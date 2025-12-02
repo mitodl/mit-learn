@@ -9,15 +9,14 @@ import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./extensions/ui/media-embed/media-embed-button"
+import { pxToRem } from "../ThemeProvider/typography"
 
-// --- UI Primitives ---
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import {
   ToolbarGroup,
   ToolbarSeparator,
 } from "./vendor/components/tiptap-ui-primitive/toolbar"
 
-// --- Tiptap Node ---
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
 import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
@@ -26,7 +25,6 @@ import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
-// --- Tiptap UI ---
 import { HeadingDropdownMenu } from "./vendor/components/tiptap-ui/heading-dropdown-menu"
 import { ListDropdownMenu } from "./vendor/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "./vendor/components/tiptap-ui/blockquote-button"
@@ -38,7 +36,6 @@ import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
 
-// --- Styles ---
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
@@ -60,7 +57,6 @@ const StyledEditorContent = styled(EditorContent, {
   },
   ...(readOnly
     ? {
-        maxWidth: "890px",
         backgroundColor: "transparent",
         ".tiptap.ProseMirror.simple-editor": {
           padding: "0 24px",
@@ -70,14 +66,63 @@ const StyledEditorContent = styled(EditorContent, {
         },
       }
     : {}),
+  "&& .tiptap.ProseMirror": {
+    fontFamily: theme.typography.fontFamily,
+    color: theme.custom.colors.darkGray2,
+    h1: {
+      ...theme.typography.h1,
+    },
+    h2: {
+      ...theme.typography.h2,
+    },
+    h3: {
+      ...theme.typography.h3,
+    },
+    h4: {
+      ...theme.typography.h4,
+    },
+    h5: {
+      ...theme.typography.h5,
+    },
+    p: {
+      ...theme.typography.body1,
+      fontSize: pxToRem(18),
+      lineHeight: pxToRem(32),
+      marginBottom: "40px",
+    },
+    ul: {
+      ...theme.typography.body1,
+    },
+    ol: {
+      ...theme.typography.body1,
+    },
+    li: {
+      ...theme.typography.body1,
+      lineHeight: pxToRem(54),
+      p: {
+        marginBottom: 0,
+      },
+    },
+  },
 }))
+
+const Toolbar = styled.div({
+  display: "contents",
+  button: {
+    cursor: "pointer",
+    borderRadius: "6px",
+  },
+  ".tiptap-card": {
+    borderRadius: "8px",
+  },
+})
 
 interface TiptapEditorToolbarProps {
   editor: Editor
 }
 export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
   return (
-    <>
+    <Toolbar>
       <Spacer />
 
       <ToolbarGroup>
@@ -130,7 +175,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <MediaEmbedButton editor={editor} text="Embed" />
       </ToolbarGroup>
       <Spacer />
-    </>
+    </Toolbar>
   )
 }
 

@@ -162,6 +162,17 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
                     {
                       type: "text",
                       text: "Mathematics of Big Data and Machine Learning",
+                      marks: [
+                        {
+                          type: "link",
+                          attrs: {
+                            href: "https://tiptap.dev/docs/editor/core-concepts/schema",
+                            target: "_blank",
+                            rel: "noopener noreferrer nofollow",
+                            class: null,
+                          },
+                        },
+                      ],
                     },
                   ],
                 },
@@ -177,6 +188,17 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
                     {
                       type: "text",
                       text: "Foundation Models and Generative AI",
+                      marks: [
+                        {
+                          type: "link",
+                          attrs: {
+                            href: "https://tiptap.dev/docs/editor/core-concepts/schema",
+                            target: "_blank",
+                            rel: "noopener noreferrer nofollow",
+                            class: null,
+                          },
+                        },
+                      ],
                     },
                   ],
                 },
@@ -204,6 +226,17 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
                     {
                       type: "text",
                       text: "Driving Innovation with Generative AI",
+                      marks: [
+                        {
+                          type: "link",
+                          attrs: {
+                            href: "https://tiptap.dev/docs/editor/core-concepts/schema",
+                            target: "_blank",
+                            rel: "noopener noreferrer nofollow",
+                            class: null,
+                          },
+                        },
+                      ],
                     },
                   ],
                 },

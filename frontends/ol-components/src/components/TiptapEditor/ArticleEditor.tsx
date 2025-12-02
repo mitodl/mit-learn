@@ -71,7 +71,6 @@ const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
     width: "100vw",
     overflow: "scroll",
     marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
-    borderBottom: "1px solid red",
     backgroundColor: theme.custom.colors.white,
     height: `calc(100vh - ${HEADER_HEIGHT + (toolbarVisible ? TOOLBAR_HEIGHT : 0) + FOOTER_HEIGHT}px)`,
     [theme.breakpoints.down("md")]: {
@@ -79,18 +78,6 @@ const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
     },
   }),
 )
-
-// const Title = styled(Typography)<TypographyProps>({
-//   margin: "60px auto",
-//   maxWidth: "1000px",
-// })
-
-// const TitleInput = styled(Input)({
-//   width: "100%",
-//   maxWidth: "1000px",
-//   margin: "10px auto",
-//   display: "block-flex",
-// })
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   "&&": {
@@ -101,10 +88,6 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
     },
   },
 }))
-
-// const StyledContainer = styled(Container)({
-//   marginTop: "60px",
-// })
 
 const StyledAlert = styled(Alert)({
   margin: "0 auto 20px",
@@ -264,8 +247,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       BannerExtension,
     ],
   })
-
-  console.log("content", content)
 
   useEffect(() => {
     if (!editor) return

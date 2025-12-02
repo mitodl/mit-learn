@@ -9,7 +9,6 @@ import {
 import { BannerBackground } from "../../../../Banner/Banner"
 import Container from "@mui/material/Container"
 import styled from "@emotion/styled"
-import { pxToRem } from "../../../../ThemeProvider/typography"
 
 const FullWidthContainer = styled.div({
   position: "relative",
@@ -31,12 +30,11 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   "&& h1": {
-    ...theme.typography.h1,
+    marginBottom: "16px",
   },
   "&&&& p": {
-    fontSize: pxToRem(20),
-    lineHeight: pxToRem(32),
     position: "relative",
+    marginBottom: 0,
   },
   ".is-empty:not(.with-slash)[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child)::before":
     {
@@ -45,15 +43,23 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
     },
 }))
 
+const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
+  marginBottom: "56px",
+  padding: "64px 0",
+  [theme.breakpoints.down("sm")]: {
+    padding: "42px 0",
+  },
+}))
+
 const BannerWrapper = () => {
   return (
     <NodeViewWrapper as="div">
       <FullWidthContainer>
-        <BannerBackground>
+        <StyledBannerBackground>
           <InnerContainer>
             <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
-        </BannerBackground>
+        </StyledBannerBackground>
       </FullWidthContainer>
     </NodeViewWrapper>
   )

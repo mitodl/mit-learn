@@ -1,7 +1,6 @@
 import React from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
-
 import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
@@ -51,18 +50,12 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)({
   },
 
   ".caption-input": {
-    marginTop: "10px",
     width: "100%",
     border: "none",
     outline: "none",
-    textAlign: "center",
     background: "transparent",
     fontSize: "14px",
-    padding: "4px 0",
-
-    "&:focus": {
-      borderBottomColor: "#999",
-    },
+    padding: "0",
   },
 
   ".media-layout-toolbar": {
@@ -138,7 +131,7 @@ const Image = styled.img<{ layout: Layout }>(({ layout }) => ({
 }))
 
 const Caption = styled.p(({ theme }) => ({
-  "&&&&": {
+  "&&&&&": {
     ...theme.typography.body2,
     color: theme.custom.colors.silverGrayDark,
     padding: "16px 0",
@@ -208,13 +201,15 @@ export function ImageUploadNodeComponent({
       <Image src={src} alt={alt || caption || "Image"} layout={layout} />
 
       {isEditable ? (
-        <input
-          type="text"
-          className="caption-input"
-          placeholder="Add caption…"
-          value={caption || ""}
-          onChange={(e) => updateAttributes({ caption: e.target.value })}
-        />
+        <Caption>
+          <input
+            type="text"
+            className="caption-input"
+            placeholder="Add caption…"
+            value={caption || ""}
+            onChange={(e) => updateAttributes({ caption: e.target.value })}
+          />
+        </Caption>
       ) : (
         caption && <Caption>{caption}</Caption>
       )}
