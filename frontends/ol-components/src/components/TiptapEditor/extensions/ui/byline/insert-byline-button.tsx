@@ -1,7 +1,7 @@
 import React, { forwardRef } from "react"
 import type { Editor } from "@tiptap/core"
-import { Button } from "../../../components/tiptap-ui-primitive/button"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
 export const InsertBylineButton = forwardRef<
   HTMLButtonElement,
