@@ -102,7 +102,6 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-
   const [titleError, setTitleError] = React.useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
 
