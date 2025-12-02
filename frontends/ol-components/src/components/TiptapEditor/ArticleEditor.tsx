@@ -6,11 +6,9 @@ import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 
-// --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Heading } from "@tiptap/extension-heading"
-
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography as TiptapTypography } from "@tiptap/extension-typography"
@@ -20,13 +18,11 @@ import { Superscript } from "@tiptap/extension-superscript"
 
 import { Selection, Placeholder } from "@tiptap/extensions"
 
-// --- UI Primitives ---
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
-// --- Tiptap Node ---
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
 import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
@@ -41,19 +37,16 @@ import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
-// --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
-// --- Styles ---
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
-import { Alert, Button, ButtonLink, Input } from "@mitodl/smoot-design"
-import Typography, { TypographyProps } from "@mui/material/Typography"
-import Container from "@mui/material/Container"
+import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import Document from "@tiptap/extension-document"
 import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
@@ -90,7 +83,7 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 }))
 
 const StyledAlert = styled(Alert)({
-  margin: "0 auto 20px",
+  margin: "20px auto",
   maxWidth: "1000px",
 })
 

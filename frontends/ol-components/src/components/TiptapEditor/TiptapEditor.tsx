@@ -84,11 +84,18 @@ const StyledEditorContent = styled(EditorContent, {
     h5: {
       ...theme.typography.h5,
     },
+    "h1, h2, h3, h4, h5, h6": {
+      marginTop: "40px",
+      marginBottom: "40px",
+    },
     p: {
       ...theme.typography.body1,
       fontSize: pxToRem(18),
       lineHeight: pxToRem(32),
       marginBottom: "40px",
+    },
+    a: {
+      color: theme.custom.colors.darkGray2,
     },
     ul: {
       ...theme.typography.body1,
@@ -100,6 +107,22 @@ const StyledEditorContent = styled(EditorContent, {
       ...theme.typography.body1,
       lineHeight: pxToRem(54),
       p: {
+        marginBottom: 0,
+      },
+    },
+    blockquote: {
+      backgroundColor: theme.custom.colors.lightGray1,
+      padding: "40px",
+      borderRadius: "8px",
+      marginBottom: "40px",
+      borderLeft: `2px solid ${theme.custom.colors.red}`,
+      ":before": {
+        display: "none",
+      },
+      p: {
+        position: "relative",
+      },
+      "p:last-child": {
         marginBottom: 0,
       },
     },

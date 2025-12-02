@@ -134,6 +134,31 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
           },
         },
         {
+          type: "heading",
+          attrs: { textAlign: null, level: 4 },
+          content: [
+            {
+              type: "text",
+              text: "Advancing career and academic ambitions with MITx MicroMasters Program in Finance (2025)",
+            },
+          ],
+        },
+        {
+          type: "blockquote",
+          content: [
+            {
+              type: "paragraph",
+              attrs: { textAlign: null },
+              content: [
+                {
+                  type: "text",
+                  text: "“My story with the MITx MicroMasters Program is proof that no matter where you are — even if you’re in a small, developing country with limited resources — if you truly want to do something, you can achieve what you want,” says Satik Movsesyan, who completed the MITx MicroMasters Program in Finance following her graduation from the American University of Armenia in 2024.",
+                },
+              ],
+            },
+          ],
+        },
+        {
           type: "paragraph",
           attrs: { textAlign: null },
           content: [
