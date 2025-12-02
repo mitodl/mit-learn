@@ -27,6 +27,7 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
         model = models.Article
         fields = ["content", "id", "title"]
 
+
 class ArticleImageUploadSerializer(serializers.Serializer):
     image_file = serializers.ImageField(required=True)
 

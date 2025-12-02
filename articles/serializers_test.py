@@ -1,14 +1,12 @@
-from rest_framework import serializers
+from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-
-from articles.serializers import SanitizedHtmlField
-from io import BytesIO
 from PIL import Image
+from rest_framework import serializers
 
-from articles.serializers import ArticleImageUploadSerializer
 from articles.models import ArticleImageUpload
+from articles.serializers import ArticleImageUploadSerializer, SanitizedHtmlField
 
 
 class HTMLSantizingSerializer(serializers.Serializer):
@@ -22,6 +20,7 @@ def test_html_sanitization():
     serializer.is_valid()
 
     assert serializer.data["html"] == "<p></p>"
+
 
 def generate_test_image():
     """Create a valid in-memory JPEG image."""
@@ -45,7 +44,6 @@ def test_article_image_upload_serializer(django_user_model):
         email="user@example.com",
         password="password123",  # noqa: S106
     )
-
 
     class FakeRequest:
         pass
