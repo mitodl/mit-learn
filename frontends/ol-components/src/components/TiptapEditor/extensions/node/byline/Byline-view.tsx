@@ -9,7 +9,6 @@ import { useUserMe } from "api/hooks/user"
 const StyledNodeViewWrapper = styled(NodeViewWrapper)`
   background: rgb(255 255 255);
   padding: 10px;
-  display: flex;
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 2px 6px rgb(230 230 230);
@@ -39,7 +38,10 @@ const BylineComponent = (props: ReactNodeViewProps) => {
   } = props.node.attrs
   const { isFetching: isLoadingUser, data: user } = useUserMe()
   return (
-    <StyledNodeViewWrapper className="byline-wrapper">
+    <StyledNodeViewWrapper
+      className="byline-wrapper"
+      style={{ display: isEditable ? "none" : "flex" }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         {avatarUrl ? (
           <Image
