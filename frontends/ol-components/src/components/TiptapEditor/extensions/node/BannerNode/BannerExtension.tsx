@@ -9,7 +9,6 @@ import {
 import { BannerBackground } from "../../../../Banner/Banner"
 import Container from "@mui/material/Container"
 import styled from "@emotion/styled"
-import "./BannerExtension.scss"
 import { pxToRem } from "../../../../ThemeProvider/typography"
 
 const FullWidthContainer = styled.div({
@@ -62,8 +61,6 @@ const BannerWrapper = () => {
 
 const BannerExtension = Node.create({
   name: "banner",
-
-  group: "block",
 
   selectable: false,
 

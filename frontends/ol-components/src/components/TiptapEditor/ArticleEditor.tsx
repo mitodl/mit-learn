@@ -2,7 +2,7 @@
 
 // Based on ./components/tiptap-templates/simple/simple-editor.tsx
 
-import React, { ChangeEventHandler, useState } from "react"
+import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 
@@ -82,9 +82,9 @@ const StyledToolbar = styled(Toolbar)({
   },
 })
 
-const StyledContainer = styled(Container)({
-  marginTop: "60px",
-})
+// const StyledContainer = styled(Container)({
+//   marginTop: "60px",
+// })
 
 const StyledAlert = styled(Alert)({
   margin: "0 auto 20px",
@@ -92,7 +92,7 @@ const StyledAlert = styled(Alert)({
 })
 
 const ArticleDocument = Document.extend({
-  content: "banner paragraph*",
+  content: "banner block+",
 })
 
 interface ArticleEditorProps {
@@ -104,7 +104,7 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  const [title] = React.useState(article?.title || "TEMP")
+  const [title, setTitle] = React.useState(article?.title || "TEMP")
   const {
     mutate: createArticle,
     isPending: isCreating,
@@ -142,6 +142,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     },
   )
   const [touched, setTouched] = useState(false)
+
+  useEffect(() => {
+    const title = content?.content?.[0].content?.[0]?.content?.[0]?.text || ""
+    setTitle(title)
+  }, [content])
 
   const handleSave = () => {
     if (article) {
