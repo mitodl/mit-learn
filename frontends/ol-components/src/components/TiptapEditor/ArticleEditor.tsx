@@ -51,7 +51,11 @@ import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
-import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
+import {
+  useArticleCreate,
+  useArticlePartialUpdate,
+  useMediaUpload,
+} from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
@@ -98,7 +102,9 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
+
   const [titleError, setTitleError] = React.useState("")
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const {
     mutate: createArticle,
@@ -112,6 +118,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
+
+  const uploadImage = useMediaUpload()
+
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
@@ -168,6 +177,40 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         },
       )
     }
+  }
+
+  const uploadHandler = async (
+    file: File,
+    onProgress?: (e: { progress: number }) => void,
+    abortSignal?: AbortSignal,
+  ) => {
+    setUploadError(null)
+    return handleImageUpload(
+      file,
+      async (file: File, progressCb?: (percent: number) => void) => {
+        try {
+          const response = await uploadImage.mutateAsync({
+            file,
+            onUploadProgress: (e) => {
+              const percent = Math.round((e.loaded * 100) / (e.total ?? 1))
+              progressCb?.(percent)
+            },
+          })
+          if (!response?.url) throw new Error("Upload failed")
+          return response.url
+        } catch (error) {
+          if (error instanceof Error) {
+            setUploadError(error.message)
+          } else {
+            setUploadError(String(error) || "Upload failed")
+          }
+
+          throw error
+        }
+      },
+      onProgress,
+      abortSignal,
+    )
   }
 
   const editor = useEditor({
@@ -246,7 +289,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: uploadHandler,
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
@@ -311,11 +354,12 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           )
         ) : null}
         <StyledContainer>
-          {(isError || titleError) && (
+          {(isError || uploadError || titleError) && (
             <StyledAlert severity="error" closable>
               <Typography variant="body2" color="textPrimary">
                 {error?.message ??
                   titleError ??
+                  uploadError ??
                   "An error occurred while saving"}
               </Typography>
             </StyledAlert>
