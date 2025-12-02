@@ -1,6 +1,41 @@
 Release Notes
 =============
 
+Version 0.47.14 (Released December 01, 2025)
+---------------
+
+- use qdrant vectors for hybrid search (#2718)
+- update posthog, add useFeatureFlagsLoaded (#2720)
+- setting create_runs=False in factory init (#2719)
+- feat: Add Custom Media Embed Plugin for Tiptap Editor (#2711)
+- chore(deps): update yarn to v4.11.0 (#2709)
+- chore(deps): update dependency ruff to v0.14.5 (#2705)
+- [pre-commit.ci] pre-commit autoupdate (#2641)
+- Add best_run_id to REST/search API results (#2696)
+- Require a non-yanked version of configargparse (#2714)
+- add task decorator back to command (#2712)
+- Scale certificate name to fit within available space (#2687)
+
+Version 0.47.13 (Released November 24, 2025)
+---------------
+
+- making sure ingestion succeeds even without xml (#2704)
+- Ab/hybrid search (#2663)
+- replacing underscore with dashes for bootstrap featureflags (#2703)
+- add error message for enrollment code issues (#2685)
+- Fix hydration error, remove prefetch helper (#2697)
+- rename views cache (#2700)
+- more dashboard CTA adjustments (#2701)
+- Ensure re-indexing and re-embedding operations include all non-course learning resource types (#2695)
+- Article editor refactor for reuse and layout updates (#2699)
+- feat: incorporating the tiptap in articles CRUD operations (#2693)
+- fix(deps): update dependency litellm to v1.79.3 (#2618)
+- limit offered by facet to specific offerors (#2692)
+- chore(deps): update dependency ruff to v0.14.4 (#2666)
+- Avoid n+1 queries on video.playlists serializer field (#2662)
+- chore(deps): update nginx docker tag to v1.29.3 (#2667)
+- fix(deps): update dependency django to v4.2.26 [security] (#2678)
+
 Version 0.47.12 (Released November 17, 2025)
 ---------------
 

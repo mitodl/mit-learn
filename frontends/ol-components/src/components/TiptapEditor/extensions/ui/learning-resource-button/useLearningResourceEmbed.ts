@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import type { Editor } from "@tiptap/react"
-import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
+import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 import NiceModal from "@ebay/nice-modal-react"
 import CourseUrlInputDialog from "./ResourceUrlInputDialog"
 import { Icon } from "./Icon" // you create this SVG

@@ -15,10 +15,16 @@ import {
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getElectiveSubtree, getRequiredSubtree } from "./util"
+import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
 
-const UnderlinedLink = styled(Link)({
+const ResponsiveLink = styled(Link)(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+  },
+}))
+
+const UnderlinedLink = styled(ResponsiveLink)({
   textDecoration: "underline",
 })
 
@@ -53,9 +59,14 @@ const InfoRowInner: React.FC<{ children?: React.ReactNode }> = ({
   </Stack>
 )
 
-const InfoLabel = styled.span(({ theme }) => ({
-  fontWeight: theme.typography.fontWeightBold,
-}))
+const InfoLabel = styled.span<{ underline?: boolean }>(
+  ({ theme, underline }) => [
+    {
+      fontWeight: theme.typography.fontWeightBold,
+    },
+    underline && { textDecoration: "underline" },
+  ],
+)
 const InfoValue = styled.span({})
 const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
@@ -433,40 +444,25 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   program,
   ...others
 }) => {
-  const requiredSubtree = getRequiredSubtree(program)
-  const electiveSubtree = getElectiveSubtree(program)
-  const requiredDisplay = requiredSubtree?.children?.length ? (
-    <InfoRowInner>
-      {`${requiredSubtree.children.length} Required ${pluralize(
-        "Course",
-        requiredSubtree.children.length,
-      )}`}
-      <span>Complete All</span>
-    </InfoRowInner>
-  ) : null
-
-  const electiveDisplay = electiveSubtree?.children?.length ? (
-    <InfoRowInner>
-      {`${electiveSubtree.children.length} Elective ${pluralize(
-        "Course",
-        electiveSubtree.children.length,
-      )}`}
-      <span>
-        Complete {electiveSubtree.data.operator_value} of{" "}
-        {electiveSubtree.children.length}
-      </span>
-    </InfoRowInner>
-  ) : null
-
-  if (!requiredDisplay && !electiveDisplay) return null
+  const parsedReqs = parseReqTree(program.req_tree)
+  const totalRequired = parsedReqs.reduce(
+    (sum, req) => sum + req.requiredCourseCount,
+    0,
+  )
+  if (totalRequired === 0) return null
 
   return (
     <InfoRow {...others}>
       <RiFileCopy2Line aria-hidden="true" />
-      <Stack gap="8px" flex={1}>
-        {requiredDisplay}
-        {electiveDisplay}
-      </Stack>
+
+      <InfoRowInner>
+        <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
+          <InfoLabel underline>
+            {`${totalRequired} ${pluralize("Course", totalRequired)}`}
+          </InfoLabel>{" "}
+          <InfoValue>to complete program</InfoValue>
+        </ResponsiveLink>
+      </InfoRowInner>
     </InfoRow>
   )
 }

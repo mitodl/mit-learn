@@ -5,7 +5,7 @@ import {
   EnrollmentMode,
   EnrollmentStatus,
 } from "./types"
-import type { DashboardCourse } from "./types"
+import type { DashboardCourse, DashboardProgram } from "./types"
 import * as u from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -15,7 +15,6 @@ import {
   ContractPage,
   CourseRunEnrollmentRequestV2,
   CourseWithCourseRunsSerializerV2,
-  IntegrationTypeEnum,
   OrganizationPage,
   User,
   V2Program,
@@ -33,6 +32,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
     {
       key: faker.string.uuid(),
       coursewareId: faker.string.uuid(),
+      readableId: `course-v1:${faker.string.alphanumeric(5)}+${faker.string.alphanumeric(5)}`,
       type: DashboardResourceType.Course,
       title: faker.commerce.productName(),
       marketingUrl: faker.internet.url(),
@@ -43,12 +43,34 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         certificateUpgradePrice: faker.commerce.price(),
         canUpgrade: true,
         coursewareUrl: faker.internet.url(),
+        b2bContractId: null,
       },
       enrollment: {
         id: faker.number.int(),
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
       },
+    },
+    ...overrides,
+  )
+}
+
+const dashboardProgram: PartialFactory<DashboardProgram> = (...overrides) => {
+  return mergeOverrides<DashboardProgram>(
+    {
+      id: faker.number.int(),
+      key: faker.string.uuid(),
+      type: DashboardResourceType.Program,
+      title: faker.commerce.productName(),
+      programType: faker.helpers.arrayElement([
+        "MicroMasters",
+        "Professional Certificate",
+        "XSeries",
+      ]),
+      courseIds: Array.from({ length: 3 }, () => faker.number.int()),
+      collections: [],
+      description: faker.lorem.paragraph(),
+      reqTree: [],
     },
     ...overrides,
   )
@@ -268,6 +290,10 @@ function setupOrgDashboardMocks(
   // Empty defaults
   setMockResponse.get(mitxonline.urls.enrollment.enrollmentsList(), [])
   setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
+  setMockResponse.get(
+    mitxonline.urls.programEnrollments.enrollmentsListV2(),
+    [],
+  )
   setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
   setMockResponse.get(
     mitxonline.urls.programCollections.programCollectionsList(),
@@ -298,22 +324,8 @@ function setupOrgDashboardMocks(
 const createTestContracts = (
   orgId: number,
   count: number = 1,
-): ContractPage[] => {
-  return Array.from({ length: count }, () => ({
-    id: faker.number.int(),
-    active: true,
-    contract_end: faker.date.future().toISOString(),
-    contract_start: faker.date.past().toISOString(),
-    description: faker.lorem.sentence(),
-    integration_type: IntegrationTypeEnum.NonSso,
-    name: faker.company.name(),
-    organization: orgId,
-    slug: faker.lorem.slug(),
-    membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
-    welcome_message: faker.lorem.sentence(),
-    welcome_message_extra: faker.lorem.sentence(),
-  }))
-}
+): ContractPage[] =>
+  Array.from({ length: count }, () => makeContract({ organization: orgId }))
 
 /**
  * Test utility to create courses with contract-scoped course runs
@@ -357,6 +369,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
 
 export {
   dashboardCourse,
+  dashboardProgram,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

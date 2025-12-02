@@ -31,7 +31,7 @@ import {
   ContractPage,
   CourseRunEnrollmentRequestV2,
   OrganizationPage,
-  UserProgramEnrollmentDetail,
+  V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -307,7 +307,7 @@ const OrgProgramCollectionDisplay: React.FC<{
             Component="li"
             key={course.key}
             dashboardResource={course}
-            courseNoun="Module"
+            noun="Module"
             offerUpgrade={false}
             titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
@@ -322,7 +322,7 @@ const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
   contracts?: ContractPage[]
   courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: UserProgramEnrollmentDetail[]
+  programEnrollments?: V2UserProgramEnrollmentDetail[]
   programLoading: boolean
   orgId: number
 }> = ({
@@ -376,7 +376,7 @@ const OrgProgramDisplay: React.FC<{
             size="small"
             variant="bordered"
             startIcon={<RiAwardFill />}
-            href={programEnrollment?.certificate?.link}
+            href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
           >
             View {program.programType} Certificate
           </ProgramCertificateButton>
@@ -388,7 +388,7 @@ const OrgProgramDisplay: React.FC<{
             Component="li"
             key={course.key}
             dashboardResource={course}
-            courseNoun="Module"
+            noun="Module"
             offerUpgrade={false}
             titleAction="courseware"
             buttonHref={course.run?.coursewareUrl}
