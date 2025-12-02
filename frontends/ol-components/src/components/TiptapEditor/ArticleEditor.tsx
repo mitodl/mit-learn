@@ -57,12 +57,28 @@ import Container from "@mui/material/Container"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import Document from "@tiptap/extension-document"
 import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
+import {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+  FOOTER_HEIGHT,
+  FOOTER_HEIGHT_MD,
+} from "../../components/ThemeProvider/MITLearnGlobalStyles"
 
-const ViewContainer = styled.div({
-  width: "100vw",
-  height: "calc(100vh - 204px)",
-  overflow: "scroll",
-})
+const TOOLBAR_HEIGHT = 43
+
+const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
+  ({ toolbarVisible, theme }) => ({
+    width: "100vw",
+    overflow: "scroll",
+    marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
+    borderBottom: "1px solid red",
+    backgroundColor: theme.custom.colors.white,
+    height: `calc(100vh - ${HEADER_HEIGHT + (toolbarVisible ? TOOLBAR_HEIGHT : 0) + FOOTER_HEIGHT}px)`,
+    [theme.breakpoints.down("md")]: {
+      height: `calc(100vh - ${HEADER_HEIGHT_MD + (toolbarVisible ? TOOLBAR_HEIGHT : 0) + FOOTER_HEIGHT_MD}px)`,
+    },
+  }),
+)
 
 // const Title = styled(Typography)<TypographyProps>({
 //   margin: "60px auto",
@@ -76,11 +92,15 @@ const ViewContainer = styled.div({
 //   display: "block-flex",
 // })
 
-const StyledToolbar = styled(Toolbar)({
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   "&&": {
-    top: "0",
+    position: "fixed",
+    top: HEADER_HEIGHT,
+    [theme.breakpoints.down("md")]: {
+      top: HEADER_HEIGHT_MD,
+    },
   },
-})
+}))
 
 // const StyledContainer = styled(Container)({
 //   marginTop: "60px",
@@ -247,7 +267,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   console.log("content", content)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!editor) return
 
     editor
@@ -276,7 +296,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const error = createError || updateError
 
   return (
-    <ViewContainer>
+    <ViewContainer toolbarVisible={isArticleEditor}>
       <EditorContext.Provider value={{ editor }}>
         {isArticleEditor ? (
           readOnly ? (
