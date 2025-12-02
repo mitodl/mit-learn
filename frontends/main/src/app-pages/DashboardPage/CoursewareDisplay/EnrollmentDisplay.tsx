@@ -5,6 +5,7 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  Skeleton,
   Stack,
   Typography,
   TypographyProps,
@@ -24,6 +25,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
+import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -256,12 +258,24 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
   const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
 
+  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery(enrollmentQueries.programEnrollmentsList())
+  const enrolledInProgram = programEnrollments?.some((enrollment) => {
+    return enrollment.program.id === program?.id
+  })
+
   // Only fetch courses if we have a program with course IDs
   const { data: rawProgramCourses, isLoading: programCoursesLoading } =
     useQuery({
       ...coursesQueries.coursesList({ id: program?.courseIds || [] }),
-      enabled: !!program && program.courseIds.length > 0,
+      enabled: !!program && program.courseIds.length > 0 && enrolledInProgram,
     })
+
+  const isLoading =
+    userEnrollmentsLoading ||
+    programLoading ||
+    programEnrollmentsLoading ||
+    programCoursesLoading
 
   // Build sections from requirement tree
   const requirementSections =
@@ -307,6 +321,25 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     return sum + section.courses.length
   }, 0)
 
+  if (isLoading) {
+    return (
+      <Stack direction="column">
+        <Stack direction="column" marginBottom="56px">
+          <Skeleton variant="text" width="30%" height={24} />
+          <Skeleton variant="text" width="50%" height={32} />
+        </Stack>
+        <Skeleton variant="rectangular" width="50%" height={24} />
+        <Stack direction="column" spacing={2} paddingTop="16px">
+          <Skeleton variant="rectangular" width="100%" height={64} />
+          <Skeleton variant="rectangular" width="100%" height={64} />
+          <Skeleton variant="rectangular" width="100%" height={64} />
+        </Stack>
+      </Stack>
+    )
+  }
+  if (!enrolledInProgram) {
+    return <NotFoundPage />
+  }
   return (
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
@@ -366,11 +399,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   dashboardResource={course}
                   showNotComplete={false}
                   variant="stacked"
-                  isLoading={
-                    userEnrollmentsLoading ||
-                    programLoading ||
-                    programCoursesLoading
-                  }
                 />
               ))}
             </StackedCardContainer>
