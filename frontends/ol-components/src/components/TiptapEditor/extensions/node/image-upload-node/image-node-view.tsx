@@ -182,7 +182,6 @@ export function ImageUploadNodeComponent({
         alt={alt || caption || "Image"}
         className="image-content"
       />
-
       {isEditable ? (
         <input
           type="text"
