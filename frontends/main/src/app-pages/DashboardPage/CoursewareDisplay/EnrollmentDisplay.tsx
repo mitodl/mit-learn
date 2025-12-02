@@ -399,11 +399,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   dashboardResource={course}
                   showNotComplete={false}
                   variant="stacked"
-                  isLoading={
-                    userEnrollmentsLoading ||
-                    programLoading ||
-                    programCoursesLoading
-                  }
                 />
               ))}
             </StackedCardContainer>
