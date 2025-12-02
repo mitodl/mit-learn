@@ -5,6 +5,7 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  Skeleton,
   Stack,
   Typography,
   TypographyProps,
@@ -257,9 +258,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
   const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
 
-  const { data: programEnrollments } = useQuery(
-    enrollmentQueries.programEnrollmentsList(),
-  )
+  const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery(enrollmentQueries.programEnrollmentsList())
   const enrolledInProgram = programEnrollments?.some((enrollment) => {
     return enrollment.program.id === program?.id
   })
@@ -271,9 +271,11 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       enabled: !!program && program.courseIds.length > 0 && enrolledInProgram,
     })
 
-  if (!enrolledInProgram) {
-    return <NotFoundPage />
-  }
+  const isLoading =
+    userEnrollmentsLoading ||
+    programLoading ||
+    programEnrollmentsLoading ||
+    programCoursesLoading
 
   // Build sections from requirement tree
   const requirementSections =
@@ -319,6 +321,25 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     return sum + section.courses.length
   }, 0)
 
+  if (isLoading) {
+    return (
+      <Stack direction="column">
+        <Stack direction="column" marginBottom="56px">
+          <Skeleton variant="text" width="30%" height={24} />
+          <Skeleton variant="text" width="50%" height={32} />
+        </Stack>
+        <Skeleton variant="rectangular" width="50%" height={24} />
+        <Stack direction="column" spacing={2} paddingTop="16px">
+          <Skeleton variant="rectangular" width="100%" height={64} />
+          <Skeleton variant="rectangular" width="100%" height={64} />
+          <Skeleton variant="rectangular" width="100%" height={64} />
+        </Stack>
+      </Stack>
+    )
+  }
+  if (!enrolledInProgram) {
+    return <NotFoundPage />
+  }
   return (
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
