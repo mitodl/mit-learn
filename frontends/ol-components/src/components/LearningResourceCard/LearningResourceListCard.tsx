@@ -14,7 +14,7 @@ import {
   DEFAULT_RESOURCE_IMG,
   pluralize,
   getLearningResourcePrices,
-  getResourceDate,
+  getBestResourceStartDate,
   showStartAnytime,
   getResourceLanguage,
 } from "ol-utilities"
@@ -165,7 +165,7 @@ export const StartDate: React.FC<{ resource: LearningResource }> = ({
   resource,
 }) => {
   const anytime = showStartAnytime(resource)
-  const startDate = getResourceDate(resource)
+  const startDate = getBestResourceStartDate(resource)
   const formatted = anytime
     ? "Anytime"
     : startDate && <LocalDate date={startDate} format="MMMM DD, YYYY" />

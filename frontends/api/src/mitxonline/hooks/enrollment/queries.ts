@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 import type {
   CourseRunEnrollmentRequestV2,
-  UserProgramEnrollmentDetail,
+  V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { courseRunEnrollmentsApi, programEnrollmentsApi } from "../../clients"
@@ -35,9 +35,9 @@ const enrollmentQueries = {
   programEnrollmentsList: (opts?: RawAxiosRequestConfig) =>
     queryOptions({
       queryKey: enrollmentKeys.programEnrollmentsList(opts),
-      queryFn: async (): Promise<UserProgramEnrollmentDetail[]> => {
+      queryFn: async (): Promise<V2UserProgramEnrollmentDetail[]> => {
         return programEnrollmentsApi
-          .programEnrollmentsList(opts)
+          .v2ProgramEnrollmentsList(opts)
           .then((res) => res.data)
       },
     }),

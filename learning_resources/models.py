@@ -536,6 +536,15 @@ class LearningResource(TimestampedModel):
         return None
 
     @cached_property
+    def next_run(self) -> Optional["LearningResourceRun"]:
+        """Returns the next run for the learning resource"""
+        return (
+            self.runs.filter(Q(published=True) & Q(start_date__gt=timezone.now()))
+            .order_by("start_date")
+            .first()
+        )
+
+    @cached_property
     def best_run(self) -> Optional["LearningResourceRun"]:
         """Returns the most current/upcoming enrollable run for the learning resource"""
         if hasattr(self, "_published_runs"):

@@ -72,6 +72,9 @@ export const userListView = (id: number) =>
 export const ORGANIZATION_VIEW = "/dashboard/organization/[slug]"
 export const organizationView = (slug: string) =>
   generatePath(ORGANIZATION_VIEW, { slug: slug })
+export const PROGRAM_VIEW = "/dashboard/program/[id]"
+export const programView = (id: number) =>
+  generatePath(PROGRAM_VIEW, { id: String(id) })
 
 export const SEARCH = "/search"
 

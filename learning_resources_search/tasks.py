@@ -34,11 +34,10 @@ from learning_resources_search.api import (
     gen_content_file_id,
     percolate_matches_for_document,
 )
-from learning_resources_search.connection import get_vector_model_id
 from learning_resources_search.constants import (
-    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
+    HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
     SEARCH_CONN_EXCEPTIONS,
@@ -293,9 +292,9 @@ def index_learning_resources(ids, index_name, index_types):
 
     Args:
         ids(list of int): List of course id's
+        index_name (string): resource_type value or HYBRID_COMBINED_INDEX
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
-        resource_type (string): resource_type value for the learning resource objects
 
     """
     try:
@@ -540,7 +539,7 @@ def wrap_retry_exception(*exception_classes):
 
 
 @app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noqa: C901
+def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
     Wipe and recreate index and mapping, and index all items.
     """
@@ -555,16 +554,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                 )
                 log.exception(error)
                 return error
-
-        if COMBINED_INDEX in indexes:
-            vector_model_id = get_vector_model_id()
-            if not vector_model_id:
-                log.warning(
-                    "No vector model is configured. Skipping hybrid index reindexing.",
-                )
-                indexes.remove(COMBINED_INDEX)
-                if len(indexes) == 0:
-                    return None
 
         api.delete_orphaned_indexes(
             indexes, delete_reindexing_tags=remove_existing_reindexing_tags
@@ -631,13 +620,13 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                     )
                 ]
 
-        if COMBINED_INDEX in indexes:
+        if HYBRID_COMBINED_INDEX in indexes:
             blocklisted_ids = load_course_blocklist()
 
             index_tasks = index_tasks + [
                 index_learning_resources.si(
                     ids,
-                    COMBINED_INDEX,
+                    HYBRID_COMBINED_INDEX,
                     index_types=IndexestoUpdate.reindexing_index.value,
                 )
                 for ids in chunks(

@@ -4,8 +4,8 @@ import {
   LearningResourceRun,
   ResourceTypeEnum,
 } from "api"
-import { findBestRun } from "ol-utilities"
 import getSymbolFromCurrency from "currency-symbol-map"
+import moment from "moment"
 
 /*
  * This constant represents the value displayed when a course is free.
@@ -123,11 +123,35 @@ export const showStartAnytime = (resource: LearningResource) => {
   )
 }
 
-export const getResourceDate = (resource: LearningResource): string | null => {
-  const startDate =
-    resource.next_start_date ?? findBestRun(resource.runs ?? [])?.start_date
+/**
+ * Gets the best start date for a learning resource based on best_run_id.
+ * Returns the max of start_date and enrollment_start from the best run.
+ * Returns null if best_run_id is null, run not found, or both dates are null.
+ */
+export const getBestResourceStartDate = (
+  resource: LearningResource,
+): string | null => {
+  const bestRun = resource.runs?.find((run) => run.id === resource.best_run_id)
+  if (!bestRun) return null
 
-  return startDate ?? null
+  if (!bestRun.start_date && !bestRun.enrollment_start) return null
+
+  let bestStart: string
+  if (bestRun.start_date && bestRun.enrollment_start) {
+    bestStart =
+      Date.parse(bestRun.start_date) > Date.parse(bestRun.enrollment_start)
+        ? bestRun.start_date
+        : bestRun.enrollment_start
+  } else {
+    bestStart = (bestRun.start_date || bestRun.enrollment_start)!
+  }
+
+  const currentDate = moment()
+  const bestStartMoment = moment(bestStart)
+
+  return bestStartMoment.isAfter(currentDate)
+    ? bestStart
+    : currentDate.toISOString()
 }
 
 export const getCurrencySymbol = (currencyCode: string) => {
