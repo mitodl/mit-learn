@@ -34,7 +34,7 @@ import { LinkPopover } from "./vendor/components/tiptap-ui/link-popover"
 import { MarkButton } from "./vendor/components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
-import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
+import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
 import { InsertDividerButton } from "./extensions/ui/insert-divider-button/insert-divider-button"
 import {
@@ -77,6 +77,7 @@ const StyledEditorContent = styled(EditorContent, {
   "&& .tiptap.ProseMirror": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
+    paddingBottom: "80px",
     h1: {
       ...theme.typography.h1,
     },
@@ -173,7 +174,7 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <LearningResourceEmbedButton editor={editor} text="Course" />
+          <LearningResourceButton editor={editor} text="Course" />
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>

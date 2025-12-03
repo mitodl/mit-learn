@@ -23,11 +23,11 @@ import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
-import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
+import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
-import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
+import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"

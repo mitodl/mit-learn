@@ -168,6 +168,7 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
             },
           ],
         },
+        { type: "divider" },
         {
           type: "paragraph",
           attrs: { textAlign: null },

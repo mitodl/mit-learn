@@ -1,7 +1,7 @@
-// divider-node-extension.ts
+import React from "react"
 import { Node, mergeAttributes } from "@tiptap/core"
-import { ReactNodeViewRenderer } from "@tiptap/react"
-import DividerNodeView from "./divider-node-view"
+import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react"
+import styled from "@emotion/styled"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -9,6 +9,41 @@ declare module "@tiptap/core" {
       insertDivider: () => ReturnType
     }
   }
+}
+
+const StyledNodeViewWrapper = styled(NodeViewWrapper)`
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: center;
+  outline: none;
+`
+
+const Divider = styled.div(({ theme }) => ({
+  width: "100%",
+  margin: "0 auto",
+  textAlign: "center",
+  lineHeight: "1em",
+  marginBottom: "40px",
+  "&::after": {
+    content: '". . ."',
+    fontSize: "50px",
+    color: theme.custom.colors.darkGray2,
+    letterSpacing: "6px",
+  },
+}))
+
+const DividerWrapper = () => {
+  return (
+    <StyledNodeViewWrapper
+      data-type="divider"
+      tabIndex={0}
+      role="separator"
+      aria-orientation="horizontal"
+    >
+      <Divider />
+    </StyledNodeViewWrapper>
+  )
 }
 
 export const DividerNode = Node.create({
@@ -52,7 +87,7 @@ export const DividerNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(DividerNodeView)
+    return ReactNodeViewRenderer(DividerWrapper)
   },
 })
 
