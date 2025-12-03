@@ -7509,24 +7509,6 @@ export type SourceTypeEnum =
 export interface User {
   /**
    *
-   * @type {number}
-   * @memberof User
-   */
-  id: number
-  /**
-   * Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.
-   * @type {string}
-   * @memberof User
-   */
-  username: string
-  /**
-   *
-   * @type {string}
-   * @memberof User
-   */
-  email?: string
-  /**
-   *
    * @type {string}
    * @memberof User
    */
@@ -7694,18 +7676,6 @@ export interface UserListRequest {
  * @interface UserRequest
  */
 export interface UserRequest {
-  /**
-   * Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.
-   * @type {string}
-   * @memberof UserRequest
-   */
-  username: string
-  /**
-   *
-   * @type {string}
-   * @memberof UserRequest
-   */
-  email?: string
   /**
    *
    * @type {string}

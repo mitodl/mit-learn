@@ -3,7 +3,8 @@ import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
 import Image from "next/image"
-import { Avatar, ShareButton } from "./Icon"
+import { Avatar } from "./Icon"
+import { RiShareFill } from "@remixicon/react"
 import { useUserMe } from "api/hooks/user"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper)`
@@ -27,6 +28,26 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)`
     color: #bdb2b2;
   }
 `
+const IconCircle = styled(NodeViewWrapper)`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  &:hover: {
+    background: #f5f5f5;
+  }
+`
+
+const Container = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+})
 
 const BylineComponent = (props: ReactNodeViewProps) => {
   const {
@@ -38,11 +59,8 @@ const BylineComponent = (props: ReactNodeViewProps) => {
   } = props.node.attrs
   const { isFetching: isLoadingUser, data: user } = useUserMe()
   return (
-    <StyledNodeViewWrapper
-      className="byline-wrapper"
-      style={{ display: isEditable ? "none" : "flex" }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <StyledNodeViewWrapper style={{ display: isEditable ? "none" : "flex" }}>
+      <Container>
         {avatarUrl ? (
           <Image
             src={avatarUrl}
@@ -76,9 +94,14 @@ const BylineComponent = (props: ReactNodeViewProps) => {
             {publishedDate ? publishedDate : new Date().toLocaleDateString()}
           </span>
         </div>
-      </div>
+      </Container>
       <div className="share-button">
-        <ShareButton size={30} />{" "}
+        <IconCircle>
+          <RiShareFill
+            size={20} // set custom `width` and `height`
+            color="#9e9e9e" // set `fill` color
+          />
+        </IconCircle>
       </div>
     </StyledNodeViewWrapper>
   )

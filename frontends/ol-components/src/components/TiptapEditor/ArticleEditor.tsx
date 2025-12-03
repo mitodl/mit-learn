@@ -27,7 +27,7 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
 import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
-import { BylineNode } from "./extensions/node/byline/byline-node-extension"
+import { ArticleBylineInfoBar } from "./extensions/node/byline/byline-node-extension"
 
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
@@ -282,7 +282,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Image,
       MediaEmbed,
       DividerNode,
-      BylineNode,
+      ArticleBylineInfoBar,
       ImageWithCaption,
       ImageUploadNode.configure({
         accept: "image/*",

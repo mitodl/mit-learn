@@ -15,7 +15,7 @@ declare module "@tiptap/core" {
   }
 }
 
-export const BylineNode = Node.create({
+export const ArticleBylineInfoBar = Node.create({
   name: "byline",
 
   group: "block",

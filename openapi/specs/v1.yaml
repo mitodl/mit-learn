@@ -15121,29 +15121,12 @@ components:
     User:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
         first_name:
           type: string
           maxLength: 150
         last_name:
           type: string
           maxLength: 150
-      required:
-      - id
-      - username
     UserList:
       type: object
       description: Simplified serializer for UserList model.
@@ -15240,26 +15223,12 @@ components:
     UserRequest:
       type: object
       properties:
-        username:
-          type: string
-          minLength: 1
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
         first_name:
           type: string
           maxLength: 150
         last_name:
           type: string
           maxLength: 150
-      required:
-      - username
     Video:
       type: object
       description: Serializer for the Video model
