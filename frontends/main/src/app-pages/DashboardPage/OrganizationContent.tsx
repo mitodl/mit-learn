@@ -431,6 +431,12 @@ const OrganizationContentInternal: React.FC<
 
   const transformedPrograms = programs.data?.results
     .filter((program) => program.collections.length === 0)
+    .filter((program) => {
+      if (!orgContract?.programs || orgContract.programs.length === 0) {
+        return true
+      }
+      return orgContract.programs.includes(program.id)
+    })
     .map((program) => transform.mitxonlineProgram(program))
     .sort((a, b) => {
       if (!orgContract?.programs) return 0
