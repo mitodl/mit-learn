@@ -28,7 +28,7 @@ import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar
 
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
-import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
+import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
 
@@ -285,7 +285,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
-      MediaEmbed,
+      MediaEmbedNode,
       DividerNode,
       ArticleByLineInfoBarNode,
       ImageWithCaption,
