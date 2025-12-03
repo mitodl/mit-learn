@@ -54,7 +54,6 @@ import {
 import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
-import { ensureHeadings, ensureByline } from "./extensions/lib/utils"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
 import {
@@ -95,7 +94,7 @@ const StyledAlert = styled(Alert)({
 })
 
 const ArticleDocument = Document.extend({
-  content: "banner block+",
+  content: "banner byline block+",
 })
 
 interface ArticleEditorProps {
@@ -145,6 +144,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               content: [],
             },
           ],
+        },
+        {
+          type: "byline",
         },
         { type: "paragraph", content: [] },
       ],
@@ -225,15 +227,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
 
-      ensureHeadings(editor)
       setContent(json)
       setTouched(true)
     },
 
     onCreate: ({ editor }) => {
-      ensureByline(editor)
-      ensureHeadings(editor)
-
       setTimeout(() => {
         editor.commands.setTextSelection(1)
         editor.commands.focus()

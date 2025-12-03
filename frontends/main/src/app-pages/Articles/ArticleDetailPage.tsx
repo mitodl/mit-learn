@@ -50,6 +50,16 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
           ],
         },
         {
+          type: "byline",
+          attrs: {
+            authorName: null,
+            avatarUrl: null,
+            readTime: null,
+            publishedDate: null,
+            editable: true,
+          },
+        },
+        {
           type: "imageWithCaption",
           attrs: {
             src: "/mit-dome-2.jpg",

@@ -20,8 +20,7 @@ const FullWidthContainer = styled.div({
 })
 
 const InnerContainer = styled(Container)({
-  maxWidth: "890px",
-  "@media (min-width: 1320px)": {
+  "&&": {
     maxWidth: "890px",
   },
 })
@@ -29,7 +28,8 @@ const InnerContainer = styled(Container)({
 const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  "&& h1": {
+  "&&&& h1": {
+    marginTop: 0,
     marginBottom: "16px",
   },
   "&&&& p": {
@@ -44,7 +44,6 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
 }))
 
 const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
-  marginBottom: "56px",
   padding: "64px 0",
   [theme.breakpoints.down("sm")]: {
     padding: "42px 0",
