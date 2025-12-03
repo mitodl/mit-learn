@@ -103,6 +103,7 @@ interface ArticleEditorProps {
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [titleError, setTitleError] = React.useState("")
+  const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const {
@@ -139,7 +140,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   )
   const [touched, setTouched] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = (publish: boolean) => {
     const title = extractFirstH1Title(content, 1)
     const subTitle = extractFirstH1Title(content, 4)
     if (!title?.trim()) {
@@ -160,6 +161,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           id: article.id,
           title: title.trim(),
           content,
+          is_published: publish,
         },
         {
           onSuccess: onSave,
@@ -170,6 +172,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         {
           title: title.trim(),
           content,
+          is_published: publish,
         },
         {
           onSuccess: onSave,
@@ -323,6 +326,17 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const isError = isCreateError || isUpdateError
   const error = createError || updateError
 
+  const publishButtonLabel = (() => {
+    if (isPending && article?.is_published) return "Updating..."
+
+    if (isPending && isPublishing && !article?.is_published)
+      return "Publishing..."
+
+    if (!isPending && article?.is_published) return "Update"
+
+    return "Publish"
+  })()
+
   return (
     <ViewContainer data-testid="editor">
       <EditorContext.Provider value={{ editor }}>
@@ -341,13 +355,30 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           ) : (
             <StyledToolbar>
               <MainToolbarContent editor={editor} />
+              {(!article || !article?.is_published) && (
+                <Button
+                  variant="secondary"
+                  disabled={isPending || !touched}
+                  onClick={() => {
+                    handleSave(false)
+                    setIsPublishing(false)
+                  }}
+                  size="small"
+                >
+                  {isPending && !isPublishing ? "Saving..." : "Save As Draft"}
+                </Button>
+              )}
+
               <Button
                 variant="primary"
                 disabled={isPending || !touched}
-                onClick={handleSave}
+                onClick={() => {
+                  handleSave(true)
+                  setIsPublishing(true)
+                }}
                 size="small"
               >
-                {isPending ? "Saving..." : "Save"}
+                {publishButtonLabel}
               </Button>
             </StyledToolbar>
           )
