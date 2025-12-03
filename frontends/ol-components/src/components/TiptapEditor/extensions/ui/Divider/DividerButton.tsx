@@ -1,10 +1,9 @@
-// insert-divider-button.tsx
 import React, { forwardRef } from "react"
 import type { Editor } from "@tiptap/core"
 import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
-export const InsertDividerButton = forwardRef<
+export const DividerButton = forwardRef<
   HTMLButtonElement,
   { editor?: Editor; text?: string }
 >(({ editor: providedEditor, text }, ref) => {
@@ -25,4 +24,4 @@ export const InsertDividerButton = forwardRef<
   )
 })
 
-InsertDividerButton.displayName = "InsertDividerButton"
+DividerButton.displayName = "DividerButton"

@@ -50,13 +50,17 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
+const Spacer = styled.div({
+  marginBottom: "56px",
+})
+
 const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
   const { authorName, avatarUrl, readTime, publishedDate, editable } =
     node.attrs
   const { isFetching: isLoadingUser, data: user } = useUserMe()
 
   if (editable) {
-    return null
+    return <Spacer />
   }
 
   const author =

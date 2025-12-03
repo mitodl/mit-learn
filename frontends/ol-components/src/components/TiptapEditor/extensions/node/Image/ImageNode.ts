@@ -1,5 +1,5 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react"
-import { ImageUploadNode as ImageUploadNodeComponent } from "./image-upload-node"
+import { ImageUpload } from "./ImageUpload"
 import type { NodeType } from "@tiptap/pm/model"
 
 export type UploadFunction = (
@@ -8,7 +8,7 @@ export type UploadFunction = (
   abortSignal?: AbortSignal,
 ) => Promise<string>
 
-export interface ImageUploadNodeOptions {
+export interface ImageNodeOptions {
   /**
    * The type of the node.
    * @default 'image'
@@ -53,7 +53,7 @@ export interface ImageUploadNodeOptions {
 declare module "@tiptap/react" {
   interface Commands<ReturnType> {
     imageUpload: {
-      setImageUploadNode: (options?: ImageUploadNodeOptions) => ReturnType
+      setImageNode: (options?: ImageNodeOptions) => ReturnType
     }
   }
 }
@@ -62,7 +62,7 @@ declare module "@tiptap/react" {
  * A Tiptap node extension that creates an image upload component.
  * @see registry/tiptap-node/image-upload-node/image-upload-node
  */
-export const ImageUploadNode = Node.create<ImageUploadNodeOptions>({
+export const ImageNode = Node.create<ImageNodeOptions>({
   name: "imageUpload",
 
   group: "block",
@@ -112,12 +112,12 @@ export const ImageUploadNode = Node.create<ImageUploadNodeOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ImageUploadNodeComponent)
+    return ReactNodeViewRenderer(ImageUpload)
   },
 
   addCommands() {
     return {
-      setImageUploadNode:
+      setImageNode:
         (options) =>
         ({ commands }) => {
           return commands.insertContent({
@@ -158,4 +158,4 @@ export const ImageUploadNode = Node.create<ImageUploadNodeOptions>({
   },
 })
 
-export default ImageUploadNode
+export default ImageNode

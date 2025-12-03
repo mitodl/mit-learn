@@ -28,11 +28,11 @@ const InnerContainer = styled(Container)({
 const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  "&&&& h1": {
+  "&&&&& h1": {
     marginTop: 0,
     marginBottom: "16px",
   },
-  "&&&& p": {
+  "&&&&& p": {
     position: "relative",
     marginBottom: 0,
   },

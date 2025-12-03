@@ -141,7 +141,7 @@ const Caption = styled.p(({ theme }) => ({
   },
 }))
 
-export function ImageUploadNodeComponent({
+export function ImageWithCaption({
   node,
   updateAttributes,
 }: ReactNodeViewProps) {

@@ -36,7 +36,7 @@ import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
-import { InsertDividerButton } from "./extensions/ui/insert-divider-button/insert-divider-button"
+import { DividerButton } from "./extensions/ui/Divider/DividerButton"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -178,7 +178,7 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <InsertDividerButton editor={editor} text="Divider" />
+          <DividerButton editor={editor} text="Divider" />
         </DropdownMenuItem>
       </StyledDropdownMenuWrapper>
     </DropdownMenu>

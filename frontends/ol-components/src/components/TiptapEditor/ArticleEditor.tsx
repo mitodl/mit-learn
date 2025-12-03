@@ -1,7 +1,5 @@
 "use client"
 
-// Based on ./components/tiptap-templates/simple/simple-editor.tsx
-
 import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
@@ -26,11 +24,11 @@ import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
-import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
+import { ImageNode } from "./extensions/node/Image/ImageNode"
+import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -288,8 +286,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       MediaEmbedNode,
       DividerNode,
       ArticleByLineInfoBarNode,
-      ImageWithCaption,
-      ImageUploadNode.configure({
+      ImageWithCaptionNode,
+      ImageNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
