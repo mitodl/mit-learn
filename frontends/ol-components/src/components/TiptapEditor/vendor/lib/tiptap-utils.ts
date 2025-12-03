@@ -353,7 +353,7 @@ export function selectionWithinConvertibleTypes(
  * @param abortSignal Optional AbortSignal for cancelling the upload
  * @returns Promise resolving to the URL of the uploaded image
  */
-export const handleImageUpload = async (
+export const handleImageUploadDefault = async (
   file: File,
   onProgress?: (event: { progress: number }) => void,
   abortSignal?: AbortSignal,
@@ -380,6 +380,46 @@ export const handleImageUpload = async (
   }
 
   return "/mit-dome-2.jpg"
+}
+
+/**
+ * Handles image upload with progress tracking and abort capability
+ * @param file The file to upload
+ * @param onProgress Optional callback for tracking upload progress
+ * @param abortSignal Optional AbortSignal for cancelling the upload
+ * @returns Promise resolving to the URL of the uploaded image
+ */
+export const handleImageUpload = async (
+  file: File,
+  uploadFn: (
+    file: File,
+    onUploadProgress?: (progress: number) => void,
+  ) => Promise<string>,
+  onProgress?: (event: { progress: number }) => void,
+  abortSignal?: AbortSignal,
+): Promise<string> => {
+  if (!file) throw new Error("No file provided")
+  if (file.size > MAX_FILE_SIZE)
+    throw new Error(
+      `File size exceeds maximum allowed (${MAX_FILE_SIZE / (1024 * 1024)}MB)`,
+    )
+
+  let fakeProgress = 0
+  const interval = setInterval(() => {
+    if (fakeProgress < 90) {
+      fakeProgress += 5
+      onProgress?.({ progress: fakeProgress })
+    }
+  }, 200)
+
+  const url = await uploadFn(file, (percent: number) => {
+    onProgress?.({ progress: percent })
+  })
+
+  clearInterval(interval)
+  onProgress?.({ progress: 100 })
+
+  return url
 }
 
 type ProtocolOptions = {

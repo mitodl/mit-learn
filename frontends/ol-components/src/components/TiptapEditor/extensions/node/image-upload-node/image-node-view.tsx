@@ -198,8 +198,7 @@ export function ImageUploadNodeComponent({
         </div>
       )}
 
-      <Image src={src} alt={alt || caption || "Image"} layout={layout} />
-
+      <Image src={src} alt={alt || caption} layout={layout} />
       {isEditable ? (
         <Caption>
           <input

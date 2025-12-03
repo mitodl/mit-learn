@@ -35,6 +35,14 @@ import { MarkButton } from "./vendor/components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceEmbedButton } from "./extensions/ui/learning-resource-button/learning-resource-button"
+import { Button } from "./vendor/components/tiptap-ui-primitive/button"
+import { InsertDividerButton } from "./extensions/ui/insert-divider-button/insert-divider-button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./vendor/components/tiptap-ui-primitive/dropdown-menu"
 
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
@@ -140,8 +148,40 @@ const Toolbar = styled.div({
   },
 })
 
+const StyledDropdownMenuWrapper = styled(DropdownMenuContent)`
+  &.tiptap-dropdown-menu {
+    background-color: #e1e3ed;
+    border-radius: 8px;
+    padding: 4px;
+  }
+`
+
 interface TiptapEditorToolbarProps {
   editor: Editor
+}
+
+export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button>Insert ▼</Button>
+      </DropdownMenuTrigger>
+
+      <StyledDropdownMenuWrapper side="bottom" align="start">
+        <DropdownMenuItem asChild>
+          <MediaEmbedButton editor={editor} text="Embed" />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <LearningResourceEmbedButton editor={editor} text="Course" />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <InsertDividerButton editor={editor} text="Divider" />
+        </DropdownMenuItem>
+      </StyledDropdownMenuWrapper>
+    </DropdownMenu>
+  )
 }
 export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
   return (
@@ -194,8 +234,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <ImageUploadButton text="Add" />
       </ToolbarGroup>
       <ToolbarGroup>
-        <LearningResourceEmbedButton editor={editor} text="Course" />
-        <MediaEmbedButton editor={editor} text="Embed" />
+        <InsertDropdownMenu editor={editor} />
       </ToolbarGroup>
       <Spacer />
     </Toolbar>

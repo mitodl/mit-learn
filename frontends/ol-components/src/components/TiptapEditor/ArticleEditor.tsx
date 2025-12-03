@@ -5,6 +5,8 @@
 import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
+import Document from "@tiptap/extension-document"
+import { Placeholder, Selection } from "@tiptap/extensions"
 
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
@@ -16,12 +18,13 @@ import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 
-import { Selection, Placeholder } from "@tiptap/extensions"
-
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
+
+import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
+import { ArticleBylineInfoBar } from "./extensions/node/byline/byline-node-extension"
 
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
@@ -43,12 +46,16 @@ import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
-import { useArticleCreate, useArticlePartialUpdate } from "api/hooks/articles"
+import {
+  useArticleCreate,
+  useArticlePartialUpdate,
+  useMediaUpload,
+} from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
+import { ensureHeadings, ensureByline } from "./extensions/lib/utils"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import Document from "@tiptap/extension-document"
 import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
 import {
   HEADER_HEIGHT,
@@ -101,6 +108,9 @@ interface ArticleEditorProps {
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [title, setTitle] = React.useState(article?.title || "TEMP")
+  // const [titleError, setTitleError] = React.useState("")
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
   const {
     mutate: createArticle,
     isPending: isCreating,
@@ -113,7 +123,10 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
-  const isArticleEditor = true //useUserHasPermission(Permission.ArticleEditor)
+
+  const uploadImage = useMediaUpload()
+
+  const isArticleEditor = true // TODO useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
@@ -169,21 +182,67 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     }
   }
 
+  const uploadHandler = async (
+    file: File,
+    onProgress?: (e: { progress: number }) => void,
+    abortSignal?: AbortSignal,
+  ) => {
+    setUploadError(null)
+    return handleImageUpload(
+      file,
+      async (file: File, progressCb?: (percent: number) => void) => {
+        try {
+          const response = await uploadImage.mutateAsync({
+            file,
+            onUploadProgress: (e) => {
+              const percent = Math.round((e.loaded * 100) / (e.total ?? 1))
+              progressCb?.(percent)
+            },
+          })
+          if (!response?.url) throw new Error("Upload failed")
+          return response.url
+        } catch (error) {
+          if (error instanceof Error) {
+            setUploadError(error.message)
+          } else {
+            setUploadError(String(error) || "Upload failed")
+          }
+
+          throw error
+        }
+      },
+      onProgress,
+      abortSignal,
+    )
+  }
+
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
     content,
     editable: !readOnly,
+
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-      setTouched(true)
+
+      ensureHeadings(editor)
       setContent(json)
+      setTouched(true)
     },
+
     onCreate: ({ editor }) => {
-      editor.commands.updateAttributes("mediaEmbed", {
-        editable: !readOnly,
-      })
+      ensureByline(editor)
+      ensureHeadings(editor)
+
+      setTimeout(() => {
+        editor.commands.setTextSelection(1)
+        editor.commands.focus()
+      }, 0)
+
+      editor.commands.updateAttributes("mediaEmbed", { editable: !readOnly })
+      editor.commands.updateAttributes("byline", { editable: readOnly })
     },
+
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -229,12 +288,14 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Selection,
       Image,
       MediaEmbed,
+      DividerNode,
+      ArticleBylineInfoBar,
       ImageWithCaption,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: uploadHandler,
         onError: (error) => console.error("Upload failed:", error),
       }),
       BannerExtension,
@@ -250,7 +311,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         state.doc.descendants((node, pos) => {
           if (
             node.type.name === "mediaEmbed" ||
-            node.type.name === "imageWithCaption"
+            node.type.name === "imageWithCaption" ||
+            node.type.name === "byline"
           ) {
             tr.setNodeMarkup(pos, undefined, {
               ...node.attrs,
@@ -289,7 +351,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               <MainToolbarContent editor={editor} />
               <Button
                 variant="primary"
-                disabled={isPending || !title.trim() || !touched}
+                disabled={isPending || !touched}
                 onClick={handleSave}
                 size="small"
               >
@@ -299,13 +361,16 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           )
         ) : null}
         {/* <StyledContainer> */}
-        {isError && (
-          <StyledAlert severity="error" closable>
-            <Typography variant="body2" color="textPrimary">
-              {error?.message ?? "An error occurred while saving"}
-            </Typography>
-          </StyledAlert>
-        )}
+        {isError ||
+          (uploadError && (
+            <StyledAlert severity="error" closable>
+              <Typography variant="body2" color="textPrimary">
+                {error?.message ??
+                  uploadError ??
+                  "An error occurred while saving"}
+              </Typography>
+            </StyledAlert>
+          ))}
         {/* {readOnly ? (
             <Title variant="h3" component="h1">
               {article?.title}

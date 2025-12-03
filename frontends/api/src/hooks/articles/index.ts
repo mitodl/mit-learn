@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { AxiosProgressEvent } from "axios"
 
-import { articlesApi } from "../../clients"
+import { articlesApi, mediaApi } from "../../clients"
 import type {
   ArticlesApiArticlesListRequest as ArticleListRequest,
   RichTextArticle as Article,
@@ -30,7 +31,9 @@ const useArticleDetail = (id: number | undefined) => {
 const useArticleCreate = () => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Article, "id">) =>
+    mutationFn: (
+      data: Omit<Article, "id" | "user" | "created_on" | "updated_on">,
+    ) =>
       articlesApi
         .articlesCreate({ RichTextArticleRequest: data })
         .then((response) => response.data),
@@ -39,6 +42,23 @@ const useArticleCreate = () => {
     },
   })
 }
+
+export const useMediaUpload = () => {
+  return useMutation({
+    mutationFn: async (data: {
+      file: File
+      onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+    }) => {
+      const response = await mediaApi.mediaUpload(
+        { image_file: data.file },
+        { onUploadProgress: data.onUploadProgress },
+      )
+
+      return response.data
+    },
+  })
+}
+
 const useArticleDestroy = () => {
   const client = useQueryClient()
   return useMutation({

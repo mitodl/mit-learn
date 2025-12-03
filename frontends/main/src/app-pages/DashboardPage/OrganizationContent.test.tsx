@@ -93,6 +93,42 @@ describe("OrganizationContent", () => {
     })
   })
 
+  it("displays programs in the correct order based on contract.programs, regardless of API response order", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+
+    // Update the contract to specify program order (B first, then A)
+    const contract = factories.contracts.contract({
+      organization: orgX.id,
+      name: "Org X Contract",
+      programs: [programB.id, programA.id],
+    })
+    orgX.contracts = [contract]
+    setMockResponse.get(urls.contracts.contractsList(), [contract])
+    // Need to update the orgX response to include the new contract
+    setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
+
+    // Mock API to return programs in opposite order (A first, then B)
+    setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
+      results: [programA, programB],
+    })
+
+    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+
+    // Debug: see what's actually rendered
+    await screen.findByRole("heading", { name: orgX.name })
+
+    // Check if both program titles exist first
+    await screen.findByText(programA.title)
+    await screen.findByText(programB.title)
+
+    const programs = await screen.findAllByTestId("org-program-root")
+    expect(programs.length).toBe(2)
+
+    // Verify programs appear in contract.programs order (B, A), not API response order (A, B)
+    await within(programs[0]).findByRole("heading", { name: programB.title })
+    await within(programs[1]).findByRole("heading", { name: programA.title })
+  })
+
   test("Shows correct enrollment status", async () => {
     const { orgX, programA, coursesA } = setupProgramsAndCourses()
     const enrollments = [
@@ -560,7 +596,6 @@ describe("OrganizationContent", () => {
     // Mock current time to ensure deterministic test behavior
     jest.useFakeTimers()
     jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
-
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
@@ -675,7 +710,6 @@ describe("OrganizationContent", () => {
       // The actual format is "Starts in X days"
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
-
     jest.useRealTimers()
   })
 

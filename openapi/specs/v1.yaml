@@ -8242,6 +8242,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceTopic'
           description: ''
+  /api/v1/upload-media/:
+    post:
+      operationId: media_upload
+      description: Upload an image (multipart/form-data) and return the storage URL.
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ArticleImageUploadRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+          description: Successful Upload
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
   /api/v1/userlists/:
     get:
       operationId: userlists_list
@@ -9602,6 +9628,14 @@ components:
       - free
       - delivery
       - resource_category
+    ArticleImageUploadRequest:
+      type: object
+      properties:
+        image_file:
+          type: string
+          format: binary
+      required:
+      - image_file
     ArticleResource:
       type: object
       description: Serializer for Article resources
@@ -13038,12 +13072,12 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         title:
           type: string
           minLength: 1
           maxLength: 255
+        content:
+          default: {}
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -14922,27 +14956,42 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         id:
           type: integer
           readOnly: true
         title:
           type: string
           maxLength: 255
+        content:
+          default: {}
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - created_on
       - id
       - title
+      - updated_on
+      - user
     RichTextArticleRequest:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         title:
           type: string
           minLength: 1
           maxLength: 255
+        content:
+          default: {}
       required:
       - title
     SearchModeEnum:
@@ -15069,6 +15118,15 @@ components:
       x-enum-descriptions:
       - search_subscription_type
       - channel_subscription_type
+    User:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
     UserList:
       type: object
       description: Simplified serializer for UserList model.
@@ -15162,6 +15220,15 @@ components:
           $ref: '#/components/schemas/PrivacyLevelEnum'
       required:
       - title
+    UserRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
     Video:
       type: object
       description: Serializer for the Video model
