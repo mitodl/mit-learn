@@ -141,16 +141,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   const handleSave = () => {
     const title = extractFirstH1Title(content, 1)
-    const subTitle = extractFirstH1Title(content, 4)
     if (!title?.trim()) {
       setTitleError(
         "Please enter a title. If you removed the title, add it back using the headings h1 controls.",
-      )
-      return
-    }
-    if (!subTitle?.trim()) {
-      setTitleError(
-        "Please enter a subtitle. If you removed the subtitle, add it back using the headings h4 controls.",
       )
       return
     }
