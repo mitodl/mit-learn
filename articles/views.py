@@ -57,9 +57,9 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
+    def perform_create(self, serializer):
         clear_views_cache()
-        return super().create(request, *args, **kwargs)
+        serializer.save(user=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()

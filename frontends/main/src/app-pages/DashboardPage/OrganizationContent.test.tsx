@@ -596,7 +596,6 @@ describe("OrganizationContent", () => {
     // Mock current time to ensure deterministic test behavior
     jest.useFakeTimers()
     jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
-
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
 
@@ -711,7 +710,6 @@ describe("OrganizationContent", () => {
       // The actual format is "Starts in X days"
       expect(card).toHaveTextContent(/Starts in \d+ days?/i)
     })
-
     jest.useRealTimers()
   })
 

@@ -13072,12 +13072,12 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         title:
           type: string
           minLength: 1
           maxLength: 255
+        content:
+          default: {}
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -14956,27 +14956,42 @@ components:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         id:
           type: integer
           readOnly: true
         title:
           type: string
           maxLength: 255
+        content:
+          default: {}
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        created_on:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_on:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - created_on
       - id
       - title
+      - updated_on
+      - user
     RichTextArticleRequest:
       type: object
       description: Serializer for LearningResourceInstructor model
       properties:
-        content:
-          default: {}
         title:
           type: string
           minLength: 1
           maxLength: 255
+        content:
+          default: {}
       required:
       - title
     SearchModeEnum:
@@ -15103,6 +15118,15 @@ components:
       x-enum-descriptions:
       - search_subscription_type
       - channel_subscription_type
+    User:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
     UserList:
       type: object
       description: Simplified serializer for UserList model.
@@ -15196,6 +15220,15 @@ components:
           $ref: '#/components/schemas/PrivacyLevelEnum'
       required:
       - title
+    UserRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
     Video:
       type: object
       description: Serializer for the Video model

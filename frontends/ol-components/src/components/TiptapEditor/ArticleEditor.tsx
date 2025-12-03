@@ -5,6 +5,8 @@
 import React, { ChangeEventHandler, useState } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
+import Document from "@tiptap/extension-document"
+import { Placeholder, Selection } from "@tiptap/extensions"
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
@@ -17,8 +19,6 @@ import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 
-import { Selection } from "@tiptap/extensions"
-
 // --- UI Primitives ---
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
@@ -26,6 +26,9 @@ import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 // --- Tiptap Node ---
+import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
+import { ArticleBylineInfoBar } from "./extensions/node/byline/byline-node-extension"
+
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
 import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
@@ -54,27 +57,20 @@ import {
   useMediaUpload,
 } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
-import { Alert, Button, ButtonLink, Input } from "@mitodl/smoot-design"
-import Typography, { TypographyProps } from "@mui/material/Typography"
+import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import Typography from "@mui/material/Typography"
 import Container from "@mui/material/Container"
+import {
+  extractFirstH1Title,
+  ensureHeadings,
+  ensureByline,
+} from "./extensions/lib/utils"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 
 const ViewContainer = styled.div({
   width: "100vw",
   height: "calc(100vh - 204px)",
   overflow: "scroll",
-})
-
-const Title = styled(Typography)<TypographyProps>({
-  margin: "60px auto",
-  maxWidth: "1000px",
-})
-
-const TitleInput = styled(Input)({
-  width: "100%",
-  maxWidth: "1000px",
-  margin: "10px auto",
-  display: "block-flex",
 })
 
 const StyledToolbar = styled(Toolbar)({
@@ -93,6 +89,10 @@ const StyledAlert = styled(Alert)({
   maxWidth: "1000px",
 })
 
+const CustomDocument = Document.extend({
+  content: "heading block*",
+})
+
 interface ArticleEditorProps {
   value?: object
   onSave?: (article: RichTextArticle) => void
@@ -102,7 +102,7 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  const [title, setTitle] = React.useState(article?.title || "")
+  const [titleError, setTitleError] = React.useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const {
@@ -125,12 +125,28 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
       type: "doc",
-      content: [{ type: "paragraph", content: [] }],
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+        },
+        {
+          type: "heading",
+          attrs: { level: 4 },
+        },
+      ],
     },
   )
   const [touched, setTouched] = useState(false)
 
   const handleSave = () => {
+    const title = extractFirstH1Title(content, 1)
+    if (!title?.trim()) {
+      setTitleError(
+        "Please enter a title. If you removed the title, add it back using the headings h1 controls.",
+      )
+      return
+    }
     if (article) {
       updateArticle(
         {
@@ -194,16 +210,28 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     shouldRerenderOnTransaction: false,
     content,
     editable: !readOnly,
+
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-      setTouched(true)
+
+      ensureHeadings(editor)
       setContent(json)
+      setTouched(true)
     },
+
     onCreate: ({ editor }) => {
-      editor.commands.updateAttributes("mediaEmbed", {
-        editable: !readOnly,
-      })
+      ensureByline(editor)
+      ensureHeadings(editor)
+
+      setTimeout(() => {
+        editor.commands.setTextSelection(1)
+        editor.commands.focus()
+      }, 0)
+
+      editor.commands.updateAttributes("mediaEmbed", { editable: !readOnly })
+      editor.commands.updateAttributes("byline", { editable: readOnly })
     },
+
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -214,12 +242,25 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       },
     },
     extensions: [
+      CustomDocument,
       StarterKit.configure({
         horizontalRule: false,
         link: {
           openOnClick: false,
           enableClickSelection: true,
         },
+      }),
+      Placeholder.configure({
+        placeholder: ({ node }) => {
+          if (node.type.name === "heading" && node.attrs.level === 1) {
+            return "What’s the title?"
+          }
+          if (node.type.name === "heading" && node.attrs.level === 4) {
+            return "Add a subtitle..."
+          }
+          return !readOnly ? "Start typing here..." : ""
+        },
+        showOnlyWhenEditable: false,
       }),
       HorizontalRule,
       LearningResourceNode,
@@ -233,6 +274,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Selection,
       Image,
       MediaEmbed,
+      DividerNode,
+      ArticleBylineInfoBar,
       ImageWithCaption,
       ImageUploadNode.configure({
         accept: "image/*",
@@ -253,7 +296,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         state.doc.descendants((node, pos) => {
           if (
             node.type.name === "mediaEmbed" ||
-            node.type.name === "imageWithCaption"
+            node.type.name === "imageWithCaption" ||
+            node.type.name === "byline"
           ) {
             tr.setNodeMarkup(pos, undefined, {
               ...node.attrs,
@@ -292,7 +336,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               <MainToolbarContent editor={editor} />
               <Button
                 variant="primary"
-                disabled={isPending || !title.trim() || !touched}
+                disabled={isPending || !touched}
                 onClick={handleSave}
                 size="small"
               >
@@ -302,30 +346,15 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           )
         ) : null}
         <StyledContainer>
-          {(isError || uploadError) && (
+          {(isError || uploadError || titleError) && (
             <StyledAlert severity="error" closable>
               <Typography variant="body2" color="textPrimary">
                 {error?.message ??
+                  titleError ??
                   uploadError ??
                   "An error occurred while saving"}
               </Typography>
             </StyledAlert>
-          )}
-          {readOnly ? (
-            <Title variant="h3" component="h1">
-              {article?.title}
-            </Title>
-          ) : (
-            <TitleInput
-              type="text"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                setTouched(true)
-              }}
-              placeholder="Article title"
-              className="input-field"
-            />
           )}
           <TiptapEditor editor={editor} readOnly={readOnly} />
         </StyledContainer>

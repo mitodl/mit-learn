@@ -10,6 +10,12 @@ const article: Factory<RichTextArticle> = (overrides = {}) => ({
     text: faker.lorem.paragraph(),
     author: faker.person.fullName(),
   },
+  user: {
+    first_name: faker.person.firstName(),
+    last_name: faker.person.lastName(),
+  },
+  created_on: faker.date.past().toISOString(),
+  updated_on: faker.date.recent().toISOString(),
   ...overrides,
 })
 

@@ -31,7 +31,9 @@ const useArticleDetail = (id: number | undefined) => {
 const useArticleCreate = () => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Article, "id">) =>
+    mutationFn: (
+      data: Omit<Article, "id" | "user" | "created_on" | "updated_on">,
+    ) =>
       articlesApi
         .articlesCreate({ RichTextArticleRequest: data })
         .then((response) => response.data),
