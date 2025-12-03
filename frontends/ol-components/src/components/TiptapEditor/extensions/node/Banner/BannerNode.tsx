@@ -64,7 +64,7 @@ const BannerWrapper = () => {
   )
 }
 
-const BannerExtension = Node.create({
+const BannerNode = Node.create({
   name: "banner",
 
   selectable: false,
@@ -87,4 +87,4 @@ const BannerExtension = Node.create({
   },
 })
 
-export { BannerExtension }
+export { BannerNode }

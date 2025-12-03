@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { ReactNodeViewRenderer } from "@tiptap/react"
-import BylineComponent from "./Byline-view"
+import ArticleByLineInfoBar from "./ArticleByLineInfoBar"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -15,7 +15,7 @@ declare module "@tiptap/core" {
   }
 }
 
-export const ArticleBylineInfoBar = Node.create({
+export const ArticleByLineInfoBarNode = Node.create({
   name: "byline",
   atom: true,
   selectable: false,
@@ -49,16 +49,11 @@ export const ArticleBylineInfoBar = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: "byline-block" }]
+    return [{ tag: "byline" }]
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      "byline-block",
-      mergeAttributes(HTMLAttributes),
-      // NEVER return empty text nodes
-      "",
-    ]
+    return ["byline", mergeAttributes(HTMLAttributes), 0]
   },
 
   addCommands() {
@@ -76,6 +71,6 @@ export const ArticleBylineInfoBar = Node.create({
     }
   },
   addNodeView() {
-    return ReactNodeViewRenderer(BylineComponent)
+    return ReactNodeViewRenderer(ArticleByLineInfoBar)
   },
 })

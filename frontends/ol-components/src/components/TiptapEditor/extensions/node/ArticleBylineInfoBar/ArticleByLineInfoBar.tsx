@@ -50,7 +50,7 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const BylineComponent = ({ node }: ReactNodeViewProps) => {
+const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
   const { authorName, avatarUrl, readTime, publishedDate, editable } =
     node.attrs
   const { isFetching: isLoadingUser, data: user } = useUserMe()
@@ -97,4 +97,4 @@ const BylineComponent = ({ node }: ReactNodeViewProps) => {
   )
 }
 
-export default BylineComponent
+export default ArticleByLineInfoBar

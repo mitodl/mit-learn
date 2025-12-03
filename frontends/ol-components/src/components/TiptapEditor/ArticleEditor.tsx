@@ -24,7 +24,7 @@ import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
 import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
-import { ArticleBylineInfoBar } from "./extensions/node/byline/byline-node-extension"
+import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
 import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
 import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
@@ -55,7 +55,7 @@ import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
-import { BannerExtension } from "./extensions/node/BannerNode/BannerExtension"
+import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
@@ -287,7 +287,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Image,
       MediaEmbed,
       DividerNode,
-      ArticleBylineInfoBar,
+      ArticleByLineInfoBarNode,
       ImageWithCaption,
       ImageUploadNode.configure({
         accept: "image/*",
@@ -296,7 +296,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         upload: uploadHandler,
         onError: (error) => console.error("Upload failed:", error),
       }),
-      BannerExtension,
+      BannerNode,
     ],
   })
 
