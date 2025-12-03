@@ -17,15 +17,15 @@ const ArticleNewPage: React.FC = () => {
   const router = useRouter()
 
   return (
-    // <RestrictedRoute requires={Permission.ArticleEditor}>
-    <PageContainer>
-      <ArticleEditor
-        onSave={(article) => {
-          router.push(articlesView(article.id))
-        }}
-      />
-    </PageContainer>
-    // </RestrictedRoute>
+    <RestrictedRoute requires={Permission.ArticleEditor}>
+      <PageContainer>
+        <ArticleEditor
+          onSave={(article) => {
+            router.push(articlesView(article.id))
+          }}
+        />
+      </PageContainer>
+    </RestrictedRoute>
   )
 }
 

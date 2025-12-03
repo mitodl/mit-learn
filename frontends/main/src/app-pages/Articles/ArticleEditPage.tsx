@@ -36,16 +36,16 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   }
 
   return (
-    // <RestrictedRoute requires={Permission.ArticleEditor}>
-    <PageContainer>
-      <ArticleEditor
-        article={article}
-        onSave={(article) => {
-          router.push(articlesView(article.id))
-        }}
-      />
-    </PageContainer>
-    // </RestrictedRoute>
+    <RestrictedRoute requires={Permission.ArticleEditor}>
+      <PageContainer>
+        <ArticleEditor
+          article={article}
+          onSave={(article) => {
+            router.push(articlesView(article.id))
+          }}
+        />
+      </PageContainer>
+    </RestrictedRoute>
   )
 }
 

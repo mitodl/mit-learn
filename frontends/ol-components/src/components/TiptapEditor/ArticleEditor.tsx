@@ -104,8 +104,7 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  const [title, setTitle] = React.useState(article?.title || "TEMP")
-  // const [titleError, setTitleError] = React.useState("")
+  const [title, setTitle] = React.useState(article?.title)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   const {
@@ -123,7 +122,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   const uploadImage = useMediaUpload()
 
-  const isArticleEditor = true // TODO useUserHasPermission(Permission.ArticleEditor)
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
@@ -158,6 +157,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   }, [content])
 
   const handleSave = () => {
+    if (!title) return
     if (article) {
       updateArticle(
         {
@@ -263,8 +263,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         levels: [1, 2, 3, 4, 5, 6],
       }),
       Placeholder.configure({
-        showOnlyCurrent: false, // Show placeholders for all empty nodes, not just the one with cursor
-        includeChildren: true, // Include children when traversing (needed for nodes inside NodeViewContent)
+        showOnlyCurrent: false,
+        includeChildren: true,
         placeholder: ({ node }) => {
           if (node.type.name === "heading") {
             return "Add heading..."
@@ -356,7 +356,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             </StyledToolbar>
           )
         ) : null}
-        {/* <StyledContainer> */}
         {isError ||
           (uploadError && (
             <StyledAlert severity="error" closable>
@@ -367,24 +366,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               </Typography>
             </StyledAlert>
           ))}
-        {/* {readOnly ? (
-            <Title variant="h3" component="h1">
-              {article?.title}
-            </Title>
-          ) : (
-            <TitleInput
-              type="text"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                setTouched(true)
-              }}
-              placeholder="Article title"
-              className="input-field"
-            />
-          )} */}
+
         <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
-        {/* </StyledContainer> */}
       </EditorContext.Provider>
     </ViewContainer>
   )
