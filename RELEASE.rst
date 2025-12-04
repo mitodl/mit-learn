@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.48.2
+Version 0.48.2 (Released December 04, 2025)
 --------------
 
 - select best enrollment based on grades (#2782)
