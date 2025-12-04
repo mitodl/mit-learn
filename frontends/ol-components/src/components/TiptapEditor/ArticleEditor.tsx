@@ -122,7 +122,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   const uploadImage = useMediaUpload()
 
-  const isArticleEditor = true //useUserHasPermission(Permission.ArticleEditor)
+  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
     article?.content || {

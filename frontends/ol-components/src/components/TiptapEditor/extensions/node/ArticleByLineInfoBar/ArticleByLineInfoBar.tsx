@@ -25,16 +25,16 @@ const StyledWrapper = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
-const InnerContainer = styled(Container)<{ noAuthor?: boolean }>(
-  ({ noAuthor }) => ({
-    display: "flex",
-    justifyContent: noAuthor ? "flex-end" : "space-between",
-    alignItems: "center",
-    "&&": {
-      maxWidth: "890px",
-    },
-  }),
-)
+const InnerContainer = styled(Container, {
+  shouldForwardProp: (prop) => prop !== "noAuthor",
+})<{ noAuthor?: boolean }>(({ noAuthor }) => ({
+  display: "flex",
+  justifyContent: noAuthor ? "flex-end" : "space-between",
+  alignItems: "center",
+  "&&": {
+    maxWidth: "890px",
+  },
+}))
 
 const InfoContainer = styled.div({
   display: "flex",
@@ -69,12 +69,12 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
     )
   }
 
-  const author =
-    !isLoadingUser &&
-    (authorName ||
-      (user?.first_name || user?.last_name
-        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
-        : null))
+  const author = "Jon Kafton"
+  // !isLoadingUser &&
+  // (authorName ||
+  //   (user?.first_name || user?.last_name
+  //     ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
+  //     : null))
 
   return (
     <NodeViewWrapper>
@@ -86,8 +86,7 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
                 alt={`${user?.first_name} ${user?.last_name}`}
                 src={avatarUrl}
               >
-                {user?.first_name?.charAt(0) || ""}
-                {user?.last_name?.charAt(0) || ""}
+                JK
               </Avatar>
 
               <NameText>By {author}</NameText>
