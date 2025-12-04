@@ -10,6 +10,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import BasePermission
+from learning_resources.permissions import is_admin_user
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
@@ -19,6 +21,33 @@ from main.utils import cache_page_for_all_users, clear_views_cache
 from .serializers import ArticleImageUploadSerializer
 
 # Create your views here.
+
+
+class CanViewArticle(BasePermission):
+    """
+    Allow viewing an article if:
+    - user is admin (article editor), OR
+    - article is published
+    """
+
+    def has_object_permission(self, request, _, obj):
+        # Editors (admins) may view any article
+        if is_admin_user(request):
+            return True
+
+        # Normal users may view ONLY published articles
+        return obj.is_published
+
+
+class CanEditArticle(BasePermission):
+    def has_permission(self, request, _view):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            return (
+                request.user.is_superuser
+                or request.user.is_staff
+                or is_admin_user(request)
+            )
+        return True
 
 
 class DefaultPagination(LimitOffsetPagination):
@@ -46,8 +75,18 @@ class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     pagination_class = DefaultPagination
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewArticle, CanEditArticle]
     http_method_names = VALID_HTTP_METHODS
+
+    def get_queryset(self):
+        qs = Article.objects.all()
+
+        # Admins/staff see everything
+        if is_admin_user(self.request):
+            return qs
+
+        # Normal users only see published articles
+        return qs.filter(is_published=True)
 
     @method_decorator(
         cache_page_for_all_users(

@@ -4,8 +4,6 @@ import React from "react"
 import { useArticleDetail } from "api/hooks/articles"
 import { LoadingSpinner, ArticleEditor } from "ol-components"
 import { notFound } from "next/navigation"
-import { Permission } from "api/hooks/user"
-import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   const {
@@ -20,9 +18,5 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   if (!article) {
     return notFound()
   }
-  return (
-    <RestrictedRoute requires={Permission.ArticleEditor}>
-      <ArticleEditor article={article} readOnly />
-    </RestrictedRoute>
-  )
+  return <ArticleEditor article={article} readOnly />
 }
