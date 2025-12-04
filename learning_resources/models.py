@@ -1084,8 +1084,13 @@ class ContentFile(TimestampedModel):
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
 
+    # If true, the checksum will be automatically calculated from the content on save
+    auto_checksum_content = models.BooleanField(default=True)
+
     def save(self, **kwargs):
-        self.checksum = checksum_for_content(self.content)
+        """Override save to calculate checksum if needed"""
+        if self.auto_checksum_content:
+            self.checksum = checksum_for_content(self.content)
         super().save(**kwargs)
 
     class Meta:
