@@ -11,18 +11,13 @@ declare module "@tiptap/core" {
   }
 }
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)`
-  position: relative;
-  display: block;
-  width: 100%;
-  text-align: center;
-  outline: none;
-`
-
-const Divider = styled.div(({ theme }) => ({
+const StyledDivider = styled.div(({ theme }) => ({
+  position: "relative",
+  display: "block",
   width: "100%",
-  margin: "0 auto",
   textAlign: "center",
+  outline: "none",
+  margin: "0 auto",
   lineHeight: "1em",
   marginBottom: "40px",
   "&::after": {
@@ -35,14 +30,14 @@ const Divider = styled.div(({ theme }) => ({
 
 const DividerWrapper = () => {
   return (
-    <StyledNodeViewWrapper
+    <NodeViewWrapper
       data-type="divider"
       tabIndex={0}
       role="separator"
       aria-orientation="horizontal"
     >
-      <Divider />
-    </StyledNodeViewWrapper>
+      <StyledDivider />
+    </NodeViewWrapper>
   )
 }
 

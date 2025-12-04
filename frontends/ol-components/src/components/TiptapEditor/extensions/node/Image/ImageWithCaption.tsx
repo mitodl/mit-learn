@@ -9,7 +9,7 @@ import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)({
+const Container = styled.div({
   position: "relative",
   margin: "2rem auto",
   textAlign: "center",
@@ -161,57 +161,56 @@ export function ImageWithCaption({
   }
 
   return (
-    <StyledNodeViewWrapper
-      className={`layout-${layout}`}
-      data-type="image-upload"
-    >
-      {isEditable && (
-        <div className="media-layout-toolbar">
-          <button
-            className={layout === "default" ? "active" : ""}
-            onClick={() => updateAttributes({ layout: "default" })}
-            title="Default width"
-          >
-            <DefaultWidth />
-          </button>
-          <button
-            className={layout === "wide" ? "active" : ""}
-            onClick={() => updateAttributes({ layout: "wide" })}
-            title="Wide"
-          >
-            <WideWidth />
-          </button>
-          <button
-            className={layout === "full" ? "active" : ""}
-            onClick={() => updateAttributes({ layout: "full" })}
-            title="Full width"
-          >
-            <FullWidth />
-          </button>
-          <button
-            onClick={openAltTextDialog}
-            title="Edit Alt Text"
-            className="alt-text-button"
-          >
-            Alt Text
-          </button>
-        </div>
-      )}
+    <NodeViewWrapper data-type="image-upload">
+      <Container className={`layout-${layout}`}>
+        {isEditable && (
+          <div className="media-layout-toolbar">
+            <button
+              className={layout === "default" ? "active" : ""}
+              onClick={() => updateAttributes({ layout: "default" })}
+              title="Default width"
+            >
+              <DefaultWidth />
+            </button>
+            <button
+              className={layout === "wide" ? "active" : ""}
+              onClick={() => updateAttributes({ layout: "wide" })}
+              title="Wide"
+            >
+              <WideWidth />
+            </button>
+            <button
+              className={layout === "full" ? "active" : ""}
+              onClick={() => updateAttributes({ layout: "full" })}
+              title="Full width"
+            >
+              <FullWidth />
+            </button>
+            <button
+              onClick={openAltTextDialog}
+              title="Edit Alt Text"
+              className="alt-text-button"
+            >
+              Alt Text
+            </button>
+          </div>
+        )}
 
-      <Image src={src} alt={alt || caption} layout={layout} />
-      {isEditable ? (
-        <Caption>
-          <input
-            type="text"
-            className="caption-input"
-            placeholder="Add caption…"
-            value={caption || ""}
-            onChange={(e) => updateAttributes({ caption: e.target.value })}
-          />
-        </Caption>
-      ) : (
-        caption && <Caption>{caption}</Caption>
-      )}
-    </StyledNodeViewWrapper>
+        <Image src={src} alt={alt || caption} layout={layout} />
+        {isEditable ? (
+          <Caption>
+            <input
+              type="text"
+              className="caption-input"
+              placeholder="Add caption…"
+              value={caption || ""}
+              onChange={(e) => updateAttributes({ caption: e.target.value })}
+            />
+          </Caption>
+        ) : (
+          caption && <Caption>{caption}</Caption>
+        )}
+      </Container>
+    </NodeViewWrapper>
   )
 }

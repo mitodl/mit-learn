@@ -8,7 +8,7 @@ import { useUserMe } from "api/hooks/user"
 import Avatar from "@mui/material/Avatar"
 import { ActionButton } from "@mitodl/smoot-design"
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)(({ theme }) => ({
+const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
   maxWidth: "100vw",
   position: "relative",
@@ -25,14 +25,16 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
-const InnerContainer = styled(Container)({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  "&&": {
-    maxWidth: "890px",
-  },
-})
+const InnerContainer = styled(Container)<{ noAuthor?: boolean }>(
+  ({ noAuthor }) => ({
+    display: "flex",
+    justifyContent: noAuthor ? "flex-end" : "space-between",
+    alignItems: "center",
+    "&&": {
+      maxWidth: "890px",
+    },
+  }),
+)
 
 const InfoContainer = styled.div({
   display: "flex",
@@ -60,44 +62,55 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
   const { isFetching: isLoadingUser, data: user } = useUserMe()
 
   if (editable) {
-    return <Spacer />
+    return (
+      <NodeViewWrapper>
+        <Spacer />
+      </NodeViewWrapper>
+    )
   }
 
   const author =
-    !isLoadingUser && (authorName || `${user?.first_name}  ${user?.last_name}`)
-  return (
-    <StyledNodeViewWrapper>
-      <InnerContainer>
-        {author ? (
-          <InfoContainer>
-            <Avatar
-              alt={`${user?.first_name} ${user?.last_name}`}
-              src={avatarUrl}
-            >
-              {user?.first_name?.charAt(0) || ""}
-              {user?.last_name?.charAt(0) || ""}
-            </Avatar>
+    !isLoadingUser &&
+    (authorName ||
+      (user?.first_name || user?.last_name
+        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
+        : null))
 
-            <NameText>
-              By {authorName || `${user?.first_name}  ${user?.last_name}`}
-            </NameText>
-            {readTime && <InfoText>{readTime}</InfoText>}
-            <InfoText>-</InfoText>
-            <InfoText>
-              {publishedDate ? publishedDate : new Date().toLocaleDateString()}
-            </InfoText>
-          </InfoContainer>
-        ) : null}
-        <ActionButton
-          size="small"
-          variant="bordered"
-          edge="circular"
-          aria-label="Share this article"
-        >
-          <RiShareFill />
-        </ActionButton>
-      </InnerContainer>
-    </StyledNodeViewWrapper>
+  return (
+    <NodeViewWrapper>
+      <StyledWrapper>
+        <InnerContainer noAuthor={!author}>
+          {author && (
+            <InfoContainer>
+              <Avatar
+                alt={`${user?.first_name} ${user?.last_name}`}
+                src={avatarUrl}
+              >
+                {user?.first_name?.charAt(0) || ""}
+                {user?.last_name?.charAt(0) || ""}
+              </Avatar>
+
+              <NameText>By {author}</NameText>
+              {readTime && <InfoText>{readTime}</InfoText>}
+              <InfoText>-</InfoText>
+              <InfoText>
+                {publishedDate
+                  ? publishedDate
+                  : new Date().toLocaleDateString()}
+              </InfoText>
+            </InfoContainer>
+          )}
+          <ActionButton
+            size="small"
+            variant="bordered"
+            edge="circular"
+            aria-label="Share this article"
+          >
+            <RiShareFill />
+          </ActionButton>
+        </InnerContainer>
+      </StyledWrapper>
+    </NodeViewWrapper>
   )
 }
 
