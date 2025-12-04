@@ -557,6 +557,7 @@ describe.each([
         id: faker.number.int(),
         status: EnrollmentStatus.Completed,
         mode: EnrollmentMode.Verified,
+        grades: [],
       }
       renderWithProviders(
         <DashboardCard
@@ -572,7 +573,7 @@ describe.each([
       await user.click(contextMenuButton)
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems("Test Course", course.enrollment),
+        ...getDefaultContextMenuItems("Test Course", course.enrollment!),
       ]
       const menuItems = screen.getAllByRole("menuitem")
       for (let i = 0; i < expectedMenuItems.length; i++) {
@@ -629,6 +630,7 @@ describe.each([
         id: faker.number.int(),
         status: status,
         mode: EnrollmentMode.Audit,
+        grades: [],
       }
       renderWithProviders(
         <DashboardCard titleAction="marketing" dashboardResource={course} />,

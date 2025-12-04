@@ -1,4 +1,7 @@
-import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  V2ProgramRequirement,
+  CourseRunGrade,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const DashboardResourceType = {
   Contract: "contract",
@@ -67,6 +70,7 @@ type DashboardCourseEnrollment = {
     uuid: string
     link: string
   }
+  grades: CourseRunGrade[]
 }
 
 type DashboardProgramEnrollment = {

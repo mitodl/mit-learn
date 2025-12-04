@@ -49,6 +49,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         id: faker.number.int(),
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
+        grades: [],
       },
     },
     ...overrides,
