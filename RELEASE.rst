@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.48.2
+--------------
+
+- select best enrollment based on grades (#2782)
+- Update NextJS/React to avoid React CVE (#2783)
+- feaure: add more controls in tiptap editor, like divider and byline (#2774)
+- order programs in the org dashboard based on the order in the contract (#2779)
+- display not found on dashboard program page if not enrolled (#2778)
+- feat: Add backend support for image upload in tiptap editor (#2729)
+
 Version 0.48.1 (Released December 04, 2025)
 --------------
 
