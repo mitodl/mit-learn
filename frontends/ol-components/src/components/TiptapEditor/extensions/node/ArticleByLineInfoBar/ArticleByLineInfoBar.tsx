@@ -69,12 +69,12 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
     )
   }
 
-  const author = "Jon Kafton"
-  // !isLoadingUser &&
-  // (authorName ||
-  //   (user?.first_name || user?.last_name
-  //     ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
-  //     : null))
+  const author =
+    !isLoadingUser &&
+    (authorName ||
+      (user?.first_name || user?.last_name
+        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
+        : null))
 
   return (
     <NodeViewWrapper>
