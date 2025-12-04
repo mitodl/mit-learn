@@ -256,12 +256,14 @@ export default function TiptapEditor({
   className,
 }: TiptapEditorProps) {
   return (
-    <StyledEditorContent
-      editor={editor}
-      role="presentation"
-      fullWidth={fullWidth}
-      readOnly={!!readOnly}
-      className={`simple-editor-content ${className}`}
-    />
+    <div data-testid="editor">
+      <StyledEditorContent
+        editor={editor}
+        role="presentation"
+        fullWidth={fullWidth}
+        readOnly={!!readOnly}
+        className={`simple-editor-content ${className}`}
+      />
+    </div>
   )
 }
