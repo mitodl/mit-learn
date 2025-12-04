@@ -1,7 +1,14 @@
 import React from "react"
-import { screen, renderWithProviders, setMockResponse } from "@/test-utils"
-import { factories, urls } from "api/test-utils"
+import {
+  screen,
+  renderWithProviders,
+  setMockResponse,
+  fireEvent,
+  user as userEvent,
+} from "@/test-utils"
+import { factories, urls, makeRequest } from "api/test-utils"
 import { ArticleEditPage } from "./ArticleEditPage"
+import { waitFor } from "@testing-library/react"
 
 const mockPush = jest.fn()
 
