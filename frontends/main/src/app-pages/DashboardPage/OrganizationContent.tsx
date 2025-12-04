@@ -416,6 +416,8 @@ const OrganizationContentInternal: React.FC<
   const orgContracts = contracts.data?.filter(
     (contract) => contract.organization === orgId,
   )
+  // For now, the relevant contract is always the first one
+  const orgContract = orgContracts ? orgContracts[0] : null
   const courseRunEnrollments = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
@@ -429,7 +431,19 @@ const OrganizationContentInternal: React.FC<
 
   const transformedPrograms = programs.data?.results
     .filter((program) => program.collections.length === 0)
+    .filter((program) => {
+      if (!orgContract?.programs || orgContract.programs.length === 0) {
+        return true
+      }
+      return orgContract.programs.includes(program.id)
+    })
     .map((program) => transform.mitxonlineProgram(program))
+    .sort((a, b) => {
+      if (!orgContract?.programs) return 0
+      const indexA = orgContract.programs.indexOf(a.id)
+      const indexB = orgContract.programs.indexOf(b.id)
+      return indexA - indexB
+    })
 
   const skeleton = (
     <Stack gap="16px">
