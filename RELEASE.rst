@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.48.1
+Version 0.48.1 (Released December 04, 2025)
 --------------
 
 - individual program display (#2721)
