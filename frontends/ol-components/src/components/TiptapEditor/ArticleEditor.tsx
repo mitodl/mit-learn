@@ -57,8 +57,6 @@ import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
-  FOOTER_HEIGHT,
-  FOOTER_HEIGHT_MD,
 } from "../../components/ThemeProvider/MITLearnGlobalStyles"
 
 const TOOLBAR_HEIGHT = 43
@@ -66,13 +64,8 @@ const TOOLBAR_HEIGHT = 43
 const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
   ({ toolbarVisible, theme }) => ({
     width: "100vw",
-    overflow: "scroll",
     marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
     backgroundColor: theme.custom.colors.white,
-    height: `calc(100vh - ${HEADER_HEIGHT + (toolbarVisible ? TOOLBAR_HEIGHT : 0) + FOOTER_HEIGHT}px)`,
-    [theme.breakpoints.down("md")]: {
-      height: `calc(100vh - ${HEADER_HEIGHT_MD + (toolbarVisible ? TOOLBAR_HEIGHT : 0) + FOOTER_HEIGHT_MD}px)`,
-    },
   }),
 )
 
@@ -347,7 +340,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               <MainToolbarContent editor={editor} />
               <Button
                 variant="primary"
-                disabled={isPending || !touched}
+                disabled={isPending || !touched || !title}
                 onClick={handleSave}
                 size="small"
               >
