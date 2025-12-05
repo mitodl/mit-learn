@@ -364,7 +364,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             "content_tags",
             Prefetch(
                 "runs",
-                queryset=LearningResourceRun.objects.filter(published=True)
+                queryset=LearningResourceRun.objects.filter(
+                    Q(published=True) | Q(learning_resource__test_mode=True)
+                )
                 .order_by("start_date", "enrollment_start", "id")
                 .for_serialization(),
                 to_attr="_published_runs",
@@ -550,7 +552,11 @@ class LearningResource(TimestampedModel):
         if hasattr(self, "_published_runs"):
             published_runs = self._published_runs
         else:
-            published_runs = list(self.runs.filter(published=True))
+            published_runs = list(
+                self.runs.filter(published=True)
+                if not self.test_mode
+                else self.runs.all()
+            )
 
         if not published_runs:
             return None
