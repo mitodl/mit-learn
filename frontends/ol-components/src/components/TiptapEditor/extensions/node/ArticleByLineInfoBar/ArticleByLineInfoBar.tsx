@@ -82,10 +82,7 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
         <InnerContainer noAuthor={!author}>
           {author && (
             <InfoContainer>
-              <Avatar
-                alt={`${user?.first_name} ${user?.last_name}`}
-                src={avatarUrl}
-              >
+              <Avatar src={avatarUrl}>
                 {user?.first_name?.charAt(0) || ""}
                 {user?.last_name?.charAt(0) || ""}
               </Avatar>
