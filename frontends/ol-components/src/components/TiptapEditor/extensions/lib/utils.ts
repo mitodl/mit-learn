@@ -63,7 +63,11 @@ export function ensureHeadings(editor: Editor) {
   }
 }
 
-export function ensureByline(editor: Editor) {
+export function ensureByline(
+  editor: Editor,
+  userName?: string,
+  publishedDate?: string,
+) {
   const doc = editor.state.doc
   let hasByline = false
 
@@ -82,8 +86,8 @@ export function ensureByline(editor: Editor) {
       .insertContentAt(pos, {
         type: "byline",
         attrs: {
-          authorName: "",
-          publishedDate: "",
+          authorName: userName || "",
+          publishedDate: publishedDate || new Date().toLocaleDateString(),
           readTime: "5 min read",
           avatarUrl: "",
         },

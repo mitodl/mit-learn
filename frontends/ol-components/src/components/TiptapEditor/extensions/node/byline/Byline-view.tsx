@@ -5,7 +5,6 @@ import styled from "@emotion/styled"
 import Image from "next/image"
 import { Avatar } from "./Icon"
 import { RiShareFill } from "@remixicon/react"
-import { useUserMe } from "api/hooks/user"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper)`
   background: rgb(255 255 255);
@@ -57,7 +56,7 @@ const BylineComponent = (props: ReactNodeViewProps) => {
     publishedDate,
     editable: isEditable,
   } = props.node.attrs
-  const { isFetching: isLoadingUser, data: user } = useUserMe()
+
   return (
     <StyledNodeViewWrapper style={{ display: isEditable ? "none" : "flex" }}>
       <Container>
@@ -77,14 +76,7 @@ const BylineComponent = (props: ReactNodeViewProps) => {
         )}
 
         <div style={{ display: "flex", gap: "8px", color: "#666" }}>
-          <span className="byline-name">
-            By{" "}
-            {isEditable && isLoadingUser
-              ? "Loading name..."
-              : authorName
-                ? authorName
-                : `${user?.first_name}  ${user?.last_name}`}
-          </span>
+          <span className="byline-name">By {authorName}</span>
           <span className="detail-summary">
             &nbsp;&nbsp;{readTime}&nbsp;&nbsp;
           </span>

@@ -65,7 +65,7 @@ import {
   ensureHeadings,
   ensureByline,
 } from "./extensions/lib/utils"
-import { useUserHasPermission, Permission } from "api/hooks/user"
+import { useUserHasPermission, Permission, useUserMe } from "api/hooks/user"
 
 const ViewContainer = styled.div({
   width: "100vw",
@@ -105,6 +105,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [titleError, setTitleError] = React.useState("")
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const { isFetching: isLoadingUser, data: user } = useUserMe()
 
   const {
     mutate: createArticle,
@@ -223,7 +224,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     },
 
     onCreate: ({ editor }) => {
-      ensureByline(editor)
       ensureHeadings(editor)
 
       setTimeout(() => {
@@ -312,6 +312,13 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       })
       .run()
   }, [editor, readOnly])
+
+  React.useEffect(() => {
+    if (!editor || !user || isLoadingUser) return
+
+    const userName = `${user.first_name} ${user.last_name}`.trim()
+    ensureByline(editor, userName, new Date().toLocaleDateString())
+  }, [editor, user, isLoadingUser])
 
   if (!editor) return null
 
