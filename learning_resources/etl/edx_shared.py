@@ -254,6 +254,9 @@ def sync_edx_course_files(
 
     for course_id in ids:
         course = LearningResource.objects.get(id=course_id)
+        if not course.published and not course.test_mode:
+            log.info("Skipping unpublished course %s", course_id)
+            continue
         matching_key, selected_run = _find_matching_key_for_course(
             course, keys, s3_prefix, etl_source
         )
