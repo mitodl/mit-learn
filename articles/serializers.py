@@ -37,7 +37,15 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Article
-        fields = ["id", "title", "content", "user", "created_on", "updated_on"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "user",
+            "created_on",
+            "updated_on",
+            "is_published",
+        ]
 
 
 class ArticleImageUploadSerializer(serializers.Serializer):

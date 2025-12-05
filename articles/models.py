@@ -20,6 +20,7 @@ class Article(TimestampedModel):
     )
     content = models.JSONField(default={})
     title = models.CharField(max_length=255)
+    is_published = models.BooleanField(default=False)
 
 
 class ArticleImageUpload(models.Model):
