@@ -144,11 +144,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   )
   const [touched, setTouched] = useState(false)
 
-  useEffect(() => {
-    const title = content?.content?.[0].content?.[0]?.content?.[0]?.text || ""
-    setTitle(title)
-  }, [content])
-
   const handleSave = () => {
     if (!title) return
     if (article) {
@@ -293,7 +288,12 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   useEffect(() => {
     if (!editor) return
+    const title = editor.$node("heading", { level: 1 })?.textContent || ""
+    setTitle(title)
+  }, [editor, content])
 
+  useEffect(() => {
+    if (!editor) return
     editor
       .chain()
       .command(({ tr, state }) => {
