@@ -30,6 +30,7 @@ pytestmark = pytest.mark.django_db
     ],
 )
 @pytest.mark.parametrize("published", [True, False])
+@pytest.mark.parametrize("test_mode", [True, False])
 def test_sync_edx_course_files(  # noqa: PLR0913
     mock_mitxonline_learning_bucket,
     mock_xpro_learning_bucket,
@@ -39,6 +40,7 @@ def test_sync_edx_course_files(  # noqa: PLR0913
     platform,
     s3_prefix,
     published,
+    test_mode,
 ):  # pylint: disable=too-many-arguments,too-many-locals
     """Sync edx courses from a tarball stored in S3"""
     mock_load_content_files = mocker.patch(
@@ -70,6 +72,7 @@ def test_sync_edx_course_files(  # noqa: PLR0913
         is_course=True,
         published=True,
         create_runs=False,
+        test_mode=test_mode,
     )
     keys = []
     for course in courses:
@@ -98,9 +101,9 @@ def test_sync_edx_course_files(  # noqa: PLR0913
     sync_edx_course_files(
         source, [course.id for course in courses], keys, s3_prefix=s3_prefix
     )
-    assert mock_transform.call_count == (4 if published else 0)
-    assert mock_load_content_files.call_count == (4 if published else 0)
-    if published:
+    assert mock_transform.call_count == (2 if published or test_mode else 0)
+    assert mock_load_content_files.call_count == (2 if published or test_mode else 0)
+    if published or test_mode:
         for course in courses:
             mock_load_content_files.assert_any_call(course.best_run, fake_data)
     mock_log.assert_not_called()

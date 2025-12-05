@@ -15,7 +15,7 @@ from learning_resources.etl.utils import (
     get_learning_course_bucket,
     transform_content_files,
 )
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import LearningResource
 
 log = logging.getLogger(__name__)
 
@@ -86,6 +86,150 @@ def get_most_recent_course_archives(
         return []
 
 
+def _key_matches_run(key: str, run_id: str, s3_prefix: str, etl_source: str) -> bool:
+    """
+    Check if an S3 key matches a run_id based on etl_source rules.
+
+    Args:
+        key: S3 object key
+        run_id: The course run ID to match against
+        s3_prefix: The S3 prefix used in the key path
+        etl_source: The ETL source (mit_edx, oll, etc.)
+
+    Returns:
+        bool: True if the key matches the run_id
+    """
+    matches = re.search(rf"{s3_prefix}/(.+)\.tar\.gz$", key)
+    if not matches:
+        return False
+    key_run_id = matches.group(1).split("/")[-1]
+
+    if etl_source == ETLSource.mit_edx.name:
+        # Additional processing of run ids and tarfile names,
+        # because edx data is structured differently
+        key_run_id = key_run_id.removesuffix("-course-prod-analytics.xml")
+        potential_run_ids = rf"{key_run_id.replace('-', '.').replace('+', '.')}"
+        return bool(re.search(potential_run_ids, run_id, re.IGNORECASE))
+    elif etl_source == ETLSource.oll.name:
+        # Additional processing of run ids and tarfile names,
+        # because oll data is structured differently
+        normalized_key_run_id = (
+            key_run_id.replace("_OLL", "")
+            .replace("-", ".")
+            .replace("_", ".")
+            .replace("+", ".")
+        )
+        normalized_run_id = run_id.replace("-", ".").replace("_", ".").replace("+", ".")
+        return bool(re.search(normalized_run_id, normalized_key_run_id, re.IGNORECASE))
+    else:
+        return key_run_id == run_id
+
+
+def _find_matching_key_for_course(
+    course: LearningResource, keys: list[str], s3_prefix: str, etl_source: str
+) -> tuple[str, object] | tuple[None, None]:
+    """
+    Find the best matching S3 key for a course's runs.
+
+    First tries to match the best run, then falls back to any published run.
+
+    Args:
+        course: The LearningResource course object
+        keys: List of S3 archive keys to search through
+        s3_prefix: The S3 prefix used in the key path
+        etl_source: The ETL source (mit_edx, oll, etc.)
+
+    Returns:
+        tuple: (matching_key, selected_run) or (None, None) if no match found
+    """
+    best_run = course.best_run
+    course_id = course.id
+
+    # Try to find key for best run first
+    if best_run:
+        for key in keys:
+            if _key_matches_run(key, best_run.run_id, s3_prefix, etl_source):
+                log.info(
+                    "Found key %s for best run %s of course %s",
+                    key,
+                    best_run.run_id,
+                    course_id,
+                )
+                return key, best_run
+
+    # If no key found for best run, try any published run (sorted reverse by key)
+    runs = course.runs.filter(Q(published=True) | Q(learning_resource__test_mode=True))
+
+    if runs.count() == 0:
+        log.warning("No published runs found for course %s", course_id)
+        return None, None
+
+    run_keys = [
+        (key, run)
+        for run in runs
+        for key in keys
+        if _key_matches_run(key, run.run_id, s3_prefix, etl_source)
+    ]
+
+    if run_keys:
+        # Sort by key in reverse order and take first
+        run_keys.sort(key=lambda x: x[0], reverse=True)
+        matching_key, selected_run = run_keys[0]
+        log.warning(
+            "No key found for best run %s, using key %s for run %s of course %s",
+            best_run.run_id if best_run else "None",
+            matching_key,
+            selected_run.run_id,
+            course_id,
+        )
+        return matching_key, selected_run
+
+    log.error("No matching S3 key found for course %s", course_id)
+    return None, None
+
+
+def _process_course_archive(
+    bucket, matching_key: str, selected_run, *, overwrite: bool = False
+) -> bool:
+    """
+    Download and process a course archive file.
+
+    Args:
+        bucket: S3 bucket object
+        matching_key: S3 key for the archive file
+        selected_run: The course run to associate content with
+        overwrite: Whether to overwrite existing content
+
+    Returns:
+        bool: True if processing succeeded, False otherwise
+    """
+    with TemporaryDirectory() as export_tempdir:
+        course_tarpath = Path(export_tempdir, matching_key.split("/")[-1])
+        log.info("course tarpath for run %s is %s", selected_run.run_id, course_tarpath)
+        bucket.download_file(matching_key, course_tarpath)
+        try:
+            checksum = calc_checksum(course_tarpath)
+        except ReadError:
+            log.exception("Error reading tar file %s, skipping", course_tarpath)
+            return False
+        if selected_run.checksum == checksum and not overwrite:
+            log.info("Checksums match for %s, skipping load", matching_key)
+            return True
+        try:
+            load_content_files(
+                selected_run,
+                transform_content_files(
+                    course_tarpath, selected_run, overwrite=overwrite
+                ),
+            )
+            selected_run.checksum = checksum
+            selected_run.save()
+        except:  # noqa: E722
+            log.exception("Error ingesting OLX content data for %s", matching_key)
+            return False
+    return True
+
+
 def sync_edx_course_files(
     etl_source: str,
     ids: list[int],
@@ -102,69 +246,19 @@ def sync_edx_course_files(
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
         s3_prefix(str): path prefix to include in regex for S3
+        overwrite(bool): Whether to overwrite existing content files
     """
     bucket = get_learning_course_bucket(etl_source)
     if s3_prefix is None:
         s3_prefix = "courses"
-    for key in keys:
-        matches = re.search(rf"{s3_prefix}/(.+)\.tar\.gz$", key)
-        run_id = matches.group(1).split("/")[-1]
-        log.info("Run is is %s", run_id)
-        runs = (
-            LearningResourceRun.objects.filter(
-                learning_resource__etl_source=etl_source,
-                learning_resource_id__in=ids,
-            )
-            .filter(Q(published=True) | Q(learning_resource__test_mode=True))
-            .filter(
-                Q(learning_resource__published=True)
-                | Q(learning_resource__test_mode=True)
-            )
+
+    for course_id in ids:
+        course = LearningResource.objects.get(id=course_id)
+        matching_key, selected_run = _find_matching_key_for_course(
+            course, keys, s3_prefix, etl_source
         )
 
-        if etl_source == ETLSource.mit_edx.name:
-            # Additional processing of run ids and tarfile names,
-            # because edx data is structured differently
-            run_id = run_id.strip(  # noqa: B005
-                "-course-prod-analytics.xml"
-            )  # suffix on edx tar file basename
-            potential_run_ids = rf"{run_id.replace('-', '.').replace('+', '.')}"
-            runs = runs.filter(run_id__iregex=potential_run_ids)
-        elif etl_source == ETLSource.oll.name:
-            # Additional processing of run ids and tarfile names,
-            # because oll data is structured differently
-            run_id = (
-                rf"{run_id.replace('_OLL', '')}".replace("-", ".")
-                .replace("_", ".")
-                .replace("+", ".")
-            )
-            runs = runs.filter(run_id__iregex=run_id)
-        else:
-            runs = runs.filter(run_id=run_id)
-        log.info("There are %d runs for %s", runs.count(), run_id)
-        run = runs.first()
-
-        if not run:
+        if not matching_key or not selected_run:
             continue
 
-        with TemporaryDirectory() as export_tempdir:
-            course_tarpath = Path(export_tempdir, key.split("/")[-1])
-            log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
-            bucket.download_file(key, course_tarpath)
-            try:
-                checksum = calc_checksum(course_tarpath)
-            except ReadError:
-                log.exception("Error reading tar file %s, skipping", course_tarpath)
-                continue
-            if run.checksum == checksum and not overwrite:
-                log.info("Checksums match for %s, skipping load", key)
-                continue
-            try:
-                load_content_files(
-                    run,
-                    transform_content_files(course_tarpath, run, overwrite=overwrite),
-                )
-                run.checksum = checksum
-                run.save()
-            except:  # noqa: E722
-                log.exception("Error ingesting OLX content data for %s", key)
+        _process_course_archive(bucket, matching_key, selected_run, overwrite=overwrite)
