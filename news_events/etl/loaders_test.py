@@ -114,3 +114,19 @@ def test_load_item_null_data():
 def test_load_source_null_data():
     """None should be returned from load_feed_source if input data is None"""
     assert loaders.load_feed_source(FeedType.news.name, None) is None
+
+
+def test_load_image_null_data():
+    """Test that"""
+
+    assert (
+        loaders.load_image(FeedItemFactory.create(), {"url": None, "description": None})
+        is None
+    )
+    assert (
+        loaders.load_image(
+            FeedItemFactory.create(),
+            {"url": "http://learn.mit.edu/test-image.png", "description": None},
+        )
+        is not None
+    )
