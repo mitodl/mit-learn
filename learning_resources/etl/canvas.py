@@ -100,7 +100,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
         except (ValueError, TypeError):
             log.warning("Invalid end_at date format: %s", end_at)
 
-    readable_id = f"{course_folder}-{course_info.get('course_code')}"
+    readable_id = f"canvas-{course_folder}"
     # create placeholder learning resource
     resource, _ = LearningResource.objects.update_or_create(
         readable_id=readable_id,
