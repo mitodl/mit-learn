@@ -4,6 +4,7 @@ Serializers for profile REST APIs
 
 import re
 
+from articles.permissions import is_article_group_user
 import ulid
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -319,7 +320,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_article_editor(self, instance) -> bool:  # noqa: ARG002
         request = self.context.get("request")
         if request:
-            return is_admin_user(request)
+            return is_admin_user(request) or is_article_group_user(request)
         return False
 
     def create(self, validated_data):

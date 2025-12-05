@@ -38,10 +38,5 @@ class CanViewArticle(BasePermission):
 class CanEditArticle(BasePermission):
     def has_permission(self, request, _view):
         if request.method not in SAFE_METHODS:
-            return (
-                request.user.is_superuser
-                or request.user.is_staff
-                or is_admin_user(request)
-                or is_article_group_user(request)
-            )
+            return is_admin_user(request) or is_article_group_user(request)
         return True

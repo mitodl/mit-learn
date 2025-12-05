@@ -1,1 +1,1 @@
-GROUP_STAFF_ARTICLE_EDITORS = "learning_path_article_editors"
+GROUP_STAFF_ARTICLE_EDITORS = "article_editors"
