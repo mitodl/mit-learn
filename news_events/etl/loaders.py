@@ -67,10 +67,8 @@ def load_image(item: FeedItem or FeedSource, image_data: dict) -> FeedImage:
 
     image, _ = FeedImage.objects.update_or_create(
         url=image_data.get("url"),
-        description=image_data.get("description")
-        if image_data.get("description")
-        else "",
-        alt=image_data.get("alt") if image_data.get("alt") else "",
+        description=image_data.get("description") or "",
+        alt=image_data.get("alt") or "",
     )
     item.image = image
     item.save()
