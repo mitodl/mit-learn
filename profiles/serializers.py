@@ -4,7 +4,6 @@ Serializers for profile REST APIs
 
 import re
 
-from articles.permissions import is_article_group_user
 import ulid
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -13,6 +12,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from articles.permissions import is_article_group_user
 from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor

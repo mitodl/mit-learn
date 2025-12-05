@@ -1,6 +1,6 @@
-from django.http import HttpRequest
-from articles.constants import GROUP_STAFF_ARTICLE_EDITORS
 from rest_framework.permissions import SAFE_METHODS, BasePermission
+
+from articles.constants import GROUP_STAFF_ARTICLE_EDITORS
 from learning_resources.permissions import is_admin_user
 
 
