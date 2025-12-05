@@ -10,7 +10,7 @@ declare module "@tiptap/core" {
   }
 }
 
-export const MediaEmbed = Node.create({
+export const MediaEmbedNode = Node.create({
   name: "mediaEmbed",
 
   group: "block",

@@ -7,7 +7,7 @@ import type { NodeViewProps } from "@tiptap/react"
 import { NodeViewWrapper } from "@tiptap/react"
 import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { CloseIcon } from "../../../vendor/components/tiptap-icons/close-icon"
-import "./image-upload-node.scss"
+import "./image-node.scss"
 import {
   focusNextNode,
   isValidPosition,
@@ -440,7 +440,7 @@ const DropZoneContent: React.FC<{ maxSize: number; limit: number }> = ({
   </>
 )
 
-export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
+export const ImageUpload: React.FC<NodeViewProps> = (props) => {
   const { accept, limit, maxSize } = props.node.attrs
   const inputRef = useRef<HTMLInputElement>(null)
   const extension = props.extension

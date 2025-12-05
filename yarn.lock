@@ -6543,21 +6543,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-document@npm:^3.10.5":
-  version: 3.11.1
-  resolution: "@tiptap/extension-document@npm:3.11.1"
-  peerDependencies:
-    "@tiptap/core": ^3.11.1
-  checksum: 10/c41a98c3ad98ca7c336c9c5f0a4c9d2c2208efe8dacf506a2c6ad7215f2c4518225cfc51435abe9321901208737c6df734d8e621b985e5c7dda0c6a028cd53ab
-  languageName: node
-  linkType: hard
-
 "@tiptap/extension-document@npm:^3.11.0":
   version: 3.11.0
   resolution: "@tiptap/extension-document@npm:3.11.0"
   peerDependencies:
     "@tiptap/core": ^3.11.0
   checksum: 10/aaeeb607c3dff7264ab395a637818816c34a7fc175e1ff3f1f0075aa46dfce5466caf38b5bc635213bf5460868501531fbb1027353d57c31754fed8d6ac8fd08
+  languageName: node
+  linkType: hard
+
+"@tiptap/extension-document@npm:^3.11.1":
+  version: 3.11.1
+  resolution: "@tiptap/extension-document@npm:3.11.1"
+  peerDependencies:
+    "@tiptap/core": ^3.11.1
+  checksum: 10/c41a98c3ad98ca7c336c9c5f0a4c9d2c2208efe8dacf506a2c6ad7215f2c4518225cfc51435abe9321901208737c6df734d8e621b985e5c7dda0c6a028cd53ab
   languageName: node
   linkType: hard
 
@@ -6605,6 +6605,15 @@ __metadata:
   peerDependencies:
     "@tiptap/core": ^3.11.0
   checksum: 10/4fa7c320757c1f868dab08538bbcda6a8ae6dc8b7b859236eb54064d9c4adbfe0cbf9964c0c784ad9be631d142add8a7f28b5c6fbe90e0015bb300509a9dd767
+  languageName: node
+  linkType: hard
+
+"@tiptap/extension-heading@npm:^3.11.1":
+  version: 3.11.1
+  resolution: "@tiptap/extension-heading@npm:3.11.1"
+  peerDependencies:
+    "@tiptap/core": ^3.11.1
+  checksum: 10/3a560af9ecf196fcacbbc99210eb5bb8b868e2277a690a479aa48bcf1dce66a263ef1e4722bcc1aa914361a9779fad95fb2fade3fc0397bd101b6882cb38886e
   languageName: node
   linkType: hard
 
@@ -17141,7 +17150,8 @@ __metadata:
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
     "@tiptap/core": "npm:^3.11.0"
-    "@tiptap/extension-document": "npm:^3.10.5"
+    "@tiptap/extension-document": "npm:^3.11.1"
+    "@tiptap/extension-heading": "npm:^3.11.1"
     "@tiptap/extension-highlight": "npm:^3.11.0"
     "@tiptap/extension-horizontal-rule": "npm:^3.11.0"
     "@tiptap/extension-image": "npm:^3.11.0"

@@ -2,10 +2,15 @@
 
 import React from "react"
 import { useArticleDetail } from "api/hooks/articles"
-import { LoadingSpinner, ArticleEditor } from "ol-components"
+import { LoadingSpinner, ArticleEditor, styled } from "ol-components"
 import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
+
+const PageContainer = styled.div({
+  display: "flex",
+  height: "100%",
+})
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   const {
@@ -22,7 +27,9 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   }
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
-      <ArticleEditor article={article} readOnly />
+      <PageContainer>
+        <ArticleEditor article={article} readOnly />
+      </PageContainer>
     </RestrictedRoute>
   )
 }

@@ -3,33 +3,25 @@ import type { Editor } from "@tiptap/core"
 import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
-export const InsertBylineButton = forwardRef<
+export const DividerButton = forwardRef<
   HTMLButtonElement,
-  {
-    editor?: Editor
-    authorName: string
-    publishedDate?: string
-    avatarUrl?: string
-  }
->(({ editor: providedEditor, authorName, publishedDate, avatarUrl }, ref) => {
+  { editor?: Editor; text?: string }
+>(({ editor: providedEditor, text }, ref) => {
   const { editor } = useTiptapEditor(providedEditor)
   if (!editor) return null
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    editor
-      .chain()
-      .focus()
-      .insertByline({ authorName, publishedDate, avatarUrl })
-      .run()
+    editor.chain().focus().insertDivider().run()
   }
 
   return (
     <Button type="button" data-style="ghost" onClick={handleClick} ref={ref}>
-      <span className="tiptap-button-icon">👤</span>
-      <span className="tiptap-button-text">Insert Byline</span>
+      {/* You can put an Icon here. For now: */}
+      <span className="tiptap-button-icon">• •</span>
+      {text && <span className="tiptap-button-text">{text}</span>}
     </Button>
   )
 })
 
-InsertBylineButton.displayName = "InsertBylineButton"
+DividerButton.displayName = "DividerButton"

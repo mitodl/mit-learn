@@ -1,7 +1,7 @@
-// divider-node-extension.ts
+import React from "react"
 import { Node, mergeAttributes } from "@tiptap/core"
-import { ReactNodeViewRenderer } from "@tiptap/react"
-import DividerNodeView from "./divider-node-view"
+import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react"
+import styled from "@emotion/styled"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -9,6 +9,36 @@ declare module "@tiptap/core" {
       insertDivider: () => ReturnType
     }
   }
+}
+
+const StyledDivider = styled.div(({ theme }) => ({
+  position: "relative",
+  display: "block",
+  width: "100%",
+  textAlign: "center",
+  outline: "none",
+  margin: "0 auto",
+  lineHeight: "1em",
+  marginBottom: "40px",
+  "&::after": {
+    content: '". . ."',
+    fontSize: "50px",
+    color: theme.custom.colors.darkGray2,
+    letterSpacing: "6px",
+  },
+}))
+
+const DividerWrapper = () => {
+  return (
+    <NodeViewWrapper
+      data-type="divider"
+      tabIndex={0}
+      role="separator"
+      aria-orientation="horizontal"
+    >
+      <StyledDivider />
+    </NodeViewWrapper>
+  )
 }
 
 export const DividerNode = Node.create({
@@ -52,7 +82,7 @@ export const DividerNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(DividerNodeView)
+    return ReactNodeViewRenderer(DividerWrapper)
   },
 })
 

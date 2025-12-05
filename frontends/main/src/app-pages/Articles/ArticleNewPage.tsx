@@ -4,13 +4,13 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { ArticleEditor, styled, HEADER_HEIGHT } from "ol-components"
+import { ArticleEditor, styled } from "ol-components"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   display: "flex",
-  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+  height: "100%",
 }))
 
 const ArticleNewPage: React.FC = () => {

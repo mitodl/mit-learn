@@ -1,8 +1,8 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { ReactNodeViewRenderer } from "@tiptap/react"
-import { ImageUploadNodeComponent } from "./image-node-view"
+import { ImageWithCaption } from "./ImageWithCaption"
 
-export const ImageWithCaption = Node.create({
+export const ImageWithCaptionNode = Node.create({
   name: "imageWithCaption",
 
   group: "block",
@@ -34,6 +34,6 @@ export const ImageWithCaption = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ImageUploadNodeComponent)
+    return ReactNodeViewRenderer(ImageWithCaption)
   },
 })

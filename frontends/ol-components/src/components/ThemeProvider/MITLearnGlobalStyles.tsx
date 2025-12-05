@@ -5,6 +5,8 @@ import { css, Global, Theme } from "@emotion/react"
 
 export const HEADER_HEIGHT = 72
 export const HEADER_HEIGHT_MD = 60
+export const FOOTER_HEIGHT = 132
+export const FOOTER_HEIGHT_MD = 174
 
 const pageCss = (theme: Theme) => css`
   html {

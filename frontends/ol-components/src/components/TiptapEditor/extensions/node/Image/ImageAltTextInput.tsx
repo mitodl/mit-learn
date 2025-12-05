@@ -33,7 +33,7 @@ const ImageAltTextInput = NiceModal.create(
       <FormDialog
         {...muiDialogV5(modal)}
         title="Image Alt Text"
-        confirmText="Insert"
+        confirmText="Set"
         onSubmit={handleSubmit}
         onReset={handleReset}
         noValidate
