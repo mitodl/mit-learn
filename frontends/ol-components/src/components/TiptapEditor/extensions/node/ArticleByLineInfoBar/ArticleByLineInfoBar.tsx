@@ -59,7 +59,7 @@ const Spacer = styled.div({
 const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
   const { authorName, avatarUrl, readTime, publishedDate, editable } =
     node.attrs
-  const { isFetching: isLoadingUser, data: user } = useUserMe()
+  const { isLoading, data: user } = useUserMe()
 
   if (editable) {
     return (
@@ -70,9 +70,9 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
   }
 
   const author =
-    !isLoadingUser &&
+    !isLoading &&
     (authorName ||
-      (user?.first_name || user?.last_name
+      (editable && (user?.first_name || user?.last_name)
         ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
         : null))
 
