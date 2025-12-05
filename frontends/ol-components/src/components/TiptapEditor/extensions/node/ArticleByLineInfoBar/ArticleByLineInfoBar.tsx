@@ -86,7 +86,8 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
                 alt={`${user?.first_name} ${user?.last_name}`}
                 src={avatarUrl}
               >
-                JK
+                {user?.first_name?.charAt(0) || ""}
+                {user?.last_name?.charAt(0) || ""}
               </Avatar>
 
               <NameText>By {author}</NameText>
