@@ -12,6 +12,7 @@ import { articlesView } from "@/common/urls"
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   display: "flex",
+  height: "100%",
 }))
 
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
