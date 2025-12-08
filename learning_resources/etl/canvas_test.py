@@ -186,7 +186,7 @@ def test_run_for_canvas_archive_creates_resource_and_run(tmp_path, mocker):
     _, run = run_for_canvas_archive(
         zip_path, course_folder=course_folder, overwrite=True
     )
-    resource = LearningResource.objects.get(readable_id=f"{course_folder}-TEST101")
+    resource = LearningResource.objects.get(readable_id=f"canvas-{course_folder}")
     assert resource.title == "Test Course"
     assert resource.etl_source == ETLSource.canvas.name
     assert resource.resource_type == LearningResourceType.course.name
@@ -215,7 +215,7 @@ def test_run_for_canvas_archive_creates_run_if_none_exists(tmp_path, mocker):
     )
     # Create resource with no runs
     resource = LearningResourceFactory.create(
-        readable_id=f"{course_folder}-TEST104",
+        readable_id=f"canvas-{course_folder}",
         title="Test Course",
         etl_source=ETLSource.canvas.name,
         resource_type=LearningResourceType.course.name,
