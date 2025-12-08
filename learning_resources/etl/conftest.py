@@ -17,6 +17,7 @@ def mitx_settings(settings):
     settings.EDX_API_URL = "http://localhost/fake/api/url"
     settings.EDX_BASE_URL = "http://localhost/fake/base/url"
     settings.EDX_ALT_URL = "http://localhost/fake/alt/url"
+    settings.OCR_MODEL = None
     return settings
 
 
