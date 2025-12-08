@@ -74,6 +74,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
                 "/certificate/course/$1/",
               ) ?? "",
           },
+          grades: apiData.grades,
         },
       } satisfies DashboardResource)
     },
@@ -543,6 +544,63 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         link: "",
       })
     })
+
+    test("selects enrollment with highest grade when multiple enrollments exist for same course", () => {
+      const orgId = faker.number.int()
+      const contracts = createTestContracts(orgId, 1)
+      const contractId = contracts[0].id
+
+      // Create a course with 2 runs, both tied to the same contract
+      const course = factories.courses.course({
+        id: 123,
+        title: "Test Course",
+      })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        b2b_contract: contractId,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        b2b_contract: contractId,
+      })
+      course.courseruns = [run1, run2]
+
+      // Create 2 enrollments with different grades
+      const enrollmentLowGrade = factories.enrollment.courseEnrollment({
+        run: {
+          id: run1.id,
+          course: { id: course.id, title: course.title },
+        },
+        grades: [factories.enrollment.grade({ grade: 0.65, passed: true })],
+        b2b_contract_id: contractId,
+        b2b_organization_id: orgId,
+      })
+
+      const enrollmentHighGrade = factories.enrollment.courseEnrollment({
+        run: {
+          id: run2.id,
+          course: { id: course.id, title: course.title },
+        },
+        grades: [factories.enrollment.grade({ grade: 0.95, passed: true })],
+        b2b_contract_id: contractId,
+        b2b_organization_id: orgId,
+      })
+
+      const transformedCourses = organizationCoursesWithContracts({
+        courses: [course],
+        contracts,
+        enrollments: [enrollmentLowGrade, enrollmentHighGrade],
+      })
+
+      expect(transformedCourses).toHaveLength(1)
+      const transformedCourse = transformedCourses[0]
+
+      // Should select the enrollment with the higher grade (0.95)
+      expect(transformedCourse.enrollment).toBeDefined()
+      expect(transformedCourse.enrollment?.grades).toHaveLength(1)
+      expect(transformedCourse.enrollment?.grades[0].grade).toBe(0.95)
+      expect(transformedCourse.enrollment?.id).toBe(enrollmentHighGrade.id)
+    })
   })
 
   describe("transformEnrollmentToDashboard", () => {
@@ -570,6 +628,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
           uuid: "test-cert-uuid",
           link: "/certificate/course/test123/",
         },
+        grades: enrollment.grades,
       })
     })
 
@@ -586,6 +645,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
         link: "",
       })
       expect(result.status).toBe(EnrollmentStatus.Enrolled)
+      expect(result.grades).toEqual([])
     })
 
     test("transforms certificate link pattern correctly", () => {
@@ -599,6 +659,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       const result = transformEnrollmentToDashboard(enrollment)
 
       expect(result.certificate?.link).toBe("/certificate/course/abc123/")
+      expect(result.grades).toEqual(enrollment.grades)
     })
   })
 

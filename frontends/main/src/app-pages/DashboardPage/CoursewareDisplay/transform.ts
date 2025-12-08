@@ -99,6 +99,7 @@ const transformEnrollmentToDashboard = (
           "/certificate/course/$1/",
         ) ?? "",
     },
+    grades: raw.grades,
   }
 }
 
@@ -238,7 +239,22 @@ const organizationCoursesWithContracts = (raw: {
         })
 
         if (validEnrollments.length > 0) {
-          const dashboardCourse = mitxonlineCourse(course, validEnrollments[0])
+          // Select enrollment with highest grade
+          const bestEnrollment = validEnrollments.reduce((best, current) => {
+            // Get the highest grade from each enrollment's grades array
+            const bestGrade = Math.max(
+              0,
+              ...best.grades.map((g) => g.grade ?? 0),
+            )
+            const currentGrade = Math.max(
+              0,
+              ...current.grades.map((g) => g.grade ?? 0),
+            )
+
+            return currentGrade > bestGrade ? current : best
+          }, validEnrollments[0])
+
+          const dashboardCourse = mitxonlineCourse(course, bestEnrollment)
           return dashboardCourse
         }
 

@@ -4831,6 +4831,12 @@ export interface PatchedRichTextArticleRequest {
    * @memberof PatchedRichTextArticleRequest
    */
   content?: any
+  /**
+   *
+   * @type {boolean}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  is_published?: boolean
 }
 /**
  * Serializer for UserListRelationship model
@@ -7258,6 +7264,12 @@ export interface RichTextArticle {
    * @memberof RichTextArticle
    */
   updated_on: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof RichTextArticle
+   */
+  is_published?: boolean
 }
 /**
  * Serializer for LearningResourceInstructor model
@@ -7277,6 +7289,12 @@ export interface RichTextArticleRequest {
    * @memberof RichTextArticleRequest
    */
   content?: any
+  /**
+   *
+   * @type {boolean}
+   * @memberof RichTextArticleRequest
+   */
+  is_published?: boolean
 }
 /**
  * * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid  * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid

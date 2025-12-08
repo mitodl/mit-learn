@@ -1,6 +1,34 @@
 Release Notes
 =============
 
+Version 0.48.2 (Released December 04, 2025)
+--------------
+
+- select best enrollment based on grades (#2782)
+- Update NextJS/React to avoid React CVE (#2783)
+- feaure: add more controls in tiptap editor, like divider and byline (#2774)
+- order programs in the org dashboard based on the order in the contract (#2779)
+- display not found on dashboard program page if not enrolled (#2778)
+- feat: Add backend support for image upload in tiptap editor (#2729)
+
+Version 0.48.1 (Released December 04, 2025)
+--------------
+
+- individual program display (#2721)
+- Use best_run_id to determine start date on frontend; bring back next_run/date (#2702)
+- climate topic updates (#2771)
+- Isolate tiptap vendor code (#2773)
+- feat: add image plugin (#2724)
+- Display program requirements (#2728)
+- feat: course card embedding plugin  (#2717)
+- fix(deps): update dependency redis to v7 (#2767)
+- chore(deps): update dependency jest-extended to v7 (#2750)
+- Upgrade Smoot to ^6.19.0 (#2684)
+- chore(deps): update dependency faker to v38 (#2749)
+- fix(deps): update dependency drf-nested-routers to ^0.95.0 (#2733)
+- update mitxonline client (#2726)
+- chore(deps): update dependency pytest-cov to v7 (#2752)
+
 Version 0.47.14 (Released December 01, 2025)
 ---------------
 

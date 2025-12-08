@@ -7,15 +7,17 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
+from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_for_all_users, clear_views_cache
 
+from .permissions import CanEditArticle, CanViewArticle, is_article_group_user
 from .serializers import ArticleImageUploadSerializer
 
 # Create your views here.
@@ -46,8 +48,18 @@ class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     pagination_class = DefaultPagination
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewArticle, CanEditArticle]
     http_method_names = VALID_HTTP_METHODS
+
+    def get_queryset(self):
+        qs = Article.objects.all()
+
+        # Admins/staff/learning_path_article_editors group see everything
+        if is_admin_user(self.request) or is_article_group_user(self.request):
+            return qs
+
+        # Normal users only see published articles
+        return qs.filter(is_published=True)
 
     @method_decorator(
         cache_page_for_all_users(
