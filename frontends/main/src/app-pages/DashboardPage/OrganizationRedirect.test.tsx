@@ -1,24 +1,24 @@
 import React from "react"
+import { vi } from "vitest"
 import { renderWithProviders, waitFor } from "@/test-utils"
 import OrganizationRedirect from "./OrganizationRedirect"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setupOrgAndUser } from "./CoursewareDisplay/test-utils"
 
-jest.mock("next-nprogress-bar", () => ({
-  useRouter: jest.fn(),
-}))
-
-const mockReplace = jest.fn()
-
-const { useRouter } = jest.requireMock("next-nprogress-bar")
-useRouter.mockReturnValue({
+const mockReplace = vi.fn()
+const mockUseRouter = vi.fn().mockReturnValue({
   replace: mockReplace,
 })
+
+vi.mock("next-nprogress-bar", () => ({
+  useRouter: () => mockUseRouter(),
+}))
 
 describe("OrganizationRedirect", () => {
   beforeEach(() => {
     mockReplace.mockClear()
+    mockUseRouter.mockClear()
     localStorage.clear()
     setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])

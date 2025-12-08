@@ -14,11 +14,17 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
+import { vi } from "vitest"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(() => ({})),
+}))
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
+vi.mock("@/common/useFeatureFlagsLoaded", () => ({
+  useFeatureFlagsLoaded: vi.fn(),
+}))
+const mockedUseFeatureFlagsLoaded = vi.mocked(useFeatureFlagsLoaded)
 
 const makeCourse = factories.courses.course
 const makePage = factories.pages.coursePageItem

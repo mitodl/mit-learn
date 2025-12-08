@@ -1,5 +1,6 @@
 import React from "react"
 import { screen } from "@testing-library/react"
+import { vi } from "vitest"
 import { renderWithProviders, setMockResponse } from "@/test-utils"
 import {
   factories as mitxOnlineFactories,
@@ -9,8 +10,12 @@ import { OrganizationCards } from "./OrganizationCards"
 import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(() => ({})),
+}))
+
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
 
 describe("OrganizationCards", () => {
   beforeEach(() => {

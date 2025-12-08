@@ -1,4 +1,5 @@
 import React from "react"
+import { vi, describe, test, expect } from "vitest"
 import HomePage from "./HomePage"
 import NewsEventsSection from "./NewsEventsSection"
 import { urls, setMockResponse } from "api/test-utils"
@@ -19,11 +20,10 @@ import * as routes from "@/common/urls"
 import { assertHeadings } from "ol-test-utilities"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockedPostHogCapture = jest.fn()
-jest.mock("posthog-js/react")
-jest.mocked(usePostHog).mockReturnValue(
+vi.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
+const mockedPostHogCapture = vi.fn()
+vi.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockedPostHogCapture },
 )

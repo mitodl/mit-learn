@@ -22,11 +22,14 @@ import { EnrollmentStatus } from "./types"
 import { getDescriptionFor } from "ol-test-utilities"
 import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
 import { PartialDeep } from "type-fest"
+import { vi } from "vitest"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(() => false),
+  usePostHog: vi.fn(() => ({})),
+}))
+
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
 
 describe("DashboardDialogs", () => {
   const setupApis = (includeExpired: boolean = true) => {
@@ -163,7 +166,7 @@ describe("JustInTimeDialog", () => {
     Object.defineProperty(window, "location", {
       configurable: true,
       enumerable: true,
-      value: { ...originalLocation, assign: jest.fn() },
+      value: { ...originalLocation, assign: vi.fn() },
     })
   })
 
@@ -413,8 +416,8 @@ describe("JustInTimeDialog", () => {
 
     invariant(course.coursewareId)
     const spies = {
-      createEnrollment: jest.fn(),
-      patchUser: jest.fn(),
+      createEnrollment: vi.fn(),
+      patchUser: vi.fn(),
     }
     setMockResponse.patch(mitxonline.urls.userMe.get(), spies.patchUser, {
       requestBody: {

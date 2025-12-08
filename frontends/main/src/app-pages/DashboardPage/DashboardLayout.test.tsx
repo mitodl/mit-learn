@@ -22,8 +22,12 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { OrganizationPage, ContractPage } from "@mitodl/mitxonline-api-axios/v2"
+import { vi } from "vitest"
 
-jest.mock("posthog-js/react")
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(() => ({})),
+}))
 
 describe("DashboardLayout", () => {
   type SetupOptions = {

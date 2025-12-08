@@ -1,4 +1,5 @@
 import React from "react"
+import { vi } from "vitest"
 import { screen, waitFor, within } from "@testing-library/react"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
 import { getCallToActionText } from "./CallToActionSection"
@@ -12,10 +13,10 @@ import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { kebabCase } from "lodash"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
+vi.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = vi
   .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
+  .mockReturnValue(false)
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
   width: 385,

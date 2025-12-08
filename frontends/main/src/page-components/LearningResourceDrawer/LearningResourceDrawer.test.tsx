@@ -16,26 +16,29 @@ import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { vi } from "vitest"
 
-jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
-  const actual = jest.requireActual(
+vi.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
+  const actual = vi.importActual(
     "../LearningResourceExpanded/LearningResourceExpanded",
   )
   return {
     ...actual,
-    LearningResourceExpanded: jest.fn(actual.LearningResourceExpanded),
+    LearningResourceExpanded: vi.fn(actual.LearningResourceExpanded),
   }
 })
 
-const mockedPostHogCapture = jest.fn()
-jest.mock("posthog-js/react")
-jest.mocked(usePostHog).mockReturnValue(
+const mockedPostHogCapture = vi.fn()
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(),
+}))
+vi.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
   { capture: mockedPostHogCapture },
 )
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
+mockedUseFeatureFlagEnabled.mockImplementation(() => false)
 
 describe("LearningResourceDrawer", () => {
   const setupApis = (

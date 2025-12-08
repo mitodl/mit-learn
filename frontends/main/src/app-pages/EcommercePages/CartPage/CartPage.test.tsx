@@ -1,4 +1,5 @@
 import React from "react"
+import { vi } from "vitest"
 import { renderWithProviders, setMockResponse } from "@/test-utils"
 import { urls } from "api/test-utils"
 import * as commonUrls from "@/common/urls"
@@ -8,8 +9,12 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import CartPage from "./CartPage"
 import { allowConsoleErrors } from "ol-test-utilities"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(() => ({})),
+}))
+
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
 
 const oldWindowLocation = window.location
 
@@ -21,7 +26,7 @@ beforeAll(() => {
     ...Object.getOwnPropertyDescriptors(oldWindowLocation),
     assign: {
       configurable: true,
-      value: jest.fn(),
+      value: vi.fn(),
     },
   })
 })

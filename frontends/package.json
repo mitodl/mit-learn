@@ -18,7 +18,10 @@
     "lint-fix": "yarn lint-check --fix",
     "fmt-check": "prettier --ignore-path ../.gitignore --ignore-path ../.prettierignore --check .",
     "fmt-fix": "prettier --ignore-path ../.gitignore --ignore-path ../.prettierignore --write .",
-    "test": "yarn global:test",
+    "test": "yarn test:jest && yarn test:vitest",
+    "test:jest": "yarn global:test",
+    "test:vitest": "yarn workspaces foreach -pt -A --include main run vitest:run",
+    "vitest": "vitest",
     "test-watch": "yarn global:test-watch",
     "style-lint": "yarn in-workspaces run global:style-lint",
     "style-lint-fix": "yarn in-workspaces run global:style-lint-fix",
@@ -72,7 +75,8 @@
     "stylelint-config-standard-scss": "^15.0.0",
     "ts-node": "^10.9.2",
     "type-fest": "^4.18.3",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "vitest": "^4.0.15"
   },
   "dependencies": {
     "@jest/environment": "^29.7.0"

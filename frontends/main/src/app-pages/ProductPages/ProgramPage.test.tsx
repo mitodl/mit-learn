@@ -22,11 +22,17 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { RequirementTreeBuilder } from "../../../../api/src/mitxonline/test-utils/factories/requirements"
 import { faker } from "@faker-js/faker/locale/en"
 import type { ResourceCardProps } from "@/page-components/ResourceCard/ResourceCard"
+import { vi } from "vitest"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-jest.mock("@/common/useFeatureFlagsLoaded")
-const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(),
+  usePostHog: vi.fn(() => ({})),
+}))
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
+vi.mock("@/common/useFeatureFlagsLoaded", () => ({
+  useFeatureFlagsLoaded: vi.fn(),
+}))
+const mockedUseFeatureFlagsLoaded = vi.mocked(useFeatureFlagsLoaded)
 
 jest.mock("@/page-components/ResourceCard/ResourceCard", () => {
   return {

@@ -1,5 +1,6 @@
 import React from "react"
 import { act, waitFor } from "@testing-library/react"
+import { vi } from "vitest"
 import {
   renderWithProviders,
   screen,
@@ -12,10 +13,12 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(() => false),
+  usePostHog: vi.fn(() => ({})),
+}))
+
+const mockedUseFeatureFlagEnabled = vi.mocked(useFeatureFlagEnabled)
 
 describe("EnrollmentDisplay", () => {
   const setupApis = (includeExpired: boolean = true) => {

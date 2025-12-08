@@ -14,17 +14,18 @@ import {
   LearningResourcesSearchRetrieveDeliveryEnum,
 } from "api"
 import React from "react"
+import { vi } from "vitest"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import HomeContent from "./HomeContent"
 import invariant from "tiny-invariant"
 import * as NextProgressBar from "next-nprogress-bar"
 
-jest.mock("posthog-js/react")
-jest.mock("next-nprogress-bar")
-const mockedUseFeatureFlagEnabled = jest
+vi.mock("posthog-js/react")
+vi.mock("next-nprogress-bar")
+const mockedUseFeatureFlagEnabled = vi
   .mocked(useFeatureFlagEnabled)
-  .mockImplementation(() => false)
+  .mockReturnValue(false)
 
 const makeSearchResponse = (
   results: LearningResource[],

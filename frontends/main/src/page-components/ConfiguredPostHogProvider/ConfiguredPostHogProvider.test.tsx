@@ -1,4 +1,5 @@
 import React from "react"
+import { vi } from "vitest"
 
 import { render, waitFor } from "@testing-library/react"
 import { PosthogIdentifier } from "./ConfiguredPostHogProvider"
@@ -11,20 +12,20 @@ import { makeUserSettings } from "@/test-utils/factories"
 import { usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
 
-jest.mock("posthog-js/react", () => {
+const mockPosthog: Pick<PostHog, "identify" | "reset" | "get_property"> = {
+  identify: vi.fn(),
+  reset: vi.fn(),
+  get_property: vi.fn(),
+}
+
+const mockUsePostHog = vi.fn().mockReturnValue(mockPosthog as PostHog)
+
+vi.mock("posthog-js/react", () => {
   return {
     __esModule: true,
-    usePostHog: jest.fn(),
+    usePostHog: () => mockUsePostHog(),
   }
 })
-const mockUsePostHog = jest.mocked(usePostHog)
-const posthog: Pick<PostHog, "identify" | "reset" | "get_property"> = {
-  identify: jest.fn(),
-  reset: jest.fn(),
-  get_property: jest.fn(),
-}
-mockUsePostHog.mockReturnValue(posthog as PostHog)
-const mockPosthog = jest.mocked(posthog)
 
 describe("PosthogIdentifier", () => {
   const setup = (user: Partial<User>) => {
