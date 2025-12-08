@@ -355,7 +355,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               {(!article || !article?.is_published) && (
                 <Button
                   variant="secondary"
-                  disabled={isPending || !touched}
+                  disabled={isPending || !touched || !title}
                   onClick={() => {
                     handleSave(false)
                     setIsPublishing(false)
