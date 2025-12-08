@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.48.3
+--------------
+
+- feature: add publish and save as draft functionality (#2780)
+- Fix task failure in get_medium_mit_news when url is None (#2785)
+- Canvas - Transcribe handwritten notes and pdf contentfiles  (#2777)
+
 Version 0.48.2 (Released December 04, 2025)
 --------------
 
