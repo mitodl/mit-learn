@@ -13078,6 +13078,8 @@ components:
           maxLength: 255
         content:
           default: {}
+        is_published:
+          type: boolean
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -14976,6 +14978,8 @@ components:
           type: string
           format: date-time
           readOnly: true
+        is_published:
+          type: boolean
       required:
       - created_on
       - id
@@ -14992,6 +14996,8 @@ components:
           maxLength: 255
         content:
           default: {}
+        is_published:
+          type: boolean
       required:
       - title
     SearchModeEnum:

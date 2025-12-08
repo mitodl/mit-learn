@@ -4,8 +4,8 @@ import React from "react"
 import { useArticleDetail } from "api/hooks/articles"
 import { LoadingSpinner, ArticleEditor } from "ol-components"
 import { notFound } from "next/navigation"
-import { Permission } from "api/hooks/user"
-import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
   const {
@@ -14,15 +14,15 @@ export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
     isFetching,
   } = useArticleDetail(Number(articleId))
 
+  const showArticleDetail = useFeatureFlagEnabled(
+    FeatureFlags.ArticleEditorView,
+  )
+
   if (isLoading || isFetching) {
     return <LoadingSpinner color="inherit" loading size={32} />
   }
-  if (!article) {
+  if (!article || !showArticleDetail) {
     return notFound()
   }
-  return (
-    <RestrictedRoute requires={Permission.ArticleEditor}>
-      <ArticleEditor article={article} readOnly />
-    </RestrictedRoute>
-  )
+  return <ArticleEditor article={article} readOnly />
 }

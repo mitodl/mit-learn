@@ -12,6 +12,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from articles.permissions import is_article_group_user
 from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
@@ -319,7 +320,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_article_editor(self, instance) -> bool:  # noqa: ARG002
         request = self.context.get("request")
         if request:
-            return is_admin_user(request)
+            return is_admin_user(request) or is_article_group_user(request)
         return False
 
     def create(self, validated_data):
