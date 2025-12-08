@@ -8,6 +8,7 @@ const articleKeys = {
   list: (params: ArticleListRequest) => [...articleKeys.listRoot(), params],
   detailRoot: () => [...articleKeys.root, "detail"],
   detail: (id: number) => [...articleKeys.detailRoot(), id],
+  articlesDetailRetrieve: (identifier: string) => [...articleKeys.detailRoot(), identifier],
 }
 
 const articleQueries = {
@@ -22,6 +23,12 @@ const articleQueries = {
       queryFn: () =>
         articlesApi.articlesRetrieve({ id }).then((res) => res.data),
     }),
+  articlesDetailRetrieve: (identifier: string) =>
+    queryOptions({
+      queryKey: articleKeys.articlesDetailRetrieve(identifier),
+      queryFn: () =>
+        articlesApi.articlesDetailRetrieve({ identifier }).then((res) => res.data),
+    }),   
 }
 
 export { articleQueries, articleKeys }

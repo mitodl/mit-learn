@@ -20,6 +20,7 @@ class Article(TimestampedModel):
     )
     content = models.JSONField(default={})
     title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=60, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
 
 
@@ -28,7 +29,6 @@ class ArticleImageUpload(models.Model):
     image_file = models.ImageField(
         null=True, upload_to=article_image_upload_uri, max_length=2083, editable=False
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,11 +1,8 @@
-"""URL configuration for staff_content"""
-
 from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from articles import views
-
-from .views import MediaUploadView
+from .views import MediaUploadView, ArticleDetailByIdOrSlugAPIView
 
 v1_router = SimpleRouter()
 v1_router.register(
@@ -21,11 +18,21 @@ urlpatterns = [
         include(
             (
                 [
+                    # Existing router URLs for the ViewSet
                     *v1_router.urls,
+
+                    # Media upload endpoint
                     path(
                         "upload-media/",
                         MediaUploadView.as_view(),
                         name="api-media-upload",
+                    ),
+
+                    # New endpoint: retrieve article by ID or slug
+                    path(
+                        "articles/detail/<str:identifier>/",
+                        ArticleDetailByIdOrSlugAPIView.as_view(),
+                        name="article-detail-by-id-or-slug",
                     ),
                 ],
                 "v1",

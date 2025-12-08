@@ -4837,6 +4837,12 @@ export interface PatchedRichTextArticleRequest {
    * @memberof PatchedRichTextArticleRequest
    */
   is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  slug?: string
 }
 /**
  * Serializer for UserListRelationship model
@@ -7270,6 +7276,12 @@ export interface RichTextArticle {
    * @memberof RichTextArticle
    */
   is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  slug?: string
 }
 /**
  * Serializer for LearningResourceInstructor model
@@ -7295,6 +7307,12 @@ export interface RichTextArticleRequest {
    * @memberof RichTextArticleRequest
    */
   is_published?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticleRequest
+   */
+  slug?: string
 }
 /**
  * * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid  * `phrase` - phrase * `best_fields` - best_fields * `most_fields` - most_fields * `hybrid` - hybrid
@@ -8923,6 +8941,52 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
+     * If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.
+     * @summary Retrieve article by ID or slug
+     * @param {string} identifier Article ID (number) or slug (string)
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    articlesDetailRetrieve: async (
+      identifier: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'identifier' is not null or undefined
+      assertParamExists("articlesDetailRetrieve", "identifier", identifier)
+      const localVarPath = `/api/v1/articles/detail/{identifier}/`.replace(
+        `{${"identifier"}}`,
+        encodeURIComponent(String(identifier)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Get a paginated list of articles
      * @summary List
      * @param {number} [limit] Number of results to return per page.
@@ -9144,6 +9208,38 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
+     * If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.
+     * @summary Retrieve article by ID or slug
+     * @param {string} identifier Article ID (number) or slug (string)
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async articlesDetailRetrieve(
+      identifier: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RichTextArticle>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.articlesDetailRetrieve(
+          identifier,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ArticlesApi.articlesDetailRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
      * Get a paginated list of articles
      * @summary List
      * @param {number} [limit] Number of results to return per page.
@@ -9286,6 +9382,21 @@ export const ArticlesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
+     * If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.
+     * @summary Retrieve article by ID or slug
+     * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    articlesDetailRetrieve(
+      requestParameters: ArticlesApiArticlesDetailRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<RichTextArticle> {
+      return localVarFp
+        .articlesDetailRetrieve(requestParameters.identifier, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
      * Get a paginated list of articles
      * @summary List
      * @param {ArticlesApiArticlesListRequest} requestParameters Request parameters.
@@ -9367,6 +9478,20 @@ export interface ArticlesApiArticlesDestroyRequest {
    * @memberof ArticlesApiArticlesDestroy
    */
   readonly id: number
+}
+
+/**
+ * Request parameters for articlesDetailRetrieve operation in ArticlesApi.
+ * @export
+ * @interface ArticlesApiArticlesDetailRetrieveRequest
+ */
+export interface ArticlesApiArticlesDetailRetrieveRequest {
+  /**
+   * Article ID (number) or slug (string)
+   * @type {string}
+   * @memberof ArticlesApiArticlesDetailRetrieve
+   */
+  readonly identifier: string
 }
 
 /**
@@ -9463,6 +9588,23 @@ export class ArticlesApi extends BaseAPI {
   ) {
     return ArticlesApiFp(this.configuration)
       .articlesDestroy(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.
+   * @summary Retrieve article by ID or slug
+   * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ArticlesApi
+   */
+  public articlesDetailRetrieve(
+    requestParameters: ArticlesApiArticlesDetailRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ArticlesApiFp(this.configuration)
+      .articlesDetailRetrieve(requestParameters.identifier, options)
       .then((request) => request(this.axios, this.basePath))
   }
 

@@ -4,7 +4,7 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
-import { useArticleDetail } from "api/hooks/articles"
+import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import {
   styled,
@@ -20,12 +20,12 @@ const PageContainer = styled.div(({ theme }) => ({
   height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
 }))
 
-const ArticleEditPage = ({ articleId }: { articleId: string }) => {
+const ArticleEditPage = ({ articleId, isId }: { articleId: string, isId: boolean }) => {
   const {
     data: article,
     isLoading,
     isFetching,
-  } = useArticleDetail(Number(articleId))
+  } = useArticleDetailRetrieve((articleId))
   const router = useRouter()
 
   if (isLoading || isFetching) {
@@ -41,7 +41,8 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         <ArticleEditor
           article={article}
           onSave={(article) => {
-            router.push(articlesView(article.id))
+             if(article.is_published) return router.push(articlesView(article.slug!))
+              router.push(articlesView(String(article.id)))
           }}
         />
       </PageContainer>

@@ -21,7 +21,8 @@ const ArticleNewPage: React.FC = () => {
       <PageContainer>
         <ArticleEditor
           onSave={(article) => {
-            router.push(articlesView(article.id))
+            if(article.is_published) return router.push(articlesView(article.slug!))
+            router.push(articlesView(String(article.id)))
           }}
         />
       </PageContainer>

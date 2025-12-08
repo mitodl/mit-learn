@@ -34,6 +34,7 @@ import { LearningResourceNode } from "./extensions/node/learning-resource-node/l
 import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
+import { CleanPaste } from "./extensions/Clipboard/Clipboard"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -64,6 +65,7 @@ import {
   extractFirstH1Title,
   ensureHeadings,
   ensureByline,
+  slugify,
 } from "./extensions/lib/utils"
 import { useUserHasPermission, Permission, useUserMe } from "api/hooks/user"
 
@@ -162,11 +164,13 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         },
       )
     } else {
+      const slug = slugify(title)
       createArticle(
         {
           title: title.trim(),
           content,
           is_published: publish,
+          slug: publish ? slug : "",
         },
         {
           onSuccess: onSave,
@@ -246,6 +250,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     },
     extensions: [
       CustomDocument,
+      CleanPaste,
       StarterKit.configure({
         horizontalRule: false,
         link: {
@@ -346,7 +351,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               <Spacer />
               <ButtonLink
                 variant="primary"
-                href={`/articles/${article?.id}/edit`}
+                href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
                 size="small"
               >
                 Edit

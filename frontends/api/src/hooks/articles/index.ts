@@ -28,6 +28,13 @@ const useArticleDetail = (id: number | undefined) => {
   })
 }
 
+const useArticleDetailRetrieve = (identifier: string | undefined) => {
+  return useQuery({
+    ...articleQueries.articlesDetailRetrieve(identifier ?? ""),
+    enabled: identifier !== undefined,
+  })
+}
+
 const useArticleCreate = () => {
   const client = useQueryClient()
   return useMutation({
@@ -90,4 +97,5 @@ export {
   useArticleCreate,
   useArticleDestroy,
   useArticlePartialUpdate,
+  useArticleDetailRetrieve,
 }

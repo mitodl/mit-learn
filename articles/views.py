@@ -4,12 +4,15 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
+    OpenApiParameter,
 )
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
@@ -78,6 +81,43 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
+class ArticleDetailByIdOrSlugAPIView(APIView):
+    """
+    Retrieve an article by numeric ID or slug string.
+    """
+
+    permission_classes = [CanViewArticle]  # Change if public access is allowed
+
+    @extend_schema(
+        summary="Retrieve article by ID or slug",
+        description="If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.",
+        parameters=[
+            OpenApiParameter(
+                name="identifier",
+                description="Article ID (number) or slug (string)",
+                required=True,
+                type=str,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
+        responses={200: RichTextArticleSerializer, 404: OpenApiResponse(description="Not found")},
+    )
+    def get(self, request, identifier):
+        qs = Article.objects.all()
+
+        # Admins/staff/groups see everything
+        if not (is_admin_user(request) or is_article_group_user(request)):
+            qs = qs.filter(is_published=True)
+
+        # Check if numeric → ID
+        if identifier.isdigit():
+            article = get_object_or_404(qs, id=int(identifier))
+        else:
+            article = get_object_or_404(qs, slug=identifier)
+
+        serializer = RichTextArticleSerializer(article, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
 @extend_schema_view(
     post=extend_schema(
         # request: multipart/form-data with a binary file field

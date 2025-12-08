@@ -124,6 +124,30 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/articles/detail/{identifier}/:
+    get:
+      operationId: articles_detail_retrieve
+      description: If the parameter is numeric, retrieve by ID. Otherwise, retrieve
+        by slug.
+      summary: Retrieve article by ID or slug
+      parameters:
+      - in: path
+        name: identifier
+        schema:
+          type: string
+        description: Article ID (number) or slug (string)
+        required: true
+      tags:
+      - articles
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RichTextArticle'
+          description: ''
+        '404':
+          description: Not found
   /api/v1/content_file_search/:
     get:
       operationId: content_file_search_retrieve
@@ -13080,6 +13104,10 @@ components:
           default: {}
         is_published:
           type: boolean
+        slug:
+          type: string
+          maxLength: 60
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedUserListRelationshipRequest:
       type: object
       description: Serializer for UserListRelationship model
@@ -14980,6 +15008,10 @@ components:
           readOnly: true
         is_published:
           type: boolean
+        slug:
+          type: string
+          maxLength: 60
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
       - created_on
       - id
@@ -14998,6 +15030,10 @@ components:
           default: {}
         is_published:
           type: boolean
+        slug:
+          type: string
+          maxLength: 60
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
       - title
     SearchModeEnum:
