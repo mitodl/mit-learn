@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.49.0
+Version 0.49.0 (Released December 09, 2025)
 --------------
 
 - Shanbady/revert pdf ocr changes (#2794)
