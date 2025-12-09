@@ -87,6 +87,10 @@ const useArticlePartialUpdate = () => {
         .then((response) => response.data),
     onSuccess: (article: Article) => {
       client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
+      const identifier = article.slug || article.id.toString()
+      client.invalidateQueries({
+        queryKey: articleKeys.articlesDetailRetrieve(identifier),
+      })
     },
   })
 }

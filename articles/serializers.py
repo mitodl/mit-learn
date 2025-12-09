@@ -32,9 +32,7 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
     created_on = serializers.DateTimeField(read_only=True, required=False)
     updated_on = serializers.DateTimeField(read_only=True, required=False)
     content = serializers.JSONField(default={})
-    slug = serializers.SlugField(
-        max_length=60, required=False, allow_blank=True
-    )
+    slug = serializers.SlugField(max_length=60, required=False, allow_blank=True)
     title = serializers.CharField(max_length=255)
     user = UserSerializer(read_only=True)
 
@@ -48,7 +46,7 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
             "created_on",
             "updated_on",
             "is_published",
-            "slug"
+            "slug",
         ]
 
 

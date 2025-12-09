@@ -7,7 +7,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
-export const ArticleDetailPage = ({ articleId, isId }: { articleId: string, isId: boolean }) => {
+export const ArticleDetailPage = ({ articleId }: { articleId: string }) => {
   const {
     data: article,
     isLoading,

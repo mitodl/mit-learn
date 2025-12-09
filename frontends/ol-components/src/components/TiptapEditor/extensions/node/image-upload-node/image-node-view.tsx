@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useRef, useEffect, useState } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 
@@ -65,13 +65,13 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
     position: absolute;
     top: -43px;
     left: 50%;
+    display: flex;
     transform: translateX(-50%);
     z-index: 2000;
     background-color: rgb(0 0 0 / 85%);
     padding: 6px 10px;
     border-radius: 8px;
     gap: 8px;
-    width: 220px;
     justify-content: center;
 
     &::after {
@@ -112,6 +112,18 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
       padding: 2px 6px;
       width: 100px;
     }
+    .svg-icon {
+      fill: white;
+    }
+  }
+  .image-content {
+    object-fit: contain;
+  }
+  .full-width {
+    width: 240px;
+  }
+  .small-width {
+    width: 140px;
   }
 `
 
@@ -121,8 +133,37 @@ export function ImageUploadNodeComponent({
 }: ReactNodeViewProps) {
   const { layout, caption, src, alt } = node.attrs
   const [hovering, setHovering] = useState(false)
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  const [canExpand, setCanExpand] = useState(true)
 
   const isEditable = node.attrs.editable
+
+  useEffect(() => {
+    if (!imgRef.current || !containerRef.current) return
+
+    const img = imgRef.current
+    const container = containerRef.current
+
+    const checkSize = () => {
+      const containerWidth = container.offsetWidth
+      const imageNaturalWidth = img.naturalWidth
+
+      // If the image can't expand beyond the container, disable wide/full
+      setCanExpand(imageNaturalWidth > containerWidth)
+    }
+
+    // when image loads
+    if (img.complete) {
+      checkSize()
+    } else {
+      img.onload = checkSize
+    }
+
+    window.addEventListener("resize", checkSize)
+    return () => window.removeEventListener("resize", checkSize)
+  }, [src])
 
   const openAltTextDialog = async () => {
     try {
@@ -138,6 +179,7 @@ export function ImageUploadNodeComponent({
   return (
     <StyledNodeViewWrapper
       layout={layout}
+      ref={containerRef}
       hovering={hovering}
       className={`layout-${layout}`}
       data-type="image-upload"
@@ -145,7 +187,9 @@ export function ImageUploadNodeComponent({
       onMouseLeave={() => setHovering(false)}
     >
       {isEditable && hovering && (
-        <div className="media-layout-toolbar">
+        <div
+          className={`media-layout-toolbar ${!canExpand ? "small-width" : "full-width"}`}
+        >
           <button
             className={layout === "default" ? "active" : ""}
             onClick={() => updateAttributes({ layout: "default" })}
@@ -153,20 +197,24 @@ export function ImageUploadNodeComponent({
           >
             <DefaultWidth />
           </button>
-          <button
-            className={layout === "wide" ? "active" : ""}
-            onClick={() => updateAttributes({ layout: "wide" })}
-            title="Wide"
-          >
-            <WideWidth />
-          </button>
-          <button
-            className={layout === "full" ? "active" : ""}
-            onClick={() => updateAttributes({ layout: "full" })}
-            title="Full width"
-          >
-            <FullWidth />
-          </button>
+          {canExpand && (
+            <>
+              <button
+                className={layout === "wide" ? "active" : ""}
+                onClick={() => updateAttributes({ layout: "wide" })}
+                title="Wide"
+              >
+                <WideWidth />
+              </button>
+              <button
+                className={layout === "full" ? "active" : ""}
+                onClick={() => updateAttributes({ layout: "full" })}
+                title="Full width"
+              >
+                <FullWidth />
+              </button>
+            </>
+          )}
           <button
             onClick={openAltTextDialog}
             title="Edit Alt Text"
@@ -178,9 +226,10 @@ export function ImageUploadNodeComponent({
       )}
 
       <img
+        ref={imgRef}
         src={src}
         alt={alt || caption || "Image"}
-        className="image-content"
+        className={layout === "default" ? "image-content" : undefined}
       />
       {isEditable ? (
         <input

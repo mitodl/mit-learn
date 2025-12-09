@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('articles', '0007_add_editors_group'),
+        ("articles", "0007_add_editors_group"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='article',
-            name='slug',
-            field=models.SlugField(blank=True, max_length=60, null=True, unique=True),
+            model_name="article",
+            name="slug",
+            field=models.SlugField(blank=True, max_length=255, null=True, unique=True),
         ),
     ]

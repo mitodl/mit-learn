@@ -127,8 +127,7 @@ paths:
   /api/v1/articles/detail/{identifier}/:
     get:
       operationId: articles_detail_retrieve
-      description: If the parameter is numeric, retrieve by ID. Otherwise, retrieve
-        by slug.
+      description: If the parameter is numeric, retrieve by ID. Otherwise, slug.
       summary: Retrieve article by ID or slug
       parameters:
       - in: path

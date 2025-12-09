@@ -20,14 +20,12 @@ urlpatterns = [
                 [
                     # Existing router URLs for the ViewSet
                     *v1_router.urls,
-
                     # Media upload endpoint
                     path(
                         "upload-media/",
                         MediaUploadView.as_view(),
                         name="api-media-upload",
                     ),
-
                     # New endpoint: retrieve article by ID or slug
                     path(
                         "articles/detail/<str:identifier>/",

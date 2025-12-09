@@ -20,12 +20,12 @@ const PageContainer = styled.div(({ theme }) => ({
   height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
 }))
 
-const ArticleEditPage = ({ articleId, isId }: { articleId: string, isId: boolean }) => {
+const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const {
     data: article,
     isLoading,
     isFetching,
-  } = useArticleDetailRetrieve((articleId))
+  } = useArticleDetailRetrieve(articleId)
   const router = useRouter()
 
   if (isLoading || isFetching) {
@@ -41,8 +41,9 @@ const ArticleEditPage = ({ articleId, isId }: { articleId: string, isId: boolean
         <ArticleEditor
           article={article}
           onSave={(article) => {
-             if(article.is_published) return router.push(articlesView(article.slug!))
-              router.push(articlesView(String(article.id)))
+            if (article.is_published)
+              return router.push(articlesView(article.slug!))
+            router.push(articlesView(String(article.id)))
           }}
         />
       </PageContainer>

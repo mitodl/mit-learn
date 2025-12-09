@@ -45,7 +45,10 @@ describe("ArticleEditPage", () => {
         ],
       },
     })
-    setMockResponse.get(urls.articles.details(article.id), article)
+    setMockResponse.get(
+      urls.articles.articlesDetailRetrieve(String(article.id)),
+      article,
+    )
 
     renderWithProviders(<ArticleEditPage articleId={"42"} />)
 

@@ -34,7 +34,6 @@ import { LearningResourceNode } from "./extensions/node/learning-resource-node/l
 import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
-import { CleanPaste } from "./extensions/Clipboard/Clipboard"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -151,6 +150,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       )
       return
     }
+    const slug = slugify(title)
     if (article) {
       updateArticle(
         {
@@ -158,13 +158,13 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           title: title.trim(),
           content,
           is_published: publish,
+          slug: !article.is_published ? slug : article.slug || "",
         },
         {
           onSuccess: onSave,
         },
       )
     } else {
-      const slug = slugify(title)
       createArticle(
         {
           title: title.trim(),
@@ -250,7 +250,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     },
     extensions: [
       CustomDocument,
-      CleanPaste,
       StarterKit.configure({
         horizontalRule: false,
         link: {
@@ -264,7 +263,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             return "What’s the title?"
           }
           if (node.type.name === "heading" && node.attrs.level === 4) {
-            return "Add a subtitle..."
+            return !readOnly ? "Add a subtitle..." : ""
           }
           return !readOnly ? "Start typing here..." : ""
         },

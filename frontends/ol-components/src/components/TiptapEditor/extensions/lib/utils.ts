@@ -96,15 +96,14 @@ export function ensureByline(
   }
 }
 
-
 export const slugify = (title: string) => {
   return title
     .toLowerCase()
     .trim()
-    .normalize("NFKD")                     // remove accents
-    .replace(/[^\w\s-]/g, "")              // remove special chars
-    .replace(/\s+/g, "-")                  // spaces → hyphens
-    .replace(/-+/g, "-")                   // collapse multiple hyphens
-    .substring(0, 60)                      // truncate to 50/60 chars
-    .replace(/^-+|-+$/g, "")               // trim hyphens
+    .normalize("NFKD") // remove accents
+    .replace(/[^\w\s-]/g, "") // remove special chars
+    .replace(/\s+/g, "-") // spaces → hyphens
+    .replace(/-+/g, "-") // collapse multiple hyphens
+    .substring(0, 60) // truncate to 50/60 chars
+    .replace(/^-+|-+$/g, "") // trim hyphens
 }

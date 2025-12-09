@@ -90,7 +90,7 @@ class ArticleDetailByIdOrSlugAPIView(APIView):
 
     @extend_schema(
         summary="Retrieve article by ID or slug",
-        description="If the parameter is numeric, retrieve by ID. Otherwise, retrieve by slug.",
+        description="If the parameter is numeric, retrieve by ID. Otherwise, slug.",
         parameters=[
             OpenApiParameter(
                 name="identifier",
@@ -100,7 +100,10 @@ class ArticleDetailByIdOrSlugAPIView(APIView):
                 location=OpenApiParameter.PATH,
             ),
         ],
-        responses={200: RichTextArticleSerializer, 404: OpenApiResponse(description="Not found")},
+        responses={
+            200: RichTextArticleSerializer,
+            404: OpenApiResponse(description="Not found"),
+        },
     )
     def get(self, request, identifier):
         qs = Article.objects.all()
@@ -117,7 +120,8 @@ class ArticleDetailByIdOrSlugAPIView(APIView):
 
         serializer = RichTextArticleSerializer(article, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+
 @extend_schema_view(
     post=extend_schema(
         # request: multipart/form-data with a binary file field

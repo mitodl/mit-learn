@@ -20,7 +20,7 @@ class Article(TimestampedModel):
     )
     content = models.JSONField(default={})
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=60, unique=True, blank=True, null=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
 
 
