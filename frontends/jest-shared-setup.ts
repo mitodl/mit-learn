@@ -4,8 +4,11 @@ import "cross-fetch/polyfill"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
+import { setDefaultTimezone } from "ol-test-utilities"
 
 expect.extend(matchers)
+
+setDefaultTimezone("UTC")
 
 // env vars
 process.env.NEXT_PUBLIC_MITOL_API_BASE_URL =
