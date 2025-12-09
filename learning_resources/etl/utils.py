@@ -1079,7 +1079,7 @@ def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
-    converter = DoclingLLMConverter(pdf_path, debug_mode=False)
+    converter = DoclingLLMConverter(pdf_path)
     return converter.convert_to_markdown()
 
 
