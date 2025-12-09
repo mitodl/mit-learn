@@ -337,17 +337,19 @@ const OrgProgramDisplay: React.FC<{
     (enrollment) => enrollment.program.id === program.id,
   )
   const hasValidCertificate = !!programEnrollment?.certificate
-  const courses = useQuery(
-    coursesQueries.coursesList({
+  const courses = useQuery({
+    ...coursesQueries.coursesList({
       id: program.courseIds,
       org_id: orgId,
       page_size: 30,
     }),
-  )
+    enabled: !programLoading,
+  })
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
-  if (programLoading || courses.isLoading) return skeleton
+
+  const sanitizedHtml = DOMPurify.sanitize(program.description)
   const rawCourses =
     courses.data?.results.sort((a, b) => {
       return program.courseIds.indexOf(a.id) - program.courseIds.indexOf(b.id)
@@ -357,7 +359,6 @@ const OrgProgramDisplay: React.FC<{
     contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })
-  const sanitizedHtml = DOMPurify.sanitize(program.description)
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -383,17 +384,19 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {transformedCourses.map((course) => (
-          <DashboardCardStyled
-            Component="li"
-            key={course.key}
-            dashboardResource={course}
-            noun="Module"
-            offerUpgrade={false}
-            titleAction="courseware"
-            buttonHref={course.run?.coursewareUrl}
-          />
-        ))}
+        {programLoading || courses.isLoading
+          ? skeleton
+          : transformedCourses.map((course) => (
+              <DashboardCardStyled
+                Component="li"
+                key={course.key}
+                dashboardResource={course}
+                noun="Module"
+                offerUpgrade={false}
+                titleAction="courseware"
+                buttonHref={course.run?.coursewareUrl}
+              />
+            ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -453,6 +456,24 @@ const OrganizationContentInternal: React.FC<
     </Stack>
   )
 
+  // Wait for all top-level queries to complete before rendering content
+  if (
+    programs.isLoading ||
+    programCollections.isLoading ||
+    courseRunEnrollments.isLoading ||
+    programEnrollments.isLoading
+  ) {
+    return (
+      <>
+        <Stack>
+          <OrganizationHeader org={org} />
+          <WelcomeMessage org={org} />
+        </Stack>
+        {skeleton}
+      </>
+    )
+  }
+
   return (
     <>
       <Stack>
@@ -460,7 +481,7 @@ const OrganizationContentInternal: React.FC<
         <WelcomeMessage org={org} />
       </Stack>
       <OrganizationRoot>
-        {programs.isLoading || !transformedPrograms
+        {!transformedPrograms
           ? skeleton
           : transformedPrograms.map((program) => (
               <OrgProgramDisplay
@@ -473,11 +494,11 @@ const OrganizationContentInternal: React.FC<
                 orgId={orgId}
               />
             ))}
-        {programCollections.isLoading ? (
-          skeleton
-        ) : (
-          <ProgramCollectionsList>
-            {programCollections.data?.results.map((collection) => {
+        <ProgramCollectionsList>
+          {/* Filter collections - for now show none since contract doesn't specify which collections */}
+          {(programCollections.data?.results ?? [])
+            .filter(() => false)
+            .map((collection) => {
               const transformedCollection =
                 transform.mitxonlineProgramCollection(collection)
               return (
@@ -490,8 +511,7 @@ const OrganizationContentInternal: React.FC<
                 />
               )
             })}
-          </ProgramCollectionsList>
-        )}
+        </ProgramCollectionsList>
         {programs.data?.results.length === 0 && (
           <HeaderRoot>
             <Typography variant="h3" component="h1">
