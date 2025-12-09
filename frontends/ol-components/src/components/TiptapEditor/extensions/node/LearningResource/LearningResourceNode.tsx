@@ -1,6 +1,9 @@
+import React from "react"
+import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
+import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
-import { ReactNodeViewRenderer } from "@tiptap/react"
-import { LearningResourceNodeView } from "./LearningResourceListCard"
+import { LearningResourceListCard, styled } from "ol-components"
+import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -9,6 +12,36 @@ declare module "@tiptap/core" {
     }
   }
 }
+
+const StyledLearningResourceListCard = styled(LearningResourceListCard)({
+  "&& a": {
+    color: "inherit",
+    textDecoration: "none",
+  },
+  "&& a span": {
+    textDecoration: "none",
+  },
+})
+
+export const LearningResourceListCardWrapper = ({
+  node,
+}: ReactNodeViewProps) => {
+  const resourceId = node.attrs.resourceId
+  const href = node.attrs.href
+
+  const { data, isLoading } = useLearningResourcesDetail(resourceId)
+
+  return (
+    <NodeViewWrapper className="learning-resource-node">
+      <StyledLearningResourceListCard
+        resource={data}
+        href={href}
+        isLoading={isLoading}
+      />
+    </NodeViewWrapper>
+  )
+}
+
 export interface LearningResourceOptions {
   HTMLAttributes: Record<string, string | number | null | undefined>
 }
@@ -52,6 +85,6 @@ export const LearningResourceNode = Node.create<LearningResourceOptions>({
     }
   },
   addNodeView() {
-    return ReactNodeViewRenderer(LearningResourceNodeView)
+    return ReactNodeViewRenderer(LearningResourceListCardWrapper)
   },
 })
