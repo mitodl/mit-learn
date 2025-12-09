@@ -45,27 +45,29 @@ const getKey = ({ source, resourceType, id, runId }: KeyOpts) => {
 const mitxonlineCourse = (
   raw: CourseWithCourseRunsSerializerV2,
   enrollment?: DashboardCourseEnrollment | undefined,
+  run?: CourseWithCourseRunsSerializerV2["courseruns"][number] | undefined,
 ): DashboardCourse => {
-  const run = raw.courseruns[0]
+  // Use provided run, or fall back to enrollment's run, or first run in course
+  const courseRun = run ?? (enrollment?.run || raw.courseruns[0])
   const transformedCourse = {
     key: getKey({
       source: sources.mitxonline,
       resourceType: DashboardResourceType.Course,
       id: raw.id,
-      runId: run?.id,
+      runId: courseRun?.id,
     }),
-    coursewareId: run?.courseware_id ?? null,
+    coursewareId: courseRun?.courseware_id ?? null,
     readableId: raw.readable_id ?? null,
     type: DashboardResourceType.Course,
     title: raw.title,
     marketingUrl: raw.page?.page_url,
     run: {
-      startDate: run?.start_date,
-      endDate: run?.end_date,
-      certificateUpgradeDeadline: run?.upgrade_deadline,
-      certificateUpgradePrice: run?.products[0]?.price,
-      coursewareUrl: run?.courseware_url,
-      canUpgrade: !!run?.is_upgradable,
+      startDate: courseRun?.start_date,
+      endDate: courseRun?.end_date,
+      certificateUpgradeDeadline: courseRun?.upgrade_deadline,
+      certificateUpgradePrice: courseRun?.products[0]?.price,
+      coursewareUrl: courseRun?.courseware_url,
+      canUpgrade: !!courseRun?.is_upgradable,
     },
   } as DashboardCourse
 
@@ -100,6 +102,7 @@ const transformEnrollmentToDashboard = (
         ) ?? "",
     },
     grades: raw.grades,
+    run: raw.run,
   }
 }
 
@@ -210,6 +213,31 @@ const createOrgUnenrolledCourse = (
   }
 }
 
+/**
+ * Selects the best enrollment from multiple enrollments for the same course.
+ * Priority:
+ * 1. Prefer enrollment with a certificate
+ * 2. If tied, prefer highest grade
+ * 3. Otherwise take first match
+ */
+const selectBestEnrollment = (
+  enrollments: CourseRunEnrollmentRequestV2[],
+): CourseRunEnrollmentRequestV2 => {
+  return enrollments.reduce((best, current) => {
+    const bestHasCert = !!best.certificate?.uuid
+    const currentHasCert = !!current.certificate?.uuid
+
+    // Prioritize having a certificate
+    if (currentHasCert && !bestHasCert) return current
+    if (bestHasCert && !currentHasCert) return best
+
+    // If both have or don't have certificates, compare grades
+    const bestGrade = Math.max(0, ...best.grades.map((g) => g.grade ?? 0))
+    const currentGrade = Math.max(0, ...current.grades.map((g) => g.grade ?? 0))
+    return currentGrade > bestGrade ? current : best
+  }, enrollments[0])
+}
+
 const organizationCoursesWithContracts = (raw: {
   courses: CourseWithCourseRunsSerializerV2[]
   contracts?: ContractPage[] // Make optional
@@ -227,11 +255,9 @@ const organizationCoursesWithContracts = (raw: {
     const enrollments = enrollmentsByCourseId[course.id]
 
     if (enrollments?.length > 0) {
-      const transformedEnrollments =
-        enrollmentsToOrgDashboardEnrollments(enrollments)
       if (raw.contracts && raw.contracts.length > 0) {
         // Filter enrollments to only include those with valid contracts
-        const validEnrollments = transformedEnrollments.filter((enrollment) => {
+        const validEnrollments = enrollments.filter((enrollment) => {
           const courseRunContractId = enrollment.b2b_contract_id
           return (
             courseRunContractId && contractIds.includes(courseRunContractId)
@@ -239,23 +265,34 @@ const organizationCoursesWithContracts = (raw: {
         })
 
         if (validEnrollments.length > 0) {
-          // Select enrollment with highest grade
-          const bestEnrollment = validEnrollments.reduce((best, current) => {
-            // Get the highest grade from each enrollment's grades array
-            const bestGrade = Math.max(
-              0,
-              ...best.grades.map((g) => g.grade ?? 0),
+          // Find all enrollments that match runs in this course
+          // Match by run ID AND verify the contract matches
+          const matchingEnrollments = validEnrollments.filter((enrollment) => {
+            const matchingRun = course.courseruns.find(
+              (run) => run.id === enrollment.run.id,
             )
-            const currentGrade = Math.max(
-              0,
-              ...current.grades.map((g) => g.grade ?? 0),
+            return (
+              matchingRun &&
+              matchingRun.b2b_contract === enrollment.b2b_contract_id
             )
+          })
 
-            return currentGrade > bestGrade ? current : best
-          }, validEnrollments[0])
+          if (matchingEnrollments.length > 0) {
+            // If multiple enrollments exist (e.g., user enrolled in multiple runs
+            // of the same course within the same contract), select the best one
+            const bestEnrollment = selectBestEnrollment(matchingEnrollments)
 
-          const dashboardCourse = mitxonlineCourse(course, bestEnrollment)
-          return dashboardCourse
+            // Find the corresponding run from course.courseruns
+            const matchingRun = course.courseruns.find(
+              (run) => run.id === bestEnrollment.run.id,
+            )
+            const dashboardCourse = mitxonlineCourse(
+              course,
+              transformEnrollmentToDashboard(bestEnrollment),
+              matchingRun,
+            )
+            return dashboardCourse
+          }
         }
 
         // If contracts are provided but a matching one isn't found, treat it as unenrolled
@@ -268,9 +305,13 @@ const organizationCoursesWithContracts = (raw: {
               ?.id === enrollment.run.id,
         )
         if (matchingEnrollment) {
+          const matchingRun = course.courseruns.find(
+            (run) => run.id === matchingEnrollment.run.id,
+          )
           return mitxonlineCourse(
             course,
             transformEnrollmentToDashboard(matchingEnrollment),
+            matchingRun,
           )
         }
       }
@@ -362,4 +403,5 @@ export {
   mitxonlineProgramCollection,
   sortDashboardCourses,
   filterEnrollmentsByOrganization,
+  selectBestEnrollment,
 }

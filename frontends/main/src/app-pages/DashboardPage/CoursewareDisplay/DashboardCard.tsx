@@ -599,9 +599,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {isCourse &&
-      enrollment?.status === EnrollmentStatus.Completed &&
-      run?.certificate?.link ? (
+      {isCourse && run?.certificate?.link ? (
         <SubtitleLink href={run.certificate.link}>
           <RiAwardLine size="16px" />
           View Certificate
