@@ -17,6 +17,9 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
+import EnrollmentDialog from "@/page-components/EnrollmentDialog/EnrollmentDialog"
+import NiceModal from "@ebay/nice-modal-react"
+import { getCertificatePrice } from "@/common/mitxonline"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
@@ -115,16 +118,6 @@ const getEndDate = (run: CourseRunV2) => {
       {formatDate(run.end_date)}
     </NoSSR>
   )
-}
-
-const getCertificatePrice = (run: CourseRunV2) => {
-  const product = run.products[0]
-  if (!product || run.is_archived) return null
-  const amount = product.price
-  return Number(amount).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  })
 }
 
 const getUpgradeDeadline = (run: CourseRunV2) => {
@@ -396,7 +389,10 @@ const CourseSummary: React.FC<{
           <>
             <WideButton
               onClick={() => {
-                alert("Enroll flow not yet implemented")
+                NiceModal.show(EnrollmentDialog, {
+                  type: "course",
+                  resource: course,
+                })
               }}
               variant="primary"
               size="large"
