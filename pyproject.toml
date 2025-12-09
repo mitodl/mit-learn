@@ -116,9 +116,6 @@ youtube-transcript-api = "^1.0.0"
 pypdfium2 = "^4.30.0"
 pyarrow = "^21.0.0"
 django-zeal = "^2.0.4"
-docling = {extras = ["cpu"], version = "^2.63.0"}
-hf-xet = "^1.2.0"
-opencv-python = "^4.12.0.88"
 
 
 
