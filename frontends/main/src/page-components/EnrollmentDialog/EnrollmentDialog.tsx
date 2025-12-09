@@ -91,6 +91,10 @@ const CertificateBox = styled.div<{ disabled?: boolean }>(
       background: "rgba(3, 21, 45, 0.05)",
       borderRadius: "4px",
       border: "1px solid  #DFE5EC",
+      gap: "24px",
+      [theme.breakpoints.down("sm")]: {
+        flexDirection: "column",
+      },
     },
     disabled && {
       background: "rgba(3, 21, 45, 0.025)",
@@ -98,6 +102,11 @@ const CertificateBox = styled.div<{ disabled?: boolean }>(
     },
   ],
 )
+const CertDate = styled.span<{ disabled?: boolean }>(({ theme, disabled }) => [
+  { ...theme.typography.body1 },
+  !disabled && { color: theme.custom.colors.red },
+])
+
 const CertificatePriceRoot = styled.div({
   display: "flex",
   alignItems: "flex-start",
@@ -109,12 +118,15 @@ const CertificatePriceRoot = styled.div({
   },
 })
 
-const CertificateReasonsList = styled(PlainList)({
+const CertificateReasonsList = styled(PlainList)(({ theme }) => ({
   display: "grid",
   rowGap: "24px",
   columnGap: "40px",
   gridTemplateColumns: "1fr 1fr",
-})
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr",
+  },
+}))
 const CertificateReasonItem = styled.li(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
@@ -174,9 +186,9 @@ const CertificateUpsell: React.FC<{
             >
               Get Certificate{price ? `: ${price}` : ""}
             </Typography>
-            <Typography component="span" variant="body1">
+            <CertDate disabled={!enabled}>
               {enabled ? deadlineUI : "Not available"}
-            </Typography>
+            </CertDate>
           </Stack>
         </CertificatePriceRoot>
         <BigButton
