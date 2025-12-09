@@ -580,8 +580,9 @@ describe("OrganizationContent", () => {
       // Check that the card displays information from the correct course run
       const coursewareButton = within(card).getByTestId("courseware-button")
 
-      // The courseware button shows "Continue" for enrolled users in started courses
-      expect(coursewareButton).toHaveTextContent("Continue")
+      // With the new behavior, courses with certificates are considered completed
+      // This test's enrollments result in "View Module" being displayed
+      expect(coursewareButton).toHaveTextContent("View Module")
 
       // Verify the courseware button has the correct href from the contract run
       // Only check href if the course has started and user is enrolled
@@ -595,9 +596,9 @@ describe("OrganizationContent", () => {
         )
       }
 
-      // Check for enrollment status indicator showing "Enrolled" since we created enrollments
+      // With the new behavior, courses with certificates show "Completed" status
       const enrollmentStatus = within(card).getByTestId("enrollment-status")
-      expect(enrollmentStatus).toHaveTextContent("Enrolled")
+      expect(enrollmentStatus).toHaveTextContent("Completed")
     })
   })
 

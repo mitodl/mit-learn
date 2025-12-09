@@ -539,6 +539,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const run = isCourse ? dashboardResource.run : undefined
   const coursewareId = isCourse ? dashboardResource.coursewareId : null
   const readableId = isCourse ? dashboardResource.readableId : null
+  const hasValidCertificate = isCourse ? !!run?.certificate?.link : false
+  const enrollmentStatus = hasValidCertificate
+    ? EnrollmentStatus.Completed
+    : enrollment?.status
 
   // Title link logic
   const coursewareUrl = run?.coursewareUrl
@@ -623,7 +627,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : isCourse ? (
     <>
       <EnrollmentStatusIndicator
-        status={enrollment?.status}
+        status={enrollmentStatus}
         showNotComplete={showNotComplete}
       />
       <CoursewareButton
@@ -631,7 +635,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         coursewareId={coursewareId}
         readableId={readableId}
         startDate={run?.startDate}
-        enrollmentStatus={enrollment?.status}
+        enrollmentStatus={enrollmentStatus}
         href={buttonHref ?? run?.coursewareUrl}
         endDate={run?.endDate}
         noun={noun}
