@@ -37,7 +37,7 @@ import {
   UnenrollDialog,
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
-import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
@@ -177,7 +177,7 @@ const getDefaultContextMenuItems = (
 
 const useOneClickEnroll = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const createEnrollment = useCreateEnrollment()
+  const createEnrollment = useCreateB2bEnrollment()
   const userCountry = mitxOnlineUser.data?.legal_address?.country
   const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
   const showJustInTimeDialog = !userCountry || !userYearOfBirth

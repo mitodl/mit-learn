@@ -286,7 +286,12 @@ describe("Course Price Row", () => {
   })
 
   test("Offers certificate upgrade if not archived and has product", () => {
-    const run = makeRun({ is_archived: false, products: [makeProduct()] })
+    const run = makeRun({
+      is_archived: false,
+      products: [makeProduct()],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: shuffle([run, makeRun()]),
