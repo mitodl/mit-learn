@@ -46,8 +46,8 @@ const SimpleSelect: React.FC<SimpleSelectProps> = ({ options, ...others }) => {
   )
 }
 
-type SimpleSelectFieldProps = Pick<
-  SelectFieldProps<string | string[]>,
+type SimpleSelectFieldProps<V = unknown> = Pick<
+  SelectFieldProps<V>,
   | "fullWidth"
   | "label"
   | "helpText"
@@ -71,10 +71,10 @@ type SimpleSelectFieldProps = Pick<
  * A form field for text input via select dropdowns. Supports labels, help text,
  * error text, and start/end adornments.
  */
-const SimpleSelectField: React.FC<SimpleSelectFieldProps> = ({
+const SimpleSelectField = function <V = unknown>({
   options,
   ...others
-}) => {
+}: SimpleSelectFieldProps<V>) {
   return (
     <SelectField {...others}>
       {options.map(({ value, label, ...itemProps }) => (
