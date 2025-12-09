@@ -449,8 +449,8 @@ const UpgradeBanner: React.FC<
 }
 
 const CountdownRoot = styled.div(({ theme }) => ({
-  width: "142px",
-  marginRight: "32px",
+  width: "100%",
+  paddingRight: "32px",
   display: "flex",
   justifyContent: "center",
   alignSelf: "end",
