@@ -49,23 +49,15 @@ const BigButton = styled(
     return (
       <Button variant="primary" {...others}>
         <span>
-          <Typography
-            component="span"
-            variant="h5"
-            sx={(theme) => ({ fontWeight: theme.typography.fontWeightBold })}
-          >
-            {label}
-          </Typography>
+          <span className="label">{label}</span>
           <br />
-          <Typography component="span" variant="h5">
-            {sublabel}
-          </Typography>
+          <span className="sublabel">{sublabel}</span>
         </span>
         {endIcon}
       </Button>
     )
   },
-)({
+)(({ theme }) => ({
   // mostly inheriting colors, hover, etc from regular button.
   padding: "16px 32px",
   boxShadow: "none",
@@ -78,7 +70,14 @@ const BigButton = styled(
     width: "24px",
     height: "24px",
   },
-})
+  ...theme.typography.h5,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle1,
+  },
+  ".label": {
+    fontWeight: theme.typography.fontWeightBold,
+  },
+}))
 
 const CertificateBox = styled.div<{ disabled?: boolean }>(
   ({ theme, disabled }) => [
@@ -181,7 +180,6 @@ const CertificateUpsell: React.FC<{
               variant="h5"
               sx={(theme) => ({
                 fontWeight: theme.typography.fontWeightBold,
-                marginBottom: "4px",
               })}
             >
               Get Certificate{price ? `: ${price}` : ""}
