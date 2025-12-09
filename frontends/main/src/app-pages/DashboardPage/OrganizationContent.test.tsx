@@ -82,8 +82,12 @@ describe("OrganizationContent", () => {
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
-    const programElement = await screen.findByTestId("org-program-root")
-    const cards = await within(programElement).findAllByTestId(
+    const programElements = await screen.findAllByTestId("org-program-root")
+    // Find the program with programA's title
+    const programAElement =
+      programElements.find((el) => el.textContent?.includes(programA.title)) ||
+      programElements[0]
+    const cards = await within(programAElement).findAllByTestId(
       "enrollment-card-desktop",
     )
 
@@ -176,6 +180,7 @@ describe("OrganizationContent", () => {
     })
   })
 
+  // Collections are currently disabled in the org dashboard
   test("Renders program collections", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
@@ -244,6 +249,7 @@ describe("OrganizationContent", () => {
     expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
   })
 
+  // Collections are currently disabled in the org dashboard
   test("Program collection displays the first course from each program", async () => {
     const { orgX, programA, programCollection, coursesA } =
       setupProgramsAndCourses()
@@ -292,6 +298,7 @@ describe("OrganizationContent", () => {
     expect(courseCard).toHaveTextContent(firstCourse!.title)
   })
 
+  // Collections are currently disabled in the org dashboard
   test("Does not render a program separately if it is part of a collection", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
@@ -367,6 +374,7 @@ describe("OrganizationContent", () => {
     expect(collections.length).toBe(0)
   })
 
+  // Collections are currently disabled in the org dashboard
   test("Does not render program collection if all programs have no courses", async () => {
     const { orgX, programA, programB } = setupProgramsAndCourses()
 
@@ -403,6 +411,7 @@ describe("OrganizationContent", () => {
     })
   })
 
+  // Collections are currently disabled in the org dashboard
   test("Renders program collection when at least one program has courses", async () => {
     const { orgX, programA, programB, programCollection, coursesB } =
       setupProgramsAndCourses()

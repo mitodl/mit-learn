@@ -337,14 +337,13 @@ const OrgProgramDisplay: React.FC<{
     (enrollment) => enrollment.program.id === program.id,
   )
   const hasValidCertificate = !!programEnrollment?.certificate
-  const courses = useQuery({
-    ...coursesQueries.coursesList({
+  const courses = useQuery(
+    coursesQueries.coursesList({
       id: program.courseIds,
       org_id: orgId,
       page_size: 30,
     }),
-    enabled: !programLoading,
-  })
+  )
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
@@ -432,8 +431,15 @@ const OrganizationContentInternal: React.FC<
     programCollectionQueries.programCollectionsList({}),
   )
 
+  // Get IDs of all programs that are in collections
+  const programsInCollections = new Set(
+    programCollections.data?.results.flatMap((collection) =>
+      collection.programs.map((p) => p.id),
+    ) ?? [],
+  )
+
   const transformedPrograms = programs.data?.results
-    .filter((program) => program.collections.length === 0)
+    .filter((program) => !programsInCollections.has(program.id))
     .filter((program) => {
       if (!orgContract?.programs || orgContract.programs.length === 0) {
         return true
@@ -495,9 +501,17 @@ const OrganizationContentInternal: React.FC<
               />
             ))}
         <ProgramCollectionsList>
-          {/* Filter collections - for now show none since contract doesn't specify which collections */}
           {(programCollections.data?.results ?? [])
-            .filter(() => false)
+            .filter((collection) => {
+              // Only show collections where at least one program is in the contract
+              const collectionProgramIds = collection.programs.map((p) => p.id)
+              if (!orgContract?.programs || orgContract.programs.length === 0) {
+                return collectionProgramIds.length > 0
+              }
+              return collectionProgramIds.some(
+                (id) => id !== undefined && orgContract.programs.includes(id),
+              )
+            })
             .map((collection) => {
               const transformedCollection =
                 transform.mitxonlineProgramCollection(collection)
