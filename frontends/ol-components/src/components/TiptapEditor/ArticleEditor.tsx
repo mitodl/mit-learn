@@ -1,17 +1,14 @@
 "use client"
 
-// Based on ./components/tiptap-templates/simple/simple-editor.tsx
-
-import React, { ChangeEventHandler, useState } from "react"
+import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
 
-// --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
-
+import { Heading } from "@tiptap/extension-heading"
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography as TiptapTypography } from "@tiptap/extension-typography"
@@ -19,21 +16,19 @@ import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 
-// --- UI Primitives ---
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
 
-// --- Tiptap Node ---
-import { DividerNode } from "./extensions/node/divider-node-extension/divider-node-extension"
-import { ArticleBylineInfoBar } from "./extensions/node/byline/byline-node-extension"
+import { DividerNode } from "./extensions/node/Divider/DividerNode"
+import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
-import { ImageUploadNode } from "./extensions/node/image-upload-node/image-upload-node-extension"
-import { LearningResourceNode } from "./extensions/node/learning-resource-node/learning-resource-node"
-import { MediaEmbed } from "./extensions/node/media-embed/media-embed-extension"
+import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
+import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { ImageWithCaption } from "./extensions/node/image-upload-node/image-with-caption"
+import { ImageNode } from "./extensions/node/Image/ImageNode"
+import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -43,10 +38,8 @@ import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
-// --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
-// --- Styles ---
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
@@ -59,39 +52,41 @@ import {
 import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
-import Container from "@mui/material/Container"
+import { useUserHasPermission, Permission } from "api/hooks/user"
+import { BannerNode } from "./extensions/node/Banner/BannerNode"
+import { extractFirstH1Title, slugify } from "./extensions/lib/utils"
 import {
-  extractFirstH1Title,
-  ensureHeadings,
-  ensureByline,
-  slugify,
-} from "./extensions/lib/utils"
-import { useUserHasPermission, Permission, useUserMe } from "api/hooks/user"
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "../../components/ThemeProvider/MITLearnGlobalStyles"
 
-const ViewContainer = styled.div({
-  width: "100vw",
-  height: "calc(100vh - 204px)",
-  overflow: "scroll",
-})
+const TOOLBAR_HEIGHT = 43
 
-const StyledToolbar = styled(Toolbar)({
+const ViewContainer = styled.div<{ toolbarVisible: boolean }>(
+  ({ toolbarVisible, theme }) => ({
+    width: "100vw",
+    marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
+    backgroundColor: theme.custom.colors.white,
+  }),
+)
+
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   "&&": {
     position: "fixed",
-    top: "72px",
+    top: HEADER_HEIGHT,
+    [theme.breakpoints.down("md")]: {
+      top: HEADER_HEIGHT_MD,
+    },
   },
-})
-
-const StyledContainer = styled(Container)({
-  marginTop: "60px",
-})
+}))
 
 const StyledAlert = styled(Alert)({
-  margin: "0 auto 20px",
+  margin: "20px auto",
   maxWidth: "1000px",
 })
 
-const CustomDocument = Document.extend({
-  content: "heading block*",
+const ArticleDocument = Document.extend({
+  content: "banner byline block+",
 })
 
 interface ArticleEditorProps {
@@ -103,10 +98,9 @@ interface ArticleEditorProps {
   article?: RichTextArticle
 }
 const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
-  const [titleError, setTitleError] = React.useState("")
+  const [title, setTitle] = React.useState(article?.title)
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const { isFetching: isLoadingUser, data: user } = useUserMe()
 
   const {
     mutate: createArticle,
@@ -130,13 +124,23 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       type: "doc",
       content: [
         {
-          type: "heading",
-          attrs: { level: 1 },
+          type: "banner",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 1 },
+              content: [],
+            },
+            {
+              type: "paragraph",
+              content: [],
+            },
+          ],
         },
         {
-          type: "heading",
-          attrs: { level: 4 },
+          type: "byline",
         },
+        { type: "paragraph", content: [] },
       ],
     },
   )
@@ -144,13 +148,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   const handleSave = (publish: boolean) => {
     const title = extractFirstH1Title(content, 1)
-    if (!title?.trim()) {
-      setTitleError(
-        "Please enter a title. If you removed the title, add it back using the headings h1 controls.",
-      )
-      return
-    }
-    const slug = slugify(title)
+    const slug = slugify(title ?? "")
+
+    if (!title) return
     if (article) {
       updateArticle(
         {
@@ -222,14 +222,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
 
-      ensureHeadings(editor)
       setContent(json)
       setTouched(true)
     },
 
     onCreate: ({ editor }) => {
-      ensureHeadings(editor)
-
       setTimeout(() => {
         editor.commands.setTextSelection(1)
         editor.commands.focus()
@@ -249,25 +246,28 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       },
     },
     extensions: [
-      CustomDocument,
+      ArticleDocument,
       StarterKit.configure({
+        document: false, // Disable default document to use our ArticleDocument
         horizontalRule: false,
+        heading: false,
         link: {
           openOnClick: false,
           enableClickSelection: true,
         },
       }),
+      Heading.configure({
+        levels: [1, 2, 3, 4, 5, 6],
+      }),
       Placeholder.configure({
+        showOnlyCurrent: false,
+        includeChildren: true,
         placeholder: ({ node }) => {
-          if (node.type.name === "heading" && node.attrs.level === 1) {
-            return "What’s the title?"
+          if (node.type.name === "heading") {
+            return "Add heading..."
           }
-          if (node.type.name === "heading" && node.attrs.level === 4) {
-            return !readOnly ? "Add a subtitle..." : ""
-          }
-          return !readOnly ? "Start typing here..." : ""
+          return "Add text..."
         },
-        showOnlyWhenEditable: false,
       }),
       HorizontalRule,
       LearningResourceNode,
@@ -280,23 +280,29 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
-      MediaEmbed,
+      MediaEmbedNode,
       DividerNode,
-      ArticleBylineInfoBar,
-      ImageWithCaption,
-      ImageUploadNode.configure({
+      ArticleByLineInfoBarNode,
+      ImageWithCaptionNode,
+      ImageNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
         upload: uploadHandler,
         onError: (error) => console.error("Upload failed:", error),
       }),
+      BannerNode,
     ],
   })
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!editor) return
+    const title = editor.$node("heading", { level: 1 })?.textContent || ""
+    setTitle(title)
+  }, [editor, content])
 
+  useEffect(() => {
+    if (!editor) return
     editor
       .chain()
       .command(({ tr, state }) => {
@@ -317,13 +323,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       .run()
   }, [editor, readOnly])
 
-  React.useEffect(() => {
-    if (!editor || !user || isLoadingUser) return
-
-    const userName = `${user.first_name} ${user.last_name}`.trim()
-    ensureByline(editor, userName, new Date().toLocaleDateString())
-  }, [editor, user, isLoadingUser])
-
   if (!editor) return null
 
   const isPending = isCreating || isUpdating
@@ -342,7 +341,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   })()
 
   return (
-    <ViewContainer data-testid="editor">
+    <ViewContainer toolbarVisible={isArticleEditor}>
       <EditorContext.Provider value={{ editor }}>
         {isArticleEditor ? (
           readOnly ? (
@@ -362,7 +361,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               {(!article || !article?.is_published) && (
                 <Button
                   variant="secondary"
-                  disabled={isPending || !touched}
+                  disabled={isPending || !touched || !title}
                   onClick={() => {
                     handleSave(false)
                     setIsPublishing(false)
@@ -375,7 +374,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
               <Button
                 variant="primary"
-                disabled={isPending || !touched}
+                disabled={isPending || !touched || !title}
                 onClick={() => {
                   handleSave(true)
                   setIsPublishing(true)
@@ -387,19 +386,18 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             </StyledToolbar>
           )
         ) : null}
-        <StyledContainer>
-          {(isError || uploadError || titleError) && (
+        {isError ||
+          (uploadError && (
             <StyledAlert severity="error" closable>
               <Typography variant="body2" color="textPrimary">
                 {error?.message ??
-                  titleError ??
                   uploadError ??
                   "An error occurred while saving"}
               </Typography>
             </StyledAlert>
-          )}
-          <TiptapEditor editor={editor} readOnly={readOnly} />
-        </StyledContainer>
+          ))}
+
+        <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
       </EditorContext.Provider>
     </ViewContainer>
   )

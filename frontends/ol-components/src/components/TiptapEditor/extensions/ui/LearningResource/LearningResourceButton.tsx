@@ -9,7 +9,7 @@ import {
 } from "./useLearningResourceEmbed"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
-export interface LearningResourceEmbedButtonProps {
+export interface LearningResourceButtonProps {
   editor?: Editor
   text?: string
   showShortcut?: boolean
@@ -25,9 +25,9 @@ function LearningResourceShortcutBadge() {
   )
 }
 
-export const LearningResourceEmbedButton = forwardRef<
+export const LearningResourceButton = forwardRef<
   HTMLButtonElement,
-  LearningResourceEmbedButtonProps
+  LearningResourceButtonProps
 >(
   (
     {
@@ -82,4 +82,4 @@ export const LearningResourceEmbedButton = forwardRef<
   },
 )
 
-LearningResourceEmbedButton.displayName = "LearningResourceEmbedButton"
+LearningResourceButton.displayName = "LearningResourceButton"

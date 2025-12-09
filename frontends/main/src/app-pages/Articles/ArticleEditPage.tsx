@@ -6,18 +6,13 @@ import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import {
-  styled,
-  LoadingSpinner,
-  ArticleEditor,
-  HEADER_HEIGHT,
-} from "ol-components"
+import { styled, LoadingSpinner, ArticleEditor } from "ol-components"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   display: "flex",
-  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+  height: "100%",
 }))
 
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {

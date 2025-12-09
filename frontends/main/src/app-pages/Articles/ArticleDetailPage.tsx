@@ -2,10 +2,15 @@
 
 import React from "react"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
-import { LoadingSpinner, ArticleEditor } from "ol-components"
+import { LoadingSpinner, ArticleEditor, styled } from "ol-components"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+
+const PageContainer = styled.div({
+  display: "flex",
+  height: "100%",
+})
 
 export const ArticleDetailPage = ({ articleId }: { articleId: string }) => {
   const {
@@ -24,5 +29,9 @@ export const ArticleDetailPage = ({ articleId }: { articleId: string }) => {
   if (!article || !showArticleDetail) {
     return notFound()
   }
-  return <ArticleEditor article={article} readOnly />
+  return (
+    <PageContainer>
+      <ArticleEditor article={article} readOnly />
+    </PageContainer>
+  )
 }
