@@ -32,6 +32,8 @@ renderWithTheme(<StyledComponent />)
 
 ## Mocking API Calls
 
+Unmocked API calls will result in test failures.
+
 **MIT Learn APIs:**
 
 ```tsx
@@ -74,30 +76,15 @@ setMockResponse.get(
 ) // Partial URL
 ```
 
-**Testing loading states:**
-
-```tsx
-import { ControlledPromise } from "ol-test-utilities"
-
-const response = new ControlledPromise()
-setMockResponse.get(url, response)
-renderWithProviders(<MyComponent />)
-screen.getByText("Loading...")
-response.resolve(data)
-await screen.findByText("Loaded!")
-```
-
 ## Queries & Interactions
 
-**Finding elements (in priority order):**
-
 ```tsx
-screen.getByRole("button", { name: "Submit" }) // Preferred
+// use queryBy alternatives to check for non-existence, findBy for async content
+// getByAll, etc, when multiple matches expected
+screen.getByRole("button", { name: "Submit" }) // Preferred role-based queries where possible
 screen.getByLabelText("Email")
 screen.getByText("Hello")
 screen.getByTestId("custom-element")
-screen.queryByText("Maybe not here") // Returns null if not found
-await screen.findByText("Async content") // Waits for element
 ```
 
 **User interactions:**
@@ -118,13 +105,13 @@ within(card).getByText("John Doe")
 
 ## Factories
 
-**Always use factories for test data:**
+**Always prefer using factories for test data. Assume factories create realistic data, and avoid setting unnecessary overrides manually.**
 
 ```tsx
 const channel = factories.channels.channel() // Default
 const course = factories.learningResources.resource({
-  title: "Custom",
-  resource_type: "course",
+  resource_type: "course", // good (if you need a course)
+  title: "Custom", // AVOID; prefer asserting about `course.title` instead.
 })
 const resources = factories.learningResources.resources({ count: 5 }) // List
 ```
