@@ -5,6 +5,7 @@ from django.db import models
 
 from main.models import TimestampedModel
 from profiles.utils import article_image_upload_uri
+from django.utils.text import slugify
 
 
 class Article(TimestampedModel):
@@ -22,6 +23,23 @@ class Article(TimestampedModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        previous = Article.objects.get(pk=self.pk) if self.pk else None
+        was_published = getattr(previous, "is_published", None)
+        if not was_published:
+            max_length = self._meta.get_field("slug").max_length
+            base_slug = slugify(self.title)[:max_length]
+            slug = base_slug
+            counter = 1
+
+            while Article.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                suffix = f"-{counter}"
+                slug = f"{base_slug[: 60 - len(suffix)]}{suffix}"
+                counter += 1
+
+        self.slug = slug
+        super().save(*args, **kwargs)
 
 
 class ArticleImageUpload(models.Model):

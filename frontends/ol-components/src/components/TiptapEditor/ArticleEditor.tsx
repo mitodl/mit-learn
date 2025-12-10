@@ -54,7 +54,6 @@ import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
-import { extractFirstH1Title, slugify } from "./extensions/lib/utils"
 import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
@@ -147,9 +146,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [touched, setTouched] = useState(false)
 
   const handleSave = (publish: boolean) => {
-    const title = extractFirstH1Title(content, 1)
-    const slug = slugify(title ?? "")
-
     if (!title) return
     if (article) {
       updateArticle(
@@ -158,7 +154,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           title: title.trim(),
           content,
           is_published: publish,
-          slug: !article.is_published ? slug : article.slug || "",
         },
         {
           onSuccess: onSave,
@@ -170,7 +165,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           title: title.trim(),
           content,
           is_published: publish,
-          slug: publish ? slug : "",
         },
         {
           onSuccess: onSave,
