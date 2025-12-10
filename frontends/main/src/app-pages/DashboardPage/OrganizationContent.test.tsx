@@ -29,7 +29,6 @@ const makeGrade = factories.enrollment.grade
 
 describe("OrganizationContent", () => {
   beforeEach(() => {
-    setMockResponse.get(urls.enrollment.enrollmentsList(), [])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
@@ -145,7 +144,6 @@ describe("OrganizationContent", () => {
       }),
     ]
     // Override the default empty enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
@@ -170,11 +168,11 @@ describe("OrganizationContent", () => {
 
       // Check based on the actual enrollment status, not array position
       if (course.enrollment?.status === EnrollmentStatus.Enrolled) {
-        expect(indicator).toHaveTextContent("Enrolled")
+        expect(indicator).toHaveTextContent(/^Enrolled$/)
       } else if (course.enrollment?.status === EnrollmentStatus.Completed) {
-        expect(indicator).toHaveTextContent("Completed")
+        expect(indicator).toHaveTextContent(/^Completed$/)
       } else {
-        expect(indicator).toHaveTextContent("Not Enrolled")
+        expect(indicator).toHaveTextContent(/^Not Enrolled$/)
       }
     })
   })
@@ -754,9 +752,13 @@ describe("OrganizationContent", () => {
           )?.id,
           course: { id: courses[0].id, title: courses[0].title },
         },
+        b2b_contract_id: contracts[0].id,
+        b2b_organization_id: contracts[0].organization,
         grades: [], // No grades = enrolled but not completed
       }),
     ]
+    // Override enrollments for this test
+    setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
     const program = factories.programs.program({
       courses: courses.map((c) => c.id),
@@ -771,9 +773,6 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    // Override enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsList(), enrollments)
-
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
 
     const cards = await within(
@@ -782,7 +781,7 @@ describe("OrganizationContent", () => {
 
     // First card should show enrolled status
     const firstCardStatus = within(cards[0]).getByTestId("enrollment-status")
-    expect(firstCardStatus).toHaveTextContent("Enrolled")
+    expect(firstCardStatus).toHaveTextContent(/^Enrolled$/)
 
     // Remaining cards should show not enrolled
     for (let i = 1; i < cards.length; i++) {
@@ -987,7 +986,6 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    setMockResponse.get(urls.enrollment.enrollmentsList(), [enrollment])
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [enrollment])
 
     renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
