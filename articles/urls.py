@@ -2,7 +2,8 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from articles import views
-from .views import MediaUploadView, ArticleDetailByIdOrSlugAPIView
+
+from .views import ArticleDetailByIdOrSlugAPIView, MediaUploadView
 
 v1_router = SimpleRouter()
 v1_router.register(

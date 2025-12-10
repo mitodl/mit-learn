@@ -2,11 +2,8 @@
 
 import pytest
 from rest_framework.reverse import reverse
-import pytest
-from rest_framework.reverse import reverse
 
 from articles.models import Article
-
 from main.factories import UserFactory
 
 pytestmark = [pytest.mark.django_db]
