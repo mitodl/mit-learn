@@ -5,7 +5,7 @@ import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
-
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Heading } from "@tiptap/extension-heading"
@@ -38,6 +38,7 @@ import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
+import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
 import "./vendor/styles/_keyframe-animations.scss"
@@ -256,11 +257,46 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Placeholder.configure({
         showOnlyCurrent: false,
         includeChildren: true,
-        placeholder: ({ node }) => {
-          if (node.type.name === "heading") {
-            return "Add heading..."
+        placeholder: ({ node, editor }): string => {
+          let parentNode: typeof node | null = null
+
+          editor.state.doc.descendants((n: ProseMirrorNode) => {
+            n.forEach((childNode: ProseMirrorNode) => {
+              if (childNode === node) {
+                parentNode = n
+              }
+            })
+            if (parentNode) {
+              return false
+            }
+            return undefined
+          })
+
+          if (parentNode) {
+            const parentExtension = editor.extensionManager.extensions.find(
+              (ext) => ext.name === parentNode!.type.name,
+            )
+
+            if (
+              parentExtension &&
+              "config" in parentExtension &&
+              parentExtension.config &&
+              typeof (parentExtension.config as ExtendedNodeConfig)
+                .getPlaceholders === "function"
+            ) {
+              const placeholder = (
+                parentExtension.config as ExtendedNodeConfig
+              ).getPlaceholders(node)
+              if (placeholder) {
+                return placeholder
+              }
+            }
           }
-          return "Add text..."
+
+          if (node.type.name === "heading") {
+            return "Add a heading"
+          }
+          return "Add some text"
         },
       }),
       HorizontalRule,
