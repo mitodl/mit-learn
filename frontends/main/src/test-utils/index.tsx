@@ -265,6 +265,32 @@ class TestingErrorBoundary extends React.Component<
   }
 }
 
+/**
+ * JSDOM doesn't support window.location very well; this lets us mock it if
+ * needed.
+ */
+const setupLocationMock = () => {
+  const originalLocation = window.location
+
+  beforeAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: { ...originalLocation, assign: jest.fn(), reload: jest.fn() },
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: originalLocation,
+    })
+  })
+
+  return jest.mocked(window.location)
+}
+
 export {
   renderWithProviders,
   renderWithTheme,
@@ -275,6 +301,7 @@ export {
   getMetas,
   assertPartialMetas,
   TestingErrorBoundary,
+  setupLocationMock,
 }
 // Conveniences
 export { setMockResponse }

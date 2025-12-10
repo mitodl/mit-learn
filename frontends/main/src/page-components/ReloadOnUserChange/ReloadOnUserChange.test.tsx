@@ -1,25 +1,13 @@
 import React from "react"
 import { ReloadOnUserChange } from "./ReloadOnUserChange"
-import { renderWithProviders, waitFor } from "@/test-utils"
+import { renderWithProviders, setupLocationMock, waitFor } from "@/test-utils"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { userQueries } from "api/hooks/user"
 
 const makeUser = factories.user.user
 
 describe("ReloadOnUserChange", () => {
-  const originalLocation = window.location
-  beforeEach(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: { ...originalLocation, reload: jest.fn() },
-    })
-  })
-  afterEach(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: originalLocation,
-    })
-  })
+  setupLocationMock()
 
   const user1 = makeUser()
   const user2 = makeUser()
