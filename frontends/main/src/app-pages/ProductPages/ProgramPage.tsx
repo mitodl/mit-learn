@@ -28,6 +28,7 @@ import { ResourceTypeEnum } from "api"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import dynamic from "next/dynamic"
 import type { Breakpoint } from "@mui/system"
+import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -256,11 +257,19 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       resource_type: [ResourceTypeEnum.Program],
     }),
   )
+
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
   const programResource = programResources.data?.results?.[0]
   const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
   const flagsLoaded = useFeatureFlagsLoaded()
+
+  const enrollments = useQuery({
+    ...enrollmentQueries.programEnrollmentsList(),
+    throwOnError: false,
+  })
+  const enrolled =
+    program && enrollments.data?.some((e) => e.program.id === program.id)
 
   if (!enabled) {
     return flagsLoaded ? notFound() : null
@@ -295,7 +304,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       sidebarSummary={
-        <ProgramSummary program={program} programResource={programResource} />
+        <ProgramSummary
+          enrolled={enrolled}
+          enrollmentLoading={enrollments.isLoading}
+          program={program}
+          programResource={programResource}
+        />
       }
       navLinks={navLinks}
     >
