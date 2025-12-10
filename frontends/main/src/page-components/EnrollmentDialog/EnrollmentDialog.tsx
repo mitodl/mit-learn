@@ -72,7 +72,10 @@ const BigButton = styled(
   },
   ...theme.typography.h5,
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.subtitle1,
+    ...theme.typography.subtitle2,
+    padding: "12px 20px",
+    gap: "16px",
+    justifyContent: "space-between",
   },
   ".label": {
     fontWeight: theme.typography.fontWeightBold,
@@ -93,6 +96,8 @@ const CertificateBox = styled.div<{ disabled?: boolean }>(
       gap: "24px",
       [theme.breakpoints.down("sm")]: {
         flexDirection: "column",
+        alignItems: "stretch",
+        gap: "12px",
       },
     },
     disabled && {
@@ -106,7 +111,7 @@ const CertDate = styled.span<{ disabled?: boolean }>(({ theme, disabled }) => [
   !disabled && { color: theme.custom.colors.red },
 ])
 
-const CertificatePriceRoot = styled.div({
+const CertificatePriceRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "flex-start",
@@ -115,7 +120,15 @@ const CertificatePriceRoot = styled.div({
     width: "40px",
     height: "40px",
   },
-})
+  ...theme.typography.h5,
+  [theme.breakpoints.down("sm")]: {
+    svg: {
+      width: "32px",
+      height: "32px",
+    },
+    ...theme.typography.subtitle1,
+  },
+}))
 
 const CertificateReasonsList = styled(PlainList)(({ theme }) => ({
   display: "grid",
@@ -175,15 +188,7 @@ const CertificateUpsell: React.FC<{
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
-            <Typography
-              component="span"
-              variant="h5"
-              sx={(theme) => ({
-                fontWeight: theme.typography.fontWeightBold,
-              })}
-            >
-              Get Certificate{price ? `: ${price}` : ""}
-            </Typography>
+            <strong>Get Certificate{price ? `: ${price}` : ""}</strong>
             <CertDate disabled={!enabled}>
               {enabled ? deadlineUI : "Not available"}
             </CertDate>
@@ -312,7 +317,7 @@ type EnrollmentDialogProps =
     }
   | {
       type: "program"
-      resource?: V2Program
+      resource: V2Program
     }
 const EnrollmentDialogInner: React.FC<EnrollmentDialogProps> = ({
   type,
