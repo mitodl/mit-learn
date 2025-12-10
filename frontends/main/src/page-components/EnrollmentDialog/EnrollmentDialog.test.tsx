@@ -1,6 +1,12 @@
 import React from "react"
 import { act } from "@testing-library/react"
-import { screen, waitFor, renderWithProviders, user } from "@/test-utils"
+import {
+  screen,
+  waitFor,
+  renderWithProviders,
+  user,
+  setupLocationMock,
+} from "@/test-utils"
 import { makeRequest, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
@@ -59,29 +65,8 @@ const openDialog = async (course: CourseWithCourseRunsSerializerV2) => {
   return await screen.findByRole("dialog")
 }
 
-describe("EnrollmentDialog", () => {
-  const originalLocation = window.location
-
-  beforeAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: { ...originalLocation, assign: jest.fn() },
-    })
-  })
-
-  afterAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: originalLocation,
-    })
-  })
-
-  beforeEach(() => {
-    // Mock enrollment creation API
-    setMockResponse.post(mitxUrls.enrollment.enrollmentsListV2(), {})
-  })
+describe("EnrollmentDialog (Courses)", () => {
+  setupLocationMock()
 
   describe("Course run dropdown", () => {
     test("Shows one entry for each enrollable course run", async () => {
@@ -298,6 +283,7 @@ describe("EnrollmentDialog", () => {
 
       expect(enrollButton).toBeEnabled()
 
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV2(), {})
       await user.click(enrollButton)
 
       await waitFor(() => {
