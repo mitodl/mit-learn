@@ -12,9 +12,11 @@ setDefaultTimezone("UTC")
 
 // env vars
 process.env.NEXT_PUBLIC_MITOL_API_BASE_URL =
-  "http://api.test.learn.odl.local:8063"
+  "http://api.test.learn.odl.local:8065"
 process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL =
-  "http://api.test.mitxonline.odl.local:8053"
+  "http://api.test.learn.odl.local:8065/mitxonline"
+process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
+  "http://mitxonline.odl.local:8065"
 process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
 process.env.NEXT_PUBLIC_EMBEDLY_KEY = "fake-embedly-key"
 
