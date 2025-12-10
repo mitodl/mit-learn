@@ -300,11 +300,9 @@ const getNextRun = (course?: CourseWithCourseRunsSerializerV2) => {
 const getCourseOptions = ({
   data,
   isLoading,
-  isError,
 }: {
   data?: PaginatedCourseWithCourseRunsSerializerV2List
   isLoading: boolean
-  isError: boolean
 }): SimpleSelectOption[] => {
   const opts: SimpleSelectOption[] =
     data?.results.map((course) => {
@@ -313,7 +311,7 @@ const getCourseOptions = ({
         run && !canUpgrade(run) ? " (No certificate available)" : ""
       const label = run
         ? `${course.title} - ${run.course_number}${upgradeCaveat}`
-        : `${course.title} - No upcoming runs`
+        : `${course.title} - (No available runs)`
       return {
         label: label,
         value: `${course.id}`,
@@ -323,15 +321,6 @@ const getCourseOptions = ({
     return [
       {
         label: "Loading courses...",
-        value: "-",
-        disabled: true,
-      },
-    ]
-  }
-  if (isError) {
-    return [
-      {
-        label: "Error loading courses",
         value: "-",
         disabled: true,
       },
@@ -363,6 +352,9 @@ const ProgramEnrollmentDialog: React.FC<ProgramEnrollmentDialogProps> = ({
   )
   const run = getNextRun(chosenCourse)
 
+  console.log("woofwoofmeow")
+  console.log({ err: courses.isError })
+  console.log({ data: courses.data, isLoading: courses.isLoading })
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
@@ -398,7 +390,8 @@ const ProgramEnrollmentDialog: React.FC<ProgramEnrollmentDialogProps> = ({
           options={options}
           value={chosenCourseId}
           onChange={(e) => setChosenCourseId(e.target.value)}
-          fullWidth
+          error={courses.isError}
+          errorText={courses.isError ? "Error loading courses" : undefined}
         />
         <CertificateUpsell courseRun={run} />
       </Stack>

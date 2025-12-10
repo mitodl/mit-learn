@@ -8,6 +8,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
+import { has } from "lodash"
 
 const uniqueCourseId = new UniqueEnforcer()
 const uniqueCourseRunId = new UniqueEnforcer()
@@ -122,7 +123,9 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     Array.from({ length: faker.number.int({ min: 1, max: 3 }) }).map(() =>
       courseRun(),
     )
-  const nextRunId = overrides.next_run_id ?? faker.helpers.arrayElement(runs).id
+  const nextRunId = has(overrides, "next_run_id")
+    ? (overrides.next_run_id ?? null)
+    : faker.helpers.arrayElement(runs).id
   const defaults: CourseWithCourseRunsSerializerV2 = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),

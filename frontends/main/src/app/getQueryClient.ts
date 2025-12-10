@@ -87,7 +87,16 @@ const getServerQueryClient = cache(() => {
   return queryClient
 })
 
-const makeBrowserQueryClient = (): QueryClient => {
+type BrowserClientConfig = {
+  maxRetries: number
+}
+const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
+  maxRetries: MAX_RETRIES,
+}
+const makeBrowserQueryClient = (
+  config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,
+): QueryClient => {
+  const { maxRetries } = config
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -120,7 +129,7 @@ const makeBrowserQueryClient = (): QueryClient => {
            * Includes statuses undefined and 0 as we want to retry on network errors.
            */
           if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
-            return failureCount < MAX_RETRIES
+            return failureCount < maxRetries
           }
           return false
         },
