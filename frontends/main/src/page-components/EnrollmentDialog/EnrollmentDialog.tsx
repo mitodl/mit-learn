@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import {
   FormDialog,
   SimpleSelectOption,
@@ -12,6 +12,7 @@ import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
+  PaginatedCourseWithCourseRunsSerializerV2List,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { formatDate, LocalDate } from "ol-utilities"
@@ -227,7 +228,7 @@ const getRunOptions = (
     })
 }
 
-const DEFAULT_OPTION: SimpleSelectOption = {
+const RUN_DEFAULT_OPTION: SimpleSelectOption = {
   label: "Please Select",
   value: "",
   disabled: true,
@@ -242,7 +243,7 @@ const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
 }) => {
   const modal = NiceModal.useModal()
   const runOptions = getRunOptions(course)
-  const options: SimpleSelectOption[] = [DEFAULT_OPTION, ...runOptions]
+  const options: SimpleSelectOption[] = [RUN_DEFAULT_OPTION, ...runOptions]
   const getDefaultOption = () => {
     // if multiple options, force a choice
     return runOptions.length === 1 ? runOptions[0].value : ""
@@ -260,7 +261,7 @@ const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
         e.preventDefault()
         if (!run) return
         await createEnrollment.mutateAsync({
-          CourseRunEnrollmentRequest: {
+          CourseRunEnrollmentRequestV2Request: {
             run_id: run.id,
           },
         })
@@ -291,21 +292,116 @@ const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
 type ProgramEnrollmentDialogProps = {
   program: V2Program
 }
+
+const COURSES_PAGE_SIZE = 100
+const getNextRun = (course?: CourseWithCourseRunsSerializerV2) => {
+  return course?.courseruns.find((run) => run.id === course.next_run_id)
+}
+const getCourseOptions = ({
+  data,
+  isLoading,
+  isError,
+}: {
+  data?: PaginatedCourseWithCourseRunsSerializerV2List
+  isLoading: boolean
+  isError: boolean
+}): SimpleSelectOption[] => {
+  const opts: SimpleSelectOption[] =
+    data?.results.map((course) => {
+      const run = getNextRun(course)
+      const upgradeCaveat =
+        run && !canUpgrade(run) ? " (No certificate available)" : ""
+      const label = run
+        ? `${course.title} - ${run.course_number}${upgradeCaveat}`
+        : `${course.title} - No upcoming runs`
+      return {
+        label: label,
+        value: `${course.id}`,
+      }
+    }) ?? []
+  if (isLoading) {
+    return [
+      {
+        label: "Loading courses...",
+        value: "-",
+        disabled: true,
+      },
+    ]
+  }
+  if (isError) {
+    return [
+      {
+        label: "Error loading courses",
+        value: "-",
+        disabled: true,
+      },
+    ]
+  }
+  return opts
+}
+const COURSE_DEFAULT_OPTION: SimpleSelectOption = {
+  label: "Please Select",
+  value: "",
+  disabled: true,
+}
+
 const ProgramEnrollmentDialog: React.FC<ProgramEnrollmentDialogProps> = ({
   program,
 }) => {
   const modal = NiceModal.useModal()
-  const courses = useQuery(coursesQueries.coursesList({ id: program.courses }))
-  console.log({ courses })
+  const courses = useQuery(
+    coursesQueries.coursesList({
+      id: program.courses,
+      page_size: COURSES_PAGE_SIZE, // in practice, these are like 3-5 courses
+    }),
+  )
+  const createEnrollment = useCreateEnrollment()
+  const [chosenCourseId, setChosenCourseId] = useState("")
+  const options = [COURSE_DEFAULT_OPTION, ...getCourseOptions(courses)]
+  const chosenCourse = courses.data?.results.find(
+    (course) => `${course.id}` === chosenCourseId,
+  )
+  const run = getNextRun(chosenCourse)
+
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
-      title={"Program Enrollment"}
-      onSubmit={console.log}
-      onReset={console.log}
+      title={program.title}
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!run) return
+        await createEnrollment.mutateAsync({
+          CourseRunEnrollmentRequestV2Request: {
+            run_id: run.id,
+          },
+        })
+      }}
+      onReset={() => setChosenCourseId("")}
       fullWidth
+      confirmText="No thanks, I'll take the course for free without a certificate"
+      disabled={!run}
     >
-      Placeholder
+      <Stack
+        sx={(theme) => ({
+          color: theme.custom.colors.darkGray2,
+        })}
+        gap="24px"
+      >
+        <Typography variant="body2">
+          Thank you for choosing an MITx online program. To complete your
+          enrollment in this program, you must choose a course to start with.
+          You can enroll now for free, but you will need to pay for a
+          certificate in order to earn the program credential.
+        </Typography>
+        <StyledSimpleSelectField
+          label="Choose a date:"
+          options={options}
+          value={chosenCourseId}
+          onChange={(e) => setChosenCourseId(e.target.value)}
+          fullWidth
+        />
+        <CertificateUpsell courseRun={run} />
+      </Stack>
     </StyledFormDialog>
   )
 }
