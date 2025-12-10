@@ -80,7 +80,7 @@ describe("EnrollmentDialog", () => {
 
   beforeEach(() => {
     // Mock enrollment creation API
-    setMockResponse.post(mitxUrls.enrollment.enrollmentsList(), {})
+    setMockResponse.post(mitxUrls.enrollment.enrollmentsListV2(), {})
   })
 
   describe("Course run dropdown", () => {
@@ -303,16 +303,14 @@ describe("EnrollmentDialog", () => {
       await waitFor(() => {
         expect(makeRequest).toHaveBeenCalledWith(
           "post",
-          mitxUrls.enrollment.enrollmentsList(),
+          mitxUrls.enrollment.enrollmentsListV2(),
           { run_id: run.id },
         )
       })
     })
 
     test("Clicking upgrade button redirects to MITxOnline cart with correct URL", async () => {
-      // Mock window.location.assign
-      const assignMock = jest.fn()
-      jest.spyOn(window.location, "assign").mockImplementation(assignMock)
+      const assign = jest.mocked(window.location.assign)
 
       const run = upgradeableRun()
       const product = run.products[0]
@@ -333,12 +331,8 @@ describe("EnrollmentDialog", () => {
 
       // Verify redirect URL includes product_id parameter
       await waitFor(() => {
-        expect(assignMock).toHaveBeenCalledWith(upgradeRunUrl(product))
+        expect(assign).toHaveBeenCalledWith(upgradeRunUrl(product))
       })
-      // Also verify it contains the cart path
-      expect(assignMock).toHaveBeenCalledWith(
-        expect.stringContaining("/cart/add"),
-      )
     })
   })
 })

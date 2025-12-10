@@ -18,7 +18,9 @@ const countries = {
 }
 
 const enrollment = {
-  enrollmentsList: () => `${API_BASE_URL}/api/v1/enrollments/`,
+  /**
+   * @deprecated
+   */
   courseEnrollment: (id?: number) =>
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
   enrollmentsListV2: () => `${API_BASE_URL}/api/v2/enrollments/`,
