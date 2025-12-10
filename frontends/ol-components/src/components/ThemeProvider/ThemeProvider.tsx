@@ -16,10 +16,19 @@ declare module "@mitodl/smoot-design" {
   interface LinkAdapterPropsOverrides extends LinkAdapterExtraProps {}
 }
 
+const origTheme = createTheme()
+
 const theme = createTheme({
   custom: {
     LinkAdapter,
     ImgAdapter: Image,
+  },
+  typography: {
+    ...origTheme.typography,
+    h5: {
+      ...origTheme.typography.h5,
+      lineHeight: origTheme.typography.pxToRem(26),
+    },
   },
   components: {
     /**

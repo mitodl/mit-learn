@@ -554,6 +554,18 @@ const ProgramSummary: React.FC<{
         <h2 id="program-summary">Program summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
+        <WideButton
+          onClick={() => {
+            NiceModal.show(EnrollmentDialog, {
+              type: "program",
+              resource: program,
+            })
+          }}
+          variant="primary"
+          size="large"
+        >
+          Enroll Now
+        </WideButton>
         <RequirementsRow
           program={program}
           data-testid={TestIds.RequirementsRow}
