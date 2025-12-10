@@ -1,6 +1,13 @@
 import React, { HTMLAttributes } from "react"
 import { Alert, Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
-import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
+import {
+  Dialog,
+  Link,
+  LoadingSpinner,
+  Skeleton,
+  Stack,
+  Typography,
+} from "ol-components"
 import {
   RiCalendarLine,
   RiComputerLine,
@@ -8,6 +15,7 @@ import {
   RiTimeLine,
   RiFileCopy2Line,
   RiAwardLine,
+  RiCheckLine,
 } from "@remixicon/react"
 import { formatDate, NoSSR, pluralize } from "ol-utilities"
 import {
@@ -544,28 +552,59 @@ const ProgramCertificateRow: React.FC<ProgramInfoRowProps> = ({
   )
 }
 
+const EnrolledPlaceholder = styled.div(({ theme }) => ({
+  color: theme.custom.colors.white,
+  backgroundColor: theme.custom.colors.mitRed,
+  ...theme.typography.buttonLarge,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: "48px",
+  borderRadius: "4px",
+  gap: "12px",
+  svg: {
+    width: "20px",
+    height: "20px",
+  },
+}))
+
 const ProgramSummary: React.FC<{
   program: V2Program
   programResource: LearningResource | null
-}> = ({ program, programResource }) => {
+  enrolled?: boolean
+  enrollmentLoading?: boolean
+}> = ({ program, programResource, enrolled, enrollmentLoading }) => {
   return (
     <SidebarSummaryRoot aria-labelledby="program-summary">
       <VisuallyHidden>
         <h2 id="program-summary">Program summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        <WideButton
-          onClick={() => {
-            NiceModal.show(EnrollmentDialog, {
-              type: "program",
-              resource: program,
-            })
-          }}
-          variant="primary"
-          size="large"
-        >
-          Enroll Now
-        </WideButton>
+        {enrolled ? (
+          <EnrolledPlaceholder>
+            Enrolled
+            <RiCheckLine aria-hidden="true" />
+          </EnrolledPlaceholder>
+        ) : (
+          <WideButton
+            onClick={() => {
+              NiceModal.show(EnrollmentDialog, {
+                type: "program",
+                resource: program,
+              })
+            }}
+            variant="primary"
+            size="large"
+            inert={enrollmentLoading}
+          >
+            {enrollmentLoading ? (
+              <LoadingSpinner size="20px" loading={true} color="inherit" />
+            ) : (
+              "Enroll Now"
+            )}
+          </WideButton>
+        )}
+
         <RequirementsRow
           program={program}
           data-testid={TestIds.RequirementsRow}
