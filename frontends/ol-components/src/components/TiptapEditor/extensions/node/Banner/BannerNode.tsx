@@ -89,12 +89,11 @@ const bannerNodeConfig: ExtendedNodeConfig = {
   },
 
   getPlaceholders: (childNode: ProseMirrorNode) => {
-    console.log("banner childNode", childNode)
     if (childNode.type.name === "heading") {
       return "Add a title"
     }
     if (childNode.type.name === "paragraph") {
-      return "Add the subheading"
+      return "Add a subheading"
     }
     return null
   },

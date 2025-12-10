@@ -86,7 +86,7 @@ const StyledAlert = styled(Alert)({
 })
 
 const ArticleDocument = Document.extend({
-  content: "banner byline block+",
+  content: "banner byline block? paragraph+",
 })
 
 interface ArticleEditorProps {
