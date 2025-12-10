@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.49.1
+--------------
+
+- hybrid search improvements (#2796)
+
 Version 0.49.0 (Released December 09, 2025)
 --------------
 
