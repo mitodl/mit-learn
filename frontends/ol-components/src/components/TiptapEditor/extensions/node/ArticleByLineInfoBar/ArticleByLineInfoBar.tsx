@@ -8,6 +8,7 @@ import Avatar from "@mui/material/Avatar"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useUserMe } from "api/hooks/user"
 import { useArticle } from "../../../ArticleContext"
+import { calculateReadTime } from "../../utils"
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
@@ -54,45 +55,43 @@ const InfoText = styled.span(({ theme }) => ({
 }))
 
 const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
-  const {
-    user: _author,
-    avatarUrl,
-    readTime,
-    publishedDate,
-    editable,
-  } = node.attrs
+  const { editable } = node.attrs
 
   const article = useArticle()
 
   const { data: user } = useUserMe()
 
-  let authorName = null
+  let author = null
   if (editable && !article?.user) {
-    authorName = `${user?.first_name || ""} ${user?.last_name || ""}`
+    author = user
   } else {
-    authorName = article?.user
-      ? `${article.user.first_name || ""} ${article.user.last_name || ""}`
-      : null
+    author = article?.user
   }
+
+  const publishedDate = article?.is_published ? article?.created_on : null
+
+  const readTime = calculateReadTime(article?.content)
 
   return (
     <NodeViewWrapper>
       <StyledWrapper>
-        <InnerContainer noAuthor={!authorName}>
-          {authorName && (
+        <InnerContainer noAuthor={!author}>
+          {author && (
             <InfoContainer>
-              <Avatar src={avatarUrl}>
-                {user?.first_name?.charAt(0) || ""}
-                {user?.last_name?.charAt(0) || ""}
+              <Avatar>
+                {author.first_name?.charAt(0) || ""}
+                {author.last_name?.charAt(0) || ""}
               </Avatar>
 
-              <NameText>By {authorName}</NameText>
-              {readTime && <InfoText>{readTime}</InfoText>}
+              <NameText>
+                By {author.first_name} {author.last_name}
+              </NameText>
+              {readTime && <InfoText>{readTime} min read</InfoText>}
               <InfoText>-</InfoText>
               <InfoText>
                 {publishedDate
-                  ? publishedDate
-                  : new Date().toLocaleDateString()}
+                  ? new Date(publishedDate).toLocaleDateString()
+                  : null}
               </InfoText>
             </InfoContainer>
           )}
