@@ -6,82 +6,102 @@ import {
   user,
 } from "@/test-utils"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { urls, factories } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import { V2UserProgramEnrollmentDetail } from "@mitodl/mitxonline-api-axios/v2"
 
 const makeProgram = mitxFactories.programs.program
-const programEnrollment = mitxFactories.enrollment.programEnrollmentV2
+const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV2
+const makeUser = factories.user.user
 
 describe("ProgramEnrollmentButton", () => {
   const ENROLLED = "Enrolled"
   const ENROLL = "Enroll for Free"
 
-  test("Renders loading state then 'Enrolled' for enrolled users", async () => {
+  test("Shows loading state while enrollments and user loading", async () => {
     const program = makeProgram()
-    const enrollments = [
-      programEnrollment(),
-      programEnrollment({ program: { id: program.id } }),
-      programEnrollment(),
-    ]
-    const response = Promise.withResolvers()
+    const enrollmentResponse = Promise.withResolvers()
+    const userResponse = Promise.withResolvers()
 
     setMockResponse.get(
       mitxUrls.programEnrollments.enrollmentsListV2(),
-      response.promise,
+      enrollmentResponse.promise,
     )
+    setMockResponse.get(urls.userMe.get(), userResponse.promise)
 
     renderWithProviders(<ProgramEnrollmentButton program={program} />)
 
     await Promise.resolve() // tick forward
     screen.getByRole("progressbar", { name: "Loading" })
-    expect(screen.queryByText(ENROLLED)).toBeNull()
-
+    expect(screen.queryByText(ENROLL)).toBeNull()
     // resolve
-    response.resolve(enrollments)
-    await screen.findByText(ENROLLED)
-    expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull()
-  })
-
-  test("Renders loading state then 'Enroll' for unenrolled users", async () => {
-    const program = makeProgram()
-    const enrollments = [
-      programEnrollment(),
-      programEnrollment(),
-      programEnrollment(),
-    ]
-    const response = Promise.withResolvers()
-
-    setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV2(),
-      response.promise,
-    )
-
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
-
-    await Promise.resolve() // tick forward
+    enrollmentResponse.resolve([])
+    await enrollmentResponse.promise
     screen.getByRole("progressbar", { name: "Loading" })
-    expect(screen.queryByRole("button", { name: ENROLL })).toBeNull()
+    expect(screen.queryByText(ENROLL)).toBeNull()
 
-    // resolve
-    response.resolve(enrollments)
+    userResponse.resolve(makeUser({ is_authenticated: false }))
     await screen.findByRole("button", { name: ENROLL })
     expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull()
   })
 
-  test("Opens enrollment dialog when clicking 'Enroll' button", async () => {
+  test("Shows 'Enrolled' for enrolled users", async () => {
     const program = makeProgram()
-    const enrollments: V2UserProgramEnrollmentDetail[] = []
+    const enrollments = [
+      makeProgramEnrollment(),
+      makeProgramEnrollment({ program: { id: program.id } }),
+      makeProgramEnrollment(),
+    ]
+    const user = makeUser({ is_authenticated: true })
 
     setMockResponse.get(
       mitxUrls.programEnrollments.enrollmentsListV2(),
       enrollments,
     )
+    setMockResponse.get(urls.userMe.get(), user)
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    await screen.findByText(ENROLLED)
+  })
+
+  test("Shows 'Enroll' + enrollment dialog for unenrolled users", async () => {
+    const program = makeProgram()
+    const enrollments = [
+      makeProgramEnrollment(),
+      makeProgramEnrollment(),
+      makeProgramEnrollment(),
+    ]
+
+    setMockResponse.get(
+      mitxUrls.programEnrollments.enrollmentsListV2(),
+      enrollments,
+    )
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(
       expect.stringContaining(mitxUrls.courses.coursesList()),
       { count: 0, results: [] },
+    ) // for the dialog
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const enrollButton = await screen.findByRole("button", { name: ENROLL })
+    await user.click(enrollButton)
+
+    await screen.findByRole("dialog", { name: program.title })
+  })
+
+  test("Shows signup popover for anonymous users", async () => {
+    const program = makeProgram()
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV2(), [], {
+      code: 403,
+    })
+    setMockResponse.get(
+      urls.userMe.get(),
+      makeUser({ is_authenticated: false }),
     )
 
     renderWithProviders(<ProgramEnrollmentButton program={program} />)
@@ -92,6 +112,6 @@ describe("ProgramEnrollmentButton", () => {
 
     await user.click(enrollButton)
 
-    await screen.findByRole("dialog", { name: program.title })
+    screen.getByTestId("signup-popover")
   })
 })
