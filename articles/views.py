@@ -85,6 +85,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
     serializer_class = RichTextArticleSerializer
     queryset = Article.objects.all()
     pagination_class = DefaultPagination
+    lookup_url_kwarg = "id_or_slug"
 
     permission_classes = [CanViewArticle, CanEditArticle]
     http_method_names = VALID_HTTP_METHODS
@@ -120,7 +121,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
         Override to allow lookup by either ID (numeric) or slug.
         """
         queryset = self.filter_queryset(self.get_queryset())
-        identifier = self.kwargs.get("pk")
+        identifier = self.kwargs.get("id_or_slug")
         if str(identifier).isdigit():
             filter_kwargs = {"pk": int(identifier)}
         else:
