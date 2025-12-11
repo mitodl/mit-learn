@@ -107,13 +107,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const {
     mutate: createArticle,
     isPending: isCreating,
-    isError: isCreateError,
     error: createError,
   } = useArticleCreate()
   const {
     mutate: updateArticle,
     isPending: isUpdating,
-    isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
 
@@ -320,7 +318,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         maxSize: MAX_FILE_SIZE,
         limit: 3,
         upload: uploadHandler,
-        onError: (error) => console.error("Upload failed:", error),
+        onError: (error) => setUploadError(error.message),
       }),
       BannerNode,
     ],
@@ -357,8 +355,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   if (!editor) return null
 
   const isPending = isCreating || isUpdating
-  const isError = isCreateError || isUpdateError
-  const error = createError || updateError
+  const error = createError || updateError || uploadError
 
   const publishButtonLabel = (() => {
     if (isPending && article?.is_published) return "Updating..."
@@ -418,16 +415,13 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               </StyledToolbar>
             )
           ) : null}
-          {isError ||
-            (uploadError && (
-              <StyledAlert severity="error" closable>
-                <Typography variant="body2" color="textPrimary">
-                  {error?.message ??
-                    uploadError ??
-                    "An error occurred while saving"}
-                </Typography>
-              </StyledAlert>
-            ))}
+          {error ? (
+            <StyledAlert severity="error" closable>
+              <Typography variant="body2" color="textPrimary">
+                {error instanceof Error ? error.message : error}
+              </Typography>
+            </StyledAlert>
+          ) : null}
 
           <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
         </EditorContext.Provider>
