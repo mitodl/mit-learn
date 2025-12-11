@@ -20,7 +20,6 @@ const coursesQueries = {
       queryKey: coursesKeys.coursesList(opts),
       queryFn:
         async (): Promise<PaginatedCourseWithCourseRunsSerializerV2List> => {
-          console.log("TRYING!")
           return coursesApi.apiV2CoursesList(opts).then((res) => res.data)
         },
     }),

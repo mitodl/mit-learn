@@ -72,21 +72,20 @@ describe("CourseSummary", () => {
     },
   )
 
-  test.each([
-    {
-      overrides: { is_archived: true },
-      expectLabel: "Access Course Materials",
-    },
-    { overrides: { is_archived: false }, expectLabel: "Enroll for Free" },
-  ])("Renders expected enrollment button", ({ overrides, expectLabel }) => {
-    const run = makeRun(overrides)
+  test("Renders enrollButton prop when provided", () => {
+    const run = makeRun()
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: shuffle([run, makeRun()]),
     })
-    renderWithProviders(<CourseSummary course={course} />)
+    const enrollButton = <button>Test Enroll Button</button>
+    renderWithProviders(
+      <CourseSummary course={course} enrollButton={enrollButton} />,
+    )
     const summary = screen.getByRole("region", { name: "Course summary" })
-    const button = within(summary).getByRole("button", { name: expectLabel })
+    const button = within(summary).getByRole("button", {
+      name: "Test Enroll Button",
+    })
     expect(button).toBeInTheDocument()
   })
 })

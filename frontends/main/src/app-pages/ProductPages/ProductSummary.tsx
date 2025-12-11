@@ -1,5 +1,5 @@
 import React, { HTMLAttributes } from "react"
-import { Alert, Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import {
   RiCalendarLine,
@@ -17,8 +17,6 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
-import EnrollmentDialog from "@/page-components/EnrollmentDialog/EnrollmentDialog"
-import NiceModal from "@ebay/nice-modal-react"
 import { getCertificatePrice } from "@/common/mitxonline"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
@@ -346,10 +344,6 @@ const SidebarSummaryRoot = styled.section(({ theme }) => ({
   },
 }))
 
-const WideButton = styled(Button)({
-  width: "100%",
-})
-
 enum TestIds {
   DatesRow = "dates-row",
   PaceRow = "pace-row",
@@ -376,7 +370,8 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
+  enrollButton?: React.ReactNode
+}> = ({ course, enrollButton }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
@@ -387,20 +382,7 @@ const CourseSummary: React.FC<{
       <Stack gap={{ xs: "24px", md: "32px" }}>
         {nextRun ? (
           <>
-            <WideButton
-              onClick={() => {
-                NiceModal.show(EnrollmentDialog, {
-                  type: "course",
-                  resource: course,
-                })
-              }}
-              variant="primary"
-              size="large"
-            >
-              {nextRun.is_archived
-                ? "Access Course Materials"
-                : "Enroll for Free"}
-            </WideButton>
+            {enrollButton}
             {nextRun.is_archived ? <ArchivedAlert /> : null}
             <CourseDatesRow
               course={course}
