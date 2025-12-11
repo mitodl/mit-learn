@@ -8941,7 +8941,7 @@ export const ArticlesApiAxiosParamCreator = function (
       }
     },
     /**
-     * If the parameter is numeric, retrieve by ID. Otherwise, slug.
+     * If the path parameter is numeric → ID, else → slug.
      * @summary Retrieve article by ID or slug
      * @param {string} identifier Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
@@ -9208,7 +9208,7 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * If the parameter is numeric, retrieve by ID. Otherwise, slug.
+     * If the path parameter is numeric → ID, else → slug.
      * @summary Retrieve article by ID or slug
      * @param {string} identifier Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
@@ -9382,7 +9382,7 @@ export const ArticlesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * If the parameter is numeric, retrieve by ID. Otherwise, slug.
+     * If the path parameter is numeric → ID, else → slug.
      * @summary Retrieve article by ID or slug
      * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -9592,7 +9592,7 @@ export class ArticlesApi extends BaseAPI {
   }
 
   /**
-   * If the parameter is numeric, retrieve by ID. Otherwise, slug.
+   * If the path parameter is numeric → ID, else → slug.
    * @summary Retrieve article by ID or slug
    * @param {ArticlesApiArticlesDetailRetrieveRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.

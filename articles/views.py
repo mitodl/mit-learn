@@ -12,6 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 
 from articles.models import Article
@@ -80,45 +82,35 @@ class ArticleViewSet(viewsets.ModelViewSet):
         clear_views_cache()
         return super().destroy(request, *args, **kwargs)
 
-
-class ArticleDetailByIdOrSlugAPIView(APIView):
-    """
-    Retrieve an article by numeric ID or slug string.
-    """
-
-    permission_classes = [CanViewArticle]  # Change if public access is allowed
-
     @extend_schema(
         summary="Retrieve article by ID or slug",
-        description="If the parameter is numeric, retrieve by ID. Otherwise, slug.",
+        description="If the path parameter is numeric → ID, else → slug.",
         parameters=[
             OpenApiParameter(
                 name="identifier",
-                description="Article ID (number) or slug (string)",
-                required=True,
                 type=str,
                 location=OpenApiParameter.PATH,
-            ),
+                description="Article ID (number) or slug (string)",
+                required=True,
+            )
         ],
-        responses={
-            200: RichTextArticleSerializer,
-            404: OpenApiResponse(description="Not found"),
-        },
+        responses={200: RichTextArticleSerializer, 404: OpenApiResponse()},
     )
-    def get(self, request, identifier):
-        qs = Article.objects.all()
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="detail/(?P<identifier>[^/.]+)",
+        url_name="detail-by-id-or-slug",
+    )
+    def detail_by_id_or_slug(self, _request, identifier):
+        qs = self.get_queryset()
 
-        # Admins/staff/groups see everything
-        if not (is_admin_user(request) or is_article_group_user(request)):
-            qs = qs.filter(is_published=True)
-
-        # Check if numeric → ID
         if identifier.isdigit():
             article = get_object_or_404(qs, id=int(identifier))
         else:
             article = get_object_or_404(qs, slug=identifier)
 
-        serializer = RichTextArticleSerializer(article, context={"request": request})
+        serializer = self.get_serializer(article)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -2,7 +2,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from articles import views
-from .views import MediaUploadView, ArticleDetailByIdOrSlugAPIView
+from .views import MediaUploadView
 
 v1_router = SimpleRouter()
 v1_router.register(
@@ -12,25 +12,20 @@ v1_router.register(
 )
 
 app_name = "articles"
+
 urlpatterns = [
     re_path(
         r"^api/v1/",
         include(
             (
                 [
-                    # Existing router URLs for the ViewSet
+                    # All ViewSet routes
                     *v1_router.urls,
                     # Media upload endpoint
                     path(
                         "upload-media/",
                         MediaUploadView.as_view(),
                         name="api-media-upload",
-                    ),
-                    # New endpoint: retrieve article by ID or slug
-                    path(
-                        "articles/detail/<str:identifier>/",
-                        ArticleDetailByIdOrSlugAPIView.as_view(),
-                        name="article-detail-by-id-or-slug",
                     ),
                 ],
                 "v1",

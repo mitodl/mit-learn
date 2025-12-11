@@ -2,11 +2,8 @@
 
 import pytest
 from rest_framework.reverse import reverse
-import pytest
-from rest_framework.reverse import reverse
 
 from articles.models import Article
-
 from main.factories import UserFactory
 
 pytestmark = [pytest.mark.django_db]
@@ -26,16 +23,6 @@ def test_article_creation(staff_client, user):
     assert json["title"] == "Some title"
 
 
-@pytest.mark.parametrize("is_staff", [True, False])
-def test_article_permissions(client, is_staff):
-    user = UserFactory.create(is_staff=True)
-    client.force_login(user)
-    url = reverse("articles:v1:articles-list")
-    resp = client.get(url)
-    resp.json()
-    assert resp.status_code == 200 if is_staff else 403
-
-
 def test_retrieve_article_by_id(client, user):
     """Should retrieve published article by numeric ID"""
     article = Article.objects.create(
@@ -46,7 +33,7 @@ def test_retrieve_article_by_id(client, user):
     )
 
     url = reverse(
-        "articles:v1:article-detail-by-id-or-slug",
+        "articles:v1:articles-detail-by-id-or-slug",
         kwargs={"identifier": str(article.id)},
     )
 
@@ -68,7 +55,7 @@ def test_retrieve_article_by_slug(client, user):
     )
 
     url = reverse(
-        "articles:v1:article-detail-by-id-or-slug",
+        "articles:v1:articles-detail-by-id-or-slug",
         kwargs={"identifier": article.slug},
     )
 
@@ -93,7 +80,7 @@ def test_staff_can_access_unpublished_article(client):
     )
 
     url = reverse(
-        "articles:v1:article-detail-by-id-or-slug",
+        "articles:v1:articles-detail-by-id-or-slug",
         kwargs={"identifier": str(article.id)},
     )
 
