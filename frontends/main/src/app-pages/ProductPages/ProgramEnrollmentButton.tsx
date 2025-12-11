@@ -7,6 +7,8 @@ import { RiCheckLine } from "@remixicon/react"
 import { Button } from "@mitodl/smoot-design"
 import EnrollmentDialog from "@/page-components/EnrollmentDialog/EnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
+import { userQueries } from "api/hooks/user"
+import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 
 const WideButton = styled(Button)({
   width: "100%",
@@ -34,13 +36,15 @@ type ProgramEnrollmentButtonProps = {
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
 }) => {
+  const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
+  const me = useQuery(userQueries.me())
   const enrollments = useQuery({
     ...enrollmentQueries.programEnrollmentsList(),
     throwOnError: false,
   })
   const enrolled =
     program && enrollments.data?.some((e) => e.program.id === program.id)
-  if (enrollments.isLoading) {
+  if (enrollments.isLoading || me.isLoading) {
     return (
       <EnrolledPlaceholder>
         <LoadingSpinner size="20px" loading={true} color="inherit" />
@@ -54,16 +58,22 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       </EnrolledPlaceholder>
     )
   }
+
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+    if (me.data?.is_authenticated) {
+      NiceModal.show(EnrollmentDialog, { type: "program", resource: program })
+    } else {
+      setAnchor(e.currentTarget)
+    }
+  }
+
   return (
-    <WideButton
-      onClick={() => {
-        NiceModal.show(EnrollmentDialog, { type: "program", resource: program })
-      }}
-      variant="primary"
-      size="large"
-    >
-      Enroll for Free
-    </WideButton>
+    <>
+      <WideButton onClick={handleClick} variant="primary" size="large">
+        Enroll for Free
+      </WideButton>
+      <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
+    </>
   )
 }
 

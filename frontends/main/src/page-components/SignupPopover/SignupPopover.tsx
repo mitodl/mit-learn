@@ -35,7 +35,11 @@ const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
   const loginUrl = useAuthToCurrent()
 
   return (
-    <StyledPopover {...props} open={!!props.anchorEl}>
+    <StyledPopover
+      {...props}
+      open={!!props.anchorEl}
+      data-testid="signup-popover"
+    >
       <HeaderText variant="subtitle2">Join {SITE_NAME} for free.</HeaderText>
       <BodyText variant="body2">
         As a member, get personalized recommendations, curate learning lists,
