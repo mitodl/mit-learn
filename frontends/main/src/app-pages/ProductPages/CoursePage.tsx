@@ -23,6 +23,7 @@ import ProductPageTemplate, {
 import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import CourseEnrollmentButton from "./CourseEnrollmentButton"
 
 type CoursePageProps = {
   readableId: string
@@ -106,7 +107,12 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
-      sidebarSummary={<CourseSummary course={course} />}
+      sidebarSummary={
+        <CourseSummary
+          course={course}
+          enrollButton={<CourseEnrollmentButton course={course} />}
+        />
+      }
       navLinks={navLinks}
     >
       <ProductNavbar navLinks={navLinks} productNoun="Course" />

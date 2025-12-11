@@ -4,7 +4,11 @@ import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { setMockResponse } from "api/test-utils"
+import {
+  setMockResponse,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { HeadingIds } from "./util"
@@ -44,6 +48,11 @@ const setupApis = ({
   setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
+
+  setMockResponse.get(
+    learnUrls.userMe.get(),
+    learnFactories.user.user({ is_authenticated: false }),
+  )
 }
 
 describe("CoursePage", () => {
