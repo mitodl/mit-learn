@@ -27,15 +27,21 @@ class Article(TimestampedModel):
     def save(self, *args, **kwargs):
         previous = Article.objects.get(pk=self.pk) if self.pk else None
         was_published = getattr(previous, "is_published", None)
-        if not was_published:
+
+        # Always initialize slug
+        slug = self.slug or None
+
+        if not was_published and self.is_published:
             max_length = self._meta.get_field("slug").max_length
+
             base_slug = slugify(self.title)[:max_length]
             slug = base_slug
             counter = 1
 
+            # Prevent collisions
             while Article.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 suffix = f"-{counter}"
-                slug = f"{base_slug[: 60 - len(suffix)]}{suffix}"
+                slug = f"{base_slug[: max_length - len(suffix)]}{suffix}"
                 counter += 1
 
         self.slug = slug

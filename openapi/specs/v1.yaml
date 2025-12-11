@@ -127,7 +127,7 @@ paths:
   /api/v1/articles/detail/{identifier}/:
     get:
       operationId: articles_detail_retrieve
-      description: If the parameter is numeric, retrieve by ID. Otherwise, slug.
+      description: If the path parameter is numeric → ID, else → slug.
       summary: Retrieve article by ID or slug
       parameters:
       - in: path
@@ -146,7 +146,7 @@ paths:
                 $ref: '#/components/schemas/RichTextArticle'
           description: ''
         '404':
-          description: Not found
+          description: No response body
   /api/v1/content_file_search/:
     get:
       operationId: content_file_search_retrieve
