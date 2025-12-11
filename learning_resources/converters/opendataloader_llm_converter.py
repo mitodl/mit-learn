@@ -1,47 +1,59 @@
 """
-PDF to Markdown converter using OpenDataLoader and LLM-based OCR.
+PDF to Markdown converter using OpenDataLoader JSON output and LLM-based OCR.
 
 This module provides a converter that:
-1. Uses opendataloader_pdf to convert PDFs to markdown with extracted images
-2. Processes embedded images through an LLM for OCR/description
-3. Stitches the OCR results back into the final markdown
+1. Uses opendataloader_pdf to convert PDFs to structured JSON
+2. Extracts images from PDF pages based on bounding box coordinates
+3. Processes images through an LLM for OCR/description
+4. Assembles the final markdown from structured content
 """
 
 import base64
 import gc
+import json
 import logging
-import re
 import tempfile
 import uuid
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import cv2
 import litellm
 import numpy as np
 import opendataloader_pdf
+import pdf2image
 from django.conf import settings
 from litellm import batch_completion
 from PIL import Image
 
 log = logging.getLogger(__name__)
 
-MIN_IMAGE_DIMENSION = 64
+MIN_IMAGE_DIMENSION = 32
 MIN_IMAGE_RATIO = 12
-IMAGE_PATTERN = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-
-# Process images in batches to avoid memory issues with large documents
 IMAGE_BATCH_SIZE = 5
+PDF_POINTS_PER_INCH = 72
 
 
 @dataclass
-class ImageReference:
-    """Image found in markdown."""
+class ContentBlock:
+    """A content block from the PDF structure."""
 
-    alt_text: str
-    path: str
-    full_match: str
+    block_type: str
+    block_id: int
+    page_number: int
+    bounding_box: list[float]
+    content: str | None = None
+    heading_level: int | None = None
+
+
+@dataclass
+class ImageForOCR:
+    """An image extracted from PDF that needs OCR processing."""
+
+    block_id: int
+    pil_image: Image.Image
 
 
 def _optimize_image(pil_image: Image.Image) -> Image.Image:
@@ -62,19 +74,17 @@ def _optimize_image(pil_image: Image.Image) -> Image.Image:
 
 
 def _optimize_color_image(np_image: np.ndarray) -> Image.Image:
-    processed_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
-    processed_image = cv2.GaussianBlur(processed_image, (3, 3), 0)
-    return Image.fromarray(processed_image)
+    """Apply optimization for color-rich images like charts."""
+    processed = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
+    processed = cv2.GaussianBlur(processed, (3, 3), 0)
+    return Image.fromarray(processed)
 
 
 def _optimize_text_image(np_image: np.ndarray) -> Image.Image:
     """Apply optimization for text, formulas, and handwriting."""
-    gray_image = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
-    denoised_image = cv2.medianBlur(gray_image, 3)
-    _, processed_image = cv2.threshold(
-        denoised_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-    )
-    return Image.fromarray(processed_image)
+    gray = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
+    _, processed = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return Image.fromarray(processed)
 
 
 def _image_to_base64_uri(pil_image: Image.Image) -> str:
@@ -83,15 +93,6 @@ def _image_to_base64_uri(pil_image: Image.Image) -> str:
     pil_image.save(buffer, format="JPEG", optimize=True)
     image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{image_b64}"
-
-
-def _extract_image_references(markdown_content: str) -> list[ImageReference]:
-    """Extract all image references from markdown content."""
-    matches = IMAGE_PATTERN.findall(markdown_content)
-    return [
-        ImageReference(alt_text=alt, path=path, full_match=f"![{alt}]({path})")
-        for alt, path in matches
-    ]
 
 
 def _build_ocr_message(image_uri: str, prompt: str) -> list[dict]:
@@ -107,10 +108,192 @@ def _build_ocr_message(image_uri: str, prompt: str) -> list[dict]:
     ]
 
 
+def _is_valid_image_dimensions(width: int, height: int) -> bool:
+    """Check if image dimensions are valid for processing."""
+    if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
+        return False
+    aspect_ratio = max(width / max(height, 1), height / max(width, 1))
+    return aspect_ratio <= MIN_IMAGE_RATIO
+
+
+def _parse_heading_level(block_data: dict[str, Any]) -> int:
+    """Extract heading level from block data, defaulting to 1."""
+    level_value = block_data.get("heading level") or block_data.get("level", 1)
+    if isinstance(level_value, int):
+        return level_value
+    if isinstance(level_value, str) and level_value.isdigit():
+        return int(level_value)
+    return 1
+
+
+def _parse_content_block(block_data: dict[str, Any]) -> ContentBlock:
+    """Parse a single content block from the JSON structure."""
+    block_type = block_data.get("type", "unknown")
+    heading_level = (
+        _parse_heading_level(block_data) if block_type == "heading" else None
+    )
+
+    return ContentBlock(
+        block_type=block_type,
+        block_id=block_data.get("id", 0),
+        page_number=block_data.get("page number", 1),
+        bounding_box=block_data.get("bounding box", [0, 0, 0, 0]),
+        content=block_data.get("content"),
+        heading_level=heading_level,
+    )
+
+
+class PDFPageRenderer:
+    """Handles rendering PDF pages and extracting image regions."""
+
+    def __init__(self, document_path: Path, dpi: int = 150):
+        self.document_path = document_path
+        self.dpi = dpi
+        self._page_cache: dict[int, Image.Image] = {}
+        self._scale = dpi / PDF_POINTS_PER_INCH
+
+    def get_page_image(self, page_number: int) -> Image.Image:
+        """Get or render a page image (1-indexed page numbers)."""
+        if page_number not in self._page_cache:
+            images = pdf2image.convert_from_path(
+                self.document_path,
+                dpi=self.dpi,
+                first_page=page_number,
+                last_page=page_number,
+            )
+            self._page_cache[page_number] = images[0]
+        return self._page_cache[page_number]
+
+    def extract_region(self, page_number: int, bbox: list[float]) -> Image.Image | None:
+        """
+        Extract an image region from a PDF page using bounding box coordinates.
+
+        PDF coordinates: origin at bottom-left, y increases upward.
+        PIL coordinates: origin at top-left, y increases downward.
+        """
+        page_image = self.get_page_image(page_number)
+        page_width, page_height = page_image.size
+
+        crop_coords = self._convert_bbox_to_pixels(bbox, page_width, page_height)
+        if crop_coords is None:
+            return None
+
+        return page_image.crop(crop_coords)
+
+    def _convert_bbox_to_pixels(
+        self, bbox: list[float], page_width: int, page_height: int
+    ) -> tuple[int, int, int, int] | None:
+        """Convert PDF bbox to PIL crop coordinates, returning None if invalid."""
+        pdf_x1, pdf_y1, pdf_x2, pdf_y2 = bbox
+
+        # Convert PDF points to pixels and flip y-axis
+        pil_x1 = int(pdf_x1 * self._scale)
+        pil_x2 = int(pdf_x2 * self._scale)
+        pil_y1 = int(page_height - pdf_y2 * self._scale)
+        pil_y2 = int(page_height - pdf_y1 * self._scale)
+
+        # Clamp to page bounds
+        pil_x1 = max(0, min(pil_x1, page_width))
+        pil_x2 = max(0, min(pil_x2, page_width))
+        pil_y1 = max(0, min(pil_y1, page_height))
+        pil_y2 = max(0, min(pil_y2, page_height))
+
+        width = pil_x2 - pil_x1
+        height = pil_y2 - pil_y1
+
+        if not _is_valid_image_dimensions(width, height):
+            return None
+
+        return (pil_x1, pil_y1, pil_x2, pil_y2)
+
+    def cleanup(self) -> None:
+        """Close all cached page images to free memory."""
+        for page_image in self._page_cache.values():
+            page_image.close()
+        self._page_cache.clear()
+
+
+class OCRProcessor:
+    """Handles batch OCR processing of images via LLM."""
+
+    def __init__(self, batch_size: int = IMAGE_BATCH_SIZE):
+        self.batch_size = batch_size
+
+    def process_images(self, images: list[ImageForOCR]) -> dict[int, str]:
+        """Process images and return mapping of block_id to OCR text."""
+        if not images:
+            log.info("No images to process for OCR")
+            return {}
+
+        block_ids = [img.block_id for img in images]
+        messages = self._prepare_messages(images)
+        ocr_texts = self._execute_batch_ocr(messages)
+
+        return dict(zip(block_ids, ocr_texts, strict=True))
+
+    def _prepare_messages(self, images: list[ImageForOCR]) -> list[list[dict]]:
+        """Convert images to OCR API message format."""
+        messages = []
+        for img in images:
+            image_uri = _image_to_base64_uri(img.pil_image)
+            img.pil_image.close()
+            messages.append(_build_ocr_message(image_uri, settings.OCR_PROMPT))
+        return messages
+
+    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str]:
+        """Execute batch OCR API calls in chunks to manage memory."""
+        all_texts = []
+        total = len(messages_list)
+
+        for i in range(0, total, self.batch_size):
+            batch = messages_list[i : i + self.batch_size]
+            responses = batch_completion(
+                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+                api_base=settings.LITELLM_API_BASE,
+                model=settings.OCR_MODEL,
+                messages=batch,
+            )
+            batch_texts = [resp.choices[0].message.content for resp in responses]
+            all_texts.extend(batch_texts)
+
+            end_idx = min(i + self.batch_size, total)
+            log.info("Processed OCR batch %d-%d of %d images", i + 1, end_idx, total)
+            gc.collect()
+
+        return all_texts
+
+
+class MarkdownAssembler:
+    """Assembles markdown from content blocks and OCR results."""
+
+    def assemble(self, blocks: list[ContentBlock], ocr_results: dict[int, str]) -> str:
+        """Assemble final markdown from content blocks and OCR results."""
+        formatted_parts = [
+            formatted
+            for block in blocks
+            if (formatted := self._format_block(block, ocr_results)) is not None
+        ]
+        return "\n\n".join(formatted_parts)
+
+    def _format_block(
+        self, block: ContentBlock, ocr_results: dict[int, str]
+    ) -> str | None:
+        """Format a single content block for markdown output."""
+        if block.block_type == "heading" and block.content:
+            level = min(block.heading_level or 1, 6)
+            return f"{'#' * level} {block.content}"
+
+        if block.block_type == "paragraph" and block.content:
+            return block.content
+
+        if block.block_type == "image":
+            return ocr_results.get(block.block_id)
+
+        return None
+
+
 class OpenDataLoaderLLMConverter:
-    """
-    Convert pdfs to markdown using OpenDataLoader and LLM-based OCR.
-    """
+    """Convert PDFs to markdown using OpenDataLoader JSON and LLM-based OCR."""
 
     def __init__(
         self,
@@ -118,12 +301,15 @@ class OpenDataLoaderLLMConverter:
         debug_mode,
         output_dir: Path | None = None,
         image_batch_size: int = IMAGE_BATCH_SIZE,
+        pdf_dpi: int = 150,
     ):
         self.document_path = Path(document_path)
         self.debug_mode = debug_mode
-        self.tempdir = tempfile.TemporaryDirectory()
-        self.output_dir = output_dir or Path(self.tempdir.name)
-        self.image_batch_size = image_batch_size
+        self._tempdir = tempfile.TemporaryDirectory()
+        self.output_dir = output_dir or Path(self._tempdir.name)
+        self._page_renderer = PDFPageRenderer(self.document_path, dpi=pdf_dpi)
+        self._ocr_processor = OCRProcessor(batch_size=image_batch_size)
+        self._markdown_assembler = MarkdownAssembler()
 
         if debug_mode:
             litellm._turn_on_debug()  # noqa: SLF001
@@ -147,199 +333,76 @@ class OpenDataLoaderLLMConverter:
         file_path.write_text(markdown_content)
         return str(file_path)
 
-    def _convert_pdf_to_markdown(self) -> tuple[str, Path]:
-        """
-        Convert PDF to markdown using opendataloader.
-
-        Returns:
-            Tuple of (markdown_content, images_directory_path)
-        """
+    def _convert_pdf_to_json(self) -> dict[str, Any]:
+        """Convert PDF to JSON structure using opendataloader."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         opendataloader_pdf.convert(
             input_path=[str(self.document_path)],
             output_dir=str(self.output_dir),
-            format="markdown-with-images",
-            keep_line_breaks=True,
+            format="json",
             use_struct_tree=True,
+            keep_line_breaks=True,
         )
 
-        markdown_path = self.output_dir / f"{self.document_path.stem}.md"
-        images_dir = self.output_dir / f"{self.document_path.stem}_images"
+        json_path = self.output_dir / f"{self.document_path.stem}.json"
+        return json.loads(json_path.read_text())
 
-        markdown_content = markdown_path.read_text()
-        return markdown_content, images_dir
+    def _parse_document_structure(
+        self, json_data: dict[str, Any]
+    ) -> list[ContentBlock]:
+        """Parse the JSON document structure into content blocks."""
+        kids = json_data.get("kids", [])
+        return [_parse_content_block(kid) for kid in kids]
 
-    def _load_and_optimize_image(self, image_path: Path) -> Image.Image | None:
-        """Load an image from disk and optimize it for OCR."""
-        pil_image = None
-        try:
-            pil_image = Image.open(image_path)
-            # Drop tiny pixel images
-            cw, ch = pil_image.size
-            # Skip weird tiny strips or lines
-            if cw < MIN_IMAGE_DIMENSION or ch < MIN_IMAGE_DIMENSION:
-                return None
-            # Skip extreme aspect ratios (like lines)
-            ratio = max(cw / max(ch, 1), ch / max(cw, 1))
-            if ratio > MIN_IMAGE_RATIO:  # extremely long thin strip
-                return None
-            # Load image data into memory so we can close the file handle
-            pil_image.load()
-            optimized = _optimize_image(pil_image)
-            if self.debug_mode:
-                self._save_debug_image(optimized)
-            return optimized  # noqa: TRY300
-        except Exception:
-            log.exception("Failed to load image: %s", image_path)
-            return None
-        finally:
-            # Ensure original image is closed to free memory
-            if pil_image is not None:
-                pil_image.close()
+    def _collect_images_for_ocr(self, blocks: list[ContentBlock]) -> list[ImageForOCR]:
+        """Extract and optimize all valid images from content blocks."""
+        image_blocks = [b for b in blocks if b.block_type == "image"]
+        images_for_ocr = []
 
-    def _resolve_image_path(self, ref_path: str, images_dir: Path) -> Path:
-        """
-        Resolve an image reference path to an absolute path.
+        for block in image_blocks:
+            image = self._extract_and_optimize_image(block)
+            if image is not None:
+                images_for_ocr.append(
+                    ImageForOCR(block_id=block.block_id, pil_image=image)
+                )
 
-        Handles both absolute paths and relative paths.
-        """
-        ref_path_obj = Path(ref_path)
-        if ref_path_obj.is_absolute() and ref_path_obj.exists():
-            return ref_path_obj
+        return images_for_ocr
 
-        # Try relative to images directory
-        potential_path = images_dir / ref_path_obj.name
-        if potential_path.exists():
-            return potential_path
-
-        # Try the path as-is from output directory
-        potential_path = self.output_dir / ref_path_obj.name
-        if potential_path.exists():
-            return potential_path
-
-        return ref_path_obj
-
-    def _prepare_image_message(
-        self, ref: ImageReference, images_dir: Path
-    ) -> list[dict] | None:
-        """
-        Prepare OCR message for a single image.
-
-        Returns None if image cannot be loaded or processed.
-        """
-        image_path = self._resolve_image_path(ref.path, images_dir)
-        optimized_image = self._load_and_optimize_image(image_path)
-
-        if optimized_image is None:
-            log.warning("Skipping image reference: %s", ref.path)
-            return None
-
-        image_uri = _image_to_base64_uri(optimized_image)
-        # Explicitly close image to free memory
-        optimized_image.close()
-
-        return _build_ocr_message(image_uri, settings.OCR_PROMPT)
-
-    def _prepare_batch_messages(
-        self, image_refs: list[ImageReference], images_dir: Path
-    ) -> tuple[list[ImageReference], list[list[dict]]]:
-        """
-        Prepare batch OCR messages for all valid images.
-
-        Returns:
-            Tuple of (valid_refs, messages_list) where valid_refs are references
-            with successfully loaded images
-        """
-        valid_refs = []
-        messages_list = []
-
-        for ref in image_refs:
-            messages = self._prepare_image_message(ref, images_dir)
-            if messages is not None:
-                messages_list.append(messages)
-                valid_refs.append(ref)
-
-        return valid_refs, messages_list
-
-    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str]:
-        """Execute batch OCR API calls in chunks to manage memory."""
-        if not messages_list:
-            return []
-
-        all_texts = []
-        for i in range(0, len(messages_list), self.image_batch_size):
-            batch = messages_list[i : i + self.image_batch_size]
-            responses = batch_completion(
-                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-                api_base=settings.LITELLM_API_BASE,
-                model=settings.OCR_MODEL,
-                messages=batch,
-            )
-            batch_texts = [resp.choices[0].message.content for resp in responses]
-            all_texts.extend(batch_texts)
-            log.info(
-                "Processed OCR batch %d-%d of %d images",
-                i + 1,
-                min(i + self.image_batch_size, len(messages_list)),
-                len(messages_list),
-            )
-            # Force garbage collection after each batch to manage memory
-            gc.collect()
-
-        return all_texts
-
-    def _replace_images_with_text(
-        self,
-        markdown_content: str,
-        image_refs: list[ImageReference],
-        extracted_texts: list[str],
-    ) -> str:
-        """Replace image references in markdown with extracted text."""
-        result = markdown_content
-        for ref, text in zip(image_refs, extracted_texts, strict=True):
-            result = result.replace(ref.full_match, text)
-        return result
-
-    def _process_images(self, markdown_content: str, images_dir: Path) -> str:
-        """
-        Process all images in the markdown and replace with OCR text.
-
-        Args:
-            markdown_content: The markdown content with image references
-            images_dir: Directory containing the extracted images
-
-        Returns:
-            Markdown content with images replaced by OCR text
-        """
-        image_refs = _extract_image_references(markdown_content)
-
-        if not image_refs:
-            log.info("No images found in markdown")
-            return markdown_content
-
-        valid_refs, messages_list = self._prepare_batch_messages(image_refs, images_dir)
-
-        if not messages_list:
-            log.warning("No valid images to process")
-            return markdown_content
-
-        extracted_texts = self._execute_batch_ocr(messages_list)
-        return self._replace_images_with_text(
-            markdown_content, valid_refs, extracted_texts
+    def _extract_and_optimize_image(self, block: ContentBlock) -> Image.Image | None:
+        """Extract image region from PDF and optimize for OCR."""
+        cropped = self._page_renderer.extract_region(
+            block.page_number, block.bounding_box
         )
+        if cropped is None:
+            log.debug("Skipping invalid image region for block %d", block.block_id)
+            return None
+
+        optimized = _optimize_image(cropped)
+        cropped.close()
+
+        if self.debug_mode:
+            self._save_debug_image(optimized)
+
+        return optimized
 
     def convert_to_markdown(self) -> str:
         """
         Convert the PDF document to markdown with OCR'd images.
 
         Returns:
-            The final markdown content with all images processed
+            The final markdown content with all images processed.
         """
-        markdown_content, images_dir = self._convert_pdf_to_markdown()
-        final_markdown = self._process_images(markdown_content, images_dir)
+        try:
+            json_data = self._convert_pdf_to_json()
+            blocks = self._parse_document_structure(json_data)
+            images = self._collect_images_for_ocr(blocks)
+            ocr_results = self._ocr_processor.process_images(images)
+            final_markdown = self._markdown_assembler.assemble(blocks, ocr_results)
 
-        if self.debug_mode:
-            self._save_debug_markdown(final_markdown)
+            if self.debug_mode:
+                self._save_debug_markdown(final_markdown)
 
-        return final_markdown
+            return final_markdown
+        finally:
+            self._page_renderer.cleanup()
