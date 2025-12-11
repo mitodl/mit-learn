@@ -36,10 +36,46 @@ class DefaultPagination(LimitOffsetPagination):
 
 @extend_schema_view(
     list=extend_schema(summary="List", description="Get a paginated list of articles"),
-    retrieve=extend_schema(summary="Retrieve", description="Retrieve a single article"),
+    retrieve=extend_schema(
+        summary="Retrieve",
+        description="Retrieve a single article",
+        parameters=[
+            OpenApiParameter(
+                name="id_or_slug",
+                description="Article ID (number) or slug (string)",
+                required=True,
+                type=str,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
+    ),
     create=extend_schema(summary="Create", description="Create a new article"),
-    destroy=extend_schema(summary="Destroy", description="Delete an article"),
-    partial_update=extend_schema(summary="Update", description="Update an article"),
+    destroy=extend_schema(
+        summary="Destroy",
+        description="Delete an article",
+        parameters=[
+            OpenApiParameter(
+                name="id_or_slug",
+                description="Article ID (number) or slug (string)",
+                required=True,
+                type=str,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
+    ),
+    partial_update=extend_schema(
+        summary="Update",
+        description="Update an article",
+        parameters=[
+            OpenApiParameter(
+                name="id_or_slug",
+                description="Article ID (number) or slug (string)",
+                required=True,
+                type=str,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
+    ),
 )
 class ArticleViewSet(viewsets.ModelViewSet):
     """
@@ -78,6 +114,23 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()
         return super().destroy(request, *args, **kwargs)
+
+    def get_object(self):
+        """
+        Override to allow lookup by either ID (numeric) or slug.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        identifier = self.kwargs.get("pk")
+        if str(identifier).isdigit():
+            filter_kwargs = {"pk": int(identifier)}
+        else:
+            filter_kwargs = {"slug": identifier}
+
+        obj = get_object_or_404(queryset, **filter_kwargs)
+
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
 
 class ArticleDetailByIdOrSlugAPIView(APIView):

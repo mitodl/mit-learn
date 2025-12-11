@@ -68,6 +68,12 @@ paths:
           type: integer
         description: A unique integer value identifying this article.
         required: true
+      - in: path
+        name: id_or_slug
+        schema:
+          type: string
+        description: Article ID (number) or slug (string)
+        required: true
       tags:
       - articles
       responses:
@@ -87,6 +93,12 @@ paths:
         schema:
           type: integer
         description: A unique integer value identifying this article.
+        required: true
+      - in: path
+        name: id_or_slug
+        schema:
+          type: string
+        description: Article ID (number) or slug (string)
         required: true
       tags:
       - articles
@@ -118,6 +130,12 @@ paths:
         schema:
           type: integer
         description: A unique integer value identifying this article.
+        required: true
+      - in: path
+        name: id_or_slug
+        schema:
+          type: string
+        description: Article ID (number) or slug (string)
         required: true
       tags:
       - articles

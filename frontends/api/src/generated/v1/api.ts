@@ -8898,19 +8898,22 @@ export const ArticlesApiAxiosParamCreator = function (
      * Delete an article
      * @summary Destroy
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesDestroy: async (
       id: number,
+      id_or_slug: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
       assertParamExists("articlesDestroy", "id", id)
-      const localVarPath = `/api/v1/articles/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
+      // verify required parameter 'id_or_slug' is not null or undefined
+      assertParamExists("articlesDestroy", "id_or_slug", id_or_slug)
+      const localVarPath = `/api/v1/articles/{id}/`
+        .replace(`{${"id"}}`, encodeURIComponent(String(id)))
+        .replace(`{${"id_or_slug"}}`, encodeURIComponent(String(id_or_slug)))
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
       let baseOptions
@@ -9041,21 +9044,24 @@ export const ArticlesApiAxiosParamCreator = function (
      * Update an article
      * @summary Update
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesPartialUpdate: async (
       id: number,
+      id_or_slug: string,
       PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
       assertParamExists("articlesPartialUpdate", "id", id)
-      const localVarPath = `/api/v1/articles/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
+      // verify required parameter 'id_or_slug' is not null or undefined
+      assertParamExists("articlesPartialUpdate", "id_or_slug", id_or_slug)
+      const localVarPath = `/api/v1/articles/{id}/`
+        .replace(`{${"id"}}`, encodeURIComponent(String(id)))
+        .replace(`{${"id_or_slug"}}`, encodeURIComponent(String(id_or_slug)))
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
       let baseOptions
@@ -9096,19 +9102,22 @@ export const ArticlesApiAxiosParamCreator = function (
      * Retrieve a single article
      * @summary Retrieve
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesRetrieve: async (
       id: number,
+      id_or_slug: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
       assertParamExists("articlesRetrieve", "id", id)
-      const localVarPath = `/api/v1/articles/{id}/`.replace(
-        `{${"id"}}`,
-        encodeURIComponent(String(id)),
-      )
+      // verify required parameter 'id_or_slug' is not null or undefined
+      assertParamExists("articlesRetrieve", "id_or_slug", id_or_slug)
+      const localVarPath = `/api/v1/articles/{id}/`
+        .replace(`{${"id"}}`, encodeURIComponent(String(id)))
+        .replace(`{${"id_or_slug"}}`, encodeURIComponent(String(id_or_slug)))
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
       let baseOptions
@@ -9183,17 +9192,20 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Delete an article
      * @summary Destroy
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesDestroy(
       id: number,
+      id_or_slug: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesDestroy(
         id,
+        id_or_slug,
         options,
       )
       const index = configuration?.serverIndex ?? 0
@@ -9277,12 +9289,14 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Update an article
      * @summary Update
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {PatchedRichTextArticleRequest} [PatchedRichTextArticleRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesPartialUpdate(
       id: number,
+      id_or_slug: string,
       PatchedRichTextArticleRequest?: PatchedRichTextArticleRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -9294,6 +9308,7 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.articlesPartialUpdate(
           id,
+          id_or_slug,
           PatchedRichTextArticleRequest,
           options,
         )
@@ -9312,11 +9327,13 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
      * Retrieve a single article
      * @summary Retrieve
      * @param {number} id A unique integer value identifying this article.
+     * @param {string} id_or_slug Article ID (number) or slug (string)
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesRetrieve(
       id: number,
+      id_or_slug: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -9325,7 +9342,11 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<RichTextArticle>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.articlesRetrieve(id, options)
+        await localVarAxiosParamCreator.articlesRetrieve(
+          id,
+          id_or_slug,
+          options,
+        )
       const index = configuration?.serverIndex ?? 0
       const operationBasePath =
         operationServerMap["ArticlesApi.articlesRetrieve"]?.[index]?.url
@@ -9378,7 +9399,11 @@ export const ArticlesApiFactory = function (
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<void> {
       return localVarFp
-        .articlesDestroy(requestParameters.id, options)
+        .articlesDestroy(
+          requestParameters.id,
+          requestParameters.id_or_slug,
+          options,
+        )
         .then((request) => request(axios, basePath))
     },
     /**
@@ -9429,6 +9454,7 @@ export const ArticlesApiFactory = function (
       return localVarFp
         .articlesPartialUpdate(
           requestParameters.id,
+          requestParameters.id_or_slug,
           requestParameters.PatchedRichTextArticleRequest,
           options,
         )
@@ -9446,7 +9472,11 @@ export const ArticlesApiFactory = function (
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<RichTextArticle> {
       return localVarFp
-        .articlesRetrieve(requestParameters.id, options)
+        .articlesRetrieve(
+          requestParameters.id,
+          requestParameters.id_or_slug,
+          options,
+        )
         .then((request) => request(axios, basePath))
     },
   }
@@ -9478,6 +9508,13 @@ export interface ArticlesApiArticlesDestroyRequest {
    * @memberof ArticlesApiArticlesDestroy
    */
   readonly id: number
+
+  /**
+   * Article ID (number) or slug (string)
+   * @type {string}
+   * @memberof ArticlesApiArticlesDestroy
+   */
+  readonly id_or_slug: string
 }
 
 /**
@@ -9529,6 +9566,13 @@ export interface ArticlesApiArticlesPartialUpdateRequest {
   readonly id: number
 
   /**
+   * Article ID (number) or slug (string)
+   * @type {string}
+   * @memberof ArticlesApiArticlesPartialUpdate
+   */
+  readonly id_or_slug: string
+
+  /**
    *
    * @type {PatchedRichTextArticleRequest}
    * @memberof ArticlesApiArticlesPartialUpdate
@@ -9548,6 +9592,13 @@ export interface ArticlesApiArticlesRetrieveRequest {
    * @memberof ArticlesApiArticlesRetrieve
    */
   readonly id: number
+
+  /**
+   * Article ID (number) or slug (string)
+   * @type {string}
+   * @memberof ArticlesApiArticlesRetrieve
+   */
+  readonly id_or_slug: string
 }
 
 /**
@@ -9587,7 +9638,11 @@ export class ArticlesApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return ArticlesApiFp(this.configuration)
-      .articlesDestroy(requestParameters.id, options)
+      .articlesDestroy(
+        requestParameters.id,
+        requestParameters.id_or_slug,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 
@@ -9640,6 +9695,7 @@ export class ArticlesApi extends BaseAPI {
     return ArticlesApiFp(this.configuration)
       .articlesPartialUpdate(
         requestParameters.id,
+        requestParameters.id_or_slug,
         requestParameters.PatchedRichTextArticleRequest,
         options,
       )
@@ -9659,7 +9715,11 @@ export class ArticlesApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return ArticlesApiFp(this.configuration)
-      .articlesRetrieve(requestParameters.id, options)
+      .articlesRetrieve(
+        requestParameters.id,
+        requestParameters.id_or_slug,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 }
