@@ -77,7 +77,7 @@ describe("CourseSummary", () => {
       overrides: { is_archived: true },
       expectLabel: "Access Course Materials",
     },
-    { overrides: { is_archived: false }, expectLabel: "Enroll Now" },
+    { overrides: { is_archived: false }, expectLabel: "Enroll for Free" },
   ])("Renders expected enrollment button", ({ overrides, expectLabel }) => {
     const run = makeRun(overrides)
     const course = makeCourse({

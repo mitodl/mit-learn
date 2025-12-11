@@ -352,9 +352,6 @@ const ProgramEnrollmentDialog: React.FC<ProgramEnrollmentDialogProps> = ({
   )
   const run = getNextRun(chosenCourse)
 
-  console.log("woofwoofmeow")
-  console.log({ err: courses.isError })
-  console.log({ data: courses.data, isLoading: courses.isLoading })
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
