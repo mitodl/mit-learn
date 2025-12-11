@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.50.1
+--------------
+
+- For published non-test_mode courses, only process contentfile archives of the best run (#2786)
+
 Version 0.50.0 (Released December 11, 2025)
 --------------
 
