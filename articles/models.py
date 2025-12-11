@@ -2,10 +2,10 @@
 
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
 from main.models import TimestampedModel
 from profiles.utils import article_image_upload_uri
-from django.utils.text import slugify
 
 
 class Article(TimestampedModel):
