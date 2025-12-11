@@ -98,8 +98,10 @@ def test_sync_edx_course_files(  # noqa: PLR0913
     sync_edx_course_files(
         source, [course.id for course in courses], keys, s3_prefix=s3_prefix
     )
-    assert mock_transform.call_count == (4 if published else 0)
-    assert mock_load_content_files.call_count == (4 if published else 0)
+    # Only best runs for published courses are processed, so 2 runs (one per course) not 4
+    expected_calls = 2 if published else 0
+    assert mock_transform.call_count == expected_calls
+    assert mock_load_content_files.call_count == expected_calls
     if published:
         for course in courses:
             mock_load_content_files.assert_any_call(course.best_run, fake_data)
@@ -266,6 +268,120 @@ def test_sync_edx_course_files_error(
     assert str(mock_transform.call_args[0][0]).endswith(f"{run.run_id}.tar.gz") is True
     mock_load_content_files.assert_called_once_with(run, fake_data)
     assert mock_log.call_args[0][0].startswith("Error ingesting OLX content data for ")
+
+
+@pytest.mark.parametrize(
+    "platform", [PlatformType.mitxonline.name, PlatformType.xpro.name]
+)
+def test_sync_edx_course_files_no_matching_run(
+    mock_mitxonline_learning_bucket, mock_xpro_learning_bucket, mocker, platform
+):
+    """If no run matches the run_id from the tarball, it should be skipped"""
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=platform,
+        published=True,
+        create_runs=True,
+    )
+    run = course.best_run
+    # Use a different run_id in the key than what exists in the database
+    key = "20220101/courses/non-existent-run-id.tar.gz"
+    bucket = (
+        mock_mitxonline_learning_bucket
+        if platform == PlatformType.mitxonline.name
+        else mock_xpro_learning_bucket
+    ).bucket
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(
+            Key=key,
+            Body=infile.read(),
+            ACL="public-read",
+        )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_learning_course_bucket",
+        return_value=bucket,
+    )
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
+        autospec=True,
+        return_value=[],
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
+
+    sync_edx_course_files(platform, [run.learning_resource.id], [key])
+
+    mock_load_content_files.assert_not_called()
+    mock_log.assert_any_call("No runs found for %s, skipping", "non-existent-run-id")
+
+
+@pytest.mark.parametrize(
+    "platform", [PlatformType.mitxonline.name, PlatformType.xpro.name]
+)
+def test_sync_edx_course_files_test_mode_all_runs_processed(
+    mock_mitxonline_learning_bucket, mock_xpro_learning_bucket, mocker, platform
+):
+    """For test mode courses, all runs should be processed (not just the best run)"""
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=platform,
+        published=False,
+        test_mode=True,
+        create_runs=False,
+    )
+    # Create multiple runs for this course
+    runs = LearningResourceRunFactory.create_batch(
+        3,
+        learning_resource=course,
+        published=False,
+    )
+    course.refresh_from_db()
+
+    # Create keys for all runs
+    keys = [f"20220101/courses/{run.run_id}.tar.gz" for run in runs]
+
+    bucket = (
+        mock_mitxonline_learning_bucket
+        if platform == PlatformType.mitxonline.name
+        else mock_xpro_learning_bucket
+    ).bucket
+
+    # Put all archive files in S3
+    for key in keys:
+        with Path.open(
+            Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+        ) as infile:
+            bucket.put_object(
+                Key=key,
+                Body=infile.read(),
+                ACL="public-read",
+            )
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_learning_course_bucket",
+        return_value=bucket,
+    )
+    fake_data = '{"key": "data"}'
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=fake_data,
+    )
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
+        autospec=True,
+        return_value=[],
+    )
+
+    sync_edx_course_files(platform, [course.id], keys)
+
+    # All 3 runs should be processed, not just the best run
+    assert mock_transform.call_count == 3
+    assert mock_load_content_files.call_count == 3
+
+    # Verify each run was processed
+    for run in runs:
+        mock_load_content_files.assert_any_call(run, fake_data)
 
 
 @pytest.mark.parametrize("platform", [PlatformType.edx.value, PlatformType.xpro.value])
