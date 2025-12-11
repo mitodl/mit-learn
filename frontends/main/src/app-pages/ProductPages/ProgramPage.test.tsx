@@ -161,6 +161,8 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+
+  setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
 }
 
 describe("ProgramPage", () => {
