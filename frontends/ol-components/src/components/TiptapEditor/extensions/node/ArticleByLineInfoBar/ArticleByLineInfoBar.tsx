@@ -54,15 +54,13 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
-  const { editable } = node.attrs
-
+const ArticleByLineInfoBar = ({ editor }: ReactNodeViewProps) => {
   const article = useArticle()
 
   const { data: user } = useUserMe()
 
   let author = null
-  if (editable && !article?.user) {
+  if (editor?.isEditable && !article?.user) {
     author = user
   } else {
     author = article?.user
@@ -70,7 +68,8 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
 
   const publishedDate = article?.is_published ? article?.created_on : null
 
-  const readTime = calculateReadTime(article?.content)
+  const content = article?.content || editor?.getJSON()
+  const readTime = calculateReadTime(content)
 
   return (
     <NodeViewWrapper>
@@ -87,7 +86,7 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
                 By {author.first_name} {author.last_name}
               </NameText>
               {readTime && <InfoText>{readTime} min read</InfoText>}
-              <InfoText>-</InfoText>
+              {readTime && publishedDate ? <InfoText>-</InfoText> : null}
               <InfoText>
                 {publishedDate
                   ? new Date(publishedDate).toLocaleDateString()

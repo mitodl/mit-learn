@@ -37,14 +37,14 @@ function countWords(text: string): number {
 
 export function calculateReadTime(
   content: JSONContent | null | undefined,
-  wordsPerMinute: number = 200,
-): number {
-  if (!content) return 0
+  wordsPerMinute: number = 250,
+): number | null {
+  if (!content) return null
 
   const text = extractTextFromNode(content)
   const wordCount = countWords(text)
 
-  if (wordCount === 0) return 0
+  if (wordCount === 0) return null
 
   const readingTime = wordCount / wordsPerMinute
 
