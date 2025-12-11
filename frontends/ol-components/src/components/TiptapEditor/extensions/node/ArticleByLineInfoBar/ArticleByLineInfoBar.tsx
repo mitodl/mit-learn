@@ -4,9 +4,10 @@ import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
 import Container from "@mui/material/Container"
 import { RiShareFill } from "@remixicon/react"
-import { useUserMe } from "api/hooks/user"
 import Avatar from "@mui/material/Avatar"
 import { ActionButton } from "@mitodl/smoot-design"
+import { useUserMe } from "api/hooks/user"
+import { useArticle } from "../../../ArticleContext"
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
@@ -52,42 +53,40 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Spacer = styled.div({
-  marginBottom: "56px",
-})
-
 const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
-  const { authorName, avatarUrl, readTime, publishedDate, editable } =
-    node.attrs
-  const { isLoading, data: user } = useUserMe()
+  const {
+    user: _author,
+    avatarUrl,
+    readTime,
+    publishedDate,
+    editable,
+  } = node.attrs
 
-  if (editable) {
-    return (
-      <NodeViewWrapper>
-        <Spacer />
-      </NodeViewWrapper>
-    )
+  const article = useArticle()
+
+  const { data: user } = useUserMe()
+
+  let authorName = null
+  if (editable && !article?.user) {
+    authorName = `${user?.first_name || ""} ${user?.last_name || ""}`
+  } else {
+    authorName = article?.user
+      ? `${article.user.first_name || ""} ${article.user.last_name || ""}`
+      : null
   }
-
-  const author =
-    !isLoading &&
-    (authorName ||
-      (editable && (user?.first_name || user?.last_name)
-        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
-        : null))
 
   return (
     <NodeViewWrapper>
       <StyledWrapper>
-        <InnerContainer noAuthor={!author}>
-          {author && (
+        <InnerContainer noAuthor={!authorName}>
+          {authorName && (
             <InfoContainer>
               <Avatar src={avatarUrl}>
                 {user?.first_name?.charAt(0) || ""}
                 {user?.last_name?.charAt(0) || ""}
               </Avatar>
 
-              <NameText>By {author}</NameText>
+              <NameText>By {authorName}</NameText>
               {readTime && <InfoText>{readTime}</InfoText>}
               <InfoText>-</InfoText>
               <InfoText>

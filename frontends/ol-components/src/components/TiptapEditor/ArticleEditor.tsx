@@ -3,6 +3,8 @@
 import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
+import type { RichTextArticle } from "api/v1"
+
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
@@ -20,6 +22,7 @@ import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
+import { ArticleProvider } from "./ArticleContext"
 
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
@@ -50,7 +53,6 @@ import {
   useArticlePartialUpdate,
   useMediaUpload,
 } from "api/hooks/articles"
-import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
@@ -86,7 +88,7 @@ const StyledAlert = styled(Alert)({
 })
 
 const ArticleDocument = Document.extend({
-  content: "banner byline block? paragraph+",
+  content: "banner byline block+",
 })
 
 interface ArticleEditorProps {
@@ -216,7 +218,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-
       setContent(json)
       setTouched(true)
     },
@@ -372,63 +373,65 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
   return (
     <ViewContainer toolbarVisible={isArticleEditor}>
-      <EditorContext.Provider value={{ editor }}>
-        {isArticleEditor ? (
-          readOnly ? (
-            <StyledToolbar>
-              <Spacer />
-              <ButtonLink
-                variant="primary"
-                href={`/articles/${article?.id}/edit`}
-                size="small"
-              >
-                Edit
-              </ButtonLink>
-            </StyledToolbar>
-          ) : (
-            <StyledToolbar>
-              <MainToolbarContent editor={editor} />
-              {(!article || !article?.is_published) && (
+      <ArticleProvider value={{ article }}>
+        <EditorContext.Provider value={{ editor }}>
+          {isArticleEditor ? (
+            readOnly ? (
+              <StyledToolbar>
+                <Spacer />
+                <ButtonLink
+                  variant="primary"
+                  href={`/articles/${article?.id}/edit`}
+                  size="small"
+                >
+                  Edit
+                </ButtonLink>
+              </StyledToolbar>
+            ) : (
+              <StyledToolbar>
+                <MainToolbarContent editor={editor} />
+                {(!article || !article?.is_published) && (
+                  <Button
+                    variant="secondary"
+                    disabled={isPending || !touched || !title}
+                    onClick={() => {
+                      handleSave(false)
+                      setIsPublishing(false)
+                    }}
+                    size="small"
+                  >
+                    {isPending && !isPublishing ? "Saving..." : "Save As Draft"}
+                  </Button>
+                )}
+
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   disabled={isPending || !touched || !title}
                   onClick={() => {
-                    handleSave(false)
-                    setIsPublishing(false)
+                    handleSave(true)
+                    setIsPublishing(true)
                   }}
                   size="small"
                 >
-                  {isPending && !isPublishing ? "Saving..." : "Save As Draft"}
+                  {publishButtonLabel}
                 </Button>
-              )}
+              </StyledToolbar>
+            )
+          ) : null}
+          {isError ||
+            (uploadError && (
+              <StyledAlert severity="error" closable>
+                <Typography variant="body2" color="textPrimary">
+                  {error?.message ??
+                    uploadError ??
+                    "An error occurred while saving"}
+                </Typography>
+              </StyledAlert>
+            ))}
 
-              <Button
-                variant="primary"
-                disabled={isPending || !touched || !title}
-                onClick={() => {
-                  handleSave(true)
-                  setIsPublishing(true)
-                }}
-                size="small"
-              >
-                {publishButtonLabel}
-              </Button>
-            </StyledToolbar>
-          )
-        ) : null}
-        {isError ||
-          (uploadError && (
-            <StyledAlert severity="error" closable>
-              <Typography variant="body2" color="textPrimary">
-                {error?.message ??
-                  uploadError ??
-                  "An error occurred while saving"}
-              </Typography>
-            </StyledAlert>
-          ))}
-
-        <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
-      </EditorContext.Provider>
+          <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+        </EditorContext.Provider>
+      </ArticleProvider>
     </ViewContainer>
   )
 }
