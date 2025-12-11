@@ -29,13 +29,11 @@ const Container = styled.div(({ theme }) => ({
 
   [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
     "&.layout-wide img": {
-      width: "90vw",
-      maxWidth: "90vw",
+      width: "92vw",
+      maxWidth: "1400px",
       position: "relative",
       left: "50%",
-      right: "50%",
-      marginLeft: "-45vw",
-      marginRight: "-45vw",
+      transform: "translateX(-50%)",
     },
   },
 
@@ -45,8 +43,7 @@ const Container = styled.div(({ theme }) => ({
     position: "relative",
     left: "50%",
     right: "50%",
-    marginLeft: "-50vw",
-    marginRight: "-50vw",
+    transform: "translateX(-50%)",
   },
 
   ".caption-input": {
