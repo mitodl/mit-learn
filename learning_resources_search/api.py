@@ -665,7 +665,7 @@ def add_text_query_to_search(
             }
         }
 
-        pagination_depth = search_params.get("limit") * 3
+        pagination_depth = search_params.get("limit", 10) * 3
         search = search.extra(
             query={
                 "hybrid": {
