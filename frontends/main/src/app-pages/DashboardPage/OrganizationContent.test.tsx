@@ -754,7 +754,19 @@ describe("OrganizationContent", () => {
         },
         b2b_contract_id: contracts[0].id,
         b2b_organization_id: contracts[0].organization,
-        grades: [], // No grades = enrolled but not completed
+        certificate: { uuid: faker.string.uuid(), link: faker.internet.url() },
+      }),
+      factories.enrollment.courseEnrollment({
+        run: {
+          id: courses[1].courseruns.find(
+            (r) => r.b2b_contract === contractIds[0],
+          )?.id,
+          course: { id: courses[1].id, title: courses[1].title },
+        },
+        b2b_contract_id: contracts[0].id,
+        b2b_organization_id: contracts[0].organization,
+        certificate: null,
+        grades: [],
       }),
     ]
     // Override enrollments for this test
@@ -779,15 +791,16 @@ describe("OrganizationContent", () => {
       await screen.findByTestId("org-program-root"),
     ).findAllByTestId("enrollment-card-desktop")
 
+    expect(cards.length).toBe(3)
     // First card should show enrolled status
-    const firstCardStatus = within(cards[0]).getByTestId("enrollment-status")
-    expect(firstCardStatus).toHaveTextContent(/^Enrolled$/)
+    const cardStatus0 = within(cards[0]).getByTestId("enrollment-status")
+    expect(cardStatus0).toHaveTextContent(/^Completed$/)
 
-    // Remaining cards should show not enrolled
-    for (let i = 1; i < cards.length; i++) {
-      const cardStatus = within(cards[i]).getByTestId("enrollment-status")
-      expect(cardStatus).toHaveTextContent("Not Enrolled")
-    }
+    const cardStatus1 = within(cards[1]).getByTestId("enrollment-status")
+    expect(cardStatus1).toHaveTextContent(/^Enrolled$/)
+
+    const cardStatus2 = within(cards[2]).getByTestId("enrollment-status")
+    expect(cardStatus2).toHaveTextContent(/^Not Enrolled$/)
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {
