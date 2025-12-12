@@ -91,7 +91,7 @@ def get_most_recent_course_archives(
             reversed(  # noqa: C413
                 sorted(
                     [
-                        obj
+                        (obj.key, obj.last_modified)
                         for obj in bucket.objects.filter(
                             # Use s3_prefix for OLL, "20" for all others
                             Prefix=s3_prefix
@@ -100,17 +100,17 @@ def get_most_recent_course_archives(
                         )
                         if re.search(course_tar_regex, obj.key)
                     ],
-                    key=lambda obj: obj.last_modified,
+                    key=lambda obj: obj[1],
                 )
             )
         )
         if override_base_prefix:
             # More hoops to get desired result from OLL compared to other sources
             most_recent_export_date = "/".join(
-                [s3_prefix, most_recent_export_file.key.lstrip(s3_prefix).split("/")[0]]
+                [s3_prefix, most_recent_export_file[0].lstrip(s3_prefix).split("/")[0]]
             )
         else:
-            most_recent_export_date = most_recent_export_file.key.split("/")[0]
+            most_recent_export_date = most_recent_export_file[0].split("/")[0]
         log.info("Most recent export date is %s", most_recent_export_date)
         return [
             obj.key
