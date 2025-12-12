@@ -257,25 +257,27 @@ const organizationCoursesWithContracts = (raw: {
     if (enrollments?.length > 0) {
       if (raw.contracts && raw.contracts.length > 0) {
         // Filter enrollments to only include those with valid contracts
-        const validEnrollments = enrollments.filter((enrollment) => {
+        const contractEnrollments = enrollments.filter((enrollment) => {
           const courseRunContractId = enrollment.b2b_contract_id
           return (
             courseRunContractId && contractIds.includes(courseRunContractId)
           )
         })
 
-        if (validEnrollments.length > 0) {
+        if (contractEnrollments.length > 0) {
           // Find all enrollments that match runs in this course
           // Match by run ID AND verify the contract matches
-          const matchingEnrollments = validEnrollments.filter((enrollment) => {
-            const matchingRun = course.courseruns.find(
-              (run) => run.id === enrollment.run.id,
-            )
-            return (
-              matchingRun &&
-              matchingRun.b2b_contract === enrollment.b2b_contract_id
-            )
-          })
+          const matchingEnrollments = contractEnrollments.filter(
+            (enrollment) => {
+              const matchingRun = course.courseruns.find(
+                (run) => run.id === enrollment.run.id,
+              )
+              return (
+                matchingRun &&
+                matchingRun.b2b_contract === enrollment.b2b_contract_id
+              )
+            },
+          )
 
           if (matchingEnrollments.length > 0) {
             // If multiple enrollments exist (e.g., user enrolled in multiple runs
