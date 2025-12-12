@@ -180,7 +180,6 @@ describe("OrganizationContent", () => {
     })
   })
 
-  // Collections are currently disabled in the org dashboard
   test("Renders program collections", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
@@ -249,7 +248,6 @@ describe("OrganizationContent", () => {
     expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
   })
 
-  // Collections are currently disabled in the org dashboard
   test("Program collection displays the first course from each program", async () => {
     const { orgX, programA, programCollection, coursesA } =
       setupProgramsAndCourses()
@@ -298,7 +296,6 @@ describe("OrganizationContent", () => {
     expect(courseCard).toHaveTextContent(firstCourse!.title)
   })
 
-  // Collections are currently disabled in the org dashboard
   test("Does not render a program separately if it is part of a collection", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
@@ -374,7 +371,6 @@ describe("OrganizationContent", () => {
     expect(collections.length).toBe(0)
   })
 
-  // Collections are currently disabled in the org dashboard
   test("Does not render program collection if all programs have no courses", async () => {
     const { orgX, programA, programB } = setupProgramsAndCourses()
 
@@ -411,7 +407,6 @@ describe("OrganizationContent", () => {
     })
   })
 
-  // Collections are currently disabled in the org dashboard
   test("Renders program collection when at least one program has courses", async () => {
     const { orgX, programA, programB, programCollection, coursesB } =
       setupProgramsAndCourses()
@@ -580,8 +575,7 @@ describe("OrganizationContent", () => {
       // Check that the card displays information from the correct course run
       const coursewareButton = within(card).getByTestId("courseware-button")
 
-      // With the new behavior, courses with certificates are considered completed
-      // This test's enrollments result in "View Module" being displayed
+      // Completed or ended courses show "View Module" text
       expect(coursewareButton).toHaveTextContent("View Module")
 
       // Verify the courseware button has the correct href from the contract run
@@ -596,7 +590,7 @@ describe("OrganizationContent", () => {
         )
       }
 
-      // With the new behavior, courses with certificates show "Completed" status
+      // Courses with certificates show "Completed" status
       const enrollmentStatus = within(card).getByTestId("enrollment-status")
       expect(enrollmentStatus).toHaveTextContent("Completed")
     })
