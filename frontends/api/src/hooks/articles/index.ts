@@ -90,4 +90,5 @@ export {
   useArticleCreate,
   useArticleDestroy,
   useArticlePartialUpdate,
+  articleQueries,
 }

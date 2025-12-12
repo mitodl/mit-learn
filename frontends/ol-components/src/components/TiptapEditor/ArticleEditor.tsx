@@ -376,7 +376,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
             ) : (
               <StyledToolbar>
                 <MainToolbarContent editor={editor} />
-                {(!article || !article?.is_published) && (
+                {!article?.is_published ? (
                   <Button
                     variant="secondary"
                     disabled={isPending || !touched || !title}
@@ -393,7 +393,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                   >
                     Save As Draft
                   </Button>
-                )}
+                ) : null}
 
                 <Button
                   variant="primary"

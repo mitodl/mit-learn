@@ -88,7 +88,11 @@ const ArticleByLineInfoBar = ({ editor }: ReactNodeViewProps) => {
               {readTime && publishedDate ? <InfoText>-</InfoText> : null}
               <InfoText>
                 {publishedDate
-                  ? new Date(publishedDate).toLocaleDateString()
+                  ? new Date(publishedDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
                   : editor?.isEditable
                     ? null
                     : "Draft"}
