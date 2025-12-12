@@ -141,11 +141,45 @@ function getQueryClient() {
     // have a suspense boundary BELOW the creation of the query client
     if (!browserQueryClient) {
       browserQueryClient = makeBrowserQueryClient()
-      // @ts-expect-error Make the queryClient available globally
-      // used for https://tanstack.com/query/v5/docs/framework/react/devtools
-      window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
+      initBrowserDevTools(browserQueryClient)
     }
+
     return browserQueryClient
+  }
+}
+
+declare global {
+  interface Window {
+    __TANSTACK_QUERY_CLIENT__?: QueryClient
+  }
+}
+/**
+ * Initialize Tanstack Query browser dev tools.
+ *
+ * - This can be enabled in production, it only affects people with the extension installed.
+ * - See https://tanstack.com/query/v5/docs/framework/react/devtools
+ */
+function initBrowserDevTools(browserQueryClient: QueryClient) {
+  if (process.env.NODE_ENV === "development") {
+    // Log a tip about using Tanstack Query devtools
+    // But only once... We don't want to spam devs on every hot reload
+    if (!window.__TANSTACK_QUERY_CLIENT__) {
+      const parts = [
+        {
+          text: "API Query Debugging\n",
+          style: "color: blue; font-weight: bold;",
+        },
+        {
+          text: "Tip: You can use Tanstack Query devtools to inspect query data, even if the data was fetched server-side. See https://tanstack.com/query/v5/docs/framework/react/devtools",
+          style: "color: unset; font-weight: normal;",
+        },
+      ]
+      console.log(
+        parts.map(({ text }) => `%c${text}`).join(""),
+        ...parts.map(({ style }) => style),
+      )
+    }
+    window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
   }
 }
 
