@@ -54,7 +54,7 @@
     "lodash": "^4.17.21",
     "lodash.throttle": "^4.1.1",
     "material-ui-popup-state": "^5.1.0",
-    "next": "15.5.7",
+    "next": "15.5.8",
     "ol-test-utilities": "0.0.0",
     "ol-utilities": "0.0.0",
     "react": "^19.2.1",
