@@ -740,9 +740,9 @@ KEYCLOAK_REALM_NAME = get_string(
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 
-OPENSEARCH_VECTOR_MODEL_BASE = get_string(
-    name="OPENSEARCH_VECTOR_MODEL_NAME",
-    default=None,
+OPENSEARCH_VECTOR_MODEL_BASE_NAME = get_string(
+    name="OPENSEARCH_VECTOR_MODEL_BASE_NAME",
+    default="hybrid_search_model",
 )
 POSTHOG_PROJECT_API_KEY = get_string(
     name="POSTHOG_PROJECT_API_KEY",

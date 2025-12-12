@@ -142,17 +142,18 @@ def refresh_index(index):
 
 
 def create_openai_embedding_connector_and_model(
-    conn,
+    model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME,
+    openai_model=settings.QDRANT_DENSE_MODEL,
 ):
     conn = get_conn()
 
     body = {
-        "name": CONNECTOR_NAME,
+        "name": f"{model_name}_connector",
         "description": "openAI Embedding Connector ",
         "version": "0.1",
         "protocol": "http",
         "parameters": {
-            "model": settings.QDRANT_DENSE_MODEL,
+            "model": openai_model,
         },
         "credential": {"openAI_key": settings.OPENAI_API_KEY},
         "actions": [
@@ -163,7 +164,7 @@ def create_openai_embedding_connector_and_model(
                 "headers": {
                     "Authorization": "Bearer ${credential.openAI_key}",
                 },
-                "request_body": '{"input": ${parameters.input}, "model": "${parameters.model}" }',
+                "request_body": '{"input": ${parameters.input}, "model": "${parameters.model}" }',  # noqa: E501
                 "pre_process_function": "connector.pre_process.openai.embedding",
                 "post_process_function": "connector.post_process.openai.embedding",
             }
@@ -180,7 +181,7 @@ def create_openai_embedding_connector_and_model(
         "POST",
         "/_plugins/_ml/model_groups/_register",
         body={
-            "name": MODEL_GROUP_NAME,
+            "name": f"{model_name}_group",
             "description": "OpenAI Embedding Model Group",
         },
     )
@@ -191,7 +192,7 @@ def create_openai_embedding_connector_and_model(
         "POST",
         "/_plugins/_ml/models/_register",
         body={
-            "name": "OpenAI embedding model",
+            "name": model_name,
             "function_name": "remote",
             "model_group_id": model_group_id,
             "description": "OpenAI embedding model",
@@ -200,24 +201,23 @@ def create_openai_embedding_connector_and_model(
     )
 
 
-def get_vector_model_id():
+def get_vector_model_id(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
     """
     Get the model ID for the currently loaded vector model
     """
     conn = get_conn()
-    model_name = MODEL_NAME
     body = {"query": {"term": {"name.keyword": model_name}}}
     models = conn.transport.perform_request(
         "GET", "/_plugins/_ml/models/_search", body=body
     )
 
     if len(models.get("hits", {}).get("hits", [])) > 0:
-        return models["hits"]["hits"][0]["_source"]["model_id"]
+        return models["hits"]["hits"][0]["_id"]
 
     return None
 
 
-def deploy_vector_model():
+def deploy_vector_model(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
     conn = get_conn()
-    model_id = get_vector_model_id()
+    model_id = get_vector_model_id(model_name=model_name)
     conn.transport.perform_request("POST", f"/_plugins/_ml/models/{model_id}/_deploy")
