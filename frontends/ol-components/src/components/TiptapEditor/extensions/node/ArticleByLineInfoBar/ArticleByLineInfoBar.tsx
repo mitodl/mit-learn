@@ -81,16 +81,17 @@ const ArticleByLineInfoBar = ({ editor }: ReactNodeViewProps) => {
                 {author.first_name?.charAt(0) || ""}
                 {author.last_name?.charAt(0) || ""}
               </Avatar>
-
               <NameText>
                 By {author.first_name} {author.last_name}
               </NameText>
-              {readTime && <InfoText>{readTime} min read</InfoText>}
+              {readTime ? <InfoText>{readTime} min read</InfoText> : null}
               {readTime && publishedDate ? <InfoText>-</InfoText> : null}
               <InfoText>
                 {publishedDate
                   ? new Date(publishedDate).toLocaleDateString()
-                  : null}
+                  : editor?.isEditable
+                    ? null
+                    : "Draft"}
               </InfoText>
             </InfoContainer>
           )}

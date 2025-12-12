@@ -4,7 +4,7 @@ import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { RichTextArticle } from "api/v1"
-
+import { LoadingSpinner } from "../LoadingSpinner/LoadingSpinner"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
@@ -357,17 +357,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const isPending = isCreating || isUpdating
   const error = createError || updateError || uploadError
 
-  const publishButtonLabel = (() => {
-    if (isPending && article?.is_published) return "Updating..."
-
-    if (isPending && isPublishing && !article?.is_published)
-      return "Publishing..."
-
-    if (!isPending && article?.is_published) return "Update"
-
-    return "Publish"
-  })()
-
   return (
     <ViewContainer toolbarVisible={isArticleEditor}>
       <ArticleProvider value={{ article }}>
@@ -392,25 +381,37 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                     variant="secondary"
                     disabled={isPending || !touched || !title}
                     onClick={() => {
-                      handleSave(false)
                       setIsPublishing(false)
+                      handleSave(false)
                     }}
                     size="small"
+                    endIcon={
+                      isPending && !isPublishing ? (
+                        <LoadingSpinner size={14} color="inherit" loading />
+                      ) : null
+                    }
                   >
-                    {isPending && !isPublishing ? "Saving..." : "Save As Draft"}
+                    Save As Draft
                   </Button>
                 )}
 
                 <Button
                   variant="primary"
-                  disabled={isPending || !touched || !title}
+                  disabled={
+                    isPending || !title || (!touched && article?.is_published)
+                  }
                   onClick={() => {
-                    handleSave(true)
                     setIsPublishing(true)
+                    handleSave(true)
                   }}
                   size="small"
+                  endIcon={
+                    isPending && isPublishing ? (
+                      <LoadingSpinner size={14} color="inherit" loading />
+                    ) : null
+                  }
                 >
-                  {publishButtonLabel}
+                  Publish
                 </Button>
               </StyledToolbar>
             )

@@ -48,5 +48,5 @@ export function calculateReadTime(
 
   const readingTime = wordCount / wordsPerMinute
 
-  return Math.max(1, Math.round(readingTime))
+  return Math.round(readingTime)
 }
