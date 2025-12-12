@@ -141,6 +141,9 @@ function getQueryClient() {
     // have a suspense boundary BELOW the creation of the query client
     if (!browserQueryClient) {
       browserQueryClient = makeBrowserQueryClient()
+      // @ts-expect-error Make the queryClient available globally
+      // used for https://tanstack.com/query/v5/docs/framework/react/devtools
+      window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
     }
     return browserQueryClient
   }
