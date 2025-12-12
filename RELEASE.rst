@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.50.2
+--------------
+
+- More efficient key retrieval (#2804)
+- fix dashboard card enrollment association and display (#2792)
+- For published non-test_mode courses, only process contentfile archives of the best run (#2786)
+
 Version 0.50.0 (Released December 11, 2025)
 --------------
 

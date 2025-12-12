@@ -1,6 +1,7 @@
 import {
   V2ProgramRequirement,
   CourseRunGrade,
+  CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const DashboardResourceType = {
@@ -71,6 +72,7 @@ type DashboardCourseEnrollment = {
     link: string
   }
   grades: CourseRunGrade[]
+  run: CourseRunV2
 }
 
 type DashboardProgramEnrollment = {

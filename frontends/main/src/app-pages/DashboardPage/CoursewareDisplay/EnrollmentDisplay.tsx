@@ -17,6 +17,8 @@ import {
   mitxonlineCourse,
   mitxonlineProgram,
   programEnrollmentsToPrograms,
+  selectBestEnrollment,
+  transformEnrollmentToDashboard,
   userEnrollmentsToDashboardCourses,
 } from "./transform"
 import { DashboardCard } from "./DashboardCard"
@@ -249,10 +251,9 @@ interface ProgramEnrollmentDisplayProps {
 const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   programId,
 }) => {
-  const { data: userCourses, isLoading: userEnrollmentsLoading } = useQuery({
-    ...enrollmentQueries.courseRunEnrollmentsList(),
-    select: userEnrollmentsToDashboardCourses,
-  })
+  const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
+    enrollmentQueries.courseRunEnrollmentsList(),
+  )
   const { data: rawProgram, isLoading: programLoading } = useQuery(
     programsQueries.programDetail({ id: programId }),
   )
@@ -277,6 +278,19 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     programEnrollmentsLoading ||
     programCoursesLoading
 
+  // Group enrollments by course ID for efficient lookup
+  const enrollmentsByCourseId = (rawEnrollments || []).reduce(
+    (acc, enrollment) => {
+      const courseId = enrollment.run.course.id
+      if (!acc[courseId]) {
+        acc[courseId] = []
+      }
+      acc[courseId].push(enrollment)
+      return acc
+    },
+    {} as Record<number, typeof rawEnrollments>,
+  )
+
   // Build sections from requirement tree
   const requirementSections =
     program?.reqTree
@@ -286,12 +300,30 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         const sectionCourses = (rawProgramCourses?.results || [])
           .filter((course) => courseIds.includes(course.id))
           .map((course) => {
-            const enrollment = userCourses?.find((dashboardCourse) =>
-              course.courseruns.some(
-                (run) => run.courseware_id === dashboardCourse.coursewareId,
-              ),
-            )?.enrollment
-            return mitxonlineCourse(course, enrollment)
+            // Find all enrollments for this course
+            const courseEnrollments = enrollmentsByCourseId[course.id] || []
+
+            if (courseEnrollments.length === 0) {
+              // No enrollment - use first run
+              return mitxonlineCourse(course)
+            }
+
+            // If multiple enrollments exist, select the best one
+            const bestEnrollment =
+              courseEnrollments.length > 1
+                ? selectBestEnrollment(courseEnrollments)
+                : courseEnrollments[0]
+
+            // Find the matching run from course.courseruns
+            const matchingRun = course.courseruns.find(
+              (run) => run.id === bestEnrollment.run.id,
+            )
+
+            return mitxonlineCourse(
+              course,
+              transformEnrollmentToDashboard(bestEnrollment),
+              matchingRun,
+            )
           })
 
         return {
