@@ -558,6 +558,7 @@ describe.each([
         status: EnrollmentStatus.Completed,
         mode: EnrollmentMode.Verified,
         grades: [],
+        run: mitxonline.factories.courses.courseRun(),
       }
       renderWithProviders(
         <DashboardCard
@@ -631,6 +632,7 @@ describe.each([
         status: status,
         mode: EnrollmentMode.Audit,
         grades: [],
+        run: mitxonline.factories.courses.courseRun(),
       }
       renderWithProviders(
         <DashboardCard titleAction="marketing" dashboardResource={course} />,
