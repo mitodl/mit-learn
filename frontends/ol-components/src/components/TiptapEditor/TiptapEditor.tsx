@@ -37,6 +37,7 @@ import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
 import { DividerButton } from "./extensions/ui/Divider/DividerButton"
+import { QuoteButton } from "./extensions/ui/Quote/QuoteButton"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -135,6 +136,23 @@ const StyledEditorContent = styled(EditorContent, {
         marginBottom: 0,
       },
     },
+    quote: {
+      backgroundColor: theme.custom.colors.black,
+      padding: "40px",
+      color: theme.custom.colors.white,
+      borderRadius: "8px",
+      marginBottom: "40px",
+      display: "block",
+      ":before": {
+        display: "none",
+      },
+      p: {
+        position: "relative",
+      },
+      "p:last-child": {
+        marginBottom: 0,
+      },
+    },
   },
 }))
 
@@ -179,6 +197,9 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
 
         <DropdownMenuItem asChild>
           <DividerButton editor={editor} text="Divider" />
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <QuoteButton text="Quote" />
         </DropdownMenuItem>
       </StyledDropdownMenuWrapper>
     </DropdownMenu>
