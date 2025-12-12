@@ -13,6 +13,10 @@ from learning_resources_search.constants import (
     IndexestoUpdate,
 )
 
+CONNECTOR_NAME = "openai-embedding-connector"
+MODEL_GROUP_NAME = "openai-embedding-model-group"
+MODEL_NAME = "OpenAI embedding model"
+
 
 def configure_connections():
     """
@@ -135,3 +139,85 @@ def refresh_index(index):
     """
     conn = get_conn()
     conn.indices.refresh(index)
+
+
+def create_openai_embedding_connector_and_model(
+    conn,
+):
+    conn = get_conn()
+
+    body = {
+        "name": CONNECTOR_NAME,
+        "description": "openAI Embedding Connector ",
+        "version": "0.1",
+        "protocol": "http",
+        "parameters": {
+            "model": settings.QDRANT_DENSE_MODEL,
+        },
+        "credential": {"openAI_key": settings.OPENAI_API_KEY},
+        "actions": [
+            {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://api.openai.com/v1/embeddings",
+                "headers": {
+                    "Authorization": "Bearer ${credential.openAI_key}",
+                },
+                "request_body": '{"input": ${parameters.input}, "model": "${parameters.model}" }',
+                "pre_process_function": "connector.pre_process.openai.embedding",
+                "post_process_function": "connector.post_process.openai.embedding",
+            }
+        ],
+    }
+
+    connector_response = conn.transport.perform_request(
+        "POST", "/_plugins/_ml/connectors/_create", body=body
+    )
+
+    connector_id = connector_response["connector_id"]
+
+    model_group_response = conn.transport.perform_request(
+        "POST",
+        "/_plugins/_ml/model_groups/_register",
+        body={
+            "name": MODEL_GROUP_NAME,
+            "description": "OpenAI Embedding Model Group",
+        },
+    )
+
+    model_group_id = model_group_response["model_group_id"]
+
+    conn.transport.perform_request(
+        "POST",
+        "/_plugins/_ml/models/_register",
+        body={
+            "name": "OpenAI embedding model",
+            "function_name": "remote",
+            "model_group_id": model_group_id,
+            "description": "OpenAI embedding model",
+            "connector_id": connector_id,
+        },
+    )
+
+
+def get_vector_model_id():
+    """
+    Get the model ID for the currently loaded vector model
+    """
+    conn = get_conn()
+    model_name = MODEL_NAME
+    body = {"query": {"term": {"name.keyword": model_name}}}
+    models = conn.transport.perform_request(
+        "GET", "/_plugins/_ml/models/_search", body=body
+    )
+
+    if len(models.get("hits", {}).get("hits", [])) > 0:
+        return models["hits"]["hits"][0]["_source"]["model_id"]
+
+    return None
+
+
+def deploy_vector_model():
+    conn = get_conn()
+    model_id = get_vector_model_id()
+    conn.transport.perform_request("POST", f"/_plugins/_ml/models/{model_id}/_deploy")
