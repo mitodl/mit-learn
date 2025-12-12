@@ -740,6 +740,10 @@ KEYCLOAK_REALM_NAME = get_string(
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 
+OPENSEARCH_VECTOR_MODEL_BASE_NAME = get_string(
+    name="OPENSEARCH_VECTOR_MODEL_BASE_NAME",
+    default="hybrid_search_model",
+)
 POSTHOG_PROJECT_API_KEY = get_string(
     name="POSTHOG_PROJECT_API_KEY",
     default="",
@@ -795,7 +799,9 @@ QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
-QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
+QDRANT_DENSE_MODEL = get_string(
+    name="QDRANT_DENSE_MODEL", default="text-embedding-3-small"
+)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )

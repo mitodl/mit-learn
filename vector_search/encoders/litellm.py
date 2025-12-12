@@ -16,7 +16,7 @@ class LiteLLMEncoder(BaseEncoder):
 
     token_encoding_name = settings.LITELLM_TOKEN_ENCODING_NAME
 
-    def __init__(self, model_name="text-embedding-3-small"):
+    def __init__(self, model_name):
         self.model_name = model_name
         try:
             self.token_encoding_name = tiktoken.encoding_name_for_model(model_name)

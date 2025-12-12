@@ -135,3 +135,104 @@ def refresh_index(index):
     """
     conn = get_conn()
     conn.indices.refresh(index)
+
+
+def create_openai_embedding_connector_and_model(
+    model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME,
+    openai_model=settings.QDRANT_DENSE_MODEL,
+):
+    """
+    Create OpenAI embedding connector and model for opensearch vector search.
+    The model will be used to generate embeddings for user queries
+
+    Args:
+        model_name: Name param for the model in opensearch
+        openai_model: Name of the OpenAI model that will be loaded
+    """
+
+    conn = get_conn()
+
+    body = {
+        "name": f"{model_name}_connector",
+        "description": "openAI Embedding Connector ",
+        "version": "0.1",
+        "protocol": "http",
+        "parameters": {
+            "model": openai_model,
+        },
+        "credential": {"openAI_key": settings.OPENAI_API_KEY},
+        "actions": [
+            {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://api.openai.com/v1/embeddings",
+                "headers": {
+                    "Authorization": "Bearer ${credential.openAI_key}",
+                },
+                "request_body": '{"input": ${parameters.input}, "model": "${parameters.model}" }',  # noqa: E501
+                "pre_process_function": "connector.pre_process.openai.embedding",
+                "post_process_function": "connector.post_process.openai.embedding",
+            }
+        ],
+    }
+
+    connector_response = conn.transport.perform_request(
+        "POST", "/_plugins/_ml/connectors/_create", body=body
+    )
+
+    connector_id = connector_response["connector_id"]
+
+    model_group_response = conn.transport.perform_request(
+        "POST",
+        "/_plugins/_ml/model_groups/_register",
+        body={
+            "name": f"{model_name}_group",
+            "description": "OpenAI Embedding Model Group",
+        },
+    )
+
+    model_group_id = model_group_response["model_group_id"]
+
+    conn.transport.perform_request(
+        "POST",
+        "/_plugins/_ml/models/_register",
+        body={
+            "name": model_name,
+            "function_name": "remote",
+            "model_group_id": model_group_id,
+            "description": "OpenAI embedding model",
+            "connector_id": connector_id,
+        },
+    )
+
+
+def get_vector_model_id(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
+    """
+    Get the model ID for the currently loaded opensearch vector model
+    Args:
+        model_name: Name of the model to get the id for
+    Returns:
+        str or None: The model ID if found, else None
+    """
+    conn = get_conn()
+    body = {"query": {"term": {"name.keyword": model_name}}}
+    models = conn.transport.perform_request(
+        "GET", "/_plugins/_ml/models/_search", body=body
+    )
+
+    if len(models.get("hits", {}).get("hits", [])) > 0:
+        return models["hits"]["hits"][0]["_id"]
+
+    return None
+
+
+def deploy_vector_model(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
+    """
+    Deploy an opensearch vector model
+
+    Args:
+        model_name: Name of the model to deploy
+    """
+    conn = get_conn()
+    model_id = get_vector_model_id(model_name=model_name)
+    conn.transport.perform_request("POST", f"/_plugins/_ml/models/{model_id}/_deploy")
