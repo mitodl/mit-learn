@@ -13,10 +13,6 @@ from learning_resources_search.constants import (
     IndexestoUpdate,
 )
 
-CONNECTOR_NAME = "openai-embedding-connector"
-MODEL_GROUP_NAME = "openai-embedding-model-group"
-MODEL_NAME = "OpenAI embedding model"
-
 
 def configure_connections():
     """
@@ -145,6 +141,15 @@ def create_openai_embedding_connector_and_model(
     model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME,
     openai_model=settings.QDRANT_DENSE_MODEL,
 ):
+    """
+    Create OpenAI embedding connector and model for opensearch vector search.
+    The model will be used to generate embeddings for user queries
+
+    Args:
+        model_name: Name param for the model in opensearch
+        openai_model: Name of the OpenAI model that will be loaded
+    """
+
     conn = get_conn()
 
     body = {
@@ -203,7 +208,11 @@ def create_openai_embedding_connector_and_model(
 
 def get_vector_model_id(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
     """
-    Get the model ID for the currently loaded vector model
+    Get the model ID for the currently loaded opensearch vector model
+    Args:
+        model_name: Name of the model to get the id for
+    Returns:
+        str or None: The model ID if found, else None
     """
     conn = get_conn()
     body = {"query": {"term": {"name.keyword": model_name}}}
@@ -218,6 +227,12 @@ def get_vector_model_id(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
 
 
 def deploy_vector_model(model_name=settings.OPENSEARCH_VECTOR_MODEL_BASE_NAME):
+    """
+    Deploy an opensearch vector model
+
+    Args:
+        model_name: Name of the model to deploy
+    """
     conn = get_conn()
     model_id = get_vector_model_id(model_name=model_name)
     conn.transport.perform_request("POST", f"/_plugins/_ml/models/{model_id}/_deploy")

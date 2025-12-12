@@ -656,6 +656,12 @@ def add_text_query_to_search(
 
     if use_hybrid_search:
         model_id = get_vector_model_id()
+
+        if not model_id:
+            log.error("Vector model not found. Cannot perform hybrid search.")
+            error_message = "Vector model not found."
+            raise ValueError(error_message)
+
         vector_query = {
             "neural": {
                 "vector_embedding": {
