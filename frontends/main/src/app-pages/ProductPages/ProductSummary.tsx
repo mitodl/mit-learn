@@ -1,5 +1,5 @@
 import React, { HTMLAttributes } from "react"
-import { Alert, Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import {
   RiCalendarLine,
@@ -17,6 +17,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
+import { getCertificatePrice } from "@/common/mitxonline"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
@@ -115,16 +116,6 @@ const getEndDate = (run: CourseRunV2) => {
       {formatDate(run.end_date)}
     </NoSSR>
   )
-}
-
-const getCertificatePrice = (run: CourseRunV2) => {
-  const product = run.products[0]
-  if (!product || run.is_archived) return null
-  const amount = product.price
-  return Number(amount).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  })
 }
 
 const getUpgradeDeadline = (run: CourseRunV2) => {
@@ -353,10 +344,6 @@ const SidebarSummaryRoot = styled.section(({ theme }) => ({
   },
 }))
 
-const WideButton = styled(Button)({
-  width: "100%",
-})
-
 enum TestIds {
   DatesRow = "dates-row",
   PaceRow = "pace-row",
@@ -383,7 +370,8 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
+  enrollButton?: React.ReactNode
+}> = ({ course, enrollButton }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
@@ -394,15 +382,7 @@ const CourseSummary: React.FC<{
       <Stack gap={{ xs: "24px", md: "32px" }}>
         {nextRun ? (
           <>
-            <WideButton
-              onClick={() => {
-                alert("Enroll flow not yet implemented")
-              }}
-              variant="primary"
-              size="large"
-            >
-              {nextRun.is_archived ? "Access Course Materials" : "Enroll Now"}
-            </WideButton>
+            {enrollButton}
             {nextRun.is_archived ? <ArchivedAlert /> : null}
             <CourseDatesRow
               course={course}
@@ -551,13 +531,15 @@ const ProgramCertificateRow: React.FC<ProgramInfoRowProps> = ({
 const ProgramSummary: React.FC<{
   program: V2Program
   programResource: LearningResource | null
-}> = ({ program, programResource }) => {
+  enrollButton?: React.ReactNode
+}> = ({ program, programResource, enrollButton }) => {
   return (
     <SidebarSummaryRoot aria-labelledby="program-summary">
       <VisuallyHidden>
         <h2 id="program-summary">Program summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
+        {enrollButton}
         <RequirementsRow
           program={program}
           data-testid={TestIds.RequirementsRow}

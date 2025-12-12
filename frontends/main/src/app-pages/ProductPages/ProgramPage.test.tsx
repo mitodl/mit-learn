@@ -19,9 +19,10 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { ResourceTypeEnum } from "api"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { RequirementTreeBuilder } from "../../../../api/src/mitxonline/test-utils/factories/requirements"
 import { faker } from "@faker-js/faker/locale/en"
 import type { ResourceCardProps } from "@/page-components/ResourceCard/ResourceCard"
+
+const RequirementTreeBuilder = factories.requirements.RequirementTreeBuilder
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -160,6 +161,8 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+
+  setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
 }
 
 describe("ProgramPage", () => {

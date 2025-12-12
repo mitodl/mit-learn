@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
 import {
-  useCreateEnrollment,
+  useCreateB2bEnrollment,
   useDestroyEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
@@ -196,7 +196,7 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
 }) => {
   const { data: countries } = useQuery(mitxUserQueries.countries())
   const updateUser = useUpdateUserMutation()
-  const createEnrollment = useCreateEnrollment()
+  const createEnrollment = useCreateB2bEnrollment()
   const user = useQuery(mitxUserQueries.me())
   const modal = NiceModal.useModal()
 
