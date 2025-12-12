@@ -85,6 +85,12 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 const StyledAlert = styled(Alert)({
   margin: "20px auto",
   maxWidth: "1000px",
+  position: "fixed",
+  top: "108px",
+  left: "50%",
+  width: "690px",
+  transform: "translateX(-50%)",
+  zIndex: 1,
 })
 
 const ArticleDocument = Document.extend({

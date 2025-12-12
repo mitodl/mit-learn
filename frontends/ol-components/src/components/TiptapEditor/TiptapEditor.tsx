@@ -156,6 +156,7 @@ const StyledDropdownMenu = styled(DropdownMenuContent)`
     border-radius: 8px;
     padding: 4px;
   }
+
   .tiptap-button {
     width: 100%;
   }

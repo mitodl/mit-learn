@@ -68,7 +68,7 @@ const ArticleByLineInfoBar = ({ editor }: ReactNodeViewProps) => {
 
   const publishedDate = article?.is_published ? article?.created_on : null
 
-  const content = article?.content || editor?.getJSON()
+  const content = editor?.isEditable ? editor?.getJSON() : article?.content
   const readTime = calculateReadTime(content)
 
   return (
