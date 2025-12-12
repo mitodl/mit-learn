@@ -179,8 +179,8 @@ function initBrowserDevTools(browserQueryClient: QueryClient) {
         ...parts.map(({ style }) => style),
       )
     }
-    window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
   }
+  window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
 }
 
 /**
