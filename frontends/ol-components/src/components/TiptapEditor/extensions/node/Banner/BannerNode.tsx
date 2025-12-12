@@ -6,9 +6,11 @@ import {
   NodeViewWrapper,
   NodeViewContent,
 } from "@tiptap/react"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { BannerBackground } from "../../../../Banner/Banner"
 import Container from "@mui/material/Container"
 import styled from "@emotion/styled"
+import type { ExtendedNodeConfig } from "../types"
 
 const FullWidthContainer = styled.div({
   position: "relative",
@@ -64,7 +66,7 @@ const BannerWrapper = () => {
   )
 }
 
-const BannerNode = Node.create({
+const bannerNodeConfig: ExtendedNodeConfig = {
   name: "banner",
 
   selectable: false,
@@ -78,13 +80,25 @@ const BannerNode = Node.create({
     return [{ tag: "banner" }]
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return ["banner", mergeAttributes(HTMLAttributes), 0]
   },
 
   addNodeView() {
     return ReactNodeViewRenderer(BannerWrapper)
   },
-})
+
+  getPlaceholders: (childNode: ProseMirrorNode) => {
+    if (childNode.type.name === "heading") {
+      return "Add a title"
+    }
+    if (childNode.type.name === "paragraph") {
+      return "Add a subheading"
+    }
+    return null
+  },
+}
+
+const BannerNode = Node.create(bannerNodeConfig)
 
 export { BannerNode }

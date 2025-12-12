@@ -12,19 +12,23 @@ const PageContainer = styled.div({
   height: "100%",
 })
 
+const Spinner = styled(LoadingSpinner)({
+  margin: "auto",
+  position: "absolute",
+  top: "40%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+})
+
 export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
-  const {
-    data: article,
-    isLoading,
-    isFetching,
-  } = useArticleDetail(Number(articleId))
+  const { data: article, isLoading } = useArticleDetail(Number(articleId))
 
   const showArticleDetail = useFeatureFlagEnabled(
     FeatureFlags.ArticleEditorView,
   )
 
-  if (isLoading || isFetching) {
-    return <LoadingSpinner color="inherit" loading size={32} />
+  if (isLoading) {
+    return <Spinner color="inherit" loading size={32} />
   }
   if (!article || !showArticleDetail) {
     return notFound()

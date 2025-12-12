@@ -4,9 +4,11 @@ import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
 import Container from "@mui/material/Container"
 import { RiShareFill } from "@remixicon/react"
-import { useUserMe } from "api/hooks/user"
 import Avatar from "@mui/material/Avatar"
 import { ActionButton } from "@mitodl/smoot-design"
+import { useUserMe } from "api/hooks/user"
+import { useArticle } from "../../../ArticleContext"
+import { calculateReadTime } from "../../utils"
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
@@ -52,29 +54,22 @@ const InfoText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-const Spacer = styled.div({
-  marginBottom: "56px",
-})
+const ArticleByLineInfoBar = ({ editor }: ReactNodeViewProps) => {
+  const article = useArticle()
 
-const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
-  const { authorName, avatarUrl, readTime, publishedDate, editable } =
-    node.attrs
-  const { isLoading, data: user } = useUserMe()
+  const { data: user } = useUserMe()
 
-  if (editable) {
-    return (
-      <NodeViewWrapper>
-        <Spacer />
-      </NodeViewWrapper>
-    )
+  let author = null
+  if (editor?.isEditable && !article?.user) {
+    author = user
+  } else {
+    author = article?.user
   }
 
-  const author =
-    !isLoading &&
-    (authorName ||
-      (editable && (user?.first_name || user?.last_name)
-        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
-        : null))
+  const publishedDate = article?.is_published ? article?.created_on : null
+
+  const content = editor?.isEditable ? editor?.getJSON() : article?.content
+  const readTime = calculateReadTime(content)
 
   return (
     <NodeViewWrapper>
@@ -82,18 +77,25 @@ const ArticleByLineInfoBar = ({ node }: ReactNodeViewProps) => {
         <InnerContainer noAuthor={!author}>
           {author && (
             <InfoContainer>
-              <Avatar src={avatarUrl}>
-                {user?.first_name?.charAt(0) || ""}
-                {user?.last_name?.charAt(0) || ""}
+              <Avatar>
+                {author.first_name?.charAt(0) || ""}
+                {author.last_name?.charAt(0) || ""}
               </Avatar>
-
-              <NameText>By {author}</NameText>
-              {readTime && <InfoText>{readTime}</InfoText>}
-              <InfoText>-</InfoText>
+              <NameText>
+                By {author.first_name} {author.last_name}
+              </NameText>
+              {readTime ? <InfoText>{readTime} min read</InfoText> : null}
+              {readTime && publishedDate ? <InfoText>-</InfoText> : null}
               <InfoText>
                 {publishedDate
-                  ? publishedDate
-                  : new Date().toLocaleDateString()}
+                  ? new Date(publishedDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : editor?.isEditable
+                    ? null
+                    : "Draft"}
               </InfoText>
             </InfoContainer>
           )}
