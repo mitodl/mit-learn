@@ -7,9 +7,9 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Article Detail",
 })
 
-const Page: React.FC<PageProps<"/articles/[id]">> = async (props) => {
-  const params = await props.params
+const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
+  const { slugOrId } = await props.params
 
-  return <ArticleDetailPage articleId={Number(params.id)} />
+  return <ArticleDetailPage articleId={slugOrId} />
 }
 export default Page

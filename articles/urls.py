@@ -1,5 +1,3 @@
-"""URL configuration for staff_content"""
-
 from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
@@ -15,13 +13,16 @@ v1_router.register(
 )
 
 app_name = "articles"
+
 urlpatterns = [
     re_path(
         r"^api/v1/",
         include(
             (
                 [
+                    # All ViewSet routes
                     *v1_router.urls,
+                    # Media upload endpoint
                     path(
                         "upload-media/",
                         MediaUploadView.as_view(),

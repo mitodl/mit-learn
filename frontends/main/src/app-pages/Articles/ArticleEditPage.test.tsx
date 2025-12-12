@@ -55,7 +55,11 @@ describe.skip("ArticleEditPage", () => {
         ],
       },
     })
-    setMockResponse.get(urls.articles.details(article.id), article)
+    setMockResponse.get(
+      urls.articles.articlesDetailRetrieve(String(article.id)),
+      article,
+    )
+
     renderWithProviders(<ArticleEditPage articleId={"42"} />)
     await screen.findByTestId("editor")
     expect(screen.getByText("Existing Title")).toBeInTheDocument()
