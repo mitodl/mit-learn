@@ -1081,7 +1081,7 @@ def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
-    converter = OpenDataLoaderLLMConverter(pdf_path, debug_mode=True)
+    converter = OpenDataLoaderLLMConverter(pdf_path)
     return converter.convert_to_markdown()
 
 
