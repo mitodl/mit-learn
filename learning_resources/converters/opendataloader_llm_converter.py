@@ -347,11 +347,6 @@ class MarkdownAssembler:
     def _format_table(self, block: ContentBlock) -> str | None:
         """
         Format a table block to markdown table syntax.
-
-        Markdown table format:
-        | Header 1 | Header 2 |
-        |----------|----------|
-        | Cell 1   | Cell 2   |
         """
         if not block.rows:
             # Try to extract table from nested kids structure
@@ -534,9 +529,10 @@ class OpenDataLoaderLLMConverter:
     def __init__(
         self,
         document_path: Path,
-        debug_mode,
-        output_dir: Path,
+        output_dir: Path | None = None,
         pdf_dpi: int = 150,
+        *,
+        debug_mode=False,
     ):
         self.document_path = Path(document_path)
         self.debug_mode = debug_mode
