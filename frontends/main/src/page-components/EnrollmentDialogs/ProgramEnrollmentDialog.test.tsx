@@ -474,5 +474,51 @@ describe("ProgramEnrollmentDialog", () => {
       // Should NOT redirect to dashboard
       expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
     })
+
+    test("Shows error message when enrollment fails", async () => {
+      const run = enrollableRun({ course_number: "6.009" })
+      const course = makeCourse({
+        courseruns: [run],
+        title: "Error Test Course",
+        next_run_id: run.id,
+      })
+      const program = makeProgram({ courses: [course.id] })
+      setupCourseApis([course])
+
+      renderWithProviders(null)
+      await openProgramDialog(program)
+
+      // Select the course
+      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      await user.click(select)
+      const courseOption = screen.getByRole("option", {
+        name: /Error Test Course - 6.009/i,
+      })
+      await user.click(courseOption)
+
+      // Wait for enrollment button to be enabled
+      const enrollButton = await screen.findByRole("button", {
+        name: /No thanks, I'll take the course for free without a certificate/i,
+      })
+
+      // Mock enrollment failure
+      setMockResponse.post(
+        mitxUrls.enrollment.enrollmentsListV1(),
+        "Enrollment failed",
+        { code: 500 },
+      )
+
+      // Click the enrollment button - the error will be caught by the mutation
+      await user.click(enrollButton)
+
+      // Check for error alert - the mutation error should be displayed
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            /There was a problem enrolling you in this course. Please try again later./i,
+          ),
+        ).toBeInTheDocument()
+      })
+    })
   })
 })

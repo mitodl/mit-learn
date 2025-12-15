@@ -350,5 +350,36 @@ describe("CourseEnrollmentDialog", () => {
       // Should NOT redirect to dashboard
       expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
     })
+
+    test("Shows error message when enrollment fails", async () => {
+      const run = enrollableRun()
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+
+      // Mock enrollment failure
+      setMockResponse.post(
+        mitxUrls.enrollment.enrollmentsListV1(),
+        "Enrollment failed",
+        { code: 500 },
+      )
+
+      // Click the button - the error will be caught by the mutation
+      await user.click(enrollButton)
+
+      // Check for error alert - the mutation error should be displayed
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            /There was a problem enrolling you in this course. Please try again later./i,
+          ),
+        ).toBeInTheDocument()
+      })
+    })
   })
 })

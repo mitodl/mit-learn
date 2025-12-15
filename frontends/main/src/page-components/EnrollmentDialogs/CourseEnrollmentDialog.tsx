@@ -15,7 +15,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
-import { Button, ButtonProps } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canUpgrade,
   getCertificatePrice,
@@ -265,14 +265,21 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
-        await createEnrollment.mutateAsync({
-          run_id: run.id,
-        })
-        if (onCourseEnroll) {
-          onCourseEnroll(run)
-        } else {
-          router.push(DASHBOARD_HOME)
-        }
+        createEnrollment.mutate(
+          {
+            run_id: run.id,
+          },
+          {
+            onSuccess: () => {
+              if (onCourseEnroll) {
+                onCourseEnroll(run)
+              } else {
+                router.push(DASHBOARD_HOME)
+              }
+              modal.hide()
+            },
+          },
+        )
       }}
       onReset={() => setChosenRun(getDefaultOption())}
       maxWidth={false}
@@ -292,6 +299,14 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           fullWidth
         />
         <CertificateUpsell courseRun={run} />
+        {createEnrollment.isError && (
+          <div ref={(el) => el?.scrollIntoView()}>
+            <Alert severity="error">
+              There was a problem enrolling you in this course. Please try again
+              later.
+            </Alert>
+          </div>
+        )}
       </Stack>
     </StyledFormDialog>
   )

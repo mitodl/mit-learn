@@ -23,10 +23,11 @@ const useCreateB2bEnrollment = () => {
 const useCreateEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (opts: CourseRunEnrollmentRequest) =>
-      courseRunEnrollmentsApi.enrollmentsCreate({
+    mutationFn: (opts: CourseRunEnrollmentRequest) => {
+      return courseRunEnrollmentsApi.enrollmentsCreate({
         CourseRunEnrollmentRequest: opts,
-      }),
+      })
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),

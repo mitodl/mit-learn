@@ -18,6 +18,7 @@ import {
   StyledFormDialog,
   StyledSimpleSelectField,
 } from "./CourseEnrollmentDialog"
+import { Alert } from "@mitodl/smoot-design"
 
 interface ProgramEnrollmentDialogProps {
   program: V2Program
@@ -92,14 +93,21 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!run) return
-    await createEnrollment.mutateAsync({
-      run_id: run.id,
-    })
-    if (onCourseEnroll) {
-      onCourseEnroll(run)
-    } else {
-      router.push(DASHBOARD_HOME)
-    }
+    createEnrollment.mutate(
+      {
+        run_id: run.id,
+      },
+      {
+        onSuccess: () => {
+          if (onCourseEnroll) {
+            onCourseEnroll(run)
+          } else {
+            router.push(DASHBOARD_HOME)
+          }
+          modal.hide()
+        },
+      },
+    )
   }
 
   return (
@@ -133,6 +141,14 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           errorText={courses.isError ? "Error loading courses" : undefined}
         />
         <CertificateUpsell courseRun={run} />
+        {createEnrollment.isError && (
+          <div ref={(el) => el?.scrollIntoView()}>
+            <Alert severity="error">
+              There was a problem enrolling you in this course. Please try again
+              later.
+            </Alert>
+          </div>
+        )}
       </Stack>
     </StyledFormDialog>
   )
