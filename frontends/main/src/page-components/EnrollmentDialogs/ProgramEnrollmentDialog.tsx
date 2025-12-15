@@ -139,6 +139,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           onChange={(e) => setChosenCourseId(e.target.value)}
           error={courses.isError}
           errorText={courses.isError ? "Error loading courses" : undefined}
+          fullWidth
         />
         <CertificateUpsell courseRun={run} />
         {createEnrollment.isError && (
