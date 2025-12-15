@@ -3,7 +3,7 @@ import { styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { Button } from "@mitodl/smoot-design"
-import EnrollmentDialog from "@/page-components/EnrollmentDialog/EnrollmentDialog"
+import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
@@ -31,7 +31,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      NiceModal.show(EnrollmentDialog, { type: "course", resource: course })
+      NiceModal.show(CourseEnrollmentDialog, { course })
     } else {
       setAnchor(e.currentTarget)
     }

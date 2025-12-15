@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
 import { Button } from "@mitodl/smoot-design"
-import EnrollmentDialog from "@/page-components/EnrollmentDialog/EnrollmentDialog"
+import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
@@ -61,7 +61,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (me.data?.is_authenticated) {
-      NiceModal.show(EnrollmentDialog, { type: "program", resource: program })
+      NiceModal.show(ProgramEnrollmentDialog, { program })
     } else {
       setAnchor(e.currentTarget)
     }

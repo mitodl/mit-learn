@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import {
   FormDialog,
   SimpleSelectOption,
@@ -12,8 +12,6 @@ import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
-  PaginatedCourseWithCourseRunsSerializerV2List,
-  V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
@@ -24,8 +22,11 @@ import {
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { useQuery } from "@tanstack/react-query"
+
+interface CourseEnrollmentDialogProps {
+  course: CourseWithCourseRunsSerializerV2
+  onCourseEnroll?: (run: CourseRunV2) => void
+}
 
 const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
   "&&& label": {
@@ -234,12 +235,9 @@ const RUN_DEFAULT_OPTION: SimpleSelectOption = {
   disabled: true,
 }
 
-type CourseEnrollmentDialogProps = {
-  course: CourseWithCourseRunsSerializerV2
-}
-
-const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
+const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   course,
+  onCourseEnroll,
 }) => {
   const modal = NiceModal.useModal()
   const runOptions = getRunOptions(course)
@@ -261,10 +259,9 @@ const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
         e.preventDefault()
         if (!run) return
         await createEnrollment.mutateAsync({
-          CourseRunEnrollmentRequestV2Request: {
-            run_id: run.id,
-          },
+          run_id: run.id,
         })
+        onCourseEnroll?.(run)
       }}
       onReset={() => setChosenRun(getDefaultOption())}
       maxWidth={false}
@@ -289,133 +286,8 @@ const CourseEnrollmentDialog: React.FC<CourseEnrollmentDialogProps> = ({
   )
 }
 
-type ProgramEnrollmentDialogProps = {
-  program: V2Program
-}
+const CourseEnrollmentDialog = NiceModal.create(CourseEnrollmentDialogInner)
 
-const COURSES_PAGE_SIZE = 100
-const getNextRun = (course?: CourseWithCourseRunsSerializerV2) => {
-  return course?.courseruns.find((run) => run.id === course.next_run_id)
-}
-const getCourseOptions = ({
-  data,
-  isLoading,
-}: {
-  data?: PaginatedCourseWithCourseRunsSerializerV2List
-  isLoading: boolean
-}): SimpleSelectOption[] => {
-  const opts: SimpleSelectOption[] =
-    data?.results.map((course) => {
-      const run = getNextRun(course)
-      const upgradeCaveat =
-        run && !canUpgrade(run) ? " (No certificate available)" : ""
-      const label = run
-        ? `${course.title} - ${run.course_number}${upgradeCaveat}`
-        : `${course.title} - (No available runs)`
-      return {
-        label: label,
-        value: `${course.id}`,
-      }
-    }) ?? []
-  if (isLoading) {
-    return [
-      {
-        label: "Loading courses...",
-        value: "-",
-        disabled: true,
-      },
-    ]
-  }
-  return opts
-}
-const COURSE_DEFAULT_OPTION: SimpleSelectOption = {
-  label: "Please Select",
-  value: "",
-  disabled: true,
-}
+export default CourseEnrollmentDialog
 
-const ProgramEnrollmentDialog: React.FC<ProgramEnrollmentDialogProps> = ({
-  program,
-}) => {
-  const modal = NiceModal.useModal()
-  const courses = useQuery(
-    coursesQueries.coursesList({
-      id: program.courses,
-      page_size: COURSES_PAGE_SIZE, // in practice, these are like 3-5 courses
-    }),
-  )
-  const createEnrollment = useCreateEnrollment()
-  const [chosenCourseId, setChosenCourseId] = useState("")
-  const options = [COURSE_DEFAULT_OPTION, ...getCourseOptions(courses)]
-  const chosenCourse = courses.data?.results.find(
-    (course) => `${course.id}` === chosenCourseId,
-  )
-  const run = getNextRun(chosenCourse)
-
-  return (
-    <StyledFormDialog
-      {...muiDialogV5(modal)}
-      title={program.title}
-      onSubmit={async (e) => {
-        e.preventDefault()
-        if (!run) return
-        await createEnrollment.mutateAsync({
-          CourseRunEnrollmentRequestV2Request: {
-            run_id: run.id,
-          },
-        })
-      }}
-      onReset={() => setChosenCourseId("")}
-      fullWidth
-      confirmText="No thanks, I'll take the course for free without a certificate"
-      disabled={!run}
-    >
-      <Stack
-        sx={(theme) => ({
-          color: theme.custom.colors.darkGray2,
-        })}
-        gap="24px"
-      >
-        <Typography variant="body2">
-          Thank you for choosing an MITx online program. To complete your
-          enrollment in this program, you must choose a course to start with.
-          You can enroll now for free, but you will need to pay for a
-          certificate in order to earn the program credential.
-        </Typography>
-        <StyledSimpleSelectField
-          label="Choose a date:"
-          options={options}
-          value={chosenCourseId}
-          onChange={(e) => setChosenCourseId(e.target.value)}
-          error={courses.isError}
-          errorText={courses.isError ? "Error loading courses" : undefined}
-        />
-        <CertificateUpsell courseRun={run} />
-      </Stack>
-    </StyledFormDialog>
-  )
-}
-
-type EnrollmentDialogProps =
-  | {
-      resource: CourseWithCourseRunsSerializerV2
-      type: "course"
-    }
-  | {
-      type: "program"
-      resource: V2Program
-    }
-const EnrollmentDialogInner: React.FC<EnrollmentDialogProps> = ({
-  type,
-  resource,
-}) => {
-  return type === "course" ? (
-    <CourseEnrollmentDialog course={resource} />
-  ) : (
-    <ProgramEnrollmentDialog program={resource} />
-  )
-}
-
-const EnrollmentDialog = NiceModal.create(EnrollmentDialogInner)
-
-export default EnrollmentDialog
+export { StyledSimpleSelectField, StyledFormDialog, CertificateUpsell }

@@ -3,8 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { b2bApi, courseRunEnrollmentsApi } from "../../clients"
 import {
   B2bApiB2bEnrollCreateRequest,
-  EnrollmentsApiUserEnrollmentsCreateV2Request,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
+  CourseRunEnrollmentRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const useCreateB2bEnrollment = () => {
@@ -23,8 +23,10 @@ const useCreateB2bEnrollment = () => {
 const useCreateEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (opts: EnrollmentsApiUserEnrollmentsCreateV2Request) =>
-      courseRunEnrollmentsApi.userEnrollmentsCreateV2(opts),
+    mutationFn: (opts: CourseRunEnrollmentRequest) =>
+      courseRunEnrollmentsApi.enrollmentsCreate({
+        CourseRunEnrollmentRequest: opts,
+      }),
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
