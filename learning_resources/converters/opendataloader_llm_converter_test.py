@@ -42,6 +42,10 @@ def test_basic_conversion(settings, fake_renderer, mocker):
     settings.OCR_MODEL = "test"
     sample_pdf = Path("test_pdfs/notes.pdf")
     mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter._optimize_image",
+        return_value=mocker.MagicMock(),
+    )
+    mocker.patch(
         "learning_resources.converters.opendataloader_llm_converter.PDFPageRenderer",
         return_value=fake_renderer,
     )
@@ -59,6 +63,10 @@ def test_debug_images_written(tmp_path, mocker, settings, fake_renderer):
     mocker.patch(
         "learning_resources.converters.opendataloader_llm_converter.settings.OCR_DEBUG_DIRECTORY",
         tmp_path,
+    )
+    mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter._optimize_image",
+        return_value=mocker.MagicMock(),
     )
     mocker.patch(
         "learning_resources.converters.opendataloader_llm_converter.PDFPageRenderer",
