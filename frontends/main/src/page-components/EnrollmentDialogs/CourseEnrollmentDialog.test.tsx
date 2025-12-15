@@ -18,6 +18,7 @@ import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { upgradeRunUrl } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -303,6 +304,51 @@ describe("CourseEnrollmentDialog", () => {
       await waitFor(() => {
         expect(assign).toHaveBeenCalledWith(upgradeRunUrl(product))
       })
+    })
+
+    test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
+      const run = enrollableRun()
+      const course = makeCourse({ courseruns: [run] })
+
+      const { location } = renderWithProviders(<div />)
+      await openDialog(course)
+
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
+      await user.click(enrollButton)
+
+      await waitFor(() => {
+        expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      })
+    })
+
+    test("Custom onCourseEnroll: calls callback instead of redirecting", async () => {
+      const run = enrollableRun()
+      const course = makeCourse({ courseruns: [run] })
+      const onCourseEnroll = jest.fn()
+
+      const { location } = renderWithProviders(<div />)
+      await act(async () => {
+        NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
+      })
+      await screen.findByRole("dialog")
+
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
+      await user.click(enrollButton)
+
+      await waitFor(() => {
+        expect(onCourseEnroll).toHaveBeenCalledWith(run)
+      })
+
+      // Should NOT redirect to dashboard
+      expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
     })
   })
 })

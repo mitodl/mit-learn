@@ -20,6 +20,7 @@ import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import { upgradeRunUrl } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 
@@ -389,6 +390,89 @@ describe("ProgramEnrollmentDialog", () => {
         name: /No thanks, I'll take the course for free without a certificate/i,
       })
       expect(enrollButton).toBeDisabled()
+    })
+
+    test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
+      const run = enrollableRun({ course_number: "6.007" })
+      const course = makeCourse({
+        courseruns: [run],
+        title: "Test Course",
+        next_run_id: run.id,
+      })
+      const program = makeProgram({ courses: [course.id] })
+      setupCourseApis([course])
+
+      const { location } = renderWithProviders(null)
+      await openProgramDialog(program)
+
+      // Select the course
+      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      await user.click(select)
+      const courseOption = screen.getByRole("option", {
+        name: /Test Course - 6.007/i,
+      })
+      await user.click(courseOption)
+
+      // Wait for enrollment button to be enabled
+      const enrollButton = await screen.findByRole("button", {
+        name: /No thanks, I'll take the course for free without a certificate/i,
+      })
+
+      // Mock the enrollment API call
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
+
+      // Click the enrollment button
+      await user.click(enrollButton)
+
+      // Verify redirect to dashboard home
+      await waitFor(() => {
+        expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      })
+    })
+
+    test("Custom onCourseEnroll: calls callback instead of redirecting", async () => {
+      const run = enrollableRun({ course_number: "6.008" })
+      const course = makeCourse({
+        courseruns: [run],
+        title: "Another Course",
+        next_run_id: run.id,
+      })
+      const program = makeProgram({ courses: [course.id] })
+      setupCourseApis([course])
+      const onCourseEnroll = jest.fn()
+
+      const { location } = renderWithProviders(null)
+      await act(async () => {
+        NiceModal.show(ProgramEnrollmentDialog, { program, onCourseEnroll })
+      })
+      await screen.findByRole("dialog")
+
+      // Select the course
+      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      await user.click(select)
+      const courseOption = screen.getByRole("option", {
+        name: /Another Course - 6.008/i,
+      })
+      await user.click(courseOption)
+
+      // Wait for enrollment button to be enabled
+      const enrollButton = await screen.findByRole("button", {
+        name: /No thanks, I'll take the course for free without a certificate/i,
+      })
+
+      // Mock the enrollment API call
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
+
+      // Click the enrollment button
+      await user.click(enrollButton)
+
+      // Verify callback was called with the run
+      await waitFor(() => {
+        expect(onCourseEnroll).toHaveBeenCalledWith(run)
+      })
+
+      // Should NOT redirect to dashboard
+      expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
     })
   })
 })

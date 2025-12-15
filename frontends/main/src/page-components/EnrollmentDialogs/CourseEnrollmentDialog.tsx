@@ -22,9 +22,15 @@ import {
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useRouter } from "next-nprogress-bar"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
+  /**
+   * Called after a course enrollment is successfully created
+   * By default, redirects to dashboard home.
+   */
   onCourseEnroll?: (run: CourseRunV2) => void
 }
 
@@ -249,6 +255,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
   const createEnrollment = useCreateEnrollment()
+  const router = useRouter()
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
@@ -261,7 +268,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
         await createEnrollment.mutateAsync({
           run_id: run.id,
         })
-        onCourseEnroll?.(run)
+        if (onCourseEnroll) {
+          onCourseEnroll(run)
+        } else {
+          router.push(DASHBOARD_HOME)
+        }
       }}
       onReset={() => setChosenRun(getDefaultOption())}
       maxWidth={false}

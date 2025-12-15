@@ -11,8 +11,8 @@ import { canUpgrade } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useQuery } from "@tanstack/react-query"
-// import { useRouter } from "next-nprogress-bar"
-// import { DASHBOARD_HOME } from "@/common/urls"
+import { useRouter } from "next-nprogress-bar"
+import { DASHBOARD_HOME } from "@/common/urls"
 import {
   CertificateUpsell,
   StyledFormDialog,
@@ -21,6 +21,10 @@ import {
 
 interface ProgramEnrollmentDialogProps {
   program: V2Program
+  /**
+   * Called after a course enrollment is successfully created
+   * By default, redirects to dashboard home.
+   */
   onCourseEnroll?: (run: CourseRunV2) => void
 }
 
@@ -83,19 +87,26 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
     (course) => `${course.id}` === chosenCourseId,
   )
   const run = getNextRun(chosenCourse)
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!run) return
+    await createEnrollment.mutateAsync({
+      run_id: run.id,
+    })
+    if (onCourseEnroll) {
+      onCourseEnroll(run)
+    } else {
+      router.push(DASHBOARD_HOME)
+    }
+  }
 
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
       title={program.title}
-      onSubmit={async (e) => {
-        e.preventDefault()
-        if (!run) return
-        await createEnrollment.mutateAsync({
-          run_id: run.id,
-        })
-        onCourseEnroll?.(run)
-      }}
+      onSubmit={handleSubmit}
       onReset={() => setChosenCourseId("")}
       fullWidth
       confirmText="No thanks, I'll take the course for free without a certificate"
