@@ -428,6 +428,9 @@ describe("ProgramEnrollmentDialog", () => {
       await waitFor(() => {
         expect(location.current.pathname).toBe(DASHBOARD_HOME)
       })
+
+      // Verify dialog has closed
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 
     test("Custom onCourseEnroll: calls callback instead of redirecting", async () => {
@@ -473,6 +476,9 @@ describe("ProgramEnrollmentDialog", () => {
 
       // Should NOT redirect to dashboard
       expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
+
+      // Verify dialog has closed
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 
     test("Shows error message when enrollment fails", async () => {
