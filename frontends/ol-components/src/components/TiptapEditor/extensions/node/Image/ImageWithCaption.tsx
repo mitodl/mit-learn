@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useRef, useEffect, useState } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
@@ -18,7 +18,6 @@ const Container = styled.div({
   img: {
     width: "100%",
     height: "auto",
-    aspectRatio: "16/9",
     borderRadius: "6px",
     display: "block",
   },
@@ -116,6 +115,11 @@ const Container = styled.div({
       display: "flex",
     },
   },
+
+  ".img-contained": {
+    width: "auto !important",
+    margin: "0 auto",
+  },
 })
 
 enum Layout {
@@ -145,9 +149,32 @@ export function ImageWithCaption({
   node,
   updateAttributes,
 }: ReactNodeViewProps) {
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  const [canExpand, setCanExpand] = useState(true)
+
   const { layout, caption, src, alt } = node.attrs
 
   const isEditable = node.attrs.editable
+
+  useEffect(() => {
+    if (!imgRef.current) return
+    const img = imgRef.current
+
+    const checkSize = () => {
+      const imageNaturalWidth = img.naturalWidth
+
+      setCanExpand(imageNaturalWidth > 900)
+    }
+
+    // when image loads
+    if (img.complete) {
+      checkSize()
+    } else {
+      img.onload = checkSize
+    }
+  }, [src])
 
   const openAltTextDialog = async () => {
     try {
@@ -161,7 +188,7 @@ export function ImageWithCaption({
   }
 
   return (
-    <NodeViewWrapper data-type="image-upload">
+    <NodeViewWrapper data-type="image-upload" ref={containerRef}>
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">
@@ -172,20 +199,25 @@ export function ImageWithCaption({
             >
               <DefaultWidth />
             </button>
-            <button
-              className={layout === "wide" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "wide" })}
-              title="Wide"
-            >
-              <WideWidth />
-            </button>
-            <button
-              className={layout === "full" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "full" })}
-              title="Full width"
-            >
-              <FullWidth />
-            </button>
+            {canExpand && (
+              <>
+                {" "}
+                <button
+                  className={layout === "wide" ? "active" : ""}
+                  onClick={() => updateAttributes({ layout: "wide" })}
+                  title="Wide"
+                >
+                  <WideWidth />
+                </button>
+                <button
+                  className={layout === "full" ? "active" : ""}
+                  onClick={() => updateAttributes({ layout: "full" })}
+                  title="Full width"
+                >
+                  <FullWidth />
+                </button>
+              </>
+            )}
             <button
               onClick={openAltTextDialog}
               title="Edit Alt Text"
@@ -196,7 +228,13 @@ export function ImageWithCaption({
           </div>
         )}
 
-        <Image src={src} alt={alt || caption} layout={layout} />
+        <Image
+          src={src}
+          alt={alt || ""}
+          layout={layout}
+          ref={imgRef}
+          className={`${!canExpand ? "img-contained" : ""}`}
+        />
         {isEditable ? (
           <Caption>
             <input
