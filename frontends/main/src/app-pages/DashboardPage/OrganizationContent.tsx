@@ -462,13 +462,8 @@ const OrganizationContentInternal: React.FC<
     </Stack>
   )
 
-  // Wait for all top-level queries to complete before rendering content
-  if (
-    programs.isLoading ||
-    programCollections.isLoading ||
-    courseRunEnrollments.isLoading ||
-    programEnrollments.isLoading
-  ) {
+  // Wait for all program and collection data to load
+  if (programs.isLoading || programCollections.isLoading) {
     return (
       <>
         <Stack>
