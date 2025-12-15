@@ -35,19 +35,23 @@ def mock_litellm(mocker):
     )
 
 
-def test_basic_conversion(settings):
+def test_basic_conversion(settings, fake_renderer, mocker):
     """
     Test a very basic conversion of pdf to markdown
     """
     settings.OCR_MODEL = "test"
     sample_pdf = Path("test_pdfs/notes.pdf")
+    mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.PDFPageRenderer",
+        return_value=fake_renderer,
+    )
     converter = OpenDataLoaderLLMConverter(document_path=sample_pdf, debug_mode=False)
     markdown = converter.convert_to_markdown()
     assert isinstance(markdown, str)
     assert "OCR TEXT" in markdown
 
 
-def test_debug_images_written(tmp_path, mocker, settings):
+def test_debug_images_written(tmp_path, mocker, settings, fake_renderer):
     """
     Test debug_mode flag outputs debug images
     """
@@ -55,6 +59,10 @@ def test_debug_images_written(tmp_path, mocker, settings):
     mocker.patch(
         "learning_resources.converters.opendataloader_llm_converter.settings.OCR_DEBUG_DIRECTORY",
         tmp_path,
+    )
+    mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.PDFPageRenderer",
+        return_value=fake_renderer,
     )
     sample_pdf = Path("test_pdfs/notes.pdf")
     converter = OpenDataLoaderLLMConverter(sample_pdf, debug_mode=True)
