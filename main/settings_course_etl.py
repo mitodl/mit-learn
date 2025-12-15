@@ -78,7 +78,7 @@ OCR_PROMPT = get_string(
     "Do not include anything but the resulting markdown in your response",
 )
 
-OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=15)
+OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
 OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
