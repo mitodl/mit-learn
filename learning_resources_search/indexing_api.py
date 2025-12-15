@@ -26,6 +26,8 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     EMBEDDING_FIELDS,
     HYBRID_COMBINED_INDEX,
+    HYBRID_SEARCH_PIPELINE_BODY,
+    HYBRID_SEARCH_PIPELINE_NAME,
     LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -196,6 +198,17 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
             "properties": (LEARNING_RESOURCE_MAP | vector_map)
         }
         index_create_data["settings"]["index.knn"] = True
+
+        try:
+            conn.transport.perform_request(
+                "GET", f"/_search/pipeline/{HYBRID_SEARCH_PIPELINE_NAME}"
+            )
+        except NotFoundError:
+            conn.transport.perform_request(
+                "PUT",
+                f"/_search/pipeline/{HYBRID_SEARCH_PIPELINE_NAME}",
+                body=HYBRID_SEARCH_PIPELINE_BODY,
+            )
     elif not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
 

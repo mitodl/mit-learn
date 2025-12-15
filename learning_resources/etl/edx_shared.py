@@ -22,6 +22,44 @@ log = logging.getLogger(__name__)
 EDX_S3_BASE_PREFIX = "20"
 
 
+def process_course_archive(
+    bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
+) -> None:
+    """
+    Download and process a course archive from S3.
+
+    Args:
+        bucket: S3 bucket object
+        key(str): S3 object key for the course archive
+        run(LearningResourceRun): The run to process
+        overwrite(bool): Whether to overwrite existing content files
+
+    Returns:
+        bool: True if successfully processed, False if skipped due to matching checksum
+    """
+    with TemporaryDirectory() as export_tempdir:
+        course_tarpath = Path(export_tempdir, key.split("/")[-1])
+        log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
+        bucket.download_file(key, course_tarpath)
+        try:
+            checksum = calc_checksum(course_tarpath)
+        except ReadError:
+            log.exception("Error reading tar file %s, skipping", course_tarpath)
+            return False
+        if run.checksum == checksum and not overwrite:
+            log.info("Checksums match for %s, skipping load", key)
+            return False
+        try:
+            load_content_files(
+                run,
+                transform_content_files(course_tarpath, run, overwrite=overwrite),
+            )
+            run.checksum = checksum
+            run.save()
+        except:  # noqa: E722
+            log.exception("Error ingesting OLX content data for %s", key)
+
+
 def get_most_recent_course_archives(
     etl_source: str, *, s3_prefix: str | None = None, override_base_prefix=False
 ) -> list[str]:
@@ -53,7 +91,7 @@ def get_most_recent_course_archives(
             reversed(  # noqa: C413
                 sorted(
                     [
-                        obj
+                        (obj.key, obj.last_modified)
                         for obj in bucket.objects.filter(
                             # Use s3_prefix for OLL, "20" for all others
                             Prefix=s3_prefix
@@ -62,17 +100,17 @@ def get_most_recent_course_archives(
                         )
                         if re.search(course_tar_regex, obj.key)
                     ],
-                    key=lambda obj: obj.last_modified,
+                    key=lambda obj: obj[1],
                 )
             )
         )
         if override_base_prefix:
             # More hoops to get desired result from OLL compared to other sources
             most_recent_export_date = "/".join(
-                [s3_prefix, most_recent_export_file.key.lstrip(s3_prefix).split("/")[0]]
+                [s3_prefix, most_recent_export_file[0].lstrip(s3_prefix).split("/")[0]]
             )
         else:
-            most_recent_export_date = most_recent_export_file.key.split("/")[0]
+            most_recent_export_date = most_recent_export_file[0].split("/")[0]
         log.info("Most recent export date is %s", most_recent_export_date)
         return [
             obj.key
@@ -109,7 +147,7 @@ def sync_edx_course_files(
     for key in keys:
         matches = re.search(rf"{s3_prefix}/(.+)\.tar\.gz$", key)
         run_id = matches.group(1).split("/")[-1]
-        log.info("Run is is %s", run_id)
+        log.info("Run is %s", run_id)
         runs = (
             LearningResourceRun.objects.filter(
                 learning_resource__etl_source=etl_source,
@@ -141,30 +179,20 @@ def sync_edx_course_files(
             runs = runs.filter(run_id__iregex=run_id)
         else:
             runs = runs.filter(run_id=run_id)
-        log.info("There are %d runs for %s", runs.count(), run_id)
-        run = runs.first()
 
-        if not run:
+        # There should be only 1 matching run per course archive, warn if not
+        if runs.count() > 1:
+            log.warning("There are %d runs for %s", runs.count(), run_id)
+
+        if not runs:
+            log.info("No runs found for %s, skipping", run_id)
             continue
 
-        with TemporaryDirectory() as export_tempdir:
-            course_tarpath = Path(export_tempdir, key.split("/")[-1])
-            log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
-            bucket.download_file(key, course_tarpath)
-            try:
-                checksum = calc_checksum(course_tarpath)
-            except ReadError:
-                log.exception("Error reading tar file %s, skipping", course_tarpath)
-                continue
-            if run.checksum == checksum and not overwrite:
-                log.info("Checksums match for %s, skipping load", key)
-                continue
-            try:
-                load_content_files(
-                    run,
-                    transform_content_files(course_tarpath, run, overwrite=overwrite),
-                )
-                run.checksum = checksum
-                run.save()
-            except:  # noqa: E722
-                log.exception("Error ingesting OLX content data for %s", key)
+        run = runs.first()
+        course = run.learning_resource
+        if course.published and not course.test_mode and course.best_run != run:
+            # This is not the best run for the published course, so skip it
+            log.info("Not the best run for %s, skipping", run_id)
+            continue
+
+        process_course_archive(bucket, key, run, overwrite=overwrite)
