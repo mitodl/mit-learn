@@ -76,7 +76,8 @@ def test_tiny_images_are_skipped(fake_renderer, fake_ocr, mocker):
             return_value=fake_ocr,
         ),
     ):
-        conv = OpenDataLoaderLLMConverter("fake.pdf")
+        sample_pdf = Path("test_pdfs/notes.pdf")
+        conv = OpenDataLoaderLLMConverter(sample_pdf)
 
         tiny = ImageForOCR(
             pil_image=mocker.MagicMock(size=(41, 5)),
