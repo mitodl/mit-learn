@@ -163,13 +163,12 @@ def test_search_index_plugin_resource_upserted_generate_embeddings(
         resource, percolate=False, generate_embeddings=False
     )
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_not_called()
-    mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
+        resource.id
+    )
     SearchIndexPlugin().resource_upserted(
         resource, percolate=False, generate_embeddings=True
     )
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
         [resource.id], resource_type, overwrite=True
-    )
-    mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
-        resource.id
     )
