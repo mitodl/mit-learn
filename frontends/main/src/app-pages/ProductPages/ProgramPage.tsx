@@ -28,6 +28,7 @@ import { ResourceTypeEnum } from "api"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import dynamic from "next/dynamic"
 import type { Breakpoint } from "@mui/system"
+import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -256,6 +257,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       resource_type: [ResourceTypeEnum.Program],
     }),
   )
+
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
   const programResource = programResources.data?.results?.[0]
@@ -295,7 +297,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       sidebarSummary={
-        <ProgramSummary program={program} programResource={programResource} />
+        <ProgramSummary
+          enrollButton={<ProgramEnrollmentButton program={program} />}
+          program={program}
+          programResource={programResource}
+        />
       }
       navLinks={navLinks}
     >
