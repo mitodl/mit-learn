@@ -29,9 +29,9 @@ from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
+from litellm import completion
 from PIL import Image
 from pycountry import currencies
-from pypdf import PdfReader
 from tika import parser as tika_parser
 
 from learning_resources.constants import (
@@ -46,7 +46,6 @@ from learning_resources.constants import (
     OfferedBy,
     RunStatus,
 )
-from learning_resources.converters.docling_llm_converter import DoclingLLMConverter
 from learning_resources.etl.constants import (
     RESOURCE_DELIVERY_MAPPING,
     TIME_INTERVAL_MAPPING,
@@ -535,14 +534,13 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     return video_transcript_mapping
 
 
-def process_olx_path(  # noqa: PLR0913
+def process_olx_path(
     olx_path: str,
     run: LearningResourceRun,
     *,
     overwrite,
     valid_file_types=VALID_TEXT_FILE_TYPES,
     is_tutor_problem_file_import=False,
-    use_ocr=False,
 ) -> Generator[dict, None, None]:
     video_srt_metadata = get_video_metadata(olx_path, run)
     for document, metadata in documents_from_olx(
@@ -573,13 +571,8 @@ def process_olx_path(  # noqa: PLR0913
                 }
             elif (
                 file_extension == ".pdf"
-                and use_ocr
-                and settings.OCR_MODEL
-                and (
-                    len(PdfReader(Path(olx_path) / Path(source_path)).pages)
-                    <= settings.OCR_PDF_MAX_PAGE_THRESHOLD
-                    or is_tutor_problem_file_import
-                )
+                and is_tutor_problem_file_import
+                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
             ):
                 markdown_content = _pdf_to_markdown(Path(olx_path) / Path(source_path))
                 content_dict = {
@@ -1079,8 +1072,38 @@ def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
-    converter = DoclingLLMConverter(pdf_path, debug_mode=False)
-    return converter.convert_to_markdown()
+    markdown = ""
+    for im in pdf_to_base64_images(pdf_path):
+        response = completion(
+            api_base=settings.LITELLM_API_BASE,
+            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{im}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        markdown_snippet = (
+            response.json()["choices"][0]["message"]["content"]
+            .removeprefix("```markdown\n")
+            .removesuffix("\n```")
+        )
+
+        markdown += markdown_snippet
+    return markdown
 
 
 def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):

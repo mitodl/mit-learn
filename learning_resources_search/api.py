@@ -21,6 +21,7 @@ from learning_resources_search.constants import (
     DEPARTMENT_QUERY_FIELDS,
     HYBRID_COMBINED_INDEX,
     HYBRID_SEARCH_MODE,
+    HYBRID_SEARCH_PIPELINE_NAME,
     LEARNING_RESOURCE,
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
@@ -55,21 +56,6 @@ DEFAULT_SORT = [
 ]
 
 HYBRID_SEARCH_KNN_K_VALUE = 5
-HYBRID_SEARCH_PAGINATION_DEPTH = 10
-HYBRID_SEARCH_POST_PROCESSOR = {
-    "description": "Post processor for hybrid search",
-    "phase_results_processors": [
-        {
-            "normalization-processor": {
-                "normalization": {"technique": "min_max"},
-                "combination": {
-                    "technique": "arithmetic_mean",
-                    "parameters": {"weights": [0.8, 0.2]},
-                },
-            }
-        }
-    ],
-}
 
 
 def gen_content_file_id(content_file_id):
@@ -679,10 +665,11 @@ def add_text_query_to_search(
             }
         }
 
+        pagination_depth = search_params.get("limit", 10) * 3
         search = search.extra(
             query={
                 "hybrid": {
-                    "pagination_depth": HYBRID_SEARCH_PAGINATION_DEPTH,
+                    "pagination_depth": pagination_depth,
                     "queries": [text_query, vector_query],
                 }
             }
@@ -800,7 +787,7 @@ def execute_learn_search(search_params):
     search = construct_search(search_params)
 
     if search_params.get("search_mode") == HYBRID_SEARCH_MODE:
-        search = search.extra(search_pipeline=HYBRID_SEARCH_POST_PROCESSOR)
+        search = search.extra(search_pipeline=HYBRID_SEARCH_PIPELINE_NAME)
 
     results = search.execute().to_dict()
     if results.get("_shards", {}).get("failures"):

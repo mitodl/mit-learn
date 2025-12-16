@@ -4,6 +4,7 @@ import { userQueries } from "../hooks/user/queries"
 
 const logQueries = (...args: [...string[], Query[]]) => {
   const queries = args.pop() as Query[]
+  console.group("Prefetch Info")
   console.info(...args)
   console.table(
     queries.map((query) => ({
@@ -15,6 +16,7 @@ const logQueries = (...args: [...string[], Query[]]) => {
     })),
     ["hash", "status", "observerCount", "disabled"],
   )
+  console.groupEnd()
 }
 
 const PREFETCH_EXEMPT_QUERIES = [userQueries.me().queryKey]
