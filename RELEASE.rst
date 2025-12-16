@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.50.3
+Version 0.50.3 (Released December 16, 2025)
 --------------
 
 - Only display top level skeleton on org pages if program or collection data is still loading (#2810)
