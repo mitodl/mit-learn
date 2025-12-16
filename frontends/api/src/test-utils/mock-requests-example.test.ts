@@ -1,6 +1,6 @@
 import axiosBase from "axios"
 import { setMockResponse } from "./mockAxios"
-import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
+import { allowConsoleErrors } from "ol-test-utilities"
 
 const axios = axiosBase.create()
 
@@ -80,8 +80,8 @@ describe("request mocking", () => {
   })
 
   test("Manually resolving a response", async () => {
-    const responseBody = new ControlledPromise<number>()
-    setMockResponse.get("/respond-when-i-say", responseBody)
+    const responseBody = Promise.withResolvers<number>()
+    setMockResponse.get("/respond-when-i-say", responseBody.promise)
     const response = axios.get("/respond-when-i-say")
     let responseStatus = "pending"
     response.then(() => {

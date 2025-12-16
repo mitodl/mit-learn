@@ -4,7 +4,6 @@ import { screen, act, waitFor } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { FormDialog } from "./FormDialog"
 import type { FormDialogProps } from "./FormDialog"
-import { ControlledPromise } from "ol-test-utilities"
 import { renderWithTheme } from "../../test-utils"
 
 const setup = (props?: Partial<FormDialogProps>) => {
@@ -83,10 +82,10 @@ test("It resets the form when opening/closing the dialog", async () => {
 })
 
 test("The submit button is disabled while submitting", async () => {
-  const submission = new ControlledPromise<void>()
+  const submission = Promise.withResolvers<void>()
   const onSubmit = jest.fn((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    return submission
+    return submission.promise
   })
   setup({ onSubmit })
   const submitButton = screen.getByRole("button", { name: "Submit" })

@@ -14,7 +14,7 @@ import type {
 } from "api"
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
-import { assertHeadings, ControlledPromise } from "ol-test-utilities"
+import { assertHeadings } from "ol-test-utilities"
 import { act } from "@testing-library/react"
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
@@ -819,11 +819,11 @@ test("Count changes are announced to screen readers", async () => {
   // aria-relevant is important here. See https://stackoverflow.com/a/62179258/2747370
   expect(count).toHaveAttribute("aria-relevant", "all")
 
-  const nextResponse = new ControlledPromise()
+  const nextResponse = Promise.withResolvers()
   const nextData = { ...DEFAULT_SEARCH_RESPONSE, count: 456 }
   setMockResponse.get(
     expect.stringContaining(urls.search.resources()),
-    nextResponse,
+    nextResponse.promise,
   )
 
   const queryInput = await screen.findByRole<HTMLInputElement>("textbox", {

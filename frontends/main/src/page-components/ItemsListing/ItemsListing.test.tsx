@@ -20,7 +20,6 @@ import type {
   ItemsListingProps,
   LearningResourceListItem,
 } from "./ItemsListing"
-import { ControlledPromise } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { ListType } from "api/constants"
 
@@ -297,8 +296,11 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       const [from, to] = [1, 3]
       const active = items[from]
 
-      const patchResponse = new ControlledPromise<void>()
-      setMockResponse.patch(patchUrl(listType, active.id), patchResponse)
+      const patchResponse = Promise.withResolvers<void>()
+      setMockResponse.patch(
+        patchUrl(listType, active.id),
+        patchResponse.promise,
+      )
 
       act(() => simulateDrag(from, to))
       await waitFor(() => {
@@ -313,7 +315,7 @@ describe.each([ListType.LearningPath, ListType.UserList])(
 
       await act(async () => {
         patchResponse.resolve()
-        await patchResponse
+        await patchResponse.promise
       })
 
       expectProps(spySortableItem, { disabled: false })
@@ -325,8 +327,11 @@ describe.each([ListType.LearningPath, ListType.UserList])(
       const [from, to] = [1, 3]
       const active = items[from]
 
-      const patchResponse = new ControlledPromise<void>()
-      setMockResponse.patch(patchUrl(listType, active.id), patchResponse)
+      const patchResponse = Promise.withResolvers<void>()
+      setMockResponse.patch(
+        patchUrl(listType, active.id),
+        patchResponse.promise,
+      )
 
       // dnd-kit draggables have role button (+ a roledescription)
       const cards1 = screen.getAllByRole("button", {

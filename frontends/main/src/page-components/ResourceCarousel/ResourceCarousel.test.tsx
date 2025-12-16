@@ -11,7 +11,6 @@ import {
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
 import { LearningResourceCard } from "ol-components"
-import { ControlledPromise } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 
 jest.mock("ol-components", () => {
@@ -37,15 +36,15 @@ describe("ResourceCarousel", () => {
     setMockResponse.get(urls.userLists.membershipList(), [])
     setMockResponse.get(urls.learningPaths.membershipList(), [])
 
-    const searchResponse = new ControlledPromise()
-    const listResponse = new ControlledPromise()
+    const searchResponse = Promise.withResolvers()
+    const listResponse = Promise.withResolvers()
     setMockResponse.get(
       expect.stringContaining(urls.search.resources()),
-      searchResponse,
+      searchResponse.promise,
     )
     setMockResponse.get(
       expect.stringContaining(urls.learningResources.list()),
-      listResponse,
+      listResponse.promise,
     )
     const resolve = () => {
       searchResponse.resolve(resources.search)
