@@ -4,31 +4,28 @@ import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { useQuery } from "@tanstack/react-query"
 import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
+import { programView } from "@/common/urls"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const WideButton = styled(Button)({
   width: "100%",
 })
 
-const EnrolledPlaceholder = styled.div(({ theme }) => ({
-  color: theme.custom.colors.white,
-  backgroundColor: theme.custom.colors.mitRed,
-  ...theme.typography.buttonLarge,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  height: "48px",
-  borderRadius: "4px",
-  gap: "12px",
-  svg: {
-    width: "20px",
-    height: "20px",
+const WideButtonLink = styled(ButtonLink)(({ href }) => [
+  {
+    width: "100%",
   },
-}))
+  !href && {
+    pointerEvents: "none",
+    cursor: "default",
+  },
+])
 
 type ProgramEnrollmentButtonProps = {
   program: V2Program
@@ -42,35 +39,40 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     ...enrollmentQueries.programEnrollmentsList(),
     throwOnError: false,
   })
-  const enrolled =
-    program && enrollments.data?.some((e) => e.program.id === program.id)
-  if (enrollments.isLoading || me.isLoading) {
-    return (
-      <EnrolledPlaceholder>
-        <LoadingSpinner size="20px" loading={true} color="inherit" />
-      </EnrolledPlaceholder>
-    )
-  } else if (enrolled) {
-    return (
-      <EnrolledPlaceholder>
-        Enrolled
-        <RiCheckLine aria-hidden="true" />
-      </EnrolledPlaceholder>
-    )
-  }
+  const programDashboardEnabled = useFeatureFlagEnabled(
+    FeatureFlags.EnrollmentDashboard,
+  )
+  const enrollment =
+    program && enrollments.data?.find((e) => e.program.id === program.id)
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
-    if (me.data?.is_authenticated) {
+    if (enrollments.isLoading || me.isLoading) {
+      return
+    } else if (me.data?.is_authenticated) {
       NiceModal.show(ProgramEnrollmentDialog, { program })
     } else {
       setAnchor(e.currentTarget)
     }
   }
+  const isLoading = enrollments.isLoading || me.isLoading
+  if (enrollment) {
+    const href = programDashboardEnabled ? programView(program.id) : undefined
 
+    return (
+      <WideButtonLink href={href}>
+        Enrolled
+        <RiCheckLine aria-hidden="true" />
+      </WideButtonLink>
+    )
+  }
   return (
     <>
       <WideButton onClick={handleClick} variant="primary" size="large">
-        Enroll for Free
+        {isLoading ? (
+          <LoadingSpinner size="20px" loading={true} color="inherit" />
+        ) : (
+          "Enroll for Free"
+        )}
       </WideButton>
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>

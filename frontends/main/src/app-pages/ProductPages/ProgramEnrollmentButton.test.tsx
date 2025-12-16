@@ -11,6 +11,13 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { programView } from "@/common/urls"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 const makeProgram = mitxFactories.programs.program
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV2
@@ -19,6 +26,10 @@ const makeUser = factories.user.user
 describe("ProgramEnrollmentButton", () => {
   const ENROLLED = "Enrolled"
   const ENROLL = "Enroll for Free"
+
+  beforeEach(() => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  })
 
   test("Shows loading state while enrollments and user loading", async () => {
     const program = makeProgram()
@@ -47,7 +58,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull()
   })
 
-  test("Shows 'Enrolled' for enrolled users", async () => {
+  test("Shows 'Enrolled' button without link when feature flag is off", async () => {
     const program = makeProgram()
     const enrollments = [
       makeProgramEnrollment(),
@@ -64,7 +75,32 @@ describe("ProgramEnrollmentButton", () => {
 
     renderWithProviders(<ProgramEnrollmentButton program={program} />)
 
-    await screen.findByText(ENROLLED)
+    const enrolledButton = await screen.findByText(ENROLLED)
+    // When feature flag is off, button should not have href
+    expect(enrolledButton.closest("a")).toHaveAttribute("href", "")
+  })
+
+  test("Shows 'Enrolled' button with dashboard link when feature flag is on", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+
+    const program = makeProgram()
+    const enrollments = [
+      makeProgramEnrollment(),
+      makeProgramEnrollment({ program: { id: program.id } }),
+      makeProgramEnrollment(),
+    ]
+    const user = makeUser({ is_authenticated: true })
+
+    setMockResponse.get(
+      mitxUrls.programEnrollments.enrollmentsListV2(),
+      enrollments,
+    )
+    setMockResponse.get(urls.userMe.get(), user)
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const enrolledLink = await screen.findByRole("link", { name: ENROLLED })
+    expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
   test("Shows 'Enroll' + enrollment dialog for unenrolled users", async () => {
