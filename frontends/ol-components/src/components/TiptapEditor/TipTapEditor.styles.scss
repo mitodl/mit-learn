@@ -1,0 +1,10 @@
+/*
+Avoid using this file. It defines GLOBAL styles; these
+might be applied to the entire Learn site.
+*/
+
+// Ensure tooltips appear above other UI elements like the sticky site header
+// NOTE: This must be global because tooltips are appended to document body.
+.tiptap-tooltip {
+  z-index: 2000;
+}
