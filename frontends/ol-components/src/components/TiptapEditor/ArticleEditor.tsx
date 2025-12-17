@@ -255,6 +255,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           openOnClick: false,
           enableClickSelection: true,
         },
+        trailingNode: {
+          node: "paragraph",
+        },
       }),
       Heading.configure({
         levels: [1, 2, 3, 4, 5, 6],
