@@ -216,7 +216,7 @@ def test_resource_upserted():
     resource = LearningResourceFactory.create(
         topics=[channel1.topic_detail.topic, channel2.topic_detail.topic]
     )
-    ChannelPlugin().resource_upserted(resource, None)
+    ChannelPlugin().resource_upserted(resource, None, None)
 
     channel1.refresh_from_db()
     channel2.refresh_from_db()
