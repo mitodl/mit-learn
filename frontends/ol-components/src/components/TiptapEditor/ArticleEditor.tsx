@@ -29,6 +29,7 @@ import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
 import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
+import { EnsureParagraphAfterQuote } from "./extensions/node/Quote/ParagraphAfterQuoteExtension"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -288,6 +289,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         onError: (error) => console.error("Upload failed:", error),
       }),
       BannerNode,
+      EnsureParagraphAfterQuote,
     ],
   })
 
