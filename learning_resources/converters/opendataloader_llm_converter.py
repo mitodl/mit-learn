@@ -44,11 +44,12 @@ MATH_DENSITY_THRESHOLD = 5
 
 MATH_FONTS = {"cmmi", "cmsy", "cmex", "msbm", "msam", "eufm", "dsrom", "wasy", "stmary"}
 
-# Regex for "Complex" math (Integrals, Sums, Keywords)
-COMPLEX_MATH_REGEX = re.compile(r"([∑∏∫∂∇√∞→⇒⇔]|\b(lim|sin|cos|tan|log|ln|det|mod)\b)")
 
-# Regex for any math-like symbols
-ALL_MATH_REGEX = re.compile(r"[+=≈≠≤≥<>±∑∏∫∂∇√∞∈∉⊂⊃∪∩∀∃→⇒⇔αβγδεθλμπστφωΩΓΛΨ\-]")  # noqa: RUF001
+BASIC_MATH_SYMBOLS = re.compile(r"[+=<>≤≥≠±\-]")
+# Regex for "Complex" math (Integrals, Sums, Keywords)
+COMPLEX_MATH_REGEX = re.compile(
+    r"([∑∏∫∂∇√∞∀∃∈⊂∪→⇒⇔αβγδεθλμπστφωΩΓΛΨ]|\b(lim|sin|cos|tan|log|ln|det|mod)\b)"  # noqa: RUF001
+)
 
 
 # --- Content Block Types (from JsonName.java) ---
@@ -663,7 +664,7 @@ class OpenDataLoaderLLMConverter:
                 text = b.content.strip()
                 if COMPLEX_MATH_REGEX.search(text):
                     score += 3
-                elif ALL_MATH_REGEX.search(text):
+                elif BASIC_MATH_SYMBOLS.search(text):
                     score += 1
         return score
 
