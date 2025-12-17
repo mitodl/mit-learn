@@ -121,26 +121,26 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [content, setContent] = useState<JSONContent>(
     article?.content || {
       type: "doc",
-      content: [
-        {
-          type: "banner",
-          content: [
-            {
-              type: "heading",
-              attrs: { level: 1 },
-              content: [],
-            },
-            {
-              type: "paragraph",
-              content: [],
-            },
-          ],
-        },
-        {
-          type: "byline",
-        },
-        { type: "paragraph", content: [] },
-      ],
+      // content: [
+      //   {
+      //     type: "banner",
+      //     content: [
+      //       {
+      //         type: "heading",
+      //         attrs: { level: 1 },
+      //         content: [],
+      //       },
+      //       {
+      //         type: "paragraph",
+      //         content: [],
+      //       },
+      //     ],
+      //   },
+      //   {
+      //     type: "byline",
+      //   },
+      //   { type: "paragraph", content: [] },
+      // ],
     },
   )
   const [touched, setTouched] = useState(false)
@@ -240,9 +240,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       },
     },
     extensions: [
-      ArticleDocument,
+      // ArticleDocument,
       StarterKit.configure({
-        document: false, // Disable default document to use our ArticleDocument
+        // document: false, // Disable default document to use our ArticleDocument
         horizontalRule: false,
         heading: false,
         link: {
@@ -289,33 +289,33 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     ],
   })
 
-  useEffect(() => {
-    if (!editor) return
-    const title = editor.$node("heading", { level: 1 })?.textContent || ""
-    setTitle(title)
-  }, [editor, content])
+  // useEffect(() => {
+  //   if (!editor) return
+  //   const title = editor.$node("heading", { level: 1 })?.textContent || ""
+  //   setTitle(title)
+  // }, [editor, content])
 
-  useEffect(() => {
-    if (!editor) return
-    editor
-      .chain()
-      .command(({ tr, state }) => {
-        state.doc.descendants((node, pos) => {
-          if (
-            node.type.name === "mediaEmbed" ||
-            node.type.name === "imageWithCaption" ||
-            node.type.name === "byline"
-          ) {
-            tr.setNodeMarkup(pos, undefined, {
-              ...node.attrs,
-              editable: !readOnly,
-            })
-          }
-        })
-        return true
-      })
-      .run()
-  }, [editor, readOnly])
+  // useEffect(() => {
+  //   if (!editor) return
+  //   editor
+  //     .chain()
+  //     .command(({ tr, state }) => {
+  //       state.doc.descendants((node, pos) => {
+  //         if (
+  //           node.type.name === "mediaEmbed" ||
+  //           node.type.name === "imageWithCaption" ||
+  //           node.type.name === "byline"
+  //         ) {
+  //           tr.setNodeMarkup(pos, undefined, {
+  //             ...node.attrs,
+  //             editable: !readOnly,
+  //           })
+  //         }
+  //       })
+  //       return true
+  //     })
+  //     .run()
+  // }, [editor, readOnly])
 
   if (!editor) return null
 
