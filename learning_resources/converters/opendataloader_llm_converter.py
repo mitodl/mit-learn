@@ -179,6 +179,9 @@ class PDFPageRenderer:
         self._scale = dpi / PDF_POINTS_PER_INCH
 
     def get_page_image(self, page_number: int) -> Image.Image:
+        """
+        Get a specific page from the pdf as an image
+        """
         if page_number not in self._page_cache:
             images = pdf2image.convert_from_path(
                 self.document_path,
@@ -190,6 +193,9 @@ class PDFPageRenderer:
         return self._page_cache[page_number].copy()
 
     def extract_region(self, page_number: int, bbox: list[float]) -> Image.Image | None:
+        """
+        Clip a specific region on a page as an image
+        """
         page_image = self.get_page_image(page_number)
         page_width, page_height = page_image.size
 
@@ -647,7 +653,6 @@ class OpenDataLoaderLLMConverter:
         Calculate a score representing 'math density' for a page.
         """
         score = 0
-        KEYWORD_THRESHOLD = 5
         for b in blocks:
             if b.font:
                 font_base = "".join([c for c in b.font.lower() if c.isalpha()])
@@ -660,12 +665,6 @@ class OpenDataLoaderLLMConverter:
                     score += 3
                 elif ALL_MATH_REGEX.search(text):
                     score += 1
-
-                # Bonus for keywords in short blocks
-                if len(text.split()) < KEYWORD_THRESHOLD and any(
-                    k in text.lower() for k in ["lim", "log", "sin"]
-                ):
-                    score += 2
         return score
 
     def convert_to_markdown(self) -> str:
