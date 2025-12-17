@@ -125,8 +125,17 @@ const StyledEditorContent = styled(EditorContent, {
       borderRadius: "8px",
       marginBottom: "40px",
       borderLeft: `2px solid ${theme.custom.colors.red}`,
-      ":before": {
-        display: "none",
+      "::before": {
+        content: '"“"', // opening inverted comma
+        position: "absolute",
+        left: "17px",
+        fontSize: "64px",
+        lineHeight: 1,
+        fontWeight: theme.typography.fontWeightRegular,
+        top: "-15px",
+        color: theme.custom.colors.red,
+        fontFamily: theme.typography.fontFamily,
+        background: "none",
       },
       p: {
         position: "relative",
