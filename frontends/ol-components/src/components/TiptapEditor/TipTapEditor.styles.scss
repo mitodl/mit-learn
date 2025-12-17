@@ -1,0 +1,10 @@
+/**
+NOTE: These styles will be applied to entire Learn site.
+Do not target raw HTML elements!
+*/
+
+// Note: This cannot be handled via styled-components, since tooltips
+// are appended to the document body and not scoped with the styled element.
+.tiptap-tooltip {
+  z-index: 2000;
+}
