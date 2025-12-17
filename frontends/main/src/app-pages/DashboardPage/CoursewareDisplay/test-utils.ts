@@ -50,6 +50,7 @@ const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
         status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
         mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
         grades: [],
+        run: factories.courses.courseRun(),
       },
     },
     ...overrides,
@@ -289,7 +290,6 @@ function setupOrgDashboardMocks(
   )
 
   // Empty defaults
-  setMockResponse.get(mitxonline.urls.enrollment.enrollmentsList(), [])
   setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
   setMockResponse.get(
     mitxonline.urls.programEnrollments.enrollmentsListV2(),

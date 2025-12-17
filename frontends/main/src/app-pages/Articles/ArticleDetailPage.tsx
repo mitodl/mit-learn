@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useArticleDetail } from "api/hooks/articles"
+import { useArticleDetailRetrieve } from "api/hooks/articles"
 import { LoadingSpinner, ArticleEditor, styled } from "ol-components"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -20,8 +20,8 @@ const Spinner = styled(LoadingSpinner)({
   transform: "translate(-50%, -50%)",
 })
 
-export const ArticleDetailPage = ({ articleId }: { articleId: number }) => {
-  const { data: article, isLoading } = useArticleDetail(Number(articleId))
+export const ArticleDetailPage = ({ articleId }: { articleId: string }) => {
+  const { data: article, isLoading } = useArticleDetailRetrieve(articleId)
 
   const showArticleDetail = useFeatureFlagEnabled(
     FeatureFlags.ArticleEditorView,

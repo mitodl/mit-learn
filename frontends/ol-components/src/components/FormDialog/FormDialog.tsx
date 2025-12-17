@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import styled from "@emotion/styled"
 import { Dialog } from "../Dialog/Dialog"
 import type { DialogProps } from "../Dialog/Dialog"
@@ -60,6 +60,8 @@ interface FormDialogProps {
   fullWidth?: boolean
 
   className?: string
+  maxWidth?: DialogProps["maxWidth"]
+  disabled?: boolean
 }
 
 /**
@@ -85,6 +87,8 @@ const FormDialog: React.FC<FormDialogProps> = ({
   confirmText = "Submit",
   cancelText = "Cancel",
   className,
+  maxWidth,
+  disabled = false,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = useCallback(
@@ -112,9 +116,10 @@ const FormDialog: React.FC<FormDialogProps> = ({
     return props
   }, [handleSubmit, noValidate])
 
+  const handleReset = useRef(onReset)
   useEffect(() => {
-    onReset()
-  }, [open, onReset])
+    handleReset.current?.()
+  }, [open])
 
   return (
     <Dialog
@@ -128,6 +133,8 @@ const FormDialog: React.FC<FormDialogProps> = ({
       className={className}
       PaperProps={paperProps}
       actions={actions}
+      maxWidth={maxWidth}
+      disabled={isSubmitting || disabled}
     >
       <FormContent>{children}</FormContent>
     </Dialog>

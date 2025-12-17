@@ -28,6 +28,13 @@ const useArticleDetail = (id: number | undefined) => {
   })
 }
 
+const useArticleDetailRetrieve = (identifier: string | undefined) => {
+  return useQuery({
+    ...articleQueries.articlesDetailRetrieve(identifier ?? ""),
+    enabled: identifier !== undefined,
+  })
+}
+
 const useArticleCreate = () => {
   const client = useQueryClient()
   return useMutation({
@@ -80,6 +87,10 @@ const useArticlePartialUpdate = () => {
         .then((response) => response.data),
     onSuccess: (article: Article) => {
       client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
+      const identifier = article.slug || article.id.toString()
+      client.invalidateQueries({
+        queryKey: articleKeys.articlesDetailRetrieve(identifier),
+      })
     },
   })
 }
@@ -91,4 +102,5 @@ export {
   useArticleDestroy,
   useArticlePartialUpdate,
   articleQueries,
+  useArticleDetailRetrieve,
 }

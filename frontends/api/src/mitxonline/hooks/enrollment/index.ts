@@ -4,13 +4,30 @@ import { b2bApi, courseRunEnrollmentsApi } from "../../clients"
 import {
   B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
+  CourseRunEnrollmentRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-const useCreateEnrollment = () => {
+const useCreateB2bEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (opts: B2bApiB2bEnrollCreateRequest) =>
       b2bApi.b2bEnrollCreate(opts),
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.courseRunEnrollmentsList(),
+      })
+    },
+  })
+}
+
+const useCreateEnrollment = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (opts: CourseRunEnrollmentRequest) => {
+      return courseRunEnrollmentsApi.enrollmentsCreate({
+        CourseRunEnrollmentRequest: opts,
+      })
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
@@ -48,6 +65,7 @@ const useDestroyEnrollment = () => {
 export {
   enrollmentQueries,
   enrollmentKeys,
+  useCreateB2bEnrollment,
   useCreateEnrollment,
   useUpdateEnrollment,
   useDestroyEnrollment,

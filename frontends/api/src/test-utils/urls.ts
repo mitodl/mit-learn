@@ -153,6 +153,8 @@ const articles = {
   list: (params?: Params<ArticlesApi, "articlesList">) =>
     `${API_BASE_URL}/api/v1/articles/${query(params)}`,
   details: (id: number) => `${API_BASE_URL}/api/v1/articles/${id}/`,
+  articlesDetailRetrieve: (identifier: string) =>
+    `${API_BASE_URL}/api/v1/articles/detail/${identifier}/`,
 }
 
 const userSubscription = {
