@@ -331,6 +331,22 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   })
 
   useEffect(() => {
+    if (!article || !editor) return
+
+    if (article.content) {
+      const currentContent = editor.getJSON()
+      if (JSON.stringify(article.content) !== JSON.stringify(currentContent)) {
+        setContent(article.content)
+        editor.commands.setContent(article.content)
+      }
+    }
+
+    if (article.title !== undefined) {
+      setTitle(article.title)
+    }
+  }, [article, editor])
+
+  useEffect(() => {
     if (!editor) return
     const title = editor.$node("heading", { level: 1 })?.textContent || ""
     setTitle(title)
