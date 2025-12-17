@@ -5,10 +5,10 @@ Test learning_resources utils
 import json
 from pathlib import Path
 
-import markdown
 import pytest
 import yaml
 
+import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
@@ -245,7 +245,7 @@ def test_resource_upserted_actions(mock_plugin_manager, fixture_resource):
     """
     utils.resource_upserted_actions(fixture_resource, percolate=False)
     mock_plugin_manager.hook.resource_upserted.assert_called_once_with(
-        resource=fixture_resource, percolate=False
+        resource=fixture_resource, percolate=False, generate_embeddings=True
     )
 
 
