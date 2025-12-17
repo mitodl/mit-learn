@@ -5,10 +5,10 @@ Test learning_resources utils
 import json
 from pathlib import Path
 
+import markdown
 import pytest
 import yaml
 
-import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
