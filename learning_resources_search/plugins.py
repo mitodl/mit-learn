@@ -63,7 +63,7 @@ class SearchIndexPlugin:
         log.debug("document %i percolated - %s", resource.id, list(percolated_queries))
 
     @hookimpl
-    def resource_upserted(self, resource, percolate):
+    def resource_upserted(self, resource, percolate, *, generate_embeddings=True):
         """
         Upsert a created/modified resource to the search index
 
@@ -75,7 +75,7 @@ class SearchIndexPlugin:
         upsert_tasks.append(
             tasks.upsert_learning_resource.si(resource.id),
         )
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS and generate_embeddings:
             upsert_tasks.append(
                 vector_tasks.generate_embeddings.si(
                     [resource.id], resource.resource_type, overwrite=True
