@@ -166,6 +166,8 @@ def load_posthog_lrd_view_events(
             id=resource_id, published=True
         ).first()
         if learning_resource:
-            resource_upserted_actions(learning_resource, percolate=False)
+            resource_upserted_actions(
+                learning_resource, percolate=False, generate_embeddings=False
+            )
 
     return events

@@ -165,7 +165,7 @@ class ChannelPlugin:
         offeror.delete()
 
     @hookimpl
-    def resource_upserted(self, resource, percolate):  # noqa: ARG002
+    def resource_upserted(self, resource, percolate, *, generate_embeddings=True):  # noqa: ARG002
         """
         Publish channels for the resource's topics
         """

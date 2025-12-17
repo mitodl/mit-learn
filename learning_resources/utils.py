@@ -272,13 +272,17 @@ def get_ocw_topics(topics_collection):
     return list(set(topics))
 
 
-def resource_upserted_actions(resource: LearningResource, percolate):
+def resource_upserted_actions(
+    resource: LearningResource, percolate, *, generate_embeddings=True
+):
     """
     Trigger plugins when a LearningResource is created or updated
     """
     pm = get_plugin_manager()
     hook = pm.hook
-    hook.resource_upserted(resource=resource, percolate=percolate)
+    hook.resource_upserted(
+        resource=resource, percolate=percolate, generate_embeddings=generate_embeddings
+    )
 
 
 def resource_unpublished_actions(resource: LearningResource):

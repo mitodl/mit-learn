@@ -245,7 +245,7 @@ def test_resource_upserted_actions(mock_plugin_manager, fixture_resource):
     """
     utils.resource_upserted_actions(fixture_resource, percolate=False)
     mock_plugin_manager.hook.resource_upserted.assert_called_once_with(
-        resource=fixture_resource, percolate=False
+        resource=fixture_resource, percolate=False, generate_embeddings=True
     )
 
 
