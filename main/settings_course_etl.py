@@ -70,16 +70,20 @@ CANVAS_COURSE_BUCKET_PREFIX = get_string(
 )
 
 OCR_MODEL = get_string(name="OCR_MODEL", default=None)
+
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
-    "Transcribe all text in this image to markdown. Preserve formulas."
-    "If there are non-text elements such as diagrams or pictures, "
-    "describe them in detail."
-    "Do not include anything but the resulting markdown in your response",
+    "Transcribe this image to markdown preserve text, formulas and tables and code."
+    "Leave a descriptive caption for anything that cannot be transcribed.",
 )
-
+# Do not OCR if the PDF has exceeds this many pages
 OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
+
+# OCR the entire page if the density of math formulas exceeds this threshold
+OCR_MATH_DENSITY_THRESHOLD = get_int(name="OCR_MATH_DENSITY_THRESHOLD", default=5)
 OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
+
+
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)

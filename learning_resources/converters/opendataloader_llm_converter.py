@@ -40,7 +40,7 @@ IMAGE_BATCH_SIZE = 10
 PDF_POINTS_PER_INCH = 72
 
 # Score > 5 triggers full page OCR.
-MATH_DENSITY_THRESHOLD = 5
+
 
 MATH_FONTS = {"cmmi", "cmsy", "cmex", "msbm", "msam", "eufm", "dsrom", "wasy", "stmary"}
 
@@ -664,7 +664,7 @@ class OpenDataLoaderLLMConverter:
             if b.font:
                 font_base = "".join([c for c in b.font.lower() if c.isalpha()])
                 if any(mf in font_base for mf in MATH_FONTS):
-                    score += 2
+                    score += 1
 
             if b.content:
                 text = b.content.strip()
@@ -695,7 +695,7 @@ class OpenDataLoaderLLMConverter:
                 page_blocks = pages[page_num]
 
                 math_score = self._calculate_page_math_score(page_blocks)
-                should_full_ocr = math_score > MATH_DENSITY_THRESHOLD
+                should_full_ocr = math_score > settings.OCR_MATH_DENSITY_THRESHOLD
 
                 if should_full_ocr:
                     log.info(
