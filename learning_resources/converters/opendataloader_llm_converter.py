@@ -226,6 +226,9 @@ class PDFPageRenderer:
         return page_image.crop((left, upper, right, lower))
 
     def cleanup(self) -> None:
+        """
+        Clean up processed images
+        """
         for page_image in self._page_cache.values():
             page_image.close()
         self._page_cache.clear()
@@ -236,6 +239,9 @@ class OCRProcessor:
         self.batch_size = batch_size
 
     def process_images(self, images: list[ImageForOCR]) -> dict[int, str]:
+        """
+        Batch OCR images
+        """
         if not images:
             return {}
         block_ids = [img.block_id for img in images]
