@@ -3,9 +3,11 @@
 import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
+import type { RichTextArticle } from "api/v1"
+import { LoadingSpinner } from "../LoadingSpinner/LoadingSpinner"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
-
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { StarterKit } from "@tiptap/starter-kit"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Heading } from "@tiptap/extension-heading"
@@ -20,6 +22,7 @@ import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
 import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
+import { ArticleProvider } from "./ArticleContext"
 
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
@@ -38,6 +41,7 @@ import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
+import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
 import "./vendor/styles/_keyframe-animations.scss"
@@ -49,7 +53,6 @@ import {
   useArticlePartialUpdate,
   useMediaUpload,
 } from "api/hooks/articles"
-import type { RichTextArticle } from "api/v1"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
@@ -82,6 +85,12 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 const StyledAlert = styled(Alert)({
   margin: "20px auto",
   maxWidth: "1000px",
+  position: "fixed",
+  top: "108px",
+  left: "50%",
+  width: "690px",
+  transform: "translateX(-50%)",
+  zIndex: 1,
 })
 
 const ArticleDocument = Document.extend({
@@ -104,13 +113,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const {
     mutate: createArticle,
     isPending: isCreating,
-    isError: isCreateError,
     error: createError,
   } = useArticleCreate()
   const {
     mutate: updateArticle,
     isPending: isUpdating,
-    isError: isUpdateError,
     error: updateError,
   } = useArticlePartialUpdate()
 
@@ -215,7 +222,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
     onUpdate: ({ editor }) => {
       const json = editor.getJSON()
-
       setContent(json)
       setTouched(true)
     },
@@ -256,11 +262,46 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Placeholder.configure({
         showOnlyCurrent: false,
         includeChildren: true,
-        placeholder: ({ node }) => {
-          if (node.type.name === "heading") {
-            return "Add heading..."
+        placeholder: ({ node, editor }): string => {
+          let parentNode: typeof node | null = null
+
+          editor.state.doc.descendants((n: ProseMirrorNode) => {
+            n.forEach((childNode: ProseMirrorNode) => {
+              if (childNode === node) {
+                parentNode = n
+              }
+            })
+            if (parentNode) {
+              return false
+            }
+            return undefined
+          })
+
+          if (parentNode) {
+            const parentExtension = editor.extensionManager.extensions.find(
+              (ext) => ext.name === parentNode!.type.name,
+            )
+
+            if (
+              parentExtension &&
+              "config" in parentExtension &&
+              parentExtension.config &&
+              typeof (parentExtension.config as ExtendedNodeConfig)
+                .getPlaceholders === "function"
+            ) {
+              const placeholder = (
+                parentExtension.config as ExtendedNodeConfig
+              ).getPlaceholders(node)
+              if (placeholder) {
+                return placeholder
+              }
+            }
           }
-          return "Add text..."
+
+          if (node.type.name === "heading") {
+            return "Add a heading"
+          }
+          return "Add some text"
         },
       }),
       HorizontalRule,
@@ -283,11 +324,27 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         maxSize: MAX_FILE_SIZE,
         limit: 3,
         upload: uploadHandler,
-        onError: (error) => console.error("Upload failed:", error),
+        onError: (error) => setUploadError(error.message),
       }),
       BannerNode,
     ],
   })
+
+  useEffect(() => {
+    if (!article || !editor) return
+
+    if (article.content) {
+      const currentContent = editor.getJSON()
+      if (JSON.stringify(article.content) !== JSON.stringify(currentContent)) {
+        setContent(article.content)
+        editor.commands.setContent(article.content)
+      }
+    }
+
+    if (article.title !== undefined) {
+      setTitle(article.title)
+    }
+  }, [article, editor])
 
   useEffect(() => {
     if (!editor) return
@@ -320,79 +377,78 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   if (!editor) return null
 
   const isPending = isCreating || isUpdating
-  const isError = isCreateError || isUpdateError
-  const error = createError || updateError
-
-  const publishButtonLabel = (() => {
-    if (isPending && article?.is_published) return "Updating..."
-
-    if (isPending && isPublishing && !article?.is_published)
-      return "Publishing..."
-
-    if (!isPending && article?.is_published) return "Update"
-
-    return "Publish"
-  })()
+  const error = createError || updateError || uploadError
 
   return (
     <ViewContainer toolbarVisible={isArticleEditor}>
-      <EditorContext.Provider value={{ editor }}>
-        {isArticleEditor ? (
-          readOnly ? (
-            <StyledToolbar>
-              <Spacer />
-              <ButtonLink
-                variant="primary"
-                href={`/articles/${article?.id}/edit`}
-                size="small"
-              >
-                Edit
-              </ButtonLink>
-            </StyledToolbar>
-          ) : (
-            <StyledToolbar>
-              <MainToolbarContent editor={editor} />
-              {(!article || !article?.is_published) && (
-                <Button
-                  variant="secondary"
-                  disabled={isPending || !touched || !title}
-                  onClick={() => {
-                    handleSave(false)
-                    setIsPublishing(false)
-                  }}
+      <ArticleProvider value={{ article }}>
+        <EditorContext.Provider value={{ editor }}>
+          {isArticleEditor ? (
+            readOnly ? (
+              <StyledToolbar>
+                <Spacer />
+                <ButtonLink
+                  variant="primary"
+                  href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
                   size="small"
                 >
-                  {isPending && !isPublishing ? "Saving..." : "Save As Draft"}
-                </Button>
-              )}
+                  Edit
+                </ButtonLink>
+              </StyledToolbar>
+            ) : (
+              <StyledToolbar>
+                <MainToolbarContent editor={editor} />
+                {!article?.is_published ? (
+                  <Button
+                    variant="secondary"
+                    disabled={isPending || !touched || !title}
+                    onClick={() => {
+                      setIsPublishing(false)
+                      handleSave(false)
+                    }}
+                    size="small"
+                    endIcon={
+                      isPending && !isPublishing ? (
+                        <LoadingSpinner size={14} color="inherit" loading />
+                      ) : null
+                    }
+                  >
+                    Save As Draft
+                  </Button>
+                ) : null}
 
-              <Button
-                variant="primary"
-                disabled={isPending || !touched || !title}
-                onClick={() => {
-                  handleSave(true)
-                  setIsPublishing(true)
-                }}
-                size="small"
-              >
-                {publishButtonLabel}
-              </Button>
-            </StyledToolbar>
-          )
-        ) : null}
-        {isError ||
-          (uploadError && (
+                <Button
+                  variant="primary"
+                  disabled={
+                    isPending || !title || (!touched && article?.is_published)
+                  }
+                  onClick={() => {
+                    setIsPublishing(true)
+                    handleSave(true)
+                  }}
+                  size="small"
+                  endIcon={
+                    isPending && isPublishing ? (
+                      <LoadingSpinner size={14} color="inherit" loading />
+                    ) : null
+                  }
+                >
+                  Publish
+                </Button>
+              </StyledToolbar>
+            )
+          ) : null}
+          {error ? (
             <StyledAlert severity="error" closable>
               <Typography variant="body2" color="textPrimary">
-                {error?.message ??
-                  uploadError ??
-                  "An error occurred while saving"}
+                {error instanceof Error ? error.message : error}
               </Typography>
             </StyledAlert>
-          ))}
+          ) : null}
 
-        <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
-      </EditorContext.Provider>
+          <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+        </EditorContext.Provider>
+      </ArticleProvider>
     </ViewContainer>
   )
 }

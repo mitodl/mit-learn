@@ -55,7 +55,7 @@ export const DividerNode = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-type="divider"]' }, { tag: ". . ." }]
+    return [{ tag: 'div[data-type="divider"]' }]
   },
 
   renderHTML({ HTMLAttributes }) {

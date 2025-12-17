@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.48.2"
+VERSION = "0.50.3"
 
 log = logging.getLogger()
 
@@ -740,6 +740,10 @@ KEYCLOAK_REALM_NAME = get_string(
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 
+OPENSEARCH_VECTOR_MODEL_BASE_NAME = get_string(
+    name="OPENSEARCH_VECTOR_MODEL_BASE_NAME",
+    default="hybrid_search_model",
+)
 POSTHOG_PROJECT_API_KEY = get_string(
     name="POSTHOG_PROJECT_API_KEY",
     default="",
@@ -784,6 +788,13 @@ the lookback window for getting items to embed
 will be a constant 60 minutes greater more than the schedule frequency
 """
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+OPEN_AI_EMBEDDING_MODELS = get_list_of_str(
+    "OPEN_AI_EMBEDDING_MODELS",
+    [
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+    ],
+)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
@@ -795,7 +806,9 @@ QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
-QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
+QDRANT_DENSE_MODEL = get_string(
+    name="QDRANT_DENSE_MODEL", default="text-embedding-3-small"
+)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )

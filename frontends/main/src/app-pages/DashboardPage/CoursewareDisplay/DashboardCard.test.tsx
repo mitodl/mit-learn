@@ -3,6 +3,7 @@ import {
   renderWithProviders,
   screen,
   setMockResponse,
+  setupLocationMock,
   user,
   within,
 } from "@/test-utils"
@@ -62,23 +63,7 @@ describe.each([
 ])("DashboardCard $display", ({ testId }) => {
   const getCard = () => screen.getByTestId(testId)
 
-  const originalLocation = window.location
-
-  beforeAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: { ...originalLocation, assign: jest.fn() },
-    })
-  })
-
-  afterAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: originalLocation,
-    })
-  })
+  setupLocationMock()
 
   test("It shows course title and links to marketingUrl if titleAction is marketing and enrolled", async () => {
     setupUserApis()
@@ -558,6 +543,7 @@ describe.each([
         status: EnrollmentStatus.Completed,
         mode: EnrollmentMode.Verified,
         grades: [],
+        run: mitxonline.factories.courses.courseRun(),
       }
       renderWithProviders(
         <DashboardCard
@@ -631,6 +617,7 @@ describe.each([
         status: status,
         mode: EnrollmentMode.Audit,
         grades: [],
+        run: mitxonline.factories.courses.courseRun(),
       }
       renderWithProviders(
         <DashboardCard titleAction="marketing" dashboardResource={course} />,

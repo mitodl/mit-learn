@@ -1,11 +1,14 @@
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import (
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
 )
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -76,6 +79,37 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()
         return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Retrieve article by ID or slug",
+        description="If the path parameter is numeric → ID, else → slug.",
+        parameters=[
+            OpenApiParameter(
+                name="identifier",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Article ID (number) or slug (string)",
+                required=True,
+            )
+        ],
+        responses={200: RichTextArticleSerializer, 404: OpenApiResponse()},
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="detail/(?P<identifier>[^/.]+)",
+        url_name="detail-by-id-or-slug",
+    )
+    def detail_by_id_or_slug(self, _request, identifier):
+        qs = self.get_queryset()
+
+        if identifier.isdigit():
+            article = get_object_or_404(qs, id=int(identifier))
+        else:
+            article = get_object_or_404(qs, slug=identifier)
+
+        serializer = self.get_serializer(article)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema_view(

@@ -37,6 +37,10 @@ def mock_search_index_helpers(mocker):
     mock_remove_contentfiles_immutable_signature = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
     )
+    mock_generate_embeddings_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.generate_embeddings.si"
+    )
+
     return SimpleNamespace(
         mock_upsert_learning_resource=mock_upsert_learning_resource,
         mock_upsert_learning_resource_immutable_signature=mock_upsert_learning_resource_immutable_signature,
@@ -45,6 +49,7 @@ def mock_search_index_helpers(mocker):
         mock_upsert_contentfiles=mock_upsert_contentfiles,
         mock_remove_contentfiles=mock_remove_contentfiles,
         mock_remove_contentfiles_immutable_signature=mock_remove_contentfiles_immutable_signature,
+        mock_generate_embeddings_immutable_signature=mock_generate_embeddings_immutable_signature,
     )
 
 
@@ -142,4 +147,28 @@ def test_resource_similar_topics(mocker, settings):
             "full_description": resource.full_description,
         },
         settings.OPEN_VIDEO_MAX_TOPICS,
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
+def test_search_index_plugin_resource_upserted_generate_embeddings(
+    mock_search_index_helpers, resource_type, settings
+):
+    """Test upsert plugin with generate_embeddings_flag"""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    resource = LearningResourceFactory.create(resource_type=resource_type)
+
+    SearchIndexPlugin().resource_upserted(
+        resource, percolate=False, generate_embeddings=False
+    )
+    mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_not_called()
+    mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
+        resource.id
+    )
+    SearchIndexPlugin().resource_upserted(
+        resource, percolate=False, generate_embeddings=True
+    )
+    mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
+        [resource.id], resource_type, overwrite=True
     )

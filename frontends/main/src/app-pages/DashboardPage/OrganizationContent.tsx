@@ -347,7 +347,8 @@ const OrgProgramDisplay: React.FC<{
   const skeleton = (
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
-  if (programLoading || courses.isLoading) return skeleton
+
+  const sanitizedHtml = DOMPurify.sanitize(program.description)
   const rawCourses =
     courses.data?.results.sort((a, b) => {
       return program.courseIds.indexOf(a.id) - program.courseIds.indexOf(b.id)
@@ -357,7 +358,6 @@ const OrgProgramDisplay: React.FC<{
     contracts: contracts ?? [],
     enrollments: courseRunEnrollments ?? [],
   })
-  const sanitizedHtml = DOMPurify.sanitize(program.description)
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -383,17 +383,19 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {transformedCourses.map((course) => (
-          <DashboardCardStyled
-            Component="li"
-            key={course.key}
-            dashboardResource={course}
-            noun="Module"
-            offerUpgrade={false}
-            titleAction="courseware"
-            buttonHref={course.run?.coursewareUrl}
-          />
-        ))}
+        {programLoading || courses.isLoading
+          ? skeleton
+          : transformedCourses.map((course) => (
+              <DashboardCardStyled
+                Component="li"
+                key={course.key}
+                dashboardResource={course}
+                noun="Module"
+                offerUpgrade={false}
+                titleAction="courseware"
+                buttonHref={course.run?.coursewareUrl}
+              />
+            ))}
       </PlainList>
     </ProgramRoot>
   )
@@ -429,8 +431,15 @@ const OrganizationContentInternal: React.FC<
     programCollectionQueries.programCollectionsList({}),
   )
 
+  // Get IDs of all programs that are in collections
+  const programsInCollections = new Set(
+    programCollections.data?.results.flatMap((collection) =>
+      collection.programs.map((p) => p.id),
+    ) ?? [],
+  )
+
   const transformedPrograms = programs.data?.results
-    .filter((program) => program.collections.length === 0)
+    .filter((program) => !programsInCollections.has(program.id))
     .filter((program) => {
       if (!orgContract?.programs || orgContract.programs.length === 0) {
         return true
@@ -453,6 +462,19 @@ const OrganizationContentInternal: React.FC<
     </Stack>
   )
 
+  // Wait for all program and collection data to load
+  if (programs.isLoading || programCollections.isLoading) {
+    return (
+      <>
+        <Stack>
+          <OrganizationHeader org={org} />
+          <WelcomeMessage org={org} />
+        </Stack>
+        {skeleton}
+      </>
+    )
+  }
+
   return (
     <>
       <Stack>
@@ -460,7 +482,7 @@ const OrganizationContentInternal: React.FC<
         <WelcomeMessage org={org} />
       </Stack>
       <OrganizationRoot>
-        {programs.isLoading || !transformedPrograms
+        {!transformedPrograms
           ? skeleton
           : transformedPrograms.map((program) => (
               <OrgProgramDisplay
@@ -473,11 +495,19 @@ const OrganizationContentInternal: React.FC<
                 orgId={orgId}
               />
             ))}
-        {programCollections.isLoading ? (
-          skeleton
-        ) : (
-          <ProgramCollectionsList>
-            {programCollections.data?.results.map((collection) => {
+        <ProgramCollectionsList>
+          {(programCollections.data?.results ?? [])
+            .filter((collection) => {
+              // Only show collections where at least one program is in the contract
+              const collectionProgramIds = collection.programs.map((p) => p.id)
+              if (!orgContract?.programs || orgContract.programs.length === 0) {
+                return collectionProgramIds.length > 0
+              }
+              return collectionProgramIds.some(
+                (id) => id !== undefined && orgContract.programs.includes(id),
+              )
+            })
+            .map((collection) => {
               const transformedCollection =
                 transform.mitxonlineProgramCollection(collection)
               return (
@@ -490,8 +520,7 @@ const OrganizationContentInternal: React.FC<
                 />
               )
             })}
-          </ProgramCollectionsList>
-        )}
+        </ProgramCollectionsList>
         {programs.data?.results.length === 0 && (
           <HeaderRoot>
             <Typography variant="h3" component="h1">

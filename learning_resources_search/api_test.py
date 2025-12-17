@@ -2415,8 +2415,10 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
 
-    mock_encoder = mocker.patch("learning_resources_search.api.dense_encoder")()
-    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mocker.patch(
+        "learning_resources_search.api.get_vector_model_id",
+        return_value="vector_model_id",
+    )
 
     search_params = {
         "aggregations": ["offered_by"],
@@ -2470,7 +2472,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
         "size": 1,
         "query": {
             "hybrid": {
-                "pagination_depth": 10,
+                "pagination_depth": 3,
                 "queries": [
                     {
                         "bool": {
@@ -2723,7 +2725,15 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                             "filter": {"exists": {"field": "resource_type"}},
                         }
                     },
-                    {"knn": {"vector_embedding": {"vector": [0.1, 0.2, 0.3], "k": 5}}},
+                    {
+                        "neural": {
+                            "vector_embedding": {
+                                "query_text": "math",
+                                "model_id": "vector_model_id",
+                                "k": 5,
+                            }
+                        }
+                    },
                 ],
             }
         },
@@ -2776,20 +2786,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 },
             }
         },
-        "search_pipeline": {
-            "description": "Post processor for hybrid search",
-            "phase_results_processors": [
-                {
-                    "normalization-processor": {
-                        "normalization": {"technique": "min_max"},
-                        "combination": {
-                            "technique": "arithmetic_mean",
-                            "parameters": {"weights": [0.8, 0.2]},
-                        },
-                    }
-                }
-            ],
-        },
+        "search_pipeline": "hybrid_search_pipeline",
         "_source": {
             "excludes": [
                 "created_on",

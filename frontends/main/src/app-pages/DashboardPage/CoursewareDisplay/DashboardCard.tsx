@@ -37,7 +37,7 @@ import {
   UnenrollDialog,
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
-import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
@@ -177,7 +177,7 @@ const getDefaultContextMenuItems = (
 
 const useOneClickEnroll = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const createEnrollment = useCreateEnrollment()
+  const createEnrollment = useCreateB2bEnrollment()
   const userCountry = mitxOnlineUser.data?.legal_address?.country
   const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
   const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -449,8 +449,8 @@ const UpgradeBanner: React.FC<
 }
 
 const CountdownRoot = styled.div(({ theme }) => ({
-  width: "142px",
-  marginRight: "32px",
+  width: "100%",
+  paddingRight: "32px",
   display: "flex",
   justifyContent: "center",
   alignSelf: "end",
@@ -539,6 +539,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const run = isCourse ? dashboardResource.run : undefined
   const coursewareId = isCourse ? dashboardResource.coursewareId : null
   const readableId = isCourse ? dashboardResource.readableId : null
+  const hasValidCertificate = isCourse ? !!run?.certificate?.link : false
+  const enrollmentStatus = hasValidCertificate
+    ? EnrollmentStatus.Completed
+    : enrollment?.status
 
   // Title link logic
   const coursewareUrl = run?.coursewareUrl
@@ -599,9 +603,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {isCourse &&
-      enrollment?.status === EnrollmentStatus.Completed &&
-      run?.certificate?.link ? (
+      {isCourse && run?.certificate?.link ? (
         <SubtitleLink href={run.certificate.link}>
           <RiAwardLine size="16px" />
           View Certificate
@@ -625,7 +627,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : isCourse ? (
     <>
       <EnrollmentStatusIndicator
-        status={enrollment?.status}
+        status={enrollmentStatus}
         showNotComplete={showNotComplete}
       />
       <CoursewareButton
@@ -633,7 +635,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         coursewareId={coursewareId}
         readableId={readableId}
         startDate={run?.startDate}
-        enrollmentStatus={enrollment?.status}
+        enrollmentStatus={enrollmentStatus}
         href={buttonHref ?? run?.coursewareUrl}
         endDate={run?.endDate}
         noun={noun}

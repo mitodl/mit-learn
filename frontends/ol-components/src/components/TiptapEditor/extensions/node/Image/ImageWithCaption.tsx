@@ -11,7 +11,7 @@ const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
 const WIDE_LAYOUT_MIN_IMG_WIDTH = 900
 
-const Container = styled.div({
+const Container = styled.div(({ theme }) => ({
   position: "relative",
   margin: "2rem auto",
   textAlign: "center",
@@ -30,13 +30,11 @@ const Container = styled.div({
 
   [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
     "&.layout-wide img": {
-      width: "90vw",
-      maxWidth: "90vw",
+      width: "92vw",
+      maxWidth: "1400px",
       position: "relative",
       left: "50%",
-      right: "50%",
-      marginLeft: "-45vw",
-      marginRight: "-45vw",
+      transform: "translateX(-50%)",
     },
   },
 
@@ -46,8 +44,7 @@ const Container = styled.div({
     position: "relative",
     left: "50%",
     right: "50%",
-    marginLeft: "-50vw",
-    marginRight: "-50vw",
+    transform: "translateX(-50%)",
   },
 
   ".caption-input": {
@@ -93,19 +90,30 @@ const Container = styled.div({
       border: "none",
       background: "transparent",
       filter: "brightness(0.9)",
-      color: "white",
+      color: theme.custom.colors.white,
       cursor: "pointer",
+      "&:hover": {
+        background: theme.custom.colors.darkGray1,
+      },
 
       "&.active": {
         background: "#9be19b",
-        color: "black",
+        color: theme.custom.colors.black,
         fontWeight: "bold",
+        cursor: "default",
+        svg: {
+          fill: theme.custom.colors.black,
+        },
+      },
+
+      svg: {
+        fill: theme.custom.colors.white,
       },
     },
 
     ".alt-text-button": {
-      color: "white",
-      fontSize: "12px",
+      color: theme.custom.colors.white,
+      fontSize: "14px",
       borderRadius: "4px",
       padding: "2px 6px",
       width: "100px",
@@ -122,7 +130,7 @@ const Container = styled.div({
     width: "auto !important",
     margin: "0 auto",
   },
-})
+}))
 
 const Spinner = styled(LoadingSpinner)({
   margin: "auto",
@@ -231,10 +239,10 @@ export function ImageWithCaption({
             )}
             <button
               onClick={openAltTextDialog}
-              title="Edit Alt Text"
+              title="Set Alt Text"
               className="alt-text-button"
             >
-              Alt Text
+              Set Alt Text
             </button>
           </div>
         )}

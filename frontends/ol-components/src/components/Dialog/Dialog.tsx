@@ -75,6 +75,8 @@ type DialogProps = {
   PaperProps?: MuiDialogProps["PaperProps"]
   actions?: React.ReactNode
   disableEnforceFocus?: MuiDialogProps["disableEnforceFocus"]
+  maxWidth?: MuiDialogProps["maxWidth"]
+  disabled?: boolean
 }
 
 /**
@@ -99,6 +101,8 @@ const Dialog: React.FC<DialogProps> = ({
   isSubmitting = false,
   PaperProps,
   disableEnforceFocus,
+  maxWidth,
+  disabled = false,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -125,6 +129,7 @@ const Dialog: React.FC<DialogProps> = ({
       PaperProps={PaperProps}
       TransitionComponent={Transition}
       aria-labelledby={titleId}
+      maxWidth={maxWidth}
     >
       <Close>
         <ActionButton variant="text" onClick={onClose} aria-label="Close">
@@ -153,7 +158,7 @@ const Dialog: React.FC<DialogProps> = ({
             variant="primary"
             type="submit"
             onClick={onConfirm && handleConfirm}
-            disabled={confirming || isSubmitting}
+            disabled={confirming || isSubmitting || disabled}
           >
             {confirmText}
           </Button>
