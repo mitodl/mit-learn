@@ -698,7 +698,7 @@ class OpenDataLoaderLLMConverter:
                         math_score,
                     )
 
-                    page_block_id = int(f"888{page_num}")
+                    page_block_id = page_num
 
                     full_page_img = self._page_renderer.get_page_image(page_num)
                     optimized_img = _optimize_image(full_page_img)
