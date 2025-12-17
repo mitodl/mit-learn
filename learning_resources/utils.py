@@ -273,7 +273,7 @@ def get_ocw_topics(topics_collection):
 
 
 def resource_upserted_actions(
-    resource: LearningResource, percolate, *, generate_embeddings=True
+    resource: LearningResource, percolate, generate_embeddings
 ):
     """
     Trigger plugins when a LearningResource is created or updated

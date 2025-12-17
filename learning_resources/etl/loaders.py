@@ -80,7 +80,9 @@ def update_index(learning_resource, newly_created):
     ):
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
-        resource_upserted_actions(learning_resource, percolate=False)
+        resource_upserted_actions(
+            learning_resource, percolate=False, generate_embeddings=True
+        )
 
 
 def load_topics(resource, topics_data):

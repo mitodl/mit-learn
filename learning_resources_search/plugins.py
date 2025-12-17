@@ -63,7 +63,7 @@ class SearchIndexPlugin:
         log.debug("document %i percolated - %s", resource.id, list(percolated_queries))
 
     @hookimpl
-    def resource_upserted(self, resource, percolate, *, generate_embeddings=True):
+    def resource_upserted(self, resource, percolate, generate_embeddings):
         """
         Upsert a created/modified resource to the search index
 
