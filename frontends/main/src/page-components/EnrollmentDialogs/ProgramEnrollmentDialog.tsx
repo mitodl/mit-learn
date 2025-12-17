@@ -133,7 +133,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           certificate in order to earn the program credential.
         </Typography>
         <StyledSimpleSelectField
-          label="Choose a date:"
+          label="Choose a course:"
           options={options}
           value={chosenCourseId}
           onChange={(e) => setChosenCourseId(e.target.value)}
