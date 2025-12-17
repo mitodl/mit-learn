@@ -291,7 +291,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       BannerNode,
     ],
   })
-  globalThis.editor = editor
 
   useEffect(() => {
     if (!editor) return
