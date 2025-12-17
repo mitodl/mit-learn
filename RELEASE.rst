@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.50.4
+--------------
+
+- Move query embedding into opensearch (#2808)
+- fix(deps): update dependency next to v15.5.8 [security] (#2802)
+- course/program enrollment dialog (#2797)
+
 Version 0.50.3 (Released December 16, 2025)
 --------------
 
