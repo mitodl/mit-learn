@@ -2415,8 +2415,10 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
 
-    mock_encoder = mocker.patch("learning_resources_search.api.dense_encoder")()
-    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mocker.patch(
+        "learning_resources_search.api.get_vector_model_id",
+        return_value="vector_model_id",
+    )
 
     search_params = {
         "aggregations": ["offered_by"],
@@ -2723,7 +2725,15 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                             "filter": {"exists": {"field": "resource_type"}},
                         }
                     },
-                    {"knn": {"vector_embedding": {"vector": [0.1, 0.2, 0.3], "k": 5}}},
+                    {
+                        "neural": {
+                            "vector_embedding": {
+                                "query_text": "math",
+                                "model_id": "vector_model_id",
+                                "k": 5,
+                            }
+                        }
+                    },
                 ],
             }
         },

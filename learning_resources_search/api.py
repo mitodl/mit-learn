@@ -13,6 +13,7 @@ from opensearchpy.exceptions import NotFoundError
 from learning_resources.models import LearningResource
 from learning_resources_search.connection import (
     get_default_alias_name,
+    get_vector_model_id,
 )
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -654,12 +655,22 @@ def add_text_query_to_search(
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
     if use_hybrid_search:
-        encoder = dense_encoder()
-        query_vector = encoder.embed_query(text)
+        if settings.QDRANT_DENSE_MODEL not in settings.OPEN_AI_EMBEDDING_MODELS:
+            error_message = "hybrid search only supported with OpenAI models"
+            raise ValueError(error_message)
+
+        model_id = get_vector_model_id()
+
+        if not model_id:
+            log.error("Vector model not found. Cannot perform hybrid search.")
+            error_message = "Vector model not found."
+            raise ValueError(error_message)
+
         vector_query = {
-            "knn": {
+            "neural": {
                 "vector_embedding": {
-                    "vector": query_vector,
+                    "query_text": text,
+                    "model_id": model_id,
                     "k": HYBRID_SEARCH_KNN_K_VALUE,
                 }
             }

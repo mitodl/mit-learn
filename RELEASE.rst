@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.50.3 (Released December 16, 2025)
+--------------
+
+- Only display top level skeleton on org pages if program or collection data is still loading (#2810)
+- feature: add slug for article feature (#2793)
+- Enable Tanstack Query Devtools (#2807)
+- More efficient key retrieval (#2804)
+- fix dashboard card enrollment association and display (#2792)
+- For published non-test_mode courses, only process contentfile archives of the best run (#2786)
+
 Version 0.50.0 (Released December 11, 2025)
 --------------
 

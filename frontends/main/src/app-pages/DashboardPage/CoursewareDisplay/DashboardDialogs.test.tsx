@@ -3,6 +3,7 @@ import {
   renderWithProviders,
   screen,
   setMockResponse,
+  setupLocationMock,
   user,
   within,
 } from "@/test-utils"
@@ -157,23 +158,7 @@ describe("JustInTimeDialog", () => {
     }
   }
 
-  const originalLocation = window.location
-
-  beforeAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: { ...originalLocation, assign: jest.fn() },
-    })
-  })
-
-  afterAll(() => {
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: originalLocation,
-    })
-  })
+  setupLocationMock()
 
   type SetupJitOptions = {
     userOverrides?: PartialDeep<MitxUser>
