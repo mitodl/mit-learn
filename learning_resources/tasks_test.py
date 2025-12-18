@@ -492,7 +492,9 @@ def test_update_next_start_date(mocker, published):
     update_next_start_date_and_prices()
     mock_load_next_start_date.assert_called_once_with(learning_resource)
     if published:
-        mock_upsert_index.assert_called_once_with(learning_resource, percolate=False)
+        mock_upsert_index.assert_called_once_with(
+            learning_resource, percolate=False, generate_embeddings=True
+        )
     else:
         mock_upsert_index.assert_not_called()
 

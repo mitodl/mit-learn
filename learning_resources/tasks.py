@@ -81,7 +81,9 @@ def update_next_start_date_and_prices():
     for resource in resources:
         load_run_dependent_values(resource)
         if resource.published:
-            resource_upserted_actions(resource, percolate=False)
+            resource_upserted_actions(
+                resource, percolate=False, generate_embeddings=True
+            )
     clear_views_cache()
     return len(resources)
 

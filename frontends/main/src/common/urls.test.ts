@@ -6,7 +6,7 @@ test.each([
   {
     loginNext: { pathname: "/", searchParams: null },
     expected: [
-      "http://api.test.learn.odl.local:8063/login",
+      "http://api.test.learn.odl.local:8065/login",
       "?next=http%3A%2F%2Ftest.learn.odl.local%3A8062%2F",
     ].join(""),
   },
@@ -16,7 +16,7 @@ test.each([
       searchParams: null,
     },
     expected: [
-      "http://api.test.learn.odl.local:8063/login",
+      "http://api.test.learn.odl.local:8065/login",
       "?next=http%3A%2F%2Ftest.learn.odl.local%3A8062%2Fcourses%2Fcourse-v1%3AedX%2BDemoX%2BDemo_Course",
     ].join(""),
   },

@@ -101,5 +101,6 @@ export {
   useArticleCreate,
   useArticleDestroy,
   useArticlePartialUpdate,
+  articleQueries,
   useArticleDetailRetrieve,
 }

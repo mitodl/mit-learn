@@ -15,6 +15,14 @@ const PageContainer = styled.div(({ theme }) => ({
   height: "100%",
 }))
 
+const Spinner = styled(LoadingSpinner)({
+  margin: "auto",
+  position: "absolute",
+  top: "40%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+})
+
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const {
     data: article,
@@ -24,7 +32,7 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const router = useRouter()
 
   if (isLoading || isFetching) {
-    return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
+    return <Spinner color="inherit" loading={isLoading} size={32} />
   }
   if (!article) {
     return notFound()

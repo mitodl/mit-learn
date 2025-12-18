@@ -1,9 +1,8 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React from "react"
-import { QueryClientProvider } from "@tanstack/react-query"
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
-import type { QueryClient } from "@tanstack/react-query"
 
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { render } from "@testing-library/react"
@@ -65,8 +64,9 @@ const renderWithProviders = (
   const allOpts = { ...defaultTestAppOptions, ...options }
   const { url } = allOpts
 
-  const queryClient = makeBrowserQueryClient()
-
+  const queryClient = makeBrowserQueryClient({
+    maxRetries: 0,
+  })
   if (allOpts.user) {
     const user = { ...defaultUser, ...allOpts.user }
     queryClient.setQueryData(userQueries.me().queryKey, { ...user })
@@ -265,6 +265,32 @@ class TestingErrorBoundary extends React.Component<
   }
 }
 
+/**
+ * JSDOM doesn't support window.location very well; this lets us mock it if
+ * needed.
+ */
+const setupLocationMock = () => {
+  const originalLocation = window.location
+
+  beforeAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: { ...originalLocation, assign: jest.fn(), reload: jest.fn() },
+    })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: originalLocation,
+    })
+  })
+
+  return jest.mocked(window.location)
+}
+
 export {
   renderWithProviders,
   renderWithTheme,
@@ -275,6 +301,7 @@ export {
   getMetas,
   assertPartialMetas,
   TestingErrorBoundary,
+  setupLocationMock,
 }
 // Conveniences
 export { setMockResponse }
