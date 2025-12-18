@@ -1,8 +1,8 @@
 import React, { forwardRef, useCallback } from "react"
 
 // --- Tiptap UI ---
-import type { UseQuoteConfig } from "./"
-import { QUOTE_SHORTCUT_KEY, useQuote } from "./"
+import type { UseCalloutConfig } from "./"
+import { CALLOUT_SHORTCUT_KEY, useCallout } from "./"
 
 // --- Hooks ---
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
@@ -14,10 +14,11 @@ import { parseShortcutKeys } from "../../../vendor/lib/tiptap-utils"
 import type { ButtonProps } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { Button } from "../../../vendor/components/tiptap-ui-primitive/button"
 import { Badge } from "../../../vendor/components/tiptap-ui-primitive/badge"
+import { RiInformationFill } from "@remixicon/react"
 
-export interface QuoteButtonProps
+export interface CalloutButtonProps
   extends Omit<ButtonProps, "type">,
-    UseQuoteConfig {
+    UseCalloutConfig {
   /**
    * Optional text to display alongside the icon.
    */
@@ -29,8 +30,8 @@ export interface QuoteButtonProps
   showShortcut?: boolean
 }
 
-export function QuoteShortcutBadge({
-  shortcutKeys = QUOTE_SHORTCUT_KEY,
+export function CalloutShortcutBadge({
+  shortcutKeys = CALLOUT_SHORTCUT_KEY,
 }: {
   shortcutKeys?: string
 }) {
@@ -40,9 +41,9 @@ export function QuoteShortcutBadge({
 /**
  * Button component for toggling blockquote in a Tiptap editor.
  *
- * For custom button implementations, use the `useQuote` hook instead.
+ * For custom button implementations, use the `useCallout` hook instead.
  */
-export const QuoteButton = forwardRef<HTMLButtonElement, QuoteButtonProps>(
+export const CalloutButton = forwardRef<HTMLButtonElement, CalloutButtonProps>(
   (
     {
       editor: providedEditor,
@@ -64,8 +65,7 @@ export const QuoteButton = forwardRef<HTMLButtonElement, QuoteButtonProps>(
       handleToggle,
       label,
       shortcutKeys,
-      Icon,
-    } = useQuote({
+    } = useCallout({
       editor,
       hideWhenUnavailable,
       onToggled,
@@ -94,16 +94,18 @@ export const QuoteButton = forwardRef<HTMLButtonElement, QuoteButtonProps>(
         data-disabled={!canToggle}
         aria-label={label}
         aria-pressed={isActive}
-        tooltip="Quote"
+        tooltip="Callout"
         onClick={handleClick}
         {...buttonProps}
         ref={ref}
       >
         {children ?? (
           <>
-            <Icon className="tiptap-button-icon" />
+            <RiInformationFill size={24} />
             {text && <span className="tiptap-button-text">{text}</span>}
-            {showShortcut && <QuoteShortcutBadge shortcutKeys={shortcutKeys} />}
+            {showShortcut && (
+              <CalloutShortcutBadge shortcutKeys={shortcutKeys} />
+            )}
           </>
         )}
       </Button>
@@ -111,4 +113,4 @@ export const QuoteButton = forwardRef<HTMLButtonElement, QuoteButtonProps>(
   },
 )
 
-QuoteButton.displayName = "QuoteButton"
+CalloutButton.displayName = "CalloutButton"

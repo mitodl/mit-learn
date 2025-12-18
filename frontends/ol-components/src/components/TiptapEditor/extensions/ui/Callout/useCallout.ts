@@ -7,9 +7,6 @@ import { NodeSelection, TextSelection } from "@tiptap/pm/state"
 // --- Hooks ---
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 
-// --- Icons ---
-import { BlockquoteIcon } from "../../../vendor/components/tiptap-icons/blockquote-icon"
-
 // --- UI Utils ---
 import {
   findNodePosition,
@@ -19,18 +16,18 @@ import {
   selectionWithinConvertibleTypes,
 } from "../../../vendor/lib/tiptap-utils"
 
-export const QUOTE_SHORTCUT_KEY = "mod+shift+b"
+export const CALLOUT_SHORTCUT_KEY = "mod+shift+b"
 
 /**
- * Configuration for the quote functionality
+ * Configuration for the callout functionality
  */
-export interface UseQuoteConfig {
+export interface UseCalloutConfig {
   /**
    * The Tiptap editor instance.
    */
   editor?: Editor | null
   /**
-   * Whether the button should hide when quote is not available.
+   * Whether the button should hide when callout is not available.
    * @default false
    */
   hideWhenUnavailable?: boolean
@@ -41,18 +38,21 @@ export interface UseQuoteConfig {
 }
 
 /**
- * Checks if quote can be toggled in the current editor state
+ * Checks if callout can be toggled in the current editor state
  */
-export function canToggleQuote(
+export function canToggleCallout(
   editor: Editor | null,
   turnInto: boolean = true,
 ): boolean {
   if (!editor || !editor.isEditable) return false
-  if (!isNodeInSchema("quote", editor) || isNodeTypeSelected(editor, ["image"]))
+  if (
+    !isNodeInSchema("callout", editor) ||
+    isNodeTypeSelected(editor, ["image"])
+  )
     return false
 
   if (!turnInto) {
-    return editor.can().toggleWrap("quote")
+    return editor.can().toggleWrap("callout")
   }
 
   // Ensure selection is in nodes we're allowed to convert
@@ -64,23 +64,23 @@ export function canToggleQuote(
       "orderedList",
       "taskList",
       "blockquote",
-      "quote",
+      "callout",
       "codeBlock",
     ])
   )
     return false
 
-  // Either we can wrap in quote directly on the selection,
-  // or we can clear formatting/nodes to arrive at a quote.
-  return editor.can().toggleWrap("quote") || editor.can().clearNodes()
+  // Either we can wrap in callout directly on the selection,
+  // or we can clear formatting/nodes to arrive at a callout.
+  return editor.can().toggleWrap("callout") || editor.can().clearNodes()
 }
 
 /**
- * Toggles quote formatting for a specific node or the current selection
+ * Toggles callout formatting for a specific node or the current selection
  */
-export function toggleQuote(editor: Editor | null): boolean {
+export function toggleCallout(editor: Editor | null): boolean {
   if (!editor || !editor.isEditable) return false
-  if (!canToggleQuote(editor)) return false
+  if (!canToggleCallout(editor)) return false
 
   try {
     const view = editor.view
@@ -125,9 +125,9 @@ export function toggleQuote(editor: Editor | null): boolean {
         .clearNodes()
     }
 
-    const toggle = editor.isActive("quote")
-      ? chain.lift("quote")
-      : chain.wrapIn("quote")
+    const toggle = editor.isActive("callout")
+      ? chain.lift("callout")
+      : chain.wrapIn("callout")
 
     toggle.run()
 
@@ -140,7 +140,7 @@ export function toggleQuote(editor: Editor | null): boolean {
 }
 
 /**
- * Determines if the quote button should be shown
+ * Determines if the callout button should be shown
  */
 export function shouldShowButton(props: {
   editor: Editor | null
@@ -149,16 +149,16 @@ export function shouldShowButton(props: {
   const { editor, hideWhenUnavailable } = props
 
   if (!editor || !editor.isEditable) return false
-  if (!isNodeInSchema("quote", editor)) return false
+  if (!isNodeInSchema("callout", editor)) return false
 
   if (hideWhenUnavailable && !editor.isActive("code")) {
-    return canToggleQuote(editor)
+    return canToggleCallout(editor)
   }
 
   return true
 }
 
-export function useQuote(config?: UseQuoteConfig) {
+export function useCallout(config?: UseCalloutConfig) {
   const {
     editor: providedEditor,
     hideWhenUnavailable = false,
@@ -167,8 +167,8 @@ export function useQuote(config?: UseQuoteConfig) {
 
   const { editor } = useTiptapEditor(providedEditor)
   const [isVisible, setIsVisible] = useState<boolean>(true)
-  const canToggle = canToggleQuote(editor)
-  const isActive = editor?.isActive("quote") || false
+  const canToggle = canToggleCallout(editor)
+  const isActive = editor?.isActive("callout") || false
 
   useEffect(() => {
     if (!editor) return
@@ -189,7 +189,7 @@ export function useQuote(config?: UseQuoteConfig) {
   const handleToggle = useCallback(() => {
     if (!editor) return false
 
-    const success = toggleQuote(editor)
+    const success = toggleCallout(editor)
     if (success) {
       onToggled?.()
     }
@@ -201,8 +201,7 @@ export function useQuote(config?: UseQuoteConfig) {
     isActive,
     handleToggle,
     canToggle,
-    label: "Quote",
-    shortcutKeys: QUOTE_SHORTCUT_KEY,
-    Icon: BlockquoteIcon,
+    label: "Callout",
+    shortcutKeys: CALLOUT_SHORTCUT_KEY,
   }
 }

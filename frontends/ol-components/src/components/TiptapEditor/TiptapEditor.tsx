@@ -37,7 +37,7 @@ import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
 import { DividerButton } from "./extensions/ui/Divider/DividerButton"
-import { QuoteButton } from "./extensions/ui/Quote/QuoteButton"
+import { CalloutButton } from "./extensions/ui/Callout/CalloutButton"
 import { RiArrowDropDownFill } from "@remixicon/react"
 import {
   DropdownMenu,
@@ -146,23 +146,15 @@ const StyledEditorContent = styled(EditorContent, {
         marginBottom: 0,
       },
     },
-    quote: {
-      backgroundColor: theme.custom.colors.lightGray1,
+    callout: {
+      backgroundColor: theme.custom.colors.black,
       padding: "40px",
       borderRadius: "8px",
       marginBottom: "40px",
+      color: theme.custom.colors.white,
       display: "block",
-      borderLeft: `2px solid ${theme.custom.colors.red}`,
-      "::before": {
-        content: '"“"', // opening inverted comma
-        position: "absolute",
-        left: "17px",
-        fontSize: "64px",
-        lineHeight: 1,
-        fontWeight: theme.typography.fontWeightRegular,
-        top: "-15px",
-        color: theme.custom.colors.red,
-        fontFamily: theme.typography.fontFamily,
+      ":before": {
+        display: "none",
       },
       p: {
         position: "relative",
@@ -227,7 +219,7 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
           <DividerButton editor={editor} text="Divider" />
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <QuoteButton text="Quote" />
+          <CalloutButton text="Callout" />
         </DropdownMenuItem>
       </StyledDropdownMenu>
     </DropdownMenu>

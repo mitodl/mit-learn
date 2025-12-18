@@ -32,7 +32,6 @@ import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
 import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
-import { EnsureParagraphAfterQuote } from "./extensions/node/Quote/ParagraphAfterQuoteExtension"
 
 import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -58,7 +57,7 @@ import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
-import { Quote } from "./extensions/node/Quote/Quote"
+import { Callout } from "./extensions/node/Callout/Callout"
 import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
@@ -320,7 +319,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
-      Quote,
+      Callout,
       MediaEmbedNode,
       DividerNode,
       ArticleByLineInfoBarNode,
@@ -333,7 +332,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         onError: (error) => setUploadError(error.message),
       }),
       BannerNode,
-      EnsureParagraphAfterQuote,
     ],
   })
 

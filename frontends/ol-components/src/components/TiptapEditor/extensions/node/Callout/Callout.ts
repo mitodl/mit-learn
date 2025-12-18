@@ -1,17 +1,16 @@
 import Blockquote from "@tiptap/extension-blockquote"
 
-export const Quote = Blockquote.extend({
-  name: "quote",
+export const Callout = Blockquote.extend({
+  name: "callout",
 
   parseHTML() {
     return [
-      { tag: "quote" }, // Custom tag
-      { tag: "blockquote" }, // Fallback for pasted content
+      { tag: "callout" }, // Custom tag
     ]
   },
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   renderHTML({ HTMLAttributes }: { HTMLAttributes: { [key: string]: any } }) {
-    return ["quote", HTMLAttributes, 0]
+    return ["callout", HTMLAttributes, 0]
   },
 })
