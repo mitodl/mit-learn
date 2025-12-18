@@ -169,21 +169,22 @@ export function ImageWithCaption({
 }: ReactNodeViewProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  const [canExpand, setCanExpand] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
 
-  const { layout, caption, src, alt } = node.attrs
+  const { layout, caption, src, alt, canExpand } = node.attrs
 
   const isEditable = node.attrs.editable
 
   useEffect(() => {
-    if (!imgRef.current) return
+    if (!imgRef.current || !isEditable) return
     const img = imgRef.current
 
     const checkSize = () => {
       const imageNaturalWidth = img.naturalWidth
-
-      setCanExpand(imageNaturalWidth > WIDE_LAYOUT_MIN_IMG_WIDTH)
+      updateAttributes({
+        canExpand: (imageNaturalWidth >
+          WIDE_LAYOUT_MIN_IMG_WIDTH) as unknown as boolean,
+      })
     }
 
     // when image loads
@@ -192,7 +193,7 @@ export function ImageWithCaption({
     } else {
       img.onload = checkSize
     }
-  }, [src])
+  }, [src, isEditable, updateAttributes])
 
   const openAltTextDialog = async () => {
     try {
