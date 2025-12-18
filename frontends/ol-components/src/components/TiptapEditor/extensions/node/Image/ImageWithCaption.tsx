@@ -164,11 +164,11 @@ export function ImageWithCaption({
   updateAttributes,
 }: ReactNodeViewProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const [canExpand, setCanExpand] = useState(false)
 
   const [isLoading, setIsLoading] = useState(true)
 
-  const { layout, caption, src, alt, canExpand } = node.attrs
-
+  const { layout, caption, src, alt } = node.attrs
   const isEditable = node.attrs.editable
 
   useEffect(() => {
@@ -177,10 +177,7 @@ export function ImageWithCaption({
 
     const checkSize = () => {
       const imageNaturalWidth = img.naturalWidth
-      updateAttributes({
-        canExpand: (imageNaturalWidth >
-          WIDE_LAYOUT_MIN_IMG_WIDTH) as unknown as boolean,
-      })
+      setCanExpand(imageNaturalWidth > WIDE_LAYOUT_MIN_IMG_WIDTH)
     }
 
     // when image loads

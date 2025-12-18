@@ -13,7 +13,6 @@ export const ImageWithCaptionNode = Node.create({
     return {
       src: { default: null },
       alt: { default: null },
-      canExpand: { default: true },
       title: { default: null },
       editable: { default: true },
       caption: { default: "" },
