@@ -49,6 +49,8 @@ import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
+import "./TiptapEditor.styles.scss"
+
 const StyledEditorContent = styled(EditorContent, {
   shouldForwardProp: (prop) => prop !== "fullWidth",
 })<{
