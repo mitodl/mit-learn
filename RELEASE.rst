@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.50.6
+Version 0.50.6 (Released December 18, 2025)
 --------------
 
 - fix: image issue related to it width (#2809)
