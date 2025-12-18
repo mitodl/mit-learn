@@ -1,13 +1,15 @@
-import React from "react"
+import React, { useRef, useEffect, useState } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
+import { LoadingSpinner } from "ol-components"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
+const WIDE_LAYOUT_MIN_IMG_WIDTH = 900
 
 const Container = styled.div(({ theme }) => ({
   position: "relative",
@@ -18,13 +20,13 @@ const Container = styled.div(({ theme }) => ({
   img: {
     width: "100%",
     height: "auto",
-    aspectRatio: "16/9",
     borderRadius: "6px",
     display: "block",
   },
 
   "&.layout-default img": {
-    width: "100%",
+    width: "auto",
+    margin: "0 auto",
   },
 
   [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
@@ -126,6 +128,14 @@ const Container = styled.div(({ theme }) => ({
   },
 }))
 
+const Spinner = styled(LoadingSpinner)({
+  margin: "auto",
+  position: "absolute",
+  top: "40%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+})
+
 enum Layout {
   default = "default",
   wide = "wide",
@@ -153,9 +163,30 @@ export function ImageWithCaption({
   node,
   updateAttributes,
 }: ReactNodeViewProps) {
-  const { layout, caption, src, alt } = node.attrs
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const [canExpand, setCanExpand] = useState(false)
 
+  const [isLoading, setIsLoading] = useState(true)
+
+  const { layout, caption, src, alt } = node.attrs
   const isEditable = node.attrs.editable
+
+  useEffect(() => {
+    if (!imgRef.current || !isEditable) return
+    const img = imgRef.current
+
+    const checkSize = () => {
+      const imageNaturalWidth = img.naturalWidth
+      setCanExpand(imageNaturalWidth > WIDE_LAYOUT_MIN_IMG_WIDTH)
+    }
+
+    // when image loads
+    if (img.complete) {
+      checkSize()
+    } else {
+      img.onload = checkSize
+    }
+  }, [src, isEditable, updateAttributes])
 
   const openAltTextDialog = async () => {
     try {
@@ -170,6 +201,7 @@ export function ImageWithCaption({
 
   return (
     <NodeViewWrapper data-type="image-upload">
+      {isLoading && <Spinner color="inherit" loading size={32} />}
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">
@@ -180,20 +212,25 @@ export function ImageWithCaption({
             >
               <DefaultWidth />
             </button>
-            <button
-              className={layout === "wide" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "wide" })}
-              title="Wide"
-            >
-              <WideWidth />
-            </button>
-            <button
-              className={layout === "full" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "full" })}
-              title="Full width"
-            >
-              <FullWidth />
-            </button>
+            {canExpand && (
+              <>
+                {" "}
+                <button
+                  className={layout === "wide" ? "active" : ""}
+                  onClick={() => updateAttributes({ layout: "wide" })}
+                  title="Wide"
+                >
+                  <WideWidth />
+                </button>
+                <button
+                  className={layout === "full" ? "active" : ""}
+                  onClick={() => updateAttributes({ layout: "full" })}
+                  title="Full width"
+                >
+                  <FullWidth />
+                </button>
+              </>
+            )}
             <button
               onClick={openAltTextDialog}
               title="Set Alt Text"
@@ -204,7 +241,14 @@ export function ImageWithCaption({
           </div>
         )}
 
-        <Image src={src} alt={alt || caption} layout={layout} />
+        <Image
+          src={src}
+          alt={alt || ""}
+          layout={layout}
+          ref={imgRef}
+          onLoad={() => setIsLoading(false)}
+          onError={() => setIsLoading(false)}
+        />
         {isEditable ? (
           <Caption>
             <input
