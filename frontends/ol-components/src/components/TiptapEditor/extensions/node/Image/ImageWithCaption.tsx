@@ -25,7 +25,8 @@ const Container = styled.div(({ theme }) => ({
   },
 
   "&.layout-default img": {
-    width: "100%",
+    width: "auto",
+    margin: "0 auto",
   },
 
   [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
@@ -124,11 +125,6 @@ const Container = styled.div(({ theme }) => ({
     ".media-layout-toolbar": {
       display: "flex",
     },
-  },
-
-  ".img-contained": {
-    width: "auto !important",
-    margin: "0 auto",
   },
 }))
 
@@ -255,7 +251,6 @@ export function ImageWithCaption({
           ref={imgRef}
           onLoad={() => setIsLoading(false)}
           onError={() => setIsLoading(false)}
-          className={`${!canExpand ? "img-contained" : ""}`}
         />
         {isEditable ? (
           <Caption>
