@@ -1,16 +1,20 @@
-import Blockquote from "@tiptap/extension-blockquote"
+import { Node, mergeAttributes } from "@tiptap/core"
 
-export const Callout = Blockquote.extend({
+export const Callout = Node.create({
   name: "callout",
+
+  group: "block",
+  content: "block+",
+  defining: true,
 
   parseHTML() {
     return [
-      { tag: "callout" }, // Custom tag
+      { tag: "callout" },
+      { tag: "div[data-type='callout']" }, // optional fallback
     ]
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  renderHTML({ HTMLAttributes }: { HTMLAttributes: { [key: string]: any } }) {
-    return ["callout", HTMLAttributes, 0]
+  renderHTML({ HTMLAttributes }) {
+    return ["callout", mergeAttributes(HTMLAttributes), 0]
   },
 })
