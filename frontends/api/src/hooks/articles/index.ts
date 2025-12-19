@@ -77,6 +77,15 @@ export const useMediaUpload = () => {
 
   return {
     ...mutation,
+    /**
+     * Set a callback to be called on the next upload progress event.
+     *
+     * NOTES:
+     * - This callback will be cleared after the mutation settles (either success or error).
+     * - This is a separate method, not part of the mutate/mutateAsync options,
+     *   to avoid errors with function serialization. (E.g., Tanstack Query
+     *   devtools attempt to serialize mutation options.)
+     */
     setNextProgressCallback: (
       callback: ((percent: number) => void) | undefined,
     ) => {
