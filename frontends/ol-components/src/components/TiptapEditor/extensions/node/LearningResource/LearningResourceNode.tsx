@@ -1,7 +1,7 @@
 import React from "react"
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
+import { Node, mergeAttributes } from "@tiptap/core"
 import { LearningResourceListCard, styled } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 
@@ -76,11 +76,39 @@ export const LearningResourceNode = Node.create<LearningResourceOptions>({
     return {
       insertLearningResource:
         (resourceId: number, href?: string) =>
-        ({ commands }: CommandProps) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { resourceId, href },
-          })
+        ({ state, tr, dispatch }) => {
+          const { $from } = state.selection
+
+          const nodeType = state.schema.nodes.learningResource
+          const paragraphType = state.schema.nodes.paragraph
+          if (!nodeType) return false
+
+          // 🛑 Guard: top-level selection
+          if ($from.depth === 0) {
+            tr.insert(
+              state.selection.from,
+              nodeType.create({ resourceId, href }),
+            )
+
+            dispatch?.(tr.scrollIntoView())
+            return true
+          }
+
+          // ✅ Replace the current block
+          const from = $from.before($from.depth)
+          const to = $from.after($from.depth)
+
+          tr.replaceWith(
+            from,
+            to,
+            [
+              nodeType.create({ resourceId, href }),
+              paragraphType?.create(),
+            ].filter(Boolean),
+          )
+
+          dispatch?.(tr.scrollIntoView())
+          return true
         },
     }
   },
