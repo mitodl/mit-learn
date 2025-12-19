@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosProgressEvent } from "axios"
 
@@ -51,19 +52,37 @@ const useArticleCreate = () => {
 }
 
 export const useMediaUpload = () => {
-  return useMutation({
-    mutationFn: async (data: {
-      file: File
-      onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
-    }) => {
+  const nextProgressCb = useRef<((percent: number) => void) | undefined>(
+    undefined,
+  )
+
+  const mutation = useMutation({
+    mutationFn: async (data: { file: File }) => {
       const response = await mediaApi.mediaUpload(
         { image_file: data.file },
-        { onUploadProgress: data.onUploadProgress },
+        {
+          onUploadProgress: (e: AxiosProgressEvent) => {
+            const percent = Math.round((e.loaded * 100) / (e.total ?? 1))
+            nextProgressCb.current?.(percent)
+          },
+        },
       )
 
       return response.data
     },
+    onSettled: () => {
+      nextProgressCb.current = undefined
+    },
   })
+
+  return {
+    ...mutation,
+    setNextProgressCallback: (
+      callback: ((percent: number) => void) | undefined,
+    ) => {
+      nextProgressCb.current = callback
+    },
+  }
 }
 
 const useArticleDestroy = () => {
