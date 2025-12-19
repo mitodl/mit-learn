@@ -5,6 +5,63 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { PartialFactory } from "ol-test-utilities"
 
+/**
+ * VerifiableCredential type matching the structure defined in DigitalCredentialDialog.
+ * This interface defines the structure of a VerifiableCredential (Open Badges v3.0).
+ */
+export interface VerifiableCredential {
+  id: string
+  type: string[]
+  proof?: {
+    type: string
+    created: string
+    proofValue: string
+    cryptosuite: string
+    proofPurpose: string
+    verificationMethod: string
+  }
+  issuer: {
+    id: string
+    name: string
+    type: string[]
+    image?: {
+      id: string
+      type: string
+      caption?: string
+    }
+  }
+  "@context": string[]
+  validFrom: string
+  validUntil: string
+  credentialSubject: {
+    type: string[]
+    identifier: Array<{
+      salt: string
+      type: string
+      hashed: boolean
+      identityHash: string
+      identityType: string
+    }>
+    achievement: {
+      id: string
+      name: string
+      type: string[]
+      image?: {
+        id: string
+        type: string
+        caption?: string
+      }
+      criteria?: {
+        narrative: string
+      }
+      description: string
+      achievementType: string
+    }
+    activityEndDate?: string
+    activityStartDate?: string
+  }
+}
+
 export const courseCertificate: PartialFactory<V2CourseRunCertificate> = (
   overrides = {},
 ) => {
@@ -55,6 +112,7 @@ export const courseCertificate: PartialFactory<V2CourseRunCertificate> = (
         },
       ],
     },
+    verifiable_credential_json: verifiableCredential(),
   }
 
   return { ...base, ...overrides } as V2CourseRunCertificate
@@ -104,7 +162,60 @@ export const programCertificate: PartialFactory<V2ProgramCertificate> = (
         },
       ],
     },
+    verifiable_credential_json: verifiableCredential(),
   }
 
   return { ...base, ...overrides } as V2ProgramCertificate
+}
+
+export const verifiableCredential: PartialFactory<VerifiableCredential> = (
+  overrides = {},
+) => {
+  const base: VerifiableCredential = {
+    id: `https://example.com/credentials/${faker.string.uuid()}`,
+    type: ["VerifiableCredential", "OpenBadgeCredential"],
+    proof: {
+      type: "DataIntegrityProof",
+      created: faker.date.past().toISOString(),
+      proofValue: `z${faker.string.alphanumeric(16)}`,
+      cryptosuite: "eddsa-rdfc-2022",
+      proofPurpose: "assertionMethod",
+      verificationMethod: `https://example.com/keys/${faker.number.int()}`,
+    },
+    issuer: {
+      id: "https://example.com/issuer",
+      name: "MIT Open Learning",
+      type: ["Profile"],
+    },
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json",
+    ],
+    validFrom: faker.date.past().toISOString(),
+    validUntil: faker.date.future().toISOString(),
+    credentialSubject: {
+      type: ["AchievementSubject"],
+      identifier: [
+        {
+          salt: faker.string.alphanumeric(6),
+          type: "IdentityHash",
+          hashed: true,
+          identityHash: faker.person.fullName(),
+          identityType: "email",
+        },
+      ],
+      achievement: {
+        id: `https://example.com/achievements/${faker.number.int()}`,
+        name: faker.lorem.words(3),
+        type: ["Achievement"],
+        description: faker.lorem.sentence(),
+        achievementType: "Certificate",
+        criteria: {
+          narrative: faker.lorem.sentence(),
+        },
+      },
+    },
+  }
+
+  return { ...base, ...overrides } as VerifiableCredential
 }

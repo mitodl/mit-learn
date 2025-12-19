@@ -1,5 +1,6 @@
 import React, { useCallback, useId, useState } from "react"
 import styled from "@emotion/styled"
+import type { CSSObject } from "@emotion/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { default as MuiDialog } from "@mui/material/Dialog"
 import type { DialogProps as MuiDialogProps } from "@mui/material/Dialog"
@@ -22,11 +23,12 @@ const Header = styled.div`
   padding: 20px 58px 20px 28px;
 `
 
-const Content = styled.div`
-  margin: 28px;
-  min-height: 0;
-  overflow: auto;
-`
+const Content = styled.div<{ css?: CSSObject }>(({ css }) => ({
+  margin: "28px",
+  minHeight: 0,
+  overflow: "auto",
+  ...css,
+}))
 
 const DialogActions = styled(MuiDialogActions)`
   margin: 0 28px 28px;
@@ -58,6 +60,7 @@ const Transition = React.forwardRef(
 
 type DialogProps = {
   className?: string
+  contentCss?: CSSObject
   open: boolean
   onClose: () => void
   onConfirm?: () => void | Promise<void>
@@ -97,6 +100,7 @@ const Dialog: React.FC<DialogProps> = ({
   confirmText = "Confirm",
   fullWidth,
   className,
+  contentCss,
   actions,
   isSubmitting = false,
   PaperProps,
@@ -126,7 +130,9 @@ const Dialog: React.FC<DialogProps> = ({
       open={open}
       onClose={onClose}
       disableEnforceFocus={disableEnforceFocus}
-      PaperProps={PaperProps}
+      slotProps={{
+        paper: PaperProps,
+      }}
       TransitionComponent={Transition}
       aria-labelledby={titleId}
       maxWidth={maxWidth}
@@ -143,7 +149,7 @@ const Dialog: React.FC<DialogProps> = ({
           </Typography>
         </Header>
       )}
-      <Content>
+      <Content css={contentCss}>
         {message && <Typography variant="body1">{message}</Typography>}
         {children}
       </Content>
