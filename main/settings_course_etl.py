@@ -73,8 +73,13 @@ OCR_MODEL = get_string(name="OCR_MODEL", default=None)
 
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
-    "Transcribe this image to markdown preserve text, formulas and tables and code."
-    "Leave a descriptive caption for anything that cannot be transcribed.",
+    "Transcribe this image to markdown. Properly format text, formulas, "
+    "tables, and code into markdown format."
+    "Include a markdown comment for elements that cannot be transcribed such as "
+    "photos and other visual elements."
+    "Do not include any indications your output is the result of a transcription."
+    "Do not include extra commentary - "
+    "ONLY include the resulting transcribed markdown.",
 )
 # Do not OCR if the PDF has exceeds this many pages
 OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
