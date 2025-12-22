@@ -45,6 +45,7 @@ const InfoTerm = styled.dt(({ theme }) => ({
 const InfoDetail = styled.dd(({ theme }) => ({
   ...theme.typography.body2,
   margin: "0 0 16px 0",
+  wordBreak: "break-word",
 }))
 
 const Verify = styled.div(({ theme }) => ({
