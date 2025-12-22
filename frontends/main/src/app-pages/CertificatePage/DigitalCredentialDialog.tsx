@@ -4,11 +4,7 @@ import { Dialog, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
 
-const Content = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
+const Content = styled.div({})
 
 const InfoPanel = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -155,9 +151,9 @@ export const DigitalCredentialDialog = ({
         URL.revokeObjectURL(url)
       }}
       contentCss={{
-        overflow: "visible",
         margin: "24px 28px",
       }}
+      scroll="body"
     >
       <Content>
         <Typography variant="body2">

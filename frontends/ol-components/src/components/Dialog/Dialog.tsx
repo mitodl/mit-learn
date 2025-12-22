@@ -80,6 +80,7 @@ type DialogProps = {
   disableEnforceFocus?: MuiDialogProps["disableEnforceFocus"]
   maxWidth?: MuiDialogProps["maxWidth"]
   disabled?: boolean
+  scroll?: MuiDialogProps["scroll"]
 }
 
 /**
@@ -107,6 +108,7 @@ const Dialog: React.FC<DialogProps> = ({
   disableEnforceFocus,
   maxWidth,
   disabled = false,
+  scroll,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -136,6 +138,7 @@ const Dialog: React.FC<DialogProps> = ({
       TransitionComponent={Transition}
       aria-labelledby={titleId}
       maxWidth={maxWidth}
+      scroll={scroll}
     >
       <Close>
         <ActionButton variant="text" onClick={onClose} aria-label="Close">
