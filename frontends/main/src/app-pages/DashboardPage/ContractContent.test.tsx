@@ -6,7 +6,7 @@ import {
   waitFor,
   user,
 } from "@/test-utils"
-import OrganizationContent from "./OrganizationContent"
+import ContractContent from "./ContractContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import {
@@ -27,7 +27,7 @@ import { faker } from "@faker-js/faker/locale/en"
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 
-describe("OrganizationContent", () => {
+describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
@@ -39,7 +39,7 @@ describe("OrganizationContent", () => {
     const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     await screen.findByRole("heading", {
       name: orgX.name,
@@ -78,7 +78,7 @@ describe("OrganizationContent", () => {
       { results: reversedCoursesA },
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const programElements = await screen.findAllByTestId("org-program-root")
     // Find the program with programA's title
@@ -114,7 +114,7 @@ describe("OrganizationContent", () => {
       results: [programA, programB],
     })
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     // Debug: see what's actually rendered
     await screen.findByRole("heading", { name: orgX.name })
@@ -146,7 +146,7 @@ describe("OrganizationContent", () => {
     // Override the default empty enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const [programElA] = await screen.findAllByTestId("org-program-root")
     const cards = await within(programElA).findAllByTestId(
@@ -219,7 +219,7 @@ describe("OrganizationContent", () => {
       { results: [firstCourseB, firstCourseA] },
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const collectionHeader = await screen.findByRole("heading", {
       name: programCollection.title,
@@ -277,7 +277,7 @@ describe("OrganizationContent", () => {
       { results: [firstCourse] },
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const collection = await screen.findByTestId("org-program-collection-root")
     const collectionWrapper = within(collection)
@@ -333,7 +333,7 @@ describe("OrganizationContent", () => {
       { results: [firstCourseB, firstCourseA] },
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const collectionItems = await screen.findAllByTestId(
       "org-program-collection-root",
@@ -353,7 +353,7 @@ describe("OrganizationContent", () => {
       results: [],
     })
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
@@ -385,7 +385,7 @@ describe("OrganizationContent", () => {
       results: [],
     })
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
@@ -447,7 +447,7 @@ describe("OrganizationContent", () => {
       { results: [firstCourseB] },
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     // The collection should be rendered since programB has courses
     const collectionItems = await screen.findAllByTestId(
@@ -493,7 +493,7 @@ describe("OrganizationContent", () => {
       programEnrollment,
     ])
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const programRoot = await screen.findByTestId("org-program-root")
     const certificateButton = within(programRoot).getByRole("link", {
@@ -522,7 +522,7 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     // Wait for programs to load
     const programElements = await screen.findAllByTestId("org-program-root")
@@ -587,7 +587,7 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -645,7 +645,7 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -721,7 +721,7 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -785,7 +785,7 @@ describe("OrganizationContent", () => {
       contracts,
     )
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -808,7 +808,7 @@ describe("OrganizationContent", () => {
 
     setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
 
-    renderWithProviders(<OrganizationContent orgSlug="not-found" />)
+    renderWithProviders(<ContractContent orgSlug="not-found" />)
 
     await screen.findByRole("heading", { name: "Organization not found" })
   })
@@ -820,7 +820,7 @@ describe("OrganizationContent", () => {
     orgX.contracts[0].welcome_message_extra =
       "<p>This is additional information with <strong>HTML formatting</strong>.</p>"
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     await screen.findByText("Welcome to our program!")
 
@@ -836,7 +836,7 @@ describe("OrganizationContent", () => {
     orgX.contracts[0].welcome_message_extra =
       "<p>Extra content with <em>emphasis</em></p>"
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const showMoreLink = await screen.findByText("Show more")
 
@@ -865,7 +865,7 @@ describe("OrganizationContent", () => {
     contractWithoutWelcome.welcome_message_extra = "<p>Extra content</p>"
     orgX.contracts[0] = contractWithoutWelcome
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     expect(screen.queryByText("Show more")).toBeNull()
     expect(screen.queryByText("Extra content")).toBeNull()
@@ -880,7 +880,7 @@ describe("OrganizationContent", () => {
       .welcome_message_extra
     orgX.contracts[0] = contractWithoutExtra
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     expect(screen.queryByText("Welcome message")).toBeNull()
     expect(screen.queryByText("Show more")).toBeNull()
@@ -891,7 +891,7 @@ describe("OrganizationContent", () => {
 
     orgX.contracts = []
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     expect(screen.queryByText("Show more")).toBeNull()
   })
@@ -903,7 +903,7 @@ describe("OrganizationContent", () => {
     orgX.contracts[0].welcome_message_extra =
       '<p>Safe content</p><script>alert("xss")</script><img src="x" onerror="alert(1)">'
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const showMoreLink = await screen.findByText("Show more")
     await user.click(showMoreLink)
@@ -932,7 +932,7 @@ describe("OrganizationContent", () => {
       secondContract,
     ]
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     await screen.findByText("First welcome message")
 
@@ -1001,7 +1001,7 @@ describe("OrganizationContent", () => {
 
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [enrollment])
 
-    renderWithProviders(<OrganizationContent orgSlug={orgX.slug} />)
+    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
 
     const programElement = await screen.findByTestId("org-program-root")
     const card = await within(programElement).findByTestId(

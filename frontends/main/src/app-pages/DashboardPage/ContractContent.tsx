@@ -9,7 +9,6 @@ import {
   programCollectionQueries,
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { contractQueries } from "api/mitxonline-hooks/contracts"
 import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
@@ -28,10 +27,10 @@ import {
 } from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
-  ContractPage,
   CourseRunEnrollmentRequestV2,
-  OrganizationPage,
   V2UserProgramEnrollmentDetail,
+  ContractPage,
+  OrganizationPage,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -59,7 +58,10 @@ const ImageContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
+const ContractHeader: React.FC<{
+  org?: OrganizationPage
+  contract?: ContractPage
+}> = ({ org, contract }) => {
   return (
     <HeaderRoot>
       <ImageContainer>
@@ -80,7 +82,7 @@ const OrganizationHeader: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
           {org?.name}
         </Typography>
         {/* For now we will use the first contract name until we refactor this to be based on contracts / offerings */}
-        <Typography variant="body1">{org?.contracts[0]?.name}</Typography>
+        <Typography variant="body1">{contract?.name}</Typography>
       </Stack>
     </HeaderRoot>
   )
@@ -93,13 +95,14 @@ const WelcomeMessageExtra = styled(Typography)({
   },
 })
 
-const WelcomeMessage: React.FC<{ org?: OrganizationPage }> = ({ org }) => {
+const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
+  contract,
+}) => {
   const empty = <Stack height="40px" />
   const [showingMore, setShowingMore] = React.useState(false)
-  if (!org?.contracts?.length) {
+  if (!contract) {
     return empty
   }
-  const contract = org.contracts[0]
   const welcomeMessage = contract.welcome_message
   const welcomeMessageExtra = DOMPurify.sanitize(contract.welcome_message_extra)
   if (!welcomeMessage || !welcomeMessageExtra) {
@@ -189,13 +192,16 @@ const ProgramCollectionsList = styled(PlainList)({
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
   programs: DashboardProgramCollectionProgram[],
-  orgId: number,
+  contractId: number,
 ) => {
   const programIds = programs
     .map((program) => program.id)
     .filter((id) => id !== undefined)
   const programsQuery = useQuery({
-    ...programsQueries.programsList({ id: programIds, org_id: orgId }),
+    ...programsQueries.programsList({
+      id: programIds,
+      contract_id: contractId,
+    }),
     enabled: programIds.length > 0,
   })
   const isLoading = programsQuery.isLoading
@@ -225,20 +231,19 @@ const useProgramCollectionCourses = (
 
 const OrgProgramCollectionDisplay: React.FC<{
   collection: DashboardProgramCollection
-  contracts?: ContractPage[]
+  contract: ContractPage
   enrollments?: CourseRunEnrollmentRequestV2[]
-  orgId: number
-}> = ({ collection, contracts, enrollments, orgId }) => {
+}> = ({ collection, contract, enrollments }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
-    useProgramCollectionCourses(collection.programs, orgId)
+    useProgramCollectionCourses(collection.programs, contract.id)
   const firstCourseIds = programsWithCourses
     ?.map((p) => p?.program.courseIds[0])
     .filter((id): id is number => id !== undefined)
   const courses = useQuery({
     ...coursesQueries.coursesList({
       id: firstCourseIds,
-      org_id: orgId,
+      contract_id: contract.id,
     }),
     enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
@@ -251,7 +256,7 @@ const OrgProgramCollectionDisplay: React.FC<{
     }) ?? []
   const transformedCourses = transform.organizationCoursesWithContracts({
     courses: rawCourses,
-    contracts: contracts ?? [],
+    contract: contract,
     enrollments: enrollments ?? [],
   })
 
@@ -320,14 +325,14 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: DashboardProgram
-  contracts?: ContractPage[]
+  contract?: ContractPage
   courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
   programEnrollments?: V2UserProgramEnrollmentDetail[]
   programLoading: boolean
   orgId: number
 }> = ({
   program,
-  contracts,
+  contract,
   courseRunEnrollments,
   programEnrollments,
   programLoading,
@@ -355,7 +360,7 @@ const OrgProgramDisplay: React.FC<{
     }) ?? []
   const transformedCourses = transform.organizationCoursesWithContracts({
     courses: rawCourses,
-    contracts: contracts ?? [],
+    contract: contract,
     enrollments: courseRunEnrollments ?? [],
   })
 
@@ -401,25 +406,21 @@ const OrgProgramDisplay: React.FC<{
   )
 }
 
-const OrganizationRoot = styled.div({
+const ContractRoot = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "40px",
 })
 
-type OrganizationContentInternalProps = {
+type ContractContentInternalProps = {
   org: OrganizationPage
+  contract: ContractPage
 }
-const OrganizationContentInternal: React.FC<
-  OrganizationContentInternalProps
-> = ({ org }) => {
+const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
+  org,
+  contract,
+}) => {
   const orgId = org.id
-  const contracts = useQuery(contractQueries.contractsList())
-  const orgContracts = contracts.data?.filter(
-    (contract) => contract.organization === orgId,
-  )
-  // For now, the relevant contract is always the first one
-  const orgContract = orgContracts ? orgContracts[0] : null
   const courseRunEnrollments = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
@@ -441,16 +442,16 @@ const OrganizationContentInternal: React.FC<
   const transformedPrograms = programs.data?.results
     .filter((program) => !programsInCollections.has(program.id))
     .filter((program) => {
-      if (!orgContract?.programs || orgContract.programs.length === 0) {
+      if (!contract?.programs || contract.programs.length === 0) {
         return true
       }
-      return orgContract.programs.includes(program.id)
+      return contract.programs.includes(program.id)
     })
     .map((program) => transform.mitxonlineProgram(program))
     .sort((a, b) => {
-      if (!orgContract?.programs) return 0
-      const indexA = orgContract.programs.indexOf(a.id)
-      const indexB = orgContract.programs.indexOf(b.id)
+      if (!contract?.programs) return 0
+      const indexA = contract.programs.indexOf(a.id)
+      const indexB = contract.programs.indexOf(b.id)
       return indexA - indexB
     })
 
@@ -467,8 +468,8 @@ const OrganizationContentInternal: React.FC<
     return (
       <>
         <Stack>
-          <OrganizationHeader org={org} />
-          <WelcomeMessage org={org} />
+          <ContractHeader org={org} contract={contract} />
+          <WelcomeMessage contract={contract} />
         </Stack>
         {skeleton}
       </>
@@ -478,16 +479,16 @@ const OrganizationContentInternal: React.FC<
   return (
     <>
       <Stack>
-        <OrganizationHeader org={org} />
-        <WelcomeMessage org={org} />
+        <ContractHeader contract={contract} />
+        <WelcomeMessage contract={contract} />
       </Stack>
-      <OrganizationRoot>
+      <ContractRoot>
         {!transformedPrograms
           ? skeleton
           : transformedPrograms.map((program) => (
               <OrgProgramDisplay
                 key={program.key}
-                contracts={orgContracts}
+                contract={contract}
                 program={program}
                 courseRunEnrollments={courseRunEnrollments.data}
                 programEnrollments={programEnrollments.data}
@@ -500,11 +501,11 @@ const OrganizationContentInternal: React.FC<
             .filter((collection) => {
               // Only show collections where at least one program is in the contract
               const collectionProgramIds = collection.programs.map((p) => p.id)
-              if (!orgContract?.programs || orgContract.programs.length === 0) {
+              if (!contract?.programs || contract.programs.length === 0) {
                 return collectionProgramIds.length > 0
               }
               return collectionProgramIds.some(
-                (id) => id !== undefined && orgContract.programs.includes(id),
+                (id) => id !== undefined && contract?.programs.includes(id),
               )
             })
             .map((collection) => {
@@ -514,9 +515,8 @@ const OrganizationContentInternal: React.FC<
                 <OrgProgramCollectionDisplay
                   key={collection.title}
                   collection={transformedCollection}
-                  contracts={orgContracts}
+                  contract={contract}
                   enrollments={courseRunEnrollments.data}
-                  orgId={orgId}
                 />
               )
             })}
@@ -528,7 +528,7 @@ const OrganizationContentInternal: React.FC<
             </Typography>
           </HeaderRoot>
         )}
-      </OrganizationRoot>
+      </ContractRoot>
     </>
   )
 }
@@ -538,23 +538,36 @@ const matchOrganizationBySlug =
     return organization.slug.replace("org-", "") === orgSlug
   }
 
-type OrganizationContentProps = {
+type ContractContentProps = {
   orgSlug: string
+  contractSlug: string
 }
-const OrganizationContent: React.FC<OrganizationContentProps> = ({
+const ContractContent: React.FC<ContractContentProps> = ({
   orgSlug,
+  contractSlug,
 }) => {
   const { isLoading: isLoadingMitxOnlineUser, data: mitxOnlineUser } = useQuery(
     mitxUserQueries.me(),
   )
 
+  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
+    matchOrganizationBySlug(orgSlug),
+  )
+  const b2bContract = b2bOrganization?.contracts.find(
+    (contract) => contract.slug === contractSlug,
+  )
+
   useEffect(() => {
-    if (
-      mitxOnlineUser?.b2b_organizations.find(matchOrganizationBySlug(orgSlug))
-    ) {
+    if (b2bOrganization) {
       localStorage.setItem("last-dashboard-org", orgSlug)
     }
-  }, [mitxOnlineUser, orgSlug])
+  }, [b2bOrganization, orgSlug])
+
+  useEffect(() => {
+    if (b2bContract) {
+      localStorage.setItem("last-dashboard-contract", contractSlug)
+    }
+  }, [b2bContract, contractSlug])
 
   if (isLoadingMitxOnlineUser) {
     return (
@@ -562,17 +575,15 @@ const OrganizationContent: React.FC<OrganizationContentProps> = ({
     )
   }
 
-  const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
-    matchOrganizationBySlug(orgSlug),
-  )
-
-  if (!b2bOrganization) {
-    return <ErrorContent title="Organization not found" timSays="404" />
+  if (!b2bOrganization || !b2bContract) {
+    return <ErrorContent title="Contract not found" timSays="404" />
   }
 
-  return <OrganizationContentInternal org={b2bOrganization} />
+  return (
+    <ContractContentInternal org={b2bOrganization} contract={b2bContract} />
+  )
 }
 
-export default OrganizationContent
+export default ContractContent
 
-export type { OrganizationContentProps }
+export type { ContractContentProps }
