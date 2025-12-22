@@ -37,6 +37,7 @@ import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
 import { DividerButton } from "./extensions/ui/Divider/DividerButton"
+import { CalloutButton } from "./extensions/ui/Callout/CalloutButton"
 import { RiArrowDropDownFill } from "@remixicon/react"
 import {
   DropdownMenu,
@@ -147,6 +148,24 @@ const StyledEditorContent = styled(EditorContent, {
         marginBottom: 0,
       },
     },
+    callout: {
+      backgroundColor: theme.custom.colors.black,
+      padding: "40px",
+      borderRadius: "8px",
+      marginBottom: "40px",
+      color: theme.custom.colors.white,
+      display: "block",
+      ":before": {
+        display: "none",
+      },
+      p: {
+        position: "relative",
+      },
+      "p:last-child": {
+        marginBottom: 0,
+        marginTop: 0,
+      },
+    },
   },
 }))
 
@@ -200,6 +219,9 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
 
         <DropdownMenuItem asChild>
           <DividerButton editor={editor} text="Divider" />
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <CalloutButton text="Callout" />
         </DropdownMenuItem>
       </StyledDropdownMenu>
     </DropdownMenu>
