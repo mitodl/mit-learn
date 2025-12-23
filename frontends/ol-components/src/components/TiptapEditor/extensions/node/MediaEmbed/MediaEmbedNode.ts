@@ -50,11 +50,19 @@ export const MediaEmbedNode = Node.create({
     return {
       insertMedia:
         (src: string) =>
-        ({ commands }: CommandProps) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { src },
-          })
+        ({ state, chain }: CommandProps) => {
+          const { from } = state.selection
+
+          return (
+            chain()
+              .insertContentAt(from, {
+                type: this.name,
+                attrs: { src },
+              })
+              // 👇 Move cursor AFTER the inserted node
+              .setTextSelection(from + 2)
+              .run()
+          )
         },
     }
   },
