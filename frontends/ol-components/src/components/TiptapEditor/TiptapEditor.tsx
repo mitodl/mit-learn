@@ -34,7 +34,6 @@ import { LinkPopover } from "./vendor/components/tiptap-ui/link-popover"
 import { MarkButton } from "./vendor/components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "./vendor/components/tiptap-ui/undo-redo-button"
-import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { Button } from "./vendor/components/tiptap-ui-primitive/button"
 import { DividerButton } from "./extensions/ui/Divider/DividerButton"
 import { RiArrowDropDownFill } from "@remixicon/react"
@@ -190,10 +189,6 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <MediaEmbedButton editor={editor} text="Video" />
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <LearningResourceButton editor={editor} text="Course Card" />
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
