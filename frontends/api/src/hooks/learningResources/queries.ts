@@ -48,6 +48,11 @@ const learningResourceKeys = {
     params,
   ],
   summaryListRoot: () => [...learningResourceKeys.root, "summaryList"],
+  bulkRoot: () => [...learningResourceKeys.root, "bulk"],
+  bulk: (ids: number[]) => [
+    ...learningResourceKeys.bulkRoot(),
+    ids.slice().sort((a, b) => a - b),
+  ],
   summaryList: (params: LearningResourcesSummaryListRequest) => [
     ...learningResourceKeys.summaryListRoot(),
     params,
@@ -119,6 +124,16 @@ const learningResourceQueries = {
         learningResourcesApi
           .learningResourcesRetrieve({ id })
           .then((res) => clearListMemberships(res.data)),
+    }),
+  learningResourcesBulkList: (ids: string) =>
+    queryOptions({
+      queryKey: [...learningResourceKeys.root, "bulk", ids],
+      queryFn: () =>
+        learningResourcesApi
+          .learningResourcesBulkList({ ids })
+          .then((res) =>
+            res.data.map((resource) => clearListMemberships(resource)),
+          ),
     }),
   items: (id: number, params: ItemsListRequest) =>
     queryOptions({

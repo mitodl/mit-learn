@@ -23,6 +23,8 @@ import {
   topicQueries,
   schoolQueries,
   platformsQueries,
+  learningResourceKeys,
+  clearListMemberships,
 } from "./queries"
 import { userlistKeys } from "../userLists/queries"
 import { learningPathKeys } from "../learningPaths/queries"
@@ -55,6 +57,35 @@ const useLearningResourceDetailSetCache = (
 
 const useLearningResourcesDetail = (id: number) => {
   return useQuery(learningResourceQueries.detail(id))
+}
+
+const useLearningResourcesBulkList = (
+  ids: number[],
+  options?: { enabled?: boolean },
+) => {
+  const queryClient = useQueryClient()
+
+  return useQuery({
+    queryKey: learningResourceKeys.bulk(ids),
+    enabled: options?.enabled && ids.length > 0,
+
+    queryFn: async () => {
+      const res = (await learningResourcesApi.learningResourcesBulkList({
+        ids: ids.join(","),
+      })) as { data: LearningResource[] }
+
+      const resources = res.data.map(clearListMemberships)
+
+      resources.forEach((resource) => {
+        queryClient.setQueryData(
+          learningResourceKeys.detail(resource.id),
+          resource,
+        )
+      })
+
+      return resources
+    },
+  })
 }
 
 const useFeaturedLearningResourcesList = (params: FeaturedListParams = {}) => {
@@ -181,6 +212,7 @@ export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
   useLearningResourcesDetail,
+  useLearningResourcesBulkList,
   useLearningResourceDetailSetCache,
   useLearningResourceTopic,
   useLearningResourceTopics,
@@ -197,4 +229,6 @@ export {
   schoolQueries,
   platformsQueries,
   topicQueries,
+  learningResourceKeys,
+  LearningResource,
 }

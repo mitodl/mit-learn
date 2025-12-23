@@ -28,6 +28,7 @@ import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
+import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
@@ -61,6 +62,8 @@ import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "../../components/ThemeProvider/MITLearnGlobalStyles"
+import { extractLearningResourceIds } from "./extensions/utils"
+import { LearningResourceProvider } from "./extensions/node/LearningResource/LearningResourceDataProvider"
 
 const TOOLBAR_HEIGHT = 43
 
@@ -308,6 +311,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         },
       }),
       HorizontalRule,
+      LearningResourceURLHandler,
       LearningResourceNode,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
@@ -364,7 +368,8 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           if (
             node.type.name === "mediaEmbed" ||
             node.type.name === "imageWithCaption" ||
-            node.type.name === "byline"
+            node.type.name === "byline" ||
+            node.type.name === "learningResource"
           ) {
             tr.setNodeMarkup(pos, undefined, {
               ...node.attrs,
@@ -382,75 +387,79 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const isPending = isCreating || isUpdating
   const error = createError || updateError || uploadError
 
+  const resourceIds = extractLearningResourceIds(content)
+
   return (
     <ViewContainer toolbarVisible={isArticleEditor}>
       <ArticleProvider value={{ article }}>
-        <EditorContext.Provider value={{ editor }}>
-          {isArticleEditor ? (
-            readOnly ? (
-              <StyledToolbar>
-                <Spacer />
-                <ButtonLink
-                  variant="primary"
-                  href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
-                  size="small"
-                >
-                  Edit
-                </ButtonLink>
-              </StyledToolbar>
-            ) : (
-              <StyledToolbar>
-                <MainToolbarContent editor={editor} />
-                {!article?.is_published ? (
+        <LearningResourceProvider resourceIds={resourceIds}>
+          <EditorContext.Provider value={{ editor }}>
+            {isArticleEditor ? (
+              readOnly ? (
+                <StyledToolbar>
+                  <Spacer />
+                  <ButtonLink
+                    variant="primary"
+                    href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
+                    size="small"
+                  >
+                    Edit
+                  </ButtonLink>
+                </StyledToolbar>
+              ) : (
+                <StyledToolbar>
+                  <MainToolbarContent editor={editor} />
+                  {!article?.is_published ? (
+                    <Button
+                      variant="secondary"
+                      disabled={isPending || !touched || !title}
+                      onClick={() => {
+                        setIsPublishing(false)
+                        handleSave(false)
+                      }}
+                      size="small"
+                      endIcon={
+                        isPending && !isPublishing ? (
+                          <LoadingSpinner size={14} color="inherit" loading />
+                        ) : null
+                      }
+                    >
+                      Save As Draft
+                    </Button>
+                  ) : null}
+
                   <Button
-                    variant="secondary"
-                    disabled={isPending || !touched || !title}
+                    variant="primary"
+                    disabled={
+                      isPending || !title || (!touched && article?.is_published)
+                    }
                     onClick={() => {
-                      setIsPublishing(false)
-                      handleSave(false)
+                      setIsPublishing(true)
+                      handleSave(true)
                     }}
                     size="small"
                     endIcon={
-                      isPending && !isPublishing ? (
+                      isPending && isPublishing ? (
                         <LoadingSpinner size={14} color="inherit" loading />
                       ) : null
                     }
                   >
-                    Save As Draft
+                    Publish
                   </Button>
-                ) : null}
+                </StyledToolbar>
+              )
+            ) : null}
+            {error ? (
+              <StyledAlert severity="error" closable>
+                <Typography variant="body2" color="textPrimary">
+                  {error instanceof Error ? error.message : error}
+                </Typography>
+              </StyledAlert>
+            ) : null}
 
-                <Button
-                  variant="primary"
-                  disabled={
-                    isPending || !title || (!touched && article?.is_published)
-                  }
-                  onClick={() => {
-                    setIsPublishing(true)
-                    handleSave(true)
-                  }}
-                  size="small"
-                  endIcon={
-                    isPending && isPublishing ? (
-                      <LoadingSpinner size={14} color="inherit" loading />
-                    ) : null
-                  }
-                >
-                  Publish
-                </Button>
-              </StyledToolbar>
-            )
-          ) : null}
-          {error ? (
-            <StyledAlert severity="error" closable>
-              <Typography variant="body2" color="textPrimary">
-                {error instanceof Error ? error.message : error}
-              </Typography>
-            </StyledAlert>
-          ) : null}
-
-          <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
-        </EditorContext.Provider>
+            <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+          </EditorContext.Provider>
+        </LearningResourceProvider>
       </ArticleProvider>
     </ViewContainer>
   )

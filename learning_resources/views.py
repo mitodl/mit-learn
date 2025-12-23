@@ -334,6 +334,64 @@ class LearningResourceViewSet(
         serializer = LearningResourceSummarySerializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
+    @extend_schema(
+        summary="Retrieve multiple learning resources by IDs",
+        description="Fetch multiple learning resources in a single request.",
+        parameters=[
+            OpenApiParameter(
+                name="ids",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Comma-separated list of IDs (e.g. 1,2,3)",
+                required=True,
+            )
+        ],
+        responses=LearningResourceSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["GET"],
+        url_path="bulk",
+        pagination_class=None,
+    )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="learning_resources_bulk",
+        )
+    )
+    def bulk(self, request, *args, **kwargs):  # noqa: ARG002
+        """
+        Retrieve multiple learning resources by IDs.
+
+        Example:
+            GET /api/v1/learning_resources/bulk/?ids=1,2,3
+        """
+        ids_param = request.query_params.get("ids")
+        if not ids_param:
+            return Response(
+                {"detail": "`ids` query parameter is required."},
+                status=400,
+            )
+
+        try:
+            ids = [int(i) for i in ids_param.split(",") if i.strip()]
+        except ValueError:
+            return Response(
+                {"detail": "`ids` must be a comma-separated list of integers."},
+                status=400,
+            )
+
+        queryset = self.get_queryset().filter(id__in=ids)
+
+        # Preserve client order
+        resources_by_id = {r.id: r for r in queryset}
+        ordered_resources = [resources_by_id[i] for i in ids if i in resources_by_id]
+
+        serializer = self.get_serializer(ordered_resources, many=True)
+        return Response(serializer.data)
+
 
 @extend_schema_view(
     list=extend_schema(
