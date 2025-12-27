@@ -12,6 +12,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends $(grep -vE "^\s*#" apt.txt | tr "\n" " ") && \
     apt-get install libpq-dev postgresql-client -y --no-install-recommends && \
     apt-get install poppler-utils -y && \
+    apt-get install default-jre -y && \
     apt-get clean && \
     apt-get purge &&  \
     rm -rf /var/lib/apt/lists/*
