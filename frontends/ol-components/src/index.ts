@@ -177,8 +177,6 @@ export {
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
-export * from "./components/TiptapEditor"
-
 // /**
 //  * @deprecated Please use component from @mitodl/smoot-design instead
 //  */
