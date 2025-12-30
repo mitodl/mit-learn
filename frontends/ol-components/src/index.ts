@@ -170,7 +170,10 @@ export type { LinkProps } from "./components/Link/Link"
 
 export { pxToRem } from "./components/ThemeProvider/typography"
 export * from "./components/ThemeProvider/MITLearnGlobalStyles"
-export { HEADER_HEIGHT, HEADER_HEIGHT_MD } from "./components/ThemeProvider/MITLearnGlobalStyles"
+export {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "./components/ThemeProvider/MITLearnGlobalStyles"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 

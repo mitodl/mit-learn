@@ -2,7 +2,8 @@
 
 import React from "react"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
-import { LoadingSpinner, ArticleEditor, styled } from "ol-components"
+import { LoadingSpinner, styled } from "ol-components"
+import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"

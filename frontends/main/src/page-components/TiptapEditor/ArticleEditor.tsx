@@ -4,8 +4,12 @@ import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { RichTextArticle } from "api/v1"
-import { LoadingSpinner, Typography, HEADER_HEIGHT,
-  HEADER_HEIGHT_MD, } from "ol-components"
+import {
+  LoadingSpinner,
+  Typography,
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "ol-components"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
