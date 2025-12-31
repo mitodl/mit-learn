@@ -4,6 +4,7 @@ import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
 import { LearningResourceListCard, styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
+import { useResourceCard } from "../../../../ResourceCard/ResourceCard"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -87,6 +88,15 @@ export const LearningResourceListCardWrapper = ({
 
   const { resource: data, isLoading } = useLearningResource(resourceId)
 
+  const {
+    getDrawerHref,
+    handleAddToLearningPathClick,
+    handleAddToUserListClick,
+    inUserList,
+    inLearningPath,
+    onClick,
+  } = useResourceCard(data)
+
   const handleRemove = () => {
     const pos = getPos()
     if (typeof getPos !== "function" || typeof pos !== "number") return
@@ -115,8 +125,13 @@ export const LearningResourceListCardWrapper = ({
       )}
 
       <StyledLearningResourceListCard
+        onClick={onClick}
         resource={data}
-        href={href}
+        href={data ? getDrawerHref(data?.id) : href}
+        onAddToLearningPathClick={handleAddToLearningPathClick}
+        onAddToUserListClick={handleAddToUserListClick}
+        inUserList={inUserList}
+        inLearningPath={inLearningPath}
         isLoading={isLoading && !data}
       />
     </NodeWrapper>
