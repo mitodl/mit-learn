@@ -9,7 +9,6 @@ export enum FeatureFlags {
   HomePageRecommendationBot = "home-page-recommendation-bot",
   EnrollmentDashboard = "enrollment-dashboard",
   VideoShorts = "video-shorts",
-  ProductPageCourse = "product-page-course",
   MitxOnlineProductPages = "mitxonline-product-pages",
   ArticleEditorView = "article-editor-view",
 }
