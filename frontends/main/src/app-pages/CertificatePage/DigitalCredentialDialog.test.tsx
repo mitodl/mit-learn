@@ -11,7 +11,8 @@ import {
 
 const createMockVerifiableCredential = (
   overrides?: Partial<VerifiableCredential>,
-): VerifiableCredential => factories.mitxonline.verifiableCredential(overrides)
+): VerifiableCredential =>
+  factories.mitxonline.verifiableCredential(overrides ?? {})
 
 describe("DigitalCredentialDialog", () => {
   const mockOnClose = jest.fn()
