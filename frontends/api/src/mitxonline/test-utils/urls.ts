@@ -36,7 +36,7 @@ const b2b = {
 
 const programs = {
   programsList: (opts?: ProgramsApiProgramsListV2Request) =>
-    `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
+    `${API_BASE_URL}/api/v2/programs/${queryify(opts, { explode: false })}`,
   programDetail: (id: number) => `${API_BASE_URL}/api/v2/programs/${id}/`,
 }
 
