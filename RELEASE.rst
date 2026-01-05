@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.50.6 (Released December 18, 2025)
+--------------
+
+- fix: image issue related to it width (#2809)
+- fix(deps): update dependency next to v15.5.9 [security] (#2814)
+- remove default value for generate_embeddings in pluggy plugin  (#2821)
+- fix: modify the style of blockquote node as per design (#2820)
+- Update tiptap, configure TrailingNode (#2817)
+- Article editor improvements (#2806)
+- Article Editor: Fix tooltip zindex (#2813)
+- generate_embeddings option when upserting resources (#2815)
+- Move query embedding into opensearch (#2808)
+- fix(deps): update dependency next to v15.5.8 [security] (#2802)
+- course/program enrollment dialog (#2797)
+
 Version 0.50.3 (Released December 16, 2025)
 --------------
 
