@@ -1,13 +1,13 @@
 import React, { HTMLAttributes } from "react"
 import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
+import type { StackProps } from "ol-components"
 import {
   RiCalendarLine,
   RiComputerLine,
   RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
-  RiAwardLine,
 } from "@remixicon/react"
 import { formatDate, NoSSR, pluralize } from "ol-utilities"
 import {
@@ -17,9 +17,10 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
-import { getCertificatePrice } from "@/common/mitxonline"
+import { getCourseCertificatePrice } from "@/common/mitxonline"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2, // override default for "black" color is subtitle2
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
   },
@@ -46,18 +47,17 @@ const InfoRow = styled.div(({ theme }) => ({
   },
 }))
 
-const InfoRowInner: React.FC<{ children?: React.ReactNode }> = ({
-  children,
-}) => (
+const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
+  props,
+) => (
   <Stack
     width="100%"
     direction="row"
     gap="16px"
     justifyContent="space-between"
     flexWrap="wrap"
-  >
-    {children}
-  </Stack>
+    {...props}
+  />
 )
 
 const InfoLabel = styled.span<{ underline?: boolean }>(
@@ -68,7 +68,6 @@ const InfoLabel = styled.span<{ underline?: boolean }>(
     underline && { textDecoration: "underline" },
   ],
 )
-const InfoValue = styled.span({})
 const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
   value,
@@ -77,7 +76,7 @@ const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
     <span>
       <InfoLabel>{label}</InfoLabel>
       {": "}
-      <InfoValue>{value}</InfoValue>
+      {value}
     </span>
   ) : null
 
@@ -116,23 +115,6 @@ const getEndDate = (run: CourseRunV2) => {
       {formatDate(run.end_date)}
     </NoSSR>
   )
-}
-
-const getUpgradeDeadline = (run: CourseRunV2) => {
-  if (run.is_archived) return null
-  return run.upgrade_deadline ? (
-    <NoSSR
-      onSSR={
-        <Skeleton
-          variant="text"
-          sx={{ display: "inline-block" }}
-          width="80px"
-        />
-      }
-    >
-      {formatDate(run.upgrade_deadline)}
-    </NoSSR>
-  ) : null
 }
 
 type CourseInfoRowProps = {
@@ -176,7 +158,7 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
       <UnderlinedLink
         target="_blank"
         rel="noopener noreferrer"
-        color="red"
+        color="black"
         href=""
         role="button"
         onClick={(event) => {
@@ -197,7 +179,7 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          color="red"
+          color="black"
         >
           Learn More
         </UnderlinedLink>
@@ -261,29 +243,32 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const CertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
-  const certificatePrice = getCertificatePrice(nextRun)
+const COURSE_CERT_INFO_LINK = (
+  <UnderlinedLink
+    color="black"
+    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    Learn More
+  </UnderlinedLink>
+)
 
-  const certInfoLink = (
-    <UnderlinedLink
-      color="red"
-      href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Learn More
-    </UnderlinedLink>
-  )
-  const upgradeDeadline = getUpgradeDeadline(nextRun)
+const CertificateBoxRoot = styled.div(({ theme }) => ({
+  width: "100%",
+  backgroundColor: theme.custom.colors.lightGray1,
+  borderRadius: "8px",
+  padding: "16px",
+  display: "flex",
+  gap: "8px",
+}))
+
+const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
+  const certificatePrice = getCourseCertificatePrice(nextRun)
+  const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
+
   return (
-    <Stack
-      gap="8px"
-      sx={(theme) => ({
-        backgroundColor: theme.custom.colors.lightGray1,
-        borderRadius: "8px",
-        padding: "16px",
-      })}
-    >
+    <CertificateBoxRoot>
       {certificatePrice ? (
         <>
           <InfoRowInner>
@@ -291,14 +276,25 @@ const CertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
               label="Certificate Track"
               value={certificatePrice}
             />
-            {certInfoLink}
+            {COURSE_CERT_INFO_LINK}
           </InfoRowInner>
           {upgradeDeadline ? (
             <Typography
               typography={{ xs: "body3", sm: "body2" }}
               sx={(theme) => ({ color: theme.custom.colors.red })}
             >
-              Payment deadline: {upgradeDeadline}
+              Payment deadline:{" "}
+              <NoSSR
+                onSSR={
+                  <Skeleton
+                    variant="text"
+                    sx={{ display: "inline-block" }}
+                    width="80px"
+                  />
+                }
+              >
+                {formatDate(upgradeDeadline)}
+              </NoSSR>
             </Typography>
           ) : null}
         </>
@@ -307,10 +303,10 @@ const CertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
           <Typography typography={{ xs: "subtitle3", sm: "subtitle2" }}>
             Certificate deadline passed
           </Typography>
-          {certInfoLink}
+          {COURSE_CERT_INFO_LINK}
         </InfoRowInner>
       )}
-    </Stack>
+    </CertificateBoxRoot>
   )
 }
 
@@ -324,7 +320,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
       <RiPriceTag3Line aria-hidden="true" />
       <Stack gap="8px">
         <InfoLabelValue label="Price" value="Free to Learn" />
-        <CertificateBox course={course} nextRun={nextRun} />
+        <CourseCertificateBox course={course} nextRun={nextRun} />
       </Stack>
     </InfoRow>
   )
@@ -440,7 +436,7 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
           <InfoLabel underline>
             {`${totalRequired} ${pluralize("Course", totalRequired)}`}
           </InfoLabel>{" "}
-          <InfoValue>to complete program</InfoValue>
+          to complete program
         </ResponsiveLink>
       </InfoRowInner>
     </InfoRow>
@@ -479,7 +475,7 @@ const ProgramPaceRow: React.FC<
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Program Format" value={pace.label} />{" "}
+        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
         <LearnMoreDialog
           buttonText="What's this?"
           href={pace.href}
@@ -491,39 +487,50 @@ const ProgramPaceRow: React.FC<
   )
 }
 
-const ProgramPriceRow: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => {
+const PROGRAM_CERT_INFO_LINK = (
+  <UnderlinedLink
+    color="black"
+    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{ minWidth: "fit-content" }}
+  >
+    Learn More
+  </UnderlinedLink>
+)
+const NoWrap = styled.span({ textWrap: "nowrap" })
+const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
+  program,
+}) => {
+  const price = program.page.price
+  if (!price) return null
   return (
-    <InfoRow {...props}>
-      <RiPriceTag3Line aria-hidden="true" />
-      <InfoRowInner>
-        <InfoLabelValue label="Price" value="Free to Learn" />
+    <CertificateBoxRoot>
+      <InfoRowInner flexWrap="nowrap">
+        <InfoLabelValue
+          label="Certificate Track"
+          value={<NoWrap>{price}</NoWrap>}
+        />
+        {PROGRAM_CERT_INFO_LINK}
       </InfoRowInner>
-    </InfoRow>
+    </CertificateBoxRoot>
   )
 }
 
-const ProgramCertificateRow: React.FC<ProgramInfoRowProps> = ({
+type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
+  program: V2Program
+}
+const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   program,
   ...others
 }) => {
-  const min = program.min_price
-  const max = program.max_price
-  if (!min || !max) return null
-  const range = min === max ? `$${min}` : `$${min}\u2013$${max}`
   return (
     <InfoRow {...others}>
-      <RiAwardLine aria-hidden="true" />
-      <Stack gap="8px" flex={1}>
-        <InfoLabelValue label="Certificate Track" value={range} />
-        <UnderlinedLink
-          color="red"
-          href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          What is the certificate track?
-        </UnderlinedLink>
-      </Stack>
+      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowInner>
+        <InfoLabelValue label="Price" value="Free to Learn" />
+        <ProgramCertificateBox program={program} />
+      </InfoRowInner>
     </InfoRow>
   )
 }
@@ -552,11 +559,7 @@ const ProgramSummary: React.FC<{
           programResource={programResource ?? null}
           data-testid={TestIds.PaceRow}
         />
-        <ProgramPriceRow data-testid={TestIds.PriceRow} />
-        <ProgramCertificateRow
-          data-testid={TestIds.CertificateTrackRow}
-          program={program}
-        />
+        <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
       </Stack>
     </SidebarSummaryRoot>
   )
