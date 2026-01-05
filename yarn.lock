@@ -6862,6 +6862,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/static-renderer@npm:^3.13.0":
+  version: 3.14.0
+  resolution: "@tiptap/static-renderer@npm:3.14.0"
+  peerDependencies:
+    "@tiptap/core": ^3.14.0
+    "@tiptap/pm": ^3.14.0
+    react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10/896fbe09b8185d2872b757226aa0b37cf0f76a3ed0409986ee4acc6ed92121acb23b60e9a111d8a24f08a36e8bc4e7931fd57587e08b11b4343e1eb247904456
+  languageName: node
+  linkType: hard
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -17163,6 +17175,7 @@ __metadata:
     "@tiptap/pm": "npm:^3.13.0"
     "@tiptap/react": "npm:^3.13.0"
     "@tiptap/starter-kit": "npm:^3.13.0"
+    "@tiptap/static-renderer": "npm:^3.13.0"
     "@types/lodash.throttle": "npm:^4.1.9"
     "@types/react-dom": "npm:^19.2.3"
     "@types/react-slick": "npm:^0"
