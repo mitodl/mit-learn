@@ -39,7 +39,12 @@ describe("ContractContent", () => {
     const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     await screen.findByRole("heading", {
       name: orgX.name,
@@ -78,7 +83,12 @@ describe("ContractContent", () => {
       { results: reversedCoursesA },
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const programElements = await screen.findAllByTestId("org-program-root")
     // Find the program with programA's title
@@ -114,7 +124,12 @@ describe("ContractContent", () => {
       results: [programA, programB],
     })
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     // Debug: see what's actually rendered
     await screen.findByRole("heading", { name: orgX.name })
@@ -146,7 +161,12 @@ describe("ContractContent", () => {
     // Override the default empty enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const [programElA] = await screen.findAllByTestId("org-program-root")
     const cards = await within(programElA).findAllByTestId(
@@ -198,10 +218,13 @@ describe("ContractContent", () => {
       results: [programCollection],
     })
 
-    // Mock the new bulk programs API call with array of IDs
+    // Mock the new bulk programs API call with array of IDs and contract_id
     const programIds = [programB.id, programA.id] // B first, then A to match collection order
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      urls.programs.programsList({
+        id: programIds,
+        contract_id: orgX.contracts[0].id,
+      }),
       { results: [programB, programA] }, // Return in same order as requested
     )
 
@@ -210,16 +233,21 @@ describe("ContractContent", () => {
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
 
-    // Mock the program collection courses query
+    // Mock the program collection courses query with contract_id
     setMockResponse.get(
       urls.courses.coursesList({
         id: firstCourseIds,
-        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourseB, firstCourseA] },
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const collectionHeader = await screen.findByRole("heading", {
       name: programCollection.title,
@@ -260,24 +288,32 @@ describe("ContractContent", () => {
       results: [programCollection],
     })
 
-    // Mock the new bulk programs API call with array of IDs
+    // Mock the new bulk programs API call with array of IDs and contract_id
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programA.id}`),
+      urls.programs.programsList({
+        id: [programA.id],
+        contract_id: orgX.contracts[0].id,
+      }),
       { results: [programA] },
     )
 
-    // Mock bulk API call for the first course
+    // Mock bulk API call for the first course with contract_id
     const firstCourseId = programA.courses[0]
     const firstCourse = coursesA.find((c) => c.id === firstCourseId)
     setMockResponse.get(
       urls.courses.coursesList({
         id: [firstCourseId],
-        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourse] },
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const collection = await screen.findByTestId("org-program-collection-root")
     const collectionWrapper = within(collection)
@@ -314,26 +350,34 @@ describe("ContractContent", () => {
       results: [programCollection],
     })
 
-    // Mock the bulk programs API call for the collection
+    // Mock the bulk programs API call for the collection with contract_id
     const programIds = [programB.id, programA.id]
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      urls.programs.programsList({
+        id: programIds,
+        contract_id: orgX.contracts[0].id,
+      }),
       { results: [programB, programA] },
     )
 
-    // Mock course API calls for program collection (first courses)
+    // Mock course API calls for program collection (first courses) with contract_id
     const firstCourseIds = [programB.courses[0], programA.courses[0]]
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
     setMockResponse.get(
       urls.courses.coursesList({
         id: firstCourseIds,
-        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourseB, firstCourseA] },
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const collectionItems = await screen.findAllByTestId(
       "org-program-collection-root",
@@ -353,7 +397,12 @@ describe("ContractContent", () => {
       results: [],
     })
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
@@ -385,7 +434,12 @@ describe("ContractContent", () => {
       results: [],
     })
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     // Wait for the header to appear
     await screen.findByRole("heading", {
@@ -428,10 +482,13 @@ describe("ContractContent", () => {
       results: [programCollection],
     })
 
-    // Mock the bulk programs API call for the collection
+    // Mock the bulk programs API call for the collection with contract_id
     const programIds = [programANoCourses.id, programB.id]
     setMockResponse.get(
-      expect.stringContaining(`/api/v2/programs/?id=${programIds.join("%2C")}`),
+      urls.programs.programsList({
+        id: programIds,
+        contract_id: orgX.contracts[0].id,
+      }),
       { results: [programANoCourses, programB] },
     )
 
@@ -441,13 +498,18 @@ describe("ContractContent", () => {
 
     setMockResponse.get(
       urls.courses.coursesList({
-        id: [firstCourseBId], // Only programB's first course since programA has no courses
-        org_id: orgX.id,
+        id: [firstCourseBId],
+        contract_id: orgX.contracts[0].id,
       }),
       { results: [firstCourseB] },
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     // The collection should be rendered since programB has courses
     const collectionItems = await screen.findAllByTestId(
@@ -493,7 +555,12 @@ describe("ContractContent", () => {
       programEnrollment,
     ])
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const programRoot = await screen.findByTestId("org-program-root")
     const certificateButton = within(programRoot).getByRole("link", {
@@ -508,6 +575,9 @@ describe("ContractContent", () => {
   test("displays only courses with contract-scoped runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    // Update the user's b2b_organizations to include contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
     const courses = createCoursesWithContractRuns(contracts)
     const program = factories.programs.program({
       courses: courses.map((c) => c.id),
@@ -522,7 +592,12 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     // Wait for programs to load
     const programElements = await screen.findAllByTestId("org-program-root")
@@ -554,6 +629,8 @@ describe("ContractContent", () => {
     jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create courses with specific, predictable dates for the contract runs
     // Use a date that's guaranteed to be in the future relative to mocked time
@@ -587,7 +664,12 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -610,6 +692,8 @@ describe("ContractContent", () => {
 
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create courses where non-contract runs have different, easily identifiable data
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
@@ -645,7 +729,12 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -672,6 +761,8 @@ describe("ContractContent", () => {
   test("displays correct pricing from contract-scoped runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create courses with different pricing for contract vs non-contract runs
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
@@ -721,7 +812,12 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -740,6 +836,8 @@ describe("ContractContent", () => {
   test("handles mixed scenarios with enrolled and non-enrolled contract runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
     const contractIds = contracts.map((c) => c.id)
     const courses = createCoursesWithContractRuns(contracts)
 
@@ -785,7 +883,12 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const cards = await within(
       await screen.findByTestId("org-program-root"),
@@ -808,9 +911,11 @@ describe("ContractContent", () => {
 
     setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
 
-    renderWithProviders(<ContractContent orgSlug="not-found" />)
+    renderWithProviders(
+      <ContractContent orgSlug="not-found" contractSlug="not-found" />,
+    )
 
-    await screen.findByRole("heading", { name: "Organization not found" })
+    await screen.findByRole("heading", { name: "Contract not found" })
   })
 
   test("displays welcome message when contract has welcome_message and welcome_message_extra", async () => {
@@ -820,7 +925,12 @@ describe("ContractContent", () => {
     orgX.contracts[0].welcome_message_extra =
       "<p>This is additional information with <strong>HTML formatting</strong>.</p>"
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     await screen.findByText("Welcome to our program!")
 
@@ -836,7 +946,12 @@ describe("ContractContent", () => {
     orgX.contracts[0].welcome_message_extra =
       "<p>Extra content with <em>emphasis</em></p>"
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const showMoreLink = await screen.findByText("Show more")
 
@@ -865,7 +980,12 @@ describe("ContractContent", () => {
     contractWithoutWelcome.welcome_message_extra = "<p>Extra content</p>"
     orgX.contracts[0] = contractWithoutWelcome
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     expect(screen.queryByText("Show more")).toBeNull()
     expect(screen.queryByText("Extra content")).toBeNull()
@@ -880,7 +1000,12 @@ describe("ContractContent", () => {
       .welcome_message_extra
     orgX.contracts[0] = contractWithoutExtra
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     expect(screen.queryByText("Welcome message")).toBeNull()
     expect(screen.queryByText("Show more")).toBeNull()
@@ -891,7 +1016,10 @@ describe("ContractContent", () => {
 
     orgX.contracts = []
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    // Need to pass a contract slug, even though no contracts exist - this will show not found
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug="no-contract" />,
+    )
 
     expect(screen.queryByText("Show more")).toBeNull()
   })
@@ -903,7 +1031,12 @@ describe("ContractContent", () => {
     orgX.contracts[0].welcome_message_extra =
       '<p>Safe content</p><script>alert("xss")</script><img src="x" onerror="alert(1)">'
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const showMoreLink = await screen.findByText("Show more")
     await user.click(showMoreLink)
@@ -932,7 +1065,12 @@ describe("ContractContent", () => {
       secondContract,
     ]
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     await screen.findByText("First welcome message")
 
@@ -948,6 +1086,8 @@ describe("ContractContent", () => {
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
     const contracts = createTestContracts(orgX.id, 1)
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create a course with 3 different runs with distinct URLs
     const course = factories.courses.course()
@@ -1001,7 +1141,12 @@ describe("ContractContent", () => {
 
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [enrollment])
 
-    renderWithProviders(<ContractContent orgSlug={orgX.slug} />)
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
 
     const programElement = await screen.findByTestId("org-program-root")
     const card = await within(programElement).findByTestId(
