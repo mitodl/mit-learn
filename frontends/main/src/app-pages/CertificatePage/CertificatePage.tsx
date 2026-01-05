@@ -19,10 +19,7 @@ import type {
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import SharePopover from "./SharePopover"
-import {
-  DigitalCredentialDialog,
-  type VerifiableCredential,
-} from "./DigitalCredentialDialog"
+import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -772,7 +769,7 @@ const CertificatePage: React.FC<{
         pageUrl={pageUrl}
       />
       <DigitalCredentialDialog
-        verifiableCredential={verifiableCredential as VerifiableCredential}
+        verifiableCredential={verifiableCredential}
         open={digitalCredentialDialogOpen}
         onClose={() => setDigitalCredentialDialogOpen(false)}
       />
