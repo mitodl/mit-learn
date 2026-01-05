@@ -196,6 +196,20 @@ describe("ProgramPage", () => {
     },
   )
 
+  test("Includes program type in banner area", async () => {
+    const program = makeProgram({
+      ...makeReqs(),
+      program_type: "AwesomeProgramz",
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const banner = await screen.findByTestId("banner-container")
+    expect(within(banner).getByText("MITx")).toBeVisible()
+    expect(within(banner).getByText("AwesomeProgramz")).toBeVisible()
+  })
+
   test("Page has expected headings", async () => {
     const program = makeProgram({
       ...makeReqs({
