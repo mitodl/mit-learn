@@ -532,6 +532,8 @@ def _generate_content_file_points(serialized_content):
             for j, embedding in enumerate(chunk_embeddings):
                 # Map back to the original valid_chunk index
                 relative_index = i + j
+                if relative_index >= len(valid_chunks):
+                    break
                 chunk_id, split_doc = valid_chunks[relative_index]
 
                 metadata = {
