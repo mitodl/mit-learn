@@ -21,7 +21,7 @@ import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
 import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
 import "./vendor/components/tiptap-node/list-node/list-node.scss"
-import "./vendor/components/tiptap-node/image-node/image-node.scss"
+// import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
@@ -52,6 +52,7 @@ import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 import "./TiptapEditor.styles.scss"
 import { BannerViewer } from "./extensions/node/Banner/BannerNode"
 import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 
 const Container = styled.div<{
   readOnly: boolean
@@ -289,7 +290,7 @@ const TipTapViewer = ({
 }) => {
   return (
     <Container readOnly>
-      <div className="tiptap-viewer">
+      <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
           content,
@@ -297,6 +298,7 @@ const TipTapViewer = ({
             nodeMapping: {
               banner: BannerViewer,
               byline: ArticleByLineInfoBarViewer,
+              imageWithCaption: ImageWithCaptionViewer,
             },
           },
         })}
