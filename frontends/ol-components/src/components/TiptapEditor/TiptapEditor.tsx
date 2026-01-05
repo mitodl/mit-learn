@@ -6,11 +6,11 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
-import type { Editor } from "@tiptap/core"
+import type { Editor, Extension, JSONContent, Node, Mark } from "@tiptap/core"
+import { renderToReactElement } from "@tiptap/static-renderer/pm/react"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./extensions/ui/MediaEmbed/MediaEmbedButton"
 import { pxToRem } from "../ThemeProvider/typography"
-
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import {
   ToolbarGroup,
@@ -50,21 +50,20 @@ import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import "./TiptapEditor.styles.scss"
+import { BannerViewer } from "./extensions/node/Banner/BannerNode"
+import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
 
-const StyledEditorContent = styled(EditorContent, {
-  shouldForwardProp: (prop) => prop !== "fullWidth",
-})<{
+const Container = styled.div<{
   readOnly: boolean
-  fullWidth: boolean
-}>(({ theme, readOnly, fullWidth }) => ({
+}>(({ theme, readOnly }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "10px",
   margin: "0 auto",
 
-  ".tiptap.ProseMirror.simple-editor": {
-    padding: fullWidth ? "0 24px" : "3rem 3rem 5vh",
+  ".tiptap.ProseMirror.simple-editor, .tiptap-viewer": {
+    padding: "0 24px",
   },
   ...(readOnly
     ? {
@@ -77,7 +76,7 @@ const StyledEditorContent = styled(EditorContent, {
         },
       }
     : {}),
-  "&& .tiptap.ProseMirror": {
+  "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
     paddingBottom: "80px",
@@ -268,21 +267,42 @@ interface TiptapEditorProps {
   className?: string
 }
 
-export default function TiptapEditor({
-  editor,
-  readOnly,
-  fullWidth = false,
-  className,
-}: TiptapEditorProps) {
+const TiptapEditor = ({ editor, readOnly, className }: TiptapEditorProps) => {
   return (
-    <div data-testid="editor">
-      <StyledEditorContent
+    <Container readOnly={!!readOnly} data-testid="editor">
+      <EditorContent
         editor={editor}
         role="presentation"
-        fullWidth={fullWidth}
         readOnly={!!readOnly}
-        className={`simple-editor-content ${className}`}
+        className={className}
       />
-    </div>
+    </Container>
   )
 }
+
+const TipTapViewer = ({
+  content,
+  extensions,
+}: {
+  content: JSONContent
+  extensions: Array<Extension | Node | Mark>
+}) => {
+  return (
+    <Container readOnly>
+      <div className="tiptap-viewer">
+        {renderToReactElement({
+          extensions,
+          content,
+          options: {
+            nodeMapping: {
+              banner: BannerViewer,
+              byline: ArticleByLineInfoBarViewer,
+            },
+          },
+        })}
+      </div>
+    </Container>
+  )
+}
+
+export { TiptapEditor, TipTapViewer }

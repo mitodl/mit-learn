@@ -5,6 +5,7 @@ import {
   mergeAttributes,
   NodeViewWrapper,
   NodeViewContent,
+  ReactNodeViewContentProvider,
 } from "@tiptap/react"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { BannerBackground } from "../../../../Banner/Banner"
@@ -51,6 +52,14 @@ const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
     padding: "42px 0",
   },
 }))
+
+const BannerViewer = ({ children }: { children?: React.ReactNode }) => {
+  return (
+    <ReactNodeViewContentProvider content={children}>
+      <BannerWrapper />
+    </ReactNodeViewContentProvider>
+  )
+}
 
 const BannerWrapper = () => {
   return (
@@ -101,4 +110,4 @@ const bannerNodeConfig: ExtendedNodeConfig = {
 
 const BannerNode = Node.create(bannerNodeConfig)
 
-export { BannerNode }
+export { BannerNode, BannerViewer }
