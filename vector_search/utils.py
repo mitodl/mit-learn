@@ -608,6 +608,27 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         current_batch_size = 0
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
+        contentfile_points = [
+            (
+                vector_point_id(
+                    f"{doc['resource_readable_id']}."
+                    f"{doc.get('run_readable_id', '')}."
+                    f"{doc['key']}.0"
+                ),
+                doc,
+            )
+            for doc in serialized_resources
+        ]
+        if not overwrite:
+            filtered_point_ids = filter_existing_qdrant_points_by_ids(
+                [point[0] for point in contentfile_points],
+                collection_name=CONTENT_FILES_COLLECTION_NAME,
+            )
+            serialized_resources = [
+                point[1]
+                for point in contentfile_points
+                if point[0] in filtered_point_ids
+            ]
 
         def process_batch(docs_batch, summaries_list):
             """Process a batch of documents"""
