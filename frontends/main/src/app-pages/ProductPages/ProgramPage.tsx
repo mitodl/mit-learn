@@ -261,7 +261,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
   const programResource = programResources.data?.results?.[0]
-  const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
