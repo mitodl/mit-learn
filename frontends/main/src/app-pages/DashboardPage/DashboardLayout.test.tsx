@@ -62,18 +62,17 @@ describe("DashboardLayout", () => {
   })
 
   test("Renders the expected tab links and labels", async () => {
+    const contract = mitxOnlineFactories.contracts.contract({
+      name: "Test Contract",
+    })
     const organizations = [
       mitxOnlineFactories.organizations.organization({
         slug: "org-test-org",
         name: "Test Organization",
+        contracts: [contract],
       }),
     ]
-    const contracts = [
-      mitxOnlineFactories.contracts.contract({
-        organization: organizations[0].id,
-        name: "Test Contract",
-      }),
-    ]
+    const contracts = [contract]
     setup({ organizations, contracts })
     const expectedUrls = [
       DASHBOARD_HOME,
