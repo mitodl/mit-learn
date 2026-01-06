@@ -2,9 +2,9 @@ import React from "react"
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
-import { LearningResourceListCard, styled } from "ol-components"
+import { styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
-import { useResourceCard } from "../../../../ResourceCard/ResourceCard"
+import { ResourceCard } from "../../../../ResourceCard/ResourceCard"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -28,29 +28,27 @@ const NodeWrapper = styled(NodeViewWrapper)({
     pointerEvents: "auto",
   },
 })
-const StyledLearningResourceListCard = styled(LearningResourceListCard)(
-  ({ theme }) => ({
-    position: "relative",
+const StyledLearningResourceListCard = styled(ResourceCard)(({ theme }) => ({
+  position: "relative",
 
-    ".ProseMirror-selectednode &": {
-      borderColor: theme.custom.colors.red,
-      userSelect: "none",
-    },
+  ".ProseMirror-selectednode &": {
+    borderColor: theme.custom.colors.red,
+    userSelect: "none",
+  },
 
-    "&& a": {
-      color: "inherit",
-      textDecoration: "none",
-    },
+  "&& a": {
+    color: "inherit",
+    textDecoration: "none",
+  },
 
-    "&& a span": {
-      textDecoration: "none",
-    },
-    "&:hover .remove-button": {
-      opacity: 1,
-      pointerEvents: "auto",
-    },
-  }),
-)
+  "&& a span": {
+    textDecoration: "none",
+  },
+  "&:hover .remove-button": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+}))
 
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",
@@ -83,19 +81,9 @@ export const LearningResourceListCardWrapper = ({
   getPos,
 }: ReactNodeViewProps) => {
   const resourceId = node.attrs.resourceId
-  const href = node.attrs.href
   const editable = node.attrs.editable
 
   const { resource: data, isLoading } = useLearningResource(resourceId)
-
-  const {
-    getDrawerHref,
-    handleAddToLearningPathClick,
-    handleAddToUserListClick,
-    inUserList,
-    inLearningPath,
-    onClick,
-  } = useResourceCard(data)
 
   const handleRemove = () => {
     const pos = getPos()
@@ -123,16 +111,10 @@ export const LearningResourceListCardWrapper = ({
           ×
         </RemoveButton>
       )}
-
       <StyledLearningResourceListCard
-        onClick={onClick}
-        resource={data}
-        href={data ? getDrawerHref(data?.id) : href}
-        onAddToLearningPathClick={handleAddToLearningPathClick}
-        onAddToUserListClick={handleAddToUserListClick}
-        inUserList={inUserList}
-        inLearningPath={inLearningPath}
         isLoading={isLoading && !data}
+        resource={data}
+        list
       />
     </NodeWrapper>
   )
