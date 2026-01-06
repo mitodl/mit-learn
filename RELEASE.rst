@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.50.7
+Version 0.50.7 (Released January 06, 2026)
 --------------
 
 - pre-filter neural query (#2828)
