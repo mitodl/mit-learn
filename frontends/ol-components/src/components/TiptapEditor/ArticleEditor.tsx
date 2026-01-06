@@ -58,6 +58,7 @@ import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
+import { Callout } from "./extensions/node/Callout/Callout"
 import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
@@ -322,6 +323,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       Subscript,
       Selection,
       Image,
+      Callout,
       MediaEmbedNode,
       DividerNode,
       ArticleByLineInfoBarNode,
