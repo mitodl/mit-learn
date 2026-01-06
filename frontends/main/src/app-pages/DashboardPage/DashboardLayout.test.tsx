@@ -15,7 +15,7 @@ import React from "react"
 import {
   DASHBOARD_HOME,
   MY_LISTS,
-  organizationView,
+  contractView,
   PROFILE,
   SETTINGS,
 } from "@/common/urls"
@@ -77,8 +77,11 @@ describe("DashboardLayout", () => {
     setup({ organizations, contracts })
     const expectedUrls = [
       DASHBOARD_HOME,
-      ...organizations.map((org) =>
-        organizationView(org.slug.replace("org-", "")),
+      ...organizations.map((org, index) =>
+        contractView(
+          org.slug.replace("org-", ""),
+          contracts[index]?.slug ?? "",
+        ),
       ),
       MY_LISTS,
       PROFILE,
