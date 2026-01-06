@@ -599,7 +599,6 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
-        # Use generator to avoid loading all content files into memory
         serialized_resources = serialize_bulk_content_files(ids)
         summary_content_ids = []
 
@@ -608,31 +607,31 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         current_batch_size = 0
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        contentfile_points = [
-            (
-                vector_point_id(
-                    f"{doc['resource_readable_id']}."
-                    f"{doc.get('run_readable_id', '')}."
-                    f"{doc['key']}.0"
-                ),
-                doc,
-            )
-            for doc in serialized_resources
-        ]
-        if not overwrite:
-            filtered_point_ids = filter_existing_qdrant_points_by_ids(
-                [point[0] for point in contentfile_points],
-                collection_name=CONTENT_FILES_COLLECTION_NAME,
-            )
-            serialized_resources = [
-                point[1]
-                for point in contentfile_points
-                if point[0] in filtered_point_ids
-            ]
 
         def process_batch(docs_batch, summaries_list):
             """Process a batch of documents"""
             # Collect IDs for summarization
+            contentfile_points = [
+                (
+                    vector_point_id(
+                        f"{doc['resource_readable_id']}."
+                        f"{doc.get('run_readable_id', '')}."
+                        f"{doc['key']}.0"
+                    ),
+                    doc,
+                )
+                for doc in docs_batch
+            ]
+            if not overwrite:
+                filtered_point_ids = filter_existing_qdrant_points_by_ids(
+                    [point[0] for point in contentfile_points],
+                    collection_name=collection_name,
+                )
+                docs_batch = [
+                    point[1]
+                    for point in contentfile_points
+                    if point[0] in filtered_point_ids
+                ]
             for resource in docs_batch:
                 if (
                     resource.get("summary")

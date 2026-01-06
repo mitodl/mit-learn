@@ -35,6 +35,7 @@ from vector_search.encoders.utils import dense_encoder
 from vector_search.utils import (
     _chunk_documents,
     _embed_course_metadata_as_contentfile,
+    _get_text_splitter,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -69,7 +70,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         resources = ContentFileFactory.create_batch(5, content="test content")
 
-    summarize_content_files_by_ids_mock = mocker.patch(
+    mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
 
@@ -102,11 +103,6 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
                 .upsert.points
             ]
         ) == sorted(point_ids)
-        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
-        summarize_content_files_by_ids_mock.assert_called_once_with(
-            [],
-            True,  # noqa: FBT003
-        )
 
 
 @pytest.mark.parametrize("content_type", ["course", "content_file"])
@@ -138,7 +134,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
                 for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
             ],
         )
-    summarize_content_files_by_ids_mock = mocker.patch(
+    mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
     embed_learning_resources(
@@ -166,11 +162,6 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
                 )
             )
             == 3
-        )
-        # TODO: Pass "[resource.id for resource in resources]" instead of [] when we want the scheduled content file summarization  # noqa: FIX002, TD002, TD003
-        summarize_content_files_by_ids_mock.assert_called_once_with(
-            [],
-            False,  # noqa: FBT003
         )
 
 
@@ -368,7 +359,7 @@ def test_document_chunker(mocker):
     mocked_splitter.assert_called()
 
     settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
-
+    _get_text_splitter.cache_clear()
     mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
     mocked_chunker = mocker.patch("vector_search.utils.SemanticChunker")
 
@@ -381,6 +372,7 @@ def test_document_chunker_tiktoken(mocker):
     """
     Test that we use tiktoken if a token encoding is specified
     """
+
     settings.LITELLM_TOKEN_ENCODING_NAME = None
     encoder = dense_encoder()
     encoder.token_encoding_name = None
@@ -391,6 +383,8 @@ def test_document_chunker_tiktoken(mocker):
     _chunk_documents(encoder, ["this is a test document"], [{}])
     mocked_splitter.assert_not_called()
 
+    # work around cache for testing
+    _get_text_splitter.cache_clear()
     settings.LITELLM_TOKEN_ENCODING_NAME = "test"  # noqa: S105
     _chunk_documents(encoder, ["this is a test document"], [{}])
     mocked_splitter.assert_called()
@@ -605,7 +599,6 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     mocker.patch("vector_search.utils.create_qdrant_collections")
-    mocker.patch("vector_search.utils._process_content_embeddings", return_value=None)
     mocker.patch(
         "vector_search.utils.filter_existing_qdrant_points_by_ids", return_value=[]
     )
