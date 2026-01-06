@@ -642,14 +642,6 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                 ):
                     summaries_list.append(resource["id"])
 
-            # Generate and Upload Points
-            if not overwrite:
-                # We don't have point IDs until we chunk.
-                # The 'should_generate_content_embeddings' check inside
-                # _generate_content_file_points handles the checksum verification.
-                # So we can just rely on that.
-                pass
-
             points_generator_iter = _generate_content_file_points(docs_batch)
             points_upload_batch = []
 
