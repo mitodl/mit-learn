@@ -69,6 +69,7 @@ import { LearningResourceProvider } from "./extensions/node/LearningResource/Lea
 const LearningResourceDrawer = dynamic(
   () =>
     import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+  { ssr: false },
 )
 
 const TOOLBAR_HEIGHT = 43
