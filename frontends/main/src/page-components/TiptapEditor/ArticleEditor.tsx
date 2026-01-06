@@ -4,7 +4,12 @@ import React, { ChangeEventHandler, useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { RichTextArticle } from "api/v1"
-import { LoadingSpinner } from "../LoadingSpinner/LoadingSpinner"
+import {
+  LoadingSpinner,
+  Typography,
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "ol-components"
 import Document from "@tiptap/extension-document"
 import { Placeholder, Selection } from "@tiptap/extensions"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
@@ -55,13 +60,8 @@ import {
   useMediaUpload,
 } from "api/hooks/articles"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
-import Typography from "@mui/material/Typography"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
-import {
-  HEADER_HEIGHT,
-  HEADER_HEIGHT_MD,
-} from "../../components/ThemeProvider/MITLearnGlobalStyles"
 import { extractLearningResourceIds } from "./extensions/utils"
 import { LearningResourceProvider } from "./extensions/node/LearningResource/LearningResourceDataProvider"
 

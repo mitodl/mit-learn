@@ -9,7 +9,7 @@ import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./extensions/ui/MediaEmbed/MediaEmbedButton"
-import { pxToRem } from "../ThemeProvider/typography"
+import { pxToRem } from "ol-components"
 
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import {

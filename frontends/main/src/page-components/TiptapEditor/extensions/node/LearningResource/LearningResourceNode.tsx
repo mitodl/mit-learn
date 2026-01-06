@@ -89,9 +89,16 @@ export const LearningResourceListCardWrapper = ({
 
   const handleRemove = () => {
     const pos = getPos()
-    if (typeof pos !== "number") return
+    if (typeof getPos !== "function" || typeof pos !== "number") return
 
-    editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.delete(pos, pos + node.nodeSize)
+        return true
+      })
+      .run()
   }
 
   return (
