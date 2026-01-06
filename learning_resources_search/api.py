@@ -364,7 +364,7 @@ def generate_filter_clause(
     path: str, value: str, *, case_sensitive: bool, _current_path_length=1
 ):
     """
-    Generate search clause for a single filter path abd value.
+    Generate search clause for a single filter path and value.
 
     Args:
         path (str): Search index on which to filter
@@ -595,9 +595,29 @@ def percolate_matches_for_document(document_id):
     return percolated_queries
 
 
-def add_text_query_to_search(
-    search, text, search_params, query_type_query, use_hybrid_search
+def add_text_query_to_search(  # noqa: PLR0913
+    search,
+    text,
+    search_params,
+    query_type_query,
+    use_hybrid_search,
+    filter_clauses,
 ):
+    """
+    Add text query to the opensearch_dsl search object
+
+    Args:
+        search: opensearch_dsl.Search object
+        text: user text query
+        search_params: full search params dict
+        query_type_query: subquery to filter by resource_type or content_type
+        use_hybrid_search: boolean whether to use hybrid search
+        filter_clauses: array of all filter clauses for the search
+
+    returns:
+        updated opensearch_dsl.Search object
+    """
+
     if search_params.get("endpoint") == CONTENT_FILE_TYPE:
         text_query = generate_content_file_text_clause(text)
     else:
@@ -672,11 +692,13 @@ def add_text_query_to_search(
                     "query_text": text,
                     "model_id": model_id,
                     "k": HYBRID_SEARCH_KNN_K_VALUE,
+                    "filter": {"bool": {"should": list(filter_clauses.values())}},
                 }
             }
         }
 
         pagination_depth = search_params.get("limit", 10) * 3
+
         search = search.extra(
             query={
                 "hybrid": {
@@ -685,6 +707,7 @@ def add_text_query_to_search(
                 }
             }
         )
+
     else:
         search = search.query(text_query)
 
@@ -703,14 +726,14 @@ def construct_search(search_params):  # noqa: C901
     Returns:
         opensearch_dsl.Search: an opensearch search instance
     """
+    use_hybrid_search = search_params.get("search_mode") == HYBRID_SEARCH_MODE
 
     if (
         not search_params.get("resource_type")
         and search_params.get("endpoint") != CONTENT_FILE_TYPE
+        and not use_hybrid_search
     ):
         search_params["resource_type"] = list(LEARNING_RESOURCE_TYPES)
-
-    use_hybrid_search = search_params.get("search_mode") == HYBRID_SEARCH_MODE
 
     indexes = relevant_indexes(
         search_params.get("resource_type"),
@@ -741,17 +764,22 @@ def construct_search(search_params):  # noqa: C901
     else:
         query_type_query = {"exists": {"field": "resource_type"}}
 
+    filter_clauses = generate_filter_clauses(search_params)
+
     if search_params.get("q"):
         text = re.sub("[\u201c\u201d]", '"', search_params.get("q"))
 
         search = add_text_query_to_search(
-            search, text, search_params, query_type_query, use_hybrid_search
+            search,
+            text,
+            search_params,
+            query_type_query,
+            use_hybrid_search,
+            filter_clauses,
         )
 
     else:
         search = search.query(query_type_query)
-
-    filter_clauses = generate_filter_clauses(search_params)
 
     search = search.post_filter("bool", must=list(filter_clauses.values()))
 

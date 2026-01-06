@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.50.7 (Released January 06, 2026)
+--------------
+
+- pre-filter neural query (#2828)
+- update opensearch (#2829)
+- Canvas - Transcribe handwritten notes and pdf contentfiles  (#2812)
+- fix: improvements in learning resource (#2832)
+- Add the digital credential issuer image (#2831)
+- fix: use semantic figure and caption tags (#2826)
+- fix select label (#2822)
+- fix: tooltip issue on controls (#2824)
+
 Version 0.50.6 (Released December 18, 2025)
 --------------
 
