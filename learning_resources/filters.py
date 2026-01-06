@@ -92,6 +92,11 @@ class LearningResourceFilter(FilterSet):
         field_name="readable_id",
     )
 
+    ids = NumberInFilter(
+        label="Comma-separated list of learning resource IDs",
+        field_name="id",
+    )
+
     sortby = ChoiceFilter(
         label="Sort By",
         method="filter_sortby",
