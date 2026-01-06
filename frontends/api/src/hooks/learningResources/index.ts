@@ -65,7 +65,7 @@ const useLearningResourcesBulkList = (
   const queryClient = useQueryClient()
 
   return useQuery({
-    ...learningResourceQueries.list({ ids }),
+    ...learningResourceQueries.list({ resource_id: ids }),
     enabled: options?.enabled && ids.length > 0,
 
     select: (data) => {

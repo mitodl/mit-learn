@@ -92,7 +92,7 @@ class LearningResourceFilter(FilterSet):
         field_name="readable_id",
     )
 
-    ids = NumberInFilter(
+    resource_id = NumberInFilter(
         label="Comma-separated list of learning resource IDs",
         field_name="id",
     )

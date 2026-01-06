@@ -738,15 +738,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -891,6 +882,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -1385,15 +1385,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -1538,6 +1529,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -1808,15 +1808,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -1961,6 +1952,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -2231,15 +2231,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -2384,6 +2375,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -2666,15 +2666,6 @@ paths:
           type: integer
         required: true
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -2811,6 +2802,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -3074,15 +3074,6 @@ paths:
           type: integer
         required: true
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -3219,6 +3210,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -3794,15 +3794,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -3947,6 +3938,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -6290,15 +6290,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -6443,6 +6434,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -7053,15 +7053,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -7206,6 +7197,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -7476,15 +7476,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -7629,6 +7620,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -7986,15 +7986,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -8139,6 +8130,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -8841,15 +8841,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -8994,6 +8985,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -9330,15 +9330,6 @@ paths:
           type: boolean
         description: The course/program is offered for free
       - in: query
-        name: ids
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: level
         schema:
           type: array
@@ -9483,6 +9474,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
