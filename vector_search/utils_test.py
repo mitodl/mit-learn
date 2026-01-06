@@ -1,3 +1,4 @@
+import random
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -366,6 +367,47 @@ def test_document_chunker(mocker):
     _chunk_documents(encoder, ["this is a test document"], [{}])
     mocked_chunker.assert_not_called()
     mocked_splitter.assert_called()
+
+
+def test_expected_document_chunks(mocker):
+    """
+    Test that the expected number of chunks are uploaded
+    """
+
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = random.randrange(10, 120)  # noqa: S311
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = random.randrange(  # noqa: S311
+        1, settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    )
+    settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
+
+    encoder = dense_encoder()
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    encoder.token_encoding_name = None
+
+    content_file = ContentFileFactory.create(
+        content="this is a.  test: document. " * 1000
+    )
+    chunked = _chunk_documents(
+        encoder,
+        [content_file.content],
+        list(serialize_bulk_content_files([content_file.id])),
+    )
+
+    embed_learning_resources([content_file.id], "content_file", overwrite=True)
+
+    num_points_uploaded = sum(
+        [
+            len(mock_call.kwargs["update_operations"][0].upsert.points)
+            for mock_call in mock_qdrant.batch_update_points.mock_calls
+        ]
+    )
+
+    assert len(chunked) == num_points_uploaded
 
 
 def test_document_chunker_tiktoken(mocker):
