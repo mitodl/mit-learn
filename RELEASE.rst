@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.50.8
+--------------
+
+- Download digital credential dialog (#2830)
+
 Version 0.50.7 (Released January 06, 2026)
 --------------
 
