@@ -600,6 +600,8 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         serialized_resources = serialize_bulk_content_files(ids)
+
+        # populated/modified by reference in process_batch
         summary_content_ids = []
 
         # Batching parameters
