@@ -125,16 +125,6 @@ const learningResourceQueries = {
           .learningResourcesRetrieve({ id })
           .then((res) => clearListMemberships(res.data)),
     }),
-  learningResourcesBulkList: (ids: string) =>
-    queryOptions({
-      queryKey: [...learningResourceKeys.root, "bulk", ids],
-      queryFn: () =>
-        learningResourcesApi
-          .learningResourcesBulkList({ ids })
-          .then((res) =>
-            res.data.map((resource) => clearListMemberships(resource)),
-          ),
-    }),
   items: (id: number, params: ItemsListRequest) =>
     queryOptions({
       queryKey: learningResourceKeys.items(id, params),

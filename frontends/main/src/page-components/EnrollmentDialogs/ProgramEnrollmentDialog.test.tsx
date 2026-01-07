@@ -43,6 +43,10 @@ const upgradeableRun: typeof makeCourseRun = (overrides) =>
     ...overrides,
   })
 
+const getCourseSelect = () => {
+  return screen.getByRole("combobox", { name: /choose a course/i })
+}
+
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
 
@@ -93,7 +97,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       expect(select).toHaveTextContent(/please select/i)
     })
 
@@ -107,7 +111,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       expect(
@@ -126,7 +130,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await waitFor(() => {
         expect(select).toHaveAttribute("aria-invalid", "true")
       })
@@ -151,7 +155,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       const options = screen.getAllByRole("option")
@@ -172,7 +176,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       expect(
@@ -194,7 +198,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       screen.getByRole("option", {
@@ -218,7 +222,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       expect(
@@ -241,7 +245,7 @@ describe("ProgramEnrollmentDialog", () => {
       renderWithProviders(null)
       await openProgramDialog(program)
 
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
 
       const option = screen.getByRole("option", {
@@ -280,7 +284,7 @@ describe("ProgramEnrollmentDialog", () => {
       await openProgramDialog(program)
 
       // Select the course
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /Test Course - 6.005/i,
@@ -316,7 +320,7 @@ describe("ProgramEnrollmentDialog", () => {
       await openProgramDialog(program)
 
       // Select the course
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /Algorithms - 6.006/i,
@@ -378,7 +382,7 @@ describe("ProgramEnrollmentDialog", () => {
       await openProgramDialog(program)
 
       // Try to select the course without runs
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /No available runs/i,
@@ -406,7 +410,7 @@ describe("ProgramEnrollmentDialog", () => {
       await openProgramDialog(program)
 
       // Select the course
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /Test Course - 6.007/i,
@@ -451,7 +455,7 @@ describe("ProgramEnrollmentDialog", () => {
       await screen.findByRole("dialog")
 
       // Select the course
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /Another Course - 6.008/i,
@@ -495,7 +499,7 @@ describe("ProgramEnrollmentDialog", () => {
       await openProgramDialog(program)
 
       // Select the course
-      const select = screen.getByRole("combobox", { name: /choose a date/i })
+      const select = getCourseSelect()
       await user.click(select)
       const courseOption = screen.getByRole("option", {
         name: /Error Test Course - 6.009/i,

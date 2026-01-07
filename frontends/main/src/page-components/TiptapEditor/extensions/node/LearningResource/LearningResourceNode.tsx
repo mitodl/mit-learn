@@ -28,6 +28,7 @@ const NodeWrapper = styled(NodeViewWrapper)({
     pointerEvents: "auto",
   },
 })
+
 const StyledLearningResourceListCard = styled(ResourceCard)(({ theme }) => ({
   position: "relative",
 
