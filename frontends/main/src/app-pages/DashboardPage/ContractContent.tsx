@@ -81,7 +81,6 @@ const ContractHeader: React.FC<{
         <Typography variant="h3" component="h1">
           {org?.name}
         </Typography>
-        {/* For now we will use the first contract name until we refactor this to be based on contracts / offerings */}
         <Typography variant="body1">{contract?.name}</Typography>
       </Stack>
     </HeaderRoot>
