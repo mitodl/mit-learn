@@ -9696,7 +9696,7 @@ paths:
           minLength: 1
         required: true
       - in: query
-        name: youtube_metadata
+        name: video_metadata
         schema:
           type: object
           additionalProperties: {}
@@ -16266,14 +16266,14 @@ components:
         video_id:
           type: string
           minLength: 1
-        youtube_metadata:
+        video_metadata:
           type: object
           additionalProperties: {}
         source:
           type: string
       required:
       - video_id
-      - youtube_metadata
+      - video_metadata
     WebhookResponse:
       type: object
       description: Serializer for webhook responses.
