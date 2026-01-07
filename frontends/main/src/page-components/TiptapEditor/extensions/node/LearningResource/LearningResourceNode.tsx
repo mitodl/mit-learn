@@ -2,6 +2,8 @@ import React from "react"
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
+import type { NodeProps } from "@tiptap/static-renderer"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { LearningResourceListCard, styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
 
@@ -75,6 +77,23 @@ const RemoveButton = styled("button")(({ theme }) => ({
     background: theme.custom.colors.lightGray1,
   },
 }))
+
+export const LearningResourceCardViewer = ({
+  node,
+}: {
+  node: ProseMirrorNode
+}) => {
+  const { resourceId } = node.attrs
+  const { resource, isLoading } = useLearningResource(resourceId ?? 0)
+
+  if (!resourceId) {
+    return null
+  }
+
+  return (
+    <StyledLearningResourceListCard resource={resource} isLoading={isLoading} />
+  )
+}
 
 export const LearningResourceListCardWrapper = ({
   node,

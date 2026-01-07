@@ -53,6 +53,8 @@ import "./TiptapEditor.styles.scss"
 import { BannerViewer } from "./extensions/node/Banner/BannerNode"
 import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
+import { DividerViewer } from "./extensions/node/Divider/DividerNode"
+import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
 
 const Container = styled.div<{
   readOnly: boolean
@@ -291,10 +293,20 @@ const TipTapViewer = ({
           extensions,
           content,
           options: {
+            /*
+             * Node mappings are required for custom nodes that use ReactNodeViewRenderer.
+             * Without these mappings, the static renderer would fall back to renderHTML() output,
+             * which would produce unstyled HTML elements (e.g., <banner>, <byline>) instead of
+             * the styled React components. Mappings are NOT needed for nodes that only use renderHTML()
+             * with standard HTML tags that are styled from wrapping components.
+             * See https://tiptap.dev/docs/editor/api/utilities/static-renderer#react-nodeviews
+             */
             nodeMapping: {
               banner: BannerViewer,
               byline: ArticleByLineInfoBarViewer,
+              divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
+              learningResource: LearningResourceCardViewer,
             },
           },
         })}

@@ -26,7 +26,7 @@ import { Superscript } from "@tiptap/extension-superscript"
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
-import { TiptapEditor, MainToolbarContent } from "./TiptapEditor"
+import { TiptapEditor, MainToolbarContent, TipTapViewer } from "./TiptapEditor"
 import { ArticleProvider } from "./ArticleContext"
 
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
@@ -458,7 +458,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 </Typography>
               </StyledAlert>
             ) : null}
-            <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+            {readOnly ? (
+              <TipTapViewer content={content} extensions={extensions} />
+            ) : (
+              <TiptapEditor editor={editor} />
+            )}
           </EditorContext.Provider>
         </LearningResourceProvider>
       </ArticleProvider>
