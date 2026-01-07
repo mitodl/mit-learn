@@ -479,7 +479,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   return (
     <>
       <Stack>
-        <ContractHeader contract={contract} />
+        <ContractHeader org={org} contract={contract} />
         <WelcomeMessage contract={contract} />
       </Stack>
       <ContractRoot>
