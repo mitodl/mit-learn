@@ -915,7 +915,7 @@ describe("ContractContent", () => {
       <ContractContent orgSlug="not-found" contractSlug="not-found" />,
     )
 
-    await screen.findByRole("heading", { name: "Contract not found" })
+    await screen.findByRole("heading", { name: "Organization not found" })
   })
 
   test("displays welcome message when contract has welcome_message and welcome_message_extra", async () => {
@@ -1011,17 +1011,26 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Show more")).toBeNull()
   })
 
-  test("does not display welcome message when organization has no contracts", async () => {
+  test("shows the not found screen if the contract is not found by contractSlug", async () => {
     const { orgX } = setupProgramsAndCourses()
 
     orgX.contracts = []
 
-    // Need to pass a contract slug, even though no contracts exist - this will show not found
     renderWithProviders(
       <ContractContent orgSlug={orgX.slug} contractSlug="no-contract" />,
     )
 
-    expect(screen.queryByText("Show more")).toBeNull()
+    await screen.findByRole("heading", { name: "Contract not found" })
+  })
+
+  test("shows the not found screen when contract slug doesn't match any contracts", async () => {
+    const { orgX } = setupProgramsAndCourses()
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug="invalid-contract" />,
+    )
+
+    await screen.findByRole("heading", { name: "Contract not found" })
   })
 
   test("sanitizes HTML content in welcome_message_extra", async () => {

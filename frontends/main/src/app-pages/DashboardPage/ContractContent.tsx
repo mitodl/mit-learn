@@ -574,7 +574,11 @@ const ContractContent: React.FC<ContractContentProps> = ({
     )
   }
 
-  if (!b2bOrganization || !b2bContract) {
+  if (!b2bOrganization) {
+    return <ErrorContent title="Organization not found" timSays="404" />
+  }
+
+  if (!b2bContract) {
     return <ErrorContent title="Contract not found" timSays="404" />
   }
 
