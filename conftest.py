@@ -42,79 +42,21 @@ def mock_apsisix_auth(mocker):
 
 
 @pytest.fixture
-def sample_youtube_metadata():
-    """Sample YouTube API v3 metadata for testing video shorts webhook"""
+def sample_video_metadata():
+    """Sample metadata for testing video shorts webhook"""
     return {
-        "contentDetails": {
-            "caption": "false",
-            "contentRating": {},
-            "definition": "hd",
-            "dimension": "2d",
-            "duration": "PT59S",
-            "licensedContent": False,
-            "projection": "rectangular",
+        "video_id": "k_AA4_fQIHc",
+        "published_at": "2025-09-24T15:33:27Z",
+        "title": "How far away is space?",
+        "video_url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4",
+        "thumbnail_small": {
+            "url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_small.jpg",
+            "height": 480,
+            "width": 270,
         },
-        "etag": "woYA2syI9y2lnDCE2QN4GAi7Rzs",
-        "id": "k_AA4_fQIHc",
-        "kind": "youtube#video",
-        "snippet": {
-            "categoryId": "27",
-            "channelId": "UCN0QBfKk0ZSytyX_16M11fA",
-            "channelTitle": "MIT Open Learning",
-            "defaultAudioLanguage": "en",
-            "defaultLanguage": "en",
-            "description": (
-                "The Kármán line is 100 kilometers above Earth's surface. "
-                "For context,  that distance is shorter than a trip between "
-                "Boston and New York City or London and Paris.\n\n"
-                "Keep learning about spaceflight with MIT Prof. Jeff Hoffman "
-                "on MIT Learn: https://learn.mit.edu/search?resource=2766"
-            ),
-            "liveBroadcastContent": "none",
-            "localized": {
-                "description": (
-                    "The Kármán line is 100 kilometers above Earth's surface. "
-                    "For context,  that distance is shorter than a trip between "
-                    "Boston and New York City or London and Paris.\n\n"
-                    "Keep learning about spaceflight with MIT Prof. Jeff Hoffman "
-                    "on MIT Learn: https://learn.mit.edu/search?resource=2766"
-                ),
-                "title": "How far away is space?",
-            },
-            "publishedAt": "2025-09-24T15:33:27Z",
-            "thumbnails": {
-                "default": {
-                    "height": 90,
-                    "url": "https://i.ytimg.com/vi/k_AA4_fQIHc/default.jpg",
-                    "width": 120,
-                },
-                "high": {
-                    "height": 360,
-                    "url": "https://i.ytimg.com/vi/k_AA4_fQIHc/hqdefault.jpg",
-                    "width": 480,
-                },
-                "maxres": {
-                    "height": 720,
-                    "url": "https://i.ytimg.com/vi/k_AA4_fQIHc/maxresdefault.jpg",
-                    "width": 1280,
-                },
-                "medium": {
-                    "height": 180,
-                    "url": "https://i.ytimg.com/vi/k_AA4_fQIHc/mqdefault.jpg",
-                    "width": 320,
-                },
-                "standard": {
-                    "height": 480,
-                    "url": "https://i.ytimg.com/vi/k_AA4_fQIHc/sddefault.jpg",
-                    "width": 640,
-                },
-            },
-            "title": "How far away is space?",
-        },
-        "statistics": {
-            "commentCount": "1",
-            "favoriteCount": "0",
-            "likeCount": "103",
-            "viewCount": "3413",
+        "thumbnail_large": {
+            "url": "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_large.jpg",
+            "height": 1920,
+            "width": 1080,
         },
     }

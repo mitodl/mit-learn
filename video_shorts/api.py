@@ -8,7 +8,7 @@ import boto3
 from django.conf import settings
 
 from video_shorts.models import VideoShort
-from video_shorts.serializers import YouTubeMetadataSerializer
+from video_shorts.serializers import VideoShortWebhookSerializer
 
 log = logging.getLogger(__name__)
 
@@ -48,9 +48,9 @@ def walk_video_shorts_from_s3(
 
 def upsert_video_short(data: dict) -> VideoShort:
     """Process a video short based on Youtube metadata"""
-    youtube_id = data.get("id")
-    existing_video_short = VideoShort.objects.filter(youtube_id=youtube_id).first()
-    video_short_serializer = YouTubeMetadataSerializer(
+    video_id = data.get("video_id")
+    existing_video_short = VideoShort.objects.filter(video_id=video_id).first()
+    video_short_serializer = VideoShortWebhookSerializer(
         data=data, instance=existing_video_short
     )
     video_short_serializer.is_valid(raise_exception=True)
