@@ -20,6 +20,10 @@ def test_upsert_video_short_creates_new(settings, sample_video_metadata):
 
     assert video_short.video_id == "k_AA4_fQIHc"
     assert video_short.title == "How far away is space?"
+    assert (
+        video_short.thumbnail_large_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_large.jpg"
+    )
+    assert video_short.video_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4"
     assert VideoShort.objects.count() == 1
 
 
@@ -30,12 +34,12 @@ def test_upsert_video_short_updates_existing(settings, sample_video_metadata):
     settings.VIDEO_SHORTS_S3_PREFIX = "shorts"
 
     # Create initial version
+    updated_metadata = copy.deepcopy(sample_video_metadata)
+    updated_metadata["title"] = "Updated Title"
+
     first_short = upsert_video_short(sample_video_metadata)
     assert VideoShort.objects.count() == 1
     original_created_on = first_short.created_on
-
-    updated_metadata = copy.deepcopy(sample_video_metadata)
-    updated_metadata["title"] = "Updated Title"
 
     updated_short = upsert_video_short(updated_metadata)
 
