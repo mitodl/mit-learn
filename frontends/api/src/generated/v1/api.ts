@@ -11144,6 +11144,7 @@ export const CoursesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<CoursesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<CoursesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {CoursesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -11165,6 +11166,7 @@ export const CoursesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<CoursesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<CoursesListResourceTypeEnum>,
       sortby?: CoursesListSortbyEnum,
       topic?: Array<string>,
@@ -11240,6 +11242,10 @@ export const CoursesApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -11430,6 +11436,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<CoursesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<CoursesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {CoursesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -11451,6 +11458,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<CoursesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<CoursesListResourceTypeEnum>,
       sortby?: CoursesListSortbyEnum,
       topic?: Array<string>,
@@ -11476,6 +11484,7 @@ export const CoursesApiFp = function (configuration?: Configuration) {
         professional,
         readable_id,
         resource_category,
+        resource_id,
         resource_type,
         sortby,
         topic,
@@ -11606,6 +11615,7 @@ export const CoursesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -11827,6 +11837,13 @@ export interface CoursesApiCoursesListRequest {
   readonly resource_category?: Array<CoursesListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof CoursesApiCoursesList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof CoursesApiCoursesList
@@ -11946,6 +11963,7 @@ export class CoursesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -12520,6 +12538,7 @@ export const FeaturedApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<FeaturedListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<FeaturedListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {FeaturedListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -12541,6 +12560,7 @@ export const FeaturedApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<FeaturedListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<FeaturedListResourceTypeEnum>,
       sortby?: FeaturedListSortbyEnum,
       topic?: Array<string>,
@@ -12616,6 +12636,10 @@ export const FeaturedApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -12717,6 +12741,7 @@ export const FeaturedApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<FeaturedListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<FeaturedListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {FeaturedListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -12738,6 +12763,7 @@ export const FeaturedApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<FeaturedListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<FeaturedListResourceTypeEnum>,
       sortby?: FeaturedListSortbyEnum,
       topic?: Array<string>,
@@ -12763,6 +12789,7 @@ export const FeaturedApiFp = function (configuration?: Configuration) {
         professional,
         readable_id,
         resource_category,
+        resource_id,
         resource_type,
         sortby,
         topic,
@@ -12849,6 +12876,7 @@ export const FeaturedApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -12979,6 +13007,13 @@ export interface FeaturedApiFeaturedListRequest {
   readonly resource_category?: Array<FeaturedListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof FeaturedApiFeaturedList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof FeaturedApiFeaturedList
@@ -13049,6 +13084,7 @@ export class FeaturedApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -13268,6 +13304,7 @@ export const LearningResourceDisplayInfoApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourceDisplayInfoListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourceDisplayInfoListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourceDisplayInfoListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -13289,6 +13326,7 @@ export const LearningResourceDisplayInfoApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourceDisplayInfoListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourceDisplayInfoListResourceTypeEnum>,
       sortby?: LearningResourceDisplayInfoListSortbyEnum,
       topic?: Array<string>,
@@ -13364,6 +13402,10 @@ export const LearningResourceDisplayInfoApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -13469,6 +13511,7 @@ export const LearningResourceDisplayInfoApiFp = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourceDisplayInfoListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourceDisplayInfoListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourceDisplayInfoListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -13490,6 +13533,7 @@ export const LearningResourceDisplayInfoApiFp = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourceDisplayInfoListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourceDisplayInfoListResourceTypeEnum>,
       sortby?: LearningResourceDisplayInfoListSortbyEnum,
       topic?: Array<string>,
@@ -13516,6 +13560,7 @@ export const LearningResourceDisplayInfoApiFp = function (
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -13609,6 +13654,7 @@ export const LearningResourceDisplayInfoApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -13739,6 +13785,13 @@ export interface LearningResourceDisplayInfoApiLearningResourceDisplayInfoListRe
   readonly resource_category?: Array<LearningResourceDisplayInfoListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningResourceDisplayInfoApiLearningResourceDisplayInfoList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof LearningResourceDisplayInfoApiLearningResourceDisplayInfoList
@@ -13809,6 +13862,7 @@ export class LearningResourceDisplayInfoApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -14372,6 +14426,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -14393,6 +14448,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesListResourceTypeEnum>,
       sortby?: LearningResourcesListSortbyEnum,
       topic?: Array<string>,
@@ -14468,6 +14524,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -14559,6 +14619,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesSimilarListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -14580,6 +14641,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesSimilarListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       sortby?: LearningResourcesSimilarListSortbyEnum,
       topic?: Array<string>,
@@ -14658,6 +14720,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
         localVarQueryParameter["resource_category"] = resource_category
       }
 
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
+      }
+
       if (resource_type) {
         localVarQueryParameter["resource_type"] = resource_type
       }
@@ -14701,6 +14767,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesSummaryListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesSummaryListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesSummaryListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -14722,6 +14789,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesSummaryListResourceTypeEnum>,
       sortby?: LearningResourcesSummaryListSortbyEnum,
       topic?: Array<string>,
@@ -14797,6 +14865,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -14903,6 +14975,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesVectorSimilarListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesVectorSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -14924,6 +14997,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesVectorSimilarListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       sortby?: LearningResourcesVectorSimilarListSortbyEnum,
       topic?: Array<string>,
@@ -15001,6 +15075,10 @@ export const LearningResourcesApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -15269,6 +15347,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -15290,6 +15369,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesListResourceTypeEnum>,
       sortby?: LearningResourcesListSortbyEnum,
       topic?: Array<string>,
@@ -15316,6 +15396,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -15382,6 +15463,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesSimilarListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -15403,6 +15485,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesSimilarListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       sortby?: LearningResourcesSimilarListSortbyEnum,
       topic?: Array<string>,
@@ -15429,6 +15512,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -15464,6 +15548,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesSummaryListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesSummaryListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesSummaryListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -15485,6 +15570,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesSummaryListResourceTypeEnum>,
       sortby?: LearningResourcesSummaryListSortbyEnum,
       topic?: Array<string>,
@@ -15511,6 +15597,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -15586,6 +15673,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningResourcesVectorSimilarListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningResourcesVectorSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -15607,6 +15695,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningResourcesVectorSimilarListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       sortby?: LearningResourcesVectorSimilarListSortbyEnum,
       topic?: Array<string>,
@@ -15633,6 +15722,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -15797,6 +15887,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -15846,6 +15937,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -15880,6 +15972,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -15934,6 +16027,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -16224,6 +16318,13 @@ export interface LearningResourcesApiLearningResourcesListRequest {
   readonly resource_category?: Array<LearningResourcesListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningResourcesApiLearningResourcesList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof LearningResourcesApiLearningResourcesList
@@ -16364,6 +16465,13 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
   readonly resource_category?: Array<LearningResourcesSimilarListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningResourcesApiLearningResourcesSimilarList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof LearningResourcesApiLearningResourcesSimilarList
@@ -16488,6 +16596,13 @@ export interface LearningResourcesApiLearningResourcesSummaryListRequest {
    * @memberof LearningResourcesApiLearningResourcesSummaryList
    */
   readonly resource_category?: Array<LearningResourcesSummaryListResourceCategoryEnum>
+
+  /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningResourcesApiLearningResourcesSummaryList
+   */
+  readonly resource_id?: Array<number>
 
   /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
@@ -16644,6 +16759,13 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
    */
   readonly resource_category?: Array<LearningResourcesVectorSimilarListResourceCategoryEnum>
+
+  /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
+   */
+  readonly resource_id?: Array<number>
 
   /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
@@ -16817,6 +16939,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -16870,6 +16993,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -16906,6 +17030,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -16964,6 +17089,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -21626,6 +21752,7 @@ export const LearningpathsApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningpathsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningpathsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningpathsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -21647,6 +21774,7 @@ export const LearningpathsApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningpathsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningpathsListResourceTypeEnum>,
       sortby?: LearningpathsListSortbyEnum,
       topic?: Array<string>,
@@ -21722,6 +21850,10 @@ export const LearningpathsApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -22165,6 +22297,7 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<LearningpathsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningpathsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {LearningpathsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -22186,6 +22319,7 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<LearningpathsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<LearningpathsListResourceTypeEnum>,
       sortby?: LearningpathsListSortbyEnum,
       topic?: Array<string>,
@@ -22212,6 +22346,7 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -22495,6 +22630,7 @@ export const LearningpathsApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -22811,6 +22947,13 @@ export interface LearningpathsApiLearningpathsListRequest {
   readonly resource_category?: Array<LearningpathsListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof LearningpathsApiLearningpathsList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof LearningpathsApiLearningpathsList
@@ -23046,6 +23189,7 @@ export class LearningpathsApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -24080,6 +24224,7 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<PodcastEpisodesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<PodcastEpisodesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {PodcastEpisodesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -24101,6 +24246,7 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<PodcastEpisodesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<PodcastEpisodesListResourceTypeEnum>,
       sortby?: PodcastEpisodesListSortbyEnum,
       topic?: Array<string>,
@@ -24176,6 +24322,10 @@ export const PodcastEpisodesApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -24278,6 +24428,7 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<PodcastEpisodesListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<PodcastEpisodesListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {PodcastEpisodesListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -24299,6 +24450,7 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<PodcastEpisodesListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<PodcastEpisodesListResourceTypeEnum>,
       sortby?: PodcastEpisodesListSortbyEnum,
       topic?: Array<string>,
@@ -24325,6 +24477,7 @@ export const PodcastEpisodesApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -24414,6 +24567,7 @@ export const PodcastEpisodesApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -24544,6 +24698,13 @@ export interface PodcastEpisodesApiPodcastEpisodesListRequest {
   readonly resource_category?: Array<PodcastEpisodesListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof PodcastEpisodesApiPodcastEpisodesList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof PodcastEpisodesApiPodcastEpisodesList
@@ -24614,6 +24775,7 @@ export class PodcastEpisodesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -24958,6 +25120,7 @@ export const PodcastsApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<PodcastsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<PodcastsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {PodcastsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -24979,6 +25142,7 @@ export const PodcastsApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<PodcastsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<PodcastsListResourceTypeEnum>,
       sortby?: PodcastsListSortbyEnum,
       topic?: Array<string>,
@@ -25054,6 +25218,10 @@ export const PodcastsApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -25231,6 +25399,7 @@ export const PodcastsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<PodcastsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<PodcastsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {PodcastsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -25252,6 +25421,7 @@ export const PodcastsApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<PodcastsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<PodcastsListResourceTypeEnum>,
       sortby?: PodcastsListSortbyEnum,
       topic?: Array<string>,
@@ -25277,6 +25447,7 @@ export const PodcastsApiFp = function (configuration?: Configuration) {
         professional,
         readable_id,
         resource_category,
+        resource_id,
         resource_type,
         sortby,
         topic,
@@ -25403,6 +25574,7 @@ export const PodcastsApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -25589,6 +25761,13 @@ export interface PodcastsApiPodcastsListRequest {
   readonly resource_category?: Array<PodcastsListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof PodcastsApiPodcastsList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof PodcastsApiPodcastsList
@@ -25703,6 +25882,7 @@ export class PodcastsApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -26081,6 +26261,7 @@ export const ProgramsApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<ProgramsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<ProgramsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {ProgramsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -26102,6 +26283,7 @@ export const ProgramsApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<ProgramsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<ProgramsListResourceTypeEnum>,
       sortby?: ProgramsListSortbyEnum,
       topic?: Array<string>,
@@ -26177,6 +26359,10 @@ export const ProgramsApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -26278,6 +26464,7 @@ export const ProgramsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<ProgramsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<ProgramsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {ProgramsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -26299,6 +26486,7 @@ export const ProgramsApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<ProgramsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<ProgramsListResourceTypeEnum>,
       sortby?: ProgramsListSortbyEnum,
       topic?: Array<string>,
@@ -26324,6 +26512,7 @@ export const ProgramsApiFp = function (configuration?: Configuration) {
         professional,
         readable_id,
         resource_category,
+        resource_id,
         resource_type,
         sortby,
         topic,
@@ -26410,6 +26599,7 @@ export const ProgramsApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -26540,6 +26730,13 @@ export interface ProgramsApiProgramsListRequest {
   readonly resource_category?: Array<ProgramsListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof ProgramsApiProgramsList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof ProgramsApiProgramsList
@@ -26610,6 +26807,7 @@ export class ProgramsApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -29191,6 +29389,7 @@ export const VideoPlaylistsApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<VideoPlaylistsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<VideoPlaylistsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {VideoPlaylistsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -29212,6 +29411,7 @@ export const VideoPlaylistsApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<VideoPlaylistsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<VideoPlaylistsListResourceTypeEnum>,
       sortby?: VideoPlaylistsListSortbyEnum,
       topic?: Array<string>,
@@ -29287,6 +29487,10 @@ export const VideoPlaylistsApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -29468,6 +29672,7 @@ export const VideoPlaylistsApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<VideoPlaylistsListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<VideoPlaylistsListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {VideoPlaylistsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -29489,6 +29694,7 @@ export const VideoPlaylistsApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<VideoPlaylistsListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<VideoPlaylistsListResourceTypeEnum>,
       sortby?: VideoPlaylistsListSortbyEnum,
       topic?: Array<string>,
@@ -29515,6 +29721,7 @@ export const VideoPlaylistsApiFp = function (configuration?: Configuration) {
           professional,
           readable_id,
           resource_category,
+          resource_id,
           resource_type,
           sortby,
           topic,
@@ -29642,6 +29849,7 @@ export const VideoPlaylistsApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -29828,6 +30036,13 @@ export interface VideoPlaylistsApiVideoPlaylistsListRequest {
   readonly resource_category?: Array<VideoPlaylistsListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof VideoPlaylistsApiVideoPlaylistsList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof VideoPlaylistsApiVideoPlaylistsList
@@ -29942,6 +30157,7 @@ export class VideoPlaylistsApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,
@@ -30161,6 +30377,7 @@ export const VideosApiAxiosParamCreator = function (
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<VideosListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<VideosListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {VideosListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -30182,6 +30399,7 @@ export const VideosApiAxiosParamCreator = function (
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<VideosListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<VideosListResourceTypeEnum>,
       sortby?: VideosListSortbyEnum,
       topic?: Array<string>,
@@ -30257,6 +30475,10 @@ export const VideosApiAxiosParamCreator = function (
 
       if (resource_category) {
         localVarQueryParameter["resource_category"] = resource_category
+      }
+
+      if (resource_id) {
+        localVarQueryParameter["resource_id"] = resource_id
       }
 
       if (resource_type) {
@@ -30358,6 +30580,7 @@ export const VideosApiFp = function (configuration?: Configuration) {
      * @param {boolean} [professional]
      * @param {Array<string>} [readable_id] A unique text identifier for the resources
      * @param {Array<VideosListResourceCategoryEnum>} [resource_category] The resource category of the learning resources  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<VideosListResourceTypeEnum>} [resource_type] The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
      * @param {VideosListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {Array<string>} [topic] Topics covered by the resources. Load the \&#39;/api/v1/topics\&#39; endpoint for a list of topics
@@ -30379,6 +30602,7 @@ export const VideosApiFp = function (configuration?: Configuration) {
       professional?: boolean,
       readable_id?: Array<string>,
       resource_category?: Array<VideosListResourceCategoryEnum>,
+      resource_id?: Array<number>,
       resource_type?: Array<VideosListResourceTypeEnum>,
       sortby?: VideosListSortbyEnum,
       topic?: Array<string>,
@@ -30404,6 +30628,7 @@ export const VideosApiFp = function (configuration?: Configuration) {
         professional,
         readable_id,
         resource_category,
+        resource_id,
         resource_type,
         sortby,
         topic,
@@ -30489,6 +30714,7 @@ export const VideosApiFactory = function (
           requestParameters.professional,
           requestParameters.readable_id,
           requestParameters.resource_category,
+          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.sortby,
           requestParameters.topic,
@@ -30619,6 +30845,13 @@ export interface VideosApiVideosListRequest {
   readonly resource_category?: Array<VideosListResourceCategoryEnum>
 
   /**
+   * Comma-separated list of learning resource IDs
+   * @type {Array<number>}
+   * @memberof VideosApiVideosList
+   */
+  readonly resource_id?: Array<number>
+
+  /**
    * The type of learning resource  * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_path&#x60; - Learning Path * &#x60;podcast&#x60; - Podcast * &#x60;podcast_episode&#x60; - Podcast Episode * &#x60;video&#x60; - Video * &#x60;video_playlist&#x60; - Video Playlist * &#x60;article&#x60; - Article
    * @type {Array<'article' | 'course' | 'learning_path' | 'podcast' | 'podcast_episode' | 'program' | 'video' | 'video_playlist'>}
    * @memberof VideosApiVideosList
@@ -30689,6 +30922,7 @@ export class VideosApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.readable_id,
         requestParameters.resource_category,
+        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.sortby,
         requestParameters.topic,

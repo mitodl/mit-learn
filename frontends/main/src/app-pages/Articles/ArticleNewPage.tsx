@@ -4,7 +4,8 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { ArticleEditor, styled } from "ol-components"
+import { styled } from "ol-components"
+import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({

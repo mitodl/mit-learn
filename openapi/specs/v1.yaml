@@ -885,6 +885,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -1523,6 +1532,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -1937,6 +1955,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -2348,6 +2375,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -2769,6 +2805,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -3165,6 +3210,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -3884,6 +3938,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -6374,6 +6437,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -7128,6 +7200,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -7539,6 +7620,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -8040,6 +8130,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query
@@ -8889,6 +8988,15 @@ paths:
         explode: true
         style: form
       - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
+        explode: true
+        style: form
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -9366,6 +9474,15 @@ paths:
           * `course` - Course
           * `program` - Program
           * `learning_material` - Learning Material
+        explode: true
+        style: form
+      - in: query
+        name: resource_id
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Comma-separated list of learning resource IDs
         explode: true
         style: form
       - in: query

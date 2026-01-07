@@ -8,8 +8,7 @@ import {
   ReactNodeViewContentProvider,
 } from "@tiptap/react"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import { BannerBackground } from "../../../../Banner/Banner"
-import Container from "@mui/material/Container"
+import { Container, BannerBackground } from "ol-components"
 import styled from "@emotion/styled"
 import type { ExtendedNodeConfig } from "../types"
 

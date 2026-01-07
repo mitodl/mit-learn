@@ -19,10 +19,7 @@ import type {
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import SharePopover from "./SharePopover"
-import {
-  DigitalCredentialDialog,
-  type VerifiableCredential,
-} from "./DigitalCredentialDialog"
+import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -68,7 +65,10 @@ const Buttons = styled.div(({ theme }) => ({
   width: "fit-content",
   margin: "0 auto 50px auto",
   [theme.breakpoints.down("md")]: {
-    margin: "0 auto 32px auto",
+    flexDirection: "column",
+    width: "100%",
+    maxWidth: "460px",
+    marginBottom: "32px",
   },
 }))
 
@@ -771,11 +771,13 @@ const CertificatePage: React.FC<{
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}
       />
-      <DigitalCredentialDialog
-        verifiableCredential={verifiableCredential as VerifiableCredential}
-        open={digitalCredentialDialogOpen}
-        onClose={() => setDigitalCredentialDialogOpen(false)}
-      />
+      {verifiableCredential ? (
+        <DigitalCredentialDialog
+          verifiableCredential={verifiableCredential}
+          open={digitalCredentialDialogOpen}
+          onClose={() => setDigitalCredentialDialogOpen(false)}
+        />
+      ) : null}
       <Title>
         <Typography variant="h3">
           <strong>{title}</strong> {displayType}
@@ -789,6 +791,15 @@ const CertificatePage: React.FC<{
         >
           Download PDF
         </Button>
+        {verifiableCredential ? (
+          <Button
+            variant="bordered"
+            startIcon={<RiDownloadLine />}
+            onClick={() => setDigitalCredentialDialogOpen(true)}
+          >
+            Download Digital Credential
+          </Button>
+        ) : null}
         <Button
           variant="bordered"
           startIcon={<RiDownloadLine />}

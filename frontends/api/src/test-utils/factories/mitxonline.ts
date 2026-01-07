@@ -7,6 +7,7 @@ import { PartialFactory } from "ol-test-utilities"
 
 /**
  * VerifiableCredential type matching the structure defined in DigitalCredentialDialog.
+ * Currently verifiable_credential_json (in V2CourseRunCertificate and V2ProgramCertificate) is typed as `any` in the API.
  * This interface defines the structure of a VerifiableCredential (Open Badges v3.0).
  */
 export interface VerifiableCredential {
