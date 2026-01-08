@@ -26,6 +26,7 @@
   --tiptap-image-upload-icon-color: var(--black);
 }
 
+/* stylelint-disable selector-class-pattern, no-descending-specificity */
 .tiptap.ProseMirror {
   img {
     max-width: 100%;
@@ -57,7 +58,7 @@
     margin: 0;
   }
 }
-
+/* stylelint-enable selector-class-pattern, no-descending-specificity */
 .tiptap-image-upload {
   margin: 2rem 0;
 
