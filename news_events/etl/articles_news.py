@@ -33,6 +33,7 @@ def transform_single_article(article_data: dict) -> dict:
     items = transform_items([article_data])
     return items[0] if items else None
 
+
 def sync_single_article_to_news(article: Article):
     """
     Sync a single published article to the news feed (create or update FeedItem).
@@ -46,6 +47,7 @@ def sync_single_article_to_news(article: Article):
         return
     # Find or create the FeedSource for MIT Learn Articles
     from news_events.models import FeedSource
+
     source, _ = FeedSource.objects.get_or_create(
         title="MIT Learn Articles",
         defaults={
@@ -156,6 +158,7 @@ def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901
     """
     if not content_json:
         return None
+
     def traverse_for_image(node):  # noqa: C901, PLR0911, PLR0912
         """Recursively traverse JSON structure to find first image"""
         if not node:
@@ -253,6 +256,7 @@ def extract_text_from_content(content_json: dict) -> str:  # noqa: C901
     """
     if not content_json:
         return ""
+
     def extract_text_from_node(node):  # noqa: C901
         """Recursively extract text from ProseMirror nodes"""
         if not node:
