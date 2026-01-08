@@ -36,6 +36,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
+import { matchOrganizationBySlug } from "@/common/utils"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -531,11 +532,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     </>
   )
 }
-
-const matchOrganizationBySlug =
-  (orgSlug: string) => (organization: OrganizationPage) => {
-    return organization.slug.replace("org-", "") === orgSlug
-  }
 
 type ContractContentProps = {
   orgSlug: string
