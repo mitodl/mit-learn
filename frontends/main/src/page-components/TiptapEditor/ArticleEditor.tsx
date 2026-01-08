@@ -61,9 +61,16 @@ import {
 } from "api/hooks/articles"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
+import dynamic from "next/dynamic"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import { extractLearningResourceIds } from "./extensions/utils"
 import { LearningResourceProvider } from "./extensions/node/LearningResource/LearningResourceDataProvider"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+  { ssr: false },
+)
 
 const TOOLBAR_HEIGHT = 43
 
@@ -458,6 +465,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 </Typography>
               </StyledAlert>
             ) : null}
+            <LearningResourceDrawer />
             {readOnly ? (
               <TipTapViewer content={content} extensions={extensions} />
             ) : (

@@ -266,13 +266,12 @@ interface TiptapEditorProps {
   className?: string
 }
 
-const TiptapEditor = ({ editor, readOnly, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
   return (
-    <Container readOnly={!!readOnly} data-testid="editor">
+    <Container readOnly={false} data-testid="editor">
       <EditorContent
         editor={editor}
         role="presentation"
-        readOnly={!!readOnly}
         className={className}
       />
     </Container>
