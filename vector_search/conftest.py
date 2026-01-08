@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from qdrant_client.http.models.models import CountResult
 
 from vector_search.encoders.base import BaseEncoder
@@ -18,7 +17,7 @@ class DummyEmbedEncoder(BaseEncoder):
         return np.random.random((10, 1))
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return np.random.random((10, len(texts)))
+        return [self.embed(text) for text in texts]
 
 
 @pytest.fixture(autouse=True)
@@ -41,29 +40,6 @@ def _use_test_qdrant_settings(settings, mocker):
         [],
         None,
     ]
-    get_text_splitter_patch = mocker.patch("vector_search.utils._chunk_documents")
-    get_text_splitter_patch.return_value = (
-        RecursiveCharacterTextSplitter().create_documents(
-            texts=["test dociment"],
-            metadatas=[
-                {
-                    "run_title": "",
-                    "platform": "",
-                    "offered_by": "",
-                    "run_readable_id": "",
-                    "resource_readable_id": "",
-                    "content_type": "",
-                    "file_extension": "",
-                    "content_feature_type": "",
-                    "course_number": "",
-                    "file_type": "",
-                    "description": "",
-                    "key": "",
-                    "url": "",
-                }
-            ],
-        )
-    )
     mock_qdrant.count.return_value = CountResult(count=10)
     mocker.patch(
         "vector_search.utils.qdrant_client",

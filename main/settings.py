@@ -821,6 +821,15 @@ QDRANT_CHUNK_SIZE = get_int(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
+
+QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
+    name="QDRANT_POINT_UPLOAD_BATCH_SIZE", default=1000
+)
+
+QDRANT_BATCH_SIZE_BYTES = get_int(
+    name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
+)  # default 10 MB limit for batch processing
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
