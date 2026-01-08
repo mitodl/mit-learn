@@ -35,10 +35,11 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper, {
     input {
       width: 100%;
       border: none;
-      text-align: center;
+      text-align: left;
       outline: none;
-      padding: 4px;
+      padding: 16px 0;
       font-size: 14px;
+      border-bottom: 1px solid #dde1e6;
     }
 
     p {

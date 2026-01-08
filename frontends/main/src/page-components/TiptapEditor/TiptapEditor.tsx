@@ -8,6 +8,7 @@ import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
 import type { Editor } from "@tiptap/core"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
+import { MediaEmbedButton } from "./extensions/ui/MediaEmbed/MediaEmbedButton"
 import { pxToRem } from "ol-components"
 
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
@@ -46,6 +47,8 @@ import {
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
+
+import "./TiptapEditor.styles.scss"
 
 const StyledEditorContent = styled(EditorContent, {
   shouldForwardProp: (prop) => prop !== "fullWidth",
@@ -185,6 +188,9 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
       <StyledDropdownMenu side="bottom" align="start">
         <DropdownMenuItem asChild>
           <ImageUploadButton text="Image" />
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <MediaEmbedButton editor={editor} text="Video" />
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>

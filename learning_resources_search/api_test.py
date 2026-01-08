@@ -2731,6 +2731,40 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                 "query_text": "math",
                                 "model_id": "vector_model_id",
                                 "k": 5,
+                                "filter": {
+                                    "bool": {
+                                        "should": [
+                                            {
+                                                "bool": {
+                                                    "should": [
+                                                        {
+                                                            "term": {
+                                                                "resource_type": {
+                                                                    "value": "course",
+                                                                    "case_insensitive": True,
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "bool": {
+                                                    "should": [
+                                                        {
+                                                            "term": {
+                                                                "free": {
+                                                                    "value": True,
+                                                                    "case_insensitive": True,
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                        ]
+                                    }
+                                },
                             }
                         }
                     },

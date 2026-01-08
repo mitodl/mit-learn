@@ -24,7 +24,6 @@ import {
   schoolQueries,
   platformsQueries,
   learningResourceKeys,
-  clearListMemberships,
 } from "./queries"
 import { userlistKeys } from "../userLists/queries"
 import { learningPathKeys } from "../learningPaths/queries"
@@ -66,15 +65,11 @@ const useLearningResourcesBulkList = (
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: learningResourceKeys.bulk(ids),
+    ...learningResourceQueries.list({ resource_id: ids }),
     enabled: options?.enabled && ids.length > 0,
 
-    queryFn: async () => {
-      const res = (await learningResourcesApi.learningResourcesBulkList({
-        ids: ids.join(","),
-      })) as { data: LearningResource[] }
-
-      const resources = res.data.map(clearListMemberships)
+    select: (data) => {
+      const resources = data.results
 
       resources.forEach((resource) => {
         queryClient.setQueryData(
