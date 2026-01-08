@@ -1,3 +1,5 @@
+import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+
 const isInEnum = <T extends string>(
   value: string,
   enumObject: Record<string, T>,
@@ -5,4 +7,9 @@ const isInEnum = <T extends string>(
   return Object.values(enumObject).includes(value as T)
 }
 
-export { isInEnum }
+const matchOrganizationBySlug =
+  (orgSlug: string) => (organization: OrganizationPage) => {
+    return organization.slug.replace("org-", "") === orgSlug
+  }
+
+export { isInEnum, matchOrganizationBySlug }
