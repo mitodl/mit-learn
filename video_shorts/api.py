@@ -38,8 +38,8 @@ def walk_video_shorts_from_s3(
     for short in json_objects[:limit]:
         try:
             s3_object = bucket.Object(short.key).get()
-            metadata = json.loads(s3_object["Body"].read().decode("utf-8"))
-            video_short = upsert_video_short(metadata)
+            webhook_data = json.loads(s3_object["Body"].read().decode("utf-8"))
+            video_short = upsert_video_short(webhook_data["video_metadata"])
             yield video_short
         except Exception:
             log.exception("Error processing %s", short.key)
