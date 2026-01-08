@@ -53,7 +53,7 @@ const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
   <Stack
     width="100%"
     direction="row"
-    gap="16px"
+    gap="12px"
     justifyContent="space-between"
     flexWrap="wrap"
     {...props}
@@ -260,6 +260,7 @@ const CertificateBoxRoot = styled.div(({ theme }) => ({
   borderRadius: "8px",
   padding: "16px",
   display: "flex",
+  flexDirection: "column",
   gap: "8px",
 }))
 
@@ -271,7 +272,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
     <CertificateBoxRoot>
       {certificatePrice ? (
         <>
-          <InfoRowInner>
+          <InfoRowInner flexWrap={"nowrap"}>
             <InfoLabelValue
               label="Certificate Track"
               value={certificatePrice}
@@ -498,7 +499,7 @@ const PROGRAM_CERT_INFO_LINK = (
     Learn More
   </UnderlinedLink>
 )
-const NoWrap = styled.span({ textWrap: "nowrap" })
+
 const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
   program,
 }) => {
@@ -509,7 +510,17 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
       <InfoRowInner flexWrap="nowrap">
         <InfoLabelValue
           label="Certificate Track"
-          value={<NoWrap>{price}</NoWrap>}
+          value={
+            <>
+              {/* Heuristic: If the price contains more than one word, insert a line
+            to avoid wrapping "$100-$200 per course" after $100, orphaning one word.
+            CSS alone either creates orphans or will overflow the container for long
+            text if text-wrap:nowrap is used.
+            */}
+              {price.trim().split(" ").length > 1 ? <br /> : null}
+              {price}
+            </>
+          }
         />
         {PROGRAM_CERT_INFO_LINK}
       </InfoRowInner>
