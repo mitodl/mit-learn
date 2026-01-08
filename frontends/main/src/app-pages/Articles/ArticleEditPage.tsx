@@ -6,7 +6,8 @@ import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { styled, LoadingSpinner, ArticleEditor } from "ol-components"
+import { styled, LoadingSpinner } from "ol-components"
+import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({

@@ -77,7 +77,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   )
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
-  const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
@@ -102,7 +102,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      offeredBy="MITx"
+      tags={["MITx"]}
       currentBreadcrumbLabel="Course"
       title={page.title}
       shortDescription={page.course_details.page.description}

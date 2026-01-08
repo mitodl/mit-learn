@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { PlainList, Skeleton, Stack, Typography } from "ol-components"
+import { PlainList, Stack, Typography } from "ol-components"
 import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
@@ -261,7 +261,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
   const programResource = programResources.data?.results?.[0]
-  const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
@@ -275,7 +275,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     if (!isLoading) {
       return notFound()
     } else {
-      return <Skeleton width="100%" height="100px" />
+      return null
     }
   }
 
@@ -284,9 +284,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const imageSrc = page.feature_image
     ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
+
+  const tags = ["MITx", program.program_type].filter((t): t is string => !!t)
+
   return (
     <ProductPageTemplate
-      offeredBy="MITx"
+      tags={tags}
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={

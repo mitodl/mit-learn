@@ -28,7 +28,10 @@ const canUpgrade = (run: CourseRunV2): boolean => {
   )
 }
 
-const getCertificatePrice = (run: CourseRunV2) => {
+/**
+ * Returns certificate price as formatted string, or null if upgrade not available
+ */
+const getCourseCertificatePrice = (run: CourseRunV2) => {
   if (!canUpgrade(run)) return null
   const product = run.products[0]
   const amount = product.price
@@ -38,4 +41,4 @@ const getCertificatePrice = (run: CourseRunV2) => {
   })
 }
 
-export { getCertificatePrice, canUpgrade, upgradeRunUrl }
+export { getCourseCertificatePrice, canUpgrade, upgradeRunUrl }

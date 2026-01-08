@@ -18,7 +18,7 @@ import { useIsUserListMember } from "api/hooks/userLists"
 import { useLearningResourceDetailSetCache } from "api/hooks/learningResources"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 
-const useResourceCard = (resource?: LearningResource | null) => {
+export const useResourceCard = (resource?: LearningResource | null) => {
   const getDrawerHref = useResourceDrawerHref()
   const { data: user } = useUserMe()
   const { data: inUserList } = useIsUserListMember(resource?.id)

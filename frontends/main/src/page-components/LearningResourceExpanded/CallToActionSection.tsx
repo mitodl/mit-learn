@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import {
   Skeleton,
   theme,
@@ -34,7 +34,14 @@ import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
+  coursePageView,
+  programPageView,
 } from "@/common/urls"
+import { FeatureFlags } from "@/common/feature_flags"
+import invariant from "tiny-invariant"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 
 const showChatClass = "show-chat"
 const showChatSelector = `.${showChatClass} &`
@@ -270,10 +277,14 @@ const getCallToActionText = (resource: LearningResource): string => {
   }
 }
 
-const buildCtaUrl = (url?: string | null, resourceTitle?: string) => {
+const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
   if (!url) return "#"
   try {
-    const parsedUrl = new URL(url)
+    const parsedUrl = new URL(url, NEXT_PUBLIC_ORIGIN)
+    if (parsedUrl.href.startsWith(NEXT_PUBLIC_ORIGIN)) {
+      // Do not add UTM params for internal URLs
+      return url
+    }
     parsedUrl.searchParams.set("utm_source", "mit-learn")
     parsedUrl.searchParams.set("utm_medium", "referral")
     if (resourceTitle) {
@@ -285,6 +296,23 @@ const buildCtaUrl = (url?: string | null, resourceTitle?: string) => {
     const utm = `utm_source=mit-learn&utm_medium=referral${resourceTitle ? `&utm_content=${kebabCase(resourceTitle)}` : ""}`
     return `${url}${separator}${utm}`
   }
+}
+
+const getResourceUrl = (
+  resource: LearningResource,
+  { mitxonlineProductPages }: { mitxonlineProductPages?: boolean },
+) => {
+  if (
+    mitxonlineProductPages &&
+    resource.platform?.code === PlatformEnum.Mitxonline
+  ) {
+    if (resource.resource_type === ResourceTypeEnum.Course) {
+      return coursePageView(resource.readable_id)
+    } else if (resource.resource_type === ResourceTypeEnum.Program) {
+      return programPageView(resource.readable_id)
+    }
+  }
+  return resource.url
 }
 
 const CallToActionSection = ({
@@ -311,6 +339,10 @@ const CallToActionSection = ({
   const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
+  const mitxonlineProductPages = useFeatureFlagEnabled(
+    FeatureFlags.MitxOnlineProductPages,
+  )
+
   if (hide) {
     return null
   }
@@ -323,8 +355,8 @@ const CallToActionSection = ({
       </PlatformContainer>
     )
   }
-  const { platform } = resource!
-  const offeredBy = resource?.offered_by
+  const { platform } = resource
+  const offeredBy = resource.offered_by
   const platformCode =
     (offeredBy?.code as PlatformEnum) === PlatformEnum.Xpro
       ? (offeredBy?.code as PlatformEnum)
@@ -335,6 +367,10 @@ const CallToActionSection = ({
   const bookmarkLabel = "Bookmark"
   const shareLabel = "Share"
   const socialIconSize = 18
+  const url = appendUtmParams(
+    getResourceUrl(resource, { mitxonlineProductPages }),
+    resource.title,
+  )
 
   return (
     <CallToAction data-testid="drawer-cta">
@@ -344,7 +380,7 @@ const CallToActionSection = ({
           target="_blank"
           size="medium"
           endIcon={<RiExternalLinkLine />}
-          href={buildCtaUrl(resource.url, resource.title)}
+          href={url}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
               posthog.capture(PostHogEvents.CallToActionClicked, { resource })

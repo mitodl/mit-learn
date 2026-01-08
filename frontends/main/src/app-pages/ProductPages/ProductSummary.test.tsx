@@ -450,7 +450,7 @@ describe("Program Pacing Row", () => {
     )
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
-    expect(paceRow).toHaveTextContent(`Program Format: ${expected}`)
+    expect(paceRow).toHaveTextContent(`Course Format: ${expected}`)
   })
 
   test.each([
@@ -495,21 +495,18 @@ describe("Price & Certificate Row", () => {
 
     expect(priceRow).toHaveTextContent("Free to Learn")
   })
-})
 
-describe("Program Certificate Track Row", () => {
   test("Renders certificate information", () => {
     const program = factories.programs.program()
+    invariant(program.page.price)
     renderWithProviders(
       <ProgramSummary program={program} programResource={null} />,
     )
 
     const summary = screen.getByRole("region", { name: "Program summary" })
-    const certRow = within(summary).getByTestId(TestIds.CertificateTrackRow)
+    const certRow = within(summary).getByTestId(TestIds.PriceRow)
 
     expect(certRow).toHaveTextContent("Certificate Track")
-    expect(certRow).toHaveTextContent(
-      `${program.min_price}\u2013$${program.max_price}`,
-    )
+    expect(certRow).toHaveTextContent(program.page.price)
   })
 })
