@@ -11,7 +11,7 @@ const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
 const WIDE_LAYOUT_MIN_IMG_WIDTH = 900
 
-const Container = styled.div(({ theme }) => ({
+const Container = styled.figure(({ theme }) => ({
   position: "relative",
   margin: "2rem auto",
   textAlign: "center",
@@ -197,7 +197,7 @@ const ImageWrapper = styled("div")({
   },
 })
 
-const Caption = styled.p(({ theme }) => ({
+const Caption = styled.figcaption(({ theme }) => ({
   "&&&&&": {
     ...theme.typography.body2,
     color: theme.custom.colors.silverGrayDark,

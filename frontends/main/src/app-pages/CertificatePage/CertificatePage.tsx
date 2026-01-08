@@ -19,6 +19,7 @@ import type {
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import SharePopover from "./SharePopover"
+import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -64,7 +65,10 @@ const Buttons = styled.div(({ theme }) => ({
   width: "fit-content",
   margin: "0 auto 50px auto",
   [theme.breakpoints.down("md")]: {
-    margin: "0 auto 32px auto",
+    flexDirection: "column",
+    width: "100%",
+    maxWidth: "460px",
+    marginBottom: "32px",
   },
 }))
 
@@ -662,6 +666,9 @@ const CertificatePage: React.FC<{
   uuid: string
   pageUrl: string
 }> = ({ certificateType, uuid, pageUrl }) => {
+  const [digitalCredentialDialogOpen, setDigitalCredentialDialogOpen] =
+    useState(false)
+
   const {
     data: courseCertificateData,
     isLoading: isCourseLoading,
@@ -750,6 +757,11 @@ const CertificatePage: React.FC<{
       ? "Module Certificate"
       : `${programCertificateData?.program.program_type} Certificate`
 
+  const verifiableCredential =
+    certificateType === CertificateType.Course
+      ? courseCertificateData?.verifiable_credential_json
+      : programCertificateData?.verifiable_credential_json
+
   return (
     <Page>
       <SharePopover
@@ -759,6 +771,13 @@ const CertificatePage: React.FC<{
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}
       />
+      {verifiableCredential ? (
+        <DigitalCredentialDialog
+          verifiableCredential={verifiableCredential}
+          open={digitalCredentialDialogOpen}
+          onClose={() => setDigitalCredentialDialogOpen(false)}
+        />
+      ) : null}
       <Title>
         <Typography variant="h3">
           <strong>{title}</strong> {displayType}
@@ -772,6 +791,15 @@ const CertificatePage: React.FC<{
         >
           Download PDF
         </Button>
+        {verifiableCredential ? (
+          <Button
+            variant="bordered"
+            startIcon={<RiDownloadLine />}
+            onClick={() => setDigitalCredentialDialogOpen(true)}
+          >
+            Download Digital Credential
+          </Button>
+        ) : null}
         <Button
           variant="bordered"
           startIcon={<RiShareLine />}
