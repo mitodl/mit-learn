@@ -15,14 +15,15 @@ def extract_single_article(article: Article) -> dict:
     Returns a dict in the same format as extract().
     """
     return {
-        'id': article.id,
-        'title': article.title,
-        'slug': article.slug,
-        'content': article.content,
-        'user': article.user,
-        'created_on': article.created_on,
-        'updated_on': article.updated_on,
+        "id": article.id,
+        "title": article.title,
+        "slug": article.slug,
+        "content": article.content,
+        "user": article.user,
+        "created_on": article.created_on,
+        "updated_on": article.updated_on,
     }
+
 
 def transform_single_article(article_data: dict) -> dict:
     """
@@ -64,17 +65,17 @@ def extract() -> list[dict]:
         list[dict]: List of article data dictionaries.
     """
     # Get only published articles
-    articles = Article.objects.filter(is_published=True).select_related('user')
-    
+    articles = Article.objects.filter(is_published=True).select_related("user")
+
     return [
         {
-            'id': article.id,
-            'title': article.title,
-            'slug': article.slug,
-            'content': article.content,
-            'user': article.user,
-            'created_on': article.created_on,
-            'updated_on': article.updated_on,
+            "id": article.id,
+            "title": article.title,
+            "slug": article.slug,
+            "content": article.content,
+            "user": article.user,
+            "created_on": article.created_on,
+            "updated_on": article.updated_on,
         }
         for article in articles
     ]
@@ -91,41 +92,41 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         list[dict]: List of transformed feed items
     """
     entries = []
-    
+
     for article in articles_data:
         # Extract content from JSON field
         content_json = article.get("content", {})
-        
+
         # Convert JSON content to plain text for summary
         # This is a simple implementation - adjust based on your content structure
         content_text = extract_text_from_content(content_json)
         summary_text = content_text[:500] if content_text else ""
-        
+
         # Extract first image from content
         image_data = extract_image_from_content(content_json)
-        
+
         # Debug logging
         log.info(
             "Article %s: Extracted image: %s",
             article.get("id"),
             image_data,
         )
-        
+
         # Get author information
-        user = article.get('user')
+        user = article.get("user")
         author_name = ""
         if user:
             author_name = f"{user.first_name} {user.last_name}".strip()
             if not author_name:
                 author_name = user.username
-        
+
         # Build the article URL using slug
-        slug = article.get('slug')
+        slug = article.get("slug")
         article_url = f"/articles/{slug}" if slug else f"/articles/{article.get('id')}"
-        
+
         entry = {
             "guid": f"article-{article.get('id')}",
-            "title": article.get('title', ''),
+            "title": article.get("title", ""),
             "url": article_url,
             "summary": summary_text,
             "content": content_text,
@@ -133,167 +134,173 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
             "detail": {
                 "authors": [author_name] if author_name else [],
                 "topics": [],  # Add topics if you have them in your Article model
-                "publish_date": article.get('created_on').isoformat() if article.get('created_on') else None,
+                "publish_date": article.get("created_on").isoformat()
+                if article.get("created_on")
+                else None,
             },
         }
         entries.append(entry)
-    
+
     return entries
 
 
 def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901, PLR0912
     """
     Extract the first image from JSON content structure.
-    
+
     Args:
         content_json (dict): The JSON content from Article
-    
+
     Returns:
         dict | None: Image data dict with url, alt, description or None
     """
     if not content_json:
         return None
-    
     def traverse_for_image(node):  # noqa: C901, PLR0911, PLR0912
         """Recursively traverse JSON structure to find first image"""
         if not node:
             return None
-        
+
         # Handle dict nodes
         if isinstance(node, dict):
             # Check if this node is an image node (common patterns)
-            
+
             # ProseMirror imageWithCaption (your format)
-            if node.get('type') == 'imageWithCaption':
-                attrs = node.get('attrs', {})
-                if attrs.get('src'):
+            if node.get("type") == "imageWithCaption":
+                attrs = node.get("attrs", {})
+                if attrs.get("src"):
                     return {
-                        'url': attrs['src'],
-                        'alt': attrs.get('alt', attrs.get('title', '')),
-                        'description': attrs.get('caption', attrs.get('alt', attrs.get('title', ''))),
+                        "url": attrs["src"],
+                        "alt": attrs.get("alt", attrs.get("title", "")),
+                        "description": attrs.get(
+                            "caption", attrs.get("alt", attrs.get("title", ""))
+                        ),
                     }
-            
+
             # ProseMirror image node
-            if node.get('type') == 'image':
-                attrs = node.get('attrs', {})
-                if attrs.get('src'):
+            if node.get("type") == "image":
+                attrs = node.get("attrs", {})
+                if attrs.get("src"):
                     return {
-                        'url': attrs['src'],
-                        'alt': attrs.get('alt', attrs.get('title', '')),
-                        'description': attrs.get('alt', attrs.get('title', '')),
+                        "url": attrs["src"],
+                        "alt": attrs.get("alt", attrs.get("title", "")),
+                        "description": attrs.get("alt", attrs.get("title", "")),
                     }
                 # EditorJS image block
-                data = node.get('data', {})
-                if data.get('file', {}).get('url'):
+                data = node.get("data", {})
+                if data.get("file", {}).get("url"):
                     return {
-                        'url': data['file']['url'],
-                        'alt': data.get('caption', ''),
-                        'description': data.get('caption', ''),
+                        "url": data["file"]["url"],
+                        "alt": data.get("caption", ""),
+                        "description": data.get("caption", ""),
                     }
-            
+
             # Direct image node with url
-            if 'image' in node or 'img' in node:
-                img_data = node.get('image') or node.get('img')
-                if isinstance(img_data, dict) and img_data.get('url'):
+            if "image" in node or "img" in node:
+                img_data = node.get("image") or node.get("img")
+                if isinstance(img_data, dict) and img_data.get("url"):
                     return {
-                        'url': img_data['url'],
-                        'alt': img_data.get('alt', ''),
-                        'description': img_data.get('description', img_data.get('alt', '')),
+                        "url": img_data["url"],
+                        "alt": img_data.get("alt", ""),
+                        "description": img_data.get(
+                            "description", img_data.get("alt", "")
+                        ),
                     }
                 elif isinstance(img_data, str):
                     return {
-                        'url': img_data,
-                        'alt': '',
-                        'description': '',
+                        "url": img_data,
+                        "alt": "",
+                        "description": "",
                     }
-            
+
             # Check for url field that might be an image
-            if node.get('url') and any(ext in str(node.get('url', '')).lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']):
+            if node.get("url") and any(
+                ext in str(node.get("url", "")).lower()
+                for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"]
+            ):
                 return {
-                    'url': node['url'],
-                    'alt': node.get('alt', ''),
-                    'description': node.get('description', node.get('caption', '')),
+                    "url": node["url"],
+                    "alt": node.get("alt", ""),
+                    "description": node.get("description", node.get("caption", "")),
                 }
-            
+
             # Traverse nested dict values
             for value in node.values():
                 result = traverse_for_image(value)
                 if result:
                     return result
-        
         # Handle list nodes
         elif isinstance(node, list):
             for item in node:
                 result = traverse_for_image(item)
                 if result:
                     return result
-        
+
         return None
-    
+
     return traverse_for_image(content_json)
 
 
 def extract_text_from_content(content_json: dict) -> str:  # noqa: C901
     """
     Extract plain text from JSON content structure.
-    
+
     Args:
         content_json (dict): The JSON content from Article
-    
+
     Returns:
         str: Plain text extracted from content
     """
     if not content_json:
         return ""
-    
     def extract_text_from_node(node):  # noqa: C901
         """Recursively extract text from ProseMirror nodes"""
         if not node:
             return []
-        
+
         texts = []
-        
+
         # Handle dict nodes
         if isinstance(node, dict):
             # Direct text node
-            if node.get('type') == 'text':
-                text = node.get('text', '')
+            if node.get("type") == "text":
+                text = node.get("text", "")
                 if text:
                     texts.append(text)
-            
+
             # Node with content array (ProseMirror structure)
-            if 'content' in node:
-                content = node['content']
+            if "content" in node:
+                content = node["content"]
                 if isinstance(content, list):
                     for child in content:
                         texts.extend(extract_text_from_node(child))
                 else:
                     texts.extend(extract_text_from_node(content))
-            
+
             # Simple text field
-            elif 'text' in node:
-                texts.append(node['text'])
-        
+            elif "text" in node:
+                texts.append(node["text"])
+
         # Handle list nodes
         elif isinstance(node, list):
             for item in node:
                 texts.extend(extract_text_from_node(item))
-        
+
         return texts
-    
+
     # Extract text from ProseMirror structure
     text_parts = extract_text_from_node(content_json)
-    
+
     # Fallback: EditorJS structure
     if not text_parts:
-        blocks = content_json.get('blocks', [])
+        blocks = content_json.get("blocks", [])
         for block in blocks:
             if isinstance(block, dict):
-                text = block.get('text', '') or block.get('data', {}).get('text', '')
+                text = block.get("text", "") or block.get("data", {}).get("text", "")
                 if text:
                     text_parts.append(text)
-    
-    return ' '.join(text_parts)
+
+    return " ".join(text_parts)
 
 
 def transform(articles_data: list[dict]) -> list[dict]:
@@ -308,22 +315,21 @@ def transform(articles_data: list[dict]) -> list[dict]:
     """
     if not articles_data:
         return []
-    
+
     # Transform items first
     items = transform_items(articles_data)
-    
+
     # Extract the first article's image to use as feed source image
     source_image = None
     for item in items:
-        if item.get('image'):
-            source_image = item['image']
+        if item.get("image"):
+            source_image = item["image"]
             break
-    
+
     # Fallback: use a static logo if no articles have images
     if not source_image:
         # Example: {"url": "/static/images/mit-learn-logo.png", ...}
         source_image = None
-    
     return [
         {
             "title": "MIT Learn Articles",

@@ -20,7 +20,7 @@ def mock_articles(mocker):
     mock_article.content = {
         "blocks": [
             {"type": "paragraph", "text": "This is test content."},
-            {"type": "paragraph", "text": "More content here."}
+            {"type": "paragraph", "text": "More content here."},
         ]
     }
     mock_article.user = mock_user
@@ -33,7 +33,7 @@ def mock_articles(mocker):
 
     mocker.patch(
         "news_events.etl.articles_news.Article.objects.filter",
-        return_value=mock_queryset
+        return_value=mock_queryset,
     )
 
     return [mock_article]
@@ -92,17 +92,13 @@ def test_extract_text_from_content():
         "content": [
             {
                 "type": "paragraph",
-                "content": [
-                    {"type": "text", "text": "First paragraph."}
-                ]
+                "content": [{"type": "text", "text": "First paragraph."}],
             },
             {
                 "type": "paragraph",
-                "content": [
-                    {"type": "text", "text": "Second paragraph."}
-                ]
-            }
-        ]
+                "content": [{"type": "text", "text": "Second paragraph."}],
+            },
+        ],
     }
 
     result = articles_news.extract_text_from_content(content_json)
@@ -121,19 +117,12 @@ def test_extract_text_from_nested_prosemirror():
                 "content": [
                     {
                         "type": "heading",
-                        "content": [
-                            {"type": "text", "text": "Heading text"}
-                        ]
+                        "content": [{"type": "text", "text": "Heading text"}],
                     }
-                ]
+                ],
             },
-            {
-                "type": "paragraph",
-                "content": [
-                    {"type": "text", "text": "Body text"}
-                ]
-            }
-        ]
+            {"type": "paragraph", "content": [{"type": "text", "text": "Body text"}]},
+        ],
     }
 
     result = articles_news.extract_text_from_content(content_json)
@@ -164,10 +153,10 @@ def test_extract_image_from_content():
                     "src": "http://example.com/image.webp",
                     "alt": "download",
                     "title": "download",
-                    "caption": "Image caption"
-                }
-            }
-        ]
+                    "caption": "Image caption",
+                },
+            },
+        ],
     }
 
     result = articles_news.extract_image_from_content(content_json)
@@ -188,10 +177,10 @@ def test_extract_image_from_prosemirror_image():
                 "attrs": {
                     "src": "http://example.com/photo.jpg",
                     "alt": "Photo alt text",
-                    "title": "Photo title"
-                }
+                    "title": "Photo title",
+                },
             }
-        ]
+        ],
     }
 
     result = articles_news.extract_image_from_content(content_json)
@@ -211,9 +200,9 @@ def test_extract_image_editorjs_format():
                 "type": "image",
                 "data": {
                     "file": {"url": "https://example.com/image.jpg"},
-                    "caption": "Test image caption"
-                }
-            }
+                    "caption": "Test image caption",
+                },
+            },
         ]
     }
 
@@ -235,8 +224,8 @@ def test_extract_image_from_nested_structure():
                     "image": {
                         "url": "https://example.com/nested.png",
                         "alt": "Nested image",
-                        "description": "A nested image"
-                    }
+                        "description": "A nested image",
+                    },
                 }
             ]
         }
@@ -251,11 +240,7 @@ def test_extract_image_from_nested_structure():
 
 def test_extract_image_returns_none_when_no_image():
     """Test image extraction returns None when no image found"""
-    content_json = {
-        "blocks": [
-            {"type": "paragraph", "text": "Just text, no images"}
-        ]
-    }
+    content_json = {"blocks": [{"type": "paragraph", "text": "Just text, no images"}]}
 
     result = articles_news.extract_image_from_content(content_json)
     assert result is None
@@ -326,7 +311,12 @@ def test_transform_single_article():
         "id": 1,
         "title": "Test Article",
         "slug": "test-article",
-        "content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Test"}]}]},
+        "content": {
+            "type": "doc",
+            "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "Test"}]}
+            ],
+        },
         "user": MockUser(),
         "created_on": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     }
@@ -347,11 +337,9 @@ def test_sync_single_article_to_news(mocker):
     mock_source = mocker.Mock()
     mock_get_or_create = mocker.patch(
         "news_events.models.FeedSource.objects.get_or_create",
-        return_value=(mock_source, True)
+        return_value=(mock_source, True),
     )
-    mock_load_feed_item = mocker.patch(
-        "news_events.etl.loaders.load_feed_item"
-    )
+    mock_load_feed_item = mocker.patch("news_events.etl.loaders.load_feed_item")
 
     # Create a mock user
     class User:
@@ -364,7 +352,12 @@ def test_sync_single_article_to_news(mocker):
         id = 1
         title = "Test Article"
         slug = "test-article"
-        content = {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Test"}]}]}
+        content = {
+            "type": "doc",
+            "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "Test"}]}
+            ],
+        }
         is_published = True
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
@@ -385,9 +378,7 @@ def test_sync_single_article_to_news(mocker):
 
 def test_sync_single_article_unpublished(mocker):
     """Test that unpublished articles are not synced"""
-    mock_load_feed_item = mocker.patch(
-        "news_events.etl.loaders.load_feed_item"
-    )
+    mock_load_feed_item = mocker.patch("news_events.etl.loaders.load_feed_item")
 
     # Create an unpublished article
     class MockArticle:
@@ -398,4 +389,3 @@ def test_sync_single_article_unpublished(mocker):
 
     # Verify load_feed_item was NOT called
     mock_load_feed_item.assert_not_called()
-

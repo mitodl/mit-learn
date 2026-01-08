@@ -10,16 +10,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):  # noqa: ARG002
         self.stdout.write("Syncing articles to news feed...")
-        
+
         try:
             # Run the ETL pipeline
             pipelines.articles_news_etl()
-            
+
             self.stdout.write(
                 self.style.SUCCESS("Successfully synced articles to news feed!")
             )
         except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"Error syncing articles: {str(e)}")
-            )
+            self.stdout.write(self.style.ERROR(f"Error syncing articles: {e!s}"))
             raise
