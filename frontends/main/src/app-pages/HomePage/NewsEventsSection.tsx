@@ -126,6 +126,12 @@ const EventDate = styled.div`
   background: ${theme.custom.colors.lightGray1};
 `
 
+const HeadingContainer = styled.div`
+  justify-content: space-between;
+  display: flex;
+  width: 100%;
+`
+
 const EventDay = styled.p`
   color: ${theme.custom.colors.red};
   font-family: ${theme.typography.fontFamily};
@@ -183,7 +189,7 @@ const AboveLgOnly = styled.div(({ theme }) => ({
   },
 }))
 
-const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
+export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   item,
   mobile,
 }) => {
@@ -258,9 +264,14 @@ const NewsEventsSection: React.FC = () => {
       <BelowMdOnly>
         <MobileContent>
           <MobileContainer>
-            <Typography component="h3" variant="h4">
-              Stories
-            </Typography>
+            <HeadingContainer>
+              <Typography component="h3" variant="h4">
+                Stories
+              </Typography>
+              <Typography component="h3" variant="h4">
+                More Stories
+              </Typography>
+            </HeadingContainer>
             <StoriesSlider>
               {stories.map((item) => (
                 <Story
@@ -283,9 +294,14 @@ const NewsEventsSection: React.FC = () => {
         <Container>
           <Content>
             <StoriesContainer>
-              <Typography component="h3" variant="h4">
-                Stories
-              </Typography>
+              <HeadingContainer>
+                <Typography component="h3" variant="h4">
+                  Stories
+                </Typography>
+                <Typography component="h3" variant="h4">
+                  <Link href="/articles">More Stories</Link>
+                </Typography>
+              </HeadingContainer>
               <Grid2 container columnSpacing="24px" rowSpacing="28px">
                 {stories.map((item, index) => (
                   <Grid2
