@@ -152,10 +152,42 @@ const setupEnrollments = (includeExpired: boolean) => {
 const setupProgramsAndCourses = () => {
   const user = u.factories.user.user()
   const orgX = factories.organizations.organization({ name: "Org X" })
+
   const contract = makeContract({
     organization: orgX.id,
     name: "Org X Contract",
+    programs: [], // Will be set after creating programs
   })
+
+  const coursesA = makeCourses({ count: 4 })
+  const coursesB = makeCourses({ count: 3 })
+
+  // Add contract IDs to course runs
+  coursesA.results = coursesA.results.map((course) => ({
+    ...course,
+    courseruns: course.courseruns.map((run) => ({
+      ...run,
+      b2b_contract: contract.id,
+    })),
+  }))
+  coursesB.results = coursesB.results.map((course) => ({
+    ...course,
+    courseruns: course.courseruns.map((run) => ({
+      ...run,
+      b2b_contract: contract.id,
+    })),
+  }))
+
+  const programA = makeProgram({
+    courses: coursesA.results.map((c) => c.id),
+  })
+  const programB = makeProgram({
+    courses: coursesB.results.map((c) => c.id),
+  })
+
+  // Now set the programs on the contract
+  contract.programs = [programA.id, programB.id]
+
   orgX.contracts = [contract]
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
@@ -163,14 +195,6 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(urls.organization.organizationList(""), orgX)
   setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
-  const coursesA = makeCourses({ count: 4 })
-  const coursesB = makeCourses({ count: 3 })
-  const programA = makeProgram({
-    courses: coursesA.results.map((c) => c.id),
-  })
-  const programB = makeProgram({
-    courses: coursesB.results.map((c) => c.id),
-  })
   const programCollection = makeProgramCollection({
     title: "Program Collection",
     programs: [],
@@ -179,6 +203,15 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
     results: [programA, programB],
   })
+  setMockResponse.get(
+    urls.programs.programsList({
+      org_id: orgX.id,
+      contract_id: contract.id,
+    }),
+    {
+      results: [programA, programB],
+    },
+  )
   setMockResponse.get(urls.programCollections.programCollectionsList(), {
     results: [programCollection],
   })
@@ -189,6 +222,16 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(
     urls.programs.programsList({ id: [programB.id], org_id: orgX.id }),
     { results: [programB] },
+  )
+  setMockResponse.get(
+    urls.courses.coursesList({
+      org_id: orgX.id,
+      contract_id: contract.id,
+      page_size: 200,
+    }),
+    {
+      results: [...coursesA.results, ...coursesB.results],
+    },
   )
   setMockResponse.get(
     urls.courses.coursesList({
@@ -307,6 +350,27 @@ function setupOrgDashboardMocks(
     { results: programs },
   )
 
+  // Mock programs query with contract filter
+  if (contracts.length > 0) {
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        org_id: org.id,
+        contract_id: contracts[0].id,
+      }),
+      { results: programs },
+    )
+
+    // Mock courses query with contract filter for program validation
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        org_id: org.id,
+        contract_id: contracts[0].id,
+        page_size: 200,
+      }),
+      { results: courses },
+    )
+  }
+
   programs.forEach((program) => {
     setMockResponse.get(
       mitxonline.urls.courses.coursesList({
@@ -325,8 +389,11 @@ function setupOrgDashboardMocks(
 const createTestContracts = (
   orgId: number,
   count: number = 1,
+  programs: number[] = [],
 ): ContractPage[] =>
-  Array.from({ length: count }, () => makeContract({ organization: orgId }))
+  Array.from({ length: count }, () =>
+    makeContract({ organization: orgId, programs }),
+  )
 
 /**
  * Test utility to create courses with contract-scoped course runs

@@ -427,10 +427,31 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const programEnrollments = useQuery(
     enrollmentQueries.programEnrollmentsList(),
   )
-  const programs = useQuery(programsQueries.programsList({ org_id: orgId }))
+  const programs = useQuery(
+    programsQueries.programsList({ org_id: orgId, contract_id: contract.id }),
+  )
   const programCollections = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
+  const courses = useQuery(
+    coursesQueries.coursesList({
+      org_id: orgId,
+      contract_id: contract.id,
+      page_size: 200,
+    }),
+  )
+
+  // Helper to check if a program has any courses with contract-scoped runs
+  const programHasContractRuns = (programId: number): boolean => {
+    const programData = programs.data?.results.find((p) => p.id === programId)
+    if (!programData?.courses || !courses.data?.results) return false
+
+    // Since courses query is already filtered by contract_id,
+    // we just need to check if any of the program's courses exist in the results
+    return programData.courses.some((courseId) =>
+      courses.data.results.some((c) => c.id === courseId),
+    )
+  }
 
   // Get IDs of all programs that are in collections
   const programsInCollections = new Set(
@@ -441,12 +462,15 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
 
   const transformedPrograms = programs.data?.results
     .filter((program) => !programsInCollections.has(program.id))
-    .filter((program) => {
-      if (!contract?.programs || contract.programs.length === 0) {
-        return true
-      }
-      return contract.programs.includes(program.id)
+    .filter(() => {
+      // If contract has no programs defined, show nothing
+      return contract?.programs && contract.programs.length > 0
     })
+    .filter((program) => {
+      // Only include programs that are in the contract
+      return contract?.programs.includes(program.id)
+    })
+    .filter((program) => programHasContractRuns(program.id))
     .map((program) => transform.mitxonlineProgram(program))
     .sort((a, b) => {
       if (!contract?.programs) return 0
@@ -498,14 +522,22 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             ))}
         <ProgramCollectionsList>
           {(programCollections.data?.results ?? [])
+            .filter(() => {
+              // If contract has no programs defined, show nothing
+              return contract?.programs && contract.programs.length > 0
+            })
             .filter((collection) => {
               // Only show collections where at least one program is in the contract
               const collectionProgramIds = collection.programs.map((p) => p.id)
-              if (!contract?.programs || contract.programs.length === 0) {
-                return collectionProgramIds.length > 0
-              }
               return collectionProgramIds.some(
                 (id) => id !== undefined && contract?.programs.includes(id),
+              )
+            })
+            .filter((collection) => {
+              // Filter out collections where none of the programs have valid course runs
+              const collectionProgramIds = collection.programs.map((p) => p.id)
+              return collectionProgramIds.some((id) =>
+                programHasContractRuns(id),
               )
             })
             .map((collection) => {

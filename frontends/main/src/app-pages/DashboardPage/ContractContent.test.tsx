@@ -106,7 +106,8 @@ describe("ContractContent", () => {
   })
 
   it("displays programs in the correct order based on contract.programs, regardless of API response order", async () => {
-    const { orgX, programA, programB } = setupProgramsAndCourses()
+    const { orgX, programA, programB, coursesA, coursesB } =
+      setupProgramsAndCourses()
 
     // Update the contract to specify program order (B first, then A)
     const contract = factories.contracts.contract({
@@ -123,6 +124,27 @@ describe("ContractContent", () => {
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
       results: [programA, programB],
     })
+    // Add the contract-filtered programs query
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: contract.id,
+      }),
+      {
+        results: [programA, programB],
+      },
+    )
+    // Add the contract-filtered courses query
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: contract.id,
+        page_size: 200,
+      }),
+      {
+        results: [...coursesA, ...coursesB],
+      },
+    )
 
     renderWithProviders(
       <ContractContent
@@ -393,6 +415,25 @@ describe("ContractContent", () => {
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
       results: [],
     })
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+      }),
+      {
+        results: [],
+      },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      {
+        results: [],
+      },
+    )
     setMockResponse.get(urls.programCollections.programCollectionsList(), {
       results: [],
     })
@@ -527,7 +568,7 @@ describe("ContractContent", () => {
   })
 
   test("Shows the program certificate link button if the program has a certificate", async () => {
-    const { orgX, programA } = setupProgramsAndCourses()
+    const { orgX, programA, coursesA } = setupProgramsAndCourses()
 
     // Mock the program to have a certificate
     const programWithCertificate = {
@@ -548,6 +589,27 @@ describe("ContractContent", () => {
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
       results: [programWithCertificate],
     })
+    // Add the contract-filtered programs query
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+      }),
+      {
+        results: [programWithCertificate],
+      },
+    )
+    // Add the contract-filtered courses query
+    setMockResponse.get(
+      urls.courses.coursesList({
+        org_id: orgX.id,
+        contract_id: orgX.contracts[0].id,
+        page_size: 200,
+      }),
+      {
+        results: coursesA,
+      },
+    )
     setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
       programEnrollment,
     ])
@@ -574,14 +636,17 @@ describe("ContractContent", () => {
 
   test("displays only courses with contract-scoped runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
+    const baseCourses = factories.courses.courses({ count: 3 }).results
+    const program = factories.programs.program({
+      courses: baseCourses.map((c) => c.id),
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     // Update the user's b2b_organizations to include contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
     const courses = createCoursesWithContractRuns(contracts)
-    const program = factories.programs.program({
-      courses: courses.map((c) => c.id),
-    })
+    // Update program to use the actual course IDs from createCoursesWithContractRuns
+    program.courses = courses.map((c) => c.id)
 
     setupOrgDashboardMocks(
       orgX,
@@ -628,14 +693,19 @@ describe("ContractContent", () => {
     jest.useFakeTimers()
     jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
-    orgX.contracts = contracts
-    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create courses with specific, predictable dates for the contract runs
     // Use a date that's guaranteed to be in the future relative to mocked time
     const specificStartDate = "2024-12-01T00:00:00Z"
     const specificEndDate = "2025-01-15T00:00:00Z"
+
+    const baseCourses = factories.courses.courses({ count: 3 }).results
+    const program = factories.programs.program({
+      courses: baseCourses.map((c) => c.id),
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
       ...course,
@@ -650,10 +720,8 @@ describe("ContractContent", () => {
         return run
       }),
     }))
-
-    const program = factories.programs.program({
-      courses: courses.map((c) => c.id),
-    })
+    // Update program to use the actual course IDs
+    program.courses = courses.map((c) => c.id)
 
     setupOrgDashboardMocks(
       orgX,
@@ -691,11 +759,16 @@ describe("ContractContent", () => {
     jest.setSystemTime(new Date("2024-01-01T00:00:00Z"))
 
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
+
+    // Create courses where non-contract runs have different, easily identifiable data
+    const baseCourses = factories.courses.courses({ count: 3 }).results
+    const program = factories.programs.program({
+      courses: baseCourses.map((c) => c.id),
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
-    // Create courses where non-contract runs have different, easily identifiable data
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
       ...course,
       courseruns: course.courseruns.map((run) => {
@@ -715,10 +788,8 @@ describe("ContractContent", () => {
         }
       }),
     }))
-
-    const program = factories.programs.program({
-      courses: courses.map((c) => c.id),
-    })
+    // Update program to use the actual course IDs
+    program.courses = courses.map((c) => c.id)
 
     setupOrgDashboardMocks(
       orgX,
@@ -760,11 +831,16 @@ describe("ContractContent", () => {
 
   test("displays correct pricing from contract-scoped runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
+
+    // Create courses with different pricing for contract vs non-contract runs
+    const baseCourses = factories.courses.courses({ count: 3 }).results
+    const program = factories.programs.program({
+      courses: baseCourses.map((c) => c.id),
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
-    // Create courses with different pricing for contract vs non-contract runs
     const courses = createCoursesWithContractRuns(contracts).map((course) => ({
       ...course,
       courseruns: course.courseruns.map((run) => {
@@ -798,10 +874,8 @@ describe("ContractContent", () => {
         }
       }),
     }))
-
-    const program = factories.programs.program({
-      courses: courses.map((c) => c.id),
-    })
+    // Update program to use the actual course IDs
+    program.courses = courses.map((c) => c.id)
 
     setupOrgDashboardMocks(
       orgX,
@@ -835,11 +909,17 @@ describe("ContractContent", () => {
 
   test("handles mixed scenarios with enrolled and non-enrolled contract runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
+    const baseCourses = factories.courses.courses({ count: 3 }).results
+    const program = factories.programs.program({
+      courses: baseCourses.map((c) => c.id),
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
     const contractIds = contracts.map((c) => c.id)
     const courses = createCoursesWithContractRuns(contracts)
+    // Update program to use the actual course IDs
+    program.courses = courses.map((c) => c.id)
 
     // Create enrollment for first course only
     const enrollments = [
@@ -869,10 +949,6 @@ describe("ContractContent", () => {
     ]
     // Override enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
-
-    const program = factories.programs.program({
-      courses: courses.map((c) => c.id),
-    })
 
     setupOrgDashboardMocks(
       orgX,
@@ -1094,12 +1170,16 @@ describe("ContractContent", () => {
 
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const contracts = createTestContracts(orgX.id, 1)
-    orgX.contracts = contracts
-    mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
     // Create a course with 3 different runs with distinct URLs
     const course = factories.courses.course()
+    const program = factories.programs.program({
+      courses: [course.id],
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
     const runs = [
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
@@ -1133,10 +1213,6 @@ describe("ContractContent", () => {
       },
       b2b_contract_id: contracts[0].id,
       grades: [],
-    })
-
-    const program = factories.programs.program({
-      courses: [course.id],
     })
 
     setupOrgDashboardMocks(
