@@ -107,9 +107,6 @@ def test_video_short_webhook_view_creates_new(settings, client, sample_video_met
     """Test VideoShortWebhookView creates a new VideoShort"""
     from video_shorts.models import VideoShort
 
-    settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "shorts"
-
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "k_AA4_fQIHc",
@@ -130,6 +127,13 @@ def test_video_short_webhook_view_creates_new(settings, client, sample_video_met
     # Verify VideoShort was created
     video_short = VideoShort.objects.get(video_id="k_AA4_fQIHc")
     assert video_short.title == "How far away is space?"
+    assert video_short.video_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4"
+    assert (
+        video_short.thumbnail_large_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_large.jpg"
+    )
+    assert (
+        video_short.thumbnail_small_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_small.jpg"
+    )
     assert VideoShort.objects.count() == 1
 
 
@@ -142,7 +146,6 @@ def test_video_short_webhook_view_updates_existing(
     from video_shorts.models import VideoShort
 
     settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "shorts"
 
     # Create existing video short
     existing = VideoShortFactory.create(
@@ -221,7 +224,6 @@ def test_video_short_webhook_view_missing_required_fields(settings, client):
 def test_video_short_webhook_view_invalid_video_metadata(settings, client):
     """Test VideoShortWebhookView validates metadata structure"""
     settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "shorts"
 
     url = reverse("webhooks:v1:video_short_webhook")
 

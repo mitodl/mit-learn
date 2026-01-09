@@ -21,7 +21,11 @@ def walk_video_shorts_from_s3(
     if limit is None:
         limit = settings.VIDEO_SHORTS_COUNT
 
-    s3 = boto3.resource("s3")
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
     bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
     prefix = settings.VIDEO_SHORTS_S3_PREFIX.rstrip("/") + "/"
 
