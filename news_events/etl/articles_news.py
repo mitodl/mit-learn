@@ -22,6 +22,7 @@ def extract_single_article(article: Article) -> dict:
         "user": article.user,
         "created_on": article.created_on,
         "updated_on": article.updated_on,
+        "publish_date": article.publish_date,
     }
 
 
@@ -78,6 +79,7 @@ def extract() -> list[dict]:
             "user": article.user,
             "created_on": article.created_on,
             "updated_on": article.updated_on,
+            "publish_date": article.publish_date,
         }
         for article in articles
     ]
@@ -126,6 +128,9 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         slug = article.get("slug")
         article_url = f"/articles/{slug}" if slug else f"/articles/{article.get('id')}"
 
+        # Use publish_date if available, otherwise fall back to created_on
+        publish_date = article.get("publish_date") or article.get("created_on")
+
         entry = {
             "guid": f"article-{article.get('id')}",
             "title": article.get("title", ""),
@@ -136,9 +141,7 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
             "detail": {
                 "authors": [author_name] if author_name else [],
                 "topics": [],  # Add topics if you have them in your Article model
-                "publish_date": article.get("created_on").isoformat()
-                if article.get("created_on")
-                else None,
+                "publish_date": publish_date.isoformat() if publish_date else None,
             },
         }
         entries.append(entry)

@@ -12,6 +12,7 @@ import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
 } from "api/hooks/newsEvents"
+import { ButtonLink } from "@mitodl/smoot-design"
 import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
@@ -127,9 +128,10 @@ const EventDate = styled.div`
 `
 
 const HeadingContainer = styled.div`
-  justify-content: space-between;
+  justify-content: flex-end;
   display: flex;
   width: 100%;
+  margin-top: 40px;
 `
 
 const EventDay = styled.p`
@@ -161,6 +163,12 @@ const EventTitle = styled(Link)`
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
   }
+`
+
+const SeeAllButton = styled(ButtonLink)`
+  box-sizing: content-box;
+  display: flex;
+  width: 152px;
 `
 
 const Chevron = styled(RiArrowRightSLine)`
@@ -264,14 +272,10 @@ const NewsEventsSection: React.FC = () => {
       <BelowMdOnly>
         <MobileContent>
           <MobileContainer>
-            <HeadingContainer>
-              <Typography component="h3" variant="h4">
-                Stories
-              </Typography>
-              <Typography component="h3" variant="h4">
-                More Stories
-              </Typography>
-            </HeadingContainer>
+            <Typography component="h3" variant="h4">
+              Stories
+            </Typography>
+
             <StoriesSlider>
               {stories.map((item) => (
                 <Story
@@ -294,14 +298,9 @@ const NewsEventsSection: React.FC = () => {
         <Container>
           <Content>
             <StoriesContainer>
-              <HeadingContainer>
-                <Typography component="h3" variant="h4">
-                  Stories
-                </Typography>
-                <Typography component="h3" variant="h4">
-                  <Link href="/articles">More Stories</Link>
-                </Typography>
-              </HeadingContainer>
+              <Typography component="h3" variant="h4">
+                Stories
+              </Typography>
               <Grid2 container columnSpacing="24px" rowSpacing="28px">
                 {stories.map((item, index) => (
                   <Grid2
@@ -318,6 +317,11 @@ const NewsEventsSection: React.FC = () => {
                   </Grid2>
                 ))}
               </Grid2>
+              <HeadingContainer>
+                <SeeAllButton href="/articles/" size="large" responsive>
+                  See all stories
+                </SeeAllButton>
+              </HeadingContainer>
             </StoriesContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">
