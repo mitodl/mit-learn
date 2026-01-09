@@ -155,7 +155,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const transformedCourses = organizationCoursesWithContracts({
       courses,
-      contracts,
+      contract: contracts[0],
       enrollments: [],
     })
 
@@ -195,7 +195,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const transformedCourses = organizationCoursesWithContracts({
       courses,
-      contracts,
+      contract: contracts[0],
       enrollments: [],
     })
 
@@ -218,7 +218,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const transformedCourses = organizationCoursesWithContracts({
       courses,
-      contracts,
+      contract: contracts[0],
       enrollments: enrollments,
     })
 
@@ -265,7 +265,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
     const transformedCourses = organizationCoursesWithContracts({
       courses,
-      contracts,
+      contract: contracts[0],
       enrollments: allEnrollments,
     })
 
@@ -293,7 +293,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
     const courses = createCoursesWithContractRuns(contracts)
 
     courses.forEach((course) => {
-      const transformedCourse = createOrgUnenrolledCourse(course, contracts)
+      const transformedCourse = createOrgUnenrolledCourse(course, contracts[0])
 
       // Should select the run with matching contract
       const expectedRun = course.courseruns.find(
@@ -320,7 +320,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
       ],
     })
 
-    const transformedCourse = createOrgUnenrolledCourse(course, contracts)
+    const transformedCourse = createOrgUnenrolledCourse(course, contracts[0])
 
     // Should still return a valid course object
     expect(transformedCourse.title).toBe(course.title)
@@ -481,7 +481,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const transformedCourses = organizationCoursesWithContracts({
         courses,
-        contracts,
+        contract: contracts[0],
         enrollments: enrollments,
       })
 
@@ -529,7 +529,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const transformedCourses = organizationCoursesWithContracts({
         courses,
-        contracts,
+        contract: contracts[0],
         enrollments: enrollments,
       })
 
@@ -592,7 +592,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const transformedCourses = organizationCoursesWithContracts({
         courses: [course],
-        contracts,
+        contract: contracts[0],
         enrollments: [enrollmentLowGrade, enrollmentHighGrade],
       })
 
@@ -654,7 +654,7 @@ describe("Transforming mitxonline enrollment data to DashboardResource", () => {
 
       const transformedCourses = organizationCoursesWithContracts({
         courses: [course],
-        contracts,
+        contract: contracts[0],
         enrollments: [enrollmentHighGradeNoCert, enrollmentWithCert],
       })
 
