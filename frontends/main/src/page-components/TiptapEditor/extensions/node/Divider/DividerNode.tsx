@@ -28,6 +28,8 @@ const StyledDivider = styled.div(({ theme }) => ({
   },
 }))
 
+export const DividerViewer = () => <StyledDivider />
+
 const DividerWrapper = () => {
   return (
     <NodeViewWrapper
@@ -47,12 +49,6 @@ export const DividerNode = Node.create({
   atom: true,
   draggable: false,
   selectable: false,
-
-  addAttributes() {
-    return {
-      // future attributes (e.g. style) can go here
-    }
-  },
 
   parseHTML() {
     return [{ tag: 'div[data-type="divider"]' }]

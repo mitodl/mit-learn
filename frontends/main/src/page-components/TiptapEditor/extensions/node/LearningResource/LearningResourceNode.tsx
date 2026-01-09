@@ -2,6 +2,7 @@ import React from "react"
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
 import { ResourceCard } from "../../../../ResourceCard/ResourceCard"
@@ -29,7 +30,7 @@ const NodeWrapper = styled(NodeViewWrapper)({
   },
 })
 
-const StyledLearningResourceListCard = styled(ResourceCard)(({ theme }) => ({
+const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
   position: "relative",
 
   ".ProseMirror-selectednode &": {
@@ -76,6 +77,27 @@ const RemoveButton = styled("button")(({ theme }) => ({
   },
 }))
 
+export const LearningResourceCardViewer = ({
+  node,
+}: {
+  node: ProseMirrorNode
+}) => {
+  const { resourceId } = node.attrs
+  const { resource, isLoading } = useLearningResource(resourceId ?? 0)
+
+  if (!resourceId) {
+    return null
+  }
+
+  return (
+    <StyledLearningResourceCard
+      resource={resource}
+      list
+      isLoading={isLoading}
+    />
+  )
+}
+
 export const LearningResourceListCardWrapper = ({
   node,
   editor,
@@ -112,7 +134,7 @@ export const LearningResourceListCardWrapper = ({
           ×
         </RemoveButton>
       )}
-      <StyledLearningResourceListCard
+      <StyledLearningResourceCard
         isLoading={isLoading && !data}
         resource={data}
         list

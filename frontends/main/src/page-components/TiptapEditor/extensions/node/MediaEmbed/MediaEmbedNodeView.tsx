@@ -3,7 +3,9 @@ import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import styled from "@emotion/styled"
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
+const StyledNodeViewWrapper = styled(NodeViewWrapper, {
+  shouldForwardProp: (prop) => !["editable", "float", "layout"].includes(prop),
+})<{
   layout: string
   hovering: boolean
 }>`

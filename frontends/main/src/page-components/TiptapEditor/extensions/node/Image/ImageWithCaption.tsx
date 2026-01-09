@@ -3,7 +3,6 @@ import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
-import { LoadingSpinner } from "ol-components"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 
@@ -154,34 +153,59 @@ const Container = styled.figure(({ theme }) => ({
   },
 }))
 
-const Spinner = styled(LoadingSpinner)({
-  margin: "auto",
-  position: "absolute",
-  top: "40%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-})
-
 enum Layout {
   default = "default",
   wide = "wide",
   full = "full",
 }
 
-const Image = styled.img<{ layout: Layout }>(({ layout }) => ({
-  "&&": {
-    borderRadius: layout === Layout.full ? 0 : "8px",
-  },
-  "& .remove-button": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
+const Image = styled.img<{ layout: Layout; isLoading?: boolean }>(
+  ({ layout, isLoading }) => ({
+    "&&": {
+      borderRadius: layout === Layout.full ? 0 : "8px",
+      opacity: isLoading ? 0 : 1,
+      transition: "opacity 0.3s ease-in-out",
+    },
+    "& .remove-button": {
+      opacity: 0,
+      pointerEvents: "none",
+    },
 
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
-}))
+    "&:hover .remove-button": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
+  }),
+)
+
+const ImagePlaceholder = styled.div<{ layout: Layout }>(
+  ({ layout, theme }) => ({
+    width: "100%",
+    aspectRatio: "16 / 9",
+    backgroundColor: theme.custom.colors.lightGray1,
+    borderRadius: layout === Layout.full ? 0 : "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    ...(layout === Layout.wide && {
+      [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
+        width: "92vw",
+        maxWidth: "1400px",
+        position: "relative",
+        left: "50%",
+        transform: "translateX(-50%)",
+      },
+    }),
+    ...(layout === Layout.full && {
+      width: "100vw",
+      maxWidth: "100vw",
+      position: "relative",
+      left: "50%",
+      right: "50%",
+      transform: "translateX(-50%)",
+    }),
+  }),
+)
 
 const ImageWrapper = styled("div")({
   position: "relative",
@@ -208,6 +232,49 @@ const Caption = styled.figcaption(({ theme }) => ({
   },
 }))
 
+export function ImageWithCaptionViewer({
+  node,
+}: {
+  node: {
+    attrs: { layout?: Layout; caption?: string; src?: string; alt?: string }
+  }
+}) {
+  const { layout = Layout.default, caption, src, alt } = node.attrs
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+
+  return (
+    <Container className={`layout-${layout}`}>
+      <div style={{ position: "relative", width: "100%" }}>
+        {hasError ? (
+          <ImagePlaceholder layout={layout}>
+            <span style={{ color: "inherit", fontSize: "14px" }}>
+              Failed to load image
+            </span>
+          </ImagePlaceholder>
+        ) : (
+          <>
+            {isLoading && (
+              <ImagePlaceholder layout={layout} aria-label="Loading image" />
+            )}
+            <Image
+              src={src}
+              alt={alt}
+              layout={layout}
+              isLoading={isLoading}
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false)
+                setHasError(true)
+              }}
+            />
+          </>
+        )}
+      </div>
+      {caption && <Caption>{caption}</Caption>}
+    </Container>
+  )
+}
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",
   top: -7,
@@ -284,7 +351,9 @@ export function ImageWithCaption({
 
   return (
     <NodeViewWrapper data-type="image-upload">
-      {isLoading && <Spinner color="inherit" loading size={32} />}
+      {isLoading && (
+        <ImagePlaceholder layout={layout} aria-label="Loading image" />
+      )}
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">

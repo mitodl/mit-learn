@@ -31,12 +31,10 @@ export const LearningResourceProvider = ({
     [uniqueIds, queryClient],
   )
 
-  // 🚀 fetch missing
   const { isLoading: bulkLoading } = useLearningResourcesBulkList(missingIds, {
     enabled: missingIds.length > 0,
   })
 
-  // 👇 SUBSCRIBE to each resource
   const resourceQueries = useQueries({
     queries: uniqueIds.map((id) => ({
       queryKey: learningResourceKeys.detail(id),
