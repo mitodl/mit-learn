@@ -9701,6 +9701,11 @@ paths:
           type: object
           additionalProperties: {}
         required: true
+      - in: query
+        name: youtube_metadata
+        schema:
+          type: object
+          additionalProperties: {}
       tags:
       - webhooks
       requestBody:
@@ -16267,6 +16272,9 @@ components:
           type: string
           minLength: 1
         video_metadata:
+          type: object
+          additionalProperties: {}
+        youtube_metadata:
           type: object
           additionalProperties: {}
         source:

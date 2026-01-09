@@ -21,6 +21,8 @@ class VideoShortWebhookRequestSerializer(serializers.Serializer):
 
     video_id = serializers.CharField()
     video_metadata = serializers.DictField()
+    # Leaving this here for backward compatibility
+    youtube_metadata = serializers.DictField(required=False)
     source = serializers.CharField(required=False, allow_blank=True)
 
 
