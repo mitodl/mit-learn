@@ -58,7 +58,7 @@ def test_process_video_short_invalid_metadata_raises(settings):
         upsert_video_short(invalid_data)
 
 
-@pytest.mark.parametrize("prefix", ["shorts/", "shorts"])
+@pytest.mark.parametrize("prefix", ["shorts/", "shorts", "video_shorts/"])
 def test_walk_video_shorts_from_s3(
     mock_s3_bucket, settings, sample_video_metadata, prefix
 ):
