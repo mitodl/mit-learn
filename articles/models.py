@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 
 from main.models import TimestampedModel
@@ -23,6 +24,7 @@ class Article(TimestampedModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
+    publish_date = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         previous = Article.objects.get(pk=self.pk) if self.pk else None
@@ -32,6 +34,10 @@ class Article(TimestampedModel):
         slug = self.slug or None
 
         if not was_published and self.is_published:
+            # Set publish_date only on first publish
+            if not self.publish_date:
+                self.publish_date = timezone.now()
+
             max_length = self._meta.get_field("slug").max_length
 
             base_slug = slugify(self.title)[:max_length]

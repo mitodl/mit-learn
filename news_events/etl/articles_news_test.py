@@ -27,6 +27,8 @@ def mock_articles(mocker):
     mock_article.created_on = mocker.Mock()
     mock_article.created_on.isoformat.return_value = "2024-01-01T00:00:00Z"
     mock_article.updated_on = mocker.Mock()
+    mock_article.publish_date = mocker.Mock()
+    mock_article.publish_date.isoformat.return_value = "2024-01-01T00:00:00Z"
 
     mock_queryset = mocker.Mock()
     mock_queryset.select_related.return_value = [mock_article]
@@ -71,6 +73,7 @@ def test_transform_items():
             "content": {"blocks": [{"text": "Test content"}]},
             "user": MockUser(),
             "created_on": mock_datetime,
+            "publish_date": mock_datetime,
         }
     ]
 
@@ -289,6 +292,7 @@ def test_extract_single_article():
         content = {"blocks": [{"text": "Test content"}]}
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
+        publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
     result = articles_news.extract_single_article(MockArticle())
@@ -319,6 +323,7 @@ def test_transform_single_article():
         },
         "user": MockUser(),
         "created_on": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
+        "publish_date": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     }
 
     result = articles_news.transform_single_article(article_data)
@@ -361,6 +366,7 @@ def test_sync_single_article_to_news(mocker):
         is_published = True
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
+        publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
     # Sync the article
