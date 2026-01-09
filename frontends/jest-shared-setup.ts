@@ -61,13 +61,11 @@ class FakeResizeObserver {
 }
 const polyfillResizeObserver = () => {
   if (window.ResizeObserver !== undefined) {
-    /**
-     * If this throws... I guess our test env supports it natively now.
-     * Welcome to the future!
-     */
-    throw new Error("ResizeObserver is already defined.")
+    console.info(
+      "ResizeObserver is already defined (likely running Happy DOM). Skipping polyfill.",
+    )
   }
-  window.ResizeObserver = FakeResizeObserver
+  window.ResizeObserver = window.ResizeObserver || FakeResizeObserver
 }
 polyfillResizeObserver()
 
