@@ -9700,7 +9700,6 @@ paths:
         schema:
           type: object
           additionalProperties: {}
-        required: true
       - in: query
         name: youtube_metadata
         schema:
@@ -16281,7 +16280,6 @@ components:
           type: string
       required:
       - video_id
-      - video_metadata
     WebhookResponse:
       type: object
       description: Serializer for webhook responses.

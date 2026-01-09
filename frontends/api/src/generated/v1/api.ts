@@ -8798,7 +8798,7 @@ export interface VideoShortWebhookRequestRequest {
    * @type {{ [key: string]: any; }}
    * @memberof VideoShortWebhookRequestRequest
    */
-  video_metadata: { [key: string]: any }
+  video_metadata?: { [key: string]: any }
   /**
    *
    * @type {{ [key: string]: any; }}
@@ -31260,29 +31260,23 @@ export const WebhooksApiAxiosParamCreator = function (
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {{ [key: string]: any; }} video_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
+     * @param {{ [key: string]: any; }} [video_metadata]
      * @param {{ [key: string]: any; }} [youtube_metadata]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     webhooksVideoShortsCreate: async (
       video_id: string,
-      video_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
+      video_metadata?: { [key: string]: any },
       youtube_metadata?: { [key: string]: any },
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'video_id' is not null or undefined
       assertParamExists("webhooksVideoShortsCreate", "video_id", video_id)
-      // verify required parameter 'video_metadata' is not null or undefined
-      assertParamExists(
-        "webhooksVideoShortsCreate",
-        "video_metadata",
-        video_metadata,
-      )
       // verify required parameter 'VideoShortWebhookRequestRequest' is not null or undefined
       assertParamExists(
         "webhooksVideoShortsCreate",
@@ -31433,18 +31427,18 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {{ [key: string]: any; }} video_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
+     * @param {{ [key: string]: any; }} [video_metadata]
      * @param {{ [key: string]: any; }} [youtube_metadata]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async webhooksVideoShortsCreate(
       video_id: string,
-      video_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
+      video_metadata?: { [key: string]: any },
       youtube_metadata?: { [key: string]: any },
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -31456,9 +31450,9 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksVideoShortsCreate(
           video_id,
-          video_metadata,
           VideoShortWebhookRequestRequest,
           source,
+          video_metadata,
           youtube_metadata,
           options,
         )
@@ -31538,9 +31532,9 @@ export const WebhooksApiFactory = function (
       return localVarFp
         .webhooksVideoShortsCreate(
           requestParameters.video_id,
-          requestParameters.video_metadata,
           requestParameters.VideoShortWebhookRequestRequest,
           requestParameters.source,
+          requestParameters.video_metadata,
           requestParameters.youtube_metadata,
           options,
         )
@@ -31613,13 +31607,6 @@ export interface WebhooksApiWebhooksVideoShortsCreateRequest {
 
   /**
    *
-   * @type {{ [key: string]: any; }}
-   * @memberof WebhooksApiWebhooksVideoShortsCreate
-   */
-  readonly video_metadata: { [key: string]: any }
-
-  /**
-   *
    * @type {VideoShortWebhookRequestRequest}
    * @memberof WebhooksApiWebhooksVideoShortsCreate
    */
@@ -31631,6 +31618,13 @@ export interface WebhooksApiWebhooksVideoShortsCreateRequest {
    * @memberof WebhooksApiWebhooksVideoShortsCreate
    */
   readonly source?: string
+
+  /**
+   *
+   * @type {{ [key: string]: any; }}
+   * @memberof WebhooksApiWebhooksVideoShortsCreate
+   */
+  readonly video_metadata?: { [key: string]: any }
 
   /**
    *
@@ -31702,9 +31696,9 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksVideoShortsCreate(
         requestParameters.video_id,
-        requestParameters.video_metadata,
         requestParameters.VideoShortWebhookRequestRequest,
         requestParameters.source,
+        requestParameters.video_metadata,
         requestParameters.youtube_metadata,
         options,
       )

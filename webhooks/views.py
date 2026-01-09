@@ -132,6 +132,9 @@ class VideoShortWebhookView(BaseWebhookView):
         try:
             data = self.get_data(request)
             video_data = data.get("video_metadata")
+            if not video_data:
+                msg = "Missing video_metadata in request"
+                raise ValidationError(msg)  # noqa: TRY301
             upsert_video_short(video_data)
             clear_views_cache()
             return self.success()
