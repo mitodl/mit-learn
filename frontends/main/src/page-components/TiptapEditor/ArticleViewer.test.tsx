@@ -247,16 +247,8 @@ describe("ArticleViewer", () => {
                 type: "listItem",
                 content: [
                   {
-                    type: "paragraph",
-                    attrs: {
-                      textAlign: null,
-                    },
-                    content: [
-                      {
-                        type: "text",
-                        text: "First unordered item",
-                      },
-                    ],
+                    type: "text",
+                    text: "First unordered item",
                   },
                 ],
               },
@@ -264,16 +256,8 @@ describe("ArticleViewer", () => {
                 type: "listItem",
                 content: [
                   {
-                    type: "paragraph",
-                    attrs: {
-                      textAlign: null,
-                    },
-                    content: [
-                      {
-                        type: "text",
-                        text: "Second unordered item",
-                      },
-                    ],
+                    type: "text",
+                    text: "Second unordered item",
                   },
                 ],
               },
@@ -286,16 +270,8 @@ describe("ArticleViewer", () => {
                 type: "listItem",
                 content: [
                   {
-                    type: "paragraph",
-                    attrs: {
-                      textAlign: null,
-                    },
-                    content: [
-                      {
-                        type: "text",
-                        text: "First ordered item",
-                      },
-                    ],
+                    type: "text",
+                    text: "First ordered item",
                   },
                 ],
               },
@@ -303,16 +279,8 @@ describe("ArticleViewer", () => {
                 type: "listItem",
                 content: [
                   {
-                    type: "paragraph",
-                    attrs: {
-                      textAlign: null,
-                    },
-                    content: [
-                      {
-                        type: "text",
-                        text: "Second ordered item",
-                      },
-                    ],
+                    type: "text",
+                    text: "Second ordered item",
                   },
                 ],
               },
@@ -324,16 +292,22 @@ describe("ArticleViewer", () => {
 
     renderWithProviders(<ArticleEditor article={article} readOnly />)
 
-    expect(await screen.findByText("First unordered item")).toBeInTheDocument()
-    expect(screen.getByText("Second unordered item")).toBeInTheDocument()
-    expect(screen.getByText("First ordered item")).toBeInTheDocument()
-    expect(screen.getByText("Second ordered item")).toBeInTheDocument()
+    const firstUnordered = await screen.findByText("First unordered item")
+    const secondUnordered = await screen.findByText("Second unordered item")
+    const firstOrdered = await screen.findByText("First ordered item")
+    const secondOrdered = await screen.findByText("Second ordered item")
 
-    const lists = await screen.findAllByRole("list")
+    expect(firstUnordered.closest("li")).toBeTruthy()
+    expect(secondUnordered.closest("li")).toBeTruthy()
+    expect(firstOrdered.closest("li")).toBeTruthy()
+    expect(secondOrdered.closest("li")).toBeTruthy()
+
+    const lists = screen.getAllByRole("list")
     const unorderedList = lists.find((list) => list.tagName === "UL")
     const orderedList = lists.find((list) => list.tagName === "OL")
-    expect(unorderedList).toBeInTheDocument()
-    expect(orderedList).toBeInTheDocument()
+
+    expect(unorderedList).toBeDefined()
+    expect(orderedList).toBeDefined()
   })
 
   test("renders inline marks including bold, italic, code and underline", async () => {
