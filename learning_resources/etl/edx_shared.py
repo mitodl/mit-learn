@@ -185,10 +185,7 @@ def run_for_edx_archive(
     if etl_source == ETLSource.mit_edx.name:
         # Additional processing of run ids and tarfile names,
         # because edx data is structured differently
-        run_id = potential_run_id.strip(  # noqa: B005
-            "-course-prod-analytics.xml"
-        )  # suffix on edx tar file basename
-        potential_run_ids = rf"{run_id.replace('-', '.').replace('+', '.')}"
+        potential_run_ids = rf"{potential_run_id.replace('-', '.').replace('+', '.')}"
         runs = runs.filter(run_id__iregex=potential_run_ids)
     elif etl_source == ETLSource.oll.name:
         # Additional processing of run ids and tarfile names,

@@ -635,7 +635,6 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     """
     settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
     mocker.patch("learning_resources.tasks.resource_unpublished_actions")
-    mocker.patch("learning_resources.tasks.get_learning_course_bucket")
     mock_bucket = mocker.Mock()
     mock_archive1 = mocker.Mock()
     mock_archive1.key = "canvas/1/archive1.imscc"
@@ -645,7 +644,7 @@ def test_sync_canvas_courses(settings, mocker, django_assert_num_queries, canvas
     mock_archive2.last_modified = now_in_utc() - timedelta(days=1)
     mock_bucket.objects.filter.return_value = [mock_archive1, mock_archive2]
     mocker.patch(
-        "learning_resources.tasks.get_learning_course_bucket", return_value=mock_bucket
+        "learning_resources.tasks.get_bucket_by_name", return_value=mock_bucket
     )
 
     # Create two canvas LearningResources - one stale
@@ -758,4 +757,6 @@ def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
 
     ingest_edx_course(etl_source, archive_path, overwrite=overwrite)
 
-    mock_sync.assert_called_once_with(etl_source, archive_path, overwrite=overwrite)
+    mock_sync.assert_called_once_with(
+        etl_source, archive_path, course_id=None, overwrite=overwrite
+    )
