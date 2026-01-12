@@ -81,6 +81,77 @@ def test_content_file_delete_webhook_view_canvas_resource_not_found(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("etl_source", "course_id", "readable_id"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            "course-v1:Test+Course+R1",
+            "course-v1:Test+Course+R1",
+        ),
+        (ETLSource.xpro.name, "course-v1:xPRO+Test+R1", "course-v1:xPRO+Test+R1"),
+        (ETLSource.mit_edx.name, "MITx-1.00x-1T2022", "MITx-1.00x-1T2022"),
+        (ETLSource.oll.name, "course-v1:OLL+Test+R1", "course-v1:OLL+Test+R1"),
+    ],
+)
+def test_content_file_delete_webhook_view_edx_success(  # noqa: PLR0913
+    settings, client, mocker, etl_source, course_id, readable_id
+):
+    """
+    Test ContentFileDeleteWebhookView processes edX delete webhook successfully
+    """
+    mocker.patch(
+        "learning_resources_search.plugins.SearchIndexPlugin.resource_before_delete"
+    )
+    url = reverse("webhooks:v1:content_file_delete_webhook")
+
+    LearningResourceFactory.create(etl_source=etl_source, readable_id=readable_id)
+
+    data = {
+        "source": etl_source,
+        "course_id": course_id,
+    }
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+    assert response.status_code == 200
+    assert not LearningResource.objects.filter(readable_id=readable_id).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
+)
+def test_content_file_delete_webhook_view_edx_resource_not_found(
+    settings, client, mocker, etl_source
+):
+    """
+    Test ContentFileDeleteWebhookView handles missing edX resource gracefully
+    """
+    url = reverse("webhooks:v1:content_file_delete_webhook")
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+    mock_log = mocker.patch("webhooks.views.log")
+    data = {
+        "source": etl_source,
+        "course_id": "non-existent-course",
+    }
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+    assert response.status_code == 200
+    assert mock_log.warning.called
+    assert "does not exist" in mock_log.warning.call_args[0][0]
+    mock_delete.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_content_file_webhook_view_canvas_success(settings, client, mocker):
     """
     Test ContentFileWebhookView processes Canvas create webhook successfully
@@ -100,6 +171,76 @@ def test_content_file_webhook_view_canvas_success(settings, client, mocker):
     )
     assert response.status_code == 200
     mock_ingest.assert_called_once_with(["/path/to/canvas/course.tar.gz", False])
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("etl_source", "content_path", "readable_id"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            "mitxonline/courses/course-v1:Test+Course+R1/abcdef.tar.gz",
+            "course-v1:Test+Course",
+        ),
+        (
+            ETLSource.xpro.name,
+            "xpro/courses/course-v1:xPRO+Test+R1/abcdef.tar.gz",
+            None,
+        ),
+        (
+            ETLSource.mit_edx.name,
+            "edxorg-raw-data/courses/xml/MITx-1.00x-1T2022/tuvxyz.tar.gz",
+            "MITx-1.00x",
+        ),
+        (
+            ETLSource.oll.name,
+            "open-learning-library/courses/course-v1:OLL+Test+R1_OLL.tar.gz",
+            "course-v1:OLL+Test",
+        ),
+    ],
+)
+def test_content_file_webhook_view_edx_success(  # noqa: PLR0913
+    settings, client, mocker, etl_source, content_path, readable_id
+):
+    """
+    Test ContentFileWebhookView processes edX create webhooks successfully
+    """
+    url = reverse("webhooks:v1:content_file_webhook")
+    mock_ingest = mocker.patch("webhooks.views.ingest_edx_course.apply_async")
+
+    data = {
+        "source": etl_source,
+        "content_path": content_path,
+    }
+    if readable_id:
+        data["course_id"] = readable_id
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+    assert response.status_code == 200
+    mock_ingest.assert_called_once_with(
+        [etl_source, content_path], readable_id=readable_id, overwrite=False
+    )
+
+
+@pytest.mark.django_db
+def test_content_file_webhook_view_invalid_json(settings, client):
+    """
+    Test ContentFileWebhookView handles invalid JSON
+    """
+    url = reverse("webhooks:v1:content_file_webhook")
+    invalid_data = "invalid json{"
+    response = client.post(
+        url,
+        data=invalid_data,
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(invalid_data, settings)},
+    )
+    assert response.status_code == 400
+    assert "Invalid JSON format" in response.content.decode()
 
 
 @pytest.mark.django_db

@@ -723,3 +723,39 @@ def test_remove_duplicate_resources(mocker, mocked_celery):
         remove_duplicate_resources()
     assert generate_embeddings_mock.mock_calls[0].args[0] == [published_reasource.id]
     assert LearningResource.objects.filter(readable_id=duplicate_id).count() == 1
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "archive_path", "overwrite"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            "mitxonline/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz",
+            False,
+        ),
+        (
+            ETLSource.xpro.name,
+            "xpro/courses/course-v1:xPRO+Test+R1/qrstuvwxyz.tar.gz",
+            True,
+        ),
+        (
+            ETLSource.mit_edx.name,
+            "edxorg-raw-data/courses/MITx-1.00x-1T2022/abcdefghijklmnop.tar.gz",
+            False,
+        ),
+        (
+            ETLSource.oll.name,
+            "open-learning-library/courses/20220101/course-v1:OLL+Test+R1_OLL.tar.gz",
+            True,
+        ),
+    ],
+)
+def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
+    """Test ingest_edx_course task calls sync_edx_archive with correct parameters"""
+    from learning_resources.tasks import ingest_edx_course
+
+    mock_sync = mocker.patch("learning_resources.tasks.sync_edx_archive")
+
+    ingest_edx_course(etl_source, archive_path, overwrite=overwrite)
+
+    mock_sync.assert_called_once_with(etl_source, archive_path, overwrite=overwrite)

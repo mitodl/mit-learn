@@ -64,7 +64,9 @@ OLL_LEARNING_COURSE_BUCKET_PREFIX = get_string(
 )
 
 # Canvas course settings
-CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
+COURSE_ARCHIVE_BUCKET_NAME = get_string(
+    "COURSE_ARCHIVE_BUCKET_NAME", "ol-data-lake-landing-zone-production"
+)
 CANVAS_COURSE_BUCKET_PREFIX = get_string(
     "CANVAS_COURSE_BUCKET_PREFIX", "canvas/course_content"
 )
