@@ -246,12 +246,12 @@ const getTabData = (user?: MitxOnlineUser): TabData[] => {
                 <Typography variant="subtitle2" component="span">
                   {org.name}
                 </Typography>
-                {` - ${contract?.name}`}
+                {` - ${contract.name}`}
               </>
             )
             const href = contractView(
               org.slug.replace("org-", ""),
-              contract?.slug,
+              contract.slug,
             )
             return {
               value: href,
