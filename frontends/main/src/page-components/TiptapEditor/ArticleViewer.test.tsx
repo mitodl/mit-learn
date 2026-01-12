@@ -200,23 +200,12 @@ describe("ArticleViewer", () => {
 
     renderWithProviders(<ArticleEditor article={article} readOnly />)
 
-    const headings1 = await screen.findAllByRole("heading", { level: 1 })
-    expect(headings1[1]).toHaveTextContent("Heading Level 1")
-
-    const heading2 = await screen.findByRole("heading", { level: 2 })
-    expect(heading2).toHaveTextContent("Heading Level 2")
-
-    const heading3 = await screen.findByRole("heading", { level: 3 })
-    expect(heading3).toHaveTextContent("Heading Level 3")
-
-    const heading4 = await screen.findByRole("heading", { level: 4 })
-    expect(heading4).toHaveTextContent("Heading Level 4")
-
-    const heading5 = await screen.findByRole("heading", { level: 5 })
-    expect(heading5).toHaveTextContent("Heading Level 5")
-
-    const heading6 = await screen.findByRole("heading", { level: 6 })
-    expect(heading6).toHaveTextContent("Heading Level 6")
+    await screen.findByRole("heading", { level: 1, name: "Heading Level 1" })
+    await screen.findByRole("heading", { level: 2, name: "Heading Level 2" })
+    await screen.findByRole("heading", { level: 3, name: "Heading Level 3" })
+    await screen.findByRole("heading", { level: 4, name: "Heading Level 4" })
+    await screen.findByRole("heading", { level: 5, name: "Heading Level 5" })
+    await screen.findByRole("heading", { level: 6, name: "Heading Level 6" })
   })
 
   test("renders ordered and unordered lists", async () => {

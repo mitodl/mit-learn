@@ -5,7 +5,7 @@
  * elements not supported by JSDOM, the default environment in Jest.
  */
 import React from "react"
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
@@ -15,7 +15,6 @@ import { renderWithTheme } from "../../../../ol-components/src/test-utils"
 import { ArticleEditor } from "./ArticleEditor"
 import type { JSONContent } from "@tiptap/react"
 
-// Mock feature flag to always return true
 jest.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: () => true,
   usePostHog: () => ({}),
@@ -23,7 +22,6 @@ jest.mock("posthog-js/react", () => ({
 
 const mockOnSave = jest.fn()
 
-// Helper to render with providers (uses renderWithTheme + adds React Query and NiceModal)
 const renderWithProviders = (
   component: React.ReactElement,
   options: { user?: ReturnType<typeof factories.user.user> } = {},
@@ -48,12 +46,10 @@ const renderWithProviders = (
   return renderWithTheme(<Wrapper>{component}</Wrapper>)
 }
 
-// Helper to get mock calls from makeRequest with proper typing
 const getMakeRequestCalls = () => {
   return (makeRequest as unknown as ReturnType<typeof jest.fn>).mock.calls
 }
 
-// Helper to find a specific API call by method and URL
 const findApiCall = (
   method: string,
   url: string,
@@ -64,29 +60,13 @@ const findApiCall = (
     | undefined
 }
 
-describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
-  let consoleWarnSpy: ReturnType<typeof jest.spyOn>
-
+describe("ArticleEditor - Content Editing and Saving", () => {
   beforeEach(() => {
     mockOnSave.mockClear()
     jest.clearAllMocks()
-    consoleWarnSpy = jest
-      .spyOn(console, "warn")
-      .mockImplementation((message) => {
-        if (
-          typeof message === "string" &&
-          message.includes("Duplicate extension names")
-        ) {
-          return
-        }
-      })
   })
 
-  afterEach(() => {
-    consoleWarnSpy.mockRestore()
-  })
-
-  const setupEditableEditor = async (
+  const setupEditor = async (
     content: JSONContent,
     articleId = 100,
     title = "Test Article",
@@ -143,11 +123,7 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         ],
       }
 
-      const article = await setupEditableEditor(
-        initialContent,
-        200,
-        "Original Title",
-      )
+      const article = await setupEditor(initialContent, 200, "Original Title")
 
       const updatedArticle = {
         ...article,
@@ -181,14 +157,12 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
       }
       setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
 
-      // Edit the heading
       const heading = screen.getByRole("heading", { level: 1 })
       await userEvent.click(heading)
-      // Select all, delete, then type new text
+
       await userEvent.keyboard("{Control>}a{/Control}{Delete}")
       await userEvent.type(heading, "Updated Title")
 
-      // Wait for button to become enabled (content is touched)
       await waitFor(
         () => {
           const updateButton = screen.getByRole("button", {
@@ -199,13 +173,11 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         { timeout: 3000 },
       )
 
-      // Click Update/Publish button (for unpublished articles it's "Publish")
       const updateButton = screen.getByRole("button", {
         name: /Update|Publish/,
       })
       await userEvent.click(updateButton)
 
-      // Verify API call was made with PATCH
       await waitFor(
         () => {
           const patchCall = findApiCall(
@@ -217,7 +189,6 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         { timeout: 5000 },
       )
 
-      // Verify the request includes updated title and content
       const patchCall = findApiCall("patch", urls.articles.details(article.id))
       expect(patchCall).toBeDefined()
       if (patchCall) {
@@ -228,12 +199,10 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         expect(requestBody.title).toBe("Updated Title")
         expect(requestBody.content).toBeDefined()
 
-        // Verify the updated heading text is in the content
         const contentStr = JSON.stringify(requestBody.content)
         expect(contentStr).toContain("Updated Title")
       }
 
-      // Verify onSave callback was called
       await waitFor(() => expect(mockOnSave).toHaveBeenCalled())
     })
   })
@@ -267,19 +236,13 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         ],
       }
 
-      const article = await setupEditableEditor(
-        initialContent,
-        201,
-        "Article Title",
-      )
+      const article = await setupEditor(initialContent, 201, "Article Title")
 
-      // Find and edit the paragraph
       const paragraph = screen.getByText("Original paragraph text")
       await userEvent.click(paragraph)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.type(paragraph, "Updated paragraph text")
 
-      // Wait for button to become enabled
       await waitFor(
         () => {
           const updateButton = screen.getByRole("button", {
@@ -321,13 +284,11 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
       }
       setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
 
-      // Click Update button
       const updateButton = screen.getByRole("button", {
         name: /Update|Publish/,
       })
       await userEvent.click(updateButton)
 
-      // Verify API call was made with PATCH
       await waitFor(
         () => {
           const patchCall = findApiCall(
@@ -339,17 +300,12 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         { timeout: 5000 },
       )
 
-      // Verify the request includes updated content with the new paragraph text
-      const patchCall = findApiCall(
-        "patch",
-        urls.articles.details(article.id),
-      )
+      const patchCall = findApiCall("patch", urls.articles.details(article.id))
       expect(patchCall).toBeDefined()
       if (patchCall) {
         const requestBody = patchCall[2] as { content: JSONContent }
         expect(requestBody.content).toBeDefined()
 
-        // Verify the updated paragraph text is in the content
         const contentStr = JSON.stringify(requestBody.content)
         expect(contentStr).toContain("Updated paragraph text")
       }
@@ -357,94 +313,6 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
   })
 
   describe("Save button states", () => {
-    test("save button is disabled when content is unchanged", async () => {
-      const initialContent: JSONContent = {
-        type: "doc",
-        content: [
-          {
-            type: "banner",
-            content: [
-              {
-                type: "heading",
-                attrs: { level: 1 },
-                content: [{ type: "text", text: "Title" }],
-              },
-              {
-                type: "paragraph",
-                content: [],
-              },
-            ],
-          },
-          {
-            type: "byline",
-          },
-          {
-            type: "paragraph",
-            content: [],
-          },
-        ],
-      }
-
-      await setupEditableEditor(initialContent, 205, "Title")
-
-      // Button should be disabled initially (no changes made)
-      const updateButton = screen.getByRole("button", {
-        name: /Update|Publish/,
-      })
-      expect(updateButton).toBeDisabled()
-    })
-
-    test("save button becomes enabled after editing content", async () => {
-      const initialContent: JSONContent = {
-        type: "doc",
-        content: [
-          {
-            type: "banner",
-            content: [
-              {
-                type: "heading",
-                attrs: { level: 1 },
-                content: [{ type: "text", text: "Title" }],
-              },
-              {
-                type: "paragraph",
-                content: [],
-              },
-            ],
-          },
-          {
-            type: "byline",
-          },
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "Original text" }],
-          },
-        ],
-      }
-
-      await setupEditableEditor(initialContent, 206, "Title")
-
-      // Initially disabled
-      const updateButton = screen.getByRole("button", {
-        name: /Update|Publish/,
-      })
-      expect(updateButton).toBeDisabled()
-
-      // Edit content
-      const paragraph = screen.getByText("Original text")
-      await userEvent.click(paragraph)
-      await userEvent.keyboard("{Control>}a{/Control}")
-      await userEvent.type(paragraph, "Edited text")
-
-      // Button should become enabled
-      await waitFor(
-        () => {
-          expect(updateButton).not.toBeDisabled()
-        },
-        { timeout: 3000 },
-      )
-    })
-
     test("save button is disabled when title is empty", async () => {
       const initialContent: JSONContent = {
         type: "doc",
@@ -473,15 +341,13 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         ],
       }
 
-      await setupEditableEditor(initialContent, 207, "Title")
+      await setupEditor(initialContent, 207, "Title")
 
-      // Clear the title
       const heading = screen.getByRole("heading", { level: 1 })
       await userEvent.click(heading)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.keyboard("{Delete}")
 
-      // Button should be disabled when title is empty
       await waitFor(
         () => {
           const updateButton = screen.getByRole("button", {
@@ -491,6 +357,48 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         },
         { timeout: 1000 },
       )
+    })
+
+    test("save button is enabled when a title is set", async () => {
+      const initialContent: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Content" }],
+          },
+        ],
+      }
+
+      await setupEditor(initialContent, 206, "")
+
+      const updateButton = screen.getByRole("button", {
+        name: /Update|Publish/,
+      })
+      expect(updateButton).toBeDisabled()
+
+      const heading = screen.getByRole("heading", { level: 1 })
+      await userEvent.click(heading)
+      await userEvent.type(heading, "Article Title")
+
+      expect(updateButton).not.toBeDisabled()
     })
   })
 
@@ -523,24 +431,12 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         ],
       }
 
-      const article = await setupEditableEditor(initialContent, 208, "Title")
+      const article = await setupEditor(initialContent, 208, "Title")
 
-      // Edit content
       const paragraph = screen.getByText("Content")
       await userEvent.click(paragraph)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.type(paragraph, "Updated content")
-
-      // Wait for button to become enabled
-      await waitFor(
-        () => {
-          const saveDraftButton = screen.getByRole("button", {
-            name: "Save As Draft",
-          })
-          expect(saveDraftButton).not.toBeDisabled()
-        },
-        { timeout: 3000 },
-      )
 
       const updatedArticle = {
         ...article,
@@ -551,21 +447,20 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
       }
       setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
 
-      // Click Save As Draft button
-      const saveDraftButton = screen.getByRole("button", {
+      const saveDraftButton = await screen.findByRole("button", {
         name: "Save As Draft",
       })
+
+      expect(saveDraftButton).not.toBeDisabled()
+
       await userEvent.click(saveDraftButton)
 
-      // Verify API call with is_published: false
-      await waitFor(() =>
-        expect(makeRequest).toHaveBeenCalledWith(
-          "patch",
-          urls.articles.details(article.id),
-          expect.objectContaining({
-            is_published: false,
-          }),
-        ),
+      expect(makeRequest).toHaveBeenCalledWith(
+        "patch",
+        urls.articles.details(article.id),
+        expect.objectContaining({
+          is_published: false,
+        }),
       )
     })
   })
@@ -599,57 +494,1017 @@ describe("ArticleEditor - Content Editing and Saving (Happy DOM)", () => {
         ],
       }
 
-      const article = await setupEditableEditor(initialContent, 209, "Title")
+      const article = await setupEditor(initialContent, 209, "Title")
 
-      // Mock a failed save
       setMockResponse.patch(
         urls.articles.details(article.id),
         { detail: "Server error" },
         { code: 500 },
       )
 
-      // Edit content
       const paragraph = screen.getByText("Content")
       await userEvent.click(paragraph)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.type(paragraph, "Updated content")
 
-      // Wait for button to become enabled
-      await waitFor(
-        () => {
-          const updateButton = screen.getByRole("button", {
-            name: /Update|Publish/,
-          })
-          expect(updateButton).not.toBeDisabled()
-        },
-        { timeout: 3000 },
-      )
-
-      // Click Update button
-      const updateButton = screen.getByRole("button", {
+      const updateButton = await screen.findByRole("button", {
         name: /Update|Publish/,
       })
+      expect(updateButton).not.toBeDisabled()
+
       await userEvent.click(updateButton)
 
-      // Wait for error message - check for error alert
+      const errorText = screen.queryByText(
+        /Mock Error|An error occurred while saving|Server error/i,
+      )
+      if (errorText) {
+        expect(errorText).toBeInTheDocument()
+      } else {
+        const alert = screen.queryByRole("alert")
+        if (alert) {
+          expect(alert).toBeInTheDocument()
+        }
+      }
+    })
+  })
+
+  describe("Creating new articles", () => {
+    test("submits article successfully", async () => {
+      const user = factories.user.user({
+        is_authenticated: true,
+        is_article_editor: true,
+      })
+      setMockResponse.get(urls.userMe.get(), user)
+
+      const createdArticle = factories.articles.article({
+        id: 101,
+        title: "My Article",
+        is_published: true,
+      })
+      setMockResponse.post(urls.articles.list(), createdArticle)
+
+      renderWithProviders(<ArticleEditor onSave={mockOnSave} />, { user })
+
+      await screen.findByTestId("editor")
+
+      const heading = screen.getByRole("heading", { level: 1 })
+      await userEvent.click(heading)
+
+      await userEvent.keyboard("{Control>}a{/Control}")
+      await userEvent.type(heading, "My Article", { delay: 0 })
+
+      await screen.findByRole("heading", { level: 1, name: "My Article" })
+
+      const publishButton = await screen.findByRole("button", {
+        name: "Publish",
+      })
+
+      expect(publishButton).not.toBeDisabled()
+
+      fireEvent.click(publishButton!)
+
       await waitFor(
         () => {
-          // The error might appear in an alert component
-          const errorText = screen.queryByText(
-            /Mock Error|An error occurred while saving|Server error/i,
+          expect(makeRequest).toHaveBeenCalledWith(
+            "post",
+            urls.articles.list(),
+            expect.objectContaining({
+              title: "My Article",
+              is_published: true,
+            }),
           )
-          if (errorText) {
-            expect(errorText).toBeInTheDocument()
-          } else {
-            // Sometimes the error might be in a different format
-            const alert = screen.queryByRole("alert")
-            if (alert) {
-              expect(alert).toBeInTheDocument()
-            }
-          }
         },
         { timeout: 5000 },
       )
+
+      expect(mockOnSave).toHaveBeenCalled()
+
+      const calls = mockOnSave.mock.calls
+      expect(calls.length).toBeGreaterThan(0)
+      const savedData = calls[calls.length - 1][0]
+
+      expect(savedData).toBeDefined()
+      expect(savedData).toMatchObject({
+        id: createdArticle.id,
+        title: "My Article",
+        is_published: true,
+      })
+    }, 15000)
+  })
+})
+
+describe("ArticleEditor - Document Rendering", () => {
+  let consoleErrorSpy: ReturnType<typeof jest.spyOn>
+
+  beforeEach(() => {
+    const originalError = console.error
+    consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation((message) => {
+        if (
+          typeof message === "string" &&
+          // Expected as task items (checkboxes) don't have change handlers in edit mode.
+          message.includes(
+            "You provided a `checked` prop to a form field without an `onChange` handler",
+          )
+        ) {
+          return
+        }
+        originalError(message)
+      })
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
+  })
+
+  const setupEditor = async (content: JSONContent, articleId = 1) => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const article = factories.articles.article({
+      id: 1,
+      title: "Test Article",
+      content,
+    })
+    setMockResponse.get(urls.articles.details(articleId), article)
+
+    renderWithProviders(
+      <ArticleEditor article={article} onSave={mockOnSave} readOnly />,
+      { user },
+    )
+
+    await screen.findByTestId("editor")
+    return article
+  }
+
+  test("renders editor when user has ArticleEditor permission", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    renderWithProviders(<ArticleEditor onSave={mockOnSave} />, { user })
+
+    await screen.findByTestId("editor")
+  })
+
+  describe("Basic document structure", () => {
+    test("renders empty document with banner, byline, and empty paragraph", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      await screen.findByTestId("editor")
+
+      await screen.findByRole("heading", { level: 1 })
+    })
+
+    test("renders document with title in banner heading", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Article Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Banner subtitle" }],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      await screen.findByText("Article Title")
+      await screen.findByText("Banner subtitle")
+    })
+
+    test("renders document with multiple paragraphs", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "First paragraph" }],
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Second paragraph" }],
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Third paragraph" }],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      await screen.findByText("First paragraph")
+      await screen.findByText("Second paragraph")
+      await screen.findByText("Third paragraph")
+    })
+  })
+
+  describe("Headings", () => {
+    test("renders document with multiple heading levels", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "H1 Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "heading",
+            attrs: { level: 2 },
+            content: [{ type: "text", text: "H2 Heading" }],
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "H3 Heading" }],
+          },
+          {
+            type: "heading",
+            attrs: { level: 4 },
+            content: [{ type: "text", text: "H4 Heading" }],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      await screen.findByRole("heading", { level: 1, name: "H1 Title" })
+      await screen.findByRole("heading", { level: 2, name: "H2 Heading" })
+      await screen.findByRole("heading", { level: 3, name: "H3 Heading" })
+      await screen.findByRole("heading", { level: 4, name: "H4 Heading" })
+    })
+  })
+
+  describe("Text formatting", () => {
+    test("renders document with bold text", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "This is " },
+              { type: "text", marks: [{ type: "bold" }], text: "bold text" },
+              { type: "text", text: " in a paragraph." },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const boldText = await screen.findByText("bold text")
+      expect(boldText.closest("strong") || boldText.closest("b")).toBeTruthy()
+    })
+
+    test("renders document with italic text", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "This is " },
+              {
+                type: "text",
+                marks: [{ type: "italic" }],
+                text: "italic text",
+              },
+              { type: "text", text: " in a paragraph." },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const italicText = await screen.findByText("italic text")
+      expect(italicText.closest("em") || italicText.closest("i")).toBeTruthy()
+    })
+
+    test("renders document with highlighted text", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "This is " },
+              {
+                type: "text",
+                marks: [{ type: "highlight" }],
+                text: "highlighted text",
+              },
+              { type: "text", text: " in a paragraph." },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const highlightedText = await screen.findByText("highlighted text")
+      expect(highlightedText.closest("mark")).toBeTruthy()
+    })
+
+    test("renders document with links", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Visit " },
+              {
+                type: "text",
+                marks: [
+                  {
+                    type: "link",
+                    attrs: { href: "https://example.com", target: "_blank" },
+                  },
+                ],
+                text: "example.com",
+              },
+              { type: "text", text: " for more info." },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const link = await screen.findByRole("link", { name: "example.com" })
+      expect(link).toHaveAttribute("href", "https://example.com")
+    })
+  })
+
+  describe("Lists", () => {
+    test("renders document with bullet list", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "First item" }],
+                  },
+                ],
+              },
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Second item" }],
+                  },
+                ],
+              },
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Third item" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const firstItem = await screen.findByText("First item")
+      const secondItem = await screen.findByText("Second item")
+      const thirdItem = await screen.findByText("Third item")
+      expect(firstItem.closest("li")).toBeTruthy()
+      expect(secondItem.closest("li")).toBeTruthy()
+      expect(thirdItem.closest("li")).toBeTruthy()
+    })
+
+    test("renders document with ordered list", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "orderedList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Step one" }],
+                  },
+                ],
+              },
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Step two" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const stepOne = await screen.findByText("Step one")
+      const stepTwo = await screen.findByText("Step two")
+      expect(stepOne.closest("li")).toBeTruthy()
+      expect(stepTwo.closest("li")).toBeTruthy()
+    })
+
+    test("renders document with task list", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "taskList",
+            content: [
+              {
+                type: "taskItem",
+                attrs: { checked: false },
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Unchecked task" }],
+                  },
+                ],
+              },
+              {
+                type: "taskItem",
+                attrs: { checked: true },
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Checked task" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const uncheckedTask = await screen.findByText("Unchecked task")
+      const checkedTask = await screen.findByText("Checked task")
+      expect(uncheckedTask.closest("li")).toBeTruthy()
+      expect(checkedTask.closest("li")).toBeTruthy()
+      expect(screen.getByText("Checked task")).toBeInTheDocument()
+    })
+  })
+
+  describe("Block elements", () => {
+    test("renders document with blockquote", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "blockquote",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "This is a quote" }],
+              },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const quote = await screen.findByText("This is a quote")
+      expect(quote.closest("blockquote")).toBeTruthy()
+    })
+
+    test("renders document with code block", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "codeBlock",
+            attrs: { language: "javascript" },
+            content: [{ type: "text", text: "const x = 1;" }],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      const code = await screen.findByText("const x = 1;")
+      expect(code.closest("code")).toBeTruthy()
+    })
+
+    test("renders document with horizontal rule", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "horizontalRule",
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      await screen.findByRole("separator")
+    })
+  })
+
+  describe("Complex document structures", () => {
+    test("renders document with mixed content types", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Complex Article" }],
+              },
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: "A " },
+                  {
+                    type: "text",
+                    marks: [{ type: "bold" }],
+                    text: "complex",
+                  },
+                  { type: "text", text: " article with " },
+                  {
+                    type: "text",
+                    marks: [{ type: "italic" }],
+                    text: "various",
+                  },
+                  { type: "text", text: " elements." },
+                ],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "heading",
+            attrs: { level: 2 },
+            content: [{ type: "text", text: "Introduction" }],
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "First paragraph of content." }],
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "List item one" }],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "blockquote",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "Important quote" }],
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Conclusion" }],
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Final thoughts." }],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      expect(screen.getByText("Complex Article")).toBeInTheDocument()
+      expect(screen.getByText("complex")).toBeInTheDocument()
+      expect(screen.getByText("various")).toBeInTheDocument()
+
+      expect(
+        screen.getByRole("heading", { level: 2, name: "Introduction" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { level: 3, name: "Conclusion" }),
+      ).toBeInTheDocument()
+
+      expect(
+        screen.getByText("First paragraph of content."),
+      ).toBeInTheDocument()
+      expect(screen.getByText("Final thoughts.")).toBeInTheDocument()
+
+      expect(screen.getByText("List item one")).toBeInTheDocument()
+
+      expect(screen.getByText("Important quote")).toBeInTheDocument()
+    })
+
+    test("renders document with nested lists", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Parent item" }],
+                  },
+                  {
+                    type: "bulletList",
+                    content: [
+                      {
+                        type: "listItem",
+                        content: [
+                          {
+                            type: "paragraph",
+                            content: [{ type: "text", text: "Nested item" }],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      expect(screen.getByText("Parent item")).toBeInTheDocument()
+      expect(screen.getByText("Nested item")).toBeInTheDocument()
+    })
+  })
+
+  describe("Document structure validation", () => {
+    test("renders editor even with minimal valid structure", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      expect(screen.getByTestId("editor")).toBeInTheDocument()
+      await screen.findByRole("heading", { level: 1 })
+    })
+
+    test("renders document with empty banner subtitle", async () => {
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Title Only" }],
+              },
+              {
+                type: "paragraph",
+                content: [],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Content paragraph" }],
+          },
+        ],
+      }
+
+      await setupEditor(content)
+
+      expect(screen.getByText("Title Only")).toBeInTheDocument()
+      expect(screen.getByText("Content paragraph")).toBeInTheDocument()
     })
   })
 })
