@@ -62,7 +62,7 @@ class FakeResizeObserver {
 const polyfillResizeObserver = () => {
   if (window.ResizeObserver !== undefined) {
     console.info(
-      "ResizeObserver is already defined (likely running Happy DOM). Skipping polyfill.",
+      "ResizeObserver is already defined (expected if using the Happy DOM test environment). Skipping polyfill.",
     )
   }
   window.ResizeObserver = window.ResizeObserver || FakeResizeObserver
