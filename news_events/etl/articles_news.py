@@ -272,17 +272,15 @@ def extract_text_from_content(content_json: dict) -> str:  # noqa: C901
                 text = node.get("text", "")
                 if text:
                     texts.append(text)
-
             # Node with content array (ProseMirror structure)
-            if "content" in node:
+            elif "content" in node:
                 content = node["content"]
                 if isinstance(content, list):
                     for child in content:
                         texts.extend(extract_text_from_node(child))
                 else:
                     texts.extend(extract_text_from_node(content))
-
-            # Simple text field
+            # Simple text field (fallback)
             elif "text" in node:
                 texts.append(node["text"])
 
