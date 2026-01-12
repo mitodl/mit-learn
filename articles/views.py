@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
+from articles.api import article_published_actions
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_for_all_users, clear_views_cache
@@ -74,7 +75,13 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         clear_views_cache()
-        serializer.save(user=self.request.user)
+        article = serializer.save(user=self.request.user)
+        article_published_actions(article=article)
+
+    def perform_update(self, serializer):
+        clear_views_cache()
+        article = serializer.save()
+        article_published_actions(article=article)
 
     def destroy(self, request, *args, **kwargs):
         clear_views_cache()
