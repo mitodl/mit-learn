@@ -535,7 +535,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             })
             .filter((collection) => {
               // Filter out collections where none of the programs have valid course runs
-              const collectionProgramIds = collection.programs.map((p) => p.id)
+              const collectionProgramIds = collection.programs
+                .map((p) => p.id)
+                .filter((id): id is number => id !== undefined)
               return collectionProgramIds.some((id) =>
                 programHasContractRuns(id),
               )
