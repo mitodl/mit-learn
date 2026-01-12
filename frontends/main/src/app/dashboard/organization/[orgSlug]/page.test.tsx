@@ -1,23 +1,15 @@
 import React from "react"
-import { renderWithProviders, screen, waitFor } from "@/test-utils"
+import { renderWithProviders, waitFor } from "@/test-utils"
 import Page from "./page"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { setupOrgAndUser } from "@/app-pages/DashboardPage/CoursewareDisplay/test-utils"
 import { act } from "@testing-library/react"
+import { contractView, DASHBOARD_HOME } from "@/common/urls"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: jest.fn(),
 }))
-
-jest.mock("@/app-pages/DashboardPage/ContractContent", () => {
-  return jest.fn(({ orgSlug, contractSlug }) => (
-    <div data-testid="contract-content">
-      <div>Org: {orgSlug}</div>
-      <div>Contract: {contractSlug}</div>
-    </div>
-  ))
-})
 
 const mockReplace = jest.fn()
 
@@ -33,7 +25,7 @@ describe("Organization Page", () => {
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
-  test("renders ContractContent with first contract when organization and contract exist", async () => {
+  test("redirects to contract view with first contract when organization and contract exist", async () => {
     const { mitxOnlineUser } = setupOrgAndUser()
 
     const contract = factories.contracts.contract({})
@@ -59,10 +51,11 @@ describe("Organization Page", () => {
       renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
     })
 
-    await screen.findByTestId("contract-content")
-
-    expect(screen.getByText(`Org: ${orgSlug}`)).toBeInTheDocument()
-    expect(screen.getByText(`Contract: ${contract.slug}`)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        contractView(orgSlug, contract.slug),
+      )
+    })
   })
 
   test("redirects to dashboard when organization has no contracts", async () => {
@@ -91,7 +84,7 @@ describe("Organization Page", () => {
     })
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_HOME)
     })
   })
 
@@ -107,11 +100,11 @@ describe("Organization Page", () => {
     })
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_HOME)
     })
   })
 
-  test("uses first contract when organization has multiple contracts", async () => {
+  test("redirects to first contract when organization has multiple contracts", async () => {
     const { mitxOnlineUser } = setupOrgAndUser()
 
     const contract1 = factories.contracts.contract({ slug: "first-contract" })
@@ -139,15 +132,14 @@ describe("Organization Page", () => {
       renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
     })
 
-    await screen.findByTestId("contract-content")
-
-    expect(screen.getByText(`Contract: ${contract1.slug}`)).toBeInTheDocument()
-    expect(
-      screen.queryByText(`Contract: ${contract2.slug}`),
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        contractView(orgSlug, contract1.slug),
+      )
+    })
   })
 
-  test("matches organization slug correctly with org- prefix", async () => {
+  test("redirects correctly when matching organization slug with org- prefix", async () => {
     const { mitxOnlineUser } = setupOrgAndUser()
 
     const contract = factories.contracts.contract({})
@@ -171,12 +163,14 @@ describe("Organization Page", () => {
       )
     })
 
-    await screen.findByTestId("contract-content")
-
-    expect(screen.getByText("Org: test-organization")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        contractView("test-organization", contract.slug),
+      )
+    })
   })
 
-  test("returns null when no contract available", async () => {
+  test("redirects to dashboard when no contract available", async () => {
     const { mitxOnlineUser } = setupOrgAndUser()
 
     const userWithNoContracts = {
@@ -201,12 +195,8 @@ describe("Organization Page", () => {
       renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
     })
 
-    // Should not render the contract content
-    expect(screen.queryByTestId("contract-content")).not.toBeInTheDocument()
-
-    // Should trigger redirect
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(mockReplace).toHaveBeenCalledWith(DASHBOARD_HOME)
     })
   })
 })

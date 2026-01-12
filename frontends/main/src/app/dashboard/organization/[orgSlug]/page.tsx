@@ -1,11 +1,11 @@
 "use client"
 
 import React, { use, useEffect } from "react"
-import ContractContent from "@/app-pages/DashboardPage/ContractContent"
 import { useQuery } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { useRouter } from "next-nprogress-bar"
+import { contractView, DASHBOARD_HOME } from "@/common/urls"
 
 const Page: React.FC<{
   params: Promise<{ orgSlug: string }>
@@ -24,16 +24,14 @@ const Page: React.FC<{
   const firstContractSlug = b2bOrganization?.contracts[0]?.slug
 
   useEffect(() => {
-    if (!isLoadingMitxOnlineUser && !firstContractSlug) {
-      router.replace("/dashboard")
+    if (!isLoadingMitxOnlineUser) {
+      if (firstContractSlug) {
+        router.replace(contractView(orgSlug, firstContractSlug))
+      } else {
+        router.replace(DASHBOARD_HOME)
+      }
     }
-  }, [isLoadingMitxOnlineUser, firstContractSlug, router])
-
-  if (firstContractSlug) {
-    return (
-      <ContractContent orgSlug={orgSlug} contractSlug={firstContractSlug} />
-    )
-  }
+  }, [isLoadingMitxOnlineUser, firstContractSlug, orgSlug, router])
 
   return null
 }
