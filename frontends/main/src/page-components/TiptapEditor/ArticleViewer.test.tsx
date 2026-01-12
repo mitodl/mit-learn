@@ -84,6 +84,449 @@ describe("ArticleViewer", () => {
     await screen.findByText(`By ${user.first_name} ${user.last_name}`)
   })
 
+  test("renders headings levels 1-6", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const article = factories.articles.article({
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: {
+                  textAlign: null,
+                  level: 1,
+                },
+                content: [
+                  {
+                    type: "text",
+                    text: "Article Title",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 1,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 1",
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 2,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 2",
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 3,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 3",
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 4,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 4",
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 5,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 5",
+              },
+            ],
+          },
+          {
+            type: "heading",
+            attrs: {
+              textAlign: null,
+              level: 6,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Heading Level 6",
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    const headings1 = await screen.findAllByRole("heading", { level: 1 })
+    expect(headings1[1]).toHaveTextContent("Heading Level 1")
+
+    const heading2 = await screen.findByRole("heading", { level: 2 })
+    expect(heading2).toHaveTextContent("Heading Level 2")
+
+    const heading3 = await screen.findByRole("heading", { level: 3 })
+    expect(heading3).toHaveTextContent("Heading Level 3")
+
+    const heading4 = await screen.findByRole("heading", { level: 4 })
+    expect(heading4).toHaveTextContent("Heading Level 4")
+
+    const heading5 = await screen.findByRole("heading", { level: 5 })
+    expect(heading5).toHaveTextContent("Heading Level 5")
+
+    const heading6 = await screen.findByRole("heading", { level: 6 })
+    expect(heading6).toHaveTextContent("Heading Level 6")
+  })
+
+  test("renders ordered and unordered lists", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const article = factories.articles.article({
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: {
+                  textAlign: null,
+                  level: 1,
+                },
+                content: [
+                  {
+                    type: "text",
+                    text: "Article Title",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    attrs: {
+                      textAlign: null,
+                    },
+                    content: [
+                      {
+                        type: "text",
+                        text: "First unordered item",
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    attrs: {
+                      textAlign: null,
+                    },
+                    content: [
+                      {
+                        type: "text",
+                        text: "Second unordered item",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "orderedList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    attrs: {
+                      textAlign: null,
+                    },
+                    content: [
+                      {
+                        type: "text",
+                        text: "First ordered item",
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    attrs: {
+                      textAlign: null,
+                    },
+                    content: [
+                      {
+                        type: "text",
+                        text: "Second ordered item",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    expect(await screen.findByText("First unordered item")).toBeInTheDocument()
+    expect(screen.getByText("Second unordered item")).toBeInTheDocument()
+    expect(screen.getByText("First ordered item")).toBeInTheDocument()
+    expect(screen.getByText("Second ordered item")).toBeInTheDocument()
+
+    const lists = await screen.findAllByRole("list")
+    const unorderedList = lists.find((list) => list.tagName === "UL")
+    const orderedList = lists.find((list) => list.tagName === "OL")
+    expect(unorderedList).toBeInTheDocument()
+    expect(orderedList).toBeInTheDocument()
+  })
+
+  test("renders inline marks including bold, italic, code and underline", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const article = factories.articles.article({
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: {
+                  textAlign: null,
+                  level: 1,
+                },
+                content: [
+                  {
+                    type: "text",
+                    text: "Article Title",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            attrs: {
+              textAlign: null,
+            },
+            content: [
+              {
+                type: "text",
+                text: "This is ",
+              },
+              {
+                type: "text",
+                marks: [{ type: "bold" }],
+                text: "bold text",
+              },
+              {
+                type: "text",
+                text: ", ",
+              },
+              {
+                type: "text",
+                marks: [{ type: "italic" }],
+                text: "italic text",
+              },
+              {
+                type: "text",
+                text: ", ",
+              },
+              {
+                type: "text",
+                marks: [{ type: "code" }],
+                text: "code text",
+              },
+              {
+                type: "text",
+                text: ", and ",
+              },
+              {
+                type: "text",
+                marks: [{ type: "underline" }],
+                text: "underlined text",
+              },
+              {
+                type: "text",
+                text: ".",
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    const boldText = await screen.findByText("bold text")
+    expect(boldText).toBeInTheDocument()
+    expect(
+      boldText.closest("strong") || boldText.closest("b"),
+    ).toBeInTheDocument()
+
+    const italicText = screen.getByText("italic text")
+    expect(italicText).toBeInTheDocument()
+    expect(
+      italicText.closest("em") || italicText.closest("i"),
+    ).toBeInTheDocument()
+
+    const codeText = screen.getByText("code text")
+    expect(codeText).toBeInTheDocument()
+    expect(codeText.closest("code")).toBeInTheDocument()
+
+    const underlinedText = screen.getByText("underlined text")
+    expect(underlinedText).toBeInTheDocument()
+    expect(underlinedText.closest("u")).toBeInTheDocument()
+  })
+
+  test("renders links", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const article = factories.articles.article({
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: {
+                  textAlign: null,
+                  level: 1,
+                },
+                content: [
+                  {
+                    type: "text",
+                    text: "Article Title",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "byline",
+          },
+          {
+            type: "paragraph",
+            attrs: {
+              textAlign: null,
+            },
+            content: [
+              {
+                type: "text",
+                text: "Visit ",
+              },
+              {
+                type: "text",
+                marks: [
+                  {
+                    type: "link",
+                    attrs: {
+                      href: "https://example.com",
+                      target: "_blank",
+                    },
+                  },
+                ],
+                text: "example.com",
+              },
+              {
+                type: "text",
+                text: " for more information.",
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    renderWithProviders(<ArticleEditor article={article} readOnly />)
+
+    const link = await screen.findByRole("link", { name: "example.com" })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute("href", "https://example.com")
+    expect(link).toHaveAttribute("target", "_blank")
+  })
+
   test("shows edit button for article editors", async () => {
     const user = factories.user.user({
       is_authenticated: true,
