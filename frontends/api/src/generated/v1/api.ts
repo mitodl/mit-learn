@@ -7272,6 +7272,12 @@ export interface RichTextArticle {
   updated_on: string
   /**
    *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  publish_date: string
+  /**
+   *
    * @type {boolean}
    * @memberof RichTextArticle
    */

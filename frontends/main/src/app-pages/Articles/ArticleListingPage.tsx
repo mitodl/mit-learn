@@ -97,7 +97,7 @@ const FeaturedMainCard = styled.div`
   overflow: hidden;
   border: 1px solid ${theme.custom.colors.lightGray2};
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 `
 
 const FeaturedMainImage = styled.div<{ imageUrl?: string }>`
@@ -157,7 +157,7 @@ const SidebarStoryCard = styled.div`
   overflow: hidden;
   border: 1px solid ${theme.custom.colors.lightGray2};
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
   background: ${theme.custom.colors.white};
 `
 
@@ -167,7 +167,7 @@ const SidebarStoryContent = styled.div`
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  padding: 12px 16px 12px 16px;
+  padding: 12px 16px;
   min-width: 0;
 `
 

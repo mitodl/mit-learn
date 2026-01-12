@@ -15122,6 +15122,10 @@ components:
           type: string
           format: date-time
           readOnly: true
+        publish_date:
+          type: string
+          format: date-time
+          readOnly: true
         is_published:
           type: boolean
         slug:
@@ -15131,6 +15135,7 @@ components:
       required:
       - created_on
       - id
+      - publish_date
       - title
       - updated_on
       - user

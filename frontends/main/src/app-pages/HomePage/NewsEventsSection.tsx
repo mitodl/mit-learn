@@ -128,7 +128,7 @@ const EventDate = styled.div`
 `
 
 const HeadingContainer = styled.div`
-  justify-content: flex-end;
+  justify-content: center;
   display: flex;
   width: 100%;
   margin-top: 40px;
@@ -225,7 +225,7 @@ const NewsEventsSection: React.FC = () => {
 
   const { data: events } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.Events],
-    limit: 5,
+    limit: 6,
     sortby: "event_date",
   })
 
