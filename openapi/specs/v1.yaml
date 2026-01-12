@@ -9603,6 +9603,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: course_readable_id
+        schema:
+          type: string
+      - in: query
         name: source
         schema:
           enum:
@@ -10377,6 +10381,8 @@ components:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
+        course_readable_id:
+          type: string
       required:
       - source
     ContentFileWebHookRequestRequest:
@@ -10388,6 +10394,8 @@ components:
         source:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
+          type: string
+        course_readable_id:
           type: string
       required:
       - source
