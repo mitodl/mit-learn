@@ -131,8 +131,8 @@ class VideoShortWebhookView(BaseWebhookView):
     def post(self, request):
         try:
             data = self.get_data(request)
-            youtube_data = data.get("youtube_metadata")
-            upsert_video_short(youtube_data)
+            video_data = data.get("video_metadata")
+            upsert_video_short(video_data)
             clear_views_cache()
             return self.success()
         except json.JSONDecodeError:

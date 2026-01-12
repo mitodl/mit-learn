@@ -4,7 +4,8 @@ import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import styled from "@emotion/styled"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
-  shouldForwardProp: (prop) => !["editable", "layout"].includes(prop),
+  shouldForwardProp: (prop) =>
+    !["editable", "hovering", "layout"].includes(prop),
 })<{
   layout: string
   hovering: boolean

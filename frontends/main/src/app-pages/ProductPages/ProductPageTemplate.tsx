@@ -25,19 +25,14 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 const TitleBox = styled(Stack)(({ theme }) => ({
   color: theme.custom.colors.white,
 }))
-const OfferedByTag = styled.div(({ theme }) => ({
+const ProductTag = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.darkGray1,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  height: "32px",
-  padding: "0 12px",
+  padding: "4px 12px",
   borderRadius: "4px",
-  marginBottom: "4px",
-  ...theme.typography.subtitle1,
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
+  ...theme.typography.subtitle2,
 }))
 
 const Page = styled.div(({ theme }) => ({
@@ -162,7 +157,7 @@ type HeadingData = {
 }
 
 type ProductPageTemplateProps = {
-  offeredBy: string
+  tags: string[]
   currentBreadcrumbLabel: string
   title: string
   shortDescription: React.ReactNode
@@ -172,7 +167,7 @@ type ProductPageTemplateProps = {
   navLinks: HeadingData[]
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
-  offeredBy,
+  tags,
   currentBreadcrumbLabel,
   title,
   shortDescription,
@@ -183,7 +178,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   return (
     <Page>
       <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
-        <TopContainer>
+        <TopContainer data-testid="banner-container">
           <MainCol>
             <StyledBreadcrumbs
               variant="dark"
@@ -191,7 +186,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               current={currentBreadcrumbLabel}
             />
             <TitleBox alignItems="flex-start" gap="4px">
-              <OfferedByTag>{offeredBy}</OfferedByTag>
+              <Stack direction="row" gap="8px">
+                {tags.map((tag) => {
+                  return <ProductTag key={tag}>{tag}</ProductTag>
+                })}
+              </Stack>
               <Stack alignItems="flex-start" gap="16px">
                 <Typography component="h1" typography={{ xs: "h3", sm: "h2" }}>
                   {title}

@@ -34,6 +34,7 @@ import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar
 
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
 import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
+import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
@@ -294,6 +295,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     DividerNode,
     ArticleByLineInfoBarNode,
     ImageWithCaptionNode,
+    MediaEmbedURLHandler,
     ImageNode.configure({
       accept: "image/*",
       maxSize: MAX_FILE_SIZE,

@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.51.0 (Released January 08, 2026)
+--------------
+
+- Certificate page digital credential fixes (#2842)
+- Download digital credential dialog (#2830)
+
 Version 0.50.7 (Released January 06, 2026)
 --------------
 

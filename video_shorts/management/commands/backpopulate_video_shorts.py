@@ -46,9 +46,7 @@ class Command(BaseCommand):
         upserted_count = 0
         for video_short in walk_video_shorts_from_s3(limit=limit):
             upserted_count += 1
-            self.stdout.write(
-                f"Upserted: {video_short.title} ({video_short.youtube_id})"
-            )
+            self.stdout.write(f"Upserted: {video_short.title} ({video_short.video_id})")
         clear_views_cache()
         self.stdout.write(
             self.style.SUCCESS(f"Complete: {upserted_count} video short(s) upserted")

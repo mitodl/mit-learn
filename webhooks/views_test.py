@@ -103,20 +103,15 @@ def test_content_file_webhook_view_canvas_success(settings, client, mocker):
 
 
 @pytest.mark.django_db
-def test_video_short_webhook_view_creates_new(
-    settings, client, sample_youtube_metadata
-):
+def test_video_short_webhook_view_creates_new(settings, client, sample_video_metadata):
     """Test VideoShortWebhookView creates a new VideoShort"""
     from video_shorts.models import VideoShort
-
-    settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
 
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "k_AA4_fQIHc",
-        "youtube_metadata": sample_youtube_metadata,
-        "source": "youtube_shorts",
+        "video_metadata": sample_video_metadata,
+        "source": "video_shorts",
     }
 
     response = client.post(
@@ -130,25 +125,31 @@ def test_video_short_webhook_view_creates_new(
     assert response.json()["status"] == "success"
 
     # Verify VideoShort was created
-    video_short = VideoShort.objects.get(youtube_id="k_AA4_fQIHc")
+    video_short = VideoShort.objects.get(video_id="k_AA4_fQIHc")
     assert video_short.title == "How far away is space?"
+    assert video_short.video_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4"
+    assert (
+        video_short.thumbnail_large_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_large.jpg"
+    )
+    assert (
+        video_short.thumbnail_small_url == "/shorts/k_AA4_fQIHc/k_AA4_fQIHc_small.jpg"
+    )
     assert VideoShort.objects.count() == 1
 
 
 @pytest.mark.django_db
 def test_video_short_webhook_view_updates_existing(
-    settings, client, sample_youtube_metadata
+    settings, client, sample_video_metadata
 ):
     """Test VideoShortWebhookView updates existing VideoShort"""
     from video_shorts.factories import VideoShortFactory
     from video_shorts.models import VideoShort
 
     settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
 
     # Create existing video short
     existing = VideoShortFactory.create(
-        youtube_id="k_AA4_fQIHc",
+        video_id="k_AA4_fQIHc",
         title="Old Title",
     )
     original_created_on = existing.created_on
@@ -156,13 +157,13 @@ def test_video_short_webhook_view_updates_existing(
     url = reverse("webhooks:v1:video_short_webhook")
 
     # Update with new metadata
-    updated_metadata = sample_youtube_metadata.copy()
-    updated_metadata["snippet"]["title"] = "Updated Title"
+    updated_metadata = sample_video_metadata.copy()
+    updated_metadata["title"] = "Updated Title"
 
     data = {
         "video_id": "k_AA4_fQIHc",
-        "youtube_metadata": updated_metadata,
-        "source": "youtube_shorts",
+        "video_metadata": updated_metadata,
+        "source": "video_shorts",
     }
 
     response = client.post(
@@ -177,7 +178,7 @@ def test_video_short_webhook_view_updates_existing(
 
     # Verify VideoShort was updated, not duplicated
     assert VideoShort.objects.count() == 1
-    video_short = VideoShort.objects.get(youtube_id="k_AA4_fQIHc")
+    video_short = VideoShort.objects.get(video_id="k_AA4_fQIHc")
     assert video_short.title == "Updated Title"
     assert video_short.created_on == original_created_on
 
@@ -203,10 +204,10 @@ def test_video_short_webhook_view_missing_required_fields(settings, client):
     """Test VideoShortWebhookView validates required fields"""
     url = reverse("webhooks:v1:video_short_webhook")
 
-    # Missing youtube_metadata
+    # Missing video_metadata
     data = {
         "video_id": "test_id",
-        "source": "youtube_shorts",
+        "source": "video_shorts",
     }
 
     response = client.post(
@@ -220,21 +221,20 @@ def test_video_short_webhook_view_missing_required_fields(settings, client):
 
 
 @pytest.mark.django_db
-def test_video_short_webhook_view_invalid_youtube_metadata(settings, client):
-    """Test VideoShortWebhookView validates youtube_metadata structure"""
+def test_video_short_webhook_view_invalid_video_metadata(settings, client):
+    """Test VideoShortWebhookView validates metadata structure"""
     settings.APP_BASE_URL = "https://learn.mit.edu/"
-    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
 
     url = reverse("webhooks:v1:video_short_webhook")
 
-    # Invalid youtube_metadata (missing required fields)
+    # Invalid metadata (missing required fields)
     data = {
         "video_id": "test_id",
-        "youtube_metadata": {
-            "id": "test_id",
-            # Missing 'snippet' and other required fields
+        "video_metadata": {
+            "video_id": "test_id",
+            # Missing 'title' and other required fields
         },
-        "source": "youtube_shorts",
+        "source": "video_shorts",
     }
 
     response = client.post(
