@@ -2,7 +2,6 @@
 
 import React, { use, useEffect } from "react"
 import ContractContent from "@/app-pages/DashboardPage/ContractContent"
-import invariant from "tiny-invariant"
 import { useQuery } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -17,7 +16,6 @@ const Page: React.FC<{
   )
 
   const resolved = use(params)
-  invariant(resolved.orgSlug, "orgSlug is required")
   const orgSlug = resolved.orgSlug
 
   const b2bOrganization = mitxOnlineUser?.b2b_organizations.find(
