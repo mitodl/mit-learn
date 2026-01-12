@@ -7,6 +7,7 @@ import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 
 const PageContainer = styled.div({
@@ -34,11 +35,20 @@ export const ArticleDetailPage = ({
   const showArticleDetail = useFeatureFlagEnabled(
     FeatureFlags.ArticleEditorView,
   )
+  const flagsLoaded = useFeatureFlagsLoaded()
 
-  if (isLoading) {
-    return <Spinner color="inherit" loading size={32} />
+  /* Ensure queries are accessed during loading/flag check.
+   * This prevents React Query warnings about prefetched queries not being accessed.
+   * We can remove the early LearningResourceProvider when we remove the feature flag.
+   */
+  if (isLoading || (!flagsLoaded && showArticleDetail === undefined)) {
+    return (
+      <LearningResourceProvider resourceIds={learningResourceIds}>
+        <Spinner color="inherit" loading size={32} />
+      </LearningResourceProvider>
+    )
   }
-  if (!article || !showArticleDetail) {
+  if (!showArticleDetail || !article) {
     return notFound()
   }
 
