@@ -7,8 +7,6 @@ import {
   theme,
   Typography,
   Grid2,
-  Breadcrumbs,
-  BannerBackground,
   Pagination,
   PaginationItem,
   css,
@@ -22,8 +20,8 @@ import {
 import type { NewsFeedItem } from "api/v0"
 import { Story } from "../HomePage/NewsEventsSection"
 import { LocalDate } from "ol-utilities"
+import { ArticleBanner } from "./ArticleBanner"
 
-const DEFAULT_BACKGROUND_IMAGE_URL = "/images/backgrounds/background_steps.jpg"
 const PAGE_SIZE = 20
 const MAX_PAGE = 50
 
@@ -31,23 +29,6 @@ const getLastPage = (count: number): number => {
   const pages = Math.ceil(count / PAGE_SIZE)
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
-
-const BannerSection = styled(BannerBackground)`
-  padding: 48px 0;
-  ${theme.breakpoints.down("sm")} {
-    padding: 32px 0;
-  }
-`
-
-const BannerTitle = styled(Typography)`
-  color: ${theme.custom.colors.white};
-  margin-top: 8px;
-` as typeof Typography
-
-const BannerDescription = styled(Typography)`
-  color: ${theme.custom.colors.white};
-  margin-top: 8px;
-`
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -380,26 +361,11 @@ const ArticleListingPage: React.FC = () => {
 
   return (
     <>
-      <BannerSection
-        backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
-        backgroundSize="cover"
-        backgroundDim={0.4}
-      >
-        <Container>
-          <Breadcrumbs
-            variant="dark"
-            ancestors={[{ href: "/", label: "Home" }]}
-            current="MIT Stories"
-          />
-          <BannerTitle component="h1" variant="h1">
-            MIT Stories
-          </BannerTitle>
-          <BannerDescription variant="body1">
-            See what's happening in the world of learning with the latest news,
-            insights, and upcoming events at MIT.
-          </BannerDescription>
-        </Container>
-      </BannerSection>
+      <ArticleBanner
+        title="MIT Stories"
+        description="See what's happening in the world of learning with the latest news, insights, and upcoming events at MIT."
+        currentBreadcrumb="MIT Stories"
+      />
 
       <Section>
         <div ref={scrollHook} />

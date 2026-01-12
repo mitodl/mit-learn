@@ -210,7 +210,7 @@ export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
         {item.title}
       </Card.Title>
       <Card.Footer>
-        Published: <LocalDate date={item.news_details?.publish_date} />
+        <LocalDate date={item.news_details?.publish_date} />
       </Card.Footer>
     </StoryCard>
   )

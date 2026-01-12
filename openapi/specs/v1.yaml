@@ -10,6 +10,13 @@ paths:
       description: Get a paginated list of articles
       summary: List
       parameters:
+      - in: query
+        name: draft
+        schema:
+          type: boolean
+        description: Filter to show only draft articles. Only available for admins
+          and article editors. If true, returns unpublished articles. If not specified,
+          returns all articles.
       - name: limit
         required: false
         in: query
