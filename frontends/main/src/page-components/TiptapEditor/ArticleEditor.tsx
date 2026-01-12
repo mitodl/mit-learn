@@ -39,14 +39,6 @@ import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-
 import { ImageNode } from "./extensions/node/Image/ImageNode"
 import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
 
-// import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
-// import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
-// import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
-// import "./vendor/components/tiptap-node/list-node/list-node.scss"
-// import "./vendor/components/tiptap-node/image-node/image-node.scss"
-// import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
-// import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
-
 import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
 
