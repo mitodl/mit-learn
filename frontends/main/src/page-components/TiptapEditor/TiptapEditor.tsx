@@ -284,7 +284,7 @@ const TipTapViewer = ({
   extensions: Array<Extension | Node | Mark>
 }) => {
   return (
-    <Container readOnly>
+    <Container readOnly data-testid="editor">
       <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
