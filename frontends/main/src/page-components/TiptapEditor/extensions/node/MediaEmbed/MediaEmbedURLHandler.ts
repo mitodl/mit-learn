@@ -1,12 +1,12 @@
 import { Extension } from "@tiptap/core"
-import { Plugin } from "@tiptap/pm/state"
+import { Plugin, TextSelection } from "@tiptap/pm/state"
 
 import { convertToEmbedUrl } from "./lib"
 
 function extractMediaEmbedUrl(text: string): string | null {
   try {
-    const embedUrl = convertToEmbedUrl(text.trim())
-    return embedUrl || null
+    // convertToEmbedUrl now handles all validation and returns null for unsupported URLs
+    return convertToEmbedUrl(text.trim())
   } catch {
     return null
   }
@@ -31,6 +31,7 @@ export const MediaEmbedURLHandler = Extension.create({
 
             const text = parent.textContent.trim()
             const embedSrc = extractMediaEmbedUrl(text)
+            console.log(embedSrc)
             if (!embedSrc) return false
 
             event.preventDefault()
@@ -42,7 +43,19 @@ export const MediaEmbedURLHandler = Extension.create({
               src: embedSrc,
             })
 
-            const tr = state.tr.replaceWith(startPos, endPos, mediaNode)
+            // Create an empty paragraph for the user to continue typing
+            const newParagraph = state.schema.nodes.paragraph.create()
+
+            // Replace the current paragraph with media node + new paragraph
+            let tr = state.tr.replaceWith(startPos, endPos, [
+              mediaNode,
+              newParagraph,
+            ])
+
+            // Set cursor at the start of the new paragraph
+            const cursorPos = startPos + mediaNode.nodeSize + 1
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)))
+
             view.dispatch(tr)
 
             return true
