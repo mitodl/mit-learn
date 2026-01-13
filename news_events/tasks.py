@@ -71,6 +71,7 @@ def sync_article_to_news(self, article_id: int):
         - 5 second delay between retries
     """
     import logging
+
     from articles.models import Article
     from news_events.etl.articles_news import sync_single_article_to_news
 

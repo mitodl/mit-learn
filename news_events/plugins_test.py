@@ -1,7 +1,8 @@
 """Tests for news_events plugins"""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from articles.models import Article
 from main.factories import UserFactory

@@ -3,7 +3,7 @@
 import pytest
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_article_published_actions_triggers_hook(mocker, user):
     """Test that article_published_actions triggers the plugin hook for published articles"""
     from articles.api import article_published_actions
@@ -30,7 +30,7 @@ def test_article_published_actions_triggers_hook(mocker, user):
     mock_hook.article_published.assert_called_once_with(article=article)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_article_published_actions_skips_unpublished(mocker, user, caplog):
     """Test that article_published_actions skips unpublished articles"""
     from articles.api import article_published_actions
@@ -62,7 +62,7 @@ def test_article_published_actions_skips_unpublished(mocker, user, caplog):
     )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_article_published_actions_logs_execution(mocker, user, caplog):
     """Test that article_published_actions logs when triggering plugins"""
     from articles.api import article_published_actions

@@ -146,7 +146,7 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
     return entries
 
 
-def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901, PLR0912
+def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901
     """
     Extract the first image from JSON content structure.
 

@@ -44,7 +44,7 @@ def test_get_mitpe_news(mocker):
     mock_etl.assert_called_once()
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_sync_article_to_news_success(mocker, user):
     """Task should sync published article to news feed"""
     from articles.models import Article
@@ -71,7 +71,7 @@ def test_sync_article_to_news_success(mocker, user):
     mock_clear_cache.assert_called_once()
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_sync_article_to_news_article_not_found(mocker, caplog):
     """Task should log warning if article doesn't exist"""
     mock_sync = mocker.patch(
@@ -92,7 +92,7 @@ def test_sync_article_to_news_article_not_found(mocker, caplog):
     assert "Article 99999 not found or not published" in caplog.text
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
     """Task should skip unpublished articles"""
     from articles.models import Article
@@ -122,7 +122,7 @@ def test_sync_article_to_news_unpublished_article(mocker, user, caplog):
     assert f"Article {article.id} not found or not published" in caplog.text
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_sync_article_to_news_sync_failure(mocker, user):
     """Task should retry on sync failure"""
     from articles.models import Article

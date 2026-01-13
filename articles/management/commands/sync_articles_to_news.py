@@ -19,5 +19,5 @@ class Command(BaseCommand):
                 self.style.SUCCESS("Successfully synced articles to news feed!")
             )
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error syncing articles: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"Error syncing articles: {e!s}"))
             raise
