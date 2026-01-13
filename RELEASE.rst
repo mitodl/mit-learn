@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.51.2
+--------------
+
+- Remove duplicate download credential button (#2856)
+- Revert "pre-filter neural query (#2828)" (#2854)
+- fix server import issue (#2853)
+- Prevent query devtools from erroring on image upload (#2827)
+- update mitxonline-api-axios client (#2852)
+- Render article editor content on the server #9760 (#2847)
+- feat: add news/stories pipeline which create news from article (#2844)
+- fix: change media url input behaviour (#2835)
+- Refactor video_shorts (#2845)
+
 Version 0.51.1 (Released January 13, 2026)
 --------------
 
