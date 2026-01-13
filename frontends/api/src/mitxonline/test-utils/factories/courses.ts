@@ -143,7 +143,8 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
       live: faker.datatype.boolean(),
       length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
       effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
-      financial_assistance_form_url: faker.internet.url(),
+      // financial aid is somewhat unusual; default to no financial aid unless overridden
+      financial_assistance_form_url: "",
       current_price: faker.number.int({ min: 0, max: 1000 }),
       instructors: Array.from({
         length: faker.number.int({ min: 1, max: 3 }),
