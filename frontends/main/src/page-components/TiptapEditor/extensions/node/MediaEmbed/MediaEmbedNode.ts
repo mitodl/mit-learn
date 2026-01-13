@@ -23,6 +23,7 @@ export const MediaEmbedNode = Node.create({
       height: { default: "100%" },
       frameBorder: { default: 0 },
       allowFullScreen: { default: true },
+      float: { default: null, renderHTML: false }, // ← NEW ("left" | "right" | null)
       editable: { default: true, renderHTML: false },
       layout: {
         default: "default", // 👈 NEW!
@@ -43,7 +44,7 @@ export const MediaEmbedNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const { editable, layout, ...iframeAttributes } = HTMLAttributes
+    const { editable, layout, float, ...iframeAttributes } = HTMLAttributes
     return ["iframe", mergeAttributes(iframeAttributes)]
   },
 
