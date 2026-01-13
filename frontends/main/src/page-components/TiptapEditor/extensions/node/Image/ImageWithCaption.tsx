@@ -29,6 +29,17 @@ const Container = styled.figure(({ theme }) => ({
     margin: "0 auto",
   },
 
+  ".image-wrapper": {
+    position: "relative",
+    margin: "0 auto",
+    maxWidth: "100%",
+  },
+
+  "&.layout-default .image-wrapper": {
+    width: "auto",
+    display: "inline-block",
+  },
+
   [`@media (min-width: ${ARTICLE_MAX_WIDTH + CONTAINER_PADDING * 2}px)`]: {
     "&.layout-wide img": {
       width: "92vw",
@@ -37,6 +48,21 @@ const Container = styled.figure(({ theme }) => ({
       left: "50%",
       transform: "translateX(-50%)",
     },
+
+    "&.layout-wide .image-wrapper": {
+      width: "92vw",
+      maxWidth: "1400px",
+      position: "relative",
+      left: "50%",
+      transform: "translateX(-50%)",
+    },
+  },
+  "&.layout-full .image-wrapper": {
+    width: "100vw",
+    maxWidth: "100vw",
+    position: "relative",
+    left: "50%",
+    transform: "translateX(-50%)",
   },
 
   "&.layout-full img": {
@@ -146,7 +172,30 @@ const Image = styled.img<{ layout: Layout }>(({ layout }) => ({
   "&&": {
     borderRadius: layout === Layout.full ? 0 : "8px",
   },
+  "& .remove-button": {
+    opacity: 0,
+    pointerEvents: "none",
+  },
+
+  "&:hover .remove-button": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
 }))
+
+const ImageWrapper = styled("div")({
+  position: "relative",
+
+  "& .remove-button": {
+    opacity: 0,
+    pointerEvents: "none",
+  },
+
+  "&:hover .remove-button": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+})
 
 const Caption = styled.figcaption(({ theme }) => ({
   "&&&&&": {
@@ -159,8 +208,35 @@ const Caption = styled.figcaption(({ theme }) => ({
   },
 }))
 
+const RemoveButton = styled("button")(({ theme }) => ({
+  position: "absolute",
+  top: -7,
+  right: -7,
+  zIndex: 999999,
+
+  background: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "50%",
+  width: 24,
+  height: 24,
+
+  cursor: "pointer",
+  fontSize: 14,
+  lineHeight: 1,
+
+  opacity: 0, // 👈 hidden
+  pointerEvents: "none", // 👈 not clickable when hidden
+  transition: "opacity 0.15s ease",
+
+  "&:hover": {
+    background: theme.custom.colors.lightGray1,
+  },
+}))
+
 export function ImageWithCaption({
   node,
+  editor,
+  getPos,
   updateAttributes,
 }: ReactNodeViewProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -197,6 +273,13 @@ export function ImageWithCaption({
     } catch {
       await NiceModal.hide(ImageAltTextInput)
     }
+  }
+
+  const handleRemove = () => {
+    const pos = getPos()
+    if (typeof pos !== "number") return
+
+    editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
   return (
@@ -241,14 +324,26 @@ export function ImageWithCaption({
           </div>
         )}
 
-        <Image
-          src={src}
-          alt={alt || ""}
-          layout={layout}
-          ref={imgRef}
-          onLoad={() => setIsLoading(false)}
-          onError={() => setIsLoading(false)}
-        />
+        <ImageWrapper className="image-wrapper">
+          {isEditable && (
+            <RemoveButton
+              type="button"
+              aria-label="Remove course card"
+              onClick={handleRemove}
+              className="remove-button"
+            >
+              ×
+            </RemoveButton>
+          )}
+          <Image
+            src={src}
+            alt={alt || ""}
+            layout={layout}
+            ref={imgRef}
+            onLoad={() => setIsLoading(false)}
+            onError={() => setIsLoading(false)}
+          />
+        </ImageWrapper>
         {isEditable ? (
           <Caption>
             <input

@@ -8798,7 +8798,7 @@ export interface VideoShortWebhookRequestRequest {
    * @type {{ [key: string]: any; }}
    * @memberof VideoShortWebhookRequestRequest
    */
-  youtube_metadata: { [key: string]: any }
+  video_metadata: { [key: string]: any }
   /**
    *
    * @type {string}
@@ -31254,7 +31254,7 @@ export const WebhooksApiAxiosParamCreator = function (
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {{ [key: string]: any; }} youtube_metadata
+     * @param {{ [key: string]: any; }} video_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
      * @param {*} [options] Override http request option.
@@ -31262,18 +31262,18 @@ export const WebhooksApiAxiosParamCreator = function (
      */
     webhooksVideoShortsCreate: async (
       video_id: string,
-      youtube_metadata: { [key: string]: any },
+      video_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'video_id' is not null or undefined
       assertParamExists("webhooksVideoShortsCreate", "video_id", video_id)
-      // verify required parameter 'youtube_metadata' is not null or undefined
+      // verify required parameter 'video_metadata' is not null or undefined
       assertParamExists(
         "webhooksVideoShortsCreate",
-        "youtube_metadata",
-        youtube_metadata,
+        "video_metadata",
+        video_metadata,
       )
       // verify required parameter 'VideoShortWebhookRequestRequest' is not null or undefined
       assertParamExists(
@@ -31305,8 +31305,8 @@ export const WebhooksApiAxiosParamCreator = function (
         localVarQueryParameter["video_id"] = video_id
       }
 
-      if (youtube_metadata !== undefined) {
-        for (const [key, value] of Object.entries(youtube_metadata)) {
+      if (video_metadata !== undefined) {
+        for (const [key, value] of Object.entries(video_metadata)) {
           localVarQueryParameter[key] = value
         }
       }
@@ -31419,7 +31419,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
-     * @param {{ [key: string]: any; }} youtube_metadata
+     * @param {{ [key: string]: any; }} video_metadata
      * @param {VideoShortWebhookRequestRequest} VideoShortWebhookRequestRequest
      * @param {string} [source]
      * @param {*} [options] Override http request option.
@@ -31427,7 +31427,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
      */
     async webhooksVideoShortsCreate(
       video_id: string,
-      youtube_metadata: { [key: string]: any },
+      video_metadata: { [key: string]: any },
       VideoShortWebhookRequestRequest: VideoShortWebhookRequestRequest,
       source?: string,
       options?: RawAxiosRequestConfig,
@@ -31440,7 +31440,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksVideoShortsCreate(
           video_id,
-          youtube_metadata,
+          video_metadata,
           VideoShortWebhookRequestRequest,
           source,
           options,
@@ -31521,7 +31521,7 @@ export const WebhooksApiFactory = function (
       return localVarFp
         .webhooksVideoShortsCreate(
           requestParameters.video_id,
-          requestParameters.youtube_metadata,
+          requestParameters.video_metadata,
           requestParameters.VideoShortWebhookRequestRequest,
           requestParameters.source,
           options,
@@ -31598,7 +31598,7 @@ export interface WebhooksApiWebhooksVideoShortsCreateRequest {
    * @type {{ [key: string]: any; }}
    * @memberof WebhooksApiWebhooksVideoShortsCreate
    */
-  readonly youtube_metadata: { [key: string]: any }
+  readonly video_metadata: { [key: string]: any }
 
   /**
    *
@@ -31677,7 +31677,7 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksVideoShortsCreate(
         requestParameters.video_id,
-        requestParameters.youtube_metadata,
+        requestParameters.video_metadata,
         requestParameters.VideoShortWebhookRequestRequest,
         requestParameters.source,
         options,

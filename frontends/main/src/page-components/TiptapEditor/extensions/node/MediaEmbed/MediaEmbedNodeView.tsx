@@ -3,7 +3,9 @@ import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import styled from "@emotion/styled"
 
-const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
+const StyledNodeViewWrapper = styled(NodeViewWrapper, {
+  shouldForwardProp: (prop) => prop !== "hovering" && prop !== "layout",
+})<{
   layout: string
   hovering: boolean
 }>`
@@ -109,20 +111,66 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper)<{
   .svg-icon {
     fill: white;
   }
+
+  .remove-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &:hover .remove-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
 `
+
+const RemoveButton = styled("button")(({ theme }) => ({
+  position: "absolute",
+  top: -7,
+  right: -7,
+  zIndex: 2,
+
+  background: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "50%",
+  width: 24,
+  height: 24,
+
+  cursor: "pointer",
+  fontSize: 14,
+  lineHeight: 1,
+
+  opacity: 0, // 👈 hidden
+  pointerEvents: "none", // 👈 not clickable when hidden
+  transition: "opacity 0.15s ease",
+
+  "&:hover": {
+    background: theme.custom.colors.lightGray1,
+  },
+}))
 
 interface MediaEmbedNodeProps {
   node: NodeViewProps["node"]
+  editor: NodeViewProps["editor"]
+  getPos: NodeViewProps["getPos"]
   updateAttributes: (attrs: Record<string, string>) => void
 }
 
 export const MediaEmbedNodeView = ({
   node,
+  editor,
+  getPos,
   updateAttributes,
 }: MediaEmbedNodeProps) => {
   const [hovering, setHovering] = useState(false)
 
   const { layout, caption, src, editable } = node.attrs
+
+  const handleRemove = () => {
+    const pos = getPos()
+    if (typeof pos !== "number") return
+
+    editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
+  }
 
   return (
     <StyledNodeViewWrapper
@@ -132,6 +180,16 @@ export const MediaEmbedNodeView = ({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
+      {editable && (
+        <RemoveButton
+          type="button"
+          aria-label="Remove course card"
+          onClick={handleRemove}
+          className="remove-button"
+        >
+          ×
+        </RemoveButton>
+      )}
       {/* Toolbar — identical to ImageUpload version */}
       {editable && hovering && (
         <div className="media-layout-toolbar">

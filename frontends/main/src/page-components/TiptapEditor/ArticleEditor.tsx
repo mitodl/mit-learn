@@ -34,6 +34,7 @@ import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar
 
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
 import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
+import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
@@ -61,9 +62,16 @@ import {
 } from "api/hooks/articles"
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
+import dynamic from "next/dynamic"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import { extractLearningResourceIds } from "./extensions/utils"
 import { LearningResourceProvider } from "./extensions/node/LearningResource/LearningResourceDataProvider"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+  { ssr: false },
+)
 
 const TOOLBAR_HEIGHT = 43
 
@@ -326,6 +334,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       DividerNode,
       ArticleByLineInfoBarNode,
       ImageWithCaptionNode,
+      MediaEmbedURLHandler,
       ImageNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
@@ -456,7 +465,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 </Typography>
               </StyledAlert>
             ) : null}
-
+            <LearningResourceDrawer />
             <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
           </EditorContext.Provider>
         </LearningResourceProvider>
