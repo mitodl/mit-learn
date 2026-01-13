@@ -254,8 +254,28 @@ const OrgProgramCollectionDisplay: React.FC<{
         (firstCourseIds?.indexOf(b.id) ?? -1)
       )
     }) ?? []
+
+  // Create mapping from course ID to program order
+  const courseIdToOrder = new Map<number, number>()
+  programsWithCourses?.forEach((item) => {
+    const firstCourseId = item?.program.courseIds[0]
+    const programId = item?.programId
+    if (firstCourseId !== undefined && programId !== undefined) {
+      const order =
+        collection.programs.find((p) => p.id === programId)?.order ?? Infinity
+      courseIdToOrder.set(firstCourseId, order)
+    }
+  })
+
+  // Sort raw courses by program order before transforming
+  const sortedRawCourses = [...rawCourses].sort((a, b) => {
+    const orderA = courseIdToOrder.get(a.id) ?? Infinity
+    const orderB = courseIdToOrder.get(b.id) ?? Infinity
+    return orderA - orderB
+  })
+
   const transformedCourses = transform.organizationCoursesWithContracts({
-    courses: rawCourses,
+    courses: sortedRawCourses,
     contract: contract,
     enrollments: enrollments ?? [],
   })
