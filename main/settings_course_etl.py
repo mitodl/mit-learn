@@ -10,8 +10,8 @@ EDX_PROGRAMS_API_URL = get_string("EDX_PROGRAMS_API_URL", None)
 EDX_API_ACCESS_TOKEN_URL = get_string("EDX_API_ACCESS_TOKEN_URL", None)
 EDX_API_CLIENT_ID = get_string("EDX_API_CLIENT_ID", None)
 EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
-EDX_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "EDX_LEARNING_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
+EDX_COURSE_BUCKET_PREFIX = get_string(
+    "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
 
 # Authentication for the github api
@@ -59,8 +59,8 @@ MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
 
 
 # Open Learning Library settings
-OLL_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "OLL_LEARNING_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
+OLL_COURSE_BUCKET_PREFIX = get_string(
+    "OLL_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
 )
 
 # Canvas course settings

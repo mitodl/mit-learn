@@ -15,7 +15,6 @@ from learning_resources.constants import (
     LearningResourceDelivery,
     LearningResourceType,
     OfferedBy,
-    PlatformType,
     RunStatus,
 )
 from learning_resources.etl import utils
@@ -175,9 +174,16 @@ def test_parse_dates():
 @pytest.mark.parametrize("folder", ["folder", "static"])
 @pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
 def test_transform_content_files(  # noqa: PLR0913
-    mocker, folder, has_metadata, matching_edx_module_id, overwrite, tika_content
+    mocker,
+    folder,
+    has_metadata,
+    matching_edx_module_id,
+    overwrite,
+    tika_content,
+    settings,
 ):
     """transform_content_files"""
+    settings.SKIP_TIKA = False
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
     file_extension = ".pdf" if folder == "static" else ".html"
@@ -288,17 +294,10 @@ def test_documents_from_olx():
     assert formula2do[1]["mime_type"].endswith("/xml")
 
 
-@pytest.mark.parametrize(
-    "platform", [PlatformType.mitxonline.name, PlatformType.xpro.name]
-)
-def test_get_learning_course_bucket(
-    aws_settings, mock_mitx_learning_bucket, mock_xpro_learning_bucket, platform
-):  # pylint: disable=unused-argument
+def test_get_bucket_by_name(aws_settings, mock_course_archive_bucket):  # pylint: disable=unused-argument
     """The correct bucket should be returned by the function"""
-    assert utils.get_learning_course_bucket(platform).name == (
-        aws_settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME
-        if platform == PlatformType.mitxonline.name
-        else aws_settings.XPRO_LEARNING_COURSE_BUCKET_NAME
+    assert utils.get_bucket_by_name(aws_settings.COURSE_ARCHIVE_BUCKET_NAME) == (
+        mock_course_archive_bucket.bucket
     )
 
 

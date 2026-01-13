@@ -656,40 +656,27 @@ def transform_content_files(
         yield from process_olx_path(olx_path, run, overwrite=overwrite)
 
 
-def get_learning_course_bucket_name(etl_source: str) -> str:
+def get_s3_prefix_for_source(etl_source: str) -> str:
     """
-    Get the name of the platform's (old, deprecated) edx content bucket.
-    These archives will eventually be removed, with COURSE_ARCHIVE_BUCKET_NAME
-    holding archives for all sources.
+    Get the S3 prefix for a given ETL source
 
     Args:
-        etl_source(str): The ETL source that determines which bucket to use
-
+        etl_source(str): The ETL source
     Returns:
-        str: The name of the edx archive bucket for the platform
+        str: The S3 prefix
     """
-    bucket_names = {
-        ETLSource.mit_edx.name: settings.EDX_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.xpro.name: settings.XPRO_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.mitxonline.name: settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.oll.name: settings.OLL_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.canvas.name: settings.COURSE_ARCHIVE_BUCKET_NAME,
+    prefix_mapping = {
+        ETLSource.mit_edx.name: settings.EDX_COURSE_BUCKET_PREFIX,
+        ETLSource.xpro.name: settings.XPRO_COURSE_BUCKET_PREFIX,
+        ETLSource.mitxonline.name: settings.MITX_ONLINE_COURSE_BUCKET_PREFIX,
+        ETLSource.oll.name: settings.OLL_COURSE_BUCKET_PREFIX,
+        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_PREFIX,
     }
-    return bucket_names.get(etl_source)
-
-
-def get_learning_course_bucket(etl_source: str) -> object:
-    """
-    Get the ETLSource-specific learning course S3 Bucket holding content file data
-
-    Args:
-        etl_source(str): The ETL source of the course data
-
-    Returns:
-        boto3.Bucket: the OCW S3 Bucket or None
-    """
-    bucket_name = get_learning_course_bucket_name(etl_source)
-    return get_bucket_by_name(bucket_name)
+    prefix = prefix_mapping.get(etl_source)
+    if not prefix:
+        msg = f"No S3 prefix found for ETL source: {etl_source}"
+        raise ValueError(msg)
+    return prefix
 
 
 def get_bucket_by_name(bucket_name: str) -> object:
@@ -699,7 +686,7 @@ def get_bucket_by_name(bucket_name: str) -> object:
     Args:
         bucket_name(str): The name of the S3 bucket
 
-    Returns:
+    Returns:S
         boto3.Bucket: the S3 Bucket or None
     """
     if bucket_name:

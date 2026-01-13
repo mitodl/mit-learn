@@ -26,7 +26,6 @@ from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
-    get_learning_course_bucket_name,
     get_s3_prefix_for_source,
 )
 from learning_resources.models import ContentFile, LearningResource
@@ -188,7 +187,7 @@ def get_content_files(
     if not (
         settings.AWS_ACCESS_KEY_ID
         and settings.AWS_SECRET_ACCESS_KEY
-        and get_learning_course_bucket_name(etl_source) is not None
+        and settings.COURSE_ARCHIVE_BUCKET_NAME is not None
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
@@ -265,7 +264,6 @@ def import_all_oll_files(
         get_content_tasks(
             ETLSource.oll.name,
             chunk_size=chunk_size,
-            override_base_prefix=True,
             overwrite=overwrite,
             learning_resource_ids=learning_resource_ids,
         )

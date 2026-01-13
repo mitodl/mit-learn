@@ -7,6 +7,13 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def global_settings(settings):
+    """Global ETL test settings"""
+    settings.SKIP_TIKA = False
+    return settings
+
+
+@pytest.fixture(autouse=True)
 def mitx_settings(settings):
     """Test settings for MITx import"""
     settings.EDX_API_CLIENT_ID = "fake-client-id"

@@ -13,7 +13,6 @@ from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
     calc_checksum,
     get_bucket_by_name,
-    get_learning_course_bucket,
     get_s3_prefix_for_source,
     transform_content_files,
 )
@@ -87,10 +86,13 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
             else:
                 course_id = Path(key).parent.name.split("/")[-1]
             if (course_id not in latest_archives) or max(
-                archive.last_modified, latest_archives[course_id].last_modified
+                archive.last_modified, latest_archives[course_id]["last_modified"]
             ) == archive.last_modified:
-                latest_archives[course_id] = archive.key
-        return latest_archives.values()
+                latest_archives[course_id] = {
+                    "key": archive.key,
+                    "last_modified": archive.last_modified,
+                }
+        return [entry["key"] for entry in latest_archives.values()]
     except (StopIteration, IndexError):
         log.warning(
             "No %s exported courses found in S3 bucket %s", etl_source, bucket.name
@@ -193,7 +195,7 @@ def sync_edx_course_files(
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
     """
-    bucket = get_learning_course_bucket(etl_source)
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     for key in keys:
         run = run_for_edx_archive(etl_source, key)
 
