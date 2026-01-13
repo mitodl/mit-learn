@@ -809,6 +809,13 @@ const CertificatePage: React.FC<{
         </Button>
         <Button
           variant="bordered"
+          startIcon={<RiDownloadLine />}
+          onClick={() => setDigitalCredentialDialogOpen(true)}
+        >
+          Download Digital Credential
+        </Button>
+        <Button
+          variant="bordered"
           startIcon={<RiShareLine />}
           onClick={() => setShareOpen(true)}
         >
