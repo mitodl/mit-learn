@@ -27,18 +27,16 @@ import { usePathname } from "next/navigation"
 import backgroundImage from "@/public/images/backgrounds/user_menu_background.svg"
 
 import {
+  contractView,
   DASHBOARD_HOME,
   MY_LISTS,
-  organizationView,
   PROFILE,
   SETTINGS,
 } from "@/common/urls"
 import dynamic from "next/dynamic"
 import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useUserMe } from "api/hooks/user"
-import { contractQueries } from "api/mitxonline-hooks/contracts"
 import { useQuery } from "@tanstack/react-query"
-import { ContractPage } from "@mitodl/mitxonline-api-axios/v2"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -238,38 +236,37 @@ type TabData = {
     desktop: React.ReactNode
   }
 }
-const getTabData = (
-  user?: MitxOnlineUser,
-  contracts?: ContractPage[],
-): TabData[] => {
-  const orgTabs =
-    user && contracts
-      ? user?.b2b_organizations.map((org) => {
-          const orgContracts = contracts?.filter(
-            (contract) => contract.organization === org.id,
-          )
-          const contract =
-            orgContracts && orgContracts.length > 0 ? orgContracts[0] : null
-          const label = (
-            <>
-              <Typography variant="subtitle2" component="span">
-                {org.name}
-              </Typography>
-              {` - ${contract?.name}`}
-            </>
-          )
-          return {
-            value: organizationView(org.slug.replace("org-", "")),
-            href: organizationView(org.slug.replace("org-", "")),
-            label: {
-              mobile: label,
-              desktop: (
-                <DesktopTabLabel icon={<RiBuilding2Line />} text={label} />
-              ),
-            },
-          }
+const getTabData = (user?: MitxOnlineUser): TabData[] => {
+  const orgTabs = user
+    ? user?.b2b_organizations
+        .map((org) => {
+          return org.contracts.map((contract) => {
+            const label = (
+              <>
+                <Typography variant="subtitle2" component="span">
+                  {org.name}
+                </Typography>
+                {` - ${contract.name}`}
+              </>
+            )
+            const href = contractView(
+              org.slug.replace("org-", ""),
+              contract.slug,
+            )
+            return {
+              value: href,
+              href: href,
+              label: {
+                mobile: label,
+                desktop: (
+                  <DesktopTabLabel icon={<RiBuilding2Line />} text={label} />
+                ),
+              },
+            }
+          })
         })
-      : []
+        .flat()
+    : []
   return [
     {
       value: DASHBOARD_HOME,
@@ -319,16 +316,10 @@ const DashboardPage: React.FC<{
       ...mitxUserQueries.me(),
     },
   )
-  const { data: contracts, isLoading: isLoadingContracts } = useQuery(
-    contractQueries.contractsList(),
-  )
 
   const tabData = useMemo(
-    () =>
-      isLoadingMitxOnlineUser || isLoadingContracts
-        ? getTabData()
-        : getTabData(mitxOnlineUser, contracts),
-    [isLoadingMitxOnlineUser, isLoadingContracts, mitxOnlineUser, contracts],
+    () => (isLoadingMitxOnlineUser ? getTabData() : getTabData(mitxOnlineUser)),
+    [isLoadingMitxOnlineUser, mitxOnlineUser],
   )
 
   const tabValue = useMemo(() => {
