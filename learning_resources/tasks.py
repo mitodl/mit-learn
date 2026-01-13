@@ -19,12 +19,13 @@ from learning_resources.etl.canvas import (
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
+    sync_edx_archive,
     sync_edx_course_files,
 )
 from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
-    get_learning_course_bucket,
+    get_bucket_by_name,
     get_learning_course_bucket_name,
 )
 from learning_resources.models import ContentFile, LearningResource
@@ -524,8 +525,21 @@ def summarize_unprocessed_content(
 
 @app.task(acks_late=True)
 def ingest_canvas_course(archive_path, overwrite):
-    bucket = get_learning_course_bucket(ETLSource.canvas.name)
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
+
+
+@app.task(acks_late=True)
+def ingest_edx_course(
+    etl_source: str,
+    archive_path: str,
+    *,
+    course_id: str | None = None,
+    overwrite: bool = False,
+):
+    return sync_edx_archive(
+        etl_source, archive_path, course_id=course_id, overwrite=overwrite
+    )
 
 
 @app.task(acks_late=True)
@@ -537,7 +551,7 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
         overwrite (bool): Whether to overwrite existing content files
     """
 
-    bucket = get_learning_course_bucket(ETLSource.canvas.name)
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = f"{settings.CANVAS_COURSE_BUCKET_PREFIX}"
     exports = bucket.objects.filter(Prefix=s3_prefix)
     log.info("syncing all canvas courses")
