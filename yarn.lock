@@ -3288,13 +3288,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2026.1.5":
-  version: 2026.1.5
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.1.5"
+"@mitodl/mitxonline-api-axios@npm:^2025.12.18":
+  version: 2025.12.18
+  resolution: "@mitodl/mitxonline-api-axios@npm:2025.12.18"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/c4337e67e9ea5cfdc43b7e57c4c5fa3534782e310a7c54871b98b400b6f1a862edd2420807634f2bab766f5577d31814acf6251ad3d656fcfb54baf1a673b937
+  checksum: 10/05f542d45c0be5f4fff523c615fc68dd42c11451ccf7ab033ede9beb46e19e2bbfdf90b882ccbee5392c313c29a9cf0b0796f29eb026e15e4ab89117800069f4
   languageName: node
   linkType: hard
 
@@ -6863,14 +6863,14 @@ __metadata:
   linkType: hard
 
 "@tiptap/static-renderer@npm:^3.13.0":
-  version: 3.15.3
-  resolution: "@tiptap/static-renderer@npm:3.15.3"
+  version: 3.14.0
+  resolution: "@tiptap/static-renderer@npm:3.14.0"
   peerDependencies:
-    "@tiptap/core": ^3.15.3
-    "@tiptap/pm": ^3.15.3
+    "@tiptap/core": ^3.14.0
+    "@tiptap/pm": ^3.14.0
     react: ^17.0.0 || ^18.0.0 || ^19.0.0
     react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10/7aea76ded671c38091436fbd5473fb35793b187ad34259021a97d6154e481743b61e7a8949c8f0e057a45273e3d9e47c7520ed335f3294640d21465e01df1416
+  checksum: 10/896fbe09b8185d2872b757226aa0b37cf0f76a3ed0409986ee4acc6ed92121acb23b60e9a111d8a24f08a36e8bc4e7931fd57587e08b11b4343e1eb247904456
   languageName: node
   linkType: hard
 
@@ -8552,7 +8552,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.1.5"
+    "@mitodl/mitxonline-api-axios": "npm:^2025.12.18"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -15362,8 +15362,6 @@ __metadata:
     "@mitodl/course-search-utils": "npm:^3.5.0"
     "@mitodl/mitxonline-api-axios": "npm:^2025.11.24"
     "@mitodl/smoot-design": "npm:^6.19.0"
-    "@mui/material": "npm:^6.4.5"
-    "@mui/material-nextjs": "npm:^6.4.3"
     "@next/bundle-analyzer": "npm:^14.2.15"
     "@react-pdf/renderer": "npm:^4.3.0"
     "@remixicon/react": "npm:^4.2.0"
@@ -15372,22 +15370,6 @@ __metadata:
     "@testing-library/jest-dom": "npm:^6.4.8"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
-    "@tiptap/core": "npm:^3.13.0"
-    "@tiptap/extension-document": "npm:^3.13.0"
-    "@tiptap/extension-heading": "npm:^3.13.0"
-    "@tiptap/extension-highlight": "npm:^3.13.0"
-    "@tiptap/extension-horizontal-rule": "npm:^3.13.0"
-    "@tiptap/extension-image": "npm:^3.13.0"
-    "@tiptap/extension-list": "npm:^3.13.0"
-    "@tiptap/extension-subscript": "npm:^3.13.0"
-    "@tiptap/extension-superscript": "npm:^3.13.0"
-    "@tiptap/extension-text-align": "npm:^3.13.0"
-    "@tiptap/extension-typography": "npm:^3.13.0"
-    "@tiptap/extensions": "npm:^3.13.0"
-    "@tiptap/pm": "npm:^3.13.0"
-    "@tiptap/react": "npm:^3.13.0"
-    "@tiptap/starter-kit": "npm:^3.13.0"
-    "@tiptap/static-renderer": "npm:^3.13.0"
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.17.7"
     "@types/node": "npm:^22.0.0"
@@ -17175,10 +17157,25 @@ __metadata:
     "@storybook/react": "npm:^8.2.9"
     "@storybook/test": "npm:^8.2.9"
     "@storybook/types": "npm:^8.2.9"
-    "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.5.2"
+    "@tiptap/core": "npm:^3.13.0"
+    "@tiptap/extension-document": "npm:^3.13.0"
+    "@tiptap/extension-heading": "npm:^3.13.0"
+    "@tiptap/extension-highlight": "npm:^3.13.0"
+    "@tiptap/extension-horizontal-rule": "npm:^3.13.0"
+    "@tiptap/extension-image": "npm:^3.13.0"
+    "@tiptap/extension-list": "npm:^3.13.0"
+    "@tiptap/extension-subscript": "npm:^3.13.0"
+    "@tiptap/extension-superscript": "npm:^3.13.0"
+    "@tiptap/extension-text-align": "npm:^3.13.0"
+    "@tiptap/extension-typography": "npm:^3.13.0"
+    "@tiptap/extensions": "npm:^3.13.0"
+    "@tiptap/pm": "npm:^3.13.0"
+    "@tiptap/react": "npm:^3.13.0"
+    "@tiptap/starter-kit": "npm:^3.13.0"
+    "@tiptap/static-renderer": "npm:^3.13.0"
     "@types/lodash.throttle": "npm:^4.1.9"
     "@types/react-dom": "npm:^19.2.3"
     "@types/react-slick": "npm:^0"
