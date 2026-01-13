@@ -11,7 +11,6 @@ import { renderToReactElement } from "@tiptap/static-renderer/pm/react"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./extensions/ui/MediaEmbed/MediaEmbedButton"
 import { pxToRem } from "ol-components"
-
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import {
   ToolbarGroup,
@@ -265,9 +264,9 @@ interface TiptapEditorProps {
   className?: string
 }
 
-const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
+const TiptapEditor = ({ editor, readOnly, className }: TiptapEditorProps) => {
   return (
-    <Container readOnly={false} data-testid="editor">
+    <Container readOnly={!!readOnly} data-testid="editor">
       <EditorContent
         editor={editor}
         role="presentation"
