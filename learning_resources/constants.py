@@ -112,9 +112,19 @@ class LearningResourceRelationTypes(TextChoices):
     LEARNING_PATH_ITEMS = "LEARNING_PATH_ITEMS", "Learning Path Items"
     PODCAST_EPISODES = "PODCAST_EPISODES", "Podcast Episodes"
     PLAYLIST_VIDEOS = "PLAYLIST_VIDEOS", "Playlist Videos"
+    COURSE_LEARNING_MATERIALS = "COURSE_LEARNING_MATERIALS", "Course Learning Materials"
 
 
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
+
+VALID_COURSE_CONTENT_CATEGORY_CHOICES = [
+    ("Lecture Notes", "Lecture Notes"),
+    ("Readings", "Readings"),
+    ("Practice", "Practice"),
+    ("Open Textbooks", "Open Textbooks"),
+    ("Lecture Audio", "Lecture Audio"),
+    ("Videos", "Videos"),
+]
 
 VALID_FILE_TYPES = [
     ".csv",
