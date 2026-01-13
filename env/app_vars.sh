@@ -44,7 +44,6 @@ echo "MITOL_NOTIFICATION_EMAIL_BACKEND=anymail.backends.mailgun.EmailBackend" >>
 echo "MITPE_BASE_URL=https://professional.mit.edu/" >>.env
 echo "MITX_ONLINE_BASE_URL=https://mitxonline.mit.edu/" >>.env
 echo "MITX_ONLINE_COURSES_API_URL=https://mitxonline.mit.edu/api/v2/courses/" >>.env
-echo "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME=mitx-etl-mitxonline-production" >>.env
 echo "MITX_ONLINE_PROGRAMS_API_URL=https://mitxonline.mit.edu/api/v2/programs/" >>.env
 echo "OCW_BASE_URL=https://ocw.mit.edu/" >>.env
 echo "OCW_CONTENT_BUCKET_NAME=ocw-content-storage" >>.env
@@ -68,7 +67,6 @@ echo "SENTRY_ENV=dev" >>.env
 echo "SOCIAL_AUTH_OL_OIDC_KEY=ol-mitlearn-client" >>.env
 echo "XPRO_CATALOG_API_URL=https://xpro.mit.edu/api/programs/" >>.env
 echo "XPRO_COURSES_API_URL=https://xpro.mit.edu/api/courses/" >>.env
-echo "XPRO_LEARNING_COURSE_BUCKET_NAME=mitx-etl-xpro-production-mitxpro-production" >>.env
 echo "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS=21600" >>.env
 echo "YOUTUBE_CONFIG_URL=https://raw.githubusercontent.com/mitodl/open-video-data/mitopen/youtube/channels.yaml" >>.env
 echo "POSTHOG_ENABLED=True" >>.env
@@ -94,7 +92,6 @@ echo >>.env
 echo "# Heroku Vars" >>.env
 echo "COMPOSE_PROFILES=backend,frontend" >>.env
 echo "DEBUG=false" >>.env
-echo "EDX_LEARNING_COURSE_BUCKET_NAME=edxorg-qa-edxapp-courses" >>.env
 echo "ENABLE_INFINITE_CORRIDOR=true" >>.env
 echo "GA_G_TRACKING_ID= " >>.env
 echo "GA_TRACKING_ID= " >>.env
