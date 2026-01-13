@@ -17,8 +17,8 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
-  canUpgrade,
-  getCourseCertificatePrice,
+  canUpgradeRun,
+  formatProductPrice,
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
@@ -170,10 +170,9 @@ const CERT_REASONS = [
 const CertificateUpsell: React.FC<{
   courseRun?: CourseRunV2
 }> = ({ courseRun }) => {
-  const enabled = courseRun ? canUpgrade(courseRun) : false
   const product = courseRun?.products[0]
-  const price =
-    courseRun && enabled ? getCourseCertificatePrice(courseRun) : null
+  const enabled = product && courseRun && canUpgradeRun(courseRun)
+  const price = enabled ? formatProductPrice(product) : null
   const deadlineUI = courseRun?.upgrade_deadline ? (
     <>
       Payment due: <LocalDate date={courseRun.upgrade_deadline} />
@@ -230,7 +229,9 @@ const getRunOptions = (
         .map((d) => formatDate(d))
         .join(" - ")
       return {
-        label: canUpgrade(run) ? dates : `${dates} (No certificate available)`,
+        label: canUpgradeRun(run)
+          ? dates
+          : `${dates} (No certificate available)`,
         value: `${run.id}`,
       }
     })
