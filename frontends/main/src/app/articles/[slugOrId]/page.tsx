@@ -1,7 +1,6 @@
 import React from "react"
 import { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import type { JSONContent } from "@tiptap/core"
 import { articleQueries } from "api/hooks/articles"
 import { standardizeMetadata } from "@/common/metadata"
 import { ArticleDetailPage } from "@/app-pages/Articles/ArticleDetailPage"

@@ -16,6 +16,8 @@ export const LearningResourceProvider = ({
   resourceIds,
   children,
 }: LearningResourceProviderProps) => {
+  const { isLoading } = useLearningResourcesBulkList(resourceIds)
+
   /* We can use the data from useLearningResourcesBulkList(),
    * however pulling back from the query cache ensures aligns with the
    * cache population during SSR and ensures we don't get any prefetch warnings.
