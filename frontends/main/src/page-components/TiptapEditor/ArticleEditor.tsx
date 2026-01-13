@@ -193,13 +193,10 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       file,
       async (file: File, progressCb?: (percent: number) => void) => {
         try {
-          const response = await uploadImage.mutateAsync({
-            file,
-            onUploadProgress: (e) => {
-              const percent = Math.round((e.loaded * 100) / (e.total ?? 1))
-              progressCb?.(percent)
-            },
-          })
+          uploadImage.setNextProgressCallback(progressCb)
+
+          const response = await uploadImage.mutateAsync({ file })
+
           if (!response?.url) throw new Error("Upload failed")
           return response.url
         } catch (error) {
