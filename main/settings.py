@@ -830,6 +830,8 @@ QDRANT_BATCH_SIZE_BYTES = get_int(
     name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
 )  # default 10 MB limit for batch processing
 
+QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
