@@ -7,6 +7,8 @@ import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 
 const PageContainer = styled.div({
   display: "flex",
@@ -21,22 +23,40 @@ const Spinner = styled(LoadingSpinner)({
   transform: "translate(-50%, -50%)",
 })
 
-export const ArticleDetailPage = ({ articleId }: { articleId: string }) => {
+export const ArticleDetailPage = ({
+  articleId,
+  learningResourceIds = [],
+}: {
+  articleId: string
+  learningResourceIds?: number[]
+}) => {
   const { data: article, isLoading } = useArticleDetailRetrieve(articleId)
 
   const showArticleDetail = useFeatureFlagEnabled(
     FeatureFlags.ArticleEditorView,
   )
+  const flagsLoaded = useFeatureFlagsLoaded()
 
-  if (isLoading) {
-    return <Spinner color="inherit" loading size={32} />
+  /* Ensure queries are accessed during loading/flag check.
+   * This prevents React Query warnings about prefetched queries not being accessed.
+   * We can remove the early LearningResourceProvider when we remove the feature flag.
+   */
+  if (isLoading || (!flagsLoaded && showArticleDetail === undefined)) {
+    return (
+      <LearningResourceProvider resourceIds={learningResourceIds}>
+        <Spinner color="inherit" loading size={32} />
+      </LearningResourceProvider>
+    )
   }
-  if (!article || !showArticleDetail) {
+  if (!showArticleDetail || !article) {
     return notFound()
   }
+
   return (
     <PageContainer>
-      <ArticleEditor article={article} readOnly />
+      <LearningResourceProvider resourceIds={learningResourceIds}>
+        <ArticleEditor article={article} readOnly />
+      </LearningResourceProvider>
     </PageContainer>
   )
 }

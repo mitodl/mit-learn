@@ -26,7 +26,7 @@ import { Superscript } from "@tiptap/extension-superscript"
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 
-import TiptapEditor, { MainToolbarContent } from "./TiptapEditor"
+import { TiptapEditor, MainToolbarContent, TipTapViewer } from "./TiptapEditor"
 import { ArticleProvider } from "./ArticleContext"
 
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
@@ -39,14 +39,6 @@ import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import { ImageNode } from "./extensions/node/Image/ImageNode"
 import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
-
-import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
-import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
-import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
-import "./vendor/components/tiptap-node/list-node/list-node.scss"
-import "./vendor/components/tiptap-node/image-node/image-node.scss"
-import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
-import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
 import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
@@ -225,6 +217,95 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     )
   }
 
+  const extensions = [
+    ArticleDocument,
+    StarterKit.configure({
+      document: false, // Disable default document to use our ArticleDocument
+      horizontalRule: false,
+      heading: false,
+      link: {
+        openOnClick: false,
+        enableClickSelection: true,
+      },
+      trailingNode: {
+        node: "paragraph",
+      },
+    }),
+    Heading.configure({
+      levels: [1, 2, 3, 4, 5, 6],
+    }),
+    Placeholder.configure({
+      showOnlyCurrent: false,
+      includeChildren: true,
+      placeholder: ({ node, editor }): string => {
+        let parentNode: typeof node | null = null
+
+        editor.state.doc.descendants((n: ProseMirrorNode) => {
+          n.forEach((childNode: ProseMirrorNode) => {
+            if (childNode === node) {
+              parentNode = n
+            }
+          })
+          if (parentNode) {
+            return false
+          }
+          return undefined
+        })
+
+        if (parentNode) {
+          const parentExtension = editor.extensionManager.extensions.find(
+            (ext) => ext.name === parentNode!.type.name,
+          )
+
+          if (
+            parentExtension &&
+            "config" in parentExtension &&
+            parentExtension.config &&
+            typeof (parentExtension.config as ExtendedNodeConfig)
+              .getPlaceholders === "function"
+          ) {
+            const placeholder = (
+              parentExtension.config as ExtendedNodeConfig
+            ).getPlaceholders(node)
+            if (placeholder) {
+              return placeholder
+            }
+          }
+        }
+
+        if (node.type.name === "heading") {
+          return "Add a heading"
+        }
+        return "Add some text"
+      },
+    }),
+    HorizontalRule,
+    LearningResourceURLHandler,
+    LearningResourceNode,
+    TextAlign.configure({ types: ["heading", "paragraph"] }),
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    Highlight.configure({ multicolor: true }),
+    TiptapTypography,
+    Superscript,
+    Subscript,
+    Selection,
+    Image,
+    MediaEmbedNode,
+    DividerNode,
+    ArticleByLineInfoBarNode,
+    ImageWithCaptionNode,
+    MediaEmbedURLHandler,
+    ImageNode.configure({
+      accept: "image/*",
+      maxSize: MAX_FILE_SIZE,
+      limit: 3,
+      upload: uploadHandler,
+      onError: (error) => setUploadError(error.message),
+    }),
+    BannerNode,
+  ]
+
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
@@ -256,94 +337,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
         class: "simple-editor",
       },
     },
-    extensions: [
-      ArticleDocument,
-      StarterKit.configure({
-        document: false, // Disable default document to use our ArticleDocument
-        horizontalRule: false,
-        heading: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
-        },
-        trailingNode: {
-          node: "paragraph",
-        },
-      }),
-      Heading.configure({
-        levels: [1, 2, 3, 4, 5, 6],
-      }),
-      Placeholder.configure({
-        showOnlyCurrent: false,
-        includeChildren: true,
-        placeholder: ({ node, editor }): string => {
-          let parentNode: typeof node | null = null
-
-          editor.state.doc.descendants((n: ProseMirrorNode) => {
-            n.forEach((childNode: ProseMirrorNode) => {
-              if (childNode === node) {
-                parentNode = n
-              }
-            })
-            if (parentNode) {
-              return false
-            }
-            return undefined
-          })
-
-          if (parentNode) {
-            const parentExtension = editor.extensionManager.extensions.find(
-              (ext) => ext.name === parentNode!.type.name,
-            )
-
-            if (
-              parentExtension &&
-              "config" in parentExtension &&
-              parentExtension.config &&
-              typeof (parentExtension.config as ExtendedNodeConfig)
-                .getPlaceholders === "function"
-            ) {
-              const placeholder = (
-                parentExtension.config as ExtendedNodeConfig
-              ).getPlaceholders(node)
-              if (placeholder) {
-                return placeholder
-              }
-            }
-          }
-
-          if (node.type.name === "heading") {
-            return "Add a heading"
-          }
-          return "Add some text"
-        },
-      }),
-      HorizontalRule,
-      LearningResourceURLHandler,
-      LearningResourceNode,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      TiptapTypography,
-      Superscript,
-      Subscript,
-      Selection,
-      Image,
-      MediaEmbedNode,
-      DividerNode,
-      ArticleByLineInfoBarNode,
-      ImageWithCaptionNode,
-      MediaEmbedURLHandler,
-      ImageNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: uploadHandler,
-        onError: (error) => setUploadError(error.message),
-      }),
-      BannerNode,
-    ],
+    extensions,
   })
 
   useEffect(() => {
@@ -466,7 +460,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
               </StyledAlert>
             ) : null}
             <LearningResourceDrawer />
-            <TiptapEditor editor={editor} readOnly={readOnly} fullWidth />
+            {readOnly ? (
+              <TipTapViewer content={content} extensions={extensions} />
+            ) : (
+              <TiptapEditor editor={editor} />
+            )}
           </EditorContext.Provider>
         </LearningResourceProvider>
       </ArticleProvider>

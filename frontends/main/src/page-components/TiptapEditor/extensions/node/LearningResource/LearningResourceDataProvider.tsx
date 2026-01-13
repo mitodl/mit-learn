@@ -6,7 +6,7 @@ import {
   learningResourceKeys,
   LearningResource,
 } from "api/hooks/learningResources"
-import { useQueries, useQueryClient } from "@tanstack/react-query"
+import { useQueries } from "@tanstack/react-query"
 
 interface LearningResourceProviderProps {
   resourceIds: number[]
@@ -16,29 +16,14 @@ export const LearningResourceProvider = ({
   resourceIds,
   children,
 }: LearningResourceProviderProps) => {
-  const queryClient = useQueryClient()
+  const { isLoading } = useLearningResourcesBulkList(resourceIds)
 
-  const uniqueIds = React.useMemo(
-    () => Array.from(new Set(resourceIds)),
-    [resourceIds],
-  )
-
-  const missingIds = React.useMemo(
-    () =>
-      uniqueIds.filter(
-        (id) => !queryClient.getQueryData(learningResourceKeys.detail(id)),
-      ),
-    [uniqueIds, queryClient],
-  )
-
-  // 🚀 fetch missing
-  const { isLoading: bulkLoading } = useLearningResourcesBulkList(missingIds, {
-    enabled: missingIds.length > 0,
-  })
-
-  // 👇 SUBSCRIBE to each resource
+  /* We can use the data from useLearningResourcesBulkList(),
+   * however pulling back from the query cache ensures aligns with the
+   * cache population during SSR and ensures we don't get any prefetch warnings.
+   */
   const resourceQueries = useQueries({
-    queries: uniqueIds.map((id) => ({
+    queries: resourceIds.map((id) => ({
       queryKey: learningResourceKeys.detail(id),
       enabled: false, // 👈 read-only, no refetch
     })),
@@ -48,16 +33,14 @@ export const LearningResourceProvider = ({
     const map: Record<number, LearningResource> = {}
 
     resourceQueries.forEach((query, index) => {
-      const id = uniqueIds[index]
+      const id = resourceIds[index]
       if (query.data) {
         map[id] = query.data as LearningResource
       }
     })
 
     return map
-  }, [resourceQueries, uniqueIds])
-
-  const isLoading = bulkLoading || resourceQueries.some((q) => q.isLoading)
+  }, [resourceQueries, resourceIds])
 
   return (
     <LearningResourceContext.Provider value={{ resources, isLoading }}>
