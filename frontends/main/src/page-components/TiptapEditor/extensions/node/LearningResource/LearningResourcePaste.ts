@@ -2,7 +2,12 @@ import { Extension } from "@tiptap/core"
 import { Plugin } from "@tiptap/pm/state"
 
 function extractResourceId(url: string): number | null {
-  const match = url.match(/resource=(\d+)/)
+  const trimmed = url.trim()
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    return null
+  }
+
+  const match = trimmed.match(/resource=(\d+)(?:[&#]|$)/)
   if (!match) return null
   return Number(match[1])
 }

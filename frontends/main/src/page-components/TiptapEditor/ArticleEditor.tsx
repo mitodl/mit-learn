@@ -277,7 +277,6 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       },
     }),
     HorizontalRule,
-    LearningResourceURLHandler,
     LearningResourceNode,
     TextAlign.configure({ types: ["heading", "paragraph"] }),
     TaskList,
@@ -292,6 +291,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     DividerNode,
     ArticleByLineInfoBarNode,
     ImageWithCaptionNode,
+    LearningResourceURLHandler,
     MediaEmbedURLHandler,
     ImageNode.configure({
       accept: "image/*",

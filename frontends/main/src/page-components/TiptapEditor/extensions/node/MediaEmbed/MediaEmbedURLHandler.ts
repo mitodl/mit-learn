@@ -5,7 +5,20 @@ import { convertToEmbedUrl } from "./lib"
 
 function extractMediaEmbedUrl(text: string): string | null {
   try {
-    const embedUrl = convertToEmbedUrl(text.trim())
+    const trimmed = text.trim()
+
+    // Only process text that looks like a URL (starts with http:// or https://)
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      return null
+    }
+
+    // Don't match resource URLs - they should be handled by LearningResourceURLHandler
+    if (trimmed.includes("resource=")) {
+      return null
+    }
+
+    const embedUrl = convertToEmbedUrl(trimmed)
+
     return embedUrl || null
   } catch {
     return null
