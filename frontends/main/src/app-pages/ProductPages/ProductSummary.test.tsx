@@ -318,7 +318,9 @@ describe("Course Financial Assistance", () => {
   ])(
     "Financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
     async ({ hasFinancialAid, expectLink }) => {
-      const financialAidUrl = hasFinancialAid ? faker.internet.url() : ""
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
       const product = makeProduct()
       const run = makeRun({
         is_archived: false,
@@ -356,12 +358,17 @@ describe("Course Financial Assistance", () => {
         const link = await within(priceRow).findByRole("link", {
           name: /financial assistance/i,
         })
-        expect(link).toHaveAttribute("href", financialAidUrl)
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
         expect(link).toHaveTextContent("Financial assistance available")
       } else {
         const link = within(priceRow).queryByRole("link", {
           name: /financial assistance/i,
         })
+        expect(link).toBeNull()
         expect(link).toBeNull()
       }
     },
@@ -388,7 +395,7 @@ describe("Course Financial Assistance", () => {
         expiration_date: faker.date.future().toISOString(),
       },
     })
-    const financialAidUrl = faker.internet.url()
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
     const run = makeRun({
       is_archived: false,
       products: [product],
@@ -657,7 +664,9 @@ describe("Price & Certificate Row", () => {
   ])(
     "Program financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
     ({ hasFinancialAid, expectLink }) => {
-      const financialAidUrl = hasFinancialAid ? faker.internet.url() : ""
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
       const program = factories.programs.program({
         page: { financial_assistance_form_url: financialAidUrl },
       })
@@ -672,7 +681,11 @@ describe("Price & Certificate Row", () => {
         const link = within(priceRow).getByRole("link", {
           name: /financial assistance/i,
         })
-        expect(link).toHaveAttribute("href", financialAidUrl)
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
         expect(link).toHaveTextContent("Financial assistance available")
       } else {
         const link = within(priceRow).queryByRole("link", {

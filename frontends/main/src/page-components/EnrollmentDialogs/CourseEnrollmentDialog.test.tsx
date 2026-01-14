@@ -134,8 +134,9 @@ describe("CourseEnrollmentDialog", () => {
       await openDialog(course)
 
       // The single run should be auto-selected
-      const certificatePrice = await screen.findByText(/Get Certificate: \$149/)
+      const certificatePrice = await screen.findByText(/Get Certificate/)
       expect(certificatePrice).toBeInTheDocument()
+      expect(screen.getByText(/\$149/)).toBeInTheDocument()
 
       // Check for deadline text (date format may vary)
       const deadline = screen.getByText(/Payment due:/)
@@ -386,6 +387,122 @@ describe("CourseEnrollmentDialog", () => {
           ),
         ).toBeInTheDocument()
       })
+    })
+  })
+
+  describe("Financial Assistance", () => {
+    test.each([
+      { hasFinancialAid: true, expectLink: true },
+      { hasFinancialAid: false, expectLink: false },
+    ])(
+      "Financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
+      async ({ hasFinancialAid, expectLink }) => {
+        const financialAidUrl = hasFinancialAid
+          ? `/financial-aid/${faker.string.alphanumeric(10)}`
+          : ""
+        const product = makeProduct()
+        const run = upgradeableRun({ products: [product] })
+        const course = makeCourse({
+          courseruns: [run],
+          page: { financial_assistance_form_url: financialAidUrl },
+        })
+
+        // Mock the flexible price API response when financial aid is available
+        if (hasFinancialAid) {
+          const mockFlexiblePrice = mitxFactories.products.flexiblePrice({
+            id: product.id,
+            price: product.price,
+            product_flexible_price: null,
+          })
+          setMockResponse.get(
+            mitxUrls.products.userFlexiblePriceDetail(product.id),
+            mockFlexiblePrice,
+          )
+        }
+
+        renderWithProviders(null)
+        await openDialog(course)
+
+        if (expectLink) {
+          const link = await screen.findByRole("link", {
+            name: /financial assistance/i,
+          })
+          const expectedUrl = new URL(
+            financialAidUrl,
+            process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+          ).toString()
+          expect(link).toHaveAttribute("href", expectedUrl)
+        } else {
+          const link = screen.queryByRole("link", {
+            name: /financial assistance/i,
+          })
+          expect(link).toBeNull()
+        }
+      },
+    )
+
+    test("Displays user-specific discounted price when financial aid is available", async () => {
+      const originalPrice = "100.00"
+      const discountedAmount = "50.00"
+      const product = makeProduct({ price: originalPrice })
+      const flexiblePrice = mitxFactories.products.flexiblePrice({
+        id: product.id,
+        price: originalPrice,
+        product_flexible_price: {
+          id: faker.number.int(),
+          amount: discountedAmount,
+          discount_type: "dollars-off" as const,
+          discount_code: faker.string.alphanumeric(8),
+          redemption_type: "one-time" as const,
+          is_redeemed: false,
+          automatic: true,
+          max_redemptions: 1,
+          payment_type: null,
+          activation_date: faker.date.past().toISOString(),
+          expiration_date: faker.date.future().toISOString(),
+        },
+      })
+      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+      const run = upgradeableRun({ products: [product] })
+      const course = makeCourse({
+        courseruns: [run],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+
+      setMockResponse.get(
+        mitxUrls.products.userFlexiblePriceDetail(product.id),
+        flexiblePrice,
+      )
+
+      renderWithProviders(null)
+      await openDialog(course)
+
+      // Wait for the flexible price API to be called and prices to be displayed
+      await screen.findByText("Financial assistance applied")
+      expect(screen.getByText(/\$50\.00/)).toBeInTheDocument()
+      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+    })
+
+    test("Does NOT call flexible price API when financial aid URL is empty", async () => {
+      const product = makeProduct({ price: "100.00" })
+      const run = upgradeableRun({ products: [product] })
+      const course = makeCourse({
+        courseruns: [run],
+        page: { financial_assistance_form_url: "" },
+      })
+
+      // We're NOT setting up a mock response for the flexible price API
+      // If it's called, the test will fail
+
+      renderWithProviders(null)
+      await openDialog(course)
+
+      // Should show the regular price
+      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+      // Should NOT show financial assistance link
+      expect(
+        screen.queryByRole("link", { name: /financial assistance/i }),
+      ).toBeNull()
     })
   })
 })

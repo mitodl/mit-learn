@@ -59,13 +59,23 @@ const formatProductPrice = (product: ProductFlexiblePrice) => {
   })
 }
 
+type PriceWithDiscount = {
+  isDiscounted: boolean
+  /**
+   * Indicates if the product has approved financial aid
+   * Note: May be zero discount.
+   */
+  approvedFinancialAid: boolean
+  originalPrice: string
+  finalPrice: string
+}
 const priceWithDiscount = ({
   product,
   flexiblePrice,
 }: {
   product: ProductFlexiblePrice
   flexiblePrice?: ProductFlexiblePrice
-}) => {
+}): PriceWithDiscount => {
   const originalPrice = formatProductPrice(product)
   const finalPrice = flexiblePrice
     ? formatProductPrice(flexiblePrice)
@@ -74,10 +84,6 @@ const priceWithDiscount = ({
 
   return {
     isDiscounted,
-    /**
-     * Indicates if the product has approved financial aid
-     * Note: May be zero discount.
-     */
     approvedFinancialAid: !!flexiblePrice?.product_flexible_price?.id,
     originalPrice,
     finalPrice,
@@ -95,3 +101,4 @@ export {
   upgradeRunUrl,
   mitxonlineUrl,
 }
+export type { PriceWithDiscount }
