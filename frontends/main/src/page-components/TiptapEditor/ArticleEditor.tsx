@@ -33,7 +33,7 @@ import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
-import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
+import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourceURLHandler"
 import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
 import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
