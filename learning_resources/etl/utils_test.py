@@ -18,8 +18,12 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.constants import CommitmentConfig, DurationConfig
-from learning_resources.etl.utils import parse_certification, parse_string_to_int
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.utils import (
+    get_s3_prefix_for_source,
+    parse_certification,
+    parse_string_to_int,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -292,6 +296,39 @@ def test_documents_from_olx():
     assert formula2do[1]["source_path"].endswith("formula2do.xml")
     assert formula2do[1]["content_type"] == CONTENT_TYPE_FILE
     assert formula2do[1]["mime_type"].endswith("/xml")
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "expected_setting"),
+    [
+        (ETLSource.mit_edx.name, "EDX_COURSE_BUCKET_PREFIX"),
+        (ETLSource.xpro.name, "XPRO_COURSE_BUCKET_PREFIX"),
+        (ETLSource.mitxonline.name, "MITX_ONLINE_COURSE_BUCKET_PREFIX"),
+        (ETLSource.oll.name, "OLL_COURSE_BUCKET_PREFIX"),
+        (ETLSource.canvas.name, "CANVAS_COURSE_BUCKET_PREFIX"),
+    ],
+)
+def test_get_s3_prefix_for_source(settings, etl_source, expected_setting):
+    """Test that get_s3_prefix_for_source returns correct prefix for each ETL source"""
+    expected_prefix = getattr(settings, expected_setting)
+    assert get_s3_prefix_for_source(etl_source) == expected_prefix
+
+
+@pytest.mark.parametrize(
+    "invalid_source",
+    [
+        "invalid_source",
+        "ocw",  # OCW is not in the mapping
+        "",
+        "MITX_ONLINE",  # wrong case
+    ],
+)
+def test_get_s3_prefix_for_source_invalid(invalid_source):
+    """Test that get_s3_prefix_for_source raises ValueError for invalid sources"""
+    with pytest.raises(
+        ValueError, match=f"No S3 prefix found for ETL source: {invalid_source}"
+    ):
+        get_s3_prefix_for_source(invalid_source)
 
 
 def test_get_bucket_by_name(aws_settings, mock_course_archive_bucket):  # pylint: disable=unused-argument

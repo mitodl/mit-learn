@@ -65,33 +65,6 @@ def mock_ocw_learning_bucket(
     return SimpleNamespace(s3=s3, bucket=bucket)
 
 
-@pytest.fixture(autouse=True)
-def xpro_aws_settings(aws_settings):
-    """Default xPRO test settings"""  # noqa: D401
-    aws_settings.XPRO_COURSE_BUCKET_PREFIX = (  # impossible bucket name
-        "test-xpro-bucket"
-    )
-    return aws_settings
-
-
-@pytest.fixture(autouse=True)
-def mitx_aws_settings(aws_settings):
-    """Default MITx Online test settings"""  # noqa: D401
-    aws_settings.EDX_COURSE_BUCKET_PREFIX = (  # impossible bucket name
-        "test-mitx-bucket"
-    )
-    return aws_settings
-
-
-@pytest.fixture(autouse=True)
-def mitxonline_aws_settings(aws_settings):
-    """Default MITx Online test settings"""  # noqa: D401
-    aws_settings.MITX_ONLINE_COURSE_BUCKET_PREFIX = (  # impossible bucket name
-        "test-mitxonline-bucket"
-    )
-    return aws_settings
-
-
 @pytest.fixture
 def mock_course_archive_bucket(
     aws_settings,
