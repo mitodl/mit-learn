@@ -1,10 +1,10 @@
-export function convertToEmbedUrl(url: string): string {
+export function convertToEmbedUrl(url: string): string | null {
   let parsed: URL
 
   try {
     parsed = new URL(url)
   } catch {
-    return url // not a valid URL
+    return null
   }
 
   const hostname = parsed.hostname.replace("www.", "")
@@ -44,5 +44,5 @@ export function convertToEmbedUrl(url: string): string {
     return id ? `https://player.vimeo.com/video/${id}` : url
   }
 
-  return url // fallback
+  return null
 }

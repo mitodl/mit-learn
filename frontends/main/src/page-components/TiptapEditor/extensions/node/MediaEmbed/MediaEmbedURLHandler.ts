@@ -4,12 +4,18 @@ import { Plugin } from "@tiptap/pm/state"
 import { convertToEmbedUrl } from "./lib"
 
 function extractMediaEmbedUrl(text: string): string | null {
-  try {
-    const embedUrl = convertToEmbedUrl(text.trim())
-    return embedUrl || null
-  } catch {
+  const trimmed = text.trim()
+
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
     return null
   }
+
+  // Don't match resource URLs - they should be handled by LearningResourceURLHandler
+  if (trimmed.includes("resource=")) {
+    return null
+  }
+
+  return convertToEmbedUrl(trimmed)
 }
 
 export const MediaEmbedURLHandler = Extension.create({
