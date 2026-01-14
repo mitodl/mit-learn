@@ -14,7 +14,7 @@
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
     "@mitodl/course-search-utils": "^3.5.0",
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/cc/product-flexible-api/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "^2026.1.14",
     "@mitodl/smoot-design": "^6.19.0",
     "@mui/material": "^6.4.5",
     "@mui/material-nextjs": "^6.4.3",
