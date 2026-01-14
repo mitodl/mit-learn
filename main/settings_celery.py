@@ -44,6 +44,12 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_mit_edx_data",
             "schedule": crontab(minute=0, hour=5),  # 1:00am EST
         },
+        "update-edx-files-every-1-weeks": {
+            "task": "learning_resources.tasks.import_all_mit_edx_files",
+            "schedule": crontab(
+                minute=0, hour=5, day_of_week=1
+            ),  # 12:00 PM EST on Mondays
+        },
         "update-micromasters-programs-every-1-days": {
             "task": "learning_resources.tasks.get_micromasters_data",
             "schedule": crontab(minute=0, hour=5),  # 1:00am EST
@@ -56,6 +62,12 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_mitxonline_data",
             "schedule": crontab(minute=0, hour=5),  # 1:00am EST
         },
+        "update-mitxonline-files-every-1-weeks": {
+            "task": "learning_resources.tasks.import_all_mitxonline_files",
+            "schedule": crontab(
+                minute=0, hour=5, day_of_week=3
+            ),  # 12:00 PM EST on Wednesdays
+        },
         "update-podcasts": {
             "task": "learning_resources.tasks.get_podcast_data",
             "schedule": crontab(minute=0, hour="6,23"),  # 2am and 7pm EST
@@ -67,6 +79,12 @@ CELERY_BEAT_SCHEDULE = (
         "update-xpro-courses-every-1-days": {
             "task": "learning_resources.tasks.get_xpro_data",
             "schedule": crontab(minute=0, hour=5),  # 1:00am EST
+        },
+        "update-xpro-files-every-1-weeks": {
+            "task": "learning_resources.tasks.import_all_xpro_files",
+            "schedule": crontab(
+                minute=0, hour=5, day_of_week=2
+            ),  # 12:00 PM EST on Tuesdays
         },
         "update-youtube-videos": {
             "task": "learning_resources.tasks.get_youtube_data",

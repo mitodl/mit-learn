@@ -176,7 +176,7 @@ def run_for_edx_archive(
         runs = runs.filter(run_id=potential_run_id)
     # There should be only 1 matching run per course archive, warn if not
     if runs.count() > 1:
-        log.warning("There are %d runs for %s", runs.count(), run_id)
+        log.warning("There are %d runs for %s", runs.count(), potential_run_id)
     return runs.first()
 
 
