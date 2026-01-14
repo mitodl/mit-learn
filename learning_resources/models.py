@@ -1250,13 +1250,17 @@ class CourseLearningMaterial(LearningResourceDetailModel):
         on_delete=models.CASCADE,
     )
 
-    content_tag = models.TextField(null=True, blank=True)  # noqa: DJ001
+    content_tags = ArrayField(
+        models.CharField(max_length=256, null=False, blank=False), null=True, blank=True
+    )
 
-    content_category = models.CharField(
-        max_length=128,
-        choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
-        null=False,
-        blank=True,
+    content_categories = ArrayField(
+        models.CharField(
+            max_length=128,
+            choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
+            null=False,
+            blank=True,
+        )
     )
 
     url = models.URLField(null=False, max_length=2048)
