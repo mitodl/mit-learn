@@ -7,6 +7,7 @@ import {
   Stack,
   Typography,
   PlainList,
+  Link,
 } from "ol-components"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import {
@@ -18,12 +19,16 @@ import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canUpgradeRun,
-  formatProductPrice,
+  mitxonlineUrl,
+  PriceWithDiscount,
+  priceWithDiscount,
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { useQuery } from "@tanstack/react-query"
+import { productQueries } from "api/mitxonline-hooks/products"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
@@ -41,9 +46,13 @@ const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
   },
 })) as typeof SimpleSelectField
 
+const UnderlinedLink = styled(Link)({
+  textDecoration: "underline",
+})
+
 const StyledFormDialog = styled(FormDialog)({
   ".MuiPaper-root": {
-    maxWidth: "702px",
+    maxWidth: "750px",
   },
 })
 
@@ -167,12 +176,40 @@ const CERT_REASONS = [
   "Enhance your college & earn a promotion",
   "Enhance your college application with an earned certificate from MIT",
 ]
+
+const StrickenText = styled.span(({ theme }) => ({
+  textDecoration: "line-through",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.body2,
+}))
+const NumericPriceDisplay: React.FC<{
+  price: PriceWithDiscount | null
+}> = ({ price }) => {
+  if (!price) return null
+  if (!price.isDiscounted) return price.finalPrice
+  return (
+    <span>
+      {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+    </span>
+  )
+}
+
 const CertificateUpsell: React.FC<{
+  course?: CourseWithCourseRunsSerializerV2
   courseRun?: CourseRunV2
-}> = ({ courseRun }) => {
+}> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({
+      productId: courseRun?.products?.[0]?.id ?? 0,
+    }),
+    enabled: !!course?.page.financial_assistance_form_url,
+  })
   const enabled = product && courseRun && canUpgradeRun(courseRun)
-  const price = enabled ? formatProductPrice(product) : null
+  const price = enabled
+    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+    : null
+  const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
   const deadlineUI = courseRun?.upgrade_deadline ? (
     <>
       Payment due: <LocalDate date={courseRun.upgrade_deadline} />
@@ -196,7 +233,21 @@ const CertificateUpsell: React.FC<{
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
-            <strong>Get Certificate{price ? `: ${price}` : ""}</strong>
+            <strong>
+              Get Certificate <NumericPriceDisplay price={price} />
+            </strong>
+            {hasFinancialAssistance && price ? (
+              <UnderlinedLink
+                color="black"
+                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {price.approvedFinancialAid
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </UnderlinedLink>
+            ) : null}
             <CertDate disabled={!enabled}>
               {enabled ? deadlineUI : "Not available"}
             </CertDate>
@@ -300,7 +351,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        <CertificateUpsell courseRun={run} />
+        <CertificateUpsell course={course} courseRun={run} />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

@@ -283,11 +283,12 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
   nextRun,
   course,
 }) => {
+  const hasFinancialAid = !!course?.page.financial_assistance_form_url
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: nextRun.products?.[0]?.id ?? 0,
     }),
-    enabled: !!course?.page.financial_assistance_form_url,
+    enabled: hasFinancialAid,
   })
   const price = canUpgradeRun(nextRun)
     ? priceWithDiscount({
@@ -297,10 +298,6 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
     : null
 
   const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
-  const financialAidUrl = mitxonlineUrl(
-    course.page.financial_assistance_form_url,
-  )
-  const hasFinancialAid = Boolean(financialAidUrl)
   return (
     <CertificateBoxRoot>
       {price ? (
@@ -325,7 +322,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
           {hasFinancialAid ? (
             <UnderlinedLink
               color="black"
-              href={financialAidUrl}
+              href={mitxonlineUrl(course.page.financial_assistance_form_url)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -577,19 +574,19 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
             </>
           }
         />
-        {program.page.financial_assistance_form_url ? (
-          <UnderlinedLink
-            color="black"
-            href={mitxonlineUrl(program.page.financial_assistance_form_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ minWidth: "fit-content" }}
-          >
-            Financial assistance available
-          </UnderlinedLink>
-        ) : null}
         {PROGRAM_CERT_INFO_LINK}
       </InfoRowInner>
+      {program.page.financial_assistance_form_url ? (
+        <UnderlinedLink
+          color="black"
+          href={mitxonlineUrl(program.page.financial_assistance_form_url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ minWidth: "fit-content" }}
+        >
+          Financial assistance available
+        </UnderlinedLink>
+      ) : null}
     </CertificateBoxRoot>
   )
 }

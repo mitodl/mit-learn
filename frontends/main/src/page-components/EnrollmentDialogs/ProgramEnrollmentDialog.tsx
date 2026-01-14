@@ -141,7 +141,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           errorText={courses.isError ? "Error loading courses" : undefined}
           fullWidth
         />
-        <CertificateUpsell courseRun={run} />
+        <CertificateUpsell course={chosenCourse} courseRun={run} />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
