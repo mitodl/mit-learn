@@ -414,8 +414,11 @@ def text_from_sjson_content(content: str):
     Returns:
         str: The content as a string without timestamps
     """
-    data = json.loads(content)
-    return " ".join(data.get("text", []))
+    try:
+        data = json.loads(content)
+        return " ".join(data.get("text", []))
+    except json.decoder.JSONDecodeError:
+        log.exception("Error parsing sjson content")
 
 
 def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
@@ -604,7 +607,6 @@ def process_olx_path(  # noqa: PLR0913
                     content = text_from_srt_content(content)
                 elif file_extension == ".sjson":
                     content = text_from_sjson_content(content)
-
                 if not content:
                     continue
 
