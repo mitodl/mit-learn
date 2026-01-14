@@ -23,6 +23,7 @@ import {
 } from "./CoursewareDisplay/test-utils"
 import { EnrollmentStatus } from "./CoursewareDisplay/types"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -253,6 +254,8 @@ describe("ContractContent", () => {
     // Mock the bulk course API call with first course from each program
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
 
     // Mock the program collection courses query with contract_id
@@ -291,8 +294,8 @@ describe("ContractContent", () => {
     expect(courseCards.length).toBe(2)
 
     // Verify the first course from each program is displayed in collection order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB!.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
   })
 
   test("Program collection courses are sorted by program order property", async () => {
@@ -329,6 +332,8 @@ describe("ContractContent", () => {
     // Mock the courses API call - return in array order (A's first course, B's first course)
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     const firstCourseIds = [programA.courses[0], programB.courses[0]]
 
     setMockResponse.get(
@@ -358,8 +363,8 @@ describe("ContractContent", () => {
 
     // Verify courses are displayed by program order property (B with order:1, then A with order:2)
     // NOT by array position or API response order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB!.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
   })
 
   test("Program collection displays the first course from each program", async () => {
@@ -453,6 +458,8 @@ describe("ContractContent", () => {
     const firstCourseIds = [programB.courses[0], programA.courses[0]]
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     setMockResponse.get(
       urls.courses.coursesList({
         id: firstCourseIds,
