@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from articles.api import article_published_actions
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from articles.api import article_published_actions

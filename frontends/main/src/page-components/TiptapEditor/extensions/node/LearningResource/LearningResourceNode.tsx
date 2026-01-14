@@ -2,8 +2,10 @@ import React from "react"
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import { Node, mergeAttributes, type CommandProps } from "@tiptap/core"
-import { LearningResourceListCard, styled } from "ol-components"
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
+import { styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
+import { ResourceCard } from "../../../../ResourceCard/ResourceCard"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -27,29 +29,28 @@ const NodeWrapper = styled(NodeViewWrapper)({
     pointerEvents: "auto",
   },
 })
-const StyledLearningResourceListCard = styled(LearningResourceListCard)(
-  ({ theme }) => ({
-    position: "relative",
 
-    ".ProseMirror-selectednode &": {
-      borderColor: theme.custom.colors.red,
-      userSelect: "none",
-    },
+const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
+  position: "relative",
 
-    "&& a": {
-      color: "inherit",
-      textDecoration: "none",
-    },
+  ".ProseMirror-selectednode &": {
+    borderColor: theme.custom.colors.red,
+    userSelect: "none",
+  },
 
-    "&& a span": {
-      textDecoration: "none",
-    },
-    "&:hover .remove-button": {
-      opacity: 1,
-      pointerEvents: "auto",
-    },
-  }),
-)
+  "&& a": {
+    color: "inherit",
+    textDecoration: "none",
+  },
+
+  "&& a span": {
+    textDecoration: "none",
+  },
+  "&:hover .remove-button": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+}))
 
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",
@@ -76,13 +77,33 @@ const RemoveButton = styled("button")(({ theme }) => ({
   },
 }))
 
+export const LearningResourceCardViewer = ({
+  node,
+}: {
+  node: ProseMirrorNode
+}) => {
+  const { resourceId } = node.attrs
+  const { resource, isLoading } = useLearningResource(resourceId ?? 0)
+
+  if (!resourceId) {
+    return null
+  }
+
+  return (
+    <StyledLearningResourceCard
+      resource={resource}
+      list
+      isLoading={isLoading}
+    />
+  )
+}
+
 export const LearningResourceListCardWrapper = ({
   node,
   editor,
   getPos,
 }: ReactNodeViewProps) => {
   const resourceId = node.attrs.resourceId
-  const href = node.attrs.href
   const editable = node.attrs.editable
 
   const { resource: data, isLoading } = useLearningResource(resourceId)
@@ -113,11 +134,10 @@ export const LearningResourceListCardWrapper = ({
           ×
         </RemoveButton>
       )}
-
-      <StyledLearningResourceListCard
-        resource={data}
-        href={href}
+      <StyledLearningResourceCard
         isLoading={isLoading && !data}
+        resource={data}
+        list
       />
     </NodeWrapper>
   )

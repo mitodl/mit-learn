@@ -69,9 +69,10 @@ export const SETTINGS = dashboardView("settings")
 export const USERLIST_VIEW = "/dashboard/my-lists/[id]"
 export const userListView = (id: number) =>
   generatePath(USERLIST_VIEW, { id: String(id) })
-export const ORGANIZATION_VIEW = "/dashboard/organization/[slug]"
-export const organizationView = (slug: string) =>
-  generatePath(ORGANIZATION_VIEW, { slug: slug })
+export const CONTRACT_VIEW =
+  "/dashboard/organization/[orgSlug]/contract/[contractSlug]"
+export const contractView = (orgSlug: string, contractSlug: string) =>
+  generatePath(CONTRACT_VIEW, { orgSlug: orgSlug, contractSlug: contractSlug })
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })
@@ -196,4 +197,9 @@ export const TWITTER_SHARE_BASE_URL = "https://x.com/share"
 export const LINKEDIN_SHARE_BASE_URL =
   "https://www.linkedin.com/sharing/share-offsite"
 
-export const COURSE_PAGE_VIEW = "/courses/[readableId]/"
+export const COURSE_PAGE_VIEW = "/courses/[readableId]"
+export const coursePageView = (readableId: string) =>
+  generatePath(COURSE_PAGE_VIEW, { readableId })
+export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
+export const programPageView = (readableId: string) =>
+  generatePath(PROGRAM_PAGE_VIEW, { readableId })

@@ -3,6 +3,7 @@
 import React, { useEffect } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
+import { contractView } from "@/common/urls"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { Skeleton } from "ol-components"
 
@@ -18,13 +19,22 @@ const OrganizationRedirect: React.FC = () => {
       if (mitxOnlineUser) {
         const b2bOrganization = mitxOnlineUser.b2b_organizations[0]
         if (b2bOrganization) {
-          const lastVisited = localStorage.getItem("last-dashboard-org")
-          if (lastVisited) {
-            router.replace(`/dashboard/organization/${lastVisited}`)
+          const lastOrg = localStorage.getItem("last-dashboard-org")
+          const lastContract = localStorage.getItem("last-dashboard-contract")
+          if (lastOrg && lastContract) {
+            const contractUrl = contractView(lastOrg, lastContract)
+            router.replace(contractUrl)
           } else {
-            router.replace(
-              `/dashboard/organization/${b2bOrganization.slug.replace("org-", "")}`,
-            )
+            const contract = b2bOrganization.contracts[0]
+            if (contract) {
+              const contractUrl = contractView(
+                b2bOrganization.slug.replace("org-", ""),
+                contract.slug,
+              )
+              router.replace(contractUrl)
+            } else {
+              router.replace("/dashboard")
+            }
           }
         } else {
           router.replace("/dashboard")

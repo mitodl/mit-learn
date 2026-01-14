@@ -163,13 +163,11 @@ FeedSource
 ├── title: "MIT Learn Articles"
 ├── url: "/articles"
 └── feed_type: "news"
-    
     → FeedItem (for each article)
        ├── guid: "article-1"
        ├── title: "My Article"
        ├── url: "/articles/my-article"
        └── source: FeedSource
-           
            → FeedNewsDetail
               ├── authors: ['John Doe']
               ├── topics: []
@@ -187,7 +185,6 @@ def extract_text_from_content(content_json: dict) -> str:
     # For Draft.js
     blocks = content_json.get('blocks', [])
     return ' '.join([block.get('text', '') for block in blocks])
-    
     # For ProseMirror
     def walk_nodes(node):
         if node.get('type') == 'text':
@@ -195,7 +192,6 @@ def extract_text_from_content(content_json: dict) -> str:
         children = node.get('content', [])
         return ' '.join(walk_nodes(child) for child in children)
     return walk_nodes(content_json)
-    
     # For EditorJS
     blocks = content_json.get('blocks', [])
     return ' '.join([
@@ -211,7 +207,6 @@ If your Article model has images:
 ```python
 def transform_items(articles_data: list[dict]) -> list[dict]:
     # ... existing code ...
-    
     # Add image extraction
     image_data = None
     if article.image_field:  # Replace with your field name
@@ -220,7 +215,6 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
             "alt": article.title,
             "description": article.title,
         }
-    
     entry = {
         # ... existing fields ...
         "image": image_data,

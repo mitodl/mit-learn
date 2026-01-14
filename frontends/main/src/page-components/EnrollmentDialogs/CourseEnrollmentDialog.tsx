@@ -18,7 +18,7 @@ import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canUpgrade,
-  getCertificatePrice,
+  getCourseCertificatePrice,
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
@@ -172,7 +172,8 @@ const CertificateUpsell: React.FC<{
 }> = ({ courseRun }) => {
   const enabled = courseRun ? canUpgrade(courseRun) : false
   const product = courseRun?.products[0]
-  const price = courseRun && enabled ? getCertificatePrice(courseRun) : null
+  const price =
+    courseRun && enabled ? getCourseCertificatePrice(courseRun) : null
   const deadlineUI = courseRun?.upgrade_deadline ? (
     <>
       Payment due: <LocalDate date={courseRun.upgrade_deadline} />

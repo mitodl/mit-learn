@@ -27,6 +27,7 @@ def mock_articles(mocker):
     mock_article.created_on = mocker.Mock()
     mock_article.created_on.isoformat.return_value = "2024-01-01T00:00:00Z"
     mock_article.updated_on = mocker.Mock()
+
     mock_article.publish_date = mocker.Mock()
     mock_article.publish_date.isoformat.return_value = "2024-01-01T00:00:00Z"
 

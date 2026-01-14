@@ -25,7 +25,7 @@ def test_video_short_viewset_list(client):
 
     # Should be ordered by -published_at (newest first)
     for idx, result in enumerate(data["results"]):
-        assert result["youtube_id"] == videos[idx].youtube_id
+        assert result["video_id"] == videos[idx].video_id
         if idx > 0:
             assert videos[idx].published_at <= videos[idx - 1].published_at
 
@@ -52,7 +52,7 @@ def test_video_short_viewset_retrieve(client):
     video_short = VideoShortFactory.create()
 
     url = reverse(
-        "video_shorts:v0:video_shorts_api-detail", kwargs={"pk": video_short.youtube_id}
+        "video_shorts:v0:video_shorts_api-detail", kwargs={"pk": video_short.video_id}
     )
     response = client.get(url)
 

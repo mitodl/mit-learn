@@ -183,11 +183,11 @@ const enrollmentsToOrgDashboardEnrollments = (
 
 const createOrgUnenrolledCourse = (
   course: CourseWithCourseRunsSerializerV2,
-  contracts: ContractPage[] | undefined,
+  contract: ContractPage | undefined,
 ): DashboardCourse => {
-  const contractIds = contracts?.map((contract) => contract.id)
+  const contractId = contract?.id
   const run = course.courseruns.find((run) => {
-    return run.b2b_contract && contractIds?.includes(run.b2b_contract)
+    return run.b2b_contract && run.b2b_contract === contractId
   })
   return {
     key: getKey({
@@ -240,7 +240,7 @@ const selectBestEnrollment = (
 
 const organizationCoursesWithContracts = (raw: {
   courses: CourseWithCourseRunsSerializerV2[]
-  contracts?: ContractPage[] // Make optional
+  contract?: ContractPage
   enrollments: CourseRunEnrollmentRequestV2[]
 }): DashboardCourse[] => {
   const enrollmentsByCourseId = groupBy(
@@ -248,20 +248,14 @@ const organizationCoursesWithContracts = (raw: {
     (enrollment) => enrollment.run.course.id,
   )
 
-  // Get contract IDs for easy lookup
-  const contractIds = raw.contracts?.map((contract) => contract.id) || []
-
   const transformedCourses = raw.courses.map((course) => {
     const enrollments = enrollmentsByCourseId[course.id]
 
     if (enrollments?.length > 0) {
-      if (raw.contracts && raw.contracts.length > 0) {
-        // Filter enrollments to only include those with valid contracts
+      if (raw.contract) {
+        // Filter enrollments to only include those matching this contract
         const contractEnrollments = enrollments.filter((enrollment) => {
-          const courseRunContractId = enrollment.b2b_contract_id
-          return (
-            courseRunContractId && contractIds.includes(courseRunContractId)
-          )
+          return enrollment.b2b_contract_id === raw.contract?.id
         })
 
         if (contractEnrollments.length > 0) {
@@ -297,8 +291,8 @@ const organizationCoursesWithContracts = (raw: {
           }
         }
 
-        // If contracts are provided but a matching one isn't found, treat it as unenrolled
-        return createOrgUnenrolledCourse(course, raw.contracts)
+        // If contract is provided but a matching enrollment isn't found, treat it as unenrolled
+        return createOrgUnenrolledCourse(course, raw.contract)
       } else if (enrollments?.length > 0) {
         // If no contracts provided, just find the matching enrollment to the course
         const matchingEnrollment = enrollments.find(
@@ -320,7 +314,7 @@ const organizationCoursesWithContracts = (raw: {
     }
 
     // If no enrollments or no matching enrollment found, treat it as unenrolled
-    return createOrgUnenrolledCourse(course, raw.contracts)
+    return createOrgUnenrolledCourse(course, raw.contract)
   })
   return transformedCourses
 }
