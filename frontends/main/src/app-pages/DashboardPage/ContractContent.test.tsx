@@ -23,6 +23,7 @@ import {
 } from "./CoursewareDisplay/test-utils"
 import { EnrollmentStatus } from "./CoursewareDisplay/types"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -253,6 +254,8 @@ describe("ContractContent", () => {
     // Mock the bulk course API call with first course from each program
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
 
     // Mock the program collection courses query with contract_id
@@ -291,8 +294,77 @@ describe("ContractContent", () => {
     expect(courseCards.length).toBe(2)
 
     // Verify the first course from each program is displayed in collection order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB!.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
+  })
+
+  test("Program collection courses are sorted by program order property", async () => {
+    const { orgX, programA, programB, programCollection, coursesA, coursesB } =
+      setupProgramsAndCourses()
+
+    // Set up the collection with programs in reverse order (A first in array, but higher order number)
+    programCollection.programs = [
+      {
+        id: programA.id,
+        title: programA.title,
+        order: 2, // Higher order - should appear second
+      },
+      {
+        id: programB.id,
+        title: programB.title,
+        order: 1, // Lower order - should appear first
+      },
+    ]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    // Mock the programs API call - return in array order (A, B)
+    const programIds = [programA.id, programB.id]
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: programIds,
+        contract_id: orgX.contracts[0].id,
+      }),
+      { results: [programA, programB] }, // API returns A first
+    )
+
+    // Mock the courses API call - return in array order (A's first course, B's first course)
+    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
+    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
+    const firstCourseIds = [programA.courses[0], programB.courses[0]]
+
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: firstCourseIds,
+        contract_id: orgX.contracts[0].id,
+      }),
+      { results: [firstCourseA, firstCourseB] }, // API returns A's course first
+    )
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const collectionItems = await screen.findAllByTestId(
+      "org-program-collection-root",
+    )
+    const collection = within(collectionItems[0])
+
+    const courseCards = await collection.findAllByTestId(
+      "enrollment-card-desktop",
+    )
+    expect(courseCards.length).toBe(2)
+
+    // Verify courses are displayed by program order property (B with order:1, then A with order:2)
+    // NOT by array position or API response order
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
   })
 
   test("Program collection displays the first course from each program", async () => {
@@ -386,6 +458,8 @@ describe("ContractContent", () => {
     const firstCourseIds = [programB.courses[0], programA.courses[0]]
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     setMockResponse.get(
       urls.courses.coursesList({
         id: firstCourseIds,
