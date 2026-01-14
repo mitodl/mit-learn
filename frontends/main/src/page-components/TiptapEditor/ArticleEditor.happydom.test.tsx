@@ -7,13 +7,10 @@
 import React from "react"
 import { screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
-import { userQueries } from "api/hooks/user"
-import { renderWithTheme } from "../../../../ol-components/src/test-utils"
 import { ArticleEditor } from "./ArticleEditor"
 import type { JSONContent } from "@tiptap/react"
+import { renderWithProviders } from "@/test-utils"
 
 jest.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: () => true,
@@ -21,30 +18,6 @@ jest.mock("posthog-js/react", () => ({
 }))
 
 const mockOnSave = jest.fn()
-
-const renderWithProviders = (
-  component: React.ReactElement,
-  options: { user?: ReturnType<typeof factories.user.user> } = {},
-) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
-  if (options.user) {
-    queryClient.setQueryData(userQueries.me().queryKey, options.user)
-  }
-
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <NiceModalProvider>{children}</NiceModalProvider>
-    </QueryClientProvider>
-  )
-
-  return renderWithTheme(<Wrapper>{component}</Wrapper>)
-}
 
 const getMakeRequestCalls = () => {
   return (makeRequest as unknown as ReturnType<typeof jest.fn>).mock.calls
