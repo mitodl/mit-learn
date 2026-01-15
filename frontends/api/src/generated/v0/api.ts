@@ -12,16 +12,32 @@
  * Do not edit the class manually.
  */
 
-
-import type { Configuration } from './configuration';
-import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from 'axios';
-import globalAxios from 'axios';
+import type { Configuration } from "./configuration"
+import type { AxiosPromise, AxiosInstance, RawAxiosRequestConfig } from "axios"
+import globalAxios from "axios"
 // Some imports not used depending on template conditions
 // @ts-ignore
-import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from './common';
-import type { RequestArgs } from './base';
+import {
+  DUMMY_BASE_URL,
+  assertParamExists,
+  setApiKeyToObject,
+  setBasicAuthToObject,
+  setBearerAuthToObject,
+  setOAuthToObject,
+  setSearchParams,
+  serializeDataIfNeeded,
+  toPathString,
+  createRequestFunction,
+} from "./common"
+import type { RequestArgs } from "./base"
 // @ts-ignore
-import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
+import {
+  BASE_PATH,
+  COLLECTION_FORMATS,
+  BaseAPI,
+  RequiredError,
+  operationServerMap,
+} from "./base"
 
 /**
  * Serializer for Article resources
@@ -29,296 +45,295 @@ import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerM
  * @interface ArticleResource
  */
 export interface ArticleResource {
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof ArticleResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof ArticleResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof ArticleResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ArticleResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof ArticleResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof ArticleResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ArticleResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof ArticleResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof ArticleResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof ArticleResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof ArticleResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof ArticleResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof ArticleResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof ArticleResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof ArticleResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof ArticleResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {ArticleResourceResourceTypeEnum}
-     * @memberof ArticleResource
-     */
-    'resource_type': ArticleResourceResourceTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ArticleResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ArticleResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof ArticleResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ArticleResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ArticleResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ArticleResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ArticleResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ArticleResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ArticleResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ArticleResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof ArticleResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof ArticleResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof ArticleResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof ArticleResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof ArticleResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof ArticleResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof ArticleResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof ArticleResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof ArticleResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof ArticleResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {ArticleResourceResourceTypeEnum}
+   * @memberof ArticleResource
+   */
+  resource_type: ArticleResourceResourceTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ArticleResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ArticleResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ArticleResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ArticleResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -327,15 +342,15 @@ export interface ArticleResource {
  */
 
 export const ArticleResourceResourceTypeEnumDescriptions = {
-    'article': "",
-} as const;
+  article: "",
+} as const
 
 export const ArticleResourceResourceTypeEnum = {
-    Article: 'article'
-} as const;
+  Article: "article",
+} as const
 
-export type ArticleResourceResourceTypeEnum = typeof ArticleResourceResourceTypeEnum[keyof typeof ArticleResourceResourceTypeEnum];
-
+export type ArticleResourceResourceTypeEnum =
+  (typeof ArticleResourceResourceTypeEnum)[keyof typeof ArticleResourceResourceTypeEnum]
 
 /**
  * Serializer for attestations.
@@ -343,90 +358,90 @@ export type ArticleResourceResourceTypeEnum = typeof ArticleResourceResourceType
  * @interface Attestation
  */
 export interface Attestation {
-    /**
-     *
-     * @type {number}
-     * @memberof Attestation
-     */
-    'id': number;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof Attestation
-     */
-    'avatar': string | null;
-    /**
-     * Get the avatar_small image URL
-     * @type {string}
-     * @memberof Attestation
-     */
-    'avatar_small': string | null;
-    /**
-     * Get the avatar_medium image URL
-     * @type {string}
-     * @memberof Attestation
-     */
-    'avatar_medium': string | null;
-    /**
-     * Get the cover image URL
-     * @type {string}
-     * @memberof Attestation
-     */
-    'cover': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Attestation
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof Attestation
-     */
-    'updated_on': string;
-    /**
-     * The name of the attestant
-     * @type {string}
-     * @memberof Attestation
-     */
-    'attestant_name': string;
-    /**
-     * The attestant\'s title
-     * @type {string}
-     * @memberof Attestation
-     */
-    'title': string;
-    /**
-     * The testimonial attestation
-     * @type {string}
-     * @memberof Attestation
-     */
-    'quote': string;
-    /**
-     * The position the attestation should occupy
-     * @type {number}
-     * @memberof Attestation
-     */
-    'position'?: number;
-    /**
-     * The datetime to show the testimonial
-     * @type {string}
-     * @memberof Attestation
-     */
-    'publish_date'?: string | null;
-    /**
-     * Channels that the testimonial belongs to
-     * @type {Array<number>}
-     * @memberof Attestation
-     */
-    'channels'?: Array<number>;
-    /**
-     * The offerors that this attestation can appear on
-     * @type {Array<string>}
-     * @memberof Attestation
-     */
-    'offerors'?: Array<string>;
+  /**
+   *
+   * @type {number}
+   * @memberof Attestation
+   */
+  id: number
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof Attestation
+   */
+  avatar: string | null
+  /**
+   * Get the avatar_small image URL
+   * @type {string}
+   * @memberof Attestation
+   */
+  avatar_small: string | null
+  /**
+   * Get the avatar_medium image URL
+   * @type {string}
+   * @memberof Attestation
+   */
+  avatar_medium: string | null
+  /**
+   * Get the cover image URL
+   * @type {string}
+   * @memberof Attestation
+   */
+  cover: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Attestation
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof Attestation
+   */
+  updated_on: string
+  /**
+   * The name of the attestant
+   * @type {string}
+   * @memberof Attestation
+   */
+  attestant_name: string
+  /**
+   * The attestant\'s title
+   * @type {string}
+   * @memberof Attestation
+   */
+  title: string
+  /**
+   * The testimonial attestation
+   * @type {string}
+   * @memberof Attestation
+   */
+  quote: string
+  /**
+   * The position the attestation should occupy
+   * @type {number}
+   * @memberof Attestation
+   */
+  position?: number
+  /**
+   * The datetime to show the testimonial
+   * @type {string}
+   * @memberof Attestation
+   */
+  publish_date?: string | null
+  /**
+   * Channels that the testimonial belongs to
+   * @type {Array<number>}
+   * @memberof Attestation
+   */
+  channels?: Array<number>
+  /**
+   * The offerors that this attestation can appear on
+   * @type {Array<string>}
+   * @memberof Attestation
+   */
+  offerors?: Array<string>
 }
 /**
  * * `dated` - Dated * `anytime` - Anytime
@@ -435,23 +450,23 @@ export interface Attestation {
  */
 
 export const AvailabilityEnumDescriptions = {
-    'dated': "Dated",
-    'anytime': "Anytime",
-} as const;
+  dated: "Dated",
+  anytime: "Anytime",
+} as const
 
 export const AvailabilityEnum = {
-    /**
-    * Dated
-    */
-    Dated: 'dated',
-    /**
-    * Anytime
-    */
-    Anytime: 'anytime'
-} as const;
+  /**
+   * Dated
+   */
+  Dated: "dated",
+  /**
+   * Anytime
+   */
+  Anytime: "anytime",
+} as const
 
-export type AvailabilityEnum = typeof AvailabilityEnum[keyof typeof AvailabilityEnum];
-
+export type AvailabilityEnum =
+  (typeof AvailabilityEnum)[keyof typeof AvailabilityEnum]
 
 /**
  *
@@ -460,15 +475,14 @@ export type AvailabilityEnum = typeof AvailabilityEnum[keyof typeof Availability
  */
 
 export const BlankEnumDescriptions = {
-    '': "",
-} as const;
+  "": "",
+} as const
 
 export const BlankEnum = {
-    Empty: ''
-} as const;
+  Empty: "",
+} as const
 
-export type BlankEnum = typeof BlankEnum[keyof typeof BlankEnum];
-
+export type BlankEnum = (typeof BlankEnum)[keyof typeof BlankEnum]
 
 /**
  * Serializer for CKEditor settings
@@ -476,12 +490,12 @@ export type BlankEnum = typeof BlankEnum[keyof typeof BlankEnum];
  * @interface CKEditorSettings
  */
 export interface CKEditorSettings {
-    /**
-     * Get the JWT token
-     * @type {string}
-     * @memberof CKEditorSettings
-     */
-    'token': string | null;
+  /**
+   * Get the JWT token
+   * @type {string}
+   * @memberof CKEditorSettings
+   */
+  token: string | null
 }
 /**
  * * `yes` - Yes, I am looking for a certificate * `no` - No, I am not looking for a certificate * `not-sure-yet` - Not Sure
@@ -490,34 +504,38 @@ export interface CKEditorSettings {
  */
 
 export const CertificateDesiredEnumDescriptions = {
-    'yes': "Yes, I am looking for a certificate",
-    'no': "No, I am not looking for a certificate",
-    'not-sure-yet': "Not Sure",
-} as const;
+  yes: "Yes, I am looking for a certificate",
+  no: "No, I am not looking for a certificate",
+  "not-sure-yet": "Not Sure",
+} as const
 
 export const CertificateDesiredEnum = {
-    /**
-    * Yes, I am looking for a certificate
-    */
-    Yes: 'yes',
-    /**
-    * No, I am not looking for a certificate
-    */
-    No: 'no',
-    /**
-    * Not Sure
-    */
-    NotSureYet: 'not-sure-yet'
-} as const;
+  /**
+   * Yes, I am looking for a certificate
+   */
+  Yes: "yes",
+  /**
+   * No, I am not looking for a certificate
+   */
+  No: "no",
+  /**
+   * Not Sure
+   */
+  NotSureYet: "not-sure-yet",
+} as const
 
-export type CertificateDesiredEnum = typeof CertificateDesiredEnum[keyof typeof CertificateDesiredEnum];
-
+export type CertificateDesiredEnum =
+  (typeof CertificateDesiredEnum)[keyof typeof CertificateDesiredEnum]
 
 /**
  * @type Channel
  * @export
  */
-export type Channel = { channel_type: 'department' } & DepartmentChannel | { channel_type: 'pathway' } & PathwayChannel | { channel_type: 'topic' } & TopicChannel | { channel_type: 'unit' } & UnitChannel;
+export type Channel =
+  | ({ channel_type: "department" } & DepartmentChannel)
+  | ({ channel_type: "pathway" } & PathwayChannel)
+  | ({ channel_type: "topic" } & TopicChannel)
+  | ({ channel_type: "unit" } & UnitChannel)
 
 /**
  * Serializer for resource counts associated with Channel
@@ -525,62 +543,61 @@ export type Channel = { channel_type: 'department' } & DepartmentChannel | { cha
  * @interface ChannelCounts
  */
 export interface ChannelCounts {
-    /**
-     *
-     * @type {number}
-     * @memberof ChannelCounts
-     */
-    'id': number;
-    /**
-     *
-     * @type {Counts}
-     * @memberof ChannelCounts
-     */
-    'counts': Counts;
-    /**
-     * Get the URL for the channel
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'channel_url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'updated_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'title': string;
-    /**
-     *
-     * @type {ChannelTypeEnum}
-     * @memberof ChannelCounts
-     */
-    'channel_type': ChannelTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCounts
-     */
-    'search_filter'?: string;
+  /**
+   *
+   * @type {number}
+   * @memberof ChannelCounts
+   */
+  id: number
+  /**
+   *
+   * @type {Counts}
+   * @memberof ChannelCounts
+   */
+  counts: Counts
+  /**
+   * Get the URL for the channel
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  channel_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  title: string
+  /**
+   *
+   * @type {ChannelTypeEnum}
+   * @memberof ChannelCounts
+   */
+  channel_type: ChannelTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCounts
+   */
+  search_filter?: string
 }
-
 
 /**
  * Write serializer for Channel. Uses primary keys for referenced objects during requests, and delegates to ChannelSerializer for responses.
@@ -588,86 +605,85 @@ export interface ChannelCounts {
  * @interface ChannelCreateRequest
  */
 export interface ChannelCreateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCreateRequest
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCreateRequest
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCreateRequest
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ChannelCreateRequest
-     */
-    'sub_channels'?: Array<string>;
-    /**
-     * Learning path featured in this channel.
-     * @type {number}
-     * @memberof ChannelCreateRequest
-     */
-    'featured_list'?: number | null;
-    /**
-     * Learning paths in this channel.
-     * @type {Array<number>}
-     * @memberof ChannelCreateRequest
-     */
-    'lists'?: Array<number>;
-    /**
-     *
-     * @type {File}
-     * @memberof ChannelCreateRequest
-     */
-    'avatar'?: File | null;
-    /**
-     *
-     * @type {File}
-     * @memberof ChannelCreateRequest
-     */
-    'banner'?: File | null;
-    /**
-     *
-     * @type {any}
-     * @memberof ChannelCreateRequest
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {ChannelTypeEnum}
-     * @memberof ChannelCreateRequest
-     */
-    'channel_type': ChannelTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelCreateRequest
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {ChannelTopicDetailRequest}
-     * @memberof ChannelCreateRequest
-     */
-    'topic_detail'?: ChannelTopicDetailRequest | null;
-    /**
-     *
-     * @type {ChannelDepartmentDetailRequest}
-     * @memberof ChannelCreateRequest
-     */
-    'department_detail'?: ChannelDepartmentDetailRequest | null;
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCreateRequest
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCreateRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCreateRequest
+   */
+  public_description?: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ChannelCreateRequest
+   */
+  sub_channels?: Array<string>
+  /**
+   * Learning path featured in this channel.
+   * @type {number}
+   * @memberof ChannelCreateRequest
+   */
+  featured_list?: number | null
+  /**
+   * Learning paths in this channel.
+   * @type {Array<number>}
+   * @memberof ChannelCreateRequest
+   */
+  lists?: Array<number>
+  /**
+   *
+   * @type {File}
+   * @memberof ChannelCreateRequest
+   */
+  avatar?: File | null
+  /**
+   *
+   * @type {File}
+   * @memberof ChannelCreateRequest
+   */
+  banner?: File | null
+  /**
+   *
+   * @type {any}
+   * @memberof ChannelCreateRequest
+   */
+  about?: any | null
+  /**
+   *
+   * @type {ChannelTypeEnum}
+   * @memberof ChannelCreateRequest
+   */
+  channel_type: ChannelTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelCreateRequest
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {ChannelTopicDetailRequest}
+   * @memberof ChannelCreateRequest
+   */
+  topic_detail?: ChannelTopicDetailRequest | null
+  /**
+   *
+   * @type {ChannelDepartmentDetailRequest}
+   * @memberof ChannelCreateRequest
+   */
+  department_detail?: ChannelDepartmentDetailRequest | null
 }
-
 
 /**
  * Serializer for the ChannelDepartmentDetail model
@@ -675,12 +691,12 @@ export interface ChannelCreateRequest {
  * @interface ChannelDepartmentDetail
  */
 export interface ChannelDepartmentDetail {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelDepartmentDetail
-     */
-    'department'?: string | null;
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelDepartmentDetail
+   */
+  department?: string | null
 }
 /**
  * Serializer for the ChannelDepartmentDetail model
@@ -688,12 +704,12 @@ export interface ChannelDepartmentDetail {
  * @interface ChannelDepartmentDetailRequest
  */
 export interface ChannelDepartmentDetailRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelDepartmentDetailRequest
-     */
-    'department'?: string | null;
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelDepartmentDetailRequest
+   */
+  department?: string | null
 }
 /**
  * Serializer for moderators
@@ -701,24 +717,24 @@ export interface ChannelDepartmentDetailRequest {
  * @interface ChannelModerator
  */
 export interface ChannelModerator {
-    /**
-     * Returns the name for the moderator
-     * @type {string}
-     * @memberof ChannelModerator
-     */
-    'moderator_name'?: string;
-    /**
-     * Get the email from the associated user
-     * @type {string}
-     * @memberof ChannelModerator
-     */
-    'email'?: string;
-    /**
-     * Get the full name of the associated user
-     * @type {string}
-     * @memberof ChannelModerator
-     */
-    'full_name': string;
+  /**
+   * Returns the name for the moderator
+   * @type {string}
+   * @memberof ChannelModerator
+   */
+  moderator_name?: string
+  /**
+   * Get the email from the associated user
+   * @type {string}
+   * @memberof ChannelModerator
+   */
+  email?: string
+  /**
+   * Get the full name of the associated user
+   * @type {string}
+   * @memberof ChannelModerator
+   */
+  full_name: string
 }
 /**
  * Serializer for moderators
@@ -726,18 +742,18 @@ export interface ChannelModerator {
  * @interface ChannelModeratorRequest
  */
 export interface ChannelModeratorRequest {
-    /**
-     * Returns the name for the moderator
-     * @type {string}
-     * @memberof ChannelModeratorRequest
-     */
-    'moderator_name'?: string;
-    /**
-     * Get the email from the associated user
-     * @type {string}
-     * @memberof ChannelModeratorRequest
-     */
-    'email'?: string;
+  /**
+   * Returns the name for the moderator
+   * @type {string}
+   * @memberof ChannelModeratorRequest
+   */
+  moderator_name?: string
+  /**
+   * Get the email from the associated user
+   * @type {string}
+   * @memberof ChannelModeratorRequest
+   */
+  email?: string
 }
 /**
  * Serializer for the ChannelTopicDetail model
@@ -745,12 +761,12 @@ export interface ChannelModeratorRequest {
  * @interface ChannelTopicDetail
  */
 export interface ChannelTopicDetail {
-    /**
-     *
-     * @type {number}
-     * @memberof ChannelTopicDetail
-     */
-    'topic'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof ChannelTopicDetail
+   */
+  topic?: number | null
 }
 /**
  * Serializer for the ChannelTopicDetail model
@@ -758,12 +774,12 @@ export interface ChannelTopicDetail {
  * @interface ChannelTopicDetailRequest
  */
 export interface ChannelTopicDetailRequest {
-    /**
-     *
-     * @type {number}
-     * @memberof ChannelTopicDetailRequest
-     */
-    'topic'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof ChannelTopicDetailRequest
+   */
+  topic?: number | null
 }
 /**
  * * `topic` - Topic * `department` - Department * `unit` - Unit * `pathway` - Pathway
@@ -772,33 +788,33 @@ export interface ChannelTopicDetailRequest {
  */
 
 export const ChannelTypeEnumDescriptions = {
-    'topic': "Topic",
-    'department': "Department",
-    'unit': "Unit",
-    'pathway': "Pathway",
-} as const;
+  topic: "Topic",
+  department: "Department",
+  unit: "Unit",
+  pathway: "Pathway",
+} as const
 
 export const ChannelTypeEnum = {
-    /**
-    * Topic
-    */
-    Topic: 'topic',
-    /**
-    * Department
-    */
-    Department: 'department',
-    /**
-    * Unit
-    */
-    Unit: 'unit',
-    /**
-    * Pathway
-    */
-    Pathway: 'pathway'
-} as const;
+  /**
+   * Topic
+   */
+  Topic: "topic",
+  /**
+   * Department
+   */
+  Department: "department",
+  /**
+   * Unit
+   */
+  Unit: "unit",
+  /**
+   * Pathway
+   */
+  Pathway: "pathway",
+} as const
 
-export type ChannelTypeEnum = typeof ChannelTypeEnum[keyof typeof ChannelTypeEnum];
-
+export type ChannelTypeEnum =
+  (typeof ChannelTypeEnum)[keyof typeof ChannelTypeEnum]
 
 /**
  * Serializer for the ChannelOfferorDetail model
@@ -806,12 +822,12 @@ export type ChannelTypeEnum = typeof ChannelTypeEnum[keyof typeof ChannelTypeEnu
  * @interface ChannelUnitDetail
  */
 export interface ChannelUnitDetail {
-    /**
-     *
-     * @type {LearningResourceOfferorDetail}
-     * @memberof ChannelUnitDetail
-     */
-    'unit': LearningResourceOfferorDetail;
+  /**
+   *
+   * @type {LearningResourceOfferorDetail}
+   * @memberof ChannelUnitDetail
+   */
+  unit: LearningResourceOfferorDetail
 }
 /**
  * Serializer class for course run ContentFiles
@@ -819,206 +835,205 @@ export interface ChannelUnitDetail {
  * @interface ContentFile
  */
 export interface ContentFile {
-    /**
-     *
-     * @type {number}
-     * @memberof ContentFile
-     */
-    'id': number;
-    /**
-     *
-     * @type {number}
-     * @memberof ContentFile
-     */
-    'run_id'?: number;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'run_title'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'run_slug'?: string;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof ContentFile
-     */
-    'departments': Array<LearningResourceDepartment>;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'semester'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof ContentFile
-     */
-    'year'?: number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof ContentFile
-     */
-    'topics': Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'key'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'uid'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'title'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ContentFile
-     */
-    'require_summaries': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ContentFile
-     */
-    'content_feature_type': Array<string>;
-    /**
-     *
-     * @type {ContentTypeEnum}
-     * @memberof ContentFile
-     */
-    'content_type'?: ContentTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'content'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'content_title'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'content_author'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'content_language'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'checksum'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'image_src'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'resource_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'resource_readable_id': string;
-    /**
-     * Extract the course number(s) from the associated course
-     * @type {Array<string>}
-     * @memberof ContentFile
-     */
-    'course_number': Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'file_type'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'file_extension'?: string | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof ContentFile
-     */
-    'offered_by': LearningResourceOfferor;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof ContentFile
-     */
-    'platform': LearningResourcePlatform;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'run_readable_id'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'edx_module_id'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFile
-     */
-    'summary'?: string;
-    /**
-     *
-     * @type {any}
-     * @memberof ContentFile
-     */
-    'flashcards'?: any;
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  id: number
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  run_id?: number
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_slug?: string
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ContentFile
+   */
+  departments: Array<LearningResourceDepartment>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  semester?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  year?: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ContentFile
+   */
+  topics: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  key?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  uid?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  description?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ContentFile
+   */
+  require_summaries: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ContentFile
+   */
+  content_feature_type: Array<string>
+  /**
+   *
+   * @type {ContentTypeEnum}
+   * @memberof ContentFile
+   */
+  content_type?: ContentTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_title?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_author?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  content_language?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  checksum?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  image_src?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  resource_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  resource_readable_id: string
+  /**
+   * Extract the course number(s) from the associated course
+   * @type {Array<string>}
+   * @memberof ContentFile
+   */
+  course_number: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  file_extension?: string | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ContentFile
+   */
+  offered_by: LearningResourceOfferor
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ContentFile
+   */
+  platform: LearningResourcePlatform
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  run_readable_id?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  edx_module_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  summary?: string
+  /**
+   *
+   * @type {any}
+   * @memberof ContentFile
+   */
+  flashcards?: any
 }
-
 
 /**
  * SearchResponseSerializer with OpenAPI annotations for Content Files search
@@ -1026,36 +1041,36 @@ export interface ContentFile {
  * @interface ContentFileVectorSearchResponse
  */
 export interface ContentFileVectorSearchResponse {
-    /**
-     *
-     * @type {number}
-     * @memberof ContentFileVectorSearchResponse
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFileVectorSearchResponse
-     */
-    'next': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFileVectorSearchResponse
-     */
-    'previous': string | null;
-    /**
-     *
-     * @type {Array<ContentFile>}
-     * @memberof ContentFileVectorSearchResponse
-     */
-    'results': Array<ContentFile>;
-    /**
-     *
-     * @type {ContentFileVectorSearchResponseMetadata}
-     * @memberof ContentFileVectorSearchResponse
-     */
-    'metadata': ContentFileVectorSearchResponseMetadata;
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  next: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  previous: string | null
+  /**
+   *
+   * @type {Array<ContentFile>}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  results: Array<ContentFile>
+  /**
+   *
+   * @type {ContentFileVectorSearchResponseMetadata}
+   * @memberof ContentFileVectorSearchResponse
+   */
+  metadata: ContentFileVectorSearchResponseMetadata
 }
 /**
  *
@@ -1063,18 +1078,22 @@ export interface ContentFileVectorSearchResponse {
  * @interface ContentFileVectorSearchResponseMetadata
  */
 export interface ContentFileVectorSearchResponseMetadata {
-    /**
-     *
-     * @type {{ [key: string]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>; }}
-     * @memberof ContentFileVectorSearchResponseMetadata
-     */
-    'aggregations': { [key: string]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>; };
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ContentFileVectorSearchResponseMetadata
-     */
-    'suggestions': Array<string>;
+  /**
+   *
+   * @type {{ [key: string]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>; }}
+   * @memberof ContentFileVectorSearchResponseMetadata
+   */
+  aggregations: {
+    [
+      key: string
+    ]: Array<ContentFileVectorSearchResponseMetadataAggregationsValueInner>
+  }
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ContentFileVectorSearchResponseMetadata
+   */
+  suggestions: Array<string>
 }
 /**
  *
@@ -1082,18 +1101,18 @@ export interface ContentFileVectorSearchResponseMetadata {
  * @interface ContentFileVectorSearchResponseMetadataAggregationsValueInner
  */
 export interface ContentFileVectorSearchResponseMetadataAggregationsValueInner {
-    /**
-     *
-     * @type {string}
-     * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
-     */
-    'key': string;
-    /**
-     *
-     * @type {number}
-     * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
-     */
-    'doc_count': number;
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
+   */
+  key: string
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFileVectorSearchResponseMetadataAggregationsValueInner
+   */
+  doc_count: number
 }
 /**
  * * `page` - page * `file` - file * `video` - video * `pdf` - pdf
@@ -1102,33 +1121,33 @@ export interface ContentFileVectorSearchResponseMetadataAggregationsValueInner {
  */
 
 export const ContentTypeEnumDescriptions = {
-    'page': "page",
-    'file': "file",
-    'video': "video",
-    'pdf': "pdf",
-} as const;
+  page: "page",
+  file: "file",
+  video: "video",
+  pdf: "pdf",
+} as const
 
 export const ContentTypeEnum = {
-    /**
-    * page
-    */
-    Page: 'page',
-    /**
-    * file
-    */
-    File: 'file',
-    /**
-    * video
-    */
-    Video: 'video',
-    /**
-    * pdf
-    */
-    Pdf: 'pdf'
-} as const;
+  /**
+   * page
+   */
+  Page: "page",
+  /**
+   * file
+   */
+  File: "file",
+  /**
+   * video
+   */
+  Video: "video",
+  /**
+   * pdf
+   */
+  Pdf: "pdf",
+} as const
 
-export type ContentTypeEnum = typeof ContentTypeEnum[keyof typeof ContentTypeEnum];
-
+export type ContentTypeEnum =
+  (typeof ContentTypeEnum)[keyof typeof ContentTypeEnum]
 
 /**
  *
@@ -1136,18 +1155,18 @@ export type ContentTypeEnum = typeof ContentTypeEnum[keyof typeof ContentTypeEnu
  * @interface Counts
  */
 export interface Counts {
-    /**
-     *
-     * @type {number}
-     * @memberof Counts
-     */
-    'courses': number;
-    /**
-     *
-     * @type {number}
-     * @memberof Counts
-     */
-    'programs': number;
+  /**
+   *
+   * @type {number}
+   * @memberof Counts
+   */
+  courses: number
+  /**
+   *
+   * @type {number}
+   * @memberof Counts
+   */
+  programs: number
 }
 /**
  * Serializer for the Course model
@@ -1155,12 +1174,12 @@ export interface Counts {
  * @interface Course
  */
 export interface Course {
-    /**
-     *
-     * @type {Array<CourseNumber>}
-     * @memberof Course
-     */
-    'course_numbers': Array<CourseNumber> | null;
+  /**
+   *
+   * @type {Array<CourseNumber>}
+   * @memberof Course
+   */
+  course_numbers: Array<CourseNumber> | null
 }
 /**
  * Serializer for CourseNumber
@@ -1168,24 +1187,24 @@ export interface Course {
  * @interface CourseNumber
  */
 export interface CourseNumber {
-    /**
-     *
-     * @type {string}
-     * @memberof CourseNumber
-     */
-    'value': string;
-    /**
-     *
-     * @type {LearningResourceDepartment}
-     * @memberof CourseNumber
-     */
-    'department': LearningResourceDepartment;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseNumber
-     */
-    'listing_type': string;
+  /**
+   *
+   * @type {string}
+   * @memberof CourseNumber
+   */
+  value: string
+  /**
+   *
+   * @type {LearningResourceDepartment}
+   * @memberof CourseNumber
+   */
+  department: LearningResourceDepartment
+  /**
+   *
+   * @type {string}
+   * @memberof CourseNumber
+   */
+  listing_type: string
 }
 /**
  * Serializer for course resources
@@ -1193,302 +1212,301 @@ export interface CourseNumber {
  * @interface CourseResource
  */
 export interface CourseResource {
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof CourseResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof CourseResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof CourseResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof CourseResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof CourseResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof CourseResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof CourseResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof CourseResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof CourseResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof CourseResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof CourseResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof CourseResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof CourseResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof CourseResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof CourseResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof CourseResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {CourseResourceResourceTypeEnum}
-     * @memberof CourseResource
-     */
-    'resource_type': CourseResourceResourceTypeEnum;
-    /**
-     *
-     * @type {Course}
-     * @memberof CourseResource
-     */
-    'course': Course;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof CourseResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof CourseResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof CourseResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof CourseResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof CourseResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof CourseResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof CourseResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof CourseResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof CourseResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof CourseResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof CourseResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof CourseResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof CourseResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof CourseResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof CourseResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof CourseResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof CourseResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof CourseResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof CourseResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof CourseResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof CourseResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {CourseResourceResourceTypeEnum}
+   * @memberof CourseResource
+   */
+  resource_type: CourseResourceResourceTypeEnum
+  /**
+   *
+   * @type {Course}
+   * @memberof CourseResource
+   */
+  course: Course
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof CourseResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -1496,28 +1514,29 @@ export interface CourseResource {
  * @interface CourseResourceCertificationType
  */
 export interface CourseResourceCertificationType {
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceCertificationType
-     */
-    'code': CourseResourceCertificationTypeCodeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceCertificationType
-     */
-    'name': string;
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceCertificationType
+   */
+  code: CourseResourceCertificationTypeCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceCertificationType
+   */
+  name: string
 }
 
 export const CourseResourceCertificationTypeCodeEnum = {
-    Micromasters: 'micromasters',
-    Professional: 'professional',
-    Completion: 'completion',
-    None: 'none'
-} as const;
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
 
-export type CourseResourceCertificationTypeCodeEnum = typeof CourseResourceCertificationTypeCodeEnum[keyof typeof CourseResourceCertificationTypeCodeEnum];
+export type CourseResourceCertificationTypeCodeEnum =
+  (typeof CourseResourceCertificationTypeCodeEnum)[keyof typeof CourseResourceCertificationTypeCodeEnum]
 
 /**
  *
@@ -1525,28 +1544,29 @@ export type CourseResourceCertificationTypeCodeEnum = typeof CourseResourceCerti
  * @interface CourseResourceDeliveryInner
  */
 export interface CourseResourceDeliveryInner {
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceDeliveryInner
-     */
-    'code': CourseResourceDeliveryInnerCodeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceDeliveryInner
-     */
-    'name': string;
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceDeliveryInner
+   */
+  code: CourseResourceDeliveryInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceDeliveryInner
+   */
+  name: string
 }
 
 export const CourseResourceDeliveryInnerCodeEnum = {
-    Online: 'online',
-    Hybrid: 'hybrid',
-    InPerson: 'in_person',
-    Offline: 'offline'
-} as const;
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
 
-export type CourseResourceDeliveryInnerCodeEnum = typeof CourseResourceDeliveryInnerCodeEnum[keyof typeof CourseResourceDeliveryInnerCodeEnum];
+export type CourseResourceDeliveryInnerCodeEnum =
+  (typeof CourseResourceDeliveryInnerCodeEnum)[keyof typeof CourseResourceDeliveryInnerCodeEnum]
 
 /**
  *
@@ -1554,26 +1574,27 @@ export type CourseResourceDeliveryInnerCodeEnum = typeof CourseResourceDeliveryI
  * @interface CourseResourceFormatInner
  */
 export interface CourseResourceFormatInner {
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceFormatInner
-     */
-    'code': CourseResourceFormatInnerCodeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourceFormatInner
-     */
-    'name': string;
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceFormatInner
+   */
+  code: CourseResourceFormatInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourceFormatInner
+   */
+  name: string
 }
 
 export const CourseResourceFormatInnerCodeEnum = {
-    Synchronous: 'synchronous',
-    Asynchronous: 'asynchronous'
-} as const;
+  Synchronous: "synchronous",
+  Asynchronous: "asynchronous",
+} as const
 
-export type CourseResourceFormatInnerCodeEnum = typeof CourseResourceFormatInnerCodeEnum[keyof typeof CourseResourceFormatInnerCodeEnum];
+export type CourseResourceFormatInnerCodeEnum =
+  (typeof CourseResourceFormatInnerCodeEnum)[keyof typeof CourseResourceFormatInnerCodeEnum]
 
 /**
  *
@@ -1581,26 +1602,27 @@ export type CourseResourceFormatInnerCodeEnum = typeof CourseResourceFormatInner
  * @interface CourseResourcePaceInner
  */
 export interface CourseResourcePaceInner {
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourcePaceInner
-     */
-    'code': CourseResourcePaceInnerCodeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof CourseResourcePaceInner
-     */
-    'name': string;
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourcePaceInner
+   */
+  code: CourseResourcePaceInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResourcePaceInner
+   */
+  name: string
 }
 
 export const CourseResourcePaceInnerCodeEnum = {
-    SelfPaced: 'self_paced',
-    InstructorPaced: 'instructor_paced'
-} as const;
+  SelfPaced: "self_paced",
+  InstructorPaced: "instructor_paced",
+} as const
 
-export type CourseResourcePaceInnerCodeEnum = typeof CourseResourcePaceInnerCodeEnum[keyof typeof CourseResourcePaceInnerCodeEnum];
+export type CourseResourcePaceInnerCodeEnum =
+  (typeof CourseResourcePaceInnerCodeEnum)[keyof typeof CourseResourcePaceInnerCodeEnum]
 
 /**
  *
@@ -1609,15 +1631,15 @@ export type CourseResourcePaceInnerCodeEnum = typeof CourseResourcePaceInnerCode
  */
 
 export const CourseResourceResourceTypeEnumDescriptions = {
-    'course': "",
-} as const;
+  course: "",
+} as const
 
 export const CourseResourceResourceTypeEnum = {
-    Course: 'course'
-} as const;
+  Course: "course",
+} as const
 
-export type CourseResourceResourceTypeEnum = typeof CourseResourceResourceTypeEnum[keyof typeof CourseResourceResourceTypeEnum];
-
+export type CourseResourceResourceTypeEnum =
+  (typeof CourseResourceResourceTypeEnum)[keyof typeof CourseResourceResourceTypeEnum]
 
 /**
  * * `` - ---- * `Doctorate` - Doctorate * `Master\'s or professional degree` - Master\'s or professional degree * `Bachelor\'s degree` - Bachelor\'s degree * `Associate degree` - Associate degree * `Secondary/high school` - Secondary/high school * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school * `No formal education` - No formal education * `Other education` - Other education
@@ -1626,53 +1648,55 @@ export type CourseResourceResourceTypeEnum = typeof CourseResourceResourceTypeEn
  */
 
 export const CurrentEducationEnumDescriptions = {
-    'Doctorate': "Doctorate",
-    'Master\'s or professional degree': "Master's or professional degree",
-    'Bachelor\'s degree': "Bachelor's degree",
-    'Associate degree': "Associate degree",
-    'Secondary/high school': "Secondary/high school",
-    'Junior secondary/junior high/middle school': "Junior secondary/junior high/middle school",
-    'No formal education': "No formal education",
-    'Other education': "Other education",
-} as const;
+  Doctorate: "Doctorate",
+  "Master's or professional degree": "Master's or professional degree",
+  "Bachelor's degree": "Bachelor's degree",
+  "Associate degree": "Associate degree",
+  "Secondary/high school": "Secondary/high school",
+  "Junior secondary/junior high/middle school":
+    "Junior secondary/junior high/middle school",
+  "No formal education": "No formal education",
+  "Other education": "Other education",
+} as const
 
 export const CurrentEducationEnum = {
-    /**
-    * Doctorate
-    */
-    Doctorate: 'Doctorate',
-    /**
-    * Master&#39;s or professional degree
-    */
-    MastersOrProfessionalDegree: 'Master\'s or professional degree',
-    /**
-    * Bachelor&#39;s degree
-    */
-    BachelorsDegree: 'Bachelor\'s degree',
-    /**
-    * Associate degree
-    */
-    AssociateDegree: 'Associate degree',
-    /**
-    * Secondary/high school
-    */
-    SecondaryHighSchool: 'Secondary/high school',
-    /**
-    * Junior secondary/junior high/middle school
-    */
-    JuniorSecondaryJuniorHighMiddleSchool: 'Junior secondary/junior high/middle school',
-    /**
-    * No formal education
-    */
-    NoFormalEducation: 'No formal education',
-    /**
-    * Other education
-    */
-    OtherEducation: 'Other education'
-} as const;
+  /**
+   * Doctorate
+   */
+  Doctorate: "Doctorate",
+  /**
+   * Master&#39;s or professional degree
+   */
+  MastersOrProfessionalDegree: "Master's or professional degree",
+  /**
+   * Bachelor&#39;s degree
+   */
+  BachelorsDegree: "Bachelor's degree",
+  /**
+   * Associate degree
+   */
+  AssociateDegree: "Associate degree",
+  /**
+   * Secondary/high school
+   */
+  SecondaryHighSchool: "Secondary/high school",
+  /**
+   * Junior secondary/junior high/middle school
+   */
+  JuniorSecondaryJuniorHighMiddleSchool:
+    "Junior secondary/junior high/middle school",
+  /**
+   * No formal education
+   */
+  NoFormalEducation: "No formal education",
+  /**
+   * Other education
+   */
+  OtherEducation: "Other education",
+} as const
 
-export type CurrentEducationEnum = typeof CurrentEducationEnum[keyof typeof CurrentEducationEnum];
-
+export type CurrentEducationEnum =
+  (typeof CurrentEducationEnum)[keyof typeof CurrentEducationEnum]
 
 /**
  * * `online` - Online * `hybrid` - Hybrid * `in_person` - In-Person * `offline` - Offline
@@ -1681,33 +1705,32 @@ export type CurrentEducationEnum = typeof CurrentEducationEnum[keyof typeof Curr
  */
 
 export const DeliveryEnumDescriptions = {
-    'online': "Online",
-    'hybrid': "Hybrid",
-    'in_person': "In-Person",
-    'offline': "Offline",
-} as const;
+  online: "Online",
+  hybrid: "Hybrid",
+  in_person: "In-Person",
+  offline: "Offline",
+} as const
 
 export const DeliveryEnum = {
-    /**
-    * Online
-    */
-    Online: 'online',
-    /**
-    * Hybrid
-    */
-    Hybrid: 'hybrid',
-    /**
-    * In-Person
-    */
-    InPerson: 'in_person',
-    /**
-    * Offline
-    */
-    Offline: 'offline'
-} as const;
+  /**
+   * Online
+   */
+  Online: "online",
+  /**
+   * Hybrid
+   */
+  Hybrid: "hybrid",
+  /**
+   * In-Person
+   */
+  InPerson: "in_person",
+  /**
+   * Offline
+   */
+  Offline: "offline",
+} as const
 
-export type DeliveryEnum = typeof DeliveryEnum[keyof typeof DeliveryEnum];
-
+export type DeliveryEnum = (typeof DeliveryEnum)[keyof typeof DeliveryEnum]
 
 /**
  * Serializer for Channel model of type department
@@ -1715,140 +1738,139 @@ export type DeliveryEnum = typeof DeliveryEnum[keyof typeof DeliveryEnum];
  * @interface DepartmentChannel
  */
 export interface DepartmentChannel {
-    /**
-     *
-     * @type {number}
-     * @memberof DepartmentChannel
-     */
-    'id': number;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'avatar'?: string | null;
-    /**
-     * Get the avatar image small URL
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'avatar_small': string | null;
-    /**
-     * Get the avatar image medium URL
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'avatar_medium': string | null;
-    /**
-     * Get the banner image URL
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'banner'?: string | null;
-    /**
-     * Return true if user is a moderator for the channel
-     * @type {boolean}
-     * @memberof DepartmentChannel
-     */
-    'is_moderator': boolean;
-    /**
-     *
-     * @type {Array<LearningPathPreview>}
-     * @memberof DepartmentChannel
-     */
-    'lists': Array<LearningPathPreview>;
-    /**
-     * Get the URL for the channel
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'channel_url': string;
-    /**
-     *
-     * @type {DepartmentChannelFeaturedList}
-     * @memberof DepartmentChannel
-     */
-    'featured_list': DepartmentChannelFeaturedList | null;
-    /**
-     *
-     * @type {Array<SubChannel>}
-     * @memberof DepartmentChannel
-     */
-    'sub_channels': Array<SubChannel>;
-    /**
-     *
-     * @type {DepartmentChannelTypeEnum}
-     * @memberof DepartmentChannel
-     */
-    'channel_type': DepartmentChannelTypeEnum;
-    /**
-     *
-     * @type {ChannelDepartmentDetail}
-     * @memberof DepartmentChannel
-     */
-    'department_detail': ChannelDepartmentDetail;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'updated_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'title': string;
-    /**
-     *
-     * @type {any}
-     * @memberof DepartmentChannel
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {any}
-     * @memberof DepartmentChannel
-     */
-    'configuration'?: any | null;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannel
-     */
-    'ga_tracking_id'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof DepartmentChannel
-     */
-    'widget_list'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof DepartmentChannel
+   */
+  id: number
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  avatar?: string | null
+  /**
+   * Get the avatar image small URL
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  avatar_small: string | null
+  /**
+   * Get the avatar image medium URL
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  avatar_medium: string | null
+  /**
+   * Get the banner image URL
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  banner?: string | null
+  /**
+   * Return true if user is a moderator for the channel
+   * @type {boolean}
+   * @memberof DepartmentChannel
+   */
+  is_moderator: boolean
+  /**
+   *
+   * @type {Array<LearningPathPreview>}
+   * @memberof DepartmentChannel
+   */
+  lists: Array<LearningPathPreview>
+  /**
+   * Get the URL for the channel
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  channel_url: string
+  /**
+   *
+   * @type {DepartmentChannelFeaturedList}
+   * @memberof DepartmentChannel
+   */
+  featured_list: DepartmentChannelFeaturedList | null
+  /**
+   *
+   * @type {Array<SubChannel>}
+   * @memberof DepartmentChannel
+   */
+  sub_channels: Array<SubChannel>
+  /**
+   *
+   * @type {DepartmentChannelTypeEnum}
+   * @memberof DepartmentChannel
+   */
+  channel_type: DepartmentChannelTypeEnum
+  /**
+   *
+   * @type {ChannelDepartmentDetail}
+   * @memberof DepartmentChannel
+   */
+  department_detail: ChannelDepartmentDetail
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  title: string
+  /**
+   *
+   * @type {any}
+   * @memberof DepartmentChannel
+   */
+  about?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof DepartmentChannel
+   */
+  configuration?: any | null
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  public_description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannel
+   */
+  ga_tracking_id?: string
+  /**
+   *
+   * @type {number}
+   * @memberof DepartmentChannel
+   */
+  widget_list?: number | null
 }
-
 
 /**
  * Learning path featured in this channel.
@@ -1856,24 +1878,24 @@ export interface DepartmentChannel {
  * @interface DepartmentChannelFeaturedList
  */
 export interface DepartmentChannelFeaturedList {
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannelFeaturedList
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof DepartmentChannelFeaturedList
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {number}
-     * @memberof DepartmentChannelFeaturedList
-     */
-    'id': number;
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannelFeaturedList
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof DepartmentChannelFeaturedList
+   */
+  url?: string | null
+  /**
+   *
+   * @type {number}
+   * @memberof DepartmentChannelFeaturedList
+   */
+  id: number
 }
 /**
  * * `department` - Department
@@ -1882,18 +1904,18 @@ export interface DepartmentChannelFeaturedList {
  */
 
 export const DepartmentChannelTypeEnumDescriptions = {
-    'department': "Department",
-} as const;
+  department: "Department",
+} as const
 
 export const DepartmentChannelTypeEnum = {
-    /**
-    * Department
-    */
-    Department: 'department'
-} as const;
+  /**
+   * Department
+   */
+  Department: "department",
+} as const
 
-export type DepartmentChannelTypeEnum = typeof DepartmentChannelTypeEnum[keyof typeof DepartmentChannelTypeEnum];
-
+export type DepartmentChannelTypeEnum =
+  (typeof DepartmentChannelTypeEnum)[keyof typeof DepartmentChannelTypeEnum]
 
 /**
  * Serializer for News FeedItem
@@ -1901,68 +1923,67 @@ export type DepartmentChannelTypeEnum = typeof DepartmentChannelTypeEnum[keyof t
  * @interface EventFeedItem
  */
 export interface EventFeedItem {
-    /**
-     *
-     * @type {number}
-     * @memberof EventFeedItem
-     */
-    'id': number;
-    /**
-     *
-     * @type {EventFeedItemFeedTypeEnum}
-     * @memberof EventFeedItem
-     */
-    'feed_type': EventFeedItemFeedTypeEnum;
-    /**
-     *
-     * @type {FeedImage}
-     * @memberof EventFeedItem
-     */
-    'image': FeedImage;
-    /**
-     *
-     * @type {FeedEventDetail}
-     * @memberof EventFeedItem
-     */
-    'event_details': FeedEventDetail;
-    /**
-     *
-     * @type {string}
-     * @memberof EventFeedItem
-     */
-    'guid': string;
-    /**
-     *
-     * @type {string}
-     * @memberof EventFeedItem
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof EventFeedItem
-     */
-    'url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof EventFeedItem
-     */
-    'summary'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof EventFeedItem
-     */
-    'content'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof EventFeedItem
-     */
-    'source': number;
+  /**
+   *
+   * @type {number}
+   * @memberof EventFeedItem
+   */
+  id: number
+  /**
+   *
+   * @type {EventFeedItemFeedTypeEnum}
+   * @memberof EventFeedItem
+   */
+  feed_type: EventFeedItemFeedTypeEnum
+  /**
+   *
+   * @type {FeedImage}
+   * @memberof EventFeedItem
+   */
+  image: FeedImage
+  /**
+   *
+   * @type {FeedEventDetail}
+   * @memberof EventFeedItem
+   */
+  event_details: FeedEventDetail
+  /**
+   *
+   * @type {string}
+   * @memberof EventFeedItem
+   */
+  guid: string
+  /**
+   *
+   * @type {string}
+   * @memberof EventFeedItem
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof EventFeedItem
+   */
+  url: string
+  /**
+   *
+   * @type {string}
+   * @memberof EventFeedItem
+   */
+  summary?: string
+  /**
+   *
+   * @type {string}
+   * @memberof EventFeedItem
+   */
+  content?: string
+  /**
+   *
+   * @type {number}
+   * @memberof EventFeedItem
+   */
+  source: number
 }
-
 
 /**
  *
@@ -1971,15 +1992,15 @@ export interface EventFeedItem {
  */
 
 export const EventFeedItemFeedTypeEnumDescriptions = {
-    'events': "",
-} as const;
+  events: "",
+} as const
 
 export const EventFeedItemFeedTypeEnum = {
-    Events: 'events'
-} as const;
+  Events: "events",
+} as const
 
-export type EventFeedItemFeedTypeEnum = typeof EventFeedItemFeedTypeEnum[keyof typeof EventFeedItemFeedTypeEnum];
-
+export type EventFeedItemFeedTypeEnum =
+  (typeof EventFeedItemFeedTypeEnum)[keyof typeof EventFeedItemFeedTypeEnum]
 
 /**
  * FeedEventDetail serializer
@@ -1987,42 +2008,42 @@ export type EventFeedItemFeedTypeEnum = typeof EventFeedItemFeedTypeEnum[keyof t
  * @interface FeedEventDetail
  */
 export interface FeedEventDetail {
-    /**
-     *
-     * @type {number}
-     * @memberof FeedEventDetail
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof FeedEventDetail
-     */
-    'audience': Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof FeedEventDetail
-     */
-    'location': Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof FeedEventDetail
-     */
-    'event_type': Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedEventDetail
-     */
-    'event_datetime': string;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedEventDetail
-     */
-    'event_end_datetime'?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof FeedEventDetail
+   */
+  id: number
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof FeedEventDetail
+   */
+  audience: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof FeedEventDetail
+   */
+  location: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof FeedEventDetail
+   */
+  event_type: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof FeedEventDetail
+   */
+  event_datetime: string
+  /**
+   *
+   * @type {string}
+   * @memberof FeedEventDetail
+   */
+  event_end_datetime?: string | null
 }
 /**
  * Serializer for FeedImage
@@ -2030,36 +2051,38 @@ export interface FeedEventDetail {
  * @interface FeedImage
  */
 export interface FeedImage {
-    /**
-     *
-     * @type {number}
-     * @memberof FeedImage
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedImage
-     */
-    'url'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedImage
-     */
-    'description'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedImage
-     */
-    'alt'?: string;
+  /**
+   *
+   * @type {number}
+   * @memberof FeedImage
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof FeedImage
+   */
+  url?: string
+  /**
+   *
+   * @type {string}
+   * @memberof FeedImage
+   */
+  description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof FeedImage
+   */
+  alt?: string
 }
 /**
  * @type FeedItem
  * @export
  */
-export type FeedItem = { resource_type: 'events' } & EventFeedItem | { resource_type: 'news' } & NewsFeedItem;
+export type FeedItem =
+  | ({ resource_type: "events" } & EventFeedItem)
+  | ({ resource_type: "news" } & NewsFeedItem)
 
 /**
  * FeedNewsDetail serializer
@@ -2067,30 +2090,30 @@ export type FeedItem = { resource_type: 'events' } & EventFeedItem | { resource_
  * @interface FeedNewsDetail
  */
 export interface FeedNewsDetail {
-    /**
-     *
-     * @type {number}
-     * @memberof FeedNewsDetail
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof FeedNewsDetail
-     */
-    'authors'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof FeedNewsDetail
-     */
-    'topics'?: Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedNewsDetail
-     */
-    'publish_date': string;
+  /**
+   *
+   * @type {number}
+   * @memberof FeedNewsDetail
+   */
+  id: number
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof FeedNewsDetail
+   */
+  authors?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof FeedNewsDetail
+   */
+  topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof FeedNewsDetail
+   */
+  publish_date: string
 }
 /**
  * FeedSource serializer
@@ -2098,44 +2121,43 @@ export interface FeedNewsDetail {
  * @interface FeedSource
  */
 export interface FeedSource {
-    /**
-     *
-     * @type {number}
-     * @memberof FeedSource
-     */
-    'id': number;
-    /**
-     *
-     * @type {FeedImage}
-     * @memberof FeedSource
-     */
-    'image': FeedImage;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedSource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedSource
-     */
-    'url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof FeedSource
-     */
-    'description'?: string;
-    /**
-     *
-     * @type {FeedSourceFeedTypeEnum}
-     * @memberof FeedSource
-     */
-    'feed_type': FeedSourceFeedTypeEnum;
+  /**
+   *
+   * @type {number}
+   * @memberof FeedSource
+   */
+  id: number
+  /**
+   *
+   * @type {FeedImage}
+   * @memberof FeedSource
+   */
+  image: FeedImage
+  /**
+   *
+   * @type {string}
+   * @memberof FeedSource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof FeedSource
+   */
+  url: string
+  /**
+   *
+   * @type {string}
+   * @memberof FeedSource
+   */
+  description?: string
+  /**
+   *
+   * @type {FeedSourceFeedTypeEnum}
+   * @memberof FeedSource
+   */
+  feed_type: FeedSourceFeedTypeEnum
 }
-
 
 /**
  * * `news` - News * `events` - Events
@@ -2144,23 +2166,23 @@ export interface FeedSource {
  */
 
 export const FeedSourceFeedTypeEnumDescriptions = {
-    'news': "News",
-    'events': "Events",
-} as const;
+  news: "News",
+  events: "Events",
+} as const
 
 export const FeedSourceFeedTypeEnum = {
-    /**
-    * News
-    */
-    News: 'news',
-    /**
-    * Events
-    */
-    Events: 'events'
-} as const;
+  /**
+   * News
+   */
+  News: "news",
+  /**
+   * Events
+   */
+  Events: "events",
+} as const
 
-export type FeedSourceFeedTypeEnum = typeof FeedSourceFeedTypeEnum[keyof typeof FeedSourceFeedTypeEnum];
-
+export type FeedSourceFeedTypeEnum =
+  (typeof FeedSourceFeedTypeEnum)[keyof typeof FeedSourceFeedTypeEnum]
 
 /**
  * * `academic-excellence` - Academic Boost * `career-growth` - Career Growth * `lifelong-learning` - Lifelong Learning
@@ -2169,28 +2191,27 @@ export type FeedSourceFeedTypeEnum = typeof FeedSourceFeedTypeEnum[keyof typeof 
  */
 
 export const GoalsEnumDescriptions = {
-    'academic-excellence': "Academic Boost",
-    'career-growth': "Career Growth",
-    'lifelong-learning': "Lifelong Learning",
-} as const;
+  "academic-excellence": "Academic Boost",
+  "career-growth": "Career Growth",
+  "lifelong-learning": "Lifelong Learning",
+} as const
 
 export const GoalsEnum = {
-    /**
-    * Academic Boost
-    */
-    AcademicExcellence: 'academic-excellence',
-    /**
-    * Career Growth
-    */
-    CareerGrowth: 'career-growth',
-    /**
-    * Lifelong Learning
-    */
-    LifelongLearning: 'lifelong-learning'
-} as const;
+  /**
+   * Academic Boost
+   */
+  AcademicExcellence: "academic-excellence",
+  /**
+   * Career Growth
+   */
+  CareerGrowth: "career-growth",
+  /**
+   * Lifelong Learning
+   */
+  LifelongLearning: "lifelong-learning",
+} as const
 
-export type GoalsEnum = typeof GoalsEnum[keyof typeof GoalsEnum];
-
+export type GoalsEnum = (typeof GoalsEnum)[keyof typeof GoalsEnum]
 
 /**
  * Serializer for the LearningPath model
@@ -2198,18 +2219,18 @@ export type GoalsEnum = typeof GoalsEnum[keyof typeof GoalsEnum];
  * @interface LearningPath
  */
 export interface LearningPath {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPath
-     */
-    'id': number;
-    /**
-     * Return the number of items in the list
-     * @type {number}
-     * @memberof LearningPath
-     */
-    'item_count': number;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPath
+   */
+  id: number
+  /**
+   * Return the number of items in the list
+   * @type {number}
+   * @memberof LearningPath
+   */
+  item_count: number
 }
 /**
  * Serializer for a minimal preview of Learning Paths
@@ -2217,24 +2238,24 @@ export interface LearningPath {
  * @interface LearningPathPreview
  */
 export interface LearningPathPreview {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathPreview
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathPreview
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathPreview
-     */
-    'id': number;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathPreview
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathPreview
+   */
+  url?: string | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathPreview
+   */
+  id: number
 }
 /**
  * CRUD serializer for LearningPath resources
@@ -2242,302 +2263,301 @@ export interface LearningPathPreview {
  * @interface LearningPathResource
  */
 export interface LearningPathResource {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof LearningPathResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof LearningPathResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof LearningPathResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningPathResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof LearningPathResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof LearningPathResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningPathResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof LearningPathResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof LearningPathResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof LearningPathResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof LearningPathResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof LearningPathResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof LearningPathResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof LearningPathResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof LearningPathResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof LearningPathResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {LearningPathResourceResourceTypeEnum}
-     * @memberof LearningPathResource
-     */
-    'resource_type': LearningPathResourceResourceTypeEnum;
-    /**
-     *
-     * @type {LearningPath}
-     * @memberof LearningPathResource
-     */
-    'learning_path': LearningPath;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningPathResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningPathResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'professional'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof LearningPathResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningPathResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningPathResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningPathResource
-     */
-    'require_summaries'?: boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof LearningPathResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof LearningPathResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof LearningPathResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningPathResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof LearningPathResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof LearningPathResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningPathResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LearningPathResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof LearningPathResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof LearningPathResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof LearningPathResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof LearningPathResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof LearningPathResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof LearningPathResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof LearningPathResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof LearningPathResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {LearningPathResourceResourceTypeEnum}
+   * @memberof LearningPathResource
+   */
+  resource_type: LearningPathResourceResourceTypeEnum
+  /**
+   *
+   * @type {LearningPath}
+   * @memberof LearningPathResource
+   */
+  learning_path: LearningPath
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningPathResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningPathResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  professional?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LearningPathResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningPathResource
+   */
+  require_summaries?: boolean
 }
-
 
 /**
  *
@@ -2546,21 +2566,29 @@ export interface LearningPathResource {
  */
 
 export const LearningPathResourceResourceTypeEnumDescriptions = {
-    'learning_path': "",
-} as const;
+  learning_path: "",
+} as const
 
 export const LearningPathResourceResourceTypeEnum = {
-    LearningPath: 'learning_path'
-} as const;
+  LearningPath: "learning_path",
+} as const
 
-export type LearningPathResourceResourceTypeEnum = typeof LearningPathResourceResourceTypeEnum[keyof typeof LearningPathResourceResourceTypeEnum];
-
+export type LearningPathResourceResourceTypeEnum =
+  (typeof LearningPathResourceResourceTypeEnum)[keyof typeof LearningPathResourceResourceTypeEnum]
 
 /**
  * @type LearningResource
  * @export
  */
-export type LearningResource = { resource_type: 'article' } & ArticleResource | { resource_type: 'course' } & CourseResource | { resource_type: 'learning_path' } & LearningPathResource | { resource_type: 'podcast' } & PodcastResource | { resource_type: 'podcast_episode' } & PodcastEpisodeResource | { resource_type: 'program' } & ProgramResource | { resource_type: 'video' } & VideoResource | { resource_type: 'video_playlist' } & VideoPlaylistResource;
+export type LearningResource =
+  | ({ resource_type: "article" } & ArticleResource)
+  | ({ resource_type: "course" } & CourseResource)
+  | ({ resource_type: "learning_path" } & LearningPathResource)
+  | ({ resource_type: "podcast" } & PodcastResource)
+  | ({ resource_type: "podcast_episode" } & PodcastEpisodeResource)
+  | ({ resource_type: "program" } & ProgramResource)
+  | ({ resource_type: "video" } & VideoResource)
+  | ({ resource_type: "video_playlist" } & VideoPlaylistResource)
 
 /**
  * Base serializer for LearningResourceSchool model, minus departments list  The absence of the departments list is to avoid a circular serialization structure.
@@ -2568,24 +2596,24 @@ export type LearningResource = { resource_type: 'article' } & ArticleResource | 
  * @interface LearningResourceBaseSchool
  */
 export interface LearningResourceBaseSchool {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceBaseSchool
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceBaseSchool
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceBaseSchool
-     */
-    'url': string;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceBaseSchool
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceBaseSchool
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceBaseSchool
+   */
+  url: string
 }
 /**
  * Full serializer for LearningResourceDepartment, including school
@@ -2593,30 +2621,30 @@ export interface LearningResourceBaseSchool {
  * @interface LearningResourceDepartment
  */
 export interface LearningResourceDepartment {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceDepartment
-     */
-    'department_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceDepartment
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceDepartment
-     */
-    'channel_url': string | null;
-    /**
-     *
-     * @type {LearningResourceBaseSchool}
-     * @memberof LearningResourceDepartment
-     */
-    'school': LearningResourceBaseSchool | null;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDepartment
+   */
+  department_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDepartment
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDepartment
+   */
+  channel_url: string | null
+  /**
+   *
+   * @type {LearningResourceBaseSchool}
+   * @memberof LearningResourceDepartment
+   */
+  school: LearningResourceBaseSchool | null
 }
 /**
  * Serializer for LearningResourceImage
@@ -2624,30 +2652,30 @@ export interface LearningResourceDepartment {
  * @interface LearningResourceImage
  */
 export interface LearningResourceImage {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceImage
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceImage
-     */
-    'url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceImage
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceImage
-     */
-    'alt'?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceImage
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceImage
+   */
+  url: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceImage
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceImage
+   */
+  alt?: string | null
 }
 /**
  * Serializer for LearningResourceInstructor model
@@ -2655,30 +2683,30 @@ export interface LearningResourceImage {
  * @interface LearningResourceInstructor
  */
 export interface LearningResourceInstructor {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceInstructor
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceInstructor
-     */
-    'first_name'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceInstructor
-     */
-    'last_name'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceInstructor
-     */
-    'full_name'?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceInstructor
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceInstructor
+   */
+  first_name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceInstructor
+   */
+  last_name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceInstructor
+   */
+  full_name?: string | null
 }
 /**
  * Serializer for LearningResourceOfferor with basic details
@@ -2686,30 +2714,30 @@ export interface LearningResourceInstructor {
  * @interface LearningResourceOfferor
  */
 export interface LearningResourceOfferor {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferor
-     */
-    'code': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferor
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferor
-     */
-    'channel_url': string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceOfferor
-     */
-    'display_facet'?: boolean;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferor
+   */
+  code: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferor
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferor
+   */
+  channel_url: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferor
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourceOfferor with all details
@@ -2717,84 +2745,84 @@ export interface LearningResourceOfferor {
  * @interface LearningResourceOfferorDetail
  */
 export interface LearningResourceOfferorDetail {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'code': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'channel_url': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'name': string;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'professional'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'offerings'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'audience'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'formats'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'fee'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'certifications'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'content_types'?: Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'more_information'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'value_prop'?: string;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceOfferorDetail
-     */
-    'display_facet'?: boolean;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  code: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  channel_url: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  name: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorDetail
+   */
+  professional?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  offerings?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  audience?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  formats?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  fee?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  certifications?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetail
+   */
+  content_types?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  more_information?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetail
+   */
+  value_prop?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorDetail
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourceOfferor with all details
@@ -2802,78 +2830,78 @@ export interface LearningResourceOfferorDetail {
  * @interface LearningResourceOfferorDetailRequest
  */
 export interface LearningResourceOfferorDetailRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'code': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'name': string;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'professional'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'offerings'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'audience'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'formats'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'fee'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'certifications'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'content_types'?: Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'more_information'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'value_prop'?: string;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceOfferorDetailRequest
-     */
-    'display_facet'?: boolean;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  code: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  name: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  professional?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  offerings?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  audience?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  formats?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  fee?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  certifications?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  content_types?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  more_information?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  value_prop?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceOfferorDetailRequest
+   */
+  display_facet?: boolean
 }
 /**
  * Serializer for LearningResourcePlatform
@@ -2881,18 +2909,18 @@ export interface LearningResourceOfferorDetailRequest {
  * @interface LearningResourcePlatform
  */
 export interface LearningResourcePlatform {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcePlatform
-     */
-    'code': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcePlatform
-     */
-    'name'?: string;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePlatform
+   */
+  code: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePlatform
+   */
+  name?: string
 }
 /**
  * Serializer for LearningResourcePrice model
@@ -2900,18 +2928,18 @@ export interface LearningResourcePlatform {
  * @interface LearningResourcePrice
  */
 export interface LearningResourcePrice {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcePrice
-     */
-    'amount': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcePrice
-     */
-    'currency': string;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  amount: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcePrice
+   */
+  currency: string
 }
 /**
  * Serializer field for the LearningResourceRelationship model that uses the LearningResourceSerializer to serialize the child resources
@@ -2919,38 +2947,37 @@ export interface LearningResourcePrice {
  * @interface LearningResourceRelationshipChildField
  */
 export interface LearningResourceRelationshipChildField {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRelationshipChildField
-     */
-    'child': number;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRelationshipChildField
-     */
-    'position'?: number;
-    /**
-     *
-     * @type {RelationTypeEnum}
-     * @memberof LearningResourceRelationshipChildField
-     */
-    'relation_type'?: RelationTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRelationshipChildField
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRelationshipChildField
-     */
-    'readable_id': string;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  child: number
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  position?: number
+  /**
+   *
+   * @type {RelationTypeEnum}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  relation_type?: RelationTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRelationshipChildField
+   */
+  readable_id: string
 }
-
 
 /**
  * Serializer for the LearningResourceRun model
@@ -2958,206 +2985,205 @@ export interface LearningResourceRelationshipChildField {
  * @interface LearningResourceRun
  */
 export interface LearningResourceRun {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceInstructor>}
-     * @memberof LearningResourceRun
-     */
-    'instructors': Array<LearningResourceInstructor> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof LearningResourceRun
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<LearningResourceRunLevelInner>}
-     * @memberof LearningResourceRun
-     */
-    'level': Array<LearningResourceRunLevelInner>;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof LearningResourceRun
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof LearningResourceRun
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof LearningResourceRun
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof LearningResourceRun
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'run_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof LearningResourceRun
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceRun
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'slug'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'semester'?: string | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'year'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'start_date'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'end_date'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'enrollment_start'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'enrollment_end'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof LearningResourceRun
-     */
-    'prices'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'checksum'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof LearningResourceRun
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRun
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceRun
-     */
-    'max_weekly_hours'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceInstructor>}
+   * @memberof LearningResourceRun
+   */
+  instructors: Array<LearningResourceInstructor> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof LearningResourceRun
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<LearningResourceRunLevelInner>}
+   * @memberof LearningResourceRun
+   */
+  level: Array<LearningResourceRunLevelInner>
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof LearningResourceRun
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof LearningResourceRun
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof LearningResourceRun
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LearningResourceRun
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  run_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LearningResourceRun
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceRun
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  slug?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  semester?: string | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  year?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  start_date?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  end_date?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  enrollment_start?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  enrollment_end?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceRun
+   */
+  prices?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  checksum?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LearningResourceRun
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRun
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceRun
+   */
+  max_weekly_hours?: number | null
 }
-
 
 /**
  *
@@ -3165,31 +3191,32 @@ export interface LearningResourceRun {
  * @interface LearningResourceRunLevelInner
  */
 export interface LearningResourceRunLevelInner {
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRunLevelInner
-     */
-    'code': LearningResourceRunLevelInnerCodeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceRunLevelInner
-     */
-    'name': string;
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRunLevelInner
+   */
+  code: LearningResourceRunLevelInnerCodeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceRunLevelInner
+   */
+  name: string
 }
 
 export const LearningResourceRunLevelInnerCodeEnum = {
-    Undergraduate: 'undergraduate',
-    Graduate: 'graduate',
-    HighSchool: 'high_school',
-    Noncredit: 'noncredit',
-    Advanced: 'advanced',
-    Intermediate: 'intermediate',
-    Introductory: 'introductory'
-} as const;
+  Undergraduate: "undergraduate",
+  Graduate: "graduate",
+  HighSchool: "high_school",
+  Noncredit: "noncredit",
+  Advanced: "advanced",
+  Intermediate: "intermediate",
+  Introductory: "introductory",
+} as const
 
-export type LearningResourceRunLevelInnerCodeEnum = typeof LearningResourceRunLevelInnerCodeEnum[keyof typeof LearningResourceRunLevelInnerCodeEnum];
+export type LearningResourceRunLevelInnerCodeEnum =
+  (typeof LearningResourceRunLevelInnerCodeEnum)[keyof typeof LearningResourceRunLevelInnerCodeEnum]
 
 /**
  * Serializer for LearningResourceTopic model
@@ -3197,36 +3224,36 @@ export type LearningResourceRunLevelInnerCodeEnum = typeof LearningResourceRunLe
  * @interface LearningResourceTopic
  */
 export interface LearningResourceTopic {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceTopic
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceTopic
-     */
-    'name': string;
-    /**
-     * The icon to display for the topic.
-     * @type {string}
-     * @memberof LearningResourceTopic
-     */
-    'icon'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourceTopic
-     */
-    'parent'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourceTopic
-     */
-    'channel_url': string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceTopic
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceTopic
+   */
+  name: string
+  /**
+   * The icon to display for the topic.
+   * @type {string}
+   * @memberof LearningResourceTopic
+   */
+  icon?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourceTopic
+   */
+  parent?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceTopic
+   */
+  channel_url: string | null
 }
 /**
  * Response serializer for vector based search
@@ -3234,36 +3261,36 @@ export interface LearningResourceTopic {
  * @interface LearningResourcesVectorSearchResponse
  */
 export interface LearningResourcesVectorSearchResponse {
-    /**
-     *
-     * @type {number}
-     * @memberof LearningResourcesVectorSearchResponse
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcesVectorSearchResponse
-     */
-    'next': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof LearningResourcesVectorSearchResponse
-     */
-    'previous': string | null;
-    /**
-     *
-     * @type {Array<LearningResource>}
-     * @memberof LearningResourcesVectorSearchResponse
-     */
-    'results': Array<LearningResource>;
-    /**
-     *
-     * @type {ContentFileVectorSearchResponseMetadata}
-     * @memberof LearningResourcesVectorSearchResponse
-     */
-    'metadata': ContentFileVectorSearchResponseMetadata;
+  /**
+   *
+   * @type {number}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  next: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  previous: string | null
+  /**
+   *
+   * @type {Array<LearningResource>}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  results: Array<LearningResource>
+  /**
+   *
+   * @type {ContentFileVectorSearchResponseMetadata}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  metadata: ContentFileVectorSearchResponseMetadata
 }
 /**
  * Serializer containing only parent and child ids for a learning path relationship
@@ -3271,24 +3298,24 @@ export interface LearningResourcesVectorSearchResponse {
  * @interface MicroLearningPathRelationship
  */
 export interface MicroLearningPathRelationship {
-    /**
-     *
-     * @type {number}
-     * @memberof MicroLearningPathRelationship
-     */
-    'id': number;
-    /**
-     * The id of the parent learning resource
-     * @type {number}
-     * @memberof MicroLearningPathRelationship
-     */
-    'parent': number;
-    /**
-     *
-     * @type {number}
-     * @memberof MicroLearningPathRelationship
-     */
-    'child': number;
+  /**
+   *
+   * @type {number}
+   * @memberof MicroLearningPathRelationship
+   */
+  id: number
+  /**
+   * The id of the parent learning resource
+   * @type {number}
+   * @memberof MicroLearningPathRelationship
+   */
+  parent: number
+  /**
+   *
+   * @type {number}
+   * @memberof MicroLearningPathRelationship
+   */
+  child: number
 }
 /**
  * Serializer containing only parent and child ids for a user list relationship
@@ -3296,24 +3323,24 @@ export interface MicroLearningPathRelationship {
  * @interface MicroUserListRelationship
  */
 export interface MicroUserListRelationship {
-    /**
-     *
-     * @type {number}
-     * @memberof MicroUserListRelationship
-     */
-    'id': number;
-    /**
-     * The id of the parent learning resource
-     * @type {number}
-     * @memberof MicroUserListRelationship
-     */
-    'parent': number;
-    /**
-     *
-     * @type {number}
-     * @memberof MicroUserListRelationship
-     */
-    'child': number;
+  /**
+   *
+   * @type {number}
+   * @memberof MicroUserListRelationship
+   */
+  id: number
+  /**
+   * The id of the parent learning resource
+   * @type {number}
+   * @memberof MicroUserListRelationship
+   */
+  parent: number
+  /**
+   *
+   * @type {number}
+   * @memberof MicroUserListRelationship
+   */
+  child: number
 }
 /**
  * Serializer for News FeedItem
@@ -3321,68 +3348,67 @@ export interface MicroUserListRelationship {
  * @interface NewsFeedItem
  */
 export interface NewsFeedItem {
-    /**
-     *
-     * @type {number}
-     * @memberof NewsFeedItem
-     */
-    'id': number;
-    /**
-     *
-     * @type {NewsFeedItemFeedTypeEnum}
-     * @memberof NewsFeedItem
-     */
-    'feed_type': NewsFeedItemFeedTypeEnum;
-    /**
-     *
-     * @type {FeedImage}
-     * @memberof NewsFeedItem
-     */
-    'image': FeedImage;
-    /**
-     *
-     * @type {FeedNewsDetail}
-     * @memberof NewsFeedItem
-     */
-    'news_details': FeedNewsDetail;
-    /**
-     *
-     * @type {string}
-     * @memberof NewsFeedItem
-     */
-    'guid': string;
-    /**
-     *
-     * @type {string}
-     * @memberof NewsFeedItem
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof NewsFeedItem
-     */
-    'url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof NewsFeedItem
-     */
-    'summary'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof NewsFeedItem
-     */
-    'content'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof NewsFeedItem
-     */
-    'source': number;
+  /**
+   *
+   * @type {number}
+   * @memberof NewsFeedItem
+   */
+  id: number
+  /**
+   *
+   * @type {NewsFeedItemFeedTypeEnum}
+   * @memberof NewsFeedItem
+   */
+  feed_type: NewsFeedItemFeedTypeEnum
+  /**
+   *
+   * @type {FeedImage}
+   * @memberof NewsFeedItem
+   */
+  image: FeedImage
+  /**
+   *
+   * @type {FeedNewsDetail}
+   * @memberof NewsFeedItem
+   */
+  news_details: FeedNewsDetail
+  /**
+   *
+   * @type {string}
+   * @memberof NewsFeedItem
+   */
+  guid: string
+  /**
+   *
+   * @type {string}
+   * @memberof NewsFeedItem
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof NewsFeedItem
+   */
+  url: string
+  /**
+   *
+   * @type {string}
+   * @memberof NewsFeedItem
+   */
+  summary?: string
+  /**
+   *
+   * @type {string}
+   * @memberof NewsFeedItem
+   */
+  content?: string
+  /**
+   *
+   * @type {number}
+   * @memberof NewsFeedItem
+   */
+  source: number
 }
-
 
 /**
  *
@@ -3391,15 +3417,15 @@ export interface NewsFeedItem {
  */
 
 export const NewsFeedItemFeedTypeEnumDescriptions = {
-    'news': "",
-} as const;
+  news: "",
+} as const
 
 export const NewsFeedItemFeedTypeEnum = {
-    News: 'news'
-} as const;
+  News: "news",
+} as const
 
-export type NewsFeedItemFeedTypeEnum = typeof NewsFeedItemFeedTypeEnum[keyof typeof NewsFeedItemFeedTypeEnum];
-
+export type NewsFeedItemFeedTypeEnum =
+  (typeof NewsFeedItemFeedTypeEnum)[keyof typeof NewsFeedItemFeedTypeEnum]
 
 /**
  *
@@ -3408,15 +3434,14 @@ export type NewsFeedItemFeedTypeEnum = typeof NewsFeedItemFeedTypeEnum[keyof typ
  */
 
 export const NullEnumDescriptions = {
-    'null': "",
-} as const;
+  null: "",
+} as const
 
 export const NullEnum = {
-    Null: 'null'
-} as const;
+  Null: "null",
+} as const
 
-export type NullEnum = typeof NullEnum[keyof typeof NullEnum];
-
+export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
 
 /**
  *
@@ -3424,30 +3449,30 @@ export type NullEnum = typeof NullEnum[keyof typeof NullEnum];
  * @interface PaginatedAttestationList
  */
 export interface PaginatedAttestationList {
-    /**
-     *
-     * @type {number}
-     * @memberof PaginatedAttestationList
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedAttestationList
-     */
-    'next'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedAttestationList
-     */
-    'previous'?: string | null;
-    /**
-     *
-     * @type {Array<Attestation>}
-     * @memberof PaginatedAttestationList
-     */
-    'results': Array<Attestation>;
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedAttestationList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedAttestationList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedAttestationList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<Attestation>}
+   * @memberof PaginatedAttestationList
+   */
+  results: Array<Attestation>
 }
 /**
  *
@@ -3455,30 +3480,30 @@ export interface PaginatedAttestationList {
  * @interface PaginatedChannelList
  */
 export interface PaginatedChannelList {
-    /**
-     *
-     * @type {number}
-     * @memberof PaginatedChannelList
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedChannelList
-     */
-    'next'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedChannelList
-     */
-    'previous'?: string | null;
-    /**
-     *
-     * @type {Array<Channel>}
-     * @memberof PaginatedChannelList
-     */
-    'results': Array<Channel>;
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedChannelList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedChannelList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedChannelList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<Channel>}
+   * @memberof PaginatedChannelList
+   */
+  results: Array<Channel>
 }
 /**
  *
@@ -3486,30 +3511,30 @@ export interface PaginatedChannelList {
  * @interface PaginatedFeedItemList
  */
 export interface PaginatedFeedItemList {
-    /**
-     *
-     * @type {number}
-     * @memberof PaginatedFeedItemList
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedFeedItemList
-     */
-    'next'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedFeedItemList
-     */
-    'previous'?: string | null;
-    /**
-     *
-     * @type {Array<FeedItem>}
-     * @memberof PaginatedFeedItemList
-     */
-    'results': Array<FeedItem>;
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedFeedItemList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedFeedItemList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedFeedItemList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<FeedItem>}
+   * @memberof PaginatedFeedItemList
+   */
+  results: Array<FeedItem>
 }
 /**
  *
@@ -3517,30 +3542,30 @@ export interface PaginatedFeedItemList {
  * @interface PaginatedFeedSourceList
  */
 export interface PaginatedFeedSourceList {
-    /**
-     *
-     * @type {number}
-     * @memberof PaginatedFeedSourceList
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedFeedSourceList
-     */
-    'next'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedFeedSourceList
-     */
-    'previous'?: string | null;
-    /**
-     *
-     * @type {Array<FeedSource>}
-     * @memberof PaginatedFeedSourceList
-     */
-    'results': Array<FeedSource>;
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedFeedSourceList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedFeedSourceList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedFeedSourceList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<FeedSource>}
+   * @memberof PaginatedFeedSourceList
+   */
+  results: Array<FeedSource>
 }
 /**
  *
@@ -3548,30 +3573,30 @@ export interface PaginatedFeedSourceList {
  * @interface PaginatedVideoShortList
  */
 export interface PaginatedVideoShortList {
-    /**
-     *
-     * @type {number}
-     * @memberof PaginatedVideoShortList
-     */
-    'count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedVideoShortList
-     */
-    'next'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PaginatedVideoShortList
-     */
-    'previous'?: string | null;
-    /**
-     *
-     * @type {Array<VideoShort>}
-     * @memberof PaginatedVideoShortList
-     */
-    'results': Array<VideoShort>;
+  /**
+   *
+   * @type {number}
+   * @memberof PaginatedVideoShortList
+   */
+  count: number
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedVideoShortList
+   */
+  next?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PaginatedVideoShortList
+   */
+  previous?: string | null
+  /**
+   *
+   * @type {Array<VideoShort>}
+   * @memberof PaginatedVideoShortList
+   */
+  results: Array<VideoShort>
 }
 /**
  * Similar to ChannelCreateSerializer, with read-only name
@@ -3579,86 +3604,85 @@ export interface PaginatedVideoShortList {
  * @interface PatchedChannelWriteRequest
  */
 export interface PatchedChannelWriteRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'name'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'title'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'sub_channels'?: Array<string>;
-    /**
-     * Learning path featured in this channel.
-     * @type {number}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'featured_list'?: number | null;
-    /**
-     * Learning paths in this channel.
-     * @type {Array<number>}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'lists'?: Array<number>;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'avatar'?: string | null;
-    /**
-     * Get the banner image URL
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'banner'?: string | null;
-    /**
-     *
-     * @type {any}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {ChannelTypeEnum}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'channel_type'?: ChannelTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {ChannelTopicDetailRequest}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'topic_detail'?: ChannelTopicDetailRequest | null;
-    /**
-     *
-     * @type {ChannelDepartmentDetailRequest}
-     * @memberof PatchedChannelWriteRequest
-     */
-    'department_detail'?: ChannelDepartmentDetailRequest | null;
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  public_description?: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PatchedChannelWriteRequest
+   */
+  sub_channels?: Array<string>
+  /**
+   * Learning path featured in this channel.
+   * @type {number}
+   * @memberof PatchedChannelWriteRequest
+   */
+  featured_list?: number | null
+  /**
+   * Learning paths in this channel.
+   * @type {Array<number>}
+   * @memberof PatchedChannelWriteRequest
+   */
+  lists?: Array<number>
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  avatar?: string | null
+  /**
+   * Get the banner image URL
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  banner?: string | null
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedChannelWriteRequest
+   */
+  about?: any | null
+  /**
+   *
+   * @type {ChannelTypeEnum}
+   * @memberof PatchedChannelWriteRequest
+   */
+  channel_type?: ChannelTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedChannelWriteRequest
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {ChannelTopicDetailRequest}
+   * @memberof PatchedChannelWriteRequest
+   */
+  topic_detail?: ChannelTopicDetailRequest | null
+  /**
+   *
+   * @type {ChannelDepartmentDetailRequest}
+   * @memberof PatchedChannelWriteRequest
+   */
+  department_detail?: ChannelDepartmentDetailRequest | null
 }
-
 
 /**
  * Serializer for Profile
@@ -3666,108 +3690,112 @@ export interface PatchedChannelWriteRequest {
  * @interface PatchedProfileRequest
  */
 export interface PatchedProfileRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedProfileRequest
-     */
-    'image'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedProfileRequest
-     */
-    'image_small'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedProfileRequest
-     */
-    'image_medium'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PatchedProfileRequest
-     */
-    'email_optin'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PatchedProfileRequest
-     */
-    'toc_optin'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedProfileRequest
-     */
-    'bio'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedProfileRequest
-     */
-    'headline'?: string | null;
-    /**
-     *
-     * @type {any}
-     * @memberof PatchedProfileRequest
-     */
-    'location'?: any | null;
-    /**
-     *
-     * @type {Array<number>}
-     * @memberof PatchedProfileRequest
-     */
-    'topic_interests'?: Array<number>;
-    /**
-     *
-     * @type {Array<GoalsEnum>}
-     * @memberof PatchedProfileRequest
-     */
-    'goals'?: Array<GoalsEnum>;
-    /**
-     *
-     * @type {PatchedProfileRequestCurrentEducation}
-     * @memberof PatchedProfileRequest
-     */
-    'current_education'?: PatchedProfileRequestCurrentEducation;
-    /**
-     *
-     * @type {PatchedProfileRequestCertificateDesired}
-     * @memberof PatchedProfileRequest
-     */
-    'certificate_desired'?: PatchedProfileRequestCertificateDesired;
-    /**
-     *
-     * @type {PatchedProfileRequestTimeCommitment}
-     * @memberof PatchedProfileRequest
-     */
-    'time_commitment'?: PatchedProfileRequestTimeCommitment;
-    /**
-     *
-     * @type {Array<DeliveryEnum>}
-     * @memberof PatchedProfileRequest
-     */
-    'delivery'?: Array<DeliveryEnum>;
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  image?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  image_small?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  image_medium?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PatchedProfileRequest
+   */
+  email_optin?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PatchedProfileRequest
+   */
+  toc_optin?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  bio?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedProfileRequest
+   */
+  headline?: string | null
+  /**
+   *
+   * @type {any}
+   * @memberof PatchedProfileRequest
+   */
+  location?: any | null
+  /**
+   *
+   * @type {Array<number>}
+   * @memberof PatchedProfileRequest
+   */
+  topic_interests?: Array<number>
+  /**
+   *
+   * @type {Array<GoalsEnum>}
+   * @memberof PatchedProfileRequest
+   */
+  goals?: Array<GoalsEnum>
+  /**
+   *
+   * @type {PatchedProfileRequestCurrentEducation}
+   * @memberof PatchedProfileRequest
+   */
+  current_education?: PatchedProfileRequestCurrentEducation
+  /**
+   *
+   * @type {PatchedProfileRequestCertificateDesired}
+   * @memberof PatchedProfileRequest
+   */
+  certificate_desired?: PatchedProfileRequestCertificateDesired
+  /**
+   *
+   * @type {PatchedProfileRequestTimeCommitment}
+   * @memberof PatchedProfileRequest
+   */
+  time_commitment?: PatchedProfileRequestTimeCommitment
+  /**
+   *
+   * @type {Array<DeliveryEnum>}
+   * @memberof PatchedProfileRequest
+   */
+  delivery?: Array<DeliveryEnum>
 }
 /**
  * @type PatchedProfileRequestCertificateDesired
  * @export
  */
-export type PatchedProfileRequestCertificateDesired = BlankEnum | CertificateDesiredEnum;
+export type PatchedProfileRequestCertificateDesired =
+  | BlankEnum
+  | CertificateDesiredEnum
 
 /**
  * @type PatchedProfileRequestCurrentEducation
  * @export
  */
-export type PatchedProfileRequestCurrentEducation = BlankEnum | CurrentEducationEnum;
+export type PatchedProfileRequestCurrentEducation =
+  | BlankEnum
+  | CurrentEducationEnum
 
 /**
  * @type PatchedProfileRequestTimeCommitment
  * @export
  */
-export type PatchedProfileRequestTimeCommitment = BlankEnum | TimeCommitmentEnum;
+export type PatchedProfileRequestTimeCommitment = BlankEnum | TimeCommitmentEnum
 
 /**
  * Serializer for User
@@ -3775,18 +3803,18 @@ export type PatchedProfileRequestTimeCommitment = BlankEnum | TimeCommitmentEnum
  * @interface PatchedUserRequest
  */
 export interface PatchedUserRequest {
-    /**
-     *
-     * @type {ProfileRequest}
-     * @memberof PatchedUserRequest
-     */
-    'profile'?: ProfileRequest;
-    /**
-     *
-     * @type {string}
-     * @memberof PatchedUserRequest
-     */
-    'email'?: string;
+  /**
+   *
+   * @type {ProfileRequest}
+   * @memberof PatchedUserRequest
+   */
+  profile?: ProfileRequest
+  /**
+   *
+   * @type {string}
+   * @memberof PatchedUserRequest
+   */
+  email?: string
 }
 /**
  * Serializer for WidgetLists
@@ -3794,12 +3822,12 @@ export interface PatchedUserRequest {
  * @interface PatchedWidgetListRequest
  */
 export interface PatchedWidgetListRequest {
-    /**
-     *
-     * @type {Array<WidgetInstance>}
-     * @memberof PatchedWidgetListRequest
-     */
-    'widgets'?: Array<WidgetInstance> | null;
+  /**
+   *
+   * @type {Array<WidgetInstance>}
+   * @memberof PatchedWidgetListRequest
+   */
+  widgets?: Array<WidgetInstance> | null
 }
 /**
  * Serializer for Channel model of type pathway
@@ -3807,134 +3835,133 @@ export interface PatchedWidgetListRequest {
  * @interface PathwayChannel
  */
 export interface PathwayChannel {
-    /**
-     *
-     * @type {number}
-     * @memberof PathwayChannel
-     */
-    'id': number;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'avatar'?: string | null;
-    /**
-     * Get the avatar image small URL
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'avatar_small': string | null;
-    /**
-     * Get the avatar image medium URL
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'avatar_medium': string | null;
-    /**
-     * Get the banner image URL
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'banner'?: string | null;
-    /**
-     * Return true if user is a moderator for the channel
-     * @type {boolean}
-     * @memberof PathwayChannel
-     */
-    'is_moderator': boolean;
-    /**
-     *
-     * @type {Array<LearningPathPreview>}
-     * @memberof PathwayChannel
-     */
-    'lists': Array<LearningPathPreview>;
-    /**
-     * Get the URL for the channel
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'channel_url': string;
-    /**
-     *
-     * @type {DepartmentChannelFeaturedList}
-     * @memberof PathwayChannel
-     */
-    'featured_list': DepartmentChannelFeaturedList | null;
-    /**
-     *
-     * @type {Array<SubChannel>}
-     * @memberof PathwayChannel
-     */
-    'sub_channels': Array<SubChannel>;
-    /**
-     *
-     * @type {PathwayChannelTypeEnum}
-     * @memberof PathwayChannel
-     */
-    'channel_type': PathwayChannelTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'updated_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'title': string;
-    /**
-     *
-     * @type {any}
-     * @memberof PathwayChannel
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {any}
-     * @memberof PathwayChannel
-     */
-    'configuration'?: any | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PathwayChannel
-     */
-    'ga_tracking_id'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof PathwayChannel
-     */
-    'widget_list'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof PathwayChannel
+   */
+  id: number
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  avatar?: string | null
+  /**
+   * Get the avatar image small URL
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  avatar_small: string | null
+  /**
+   * Get the avatar image medium URL
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  avatar_medium: string | null
+  /**
+   * Get the banner image URL
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  banner?: string | null
+  /**
+   * Return true if user is a moderator for the channel
+   * @type {boolean}
+   * @memberof PathwayChannel
+   */
+  is_moderator: boolean
+  /**
+   *
+   * @type {Array<LearningPathPreview>}
+   * @memberof PathwayChannel
+   */
+  lists: Array<LearningPathPreview>
+  /**
+   * Get the URL for the channel
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  channel_url: string
+  /**
+   *
+   * @type {DepartmentChannelFeaturedList}
+   * @memberof PathwayChannel
+   */
+  featured_list: DepartmentChannelFeaturedList | null
+  /**
+   *
+   * @type {Array<SubChannel>}
+   * @memberof PathwayChannel
+   */
+  sub_channels: Array<SubChannel>
+  /**
+   *
+   * @type {PathwayChannelTypeEnum}
+   * @memberof PathwayChannel
+   */
+  channel_type: PathwayChannelTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  title: string
+  /**
+   *
+   * @type {any}
+   * @memberof PathwayChannel
+   */
+  about?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof PathwayChannel
+   */
+  configuration?: any | null
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  public_description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PathwayChannel
+   */
+  ga_tracking_id?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PathwayChannel
+   */
+  widget_list?: number | null
 }
-
 
 /**
  * * `pathway` - Pathway
@@ -3943,18 +3970,18 @@ export interface PathwayChannel {
  */
 
 export const PathwayChannelTypeEnumDescriptions = {
-    'pathway': "Pathway",
-} as const;
+  pathway: "Pathway",
+} as const
 
 export const PathwayChannelTypeEnum = {
-    /**
-    * Pathway
-    */
-    Pathway: 'pathway'
-} as const;
+  /**
+   * Pathway
+   */
+  Pathway: "pathway",
+} as const
 
-export type PathwayChannelTypeEnum = typeof PathwayChannelTypeEnum[keyof typeof PathwayChannelTypeEnum];
-
+export type PathwayChannelTypeEnum =
+  (typeof PathwayChannelTypeEnum)[keyof typeof PathwayChannelTypeEnum]
 
 /**
  * Serializer for Podcasts
@@ -3962,36 +3989,36 @@ export type PathwayChannelTypeEnum = typeof PathwayChannelTypeEnum[keyof typeof 
  * @interface Podcast
  */
 export interface Podcast {
-    /**
-     *
-     * @type {number}
-     * @memberof Podcast
-     */
-    'id': number;
-    /**
-     *
-     * @type {number}
-     * @memberof Podcast
-     */
-    'episode_count': number;
-    /**
-     *
-     * @type {string}
-     * @memberof Podcast
-     */
-    'apple_podcasts_url'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Podcast
-     */
-    'google_podcasts_url'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Podcast
-     */
-    'rss_url'?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof Podcast
+   */
+  id: number
+  /**
+   *
+   * @type {number}
+   * @memberof Podcast
+   */
+  episode_count: number
+  /**
+   *
+   * @type {string}
+   * @memberof Podcast
+   */
+  apple_podcasts_url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Podcast
+   */
+  google_podcasts_url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Podcast
+   */
+  rss_url?: string | null
 }
 /**
  * Serializer for PodcastEpisode
@@ -3999,48 +4026,48 @@ export interface Podcast {
  * @interface PodcastEpisode
  */
 export interface PodcastEpisode {
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisode
-     */
-    'id': number;
-    /**
-     * Get the podcast id(s) the episode belongs to
-     * @type {Array<string>}
-     * @memberof PodcastEpisode
-     */
-    'podcasts': Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisode
-     */
-    'transcript'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisode
-     */
-    'audio_url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisode
-     */
-    'episode_link'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisode
-     */
-    'duration'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisode
-     */
-    'rss'?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisode
+   */
+  id: number
+  /**
+   * Get the podcast id(s) the episode belongs to
+   * @type {Array<string>}
+   * @memberof PodcastEpisode
+   */
+  podcasts: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  transcript?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  audio_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  episode_link?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  duration?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisode
+   */
+  rss?: string | null
 }
 /**
  * Serializer for podcast episode resources
@@ -4048,302 +4075,301 @@ export interface PodcastEpisode {
  * @interface PodcastEpisodeResource
  */
 export interface PodcastEpisodeResource {
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof PodcastEpisodeResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof PodcastEpisodeResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof PodcastEpisodeResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastEpisodeResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof PodcastEpisodeResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof PodcastEpisodeResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastEpisodeResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof PodcastEpisodeResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof PodcastEpisodeResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof PodcastEpisodeResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof PodcastEpisodeResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof PodcastEpisodeResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof PodcastEpisodeResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof PodcastEpisodeResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof PodcastEpisodeResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof PodcastEpisodeResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {PodcastEpisodeResourceResourceTypeEnum}
-     * @memberof PodcastEpisodeResource
-     */
-    'resource_type': PodcastEpisodeResourceResourceTypeEnum;
-    /**
-     *
-     * @type {PodcastEpisode}
-     * @memberof PodcastEpisodeResource
-     */
-    'podcast_episode': PodcastEpisode;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastEpisodeResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastEpisodeResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof PodcastEpisodeResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastEpisodeResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastEpisodeResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastEpisodeResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof PodcastEpisodeResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof PodcastEpisodeResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof PodcastEpisodeResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastEpisodeResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof PodcastEpisodeResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof PodcastEpisodeResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastEpisodeResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof PodcastEpisodeResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof PodcastEpisodeResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof PodcastEpisodeResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof PodcastEpisodeResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof PodcastEpisodeResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof PodcastEpisodeResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof PodcastEpisodeResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof PodcastEpisodeResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof PodcastEpisodeResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {PodcastEpisodeResourceResourceTypeEnum}
+   * @memberof PodcastEpisodeResource
+   */
+  resource_type: PodcastEpisodeResourceResourceTypeEnum
+  /**
+   *
+   * @type {PodcastEpisode}
+   * @memberof PodcastEpisodeResource
+   */
+  podcast_episode: PodcastEpisode
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastEpisodeResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastEpisodeResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof PodcastEpisodeResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastEpisodeResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastEpisodeResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -4352,15 +4378,15 @@ export interface PodcastEpisodeResource {
  */
 
 export const PodcastEpisodeResourceResourceTypeEnumDescriptions = {
-    'podcast_episode': "",
-} as const;
+  podcast_episode: "",
+} as const
 
 export const PodcastEpisodeResourceResourceTypeEnum = {
-    PodcastEpisode: 'podcast_episode'
-} as const;
+  PodcastEpisode: "podcast_episode",
+} as const
 
-export type PodcastEpisodeResourceResourceTypeEnum = typeof PodcastEpisodeResourceResourceTypeEnum[keyof typeof PodcastEpisodeResourceResourceTypeEnum];
-
+export type PodcastEpisodeResourceResourceTypeEnum =
+  (typeof PodcastEpisodeResourceResourceTypeEnum)[keyof typeof PodcastEpisodeResourceResourceTypeEnum]
 
 /**
  * Serializer for podcast resources
@@ -4368,302 +4394,301 @@ export type PodcastEpisodeResourceResourceTypeEnum = typeof PodcastEpisodeResour
  * @interface PodcastResource
  */
 export interface PodcastResource {
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof PodcastResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof PodcastResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof PodcastResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof PodcastResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof PodcastResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof PodcastResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof PodcastResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof PodcastResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof PodcastResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof PodcastResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof PodcastResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof PodcastResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof PodcastResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof PodcastResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {PodcastResourceResourceTypeEnum}
-     * @memberof PodcastResource
-     */
-    'resource_type': PodcastResourceResourceTypeEnum;
-    /**
-     *
-     * @type {Podcast}
-     * @memberof PodcastResource
-     */
-    'podcast': Podcast;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PodcastResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof PodcastResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof PodcastResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof PodcastResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof PodcastResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof PodcastResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof PodcastResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof PodcastResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof PodcastResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof PodcastResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof PodcastResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof PodcastResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof PodcastResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof PodcastResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof PodcastResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof PodcastResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof PodcastResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof PodcastResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof PodcastResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {PodcastResourceResourceTypeEnum}
+   * @memberof PodcastResource
+   */
+  resource_type: PodcastResourceResourceTypeEnum
+  /**
+   *
+   * @type {Podcast}
+   * @memberof PodcastResource
+   */
+  podcast: Podcast
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PodcastResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof PodcastResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PodcastResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PodcastResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -4672,15 +4697,15 @@ export interface PodcastResource {
  */
 
 export const PodcastResourceResourceTypeEnumDescriptions = {
-    'podcast': "",
-} as const;
+  podcast: "",
+} as const
 
 export const PodcastResourceResourceTypeEnum = {
-    Podcast: 'podcast'
-} as const;
+  Podcast: "podcast",
+} as const
 
-export type PodcastResourceResourceTypeEnum = typeof PodcastResourceResourceTypeEnum[keyof typeof PodcastResourceResourceTypeEnum];
-
+export type PodcastResourceResourceTypeEnum =
+  (typeof PodcastResourceResourceTypeEnum)[keyof typeof PodcastResourceResourceTypeEnum]
 
 /**
  * Serializer for profile search preference filters
@@ -4688,24 +4713,24 @@ export type PodcastResourceResourceTypeEnum = typeof PodcastResourceResourceType
  * @interface PreferencesSearch
  */
 export interface PreferencesSearch {
-    /**
-     *
-     * @type {boolean}
-     * @memberof PreferencesSearch
-     */
-    'certification'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PreferencesSearch
-     */
-    'topic'?: Array<string>;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof PreferencesSearch
-     */
-    'delivery'?: Array<string>;
+  /**
+   *
+   * @type {boolean}
+   * @memberof PreferencesSearch
+   */
+  certification?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PreferencesSearch
+   */
+  topic?: Array<string>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PreferencesSearch
+   */
+  delivery?: Array<string>
 }
 /**
  *
@@ -4713,12 +4738,12 @@ export interface PreferencesSearch {
  * @interface ProblemListResponse
  */
 export interface ProblemListResponse {
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ProblemListResponse
-     */
-    'problem_set_titles': Array<string>;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProblemListResponse
+   */
+  problem_set_titles: Array<string>
 }
 /**
  * Serializer for Profile
@@ -4726,126 +4751,126 @@ export interface ProblemListResponse {
  * @interface Profile
  */
 export interface Profile {
-    /**
-     * Get the user\'s name
-     * @type {string}
-     * @memberof Profile
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image_small'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image_medium'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image_file': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image_small_file': string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'image_medium_file': string | null;
-    /**
-     * Custom getter for small profile image
-     * @type {string}
-     * @memberof Profile
-     */
-    'profile_image_small': string;
-    /**
-     * Custom getter for medium profile image
-     * @type {string}
-     * @memberof Profile
-     */
-    'profile_image_medium': string;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'bio'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof Profile
-     */
-    'headline'?: string | null;
-    /**
-     * Custom getter for the username
-     * @type {string}
-     * @memberof Profile
-     */
-    'username': string;
-    /**
-     * Custom getter for location text
-     * @type {string}
-     * @memberof Profile
-     */
-    'placename': string;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof Profile
-     */
-    'topic_interests'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {Array<GoalsEnum>}
-     * @memberof Profile
-     */
-    'goals'?: Array<GoalsEnum>;
-    /**
-     *
-     * @type {PatchedProfileRequestCurrentEducation}
-     * @memberof Profile
-     */
-    'current_education'?: PatchedProfileRequestCurrentEducation;
-    /**
-     *
-     * @type {PatchedProfileRequestCertificateDesired}
-     * @memberof Profile
-     */
-    'certificate_desired'?: PatchedProfileRequestCertificateDesired;
-    /**
-     *
-     * @type {PatchedProfileRequestTimeCommitment}
-     * @memberof Profile
-     */
-    'time_commitment'?: PatchedProfileRequestTimeCommitment;
-    /**
-     *
-     * @type {Array<DeliveryEnum>}
-     * @memberof Profile
-     */
-    'delivery'?: Array<DeliveryEnum>;
-    /**
-     *
-     * @type {PreferencesSearch}
-     * @memberof Profile
-     */
-    'preference_search_filters': PreferencesSearch;
+  /**
+   * Get the user\'s name
+   * @type {string}
+   * @memberof Profile
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image_small?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image_medium?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image_file: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image_small_file: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  image_medium_file: string | null
+  /**
+   * Custom getter for small profile image
+   * @type {string}
+   * @memberof Profile
+   */
+  profile_image_small: string
+  /**
+   * Custom getter for medium profile image
+   * @type {string}
+   * @memberof Profile
+   */
+  profile_image_medium: string
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  bio?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Profile
+   */
+  headline?: string | null
+  /**
+   * Custom getter for the username
+   * @type {string}
+   * @memberof Profile
+   */
+  username: string
+  /**
+   * Custom getter for location text
+   * @type {string}
+   * @memberof Profile
+   */
+  placename: string
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof Profile
+   */
+  topic_interests?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {Array<GoalsEnum>}
+   * @memberof Profile
+   */
+  goals?: Array<GoalsEnum>
+  /**
+   *
+   * @type {PatchedProfileRequestCurrentEducation}
+   * @memberof Profile
+   */
+  current_education?: PatchedProfileRequestCurrentEducation
+  /**
+   *
+   * @type {PatchedProfileRequestCertificateDesired}
+   * @memberof Profile
+   */
+  certificate_desired?: PatchedProfileRequestCertificateDesired
+  /**
+   *
+   * @type {PatchedProfileRequestTimeCommitment}
+   * @memberof Profile
+   */
+  time_commitment?: PatchedProfileRequestTimeCommitment
+  /**
+   *
+   * @type {Array<DeliveryEnum>}
+   * @memberof Profile
+   */
+  delivery?: Array<DeliveryEnum>
+  /**
+   *
+   * @type {PreferencesSearch}
+   * @memberof Profile
+   */
+  preference_search_filters: PreferencesSearch
 }
 /**
  * Serializer for Profile
@@ -4853,90 +4878,90 @@ export interface Profile {
  * @interface ProfileRequest
  */
 export interface ProfileRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ProfileRequest
-     */
-    'image'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProfileRequest
-     */
-    'image_small'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProfileRequest
-     */
-    'image_medium'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProfileRequest
-     */
-    'email_optin'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProfileRequest
-     */
-    'toc_optin'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ProfileRequest
-     */
-    'bio'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProfileRequest
-     */
-    'headline'?: string | null;
-    /**
-     *
-     * @type {any}
-     * @memberof ProfileRequest
-     */
-    'location'?: any | null;
-    /**
-     *
-     * @type {Array<number>}
-     * @memberof ProfileRequest
-     */
-    'topic_interests'?: Array<number>;
-    /**
-     *
-     * @type {Array<GoalsEnum>}
-     * @memberof ProfileRequest
-     */
-    'goals'?: Array<GoalsEnum>;
-    /**
-     *
-     * @type {PatchedProfileRequestCurrentEducation}
-     * @memberof ProfileRequest
-     */
-    'current_education'?: PatchedProfileRequestCurrentEducation;
-    /**
-     *
-     * @type {PatchedProfileRequestCertificateDesired}
-     * @memberof ProfileRequest
-     */
-    'certificate_desired'?: PatchedProfileRequestCertificateDesired;
-    /**
-     *
-     * @type {PatchedProfileRequestTimeCommitment}
-     * @memberof ProfileRequest
-     */
-    'time_commitment'?: PatchedProfileRequestTimeCommitment;
-    /**
-     *
-     * @type {Array<DeliveryEnum>}
-     * @memberof ProfileRequest
-     */
-    'delivery'?: Array<DeliveryEnum>;
+  /**
+   *
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  image?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  image_small?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  image_medium?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProfileRequest
+   */
+  email_optin?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProfileRequest
+   */
+  toc_optin?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  bio?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProfileRequest
+   */
+  headline?: string | null
+  /**
+   *
+   * @type {any}
+   * @memberof ProfileRequest
+   */
+  location?: any | null
+  /**
+   *
+   * @type {Array<number>}
+   * @memberof ProfileRequest
+   */
+  topic_interests?: Array<number>
+  /**
+   *
+   * @type {Array<GoalsEnum>}
+   * @memberof ProfileRequest
+   */
+  goals?: Array<GoalsEnum>
+  /**
+   *
+   * @type {PatchedProfileRequestCurrentEducation}
+   * @memberof ProfileRequest
+   */
+  current_education?: PatchedProfileRequestCurrentEducation
+  /**
+   *
+   * @type {PatchedProfileRequestCertificateDesired}
+   * @memberof ProfileRequest
+   */
+  certificate_desired?: PatchedProfileRequestCertificateDesired
+  /**
+   *
+   * @type {PatchedProfileRequestTimeCommitment}
+   * @memberof ProfileRequest
+   */
+  time_commitment?: PatchedProfileRequestTimeCommitment
+  /**
+   *
+   * @type {Array<DeliveryEnum>}
+   * @memberof ProfileRequest
+   */
+  delivery?: Array<DeliveryEnum>
 }
 /**
  * Serializer for the Program model
@@ -4944,12 +4969,12 @@ export interface ProfileRequest {
  * @interface Program
  */
 export interface Program {
-    /**
-     *
-     * @type {number}
-     * @memberof Program
-     */
-    'course_count': number;
+  /**
+   *
+   * @type {number}
+   * @memberof Program
+   */
+  course_count: number
 }
 /**
  * Serializer for Program Certificates
@@ -4957,132 +4982,132 @@ export interface Program {
  * @interface ProgramCertificate
  */
 export interface ProgramCertificate {
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'record_hash': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'program_letter_generate_url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'program_letter_share_url': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'program_title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_full_name'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_email': string;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramCertificate
-     */
-    'user_edxorg_id'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramCertificate
-     */
-    'micromasters_program_id'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramCertificate
-     */
-    'mitxonline_program_id'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_edxorg_username'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_gender'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_address_city'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_first_name'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_last_name'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_year_of_birth'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_country'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_address_postal_code'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_street_address'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_address_state_or_territory'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'user_mitxonline_username'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificate
-     */
-    'program_completion_timestamp'?: string | null;
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  record_hash: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  program_letter_generate_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  program_letter_share_url: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  program_title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_full_name?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_email: string
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramCertificate
+   */
+  user_edxorg_id?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramCertificate
+   */
+  micromasters_program_id?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramCertificate
+   */
+  mitxonline_program_id?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_edxorg_username?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_gender?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_address_city?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_first_name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_last_name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_year_of_birth?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_country?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_address_postal_code?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_street_address?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_address_state_or_territory?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  user_mitxonline_username?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificate
+   */
+  program_completion_timestamp?: string | null
 }
 /**
  * Serializer for program resources
@@ -5090,302 +5115,301 @@ export interface ProgramCertificate {
  * @interface ProgramResource
  */
 export interface ProgramResource {
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof ProgramResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof ProgramResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof ProgramResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ProgramResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof ProgramResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof ProgramResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ProgramResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof ProgramResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof ProgramResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof ProgramResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof ProgramResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof ProgramResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof ProgramResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof ProgramResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof ProgramResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof ProgramResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {ProgramResourceResourceTypeEnum}
-     * @memberof ProgramResource
-     */
-    'resource_type': ProgramResourceResourceTypeEnum;
-    /**
-     *
-     * @type {Program}
-     * @memberof ProgramResource
-     */
-    'program': Program;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ProgramResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof ProgramResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof ProgramResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof ProgramResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ProgramResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ProgramResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ProgramResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProgramResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ProgramResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof ProgramResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProgramResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof ProgramResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof ProgramResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof ProgramResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof ProgramResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof ProgramResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof ProgramResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof ProgramResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof ProgramResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof ProgramResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {ProgramResourceResourceTypeEnum}
+   * @memberof ProgramResource
+   */
+  resource_type: ProgramResourceResourceTypeEnum
+  /**
+   *
+   * @type {Program}
+   * @memberof ProgramResource
+   */
+  program: Program
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProgramResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ProgramResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ProgramResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ProgramResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -5394,15 +5418,15 @@ export interface ProgramResource {
  */
 
 export const ProgramResourceResourceTypeEnumDescriptions = {
-    'program': "",
-} as const;
+  program: "",
+} as const
 
 export const ProgramResourceResourceTypeEnum = {
-    Program: 'program'
-} as const;
+  Program: "program",
+} as const
 
-export type ProgramResourceResourceTypeEnum = typeof ProgramResourceResourceTypeEnum[keyof typeof ProgramResourceResourceTypeEnum];
-
+export type ProgramResourceResourceTypeEnum =
+  (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
 
 /**
  * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos
@@ -5411,33 +5435,33 @@ export type ProgramResourceResourceTypeEnum = typeof ProgramResourceResourceType
  */
 
 export const RelationTypeEnumDescriptions = {
-    'PROGRAM_COURSES': "Program Courses",
-    'LEARNING_PATH_ITEMS': "Learning Path Items",
-    'PODCAST_EPISODES': "Podcast Episodes",
-    'PLAYLIST_VIDEOS': "Playlist Videos",
-} as const;
+  PROGRAM_COURSES: "Program Courses",
+  LEARNING_PATH_ITEMS: "Learning Path Items",
+  PODCAST_EPISODES: "Podcast Episodes",
+  PLAYLIST_VIDEOS: "Playlist Videos",
+} as const
 
 export const RelationTypeEnum = {
-    /**
-    * Program Courses
-    */
-    ProgramCourses: 'PROGRAM_COURSES',
-    /**
-    * Learning Path Items
-    */
-    LearningPathItems: 'LEARNING_PATH_ITEMS',
-    /**
-    * Podcast Episodes
-    */
-    PodcastEpisodes: 'PODCAST_EPISODES',
-    /**
-    * Playlist Videos
-    */
-    PlaylistVideos: 'PLAYLIST_VIDEOS'
-} as const;
+  /**
+   * Program Courses
+   */
+  ProgramCourses: "PROGRAM_COURSES",
+  /**
+   * Learning Path Items
+   */
+  LearningPathItems: "LEARNING_PATH_ITEMS",
+  /**
+   * Podcast Episodes
+   */
+  PodcastEpisodes: "PODCAST_EPISODES",
+  /**
+   * Playlist Videos
+   */
+  PlaylistVideos: "PLAYLIST_VIDEOS",
+} as const
 
-export type RelationTypeEnum = typeof RelationTypeEnum[keyof typeof RelationTypeEnum];
-
+export type RelationTypeEnum =
+  (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
 
 /**
  * * `news` - news * `events` - events
@@ -5446,23 +5470,23 @@ export type RelationTypeEnum = typeof RelationTypeEnum[keyof typeof RelationType
  */
 
 export const ResourceTypeEnumDescriptions = {
-    'news': "news",
-    'events': "events",
-} as const;
+  news: "news",
+  events: "events",
+} as const
 
 export const ResourceTypeEnum = {
-    /**
-    * news
-    */
-    News: 'news',
-    /**
-    * events
-    */
-    Events: 'events'
-} as const;
+  /**
+   * news
+   */
+  News: "news",
+  /**
+   * events
+   */
+  Events: "events",
+} as const
 
-export type ResourceTypeEnum = typeof ResourceTypeEnum[keyof typeof ResourceTypeEnum];
-
+export type ResourceTypeEnum =
+  (typeof ResourceTypeEnum)[keyof typeof ResourceTypeEnum]
 
 /**
  *
@@ -5470,18 +5494,18 @@ export type ResourceTypeEnum = typeof ResourceTypeEnum[keyof typeof ResourceType
  * @interface RetrieveProblemResponse
  */
 export interface RetrieveProblemResponse {
-    /**
-     *
-     * @type {string}
-     * @memberof RetrieveProblemResponse
-     */
-    'problem_set': string;
-    /**
-     *
-     * @type {string}
-     * @memberof RetrieveProblemResponse
-     */
-    'solution_set': string;
+  /**
+   *
+   * @type {string}
+   * @memberof RetrieveProblemResponse
+   */
+  problem_set: string
+  /**
+   *
+   * @type {string}
+   * @memberof RetrieveProblemResponse
+   */
+  solution_set: string
 }
 /**
  * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
@@ -5490,33 +5514,32 @@ export interface RetrieveProblemResponse {
  */
 
 export const SiteTypeEnumDescriptions = {
-    'facebook': "facebook",
-    'linkedin': "linkedin",
-    'personal': "personal",
-    'twitter': "twitter",
-} as const;
+  facebook: "facebook",
+  linkedin: "linkedin",
+  personal: "personal",
+  twitter: "twitter",
+} as const
 
 export const SiteTypeEnum = {
-    /**
-    * facebook
-    */
-    Facebook: 'facebook',
-    /**
-    * linkedin
-    */
-    Linkedin: 'linkedin',
-    /**
-    * personal
-    */
-    Personal: 'personal',
-    /**
-    * twitter
-    */
-    Twitter: 'twitter'
-} as const;
+  /**
+   * facebook
+   */
+  Facebook: "facebook",
+  /**
+   * linkedin
+   */
+  Linkedin: "linkedin",
+  /**
+   * personal
+   */
+  Personal: "personal",
+  /**
+   * twitter
+   */
+  Twitter: "twitter",
+} as const
 
-export type SiteTypeEnum = typeof SiteTypeEnum[keyof typeof SiteTypeEnum];
-
+export type SiteTypeEnum = (typeof SiteTypeEnum)[keyof typeof SiteTypeEnum]
 
 /**
  * Serializer for SubChannels
@@ -5524,24 +5547,24 @@ export type SiteTypeEnum = typeof SiteTypeEnum[keyof typeof SiteTypeEnum];
  * @interface SubChannel
  */
 export interface SubChannel {
-    /**
-     *
-     * @type {string}
-     * @memberof SubChannel
-     */
-    'parent_channel': string;
-    /**
-     *
-     * @type {string}
-     * @memberof SubChannel
-     */
-    'channel': string;
-    /**
-     *
-     * @type {number}
-     * @memberof SubChannel
-     */
-    'position'?: number;
+  /**
+   *
+   * @type {string}
+   * @memberof SubChannel
+   */
+  parent_channel: string
+  /**
+   *
+   * @type {string}
+   * @memberof SubChannel
+   */
+  channel: string
+  /**
+   *
+   * @type {number}
+   * @memberof SubChannel
+   */
+  position?: number
 }
 /**
  * * `0-to-5-hours` - <5 hours/week * `5-to-10-hours` - 5-10 hours/week * `10-to-20-hours` - 10-20 hours/week * `20-to-30-hours` - 20-30 hours/week * `30-plus-hours` - 30+ hours/week
@@ -5550,38 +5573,38 @@ export interface SubChannel {
  */
 
 export const TimeCommitmentEnumDescriptions = {
-    '0-to-5-hours': "<5 hours/week",
-    '5-to-10-hours': "5-10 hours/week",
-    '10-to-20-hours': "10-20 hours/week",
-    '20-to-30-hours': "20-30 hours/week",
-    '30-plus-hours': "30+ hours/week",
-} as const;
+  "0-to-5-hours": "<5 hours/week",
+  "5-to-10-hours": "5-10 hours/week",
+  "10-to-20-hours": "10-20 hours/week",
+  "20-to-30-hours": "20-30 hours/week",
+  "30-plus-hours": "30+ hours/week",
+} as const
 
 export const TimeCommitmentEnum = {
-    /**
-    * &lt;5 hours/week
-    */
-    _0To5Hours: '0-to-5-hours',
-    /**
-    * 5-10 hours/week
-    */
-    _5To10Hours: '5-to-10-hours',
-    /**
-    * 10-20 hours/week
-    */
-    _10To20Hours: '10-to-20-hours',
-    /**
-    * 20-30 hours/week
-    */
-    _20To30Hours: '20-to-30-hours',
-    /**
-    * 30+ hours/week
-    */
-    _30PlusHours: '30-plus-hours'
-} as const;
+  /**
+   * &lt;5 hours/week
+   */
+  _0To5Hours: "0-to-5-hours",
+  /**
+   * 5-10 hours/week
+   */
+  _5To10Hours: "5-to-10-hours",
+  /**
+   * 10-20 hours/week
+   */
+  _10To20Hours: "10-to-20-hours",
+  /**
+   * 20-30 hours/week
+   */
+  _20To30Hours: "20-to-30-hours",
+  /**
+   * 30+ hours/week
+   */
+  _30PlusHours: "30-plus-hours",
+} as const
 
-export type TimeCommitmentEnum = typeof TimeCommitmentEnum[keyof typeof TimeCommitmentEnum];
-
+export type TimeCommitmentEnum =
+  (typeof TimeCommitmentEnum)[keyof typeof TimeCommitmentEnum]
 
 /**
  * Serializer for Channel model of type topic
@@ -5589,140 +5612,139 @@ export type TimeCommitmentEnum = typeof TimeCommitmentEnum[keyof typeof TimeComm
  * @interface TopicChannel
  */
 export interface TopicChannel {
-    /**
-     *
-     * @type {number}
-     * @memberof TopicChannel
-     */
-    'id': number;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'avatar'?: string | null;
-    /**
-     * Get the avatar image small URL
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'avatar_small': string | null;
-    /**
-     * Get the avatar image medium URL
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'avatar_medium': string | null;
-    /**
-     * Get the banner image URL
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'banner'?: string | null;
-    /**
-     * Return true if user is a moderator for the channel
-     * @type {boolean}
-     * @memberof TopicChannel
-     */
-    'is_moderator': boolean;
-    /**
-     *
-     * @type {Array<LearningPathPreview>}
-     * @memberof TopicChannel
-     */
-    'lists': Array<LearningPathPreview>;
-    /**
-     * Get the URL for the channel
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'channel_url': string;
-    /**
-     *
-     * @type {DepartmentChannelFeaturedList}
-     * @memberof TopicChannel
-     */
-    'featured_list': DepartmentChannelFeaturedList | null;
-    /**
-     *
-     * @type {Array<SubChannel>}
-     * @memberof TopicChannel
-     */
-    'sub_channels': Array<SubChannel>;
-    /**
-     *
-     * @type {TopicChannelTypeEnum}
-     * @memberof TopicChannel
-     */
-    'channel_type': TopicChannelTypeEnum;
-    /**
-     *
-     * @type {ChannelTopicDetail}
-     * @memberof TopicChannel
-     */
-    'topic_detail': ChannelTopicDetail;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'updated_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'title': string;
-    /**
-     *
-     * @type {any}
-     * @memberof TopicChannel
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {any}
-     * @memberof TopicChannel
-     */
-    'configuration'?: any | null;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof TopicChannel
-     */
-    'ga_tracking_id'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof TopicChannel
-     */
-    'widget_list'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof TopicChannel
+   */
+  id: number
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  avatar?: string | null
+  /**
+   * Get the avatar image small URL
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  avatar_small: string | null
+  /**
+   * Get the avatar image medium URL
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  avatar_medium: string | null
+  /**
+   * Get the banner image URL
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  banner?: string | null
+  /**
+   * Return true if user is a moderator for the channel
+   * @type {boolean}
+   * @memberof TopicChannel
+   */
+  is_moderator: boolean
+  /**
+   *
+   * @type {Array<LearningPathPreview>}
+   * @memberof TopicChannel
+   */
+  lists: Array<LearningPathPreview>
+  /**
+   * Get the URL for the channel
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  channel_url: string
+  /**
+   *
+   * @type {DepartmentChannelFeaturedList}
+   * @memberof TopicChannel
+   */
+  featured_list: DepartmentChannelFeaturedList | null
+  /**
+   *
+   * @type {Array<SubChannel>}
+   * @memberof TopicChannel
+   */
+  sub_channels: Array<SubChannel>
+  /**
+   *
+   * @type {TopicChannelTypeEnum}
+   * @memberof TopicChannel
+   */
+  channel_type: TopicChannelTypeEnum
+  /**
+   *
+   * @type {ChannelTopicDetail}
+   * @memberof TopicChannel
+   */
+  topic_detail: ChannelTopicDetail
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  title: string
+  /**
+   *
+   * @type {any}
+   * @memberof TopicChannel
+   */
+  about?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof TopicChannel
+   */
+  configuration?: any | null
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  public_description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof TopicChannel
+   */
+  ga_tracking_id?: string
+  /**
+   *
+   * @type {number}
+   * @memberof TopicChannel
+   */
+  widget_list?: number | null
 }
-
 
 /**
  * * `topic` - Topic
@@ -5731,18 +5753,18 @@ export interface TopicChannel {
  */
 
 export const TopicChannelTypeEnumDescriptions = {
-    'topic': "Topic",
-} as const;
+  topic: "Topic",
+} as const
 
 export const TopicChannelTypeEnum = {
-    /**
-    * Topic
-    */
-    Topic: 'topic'
-} as const;
+  /**
+   * Topic
+   */
+  Topic: "topic",
+} as const
 
-export type TopicChannelTypeEnum = typeof TopicChannelTypeEnum[keyof typeof TopicChannelTypeEnum];
-
+export type TopicChannelTypeEnum =
+  (typeof TopicChannelTypeEnum)[keyof typeof TopicChannelTypeEnum]
 
 /**
  * Serializer for Channel model of type unit
@@ -5750,140 +5772,139 @@ export type TopicChannelTypeEnum = typeof TopicChannelTypeEnum[keyof typeof Topi
  * @interface UnitChannel
  */
 export interface UnitChannel {
-    /**
-     *
-     * @type {number}
-     * @memberof UnitChannel
-     */
-    'id': number;
-    /**
-     * Get the avatar image URL
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'avatar'?: string | null;
-    /**
-     * Get the avatar image small URL
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'avatar_small': string | null;
-    /**
-     * Get the avatar image medium URL
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'avatar_medium': string | null;
-    /**
-     * Get the banner image URL
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'banner'?: string | null;
-    /**
-     * Return true if user is a moderator for the channel
-     * @type {boolean}
-     * @memberof UnitChannel
-     */
-    'is_moderator': boolean;
-    /**
-     *
-     * @type {Array<LearningPathPreview>}
-     * @memberof UnitChannel
-     */
-    'lists': Array<LearningPathPreview>;
-    /**
-     * Get the URL for the channel
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'channel_url': string;
-    /**
-     *
-     * @type {DepartmentChannelFeaturedList}
-     * @memberof UnitChannel
-     */
-    'featured_list': DepartmentChannelFeaturedList | null;
-    /**
-     *
-     * @type {Array<SubChannel>}
-     * @memberof UnitChannel
-     */
-    'sub_channels': Array<SubChannel>;
-    /**
-     *
-     * @type {UnitChannelTypeEnum}
-     * @memberof UnitChannel
-     */
-    'channel_type': UnitChannelTypeEnum;
-    /**
-     *
-     * @type {ChannelUnitDetail}
-     * @memberof UnitChannel
-     */
-    'unit_detail': ChannelUnitDetail;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'updated_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'title': string;
-    /**
-     *
-     * @type {any}
-     * @memberof UnitChannel
-     */
-    'about'?: any | null;
-    /**
-     *
-     * @type {any}
-     * @memberof UnitChannel
-     */
-    'configuration'?: any | null;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'search_filter'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'public_description'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof UnitChannel
-     */
-    'ga_tracking_id'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof UnitChannel
-     */
-    'widget_list'?: number | null;
+  /**
+   *
+   * @type {number}
+   * @memberof UnitChannel
+   */
+  id: number
+  /**
+   * Get the avatar image URL
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  avatar?: string | null
+  /**
+   * Get the avatar image small URL
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  avatar_small: string | null
+  /**
+   * Get the avatar image medium URL
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  avatar_medium: string | null
+  /**
+   * Get the banner image URL
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  banner?: string | null
+  /**
+   * Return true if user is a moderator for the channel
+   * @type {boolean}
+   * @memberof UnitChannel
+   */
+  is_moderator: boolean
+  /**
+   *
+   * @type {Array<LearningPathPreview>}
+   * @memberof UnitChannel
+   */
+  lists: Array<LearningPathPreview>
+  /**
+   * Get the URL for the channel
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  channel_url: string
+  /**
+   *
+   * @type {DepartmentChannelFeaturedList}
+   * @memberof UnitChannel
+   */
+  featured_list: DepartmentChannelFeaturedList | null
+  /**
+   *
+   * @type {Array<SubChannel>}
+   * @memberof UnitChannel
+   */
+  sub_channels: Array<SubChannel>
+  /**
+   *
+   * @type {UnitChannelTypeEnum}
+   * @memberof UnitChannel
+   */
+  channel_type: UnitChannelTypeEnum
+  /**
+   *
+   * @type {ChannelUnitDetail}
+   * @memberof UnitChannel
+   */
+  unit_detail: ChannelUnitDetail
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  updated_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  name: string
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  title: string
+  /**
+   *
+   * @type {any}
+   * @memberof UnitChannel
+   */
+  about?: any | null
+  /**
+   *
+   * @type {any}
+   * @memberof UnitChannel
+   */
+  configuration?: any | null
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  search_filter?: string
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  public_description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof UnitChannel
+   */
+  ga_tracking_id?: string
+  /**
+   *
+   * @type {number}
+   * @memberof UnitChannel
+   */
+  widget_list?: number | null
 }
-
 
 /**
  * * `unit` - Unit
@@ -5892,18 +5913,18 @@ export interface UnitChannel {
  */
 
 export const UnitChannelTypeEnumDescriptions = {
-    'unit': "Unit",
-} as const;
+  unit: "Unit",
+} as const
 
 export const UnitChannelTypeEnum = {
-    /**
-    * Unit
-    */
-    Unit: 'unit'
-} as const;
+  /**
+   * Unit
+   */
+  Unit: "unit",
+} as const
 
-export type UnitChannelTypeEnum = typeof UnitChannelTypeEnum[keyof typeof UnitChannelTypeEnum];
-
+export type UnitChannelTypeEnum =
+  (typeof UnitChannelTypeEnum)[keyof typeof UnitChannelTypeEnum]
 
 /**
  * Serializer for User
@@ -5911,54 +5932,54 @@ export type UnitChannelTypeEnum = typeof UnitChannelTypeEnum[keyof typeof UnitCh
  * @interface User
  */
 export interface User {
-    /**
-     *
-     * @type {number}
-     * @memberof User
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof User
-     */
-    'username': string;
-    /**
-     *
-     * @type {Profile}
-     * @memberof User
-     */
-    'profile'?: Profile;
-    /**
-     *
-     * @type {string}
-     * @memberof User
-     */
-    'first_name': string;
-    /**
-     *
-     * @type {string}
-     * @memberof User
-     */
-    'last_name': string;
-    /**
-     *
-     * @type {boolean}
-     * @memberof User
-     */
-    'is_article_editor': boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof User
-     */
-    'is_learning_path_editor': boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof User
-     */
-    'is_authenticated': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof User
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  username: string
+  /**
+   *
+   * @type {Profile}
+   * @memberof User
+   */
+  profile?: Profile
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  first_name: string
+  /**
+   *
+   * @type {string}
+   * @memberof User
+   */
+  last_name: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof User
+   */
+  is_article_editor: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof User
+   */
+  is_learning_path_editor: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof User
+   */
+  is_authenticated: boolean
 }
 /**
  * Serializer for User
@@ -5966,18 +5987,18 @@ export interface User {
  * @interface UserRequest
  */
 export interface UserRequest {
-    /**
-     *
-     * @type {ProfileRequest}
-     * @memberof UserRequest
-     */
-    'profile'?: ProfileRequest;
-    /**
-     *
-     * @type {string}
-     * @memberof UserRequest
-     */
-    'email': string;
+  /**
+   *
+   * @type {ProfileRequest}
+   * @memberof UserRequest
+   */
+  profile?: ProfileRequest
+  /**
+   *
+   * @type {string}
+   * @memberof UserRequest
+   */
+  email: string
 }
 /**
  * Serializer for UserWebsite
@@ -5985,32 +6006,31 @@ export interface UserRequest {
  * @interface UserWebsite
  */
 export interface UserWebsite {
-    /**
-     *
-     * @type {number}
-     * @memberof UserWebsite
-     */
-    'id': number;
-    /**
-     *
-     * @type {number}
-     * @memberof UserWebsite
-     */
-    'profile': number;
-    /**
-     *
-     * @type {string}
-     * @memberof UserWebsite
-     */
-    'url': string;
-    /**
-     *
-     * @type {SiteTypeEnum}
-     * @memberof UserWebsite
-     */
-    'site_type': SiteTypeEnum;
+  /**
+   *
+   * @type {number}
+   * @memberof UserWebsite
+   */
+  id: number
+  /**
+   *
+   * @type {number}
+   * @memberof UserWebsite
+   */
+  profile: number
+  /**
+   *
+   * @type {string}
+   * @memberof UserWebsite
+   */
+  url: string
+  /**
+   *
+   * @type {SiteTypeEnum}
+   * @memberof UserWebsite
+   */
+  site_type: SiteTypeEnum
 }
-
 
 /**
  * Serializer for UserWebsite
@@ -6018,18 +6038,18 @@ export interface UserWebsite {
  * @interface UserWebsiteRequest
  */
 export interface UserWebsiteRequest {
-    /**
-     *
-     * @type {number}
-     * @memberof UserWebsiteRequest
-     */
-    'profile': number;
-    /**
-     *
-     * @type {string}
-     * @memberof UserWebsiteRequest
-     */
-    'url': string;
+  /**
+   *
+   * @type {number}
+   * @memberof UserWebsiteRequest
+   */
+  profile: number
+  /**
+   *
+   * @type {string}
+   * @memberof UserWebsiteRequest
+   */
+  url: string
 }
 /**
  * Serializer for the Video model
@@ -6037,24 +6057,24 @@ export interface UserWebsiteRequest {
  * @interface Video
  */
 export interface Video {
-    /**
-     *
-     * @type {number}
-     * @memberof Video
-     */
-    'id': number;
-    /**
-     *
-     * @type {string}
-     * @memberof Video
-     */
-    'duration': string;
-    /**
-     *
-     * @type {string}
-     * @memberof Video
-     */
-    'transcript'?: string;
+  /**
+   *
+   * @type {number}
+   * @memberof Video
+   */
+  id: number
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
+  duration: string
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
+  transcript?: string
 }
 /**
  * Serializer for the VideoChannel model
@@ -6062,18 +6082,18 @@ export interface Video {
  * @interface VideoChannel
  */
 export interface VideoChannel {
-    /**
-     *
-     * @type {string}
-     * @memberof VideoChannel
-     */
-    'channel_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoChannel
-     */
-    'title': string;
+  /**
+   *
+   * @type {string}
+   * @memberof VideoChannel
+   */
+  channel_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoChannel
+   */
+  title: string
 }
 /**
  * Serializer for the VideoPlaylist model
@@ -6081,24 +6101,24 @@ export interface VideoChannel {
  * @interface VideoPlaylist
  */
 export interface VideoPlaylist {
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylist
-     */
-    'id': number;
-    /**
-     *
-     * @type {VideoChannel}
-     * @memberof VideoPlaylist
-     */
-    'channel': VideoChannel | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylist
-     */
-    'video_count': number;
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylist
+   */
+  id: number
+  /**
+   *
+   * @type {VideoChannel}
+   * @memberof VideoPlaylist
+   */
+  channel: VideoChannel | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylist
+   */
+  video_count: number
 }
 /**
  * Serializer for video playlist resources
@@ -6106,302 +6126,301 @@ export interface VideoPlaylist {
  * @interface VideoPlaylistResource
  */
 export interface VideoPlaylistResource {
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof VideoPlaylistResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof VideoPlaylistResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof VideoPlaylistResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoPlaylistResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof VideoPlaylistResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof VideoPlaylistResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoPlaylistResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof VideoPlaylistResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof VideoPlaylistResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof VideoPlaylistResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof VideoPlaylistResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof VideoPlaylistResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof VideoPlaylistResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof VideoPlaylistResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof VideoPlaylistResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof VideoPlaylistResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {VideoPlaylistResourceResourceTypeEnum}
-     * @memberof VideoPlaylistResource
-     */
-    'resource_type': VideoPlaylistResourceResourceTypeEnum;
-    /**
-     *
-     * @type {VideoPlaylist}
-     * @memberof VideoPlaylistResource
-     */
-    'video_playlist': VideoPlaylist;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoPlaylistResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoPlaylistResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof VideoPlaylistResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoPlaylistResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoPlaylistResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoPlaylistResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof VideoPlaylistResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof VideoPlaylistResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof VideoPlaylistResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoPlaylistResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof VideoPlaylistResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof VideoPlaylistResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoPlaylistResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof VideoPlaylistResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof VideoPlaylistResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof VideoPlaylistResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof VideoPlaylistResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof VideoPlaylistResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof VideoPlaylistResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof VideoPlaylistResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof VideoPlaylistResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof VideoPlaylistResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {VideoPlaylistResourceResourceTypeEnum}
+   * @memberof VideoPlaylistResource
+   */
+  resource_type: VideoPlaylistResourceResourceTypeEnum
+  /**
+   *
+   * @type {VideoPlaylist}
+   * @memberof VideoPlaylistResource
+   */
+  video_playlist: VideoPlaylist
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoPlaylistResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoPlaylistResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof VideoPlaylistResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoPlaylistResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoPlaylistResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -6410,15 +6429,15 @@ export interface VideoPlaylistResource {
  */
 
 export const VideoPlaylistResourceResourceTypeEnumDescriptions = {
-    'video_playlist': "",
-} as const;
+  video_playlist: "",
+} as const
 
 export const VideoPlaylistResourceResourceTypeEnum = {
-    VideoPlaylist: 'video_playlist'
-} as const;
+  VideoPlaylist: "video_playlist",
+} as const
 
-export type VideoPlaylistResourceResourceTypeEnum = typeof VideoPlaylistResourceResourceTypeEnum[keyof typeof VideoPlaylistResourceResourceTypeEnum];
-
+export type VideoPlaylistResourceResourceTypeEnum =
+  (typeof VideoPlaylistResourceResourceTypeEnum)[keyof typeof VideoPlaylistResourceResourceTypeEnum]
 
 /**
  * Serializer for video resources
@@ -6426,308 +6445,307 @@ export type VideoPlaylistResourceResourceTypeEnum = typeof VideoPlaylistResource
  * @interface VideoResource
  */
 export interface VideoResource {
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<LearningResourceTopic>}
-     * @memberof VideoResource
-     */
-    'topics'?: Array<LearningResourceTopic>;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'position': number | null;
-    /**
-     *
-     * @type {LearningResourceOfferor}
-     * @memberof VideoResource
-     */
-    'offered_by': LearningResourceOfferor | null;
-    /**
-     *
-     * @type {LearningResourcePlatform}
-     * @memberof VideoResource
-     */
-    'platform': LearningResourcePlatform | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoResource
-     */
-    'course_feature': Array<string> | null;
-    /**
-     *
-     * @type {Array<LearningResourceDepartment>}
-     * @memberof VideoResource
-     */
-    'departments': Array<LearningResourceDepartment> | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'certification': boolean;
-    /**
-     *
-     * @type {CourseResourceCertificationType}
-     * @memberof VideoResource
-     */
-    'certification_type': CourseResourceCertificationType;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoResource
-     */
-    'prices': Array<string>;
-    /**
-     *
-     * @type {Array<LearningResourcePrice>}
-     * @memberof VideoResource
-     */
-    'resource_prices': Array<LearningResourcePrice>;
-    /**
-     *
-     * @type {Array<LearningResourceRun>}
-     * @memberof VideoResource
-     */
-    'runs': Array<LearningResourceRun> | null;
-    /**
-     *
-     * @type {LearningResourceImage}
-     * @memberof VideoResource
-     */
-    'image': LearningResourceImage | null;
-    /**
-     *
-     * @type {Array<MicroLearningPathRelationship>}
-     * @memberof VideoResource
-     */
-    'learning_path_parents': Array<MicroLearningPathRelationship>;
-    /**
-     *
-     * @type {Array<MicroUserListRelationship>}
-     * @memberof VideoResource
-     */
-    'user_list_parents': Array<MicroUserListRelationship>;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'views': number;
-    /**
-     *
-     * @type {Array<CourseResourceDeliveryInner>}
-     * @memberof VideoResource
-     */
-    'delivery': Array<CourseResourceDeliveryInner>;
-    /**
-     * Return true if the resource is free/has a free option
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'free': boolean;
-    /**
-     * Return the resource category of the resource
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'resource_category': string;
-    /**
-     *
-     * @type {Array<CourseResourceFormatInner>}
-     * @memberof VideoResource
-     */
-    'format': Array<CourseResourceFormatInner>;
-    /**
-     *
-     * @type {Array<CourseResourcePaceInner>}
-     * @memberof VideoResource
-     */
-    'pace': Array<CourseResourcePaceInner>;
-    /**
-     *
-     * @type {LearningResourceRelationshipChildField}
-     * @memberof VideoResource
-     */
-    'children': LearningResourceRelationshipChildField | null;
-    /**
-     * Return the best run id for the resource, if it has runs
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'best_run_id': number | null;
-    /**
-     *
-     * @type {VideoResourceResourceTypeEnum}
-     * @memberof VideoResource
-     */
-    'resource_type': VideoResourceResourceTypeEnum;
-    /**
-     *
-     * @type {Video}
-     * @memberof VideoResource
-     */
-    'video': Video;
-    /**
-     * Get the playlist id(s) the video belongs to
-     * @type {Array<string>}
-     * @memberof VideoResource
-     */
-    'playlists': Array<string>;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'readable_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'full_description'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'last_modified'?: string | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'published'?: boolean;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoResource
-     */
-    'languages'?: Array<string> | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'url'?: string | null;
-    /**
-     *
-     * @type {Array<string>}
-     * @memberof VideoResource
-     */
-    'ocw_topics'?: Array<string>;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'professional': boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'next_start_date'?: string | null;
-    /**
-     *
-     * @type {AvailabilityEnum}
-     * @memberof VideoResource
-     */
-    'availability'?: AvailabilityEnum | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'completeness'?: number;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'license_cc'?: boolean;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'test_mode'?: boolean;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'continuing_ed_credits'?: string | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'location'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'duration'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'min_weeks'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'max_weeks'?: number | null;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoResource
-     */
-    'time_commitment'?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'min_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {number}
-     * @memberof VideoResource
-     */
-    'max_weekly_hours'?: number | null;
-    /**
-     *
-     * @type {boolean}
-     * @memberof VideoResource
-     */
-    'require_summaries': boolean;
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof VideoResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof VideoResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof VideoResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof VideoResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof VideoResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof VideoResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof VideoResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof VideoResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof VideoResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof VideoResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof VideoResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof VideoResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof VideoResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof VideoResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof VideoResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof VideoResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {VideoResourceResourceTypeEnum}
+   * @memberof VideoResource
+   */
+  resource_type: VideoResourceResourceTypeEnum
+  /**
+   *
+   * @type {Video}
+   * @memberof VideoResource
+   */
+  video: Video
+  /**
+   * Get the playlist id(s) the video belongs to
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  playlists: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof VideoResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoResource
+   */
+  require_summaries: boolean
 }
-
 
 /**
  *
@@ -6736,15 +6754,15 @@ export interface VideoResource {
  */
 
 export const VideoResourceResourceTypeEnumDescriptions = {
-    'video': "",
-} as const;
+  video: "",
+} as const
 
 export const VideoResourceResourceTypeEnum = {
-    Video: 'video'
-} as const;
+  Video: "video",
+} as const
 
-export type VideoResourceResourceTypeEnum = typeof VideoResourceResourceTypeEnum[keyof typeof VideoResourceResourceTypeEnum];
-
+export type VideoResourceResourceTypeEnum =
+  (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
 
 /**
  * ModelSerializer for VideoShort model
@@ -6752,54 +6770,54 @@ export type VideoResourceResourceTypeEnum = typeof VideoResourceResourceTypeEnum
  * @interface VideoShort
  */
 export interface VideoShort {
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'video_id': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'title': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'published_at': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'thumbnail_small_url'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'thumbnail_large_url'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'video_url'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'created_on': string;
-    /**
-     *
-     * @type {string}
-     * @memberof VideoShort
-     */
-    'updated_on': string;
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  video_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  published_at: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  thumbnail_small_url?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  thumbnail_large_url?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  video_url?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  created_on: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoShort
+   */
+  updated_on: string
 }
 /**
  * WidgetInstance serializer
@@ -6807,38 +6825,37 @@ export interface VideoShort {
  * @interface WidgetInstance
  */
 export interface WidgetInstance {
-    /**
-     *
-     * @type {number}
-     * @memberof WidgetInstance
-     */
-    'id': number;
-    /**
-     *
-     * @type {WidgetTypeEnum}
-     * @memberof WidgetInstance
-     */
-    'widget_type': WidgetTypeEnum;
-    /**
-     *
-     * @type {string}
-     * @memberof WidgetInstance
-     */
-    'title': string;
-    /**
-     * Returns the configuration to serialize
-     * @type {{ [key: string]: any; }}
-     * @memberof WidgetInstance
-     */
-    'configuration'?: { [key: string]: any; };
-    /**
-     * Renders the widget to json based on configuration
-     * @type {{ [key: string]: any; }}
-     * @memberof WidgetInstance
-     */
-    'json': { [key: string]: any; } | null;
+  /**
+   *
+   * @type {number}
+   * @memberof WidgetInstance
+   */
+  id: number
+  /**
+   *
+   * @type {WidgetTypeEnum}
+   * @memberof WidgetInstance
+   */
+  widget_type: WidgetTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof WidgetInstance
+   */
+  title: string
+  /**
+   * Returns the configuration to serialize
+   * @type {{ [key: string]: any; }}
+   * @memberof WidgetInstance
+   */
+  configuration?: { [key: string]: any }
+  /**
+   * Renders the widget to json based on configuration
+   * @type {{ [key: string]: any; }}
+   * @memberof WidgetInstance
+   */
+  json: { [key: string]: any } | null
 }
-
 
 /**
  * Serializer for WidgetLists
@@ -6846,24 +6863,24 @@ export interface WidgetInstance {
  * @interface WidgetList
  */
 export interface WidgetList {
-    /**
-     *
-     * @type {number}
-     * @memberof WidgetList
-     */
-    'id': number;
-    /**
-     *
-     * @type {Array<WidgetInstance>}
-     * @memberof WidgetList
-     */
-    'widgets'?: Array<WidgetInstance> | null;
-    /**
-     *
-     * @type {Array<WidgetListAvailableWidgetsInner>}
-     * @memberof WidgetList
-     */
-    'available_widgets': Array<WidgetListAvailableWidgetsInner>;
+  /**
+   *
+   * @type {number}
+   * @memberof WidgetList
+   */
+  id: number
+  /**
+   *
+   * @type {Array<WidgetInstance>}
+   * @memberof WidgetList
+   */
+  widgets?: Array<WidgetInstance> | null
+  /**
+   *
+   * @type {Array<WidgetListAvailableWidgetsInner>}
+   * @memberof WidgetList
+   */
+  available_widgets: Array<WidgetListAvailableWidgetsInner>
 }
 /**
  *
@@ -6871,24 +6888,24 @@ export interface WidgetList {
  * @interface WidgetListAvailableWidgetsInner
  */
 export interface WidgetListAvailableWidgetsInner {
-    /**
-     *
-     * @type {string}
-     * @memberof WidgetListAvailableWidgetsInner
-     */
-    'widget_type'?: string;
-    /**
-     *
-     * @type {string}
-     * @memberof WidgetListAvailableWidgetsInner
-     */
-    'description'?: string;
-    /**
-     *
-     * @type {object}
-     * @memberof WidgetListAvailableWidgetsInner
-     */
-    'form_spec'?: object;
+  /**
+   *
+   * @type {string}
+   * @memberof WidgetListAvailableWidgetsInner
+   */
+  widget_type?: string
+  /**
+   *
+   * @type {string}
+   * @memberof WidgetListAvailableWidgetsInner
+   */
+  description?: string
+  /**
+   *
+   * @type {object}
+   * @memberof WidgetListAvailableWidgetsInner
+   */
+  form_spec?: object
 }
 /**
  * Serializer for WidgetLists
@@ -6896,12 +6913,12 @@ export interface WidgetListAvailableWidgetsInner {
  * @interface WidgetListRequest
  */
 export interface WidgetListRequest {
-    /**
-     *
-     * @type {Array<WidgetInstance>}
-     * @memberof WidgetListRequest
-     */
-    'widgets'?: Array<WidgetInstance> | null;
+  /**
+   *
+   * @type {Array<WidgetInstance>}
+   * @memberof WidgetListRequest
+   */
+  widgets?: Array<WidgetInstance> | null
 }
 /**
  * * `Markdown` - Markdown * `URL` - URL * `RSS Feed` - RSS Feed * `People` - People
@@ -6910,668 +6927,1064 @@ export interface WidgetListRequest {
  */
 
 export const WidgetTypeEnumDescriptions = {
-    'Markdown': "Markdown",
-    'URL': "URL",
-    'RSS Feed': "RSS Feed",
-    'People': "People",
-} as const;
+  Markdown: "Markdown",
+  URL: "URL",
+  "RSS Feed": "RSS Feed",
+  People: "People",
+} as const
 
 export const WidgetTypeEnum = {
-    /**
-    * Markdown
-    */
-    Markdown: 'Markdown',
-    /**
-    * URL
-    */
-    Url: 'URL',
-    /**
-    * RSS Feed
-    */
-    RssFeed: 'RSS Feed',
-    /**
-    * People
-    */
-    People: 'People'
-} as const;
+  /**
+   * Markdown
+   */
+  Markdown: "Markdown",
+  /**
+   * URL
+   */
+  Url: "URL",
+  /**
+   * RSS Feed
+   */
+  RssFeed: "RSS Feed",
+  /**
+   * People
+   */
+  People: "People",
+} as const
 
-export type WidgetTypeEnum = typeof WidgetTypeEnum[keyof typeof WidgetTypeEnum];
-
-
+export type WidgetTypeEnum =
+  (typeof WidgetTypeEnum)[keyof typeof WidgetTypeEnum]
 
 /**
  * ChannelsApi - axios parameter creator
  * @export
  */
-export const ChannelsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {string} channel_type
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsCountsList: async (channel_type: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'channel_type' is not null or undefined
-            assertParamExists('channelsCountsList', 'channel_type', channel_type)
-            const localVarPath = `/api/v0/channels/counts/{channel_type}/`
-                .replace(`{${"channel_type"}}`, encodeURIComponent(String(channel_type)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const ChannelsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {string} channel_type
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsCountsList: async (
+      channel_type: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'channel_type' is not null or undefined
+      assertParamExists("channelsCountsList", "channel_type", channel_type)
+      const localVarPath = `/api/v0/channels/counts/{channel_type}/`.replace(
+        `{${"channel_type"}}`,
+        encodeURIComponent(String(channel_type)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Create
+     * @param {ChannelCreateRequest} ChannelCreateRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsCreate: async (
+      ChannelCreateRequest: ChannelCreateRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'ChannelCreateRequest' is not null or undefined
+      assertParamExists(
+        "channelsCreate",
+        "ChannelCreateRequest",
+        ChannelCreateRequest,
+      )
+      const localVarPath = `/api/v0/channels/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Create
-         * @param {ChannelCreateRequest} ChannelCreateRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsCreate: async (ChannelCreateRequest: ChannelCreateRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'ChannelCreateRequest' is not null or undefined
-            assertParamExists('channelsCreate', 'ChannelCreateRequest', ChannelCreateRequest)
-            const localVarPath = `/api/v0/channels/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ChannelCreateRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Destroy
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsDestroy: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsDestroy", "id", id)
+      const localVarPath = `/api/v0/channels/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "DELETE",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(ChannelCreateRequest, localVarRequestOptions, configuration)
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary List
+     * @param {ChannelsListChannelTypeEnum} [channel_type] * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsList: async (
+      channel_type?: ChannelsListChannelTypeEnum,
+      limit?: number,
+      offset?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/channels/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Destroy
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsDestroy: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsDestroy', 'id', id)
-            const localVarPath = `/api/v0/channels/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      if (channel_type !== undefined) {
+        localVarQueryParameter["channel_type"] = channel_type
+      }
 
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary List
-         * @param {ChannelsListChannelTypeEnum} [channel_type] * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsList: async (channel_type?: ChannelsListChannelTypeEnum, limit?: number, offset?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/channels/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators Create
+     * @param {string} id
+     * @param {ChannelModeratorRequest} [ChannelModeratorRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsCreate: async (
+      id: string,
+      ChannelModeratorRequest?: ChannelModeratorRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsModeratorsCreate", "id", id)
+      const localVarPath = `/api/v0/channels/{id}/moderators/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (channel_type !== undefined) {
-                localVarQueryParameter['channel_type'] = channel_type;
-            }
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ChannelModeratorRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Remove the user from the moderator groups for this website
+     * @summary Channel Moderators Destroy
+     * @param {string} id
+     * @param {string} moderator_name
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsDestroy: async (
+      id: string,
+      moderator_name: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsModeratorsDestroy", "id", id)
+      // verify required parameter 'moderator_name' is not null or undefined
+      assertParamExists(
+        "channelsModeratorsDestroy",
+        "moderator_name",
+        moderator_name,
+      )
+      const localVarPath = `/api/v0/channels/{id}/moderators/{moderator_name}/`
+        .replace(`{${"id"}}`, encodeURIComponent(String(id)))
+        .replace(
+          `{${"moderator_name"}}`,
+          encodeURIComponent(String(moderator_name)),
+        )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "DELETE",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators List
+     * @param {string} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsList: async (
+      id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsModeratorsList", "id", id)
+      const localVarPath = `/api/v0/channels/{id}/moderators/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators Create
-         * @param {string} id
-         * @param {ChannelModeratorRequest} [ChannelModeratorRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsCreate: async (id: string, ChannelModeratorRequest?: ChannelModeratorRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsModeratorsCreate', 'id', id)
-            const localVarPath = `/api/v0/channels/{id}/moderators/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Update
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {PatchedChannelWriteRequest} [PatchedChannelWriteRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsPartialUpdate: async (
+      id: number,
+      PatchedChannelWriteRequest?: PatchedChannelWriteRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsPartialUpdate", "id", id)
+      const localVarPath = `/api/v0/channels/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "PATCH",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(ChannelModeratorRequest, localVarRequestOptions, configuration)
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        PatchedChannelWriteRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Remove the user from the moderator groups for this website
-         * @summary Channel Moderators Destroy
-         * @param {string} id
-         * @param {string} moderator_name
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsDestroy: async (id: string, moderator_name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsModeratorsDestroy', 'id', id)
-            // verify required parameter 'moderator_name' is not null or undefined
-            assertParamExists('channelsModeratorsDestroy', 'moderator_name', moderator_name)
-            const localVarPath = `/api/v0/channels/{id}/moderators/{moderator_name}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)))
-                .replace(`{${"moderator_name"}}`, encodeURIComponent(String(moderator_name)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("channelsRetrieve", "id", id)
+      const localVarPath = `/api/v0/channels/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {string} channel_type
+     * @param {string} name
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsTypeRetrieve: async (
+      channel_type: string,
+      name: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'channel_type' is not null or undefined
+      assertParamExists("channelsTypeRetrieve", "channel_type", channel_type)
+      // verify required parameter 'name' is not null or undefined
+      assertParamExists("channelsTypeRetrieve", "name", name)
+      const localVarPath = `/api/v0/channels/type/{channel_type}/{name}/`
+        .replace(
+          `{${"channel_type"}}`,
+          encodeURIComponent(String(channel_type)),
+        )
+        .replace(`{${"name"}}`, encodeURIComponent(String(name)))
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators List
-         * @param {string} id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsList: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsModeratorsList', 'id', id)
-            const localVarPath = `/api/v0/channels/{id}/moderators/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Update
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {PatchedChannelWriteRequest} [PatchedChannelWriteRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsPartialUpdate: async (id: number, PatchedChannelWriteRequest?: PatchedChannelWriteRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsPartialUpdate', 'id', id)
-            const localVarPath = `/api/v0/channels/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(PatchedChannelWriteRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Retrieve
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('channelsRetrieve', 'id', id)
-            const localVarPath = `/api/v0/channels/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {string} channel_type
-         * @param {string} name
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsTypeRetrieve: async (channel_type: string, name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'channel_type' is not null or undefined
-            assertParamExists('channelsTypeRetrieve', 'channel_type', channel_type)
-            // verify required parameter 'name' is not null or undefined
-            assertParamExists('channelsTypeRetrieve', 'name', name)
-            const localVarPath = `/api/v0/channels/type/{channel_type}/{name}/`
-                .replace(`{${"channel_type"}}`, encodeURIComponent(String(channel_type)))
-                .replace(`{${"name"}}`, encodeURIComponent(String(name)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * ChannelsApi - functional programming interface
  * @export
  */
-export const ChannelsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = ChannelsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {string} channel_type
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsCountsList(channel_type: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ChannelCounts>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsCountsList(channel_type, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsCountsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Create
-         * @param {ChannelCreateRequest} ChannelCreateRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsCreate(ChannelCreateRequest: ChannelCreateRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsCreate(ChannelCreateRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsCreate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Destroy
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsDestroy(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsDestroy(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsDestroy']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary List
-         * @param {ChannelsListChannelTypeEnum} [channel_type] * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsList(channel_type?: ChannelsListChannelTypeEnum, limit?: number, offset?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PaginatedChannelList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsList(channel_type, limit, offset, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators Create
-         * @param {string} id
-         * @param {ChannelModeratorRequest} [ChannelModeratorRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsModeratorsCreate(id: string, ChannelModeratorRequest?: ChannelModeratorRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ChannelModerator>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsModeratorsCreate(id, ChannelModeratorRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsModeratorsCreate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Remove the user from the moderator groups for this website
-         * @summary Channel Moderators Destroy
-         * @param {string} id
-         * @param {string} moderator_name
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsModeratorsDestroy(id: string, moderator_name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsModeratorsDestroy(id, moderator_name, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsModeratorsDestroy']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators List
-         * @param {string} id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsModeratorsList(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ChannelModerator>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsModeratorsList(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsModeratorsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Update
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {PatchedChannelWriteRequest} [PatchedChannelWriteRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsPartialUpdate(id: number, PatchedChannelWriteRequest?: PatchedChannelWriteRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsPartialUpdate(id, PatchedChannelWriteRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsPartialUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Retrieve
-         * @param {number} id A unique integer value identifying this channel.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsRetrieve(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {string} channel_type
-         * @param {string} name
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async channelsTypeRetrieve(channel_type: string, name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.channelsTypeRetrieve(channel_type, name, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ChannelsApi.channelsTypeRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const ChannelsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = ChannelsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {string} channel_type
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsCountsList(
+      channel_type: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<Array<ChannelCounts>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsCountsList(
+          channel_type,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsCountsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Create
+     * @param {ChannelCreateRequest} ChannelCreateRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsCreate(
+      ChannelCreateRequest: ChannelCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.channelsCreate(
+        ChannelCreateRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Destroy
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsDestroy(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.channelsDestroy(
+        id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsDestroy"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary List
+     * @param {ChannelsListChannelTypeEnum} [channel_type] * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsList(
+      channel_type?: ChannelsListChannelTypeEnum,
+      limit?: number,
+      offset?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedChannelList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.channelsList(
+        channel_type,
+        limit,
+        offset,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators Create
+     * @param {string} id
+     * @param {ChannelModeratorRequest} [ChannelModeratorRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsModeratorsCreate(
+      id: string,
+      ChannelModeratorRequest?: ChannelModeratorRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ChannelModerator>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsModeratorsCreate(
+          id,
+          ChannelModeratorRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsModeratorsCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Remove the user from the moderator groups for this website
+     * @summary Channel Moderators Destroy
+     * @param {string} id
+     * @param {string} moderator_name
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsModeratorsDestroy(
+      id: string,
+      moderator_name: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsModeratorsDestroy(
+          id,
+          moderator_name,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsModeratorsDestroy"]?.[index]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators List
+     * @param {string} id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsModeratorsList(
+      id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<Array<ChannelModerator>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsModeratorsList(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsModeratorsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Update
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {PatchedChannelWriteRequest} [PatchedChannelWriteRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsPartialUpdate(
+      id: number,
+      PatchedChannelWriteRequest?: PatchedChannelWriteRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsPartialUpdate(
+          id,
+          PatchedChannelWriteRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsPartialUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this channel.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsRetrieve(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {string} channel_type
+     * @param {string} name
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsTypeRetrieve(
+      channel_type: string,
+      name: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Channel>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsTypeRetrieve(
+          channel_type,
+          name,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ChannelsApi.channelsTypeRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * ChannelsApi - factory interface
  * @export
  */
-export const ChannelsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = ChannelsApiFp(configuration)
-    return {
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {ChannelsApiChannelsCountsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsCountsList(requestParameters: ChannelsApiChannelsCountsListRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<ChannelCounts>> {
-            return localVarFp.channelsCountsList(requestParameters.channel_type, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Create
-         * @param {ChannelsApiChannelsCreateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsCreate(requestParameters: ChannelsApiChannelsCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<Channel> {
-            return localVarFp.channelsCreate(requestParameters.ChannelCreateRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Destroy
-         * @param {ChannelsApiChannelsDestroyRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsDestroy(requestParameters: ChannelsApiChannelsDestroyRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.channelsDestroy(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary List
-         * @param {ChannelsApiChannelsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsList(requestParameters: ChannelsApiChannelsListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<PaginatedChannelList> {
-            return localVarFp.channelsList(requestParameters.channel_type, requestParameters.limit, requestParameters.offset, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators Create
-         * @param {ChannelsApiChannelsModeratorsCreateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsCreate(requestParameters: ChannelsApiChannelsModeratorsCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<ChannelModerator> {
-            return localVarFp.channelsModeratorsCreate(requestParameters.id, requestParameters.ChannelModeratorRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Remove the user from the moderator groups for this website
-         * @summary Channel Moderators Destroy
-         * @param {ChannelsApiChannelsModeratorsDestroyRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsDestroy(requestParameters: ChannelsApiChannelsModeratorsDestroyRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.channelsModeratorsDestroy(requestParameters.id, requestParameters.moderator_name, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for listing and adding moderators
-         * @summary Channel Moderators List
-         * @param {ChannelsApiChannelsModeratorsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsModeratorsList(requestParameters: ChannelsApiChannelsModeratorsListRequest, options?: RawAxiosRequestConfig): AxiosPromise<Array<ChannelModerator>> {
-            return localVarFp.channelsModeratorsList(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Update
-         * @param {ChannelsApiChannelsPartialUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsPartialUpdate(requestParameters: ChannelsApiChannelsPartialUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<Channel> {
-            return localVarFp.channelsPartialUpdate(requestParameters.id, requestParameters.PatchedChannelWriteRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-         * @summary Retrieve
-         * @param {ChannelsApiChannelsRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsRetrieve(requestParameters: ChannelsApiChannelsRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<Channel> {
-            return localVarFp.channelsRetrieve(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for retrieving an individual channel by type and name
-         * @summary Channel Detail Lookup by channel type and name
-         * @param {ChannelsApiChannelsTypeRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        channelsTypeRetrieve(requestParameters: ChannelsApiChannelsTypeRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<Channel> {
-            return localVarFp.channelsTypeRetrieve(requestParameters.channel_type, requestParameters.name, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const ChannelsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ChannelsApiFp(configuration)
+  return {
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {ChannelsApiChannelsCountsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsCountsList(
+      requestParameters: ChannelsApiChannelsCountsListRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Array<ChannelCounts>> {
+      return localVarFp
+        .channelsCountsList(requestParameters.channel_type, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Create
+     * @param {ChannelsApiChannelsCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsCreate(
+      requestParameters: ChannelsApiChannelsCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Channel> {
+      return localVarFp
+        .channelsCreate(requestParameters.ChannelCreateRequest, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Destroy
+     * @param {ChannelsApiChannelsDestroyRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsDestroy(
+      requestParameters: ChannelsApiChannelsDestroyRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .channelsDestroy(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary List
+     * @param {ChannelsApiChannelsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsList(
+      requestParameters: ChannelsApiChannelsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedChannelList> {
+      return localVarFp
+        .channelsList(
+          requestParameters.channel_type,
+          requestParameters.limit,
+          requestParameters.offset,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators Create
+     * @param {ChannelsApiChannelsModeratorsCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsCreate(
+      requestParameters: ChannelsApiChannelsModeratorsCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ChannelModerator> {
+      return localVarFp
+        .channelsModeratorsCreate(
+          requestParameters.id,
+          requestParameters.ChannelModeratorRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Remove the user from the moderator groups for this website
+     * @summary Channel Moderators Destroy
+     * @param {ChannelsApiChannelsModeratorsDestroyRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsDestroy(
+      requestParameters: ChannelsApiChannelsModeratorsDestroyRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .channelsModeratorsDestroy(
+          requestParameters.id,
+          requestParameters.moderator_name,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for listing and adding moderators
+     * @summary Channel Moderators List
+     * @param {ChannelsApiChannelsModeratorsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsModeratorsList(
+      requestParameters: ChannelsApiChannelsModeratorsListRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Array<ChannelModerator>> {
+      return localVarFp
+        .channelsModeratorsList(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Update
+     * @param {ChannelsApiChannelsPartialUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsPartialUpdate(
+      requestParameters: ChannelsApiChannelsPartialUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Channel> {
+      return localVarFp
+        .channelsPartialUpdate(
+          requestParameters.id,
+          requestParameters.PatchedChannelWriteRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+     * @summary Retrieve
+     * @param {ChannelsApiChannelsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsRetrieve(
+      requestParameters: ChannelsApiChannelsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Channel> {
+      return localVarFp
+        .channelsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for retrieving an individual channel by type and name
+     * @summary Channel Detail Lookup by channel type and name
+     * @param {ChannelsApiChannelsTypeRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsTypeRetrieve(
+      requestParameters: ChannelsApiChannelsTypeRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Channel> {
+      return localVarFp
+        .channelsTypeRetrieve(
+          requestParameters.channel_type,
+          requestParameters.name,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for channelsCountsList operation in ChannelsApi.
@@ -7579,12 +7992,12 @@ export const ChannelsApiFactory = function (configuration?: Configuration, baseP
  * @interface ChannelsApiChannelsCountsListRequest
  */
 export interface ChannelsApiChannelsCountsListRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsCountsList
-     */
-    readonly channel_type: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsCountsList
+   */
+  readonly channel_type: string
 }
 
 /**
@@ -7593,12 +8006,12 @@ export interface ChannelsApiChannelsCountsListRequest {
  * @interface ChannelsApiChannelsCreateRequest
  */
 export interface ChannelsApiChannelsCreateRequest {
-    /**
-     *
-     * @type {ChannelCreateRequest}
-     * @memberof ChannelsApiChannelsCreate
-     */
-    readonly ChannelCreateRequest: ChannelCreateRequest
+  /**
+   *
+   * @type {ChannelCreateRequest}
+   * @memberof ChannelsApiChannelsCreate
+   */
+  readonly ChannelCreateRequest: ChannelCreateRequest
 }
 
 /**
@@ -7607,12 +8020,12 @@ export interface ChannelsApiChannelsCreateRequest {
  * @interface ChannelsApiChannelsDestroyRequest
  */
 export interface ChannelsApiChannelsDestroyRequest {
-    /**
-     * A unique integer value identifying this channel.
-     * @type {number}
-     * @memberof ChannelsApiChannelsDestroy
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this channel.
+   * @type {number}
+   * @memberof ChannelsApiChannelsDestroy
+   */
+  readonly id: number
 }
 
 /**
@@ -7621,26 +8034,26 @@ export interface ChannelsApiChannelsDestroyRequest {
  * @interface ChannelsApiChannelsListRequest
  */
 export interface ChannelsApiChannelsListRequest {
-    /**
-     * * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
-     * @type {'department' | 'pathway' | 'topic' | 'unit'}
-     * @memberof ChannelsApiChannelsList
-     */
-    readonly channel_type?: ChannelsListChannelTypeEnum
+  /**
+   * * &#x60;topic&#x60; - Topic * &#x60;department&#x60; - Department * &#x60;unit&#x60; - Unit * &#x60;pathway&#x60; - Pathway
+   * @type {'department' | 'pathway' | 'topic' | 'unit'}
+   * @memberof ChannelsApiChannelsList
+   */
+  readonly channel_type?: ChannelsListChannelTypeEnum
 
-    /**
-     * Number of results to return per page.
-     * @type {number}
-     * @memberof ChannelsApiChannelsList
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof ChannelsApiChannelsList
+   */
+  readonly limit?: number
 
-    /**
-     * The initial index from which to return the results.
-     * @type {number}
-     * @memberof ChannelsApiChannelsList
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof ChannelsApiChannelsList
+   */
+  readonly offset?: number
 }
 
 /**
@@ -7649,19 +8062,19 @@ export interface ChannelsApiChannelsListRequest {
  * @interface ChannelsApiChannelsModeratorsCreateRequest
  */
 export interface ChannelsApiChannelsModeratorsCreateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsModeratorsCreate
-     */
-    readonly id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsModeratorsCreate
+   */
+  readonly id: string
 
-    /**
-     *
-     * @type {ChannelModeratorRequest}
-     * @memberof ChannelsApiChannelsModeratorsCreate
-     */
-    readonly ChannelModeratorRequest?: ChannelModeratorRequest
+  /**
+   *
+   * @type {ChannelModeratorRequest}
+   * @memberof ChannelsApiChannelsModeratorsCreate
+   */
+  readonly ChannelModeratorRequest?: ChannelModeratorRequest
 }
 
 /**
@@ -7670,19 +8083,19 @@ export interface ChannelsApiChannelsModeratorsCreateRequest {
  * @interface ChannelsApiChannelsModeratorsDestroyRequest
  */
 export interface ChannelsApiChannelsModeratorsDestroyRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsModeratorsDestroy
-     */
-    readonly id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsModeratorsDestroy
+   */
+  readonly id: string
 
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsModeratorsDestroy
-     */
-    readonly moderator_name: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsModeratorsDestroy
+   */
+  readonly moderator_name: string
 }
 
 /**
@@ -7691,12 +8104,12 @@ export interface ChannelsApiChannelsModeratorsDestroyRequest {
  * @interface ChannelsApiChannelsModeratorsListRequest
  */
 export interface ChannelsApiChannelsModeratorsListRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsModeratorsList
-     */
-    readonly id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsModeratorsList
+   */
+  readonly id: string
 }
 
 /**
@@ -7705,19 +8118,19 @@ export interface ChannelsApiChannelsModeratorsListRequest {
  * @interface ChannelsApiChannelsPartialUpdateRequest
  */
 export interface ChannelsApiChannelsPartialUpdateRequest {
-    /**
-     * A unique integer value identifying this channel.
-     * @type {number}
-     * @memberof ChannelsApiChannelsPartialUpdate
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this channel.
+   * @type {number}
+   * @memberof ChannelsApiChannelsPartialUpdate
+   */
+  readonly id: number
 
-    /**
-     *
-     * @type {PatchedChannelWriteRequest}
-     * @memberof ChannelsApiChannelsPartialUpdate
-     */
-    readonly PatchedChannelWriteRequest?: PatchedChannelWriteRequest
+  /**
+   *
+   * @type {PatchedChannelWriteRequest}
+   * @memberof ChannelsApiChannelsPartialUpdate
+   */
+  readonly PatchedChannelWriteRequest?: PatchedChannelWriteRequest
 }
 
 /**
@@ -7726,12 +8139,12 @@ export interface ChannelsApiChannelsPartialUpdateRequest {
  * @interface ChannelsApiChannelsRetrieveRequest
  */
 export interface ChannelsApiChannelsRetrieveRequest {
-    /**
-     * A unique integer value identifying this channel.
-     * @type {number}
-     * @memberof ChannelsApiChannelsRetrieve
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this channel.
+   * @type {number}
+   * @memberof ChannelsApiChannelsRetrieve
+   */
+  readonly id: number
 }
 
 /**
@@ -7740,19 +8153,19 @@ export interface ChannelsApiChannelsRetrieveRequest {
  * @interface ChannelsApiChannelsTypeRetrieveRequest
  */
 export interface ChannelsApiChannelsTypeRetrieveRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsTypeRetrieve
-     */
-    readonly channel_type: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsTypeRetrieve
+   */
+  readonly channel_type: string
 
-    /**
-     *
-     * @type {string}
-     * @memberof ChannelsApiChannelsTypeRetrieve
-     */
-    readonly name: string
+  /**
+   *
+   * @type {string}
+   * @memberof ChannelsApiChannelsTypeRetrieve
+   */
+  readonly name: string
 }
 
 /**
@@ -7762,215 +8175,320 @@ export interface ChannelsApiChannelsTypeRetrieveRequest {
  * @extends {BaseAPI}
  */
 export class ChannelsApi extends BaseAPI {
-    /**
-     * View for retrieving an individual channel by type and name
-     * @summary Channel Detail Lookup by channel type and name
-     * @param {ChannelsApiChannelsCountsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsCountsList(requestParameters: ChannelsApiChannelsCountsListRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsCountsList(requestParameters.channel_type, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for retrieving an individual channel by type and name
+   * @summary Channel Detail Lookup by channel type and name
+   * @param {ChannelsApiChannelsCountsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsCountsList(
+    requestParameters: ChannelsApiChannelsCountsListRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsCountsList(requestParameters.channel_type, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-     * @summary Create
-     * @param {ChannelsApiChannelsCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsCreate(requestParameters: ChannelsApiChannelsCreateRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsCreate(requestParameters.ChannelCreateRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+   * @summary Create
+   * @param {ChannelsApiChannelsCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsCreate(
+    requestParameters: ChannelsApiChannelsCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsCreate(requestParameters.ChannelCreateRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-     * @summary Destroy
-     * @param {ChannelsApiChannelsDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsDestroy(requestParameters: ChannelsApiChannelsDestroyRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsDestroy(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+   * @summary Destroy
+   * @param {ChannelsApiChannelsDestroyRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsDestroy(
+    requestParameters: ChannelsApiChannelsDestroyRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsDestroy(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-     * @summary List
-     * @param {ChannelsApiChannelsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsList(requestParameters: ChannelsApiChannelsListRequest = {}, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsList(requestParameters.channel_type, requestParameters.limit, requestParameters.offset, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+   * @summary List
+   * @param {ChannelsApiChannelsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsList(
+    requestParameters: ChannelsApiChannelsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsList(
+        requestParameters.channel_type,
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for listing and adding moderators
-     * @summary Channel Moderators Create
-     * @param {ChannelsApiChannelsModeratorsCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsModeratorsCreate(requestParameters: ChannelsApiChannelsModeratorsCreateRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsModeratorsCreate(requestParameters.id, requestParameters.ChannelModeratorRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for listing and adding moderators
+   * @summary Channel Moderators Create
+   * @param {ChannelsApiChannelsModeratorsCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsModeratorsCreate(
+    requestParameters: ChannelsApiChannelsModeratorsCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsModeratorsCreate(
+        requestParameters.id,
+        requestParameters.ChannelModeratorRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Remove the user from the moderator groups for this website
-     * @summary Channel Moderators Destroy
-     * @param {ChannelsApiChannelsModeratorsDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsModeratorsDestroy(requestParameters: ChannelsApiChannelsModeratorsDestroyRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsModeratorsDestroy(requestParameters.id, requestParameters.moderator_name, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Remove the user from the moderator groups for this website
+   * @summary Channel Moderators Destroy
+   * @param {ChannelsApiChannelsModeratorsDestroyRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsModeratorsDestroy(
+    requestParameters: ChannelsApiChannelsModeratorsDestroyRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsModeratorsDestroy(
+        requestParameters.id,
+        requestParameters.moderator_name,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for listing and adding moderators
-     * @summary Channel Moderators List
-     * @param {ChannelsApiChannelsModeratorsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsModeratorsList(requestParameters: ChannelsApiChannelsModeratorsListRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsModeratorsList(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for listing and adding moderators
+   * @summary Channel Moderators List
+   * @param {ChannelsApiChannelsModeratorsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsModeratorsList(
+    requestParameters: ChannelsApiChannelsModeratorsListRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsModeratorsList(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-     * @summary Update
-     * @param {ChannelsApiChannelsPartialUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsPartialUpdate(requestParameters: ChannelsApiChannelsPartialUpdateRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsPartialUpdate(requestParameters.id, requestParameters.PatchedChannelWriteRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+   * @summary Update
+   * @param {ChannelsApiChannelsPartialUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsPartialUpdate(
+    requestParameters: ChannelsApiChannelsPartialUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsPartialUpdate(
+        requestParameters.id,
+        requestParameters.PatchedChannelWriteRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
-     * @summary Retrieve
-     * @param {ChannelsApiChannelsRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsRetrieve(requestParameters: ChannelsApiChannelsRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsRetrieve(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * CRUD Operations related to Channels. Channels may represent groups or organizations at MIT and are a high-level categorization of content.
+   * @summary Retrieve
+   * @param {ChannelsApiChannelsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsRetrieve(
+    requestParameters: ChannelsApiChannelsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for retrieving an individual channel by type and name
-     * @summary Channel Detail Lookup by channel type and name
-     * @param {ChannelsApiChannelsTypeRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ChannelsApi
-     */
-    public channelsTypeRetrieve(requestParameters: ChannelsApiChannelsTypeRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return ChannelsApiFp(this.configuration).channelsTypeRetrieve(requestParameters.channel_type, requestParameters.name, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for retrieving an individual channel by type and name
+   * @summary Channel Detail Lookup by channel type and name
+   * @param {ChannelsApiChannelsTypeRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ChannelsApi
+   */
+  public channelsTypeRetrieve(
+    requestParameters: ChannelsApiChannelsTypeRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsTypeRetrieve(
+        requestParameters.channel_type,
+        requestParameters.name,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
 
 /**
  * @export
  */
 export const ChannelsListChannelTypeEnum = {
-    Department: 'department',
-    Pathway: 'pathway',
-    Topic: 'topic',
-    Unit: 'unit'
-} as const;
-export type ChannelsListChannelTypeEnum = typeof ChannelsListChannelTypeEnum[keyof typeof ChannelsListChannelTypeEnum];
-
+  Department: "department",
+  Pathway: "pathway",
+  Topic: "topic",
+  Unit: "unit",
+} as const
+export type ChannelsListChannelTypeEnum =
+  (typeof ChannelsListChannelTypeEnum)[keyof typeof ChannelsListChannelTypeEnum]
 
 /**
  * CkeditorApi - axios parameter creator
  * @export
  */
-export const CkeditorApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Get the settings response
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        ckeditorRetrieve: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/ckeditor`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const CkeditorApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get the settings response
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    ckeditorRetrieve: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/ckeditor`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * CkeditorApi - functional programming interface
  * @export
  */
-export const CkeditorApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = CkeditorApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Get the settings response
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async ckeditorRetrieve(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CKEditorSettings>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.ckeditorRetrieve(options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['CkeditorApi.ckeditorRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const CkeditorApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = CkeditorApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get the settings response
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async ckeditorRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<CKEditorSettings>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.ckeditorRetrieve(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["CkeditorApi.ckeditorRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * CkeditorApi - factory interface
  * @export
  */
-export const CkeditorApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = CkeditorApiFp(configuration)
-    return {
-        /**
-         * Get the settings response
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        ckeditorRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<CKEditorSettings> {
-            return localVarFp.ckeditorRetrieve(options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const CkeditorApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = CkeditorApiFp(configuration)
+  return {
+    /**
+     * Get the settings response
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    ckeditorRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<CKEditorSettings> {
+      return localVarFp
+        .ckeditorRetrieve(options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * CkeditorApi - object-oriented interface
@@ -7979,95 +8497,133 @@ export const CkeditorApiFactory = function (configuration?: Configuration, baseP
  * @extends {BaseAPI}
  */
 export class CkeditorApi extends BaseAPI {
-    /**
-     * Get the settings response
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof CkeditorApi
-     */
-    public ckeditorRetrieve(options?: RawAxiosRequestConfig) {
-        return CkeditorApiFp(this.configuration).ckeditorRetrieve(options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Get the settings response
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof CkeditorApi
+   */
+  public ckeditorRetrieve(options?: RawAxiosRequestConfig) {
+    return CkeditorApiFp(this.configuration)
+      .ckeditorRetrieve(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * LearningResourcesSearchAdminParamsApi - axios parameter creator
  * @export
  */
-export const LearningResourcesSearchAdminParamsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Learning resource search default admin param values
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        learningResourcesSearchAdminParamsRetrieve: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/learning_resources_search_admin_params/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const LearningResourcesSearchAdminParamsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Learning resource search default admin param values
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesSearchAdminParamsRetrieve: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/learning_resources_search_admin_params/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * LearningResourcesSearchAdminParamsApi - functional programming interface
  * @export
  */
-export const LearningResourcesSearchAdminParamsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = LearningResourcesSearchAdminParamsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Learning resource search default admin param values
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async learningResourcesSearchAdminParamsRetrieve(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.learningResourcesSearchAdminParamsRetrieve(options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['LearningResourcesSearchAdminParamsApi.learningResourcesSearchAdminParamsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const LearningResourcesSearchAdminParamsApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    LearningResourcesSearchAdminParamsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Learning resource search default admin param values
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async learningResourcesSearchAdminParamsRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.learningResourcesSearchAdminParamsRetrieve(
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "LearningResourcesSearchAdminParamsApi.learningResourcesSearchAdminParamsRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * LearningResourcesSearchAdminParamsApi - factory interface
  * @export
  */
-export const LearningResourcesSearchAdminParamsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = LearningResourcesSearchAdminParamsApiFp(configuration)
-    return {
-        /**
-         * Learning resource search default admin param values
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        learningResourcesSearchAdminParamsRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.learningResourcesSearchAdminParamsRetrieve(options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const LearningResourcesSearchAdminParamsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = LearningResourcesSearchAdminParamsApiFp(configuration)
+  return {
+    /**
+     * Learning resource search default admin param values
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    learningResourcesSearchAdminParamsRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .learningResourcesSearchAdminParamsRetrieve(options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * LearningResourcesSearchAdminParamsApi - object-oriented interface
@@ -8076,174 +8632,261 @@ export const LearningResourcesSearchAdminParamsApiFactory = function (configurat
  * @extends {BaseAPI}
  */
 export class LearningResourcesSearchAdminParamsApi extends BaseAPI {
-    /**
-     * Learning resource search default admin param values
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof LearningResourcesSearchAdminParamsApi
-     */
-    public learningResourcesSearchAdminParamsRetrieve(options?: RawAxiosRequestConfig) {
-        return LearningResourcesSearchAdminParamsApiFp(this.configuration).learningResourcesSearchAdminParamsRetrieve(options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Learning resource search default admin param values
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof LearningResourcesSearchAdminParamsApi
+   */
+  public learningResourcesSearchAdminParamsRetrieve(
+    options?: RawAxiosRequestConfig,
+  ) {
+    return LearningResourcesSearchAdminParamsApiFp(this.configuration)
+      .learningResourcesSearchAdminParamsRetrieve(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * NewsEventsApi - axios parameter creator
  * @export
  */
-export const NewsEventsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Get a paginated list of feed items.
-         * @param {Array<NewsEventsListFeedTypeEnum>} [feed_type] The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {NewsEventsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsList: async (feed_type?: Array<NewsEventsListFeedTypeEnum>, limit?: number, offset?: number, sortby?: NewsEventsListSortbyEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/news_events/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const NewsEventsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get a paginated list of feed items.
+     * @param {Array<NewsEventsListFeedTypeEnum>} [feed_type] The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {NewsEventsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsList: async (
+      feed_type?: Array<NewsEventsListFeedTypeEnum>,
+      limit?: number,
+      offset?: number,
+      sortby?: NewsEventsListSortbyEnum,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/news_events/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (feed_type) {
-                localVarQueryParameter['feed_type'] = feed_type;
-            }
+      if (feed_type) {
+        localVarQueryParameter["feed_type"] = feed_type
+      }
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
-            if (sortby !== undefined) {
-                localVarQueryParameter['sortby'] = sortby;
-            }
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a single feed item.
+     * @param {number} id A unique integer value identifying this feed item.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("newsEventsRetrieve", "id", id)
+      const localVarPath = `/api/v0/news_events/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieve a single feed item.
-         * @param {number} id A unique integer value identifying this feed item.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('newsEventsRetrieve', 'id', id)
-            const localVarPath = `/api/v0/news_events/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * NewsEventsApi - functional programming interface
  * @export
  */
-export const NewsEventsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = NewsEventsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Get a paginated list of feed items.
-         * @param {Array<NewsEventsListFeedTypeEnum>} [feed_type] The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {NewsEventsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async newsEventsList(feed_type?: Array<NewsEventsListFeedTypeEnum>, limit?: number, offset?: number, sortby?: NewsEventsListSortbyEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PaginatedFeedItemList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.newsEventsList(feed_type, limit, offset, sortby, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['NewsEventsApi.newsEventsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Retrieve a single feed item.
-         * @param {number} id A unique integer value identifying this feed item.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async newsEventsRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FeedItem>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.newsEventsRetrieve(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['NewsEventsApi.newsEventsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const NewsEventsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    NewsEventsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get a paginated list of feed items.
+     * @param {Array<NewsEventsListFeedTypeEnum>} [feed_type] The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {NewsEventsListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async newsEventsList(
+      feed_type?: Array<NewsEventsListFeedTypeEnum>,
+      limit?: number,
+      offset?: number,
+      sortby?: NewsEventsListSortbyEnum,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedFeedItemList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.newsEventsList(
+        feed_type,
+        limit,
+        offset,
+        sortby,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["NewsEventsApi.newsEventsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a single feed item.
+     * @param {number} id A unique integer value identifying this feed item.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async newsEventsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<FeedItem>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.newsEventsRetrieve(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["NewsEventsApi.newsEventsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * NewsEventsApi - factory interface
  * @export
  */
-export const NewsEventsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = NewsEventsApiFp(configuration)
-    return {
-        /**
-         * Get a paginated list of feed items.
-         * @param {NewsEventsApiNewsEventsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsList(requestParameters: NewsEventsApiNewsEventsListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<PaginatedFeedItemList> {
-            return localVarFp.newsEventsList(requestParameters.feed_type, requestParameters.limit, requestParameters.offset, requestParameters.sortby, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieve a single feed item.
-         * @param {NewsEventsApiNewsEventsRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsRetrieve(requestParameters: NewsEventsApiNewsEventsRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<FeedItem> {
-            return localVarFp.newsEventsRetrieve(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const NewsEventsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = NewsEventsApiFp(configuration)
+  return {
+    /**
+     * Get a paginated list of feed items.
+     * @param {NewsEventsApiNewsEventsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsList(
+      requestParameters: NewsEventsApiNewsEventsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedFeedItemList> {
+      return localVarFp
+        .newsEventsList(
+          requestParameters.feed_type,
+          requestParameters.limit,
+          requestParameters.offset,
+          requestParameters.sortby,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a single feed item.
+     * @param {NewsEventsApiNewsEventsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsRetrieve(
+      requestParameters: NewsEventsApiNewsEventsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<FeedItem> {
+      return localVarFp
+        .newsEventsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for newsEventsList operation in NewsEventsApi.
@@ -8251,33 +8894,33 @@ export const NewsEventsApiFactory = function (configuration?: Configuration, bas
  * @interface NewsEventsApiNewsEventsListRequest
  */
 export interface NewsEventsApiNewsEventsListRequest {
-    /**
-     * The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-     * @type {Array<'events' | 'news'>}
-     * @memberof NewsEventsApiNewsEventsList
-     */
-    readonly feed_type?: Array<NewsEventsListFeedTypeEnum>
+  /**
+   * The type of item  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+   * @type {Array<'events' | 'news'>}
+   * @memberof NewsEventsApiNewsEventsList
+   */
+  readonly feed_type?: Array<NewsEventsListFeedTypeEnum>
 
-    /**
-     * Number of results to return per page.
-     * @type {number}
-     * @memberof NewsEventsApiNewsEventsList
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof NewsEventsApiNewsEventsList
+   */
+  readonly limit?: number
 
-    /**
-     * The initial index from which to return the results.
-     * @type {number}
-     * @memberof NewsEventsApiNewsEventsList
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof NewsEventsApiNewsEventsList
+   */
+  readonly offset?: number
 
-    /**
-     * Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
-     * @type {'-event_date' | '-id' | '-news_date' | 'event_date' | 'id' | 'news_date'}
-     * @memberof NewsEventsApiNewsEventsList
-     */
-    readonly sortby?: NewsEventsListSortbyEnum
+  /**
+   * Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;event_date&#x60; - Event date ascending * &#x60;-event_date&#x60; - Event date  descending * &#x60;news_date&#x60; - Creation date ascending * &#x60;-news_date&#x60; - Creation date descending
+   * @type {'-event_date' | '-id' | '-news_date' | 'event_date' | 'id' | 'news_date'}
+   * @memberof NewsEventsApiNewsEventsList
+   */
+  readonly sortby?: NewsEventsListSortbyEnum
 }
 
 /**
@@ -8286,12 +8929,12 @@ export interface NewsEventsApiNewsEventsListRequest {
  * @interface NewsEventsApiNewsEventsRetrieveRequest
  */
 export interface NewsEventsApiNewsEventsRetrieveRequest {
-    /**
-     * A unique integer value identifying this feed item.
-     * @type {number}
-     * @memberof NewsEventsApiNewsEventsRetrieve
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this feed item.
+   * @type {number}
+   * @memberof NewsEventsApiNewsEventsRetrieve
+   */
+  readonly id: number
 }
 
 /**
@@ -8301,200 +8944,303 @@ export interface NewsEventsApiNewsEventsRetrieveRequest {
  * @extends {BaseAPI}
  */
 export class NewsEventsApi extends BaseAPI {
-    /**
-     * Get a paginated list of feed items.
-     * @param {NewsEventsApiNewsEventsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof NewsEventsApi
-     */
-    public newsEventsList(requestParameters: NewsEventsApiNewsEventsListRequest = {}, options?: RawAxiosRequestConfig) {
-        return NewsEventsApiFp(this.configuration).newsEventsList(requestParameters.feed_type, requestParameters.limit, requestParameters.offset, requestParameters.sortby, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Get a paginated list of feed items.
+   * @param {NewsEventsApiNewsEventsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof NewsEventsApi
+   */
+  public newsEventsList(
+    requestParameters: NewsEventsApiNewsEventsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return NewsEventsApiFp(this.configuration)
+      .newsEventsList(
+        requestParameters.feed_type,
+        requestParameters.limit,
+        requestParameters.offset,
+        requestParameters.sortby,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Retrieve a single feed item.
-     * @param {NewsEventsApiNewsEventsRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof NewsEventsApi
-     */
-    public newsEventsRetrieve(requestParameters: NewsEventsApiNewsEventsRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return NewsEventsApiFp(this.configuration).newsEventsRetrieve(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a single feed item.
+   * @param {NewsEventsApiNewsEventsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof NewsEventsApi
+   */
+  public newsEventsRetrieve(
+    requestParameters: NewsEventsApiNewsEventsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return NewsEventsApiFp(this.configuration)
+      .newsEventsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
 
 /**
  * @export
  */
 export const NewsEventsListFeedTypeEnum = {
-    Events: 'events',
-    News: 'news'
-} as const;
-export type NewsEventsListFeedTypeEnum = typeof NewsEventsListFeedTypeEnum[keyof typeof NewsEventsListFeedTypeEnum];
+  Events: "events",
+  News: "news",
+} as const
+export type NewsEventsListFeedTypeEnum =
+  (typeof NewsEventsListFeedTypeEnum)[keyof typeof NewsEventsListFeedTypeEnum]
 /**
  * @export
  */
 export const NewsEventsListSortbyEnum = {
-    EventDate: '-event_date',
-    Id: '-id',
-    NewsDate: '-news_date',
-    EventDate2: 'event_date',
-    Id2: 'id',
-    NewsDate2: 'news_date'
-} as const;
-export type NewsEventsListSortbyEnum = typeof NewsEventsListSortbyEnum[keyof typeof NewsEventsListSortbyEnum];
-
+  EventDate: "-event_date",
+  Id: "-id",
+  NewsDate: "-news_date",
+  EventDate2: "event_date",
+  Id2: "id",
+  NewsDate2: "news_date",
+} as const
+export type NewsEventsListSortbyEnum =
+  (typeof NewsEventsListSortbyEnum)[keyof typeof NewsEventsListSortbyEnum]
 
 /**
  * NewsEventsSourcesApi - axios parameter creator
  * @export
  */
-export const NewsEventsSourcesApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Get a paginated list of news/event feed sources.
-         * @param {Array<NewsEventsSourcesListFeedTypeEnum>} [feed_type] The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsSourcesList: async (feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>, limit?: number, offset?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/news_events_sources/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const NewsEventsSourcesApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get a paginated list of news/event feed sources.
+     * @param {Array<NewsEventsSourcesListFeedTypeEnum>} [feed_type] The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsSourcesList: async (
+      feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>,
+      limit?: number,
+      offset?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/news_events_sources/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (feed_type) {
-                localVarQueryParameter['feed_type'] = feed_type;
-            }
+      if (feed_type) {
+        localVarQueryParameter["feed_type"] = feed_type
+      }
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a single news/event feed source.
+     * @param {number} id A unique integer value identifying this feed source.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsSourcesRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("newsEventsSourcesRetrieve", "id", id)
+      const localVarPath = `/api/v0/news_events_sources/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieve a single news/event feed source.
-         * @param {number} id A unique integer value identifying this feed source.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsSourcesRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('newsEventsSourcesRetrieve', 'id', id)
-            const localVarPath = `/api/v0/news_events_sources/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * NewsEventsSourcesApi - functional programming interface
  * @export
  */
-export const NewsEventsSourcesApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = NewsEventsSourcesApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Get a paginated list of news/event feed sources.
-         * @param {Array<NewsEventsSourcesListFeedTypeEnum>} [feed_type] The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async newsEventsSourcesList(feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>, limit?: number, offset?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PaginatedFeedSourceList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.newsEventsSourcesList(feed_type, limit, offset, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['NewsEventsSourcesApi.newsEventsSourcesList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Retrieve a single news/event feed source.
-         * @param {number} id A unique integer value identifying this feed source.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async newsEventsSourcesRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FeedSource>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.newsEventsSourcesRetrieve(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['NewsEventsSourcesApi.newsEventsSourcesRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const NewsEventsSourcesApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    NewsEventsSourcesApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get a paginated list of news/event feed sources.
+     * @param {Array<NewsEventsSourcesListFeedTypeEnum>} [feed_type] The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async newsEventsSourcesList(
+      feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>,
+      limit?: number,
+      offset?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedFeedSourceList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.newsEventsSourcesList(
+          feed_type,
+          limit,
+          offset,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["NewsEventsSourcesApi.newsEventsSourcesList"]?.[
+          index
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a single news/event feed source.
+     * @param {number} id A unique integer value identifying this feed source.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async newsEventsSourcesRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<FeedSource>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.newsEventsSourcesRetrieve(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["NewsEventsSourcesApi.newsEventsSourcesRetrieve"]?.[
+          index
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * NewsEventsSourcesApi - factory interface
  * @export
  */
-export const NewsEventsSourcesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = NewsEventsSourcesApiFp(configuration)
-    return {
-        /**
-         * Get a paginated list of news/event feed sources.
-         * @param {NewsEventsSourcesApiNewsEventsSourcesListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsSourcesList(requestParameters: NewsEventsSourcesApiNewsEventsSourcesListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<PaginatedFeedSourceList> {
-            return localVarFp.newsEventsSourcesList(requestParameters.feed_type, requestParameters.limit, requestParameters.offset, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieve a single news/event feed source.
-         * @param {NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        newsEventsSourcesRetrieve(requestParameters: NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<FeedSource> {
-            return localVarFp.newsEventsSourcesRetrieve(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const NewsEventsSourcesApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = NewsEventsSourcesApiFp(configuration)
+  return {
+    /**
+     * Get a paginated list of news/event feed sources.
+     * @param {NewsEventsSourcesApiNewsEventsSourcesListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsSourcesList(
+      requestParameters: NewsEventsSourcesApiNewsEventsSourcesListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedFeedSourceList> {
+      return localVarFp
+        .newsEventsSourcesList(
+          requestParameters.feed_type,
+          requestParameters.limit,
+          requestParameters.offset,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a single news/event feed source.
+     * @param {NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    newsEventsSourcesRetrieve(
+      requestParameters: NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<FeedSource> {
+      return localVarFp
+        .newsEventsSourcesRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for newsEventsSourcesList operation in NewsEventsSourcesApi.
@@ -8502,26 +9248,26 @@ export const NewsEventsSourcesApiFactory = function (configuration?: Configurati
  * @interface NewsEventsSourcesApiNewsEventsSourcesListRequest
  */
 export interface NewsEventsSourcesApiNewsEventsSourcesListRequest {
-    /**
-     * The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
-     * @type {Array<'events' | 'news'>}
-     * @memberof NewsEventsSourcesApiNewsEventsSourcesList
-     */
-    readonly feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>
+  /**
+   * The type of source  * &#x60;news&#x60; - News * &#x60;events&#x60; - Events
+   * @type {Array<'events' | 'news'>}
+   * @memberof NewsEventsSourcesApiNewsEventsSourcesList
+   */
+  readonly feed_type?: Array<NewsEventsSourcesListFeedTypeEnum>
 
-    /**
-     * Number of results to return per page.
-     * @type {number}
-     * @memberof NewsEventsSourcesApiNewsEventsSourcesList
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof NewsEventsSourcesApiNewsEventsSourcesList
+   */
+  readonly limit?: number
 
-    /**
-     * The initial index from which to return the results.
-     * @type {number}
-     * @memberof NewsEventsSourcesApiNewsEventsSourcesList
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof NewsEventsSourcesApiNewsEventsSourcesList
+   */
+  readonly offset?: number
 }
 
 /**
@@ -8530,12 +9276,12 @@ export interface NewsEventsSourcesApiNewsEventsSourcesListRequest {
  * @interface NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest
  */
 export interface NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest {
-    /**
-     * A unique integer value identifying this feed source.
-     * @type {number}
-     * @memberof NewsEventsSourcesApiNewsEventsSourcesRetrieve
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this feed source.
+   * @type {number}
+   * @memberof NewsEventsSourcesApiNewsEventsSourcesRetrieve
+   */
+  readonly id: number
 }
 
 /**
@@ -8545,239 +9291,384 @@ export interface NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest {
  * @extends {BaseAPI}
  */
 export class NewsEventsSourcesApi extends BaseAPI {
-    /**
-     * Get a paginated list of news/event feed sources.
-     * @param {NewsEventsSourcesApiNewsEventsSourcesListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof NewsEventsSourcesApi
-     */
-    public newsEventsSourcesList(requestParameters: NewsEventsSourcesApiNewsEventsSourcesListRequest = {}, options?: RawAxiosRequestConfig) {
-        return NewsEventsSourcesApiFp(this.configuration).newsEventsSourcesList(requestParameters.feed_type, requestParameters.limit, requestParameters.offset, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Get a paginated list of news/event feed sources.
+   * @param {NewsEventsSourcesApiNewsEventsSourcesListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof NewsEventsSourcesApi
+   */
+  public newsEventsSourcesList(
+    requestParameters: NewsEventsSourcesApiNewsEventsSourcesListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return NewsEventsSourcesApiFp(this.configuration)
+      .newsEventsSourcesList(
+        requestParameters.feed_type,
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Retrieve a single news/event feed source.
-     * @param {NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof NewsEventsSourcesApi
-     */
-    public newsEventsSourcesRetrieve(requestParameters: NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return NewsEventsSourcesApiFp(this.configuration).newsEventsSourcesRetrieve(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a single news/event feed source.
+   * @param {NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof NewsEventsSourcesApi
+   */
+  public newsEventsSourcesRetrieve(
+    requestParameters: NewsEventsSourcesApiNewsEventsSourcesRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return NewsEventsSourcesApiFp(this.configuration)
+      .newsEventsSourcesRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
 
 /**
  * @export
  */
 export const NewsEventsSourcesListFeedTypeEnum = {
-    Events: 'events',
-    News: 'news'
-} as const;
-export type NewsEventsSourcesListFeedTypeEnum = typeof NewsEventsSourcesListFeedTypeEnum[keyof typeof NewsEventsSourcesListFeedTypeEnum];
-
+  Events: "events",
+  News: "news",
+} as const
+export type NewsEventsSourcesListFeedTypeEnum =
+  (typeof NewsEventsSourcesListFeedTypeEnum)[keyof typeof NewsEventsSourcesListFeedTypeEnum]
 
 /**
  * ProfilesApi - axios parameter creator
  * @export
  */
-export const ProfilesApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {PatchedProfileRequest} [PatchedProfileRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesPartialUpdate: async (user__username: string, PatchedProfileRequest?: PatchedProfileRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'user__username' is not null or undefined
-            assertParamExists('profilesPartialUpdate', 'user__username', user__username)
-            const localVarPath = `/api/v0/profiles/{user__username}/`
-                .replace(`{${"user__username"}}`, encodeURIComponent(String(user__username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const ProfilesApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {PatchedProfileRequest} [PatchedProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesPartialUpdate: async (
+      user__username: string,
+      PatchedProfileRequest?: PatchedProfileRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'user__username' is not null or undefined
+      assertParamExists(
+        "profilesPartialUpdate",
+        "user__username",
+        user__username,
+      )
+      const localVarPath = `/api/v0/profiles/{user__username}/`.replace(
+        `{${"user__username"}}`,
+        encodeURIComponent(String(user__username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "PATCH",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        PatchedProfileRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesRetrieve: async (
+      user__username: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'user__username' is not null or undefined
+      assertParamExists("profilesRetrieve", "user__username", user__username)
+      const localVarPath = `/api/v0/profiles/{user__username}/`.replace(
+        `{${"user__username"}}`,
+        encodeURIComponent(String(user__username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(PatchedProfileRequest, localVarRequestOptions, configuration)
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesRetrieve: async (user__username: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'user__username' is not null or undefined
-            assertParamExists('profilesRetrieve', 'user__username', user__username)
-            const localVarPath = `/api/v0/profiles/{user__username}/`
-                .replace(`{${"user__username"}}`, encodeURIComponent(String(user__username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {ProfileRequest} [ProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesUpdate: async (
+      user__username: string,
+      ProfileRequest?: ProfileRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'user__username' is not null or undefined
+      assertParamExists("profilesUpdate", "user__username", user__username)
+      const localVarPath = `/api/v0/profiles/{user__username}/`.replace(
+        `{${"user__username"}}`,
+        encodeURIComponent(String(user__username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        ProfileRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {ProfileRequest} [ProfileRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesUpdate: async (user__username: string, ProfileRequest?: ProfileRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'user__username' is not null or undefined
-            assertParamExists('profilesUpdate', 'user__username', user__username)
-            const localVarPath = `/api/v0/profiles/{user__username}/`
-                .replace(`{${"user__username"}}`, encodeURIComponent(String(user__username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(ProfileRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * ProfilesApi - functional programming interface
  * @export
  */
-export const ProfilesApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = ProfilesApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {PatchedProfileRequest} [PatchedProfileRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async profilesPartialUpdate(user__username: string, PatchedProfileRequest?: PatchedProfileRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.profilesPartialUpdate(user__username, PatchedProfileRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ProfilesApi.profilesPartialUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async profilesRetrieve(user__username: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.profilesRetrieve(user__username, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ProfilesApi.profilesRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for profile
-         * @param {string} user__username
-         * @param {ProfileRequest} [ProfileRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async profilesUpdate(user__username: string, ProfileRequest?: ProfileRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.profilesUpdate(user__username, ProfileRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ProfilesApi.profilesUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const ProfilesApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = ProfilesApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {PatchedProfileRequest} [PatchedProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesPartialUpdate(
+      user__username: string,
+      PatchedProfileRequest?: PatchedProfileRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.profilesPartialUpdate(
+          user__username,
+          PatchedProfileRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesPartialUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesRetrieve(
+      user__username: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.profilesRetrieve(
+          user__username,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for profile
+     * @param {string} user__username
+     * @param {ProfileRequest} [ProfileRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async profilesUpdate(
+      user__username: string,
+      ProfileRequest?: ProfileRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Profile>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.profilesUpdate(
+        user__username,
+        ProfileRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProfilesApi.profilesUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * ProfilesApi - factory interface
  * @export
  */
-export const ProfilesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = ProfilesApiFp(configuration)
-    return {
-        /**
-         * View for profile
-         * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesPartialUpdate(requestParameters: ProfilesApiProfilesPartialUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<Profile> {
-            return localVarFp.profilesPartialUpdate(requestParameters.user__username, requestParameters.PatchedProfileRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for profile
-         * @param {ProfilesApiProfilesRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesRetrieve(requestParameters: ProfilesApiProfilesRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<Profile> {
-            return localVarFp.profilesRetrieve(requestParameters.user__username, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for profile
-         * @param {ProfilesApiProfilesUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        profilesUpdate(requestParameters: ProfilesApiProfilesUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<Profile> {
-            return localVarFp.profilesUpdate(requestParameters.user__username, requestParameters.ProfileRequest, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const ProfilesApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ProfilesApiFp(configuration)
+  return {
+    /**
+     * View for profile
+     * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesPartialUpdate(
+      requestParameters: ProfilesApiProfilesPartialUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesPartialUpdate(
+          requestParameters.user__username,
+          requestParameters.PatchedProfileRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for profile
+     * @param {ProfilesApiProfilesRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesRetrieve(
+      requestParameters: ProfilesApiProfilesRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesRetrieve(requestParameters.user__username, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for profile
+     * @param {ProfilesApiProfilesUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    profilesUpdate(
+      requestParameters: ProfilesApiProfilesUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Profile> {
+      return localVarFp
+        .profilesUpdate(
+          requestParameters.user__username,
+          requestParameters.ProfileRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for profilesPartialUpdate operation in ProfilesApi.
@@ -8785,19 +9676,19 @@ export const ProfilesApiFactory = function (configuration?: Configuration, baseP
  * @interface ProfilesApiProfilesPartialUpdateRequest
  */
 export interface ProfilesApiProfilesPartialUpdateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ProfilesApiProfilesPartialUpdate
-     */
-    readonly user__username: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProfilesApiProfilesPartialUpdate
+   */
+  readonly user__username: string
 
-    /**
-     *
-     * @type {PatchedProfileRequest}
-     * @memberof ProfilesApiProfilesPartialUpdate
-     */
-    readonly PatchedProfileRequest?: PatchedProfileRequest
+  /**
+   *
+   * @type {PatchedProfileRequest}
+   * @memberof ProfilesApiProfilesPartialUpdate
+   */
+  readonly PatchedProfileRequest?: PatchedProfileRequest
 }
 
 /**
@@ -8806,12 +9697,12 @@ export interface ProfilesApiProfilesPartialUpdateRequest {
  * @interface ProfilesApiProfilesRetrieveRequest
  */
 export interface ProfilesApiProfilesRetrieveRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ProfilesApiProfilesRetrieve
-     */
-    readonly user__username: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProfilesApiProfilesRetrieve
+   */
+  readonly user__username: string
 }
 
 /**
@@ -8820,19 +9711,19 @@ export interface ProfilesApiProfilesRetrieveRequest {
  * @interface ProfilesApiProfilesUpdateRequest
  */
 export interface ProfilesApiProfilesUpdateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof ProfilesApiProfilesUpdate
-     */
-    readonly user__username: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProfilesApiProfilesUpdate
+   */
+  readonly user__username: string
 
-    /**
-     *
-     * @type {ProfileRequest}
-     * @memberof ProfilesApiProfilesUpdate
-     */
-    readonly ProfileRequest?: ProfileRequest
+  /**
+   *
+   * @type {ProfileRequest}
+   * @memberof ProfilesApiProfilesUpdate
+   */
+  readonly ProfileRequest?: ProfileRequest
 }
 
 /**
@@ -8842,131 +9733,205 @@ export interface ProfilesApiProfilesUpdateRequest {
  * @extends {BaseAPI}
  */
 export class ProfilesApi extends BaseAPI {
-    /**
-     * View for profile
-     * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProfilesApi
-     */
-    public profilesPartialUpdate(requestParameters: ProfilesApiProfilesPartialUpdateRequest, options?: RawAxiosRequestConfig) {
-        return ProfilesApiFp(this.configuration).profilesPartialUpdate(requestParameters.user__username, requestParameters.PatchedProfileRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for profile
+   * @param {ProfilesApiProfilesPartialUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesPartialUpdate(
+    requestParameters: ProfilesApiProfilesPartialUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProfilesApiFp(this.configuration)
+      .profilesPartialUpdate(
+        requestParameters.user__username,
+        requestParameters.PatchedProfileRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for profile
-     * @param {ProfilesApiProfilesRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProfilesApi
-     */
-    public profilesRetrieve(requestParameters: ProfilesApiProfilesRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return ProfilesApiFp(this.configuration).profilesRetrieve(requestParameters.user__username, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for profile
+   * @param {ProfilesApiProfilesRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesRetrieve(
+    requestParameters: ProfilesApiProfilesRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProfilesApiFp(this.configuration)
+      .profilesRetrieve(requestParameters.user__username, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for profile
-     * @param {ProfilesApiProfilesUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProfilesApi
-     */
-    public profilesUpdate(requestParameters: ProfilesApiProfilesUpdateRequest, options?: RawAxiosRequestConfig) {
-        return ProfilesApiFp(this.configuration).profilesUpdate(requestParameters.user__username, requestParameters.ProfileRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for profile
+   * @param {ProfilesApiProfilesUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProfilesApi
+   */
+  public profilesUpdate(
+    requestParameters: ProfilesApiProfilesUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProfilesApiFp(this.configuration)
+      .profilesUpdate(
+        requestParameters.user__username,
+        requestParameters.ProfileRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * ProgramCertificatesApi - axios parameter creator
  * @export
  */
-export const ProgramCertificatesApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * View for listing program certificates for a user (includes program letter links)
-         * @param {number} [micromasters_program_id]
-         * @param {string} [program_title]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        programCertificatesList: async (micromasters_program_id?: number, program_title?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/program_certificates/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const ProgramCertificatesApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * View for listing program certificates for a user (includes program letter links)
+     * @param {number} [micromasters_program_id]
+     * @param {string} [program_title]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    programCertificatesList: async (
+      micromasters_program_id?: number,
+      program_title?: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/program_certificates/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (micromasters_program_id !== undefined) {
-                localVarQueryParameter['micromasters_program_id'] = micromasters_program_id;
-            }
+      if (micromasters_program_id !== undefined) {
+        localVarQueryParameter["micromasters_program_id"] =
+          micromasters_program_id
+      }
 
-            if (program_title !== undefined) {
-                localVarQueryParameter['program_title'] = program_title;
-            }
+      if (program_title !== undefined) {
+        localVarQueryParameter["program_title"] = program_title
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * ProgramCertificatesApi - functional programming interface
  * @export
  */
-export const ProgramCertificatesApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = ProgramCertificatesApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * View for listing program certificates for a user (includes program letter links)
-         * @param {number} [micromasters_program_id]
-         * @param {string} [program_title]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async programCertificatesList(micromasters_program_id?: number, program_title?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ProgramCertificate>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.programCertificatesList(micromasters_program_id, program_title, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['ProgramCertificatesApi.programCertificatesList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const ProgramCertificatesApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    ProgramCertificatesApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * View for listing program certificates for a user (includes program letter links)
+     * @param {number} [micromasters_program_id]
+     * @param {string} [program_title]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async programCertificatesList(
+      micromasters_program_id?: number,
+      program_title?: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<Array<ProgramCertificate>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.programCertificatesList(
+          micromasters_program_id,
+          program_title,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["ProgramCertificatesApi.programCertificatesList"]?.[
+          index
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * ProgramCertificatesApi - factory interface
  * @export
  */
-export const ProgramCertificatesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = ProgramCertificatesApiFp(configuration)
-    return {
-        /**
-         * View for listing program certificates for a user (includes program letter links)
-         * @param {ProgramCertificatesApiProgramCertificatesListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        programCertificatesList(requestParameters: ProgramCertificatesApiProgramCertificatesListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<Array<ProgramCertificate>> {
-            return localVarFp.programCertificatesList(requestParameters.micromasters_program_id, requestParameters.program_title, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const ProgramCertificatesApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = ProgramCertificatesApiFp(configuration)
+  return {
+    /**
+     * View for listing program certificates for a user (includes program letter links)
+     * @param {ProgramCertificatesApiProgramCertificatesListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    programCertificatesList(
+      requestParameters: ProgramCertificatesApiProgramCertificatesListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Array<ProgramCertificate>> {
+      return localVarFp
+        .programCertificatesList(
+          requestParameters.micromasters_program_id,
+          requestParameters.program_title,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for programCertificatesList operation in ProgramCertificatesApi.
@@ -8974,19 +9939,19 @@ export const ProgramCertificatesApiFactory = function (configuration?: Configura
  * @interface ProgramCertificatesApiProgramCertificatesListRequest
  */
 export interface ProgramCertificatesApiProgramCertificatesListRequest {
-    /**
-     *
-     * @type {number}
-     * @memberof ProgramCertificatesApiProgramCertificatesList
-     */
-    readonly micromasters_program_id?: number
+  /**
+   *
+   * @type {number}
+   * @memberof ProgramCertificatesApiProgramCertificatesList
+   */
+  readonly micromasters_program_id?: number
 
-    /**
-     *
-     * @type {string}
-     * @memberof ProgramCertificatesApiProgramCertificatesList
-     */
-    readonly program_title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramCertificatesApiProgramCertificatesList
+   */
+  readonly program_title?: string
 }
 
 /**
@@ -8996,187 +9961,284 @@ export interface ProgramCertificatesApiProgramCertificatesListRequest {
  * @extends {BaseAPI}
  */
 export class ProgramCertificatesApi extends BaseAPI {
-    /**
-     * View for listing program certificates for a user (includes program letter links)
-     * @param {ProgramCertificatesApiProgramCertificatesListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ProgramCertificatesApi
-     */
-    public programCertificatesList(requestParameters: ProgramCertificatesApiProgramCertificatesListRequest = {}, options?: RawAxiosRequestConfig) {
-        return ProgramCertificatesApiFp(this.configuration).programCertificatesList(requestParameters.micromasters_program_id, requestParameters.program_title, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for listing program certificates for a user (includes program letter links)
+   * @param {ProgramCertificatesApiProgramCertificatesListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProgramCertificatesApi
+   */
+  public programCertificatesList(
+    requestParameters: ProgramCertificatesApiProgramCertificatesListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ProgramCertificatesApiFp(this.configuration)
+      .programCertificatesList(
+        requestParameters.micromasters_program_id,
+        requestParameters.program_title,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * TestimonialsApi - axios parameter creator
  * @export
  */
-export const TestimonialsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * List all testimonials.
-         * @summary List
-         * @param {Array<number>} [channels] The channels the attestation is for
-         * @param {number} [limit] Number of results to return per page.
-         * @param {Array<string>} [offerors] The offerors the attestation is for
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {number} [position] Only show items that exist at this position
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        testimonialsList: async (channels?: Array<number>, limit?: number, offerors?: Array<string>, offset?: number, position?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/testimonials/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const TestimonialsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * List all testimonials.
+     * @summary List
+     * @param {Array<number>} [channels] The channels the attestation is for
+     * @param {number} [limit] Number of results to return per page.
+     * @param {Array<string>} [offerors] The offerors the attestation is for
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {number} [position] Only show items that exist at this position
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    testimonialsList: async (
+      channels?: Array<number>,
+      limit?: number,
+      offerors?: Array<string>,
+      offset?: number,
+      position?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/testimonials/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (channels) {
-                localVarQueryParameter['channels'] = channels;
-            }
+      if (channels) {
+        localVarQueryParameter["channels"] = channels
+      }
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (offerors) {
-                localVarQueryParameter['offerors'] = offerors;
-            }
+      if (offerors) {
+        localVarQueryParameter["offerors"] = offerors
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
-            if (position !== undefined) {
-                localVarQueryParameter['position'] = position;
-            }
+      if (position !== undefined) {
+        localVarQueryParameter["position"] = position
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a testimonial.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this attestation.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    testimonialsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("testimonialsRetrieve", "id", id)
+      const localVarPath = `/api/v0/testimonials/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieve a testimonial.
-         * @summary Retrieve
-         * @param {number} id A unique integer value identifying this attestation.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        testimonialsRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('testimonialsRetrieve', 'id', id)
-            const localVarPath = `/api/v0/testimonials/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * TestimonialsApi - functional programming interface
  * @export
  */
-export const TestimonialsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = TestimonialsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * List all testimonials.
-         * @summary List
-         * @param {Array<number>} [channels] The channels the attestation is for
-         * @param {number} [limit] Number of results to return per page.
-         * @param {Array<string>} [offerors] The offerors the attestation is for
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {number} [position] Only show items that exist at this position
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async testimonialsList(channels?: Array<number>, limit?: number, offerors?: Array<string>, offset?: number, position?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PaginatedAttestationList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.testimonialsList(channels, limit, offerors, offset, position, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['TestimonialsApi.testimonialsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Retrieve a testimonial.
-         * @summary Retrieve
-         * @param {number} id A unique integer value identifying this attestation.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async testimonialsRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Attestation>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.testimonialsRetrieve(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['TestimonialsApi.testimonialsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const TestimonialsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    TestimonialsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * List all testimonials.
+     * @summary List
+     * @param {Array<number>} [channels] The channels the attestation is for
+     * @param {number} [limit] Number of results to return per page.
+     * @param {Array<string>} [offerors] The offerors the attestation is for
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {number} [position] Only show items that exist at this position
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async testimonialsList(
+      channels?: Array<number>,
+      limit?: number,
+      offerors?: Array<string>,
+      offset?: number,
+      position?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedAttestationList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.testimonialsList(
+          channels,
+          limit,
+          offerors,
+          offset,
+          position,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TestimonialsApi.testimonialsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a testimonial.
+     * @summary Retrieve
+     * @param {number} id A unique integer value identifying this attestation.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async testimonialsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Attestation>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.testimonialsRetrieve(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TestimonialsApi.testimonialsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * TestimonialsApi - factory interface
  * @export
  */
-export const TestimonialsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = TestimonialsApiFp(configuration)
-    return {
-        /**
-         * List all testimonials.
-         * @summary List
-         * @param {TestimonialsApiTestimonialsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        testimonialsList(requestParameters: TestimonialsApiTestimonialsListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<PaginatedAttestationList> {
-            return localVarFp.testimonialsList(requestParameters.channels, requestParameters.limit, requestParameters.offerors, requestParameters.offset, requestParameters.position, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieve a testimonial.
-         * @summary Retrieve
-         * @param {TestimonialsApiTestimonialsRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        testimonialsRetrieve(requestParameters: TestimonialsApiTestimonialsRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<Attestation> {
-            return localVarFp.testimonialsRetrieve(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const TestimonialsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = TestimonialsApiFp(configuration)
+  return {
+    /**
+     * List all testimonials.
+     * @summary List
+     * @param {TestimonialsApiTestimonialsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    testimonialsList(
+      requestParameters: TestimonialsApiTestimonialsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedAttestationList> {
+      return localVarFp
+        .testimonialsList(
+          requestParameters.channels,
+          requestParameters.limit,
+          requestParameters.offerors,
+          requestParameters.offset,
+          requestParameters.position,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a testimonial.
+     * @summary Retrieve
+     * @param {TestimonialsApiTestimonialsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    testimonialsRetrieve(
+      requestParameters: TestimonialsApiTestimonialsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<Attestation> {
+      return localVarFp
+        .testimonialsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for testimonialsList operation in TestimonialsApi.
@@ -9184,40 +10246,40 @@ export const TestimonialsApiFactory = function (configuration?: Configuration, b
  * @interface TestimonialsApiTestimonialsListRequest
  */
 export interface TestimonialsApiTestimonialsListRequest {
-    /**
-     * The channels the attestation is for
-     * @type {Array<number>}
-     * @memberof TestimonialsApiTestimonialsList
-     */
-    readonly channels?: Array<number>
+  /**
+   * The channels the attestation is for
+   * @type {Array<number>}
+   * @memberof TestimonialsApiTestimonialsList
+   */
+  readonly channels?: Array<number>
 
-    /**
-     * Number of results to return per page.
-     * @type {number}
-     * @memberof TestimonialsApiTestimonialsList
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof TestimonialsApiTestimonialsList
+   */
+  readonly limit?: number
 
-    /**
-     * The offerors the attestation is for
-     * @type {Array<string>}
-     * @memberof TestimonialsApiTestimonialsList
-     */
-    readonly offerors?: Array<string>
+  /**
+   * The offerors the attestation is for
+   * @type {Array<string>}
+   * @memberof TestimonialsApiTestimonialsList
+   */
+  readonly offerors?: Array<string>
 
-    /**
-     * The initial index from which to return the results.
-     * @type {number}
-     * @memberof TestimonialsApiTestimonialsList
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof TestimonialsApiTestimonialsList
+   */
+  readonly offset?: number
 
-    /**
-     * Only show items that exist at this position
-     * @type {number}
-     * @memberof TestimonialsApiTestimonialsList
-     */
-    readonly position?: number
+  /**
+   * Only show items that exist at this position
+   * @type {number}
+   * @memberof TestimonialsApiTestimonialsList
+   */
+  readonly position?: number
 }
 
 /**
@@ -9226,12 +10288,12 @@ export interface TestimonialsApiTestimonialsListRequest {
  * @interface TestimonialsApiTestimonialsRetrieveRequest
  */
 export interface TestimonialsApiTestimonialsRetrieveRequest {
-    /**
-     * A unique integer value identifying this attestation.
-     * @type {number}
-     * @memberof TestimonialsApiTestimonialsRetrieve
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this attestation.
+   * @type {number}
+   * @memberof TestimonialsApiTestimonialsRetrieve
+   */
+  readonly id: number
 }
 
 /**
@@ -9241,180 +10303,283 @@ export interface TestimonialsApiTestimonialsRetrieveRequest {
  * @extends {BaseAPI}
  */
 export class TestimonialsApi extends BaseAPI {
-    /**
-     * List all testimonials.
-     * @summary List
-     * @param {TestimonialsApiTestimonialsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TestimonialsApi
-     */
-    public testimonialsList(requestParameters: TestimonialsApiTestimonialsListRequest = {}, options?: RawAxiosRequestConfig) {
-        return TestimonialsApiFp(this.configuration).testimonialsList(requestParameters.channels, requestParameters.limit, requestParameters.offerors, requestParameters.offset, requestParameters.position, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * List all testimonials.
+   * @summary List
+   * @param {TestimonialsApiTestimonialsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TestimonialsApi
+   */
+  public testimonialsList(
+    requestParameters: TestimonialsApiTestimonialsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TestimonialsApiFp(this.configuration)
+      .testimonialsList(
+        requestParameters.channels,
+        requestParameters.limit,
+        requestParameters.offerors,
+        requestParameters.offset,
+        requestParameters.position,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Retrieve a testimonial.
-     * @summary Retrieve
-     * @param {TestimonialsApiTestimonialsRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TestimonialsApi
-     */
-    public testimonialsRetrieve(requestParameters: TestimonialsApiTestimonialsRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return TestimonialsApiFp(this.configuration).testimonialsRetrieve(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a testimonial.
+   * @summary Retrieve
+   * @param {TestimonialsApiTestimonialsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TestimonialsApi
+   */
+  public testimonialsRetrieve(
+    requestParameters: TestimonialsApiTestimonialsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TestimonialsApiFp(this.configuration)
+      .testimonialsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * TutorApi - axios parameter creator
  * @export
  */
-export const TutorApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Retrieve a list of problem names for a course run
-         * @summary Retrieve problem list
-         * @param {string} run_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        listProblems: async (run_readable_id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'run_readable_id' is not null or undefined
-            assertParamExists('listProblems', 'run_readable_id', run_readable_id)
-            const localVarPath = `/api/v0/tutor/problems/{run_readable_id}/`
-                .replace(`{${"run_readable_id"}}`, encodeURIComponent(String(run_readable_id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const TutorApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    listProblems: async (
+      run_readable_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'run_readable_id' is not null or undefined
+      assertParamExists("listProblems", "run_readable_id", run_readable_id)
+      const localVarPath = `/api/v0/tutor/problems/{run_readable_id}/`.replace(
+        `{${"run_readable_id"}}`,
+        encodeURIComponent(String(run_readable_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {string} problem_title
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    retrieveProblem: async (
+      problem_title: string,
+      run_readable_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'problem_title' is not null or undefined
+      assertParamExists("retrieveProblem", "problem_title", problem_title)
+      // verify required parameter 'run_readable_id' is not null or undefined
+      assertParamExists("retrieveProblem", "run_readable_id", run_readable_id)
+      const localVarPath =
+        `/api/v0/tutor/problems/{run_readable_id}/{problem_title}/`
+          .replace(
+            `{${"problem_title"}}`,
+            encodeURIComponent(String(problem_title)),
+          )
+          .replace(
+            `{${"run_readable_id"}}`,
+            encodeURIComponent(String(run_readable_id)),
+          )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieve a specific problem and its solution for a course run
-         * @summary Retrieve Problem
-         * @param {string} problem_title
-         * @param {string} run_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        retrieveProblem: async (problem_title: string, run_readable_id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'problem_title' is not null or undefined
-            assertParamExists('retrieveProblem', 'problem_title', problem_title)
-            // verify required parameter 'run_readable_id' is not null or undefined
-            assertParamExists('retrieveProblem', 'run_readable_id', run_readable_id)
-            const localVarPath = `/api/v0/tutor/problems/{run_readable_id}/{problem_title}/`
-                .replace(`{${"problem_title"}}`, encodeURIComponent(String(problem_title)))
-                .replace(`{${"run_readable_id"}}`, encodeURIComponent(String(run_readable_id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * TutorApi - functional programming interface
  * @export
  */
-export const TutorApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = TutorApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Retrieve a list of problem names for a course run
-         * @summary Retrieve problem list
-         * @param {string} run_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async listProblems(run_readable_id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProblemListResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listProblems(run_readable_id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['TutorApi.listProblems']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Retrieve a specific problem and its solution for a course run
-         * @summary Retrieve Problem
-         * @param {string} problem_title
-         * @param {string} run_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async retrieveProblem(problem_title: string, run_readable_id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RetrieveProblemResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.retrieveProblem(problem_title, run_readable_id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['TutorApi.retrieveProblem']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const TutorApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = TutorApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async listProblems(
+      run_readable_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ProblemListResponse>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.listProblems(
+        run_readable_id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TutorApi.listProblems"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {string} problem_title
+     * @param {string} run_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async retrieveProblem(
+      problem_title: string,
+      run_readable_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<RetrieveProblemResponse>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.retrieveProblem(
+        problem_title,
+        run_readable_id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["TutorApi.retrieveProblem"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * TutorApi - factory interface
  * @export
  */
-export const TutorApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = TutorApiFp(configuration)
-    return {
-        /**
-         * Retrieve a list of problem names for a course run
-         * @summary Retrieve problem list
-         * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        listProblems(requestParameters: TutorApiListProblemsRequest, options?: RawAxiosRequestConfig): AxiosPromise<ProblemListResponse> {
-            return localVarFp.listProblems(requestParameters.run_readable_id, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieve a specific problem and its solution for a course run
-         * @summary Retrieve Problem
-         * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        retrieveProblem(requestParameters: TutorApiRetrieveProblemRequest, options?: RawAxiosRequestConfig): AxiosPromise<RetrieveProblemResponse> {
-            return localVarFp.retrieveProblem(requestParameters.problem_title, requestParameters.run_readable_id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const TutorApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = TutorApiFp(configuration)
+  return {
+    /**
+     * Retrieve a list of problem names for a course run
+     * @summary Retrieve problem list
+     * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    listProblems(
+      requestParameters: TutorApiListProblemsRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ProblemListResponse> {
+      return localVarFp
+        .listProblems(requestParameters.run_readable_id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a specific problem and its solution for a course run
+     * @summary Retrieve Problem
+     * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    retrieveProblem(
+      requestParameters: TutorApiRetrieveProblemRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<RetrieveProblemResponse> {
+      return localVarFp
+        .retrieveProblem(
+          requestParameters.problem_title,
+          requestParameters.run_readable_id,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for listProblems operation in TutorApi.
@@ -9422,12 +10587,12 @@ export const TutorApiFactory = function (configuration?: Configuration, basePath
  * @interface TutorApiListProblemsRequest
  */
 export interface TutorApiListProblemsRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof TutorApiListProblems
-     */
-    readonly run_readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiListProblems
+   */
+  readonly run_readable_id: string
 }
 
 /**
@@ -9436,19 +10601,19 @@ export interface TutorApiListProblemsRequest {
  * @interface TutorApiRetrieveProblemRequest
  */
 export interface TutorApiRetrieveProblemRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof TutorApiRetrieveProblem
-     */
-    readonly problem_title: string
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiRetrieveProblem
+   */
+  readonly problem_title: string
 
-    /**
-     *
-     * @type {string}
-     * @memberof TutorApiRetrieveProblem
-     */
-    readonly run_readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof TutorApiRetrieveProblem
+   */
+  readonly run_readable_id: string
 }
 
 /**
@@ -9458,441 +10623,690 @@ export interface TutorApiRetrieveProblemRequest {
  * @extends {BaseAPI}
  */
 export class TutorApi extends BaseAPI {
-    /**
-     * Retrieve a list of problem names for a course run
-     * @summary Retrieve problem list
-     * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TutorApi
-     */
-    public listProblems(requestParameters: TutorApiListProblemsRequest, options?: RawAxiosRequestConfig) {
-        return TutorApiFp(this.configuration).listProblems(requestParameters.run_readable_id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a list of problem names for a course run
+   * @summary Retrieve problem list
+   * @param {TutorApiListProblemsRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TutorApi
+   */
+  public listProblems(
+    requestParameters: TutorApiListProblemsRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TutorApiFp(this.configuration)
+      .listProblems(requestParameters.run_readable_id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Retrieve a specific problem and its solution for a course run
-     * @summary Retrieve Problem
-     * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof TutorApi
-     */
-    public retrieveProblem(requestParameters: TutorApiRetrieveProblemRequest, options?: RawAxiosRequestConfig) {
-        return TutorApiFp(this.configuration).retrieveProblem(requestParameters.problem_title, requestParameters.run_readable_id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a specific problem and its solution for a course run
+   * @summary Retrieve Problem
+   * @param {TutorApiRetrieveProblemRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof TutorApi
+   */
+  public retrieveProblem(
+    requestParameters: TutorApiRetrieveProblemRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return TutorApiFp(this.configuration)
+      .retrieveProblem(
+        requestParameters.problem_title,
+        requestParameters.run_readable_id,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * UsersApi - axios parameter creator
  * @export
  */
-export const UsersApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * View for users
-         * @param {UserRequest} UserRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersCreate: async (UserRequest: UserRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'UserRequest' is not null or undefined
-            assertParamExists('usersCreate', 'UserRequest', UserRequest)
-            const localVarPath = `/api/v0/users/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const UsersApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * View for users
+     * @param {UserRequest} UserRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersCreate: async (
+      UserRequest: UserRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'UserRequest' is not null or undefined
+      assertParamExists("usersCreate", "UserRequest", UserRequest)
+      const localVarPath = `/api/v0/users/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        UserRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersDestroy: async (
+      username: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'username' is not null or undefined
+      assertParamExists("usersDestroy", "username", username)
+      const localVarPath = `/api/v0/users/{username}/`.replace(
+        `{${"username"}}`,
+        encodeURIComponent(String(username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(UserRequest, localVarRequestOptions, configuration)
+      const localVarRequestOptions = {
+        method: "DELETE",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersDestroy: async (username: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('usersDestroy', 'username', username)
-            const localVarPath = `/api/v0/users/{username}/`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for users
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersList: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/users/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * User retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersMeRetrieve: async (
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/users/me/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for users
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersList: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/users/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {PatchedUserRequest} [PatchedUserRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersPartialUpdate: async (
+      username: string,
+      PatchedUserRequest?: PatchedUserRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'username' is not null or undefined
+      assertParamExists("usersPartialUpdate", "username", username)
+      const localVarPath = `/api/v0/users/{username}/`.replace(
+        `{${"username"}}`,
+        encodeURIComponent(String(username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "PATCH",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * User retrieve and update viewsets for the current user
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersMeRetrieve: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/users/me/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        PatchedUserRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersRetrieve: async (
+      username: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'username' is not null or undefined
+      assertParamExists("usersRetrieve", "username", username)
+      const localVarPath = `/api/v0/users/{username}/`.replace(
+        `{${"username"}}`,
+        encodeURIComponent(String(username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {UserRequest} UserRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersUpdate: async (
+      username: string,
+      UserRequest: UserRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'username' is not null or undefined
+      assertParamExists("usersUpdate", "username", username)
+      // verify required parameter 'UserRequest' is not null or undefined
+      assertParamExists("usersUpdate", "UserRequest", UserRequest)
+      const localVarPath = `/api/v0/users/{username}/`.replace(
+        `{${"username"}}`,
+        encodeURIComponent(String(username)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {PatchedUserRequest} [PatchedUserRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersPartialUpdate: async (username: string, PatchedUserRequest?: PatchedUserRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('usersPartialUpdate', 'username', username)
-            const localVarPath = `/api/v0/users/{username}/`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        UserRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(PatchedUserRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersRetrieve: async (username: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('usersRetrieve', 'username', username)
-            const localVarPath = `/api/v0/users/{username}/`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {UserRequest} UserRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersUpdate: async (username: string, UserRequest: UserRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('usersUpdate', 'username', username)
-            // verify required parameter 'UserRequest' is not null or undefined
-            assertParamExists('usersUpdate', 'UserRequest', UserRequest)
-            const localVarPath = `/api/v0/users/{username}/`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(UserRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * UsersApi - functional programming interface
  * @export
  */
-export const UsersApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = UsersApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * View for users
-         * @param {UserRequest} UserRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersCreate(UserRequest: UserRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersCreate(UserRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersCreate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersDestroy(username: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersDestroy(username, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersDestroy']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for users
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersList(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<User>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersList(options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * User retrieve and update viewsets for the current user
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersMeRetrieve(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersMeRetrieve(options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersMeRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {PatchedUserRequest} [PatchedUserRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersPartialUpdate(username: string, PatchedUserRequest?: PatchedUserRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersPartialUpdate(username, PatchedUserRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersPartialUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersRetrieve(username: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersRetrieve(username, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for users
-         * @param {string} username
-         * @param {UserRequest} UserRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async usersUpdate(username: string, UserRequest: UserRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.usersUpdate(username, UserRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['UsersApi.usersUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const UsersApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = UsersApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * View for users
+     * @param {UserRequest} UserRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersCreate(
+      UserRequest: UserRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.usersCreate(
+        UserRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersDestroy(
+      username: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.usersDestroy(
+        username,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersDestroy"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for users
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersList(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<User>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.usersList(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * User retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersMeRetrieve(
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.usersMeRetrieve(options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersMeRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {PatchedUserRequest} [PatchedUserRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersPartialUpdate(
+      username: string,
+      PatchedUserRequest?: PatchedUserRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.usersPartialUpdate(
+          username,
+          PatchedUserRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersPartialUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersRetrieve(
+      username: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.usersRetrieve(
+        username,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for users
+     * @param {string} username
+     * @param {UserRequest} UserRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async usersUpdate(
+      username: string,
+      UserRequest: UserRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.usersUpdate(
+        username,
+        UserRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["UsersApi.usersUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * UsersApi - factory interface
  * @export
  */
-export const UsersApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = UsersApiFp(configuration)
-    return {
-        /**
-         * View for users
-         * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersCreate(requestParameters: UsersApiUsersCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<User> {
-            return localVarFp.usersCreate(requestParameters.UserRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for users
-         * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersDestroy(requestParameters: UsersApiUsersDestroyRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.usersDestroy(requestParameters.username, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for users
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersList(options?: RawAxiosRequestConfig): AxiosPromise<Array<User>> {
-            return localVarFp.usersList(options).then((request) => request(axios, basePath));
-        },
-        /**
-         * User retrieve and update viewsets for the current user
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersMeRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<User> {
-            return localVarFp.usersMeRetrieve(options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for users
-         * @param {UsersApiUsersPartialUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersPartialUpdate(requestParameters: UsersApiUsersPartialUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<User> {
-            return localVarFp.usersPartialUpdate(requestParameters.username, requestParameters.PatchedUserRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for users
-         * @param {UsersApiUsersRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersRetrieve(requestParameters: UsersApiUsersRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<User> {
-            return localVarFp.usersRetrieve(requestParameters.username, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for users
-         * @param {UsersApiUsersUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        usersUpdate(requestParameters: UsersApiUsersUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<User> {
-            return localVarFp.usersUpdate(requestParameters.username, requestParameters.UserRequest, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const UsersApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = UsersApiFp(configuration)
+  return {
+    /**
+     * View for users
+     * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersCreate(
+      requestParameters: UsersApiUsersCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<User> {
+      return localVarFp
+        .usersCreate(requestParameters.UserRequest, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for users
+     * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersDestroy(
+      requestParameters: UsersApiUsersDestroyRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .usersDestroy(requestParameters.username, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for users
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersList(options?: RawAxiosRequestConfig): AxiosPromise<Array<User>> {
+      return localVarFp
+        .usersList(options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * User retrieve and update viewsets for the current user
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersMeRetrieve(options?: RawAxiosRequestConfig): AxiosPromise<User> {
+      return localVarFp
+        .usersMeRetrieve(options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for users
+     * @param {UsersApiUsersPartialUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersPartialUpdate(
+      requestParameters: UsersApiUsersPartialUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<User> {
+      return localVarFp
+        .usersPartialUpdate(
+          requestParameters.username,
+          requestParameters.PatchedUserRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for users
+     * @param {UsersApiUsersRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersRetrieve(
+      requestParameters: UsersApiUsersRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<User> {
+      return localVarFp
+        .usersRetrieve(requestParameters.username, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for users
+     * @param {UsersApiUsersUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    usersUpdate(
+      requestParameters: UsersApiUsersUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<User> {
+      return localVarFp
+        .usersUpdate(
+          requestParameters.username,
+          requestParameters.UserRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for usersCreate operation in UsersApi.
@@ -9900,12 +11314,12 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
  * @interface UsersApiUsersCreateRequest
  */
 export interface UsersApiUsersCreateRequest {
-    /**
-     *
-     * @type {UserRequest}
-     * @memberof UsersApiUsersCreate
-     */
-    readonly UserRequest: UserRequest
+  /**
+   *
+   * @type {UserRequest}
+   * @memberof UsersApiUsersCreate
+   */
+  readonly UserRequest: UserRequest
 }
 
 /**
@@ -9914,12 +11328,12 @@ export interface UsersApiUsersCreateRequest {
  * @interface UsersApiUsersDestroyRequest
  */
 export interface UsersApiUsersDestroyRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof UsersApiUsersDestroy
-     */
-    readonly username: string
+  /**
+   *
+   * @type {string}
+   * @memberof UsersApiUsersDestroy
+   */
+  readonly username: string
 }
 
 /**
@@ -9928,19 +11342,19 @@ export interface UsersApiUsersDestroyRequest {
  * @interface UsersApiUsersPartialUpdateRequest
  */
 export interface UsersApiUsersPartialUpdateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof UsersApiUsersPartialUpdate
-     */
-    readonly username: string
+  /**
+   *
+   * @type {string}
+   * @memberof UsersApiUsersPartialUpdate
+   */
+  readonly username: string
 
-    /**
-     *
-     * @type {PatchedUserRequest}
-     * @memberof UsersApiUsersPartialUpdate
-     */
-    readonly PatchedUserRequest?: PatchedUserRequest
+  /**
+   *
+   * @type {PatchedUserRequest}
+   * @memberof UsersApiUsersPartialUpdate
+   */
+  readonly PatchedUserRequest?: PatchedUserRequest
 }
 
 /**
@@ -9949,12 +11363,12 @@ export interface UsersApiUsersPartialUpdateRequest {
  * @interface UsersApiUsersRetrieveRequest
  */
 export interface UsersApiUsersRetrieveRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof UsersApiUsersRetrieve
-     */
-    readonly username: string
+  /**
+   *
+   * @type {string}
+   * @memberof UsersApiUsersRetrieve
+   */
+  readonly username: string
 }
 
 /**
@@ -9963,19 +11377,19 @@ export interface UsersApiUsersRetrieveRequest {
  * @interface UsersApiUsersUpdateRequest
  */
 export interface UsersApiUsersUpdateRequest {
-    /**
-     *
-     * @type {string}
-     * @memberof UsersApiUsersUpdate
-     */
-    readonly username: string
+  /**
+   *
+   * @type {string}
+   * @memberof UsersApiUsersUpdate
+   */
+  readonly username: string
 
-    /**
-     *
-     * @type {UserRequest}
-     * @memberof UsersApiUsersUpdate
-     */
-    readonly UserRequest: UserRequest
+  /**
+   *
+   * @type {UserRequest}
+   * @memberof UsersApiUsersUpdate
+   */
+  readonly UserRequest: UserRequest
 }
 
 /**
@@ -9985,260 +11399,403 @@ export interface UsersApiUsersUpdateRequest {
  * @extends {BaseAPI}
  */
 export class UsersApi extends BaseAPI {
-    /**
-     * View for users
-     * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersCreate(requestParameters: UsersApiUsersCreateRequest, options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersCreate(requestParameters.UserRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {UsersApiUsersCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersCreate(
+    requestParameters: UsersApiUsersCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UsersApiFp(this.configuration)
+      .usersCreate(requestParameters.UserRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for users
-     * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersDestroy(requestParameters: UsersApiUsersDestroyRequest, options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersDestroy(requestParameters.username, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {UsersApiUsersDestroyRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersDestroy(
+    requestParameters: UsersApiUsersDestroyRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UsersApiFp(this.configuration)
+      .usersDestroy(requestParameters.username, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for users
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersList(options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersList(options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersList(options?: RawAxiosRequestConfig) {
+    return UsersApiFp(this.configuration)
+      .usersList(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * User retrieve and update viewsets for the current user
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersMeRetrieve(options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersMeRetrieve(options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * User retrieve and update viewsets for the current user
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersMeRetrieve(options?: RawAxiosRequestConfig) {
+    return UsersApiFp(this.configuration)
+      .usersMeRetrieve(options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for users
-     * @param {UsersApiUsersPartialUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersPartialUpdate(requestParameters: UsersApiUsersPartialUpdateRequest, options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersPartialUpdate(requestParameters.username, requestParameters.PatchedUserRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {UsersApiUsersPartialUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersPartialUpdate(
+    requestParameters: UsersApiUsersPartialUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UsersApiFp(this.configuration)
+      .usersPartialUpdate(
+        requestParameters.username,
+        requestParameters.PatchedUserRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for users
-     * @param {UsersApiUsersRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersRetrieve(requestParameters: UsersApiUsersRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersRetrieve(requestParameters.username, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {UsersApiUsersRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersRetrieve(
+    requestParameters: UsersApiUsersRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UsersApiFp(this.configuration)
+      .usersRetrieve(requestParameters.username, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for users
-     * @param {UsersApiUsersUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof UsersApi
-     */
-    public usersUpdate(requestParameters: UsersApiUsersUpdateRequest, options?: RawAxiosRequestConfig) {
-        return UsersApiFp(this.configuration).usersUpdate(requestParameters.username, requestParameters.UserRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for users
+   * @param {UsersApiUsersUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof UsersApi
+   */
+  public usersUpdate(
+    requestParameters: UsersApiUsersUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return UsersApiFp(this.configuration)
+      .usersUpdate(
+        requestParameters.username,
+        requestParameters.UserRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * VectorContentFilesSearchApi - axios parameter creator
  * @export
  */
-export const VectorContentFilesSearchApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Vector Search for content
-         * @summary Content File Vector Search
-         * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
-         * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
-         * @param {Array<string>} [course_number] Course number of the content file
-         * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
-         * @param {Array<string>} [file_extension] The extension of the content file.
-         * @param {string} [group_by] The attribute to group results by
-         * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
-         * @param {Array<string>} [key] The filename of the content file
-         * @param {number} [limit] Number of results to return per page
-         * @param {Array<string>} [offered_by] Offeror of the content file
-         * @param {number} [offset] The initial index from which to return the results
-         * @param {Array<string>} [platform] platform(s) of the content file
-         * @param {string} [q] The search text
-         * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
-         * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-         * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        vectorContentFilesSearchRetrieve: async (collection_name?: string, content_feature_type?: Array<string>, course_number?: Array<string>, edx_module_id?: Array<string>, file_extension?: Array<string>, group_by?: string, group_size?: number, key?: Array<string>, limit?: number, offered_by?: Array<string>, offset?: number, platform?: Array<string>, q?: string, resource_readable_id?: Array<string>, run_readable_id?: Array<string>, sortby?: VectorContentFilesSearchRetrieveSortbyEnum, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/vector_content_files_search/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const VectorContentFilesSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {string} [group_by] The attribute to group results by
+     * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorContentFilesSearchRetrieve: async (
+      collection_name?: string,
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      edx_module_id?: Array<string>,
+      file_extension?: Array<string>,
+      group_by?: string,
+      group_size?: number,
+      key?: Array<string>,
+      limit?: number,
+      offered_by?: Array<string>,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/vector_content_files_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (collection_name !== undefined) {
-                localVarQueryParameter['collection_name'] = collection_name;
-            }
+      if (collection_name !== undefined) {
+        localVarQueryParameter["collection_name"] = collection_name
+      }
 
-            if (content_feature_type) {
-                localVarQueryParameter['content_feature_type'] = content_feature_type;
-            }
+      if (content_feature_type) {
+        localVarQueryParameter["content_feature_type"] = content_feature_type
+      }
 
-            if (course_number) {
-                localVarQueryParameter['course_number'] = course_number;
-            }
+      if (course_number) {
+        localVarQueryParameter["course_number"] = course_number
+      }
 
-            if (edx_module_id) {
-                localVarQueryParameter['edx_module_id'] = edx_module_id;
-            }
+      if (edx_module_id) {
+        localVarQueryParameter["edx_module_id"] = edx_module_id
+      }
 
-            if (file_extension) {
-                localVarQueryParameter['file_extension'] = file_extension;
-            }
+      if (file_extension) {
+        localVarQueryParameter["file_extension"] = file_extension
+      }
 
-            if (group_by !== undefined) {
-                localVarQueryParameter['group_by'] = group_by;
-            }
+      if (group_by !== undefined) {
+        localVarQueryParameter["group_by"] = group_by
+      }
 
-            if (group_size !== undefined) {
-                localVarQueryParameter['group_size'] = group_size;
-            }
+      if (group_size !== undefined) {
+        localVarQueryParameter["group_size"] = group_size
+      }
 
-            if (key) {
-                localVarQueryParameter['key'] = key;
-            }
+      if (key) {
+        localVarQueryParameter["key"] = key
+      }
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (offered_by) {
-                localVarQueryParameter['offered_by'] = offered_by;
-            }
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
-            if (platform) {
-                localVarQueryParameter['platform'] = platform;
-            }
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
 
-            if (q !== undefined) {
-                localVarQueryParameter['q'] = q;
-            }
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
 
-            if (resource_readable_id) {
-                localVarQueryParameter['resource_readable_id'] = resource_readable_id;
-            }
+      if (resource_readable_id) {
+        localVarQueryParameter["resource_readable_id"] = resource_readable_id
+      }
 
-            if (run_readable_id) {
-                localVarQueryParameter['run_readable_id'] = run_readable_id;
-            }
+      if (run_readable_id) {
+        localVarQueryParameter["run_readable_id"] = run_readable_id
+      }
 
-            if (sortby !== undefined) {
-                localVarQueryParameter['sortby'] = sortby;
-            }
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * VectorContentFilesSearchApi - functional programming interface
  * @export
  */
-export const VectorContentFilesSearchApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = VectorContentFilesSearchApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Vector Search for content
-         * @summary Content File Vector Search
-         * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
-         * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
-         * @param {Array<string>} [course_number] Course number of the content file
-         * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
-         * @param {Array<string>} [file_extension] The extension of the content file.
-         * @param {string} [group_by] The attribute to group results by
-         * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
-         * @param {Array<string>} [key] The filename of the content file
-         * @param {number} [limit] Number of results to return per page
-         * @param {Array<string>} [offered_by] Offeror of the content file
-         * @param {number} [offset] The initial index from which to return the results
-         * @param {Array<string>} [platform] platform(s) of the content file
-         * @param {string} [q] The search text
-         * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
-         * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-         * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async vectorContentFilesSearchRetrieve(collection_name?: string, content_feature_type?: Array<string>, course_number?: Array<string>, edx_module_id?: Array<string>, file_extension?: Array<string>, group_by?: string, group_size?: number, key?: Array<string>, limit?: number, offered_by?: Array<string>, offset?: number, platform?: Array<string>, q?: string, resource_readable_id?: Array<string>, run_readable_id?: Array<string>, sortby?: VectorContentFilesSearchRetrieveSortbyEnum, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ContentFileVectorSearchResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(collection_name, content_feature_type, course_number, edx_module_id, file_extension, group_by, group_size, key, limit, offered_by, offset, platform, q, resource_readable_id, run_readable_id, sortby, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['VectorContentFilesSearchApi.vectorContentFilesSearchRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const VectorContentFilesSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    VectorContentFilesSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
+     * @param {Array<string>} [content_feature_type] The feature type of the content file. Possible options are at api/v1/course_features/
+     * @param {Array<string>} [course_number] Course number of the content file
+     * @param {Array<string>} [edx_module_id] The edx_module_id of the content file
+     * @param {Array<string>} [file_extension] The extension of the content file.
+     * @param {string} [group_by] The attribute to group results by
+     * @param {number} [group_size] The number of chunks in each group. Only relevant when group_by is used
+     * @param {Array<string>} [key] The filename of the content file
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [offered_by] Offeror of the content file
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<string>} [platform] platform(s) of the content file
+     * @param {string} [q] The search text
+     * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
+     * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
+     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async vectorContentFilesSearchRetrieve(
+      collection_name?: string,
+      content_feature_type?: Array<string>,
+      course_number?: Array<string>,
+      edx_module_id?: Array<string>,
+      file_extension?: Array<string>,
+      group_by?: string,
+      group_size?: number,
+      key?: Array<string>,
+      limit?: number,
+      offered_by?: Array<string>,
+      offset?: number,
+      platform?: Array<string>,
+      q?: string,
+      resource_readable_id?: Array<string>,
+      run_readable_id?: Array<string>,
+      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<ContentFileVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(
+          collection_name,
+          content_feature_type,
+          course_number,
+          edx_module_id,
+          file_extension,
+          group_by,
+          group_size,
+          key,
+          limit,
+          offered_by,
+          offset,
+          platform,
+          q,
+          resource_readable_id,
+          run_readable_id,
+          sortby,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "VectorContentFilesSearchApi.vectorContentFilesSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * VectorContentFilesSearchApi - factory interface
  * @export
  */
-export const VectorContentFilesSearchApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = VectorContentFilesSearchApiFp(configuration)
-    return {
-        /**
-         * Vector Search for content
-         * @summary Content File Vector Search
-         * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        vectorContentFilesSearchRetrieve(requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ContentFileVectorSearchResponse> {
-            return localVarFp.vectorContentFilesSearchRetrieve(requestParameters.collection_name, requestParameters.content_feature_type, requestParameters.course_number, requestParameters.edx_module_id, requestParameters.file_extension, requestParameters.group_by, requestParameters.group_size, requestParameters.key, requestParameters.limit, requestParameters.offered_by, requestParameters.offset, requestParameters.platform, requestParameters.q, requestParameters.resource_readable_id, requestParameters.run_readable_id, requestParameters.sortby, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const VectorContentFilesSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VectorContentFilesSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for content
+     * @summary Content File Vector Search
+     * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorContentFilesSearchRetrieve(
+      requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<ContentFileVectorSearchResponse> {
+      return localVarFp
+        .vectorContentFilesSearchRetrieve(
+          requestParameters.collection_name,
+          requestParameters.content_feature_type,
+          requestParameters.course_number,
+          requestParameters.edx_module_id,
+          requestParameters.file_extension,
+          requestParameters.group_by,
+          requestParameters.group_size,
+          requestParameters.key,
+          requestParameters.limit,
+          requestParameters.offered_by,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.q,
+          requestParameters.resource_readable_id,
+          requestParameters.run_readable_id,
+          requestParameters.sortby,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for vectorContentFilesSearchRetrieve operation in VectorContentFilesSearchApi.
@@ -10246,117 +11803,117 @@ export const VectorContentFilesSearchApiFactory = function (configuration?: Conf
  * @interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest
  */
 export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest {
-    /**
-     * Manually specify the name of the Qdrant collection to query
-     * @type {string}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly collection_name?: string
+  /**
+   * Manually specify the name of the Qdrant collection to query
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly collection_name?: string
 
-    /**
-     * The feature type of the content file. Possible options are at api/v1/course_features/
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly content_feature_type?: Array<string>
+  /**
+   * The feature type of the content file. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly content_feature_type?: Array<string>
 
-    /**
-     * Course number of the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly course_number?: Array<string>
+  /**
+   * Course number of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly course_number?: Array<string>
 
-    /**
-     * The edx_module_id of the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly edx_module_id?: Array<string>
+  /**
+   * The edx_module_id of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly edx_module_id?: Array<string>
 
-    /**
-     * The extension of the content file.
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly file_extension?: Array<string>
+  /**
+   * The extension of the content file.
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly file_extension?: Array<string>
 
-    /**
-     * The attribute to group results by
-     * @type {string}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly group_by?: string
+  /**
+   * The attribute to group results by
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly group_by?: string
 
-    /**
-     * The number of chunks in each group. Only relevant when group_by is used
-     * @type {number}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly group_size?: number
+  /**
+   * The number of chunks in each group. Only relevant when group_by is used
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly group_size?: number
 
-    /**
-     * The filename of the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly key?: Array<string>
+  /**
+   * The filename of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly key?: Array<string>
 
-    /**
-     * Number of results to return per page
-     * @type {number}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly limit?: number
 
-    /**
-     * Offeror of the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly offered_by?: Array<string>
+  /**
+   * Offeror of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly offered_by?: Array<string>
 
-    /**
-     * The initial index from which to return the results
-     * @type {number}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly offset?: number
 
-    /**
-     * platform(s) of the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly platform?: Array<string>
+  /**
+   * platform(s) of the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly platform?: Array<string>
 
-    /**
-     * The search text
-     * @type {string}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly q?: string
+  /**
+   * The search text
+   * @type {string}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly q?: string
 
-    /**
-     * The readable_id value of the parent learning resource for the content file
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly resource_readable_id?: Array<string>
+  /**
+   * The readable_id value of the parent learning resource for the content file
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly resource_readable_id?: Array<string>
 
-    /**
-     * The readable_id value of the run that the content file belongs to
-     * @type {Array<string>}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly run_readable_id?: Array<string>
+  /**
+   * The readable_id value of the run that the content file belongs to
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly run_readable_id?: Array<string>
 
-    /**
-     * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-     * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
-     * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-     */
-    readonly sortby?: VectorContentFilesSearchRetrieveSortbyEnum
+  /**
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+   * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly sortby?: VectorContentFilesSearchRetrieveSortbyEnum
 }
 
 /**
@@ -10366,219 +11923,358 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
  * @extends {BaseAPI}
  */
 export class VectorContentFilesSearchApi extends BaseAPI {
-    /**
-     * Vector Search for content
-     * @summary Content File Vector Search
-     * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof VectorContentFilesSearchApi
-     */
-    public vectorContentFilesSearchRetrieve(requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {}, options?: RawAxiosRequestConfig) {
-        return VectorContentFilesSearchApiFp(this.configuration).vectorContentFilesSearchRetrieve(requestParameters.collection_name, requestParameters.content_feature_type, requestParameters.course_number, requestParameters.edx_module_id, requestParameters.file_extension, requestParameters.group_by, requestParameters.group_size, requestParameters.key, requestParameters.limit, requestParameters.offered_by, requestParameters.offset, requestParameters.platform, requestParameters.q, requestParameters.resource_readable_id, requestParameters.run_readable_id, requestParameters.sortby, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Vector Search for content
+   * @summary Content File Vector Search
+   * @param {VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VectorContentFilesSearchApi
+   */
+  public vectorContentFilesSearchRetrieve(
+    requestParameters: VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VectorContentFilesSearchApiFp(this.configuration)
+      .vectorContentFilesSearchRetrieve(
+        requestParameters.collection_name,
+        requestParameters.content_feature_type,
+        requestParameters.course_number,
+        requestParameters.edx_module_id,
+        requestParameters.file_extension,
+        requestParameters.group_by,
+        requestParameters.group_size,
+        requestParameters.key,
+        requestParameters.limit,
+        requestParameters.offered_by,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.q,
+        requestParameters.resource_readable_id,
+        requestParameters.run_readable_id,
+        requestParameters.sortby,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
 
 /**
  * @export
  */
 export const VectorContentFilesSearchRetrieveSortbyEnum = {
-    Id: 'id',
-    Id2: '-id',
-    ResourceReadableId: 'resource_readable_id',
-    ResourceReadableId2: '-resource_readable_id'
-} as const;
-export type VectorContentFilesSearchRetrieveSortbyEnum = typeof VectorContentFilesSearchRetrieveSortbyEnum[keyof typeof VectorContentFilesSearchRetrieveSortbyEnum];
-
+  Id: "id",
+  Id2: "-id",
+  ResourceReadableId: "resource_readable_id",
+  ResourceReadableId2: "-resource_readable_id",
+} as const
+export type VectorContentFilesSearchRetrieveSortbyEnum =
+  (typeof VectorContentFilesSearchRetrieveSortbyEnum)[keyof typeof VectorContentFilesSearchRetrieveSortbyEnum]
 
 /**
  * VectorLearningResourcesSearchApi - axios parameter creator
  * @export
  */
-export const VectorLearningResourcesSearchApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Vector Search for learning resources
-         * @summary Vector Search
-         * @param {boolean | null} [certification] True if the learning resource offers a certificate
-         * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-         * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-         * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-         * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-         * @param {boolean | null} [free]
-         * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
-         * @param {number} [limit] Number of results to return per page
-         * @param {Array<string>} [ocw_topic] The ocw topic name.
-         * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
-         * @param {number} [offset] The initial index from which to return the results
-         * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
-         * @param {boolean | null} [professional]
-         * @param {string} [q] The search text
-         * @param {string} [readable_id] The readable id of the resource
-         * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-         * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
-         * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        vectorLearningResourcesSearchRetrieve: async (certification?: boolean | null, certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>, course_feature?: Array<string>, delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>, department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>, free?: boolean | null, level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>, limit?: number, ocw_topic?: Array<string>, offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>, offset?: number, platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>, professional?: boolean | null, q?: string, readable_id?: string, resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>, resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>, topic?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/vector_learning_resources_search/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [free]
+     * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorLearningResourcesSearchRetrieve: async (
+      certification?: boolean | null,
+      certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
+      department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
+      free?: boolean | null,
+      level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>,
+      limit?: number,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      readable_id?: string,
+      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      topic?: Array<string>,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/vector_learning_resources_search/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (certification !== undefined) {
-                localVarQueryParameter['certification'] = certification;
-            }
+      if (certification !== undefined) {
+        localVarQueryParameter["certification"] = certification
+      }
 
-            if (certification_type) {
-                localVarQueryParameter['certification_type'] = certification_type;
-            }
+      if (certification_type) {
+        localVarQueryParameter["certification_type"] = certification_type
+      }
 
-            if (course_feature) {
-                localVarQueryParameter['course_feature'] = course_feature;
-            }
+      if (course_feature) {
+        localVarQueryParameter["course_feature"] = course_feature
+      }
 
-            if (delivery) {
-                localVarQueryParameter['delivery'] = delivery;
-            }
+      if (delivery) {
+        localVarQueryParameter["delivery"] = delivery
+      }
 
-            if (department) {
-                localVarQueryParameter['department'] = department;
-            }
+      if (department) {
+        localVarQueryParameter["department"] = department
+      }
 
-            if (free !== undefined) {
-                localVarQueryParameter['free'] = free;
-            }
+      if (free !== undefined) {
+        localVarQueryParameter["free"] = free
+      }
 
-            if (level) {
-                localVarQueryParameter['level'] = level;
-            }
+      if (level) {
+        localVarQueryParameter["level"] = level
+      }
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (ocw_topic) {
-                localVarQueryParameter['ocw_topic'] = ocw_topic;
-            }
+      if (ocw_topic) {
+        localVarQueryParameter["ocw_topic"] = ocw_topic
+      }
 
-            if (offered_by) {
-                localVarQueryParameter['offered_by'] = offered_by;
-            }
+      if (offered_by) {
+        localVarQueryParameter["offered_by"] = offered_by
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
-            if (platform) {
-                localVarQueryParameter['platform'] = platform;
-            }
+      if (platform) {
+        localVarQueryParameter["platform"] = platform
+      }
 
-            if (professional !== undefined) {
-                localVarQueryParameter['professional'] = professional;
-            }
+      if (professional !== undefined) {
+        localVarQueryParameter["professional"] = professional
+      }
 
-            if (q !== undefined) {
-                localVarQueryParameter['q'] = q;
-            }
+      if (q !== undefined) {
+        localVarQueryParameter["q"] = q
+      }
 
-            if (readable_id !== undefined) {
-                localVarQueryParameter['readable_id'] = readable_id;
-            }
+      if (readable_id !== undefined) {
+        localVarQueryParameter["readable_id"] = readable_id
+      }
 
-            if (resource_category) {
-                localVarQueryParameter['resource_category'] = resource_category;
-            }
+      if (resource_category) {
+        localVarQueryParameter["resource_category"] = resource_category
+      }
 
-            if (resource_type) {
-                localVarQueryParameter['resource_type'] = resource_type;
-            }
+      if (resource_type) {
+        localVarQueryParameter["resource_type"] = resource_type
+      }
 
-            if (topic) {
-                localVarQueryParameter['topic'] = topic;
-            }
+      if (topic) {
+        localVarQueryParameter["topic"] = topic
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * VectorLearningResourcesSearchApi - functional programming interface
  * @export
  */
-export const VectorLearningResourcesSearchApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = VectorLearningResourcesSearchApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Vector Search for learning resources
-         * @summary Vector Search
-         * @param {boolean | null} [certification] True if the learning resource offers a certificate
-         * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-         * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
-         * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-         * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-         * @param {boolean | null} [free]
-         * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
-         * @param {number} [limit] Number of results to return per page
-         * @param {Array<string>} [ocw_topic] The ocw topic name.
-         * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
-         * @param {number} [offset] The initial index from which to return the results
-         * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
-         * @param {boolean | null} [professional]
-         * @param {string} [q] The search text
-         * @param {string} [readable_id] The readable id of the resource
-         * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-         * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
-         * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async vectorLearningResourcesSearchRetrieve(certification?: boolean | null, certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>, course_feature?: Array<string>, delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>, department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>, free?: boolean | null, level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>, limit?: number, ocw_topic?: Array<string>, offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>, offset?: number, platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>, professional?: boolean | null, q?: string, readable_id?: string, resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>, resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>, topic?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LearningResourcesVectorSearchResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.vectorLearningResourcesSearchRetrieve(certification, certification_type, course_feature, delivery, department, free, level, limit, ocw_topic, offered_by, offset, platform, professional, q, readable_id, resource_category, resource_type, topic, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['VectorLearningResourcesSearchApi.vectorLearningResourcesSearchRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const VectorLearningResourcesSearchApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    VectorLearningResourcesSearchApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {boolean | null} [certification] True if the learning resource offers a certificate
+     * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
+     * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+     * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+     * @param {boolean | null} [free]
+     * @param {Array<VectorLearningResourcesSearchRetrieveLevelEnum>} [level]
+     * @param {number} [limit] Number of results to return per page
+     * @param {Array<string>} [ocw_topic] The ocw topic name.
+     * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
+     * @param {number} [offset] The initial index from which to return the results
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
+     * @param {boolean | null} [professional]
+     * @param {string} [q] The search text
+     * @param {string} [readable_id] The readable id of the resource
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
+     * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async vectorLearningResourcesSearchRetrieve(
+      certification?: boolean | null,
+      certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      course_feature?: Array<string>,
+      delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
+      department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
+      free?: boolean | null,
+      level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>,
+      limit?: number,
+      ocw_topic?: Array<string>,
+      offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>,
+      offset?: number,
+      platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
+      professional?: boolean | null,
+      q?: string,
+      readable_id?: string,
+      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
+      resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      topic?: Array<string>,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<LearningResourcesVectorSearchResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.vectorLearningResourcesSearchRetrieve(
+          certification,
+          certification_type,
+          course_feature,
+          delivery,
+          department,
+          free,
+          level,
+          limit,
+          ocw_topic,
+          offered_by,
+          offset,
+          platform,
+          professional,
+          q,
+          readable_id,
+          resource_category,
+          resource_type,
+          topic,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap[
+          "VectorLearningResourcesSearchApi.vectorLearningResourcesSearchRetrieve"
+        ]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * VectorLearningResourcesSearchApi - factory interface
  * @export
  */
-export const VectorLearningResourcesSearchApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = VectorLearningResourcesSearchApiFp(configuration)
-    return {
-        /**
-         * Vector Search for learning resources
-         * @summary Vector Search
-         * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        vectorLearningResourcesSearchRetrieve(requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LearningResourcesVectorSearchResponse> {
-            return localVarFp.vectorLearningResourcesSearchRetrieve(requestParameters.certification, requestParameters.certification_type, requestParameters.course_feature, requestParameters.delivery, requestParameters.department, requestParameters.free, requestParameters.level, requestParameters.limit, requestParameters.ocw_topic, requestParameters.offered_by, requestParameters.offset, requestParameters.platform, requestParameters.professional, requestParameters.q, requestParameters.readable_id, requestParameters.resource_category, requestParameters.resource_type, requestParameters.topic, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const VectorLearningResourcesSearchApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VectorLearningResourcesSearchApiFp(configuration)
+  return {
+    /**
+     * Vector Search for learning resources
+     * @summary Vector Search
+     * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    vectorLearningResourcesSearchRetrieve(
+      requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<LearningResourcesVectorSearchResponse> {
+      return localVarFp
+        .vectorLearningResourcesSearchRetrieve(
+          requestParameters.certification,
+          requestParameters.certification_type,
+          requestParameters.course_feature,
+          requestParameters.delivery,
+          requestParameters.department,
+          requestParameters.free,
+          requestParameters.level,
+          requestParameters.limit,
+          requestParameters.ocw_topic,
+          requestParameters.offered_by,
+          requestParameters.offset,
+          requestParameters.platform,
+          requestParameters.professional,
+          requestParameters.q,
+          requestParameters.readable_id,
+          requestParameters.resource_category,
+          requestParameters.resource_type,
+          requestParameters.topic,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for vectorLearningResourcesSearchRetrieve operation in VectorLearningResourcesSearchApi.
@@ -10586,131 +12282,131 @@ export const VectorLearningResourcesSearchApiFactory = function (configuration?:
  * @interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest
  */
 export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
-    /**
-     * True if the learning resource offers a certificate
-     * @type {boolean}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly certification?: boolean | null
+  /**
+   * True if the learning resource offers a certificate
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly certification?: boolean | null
 
-    /**
-     * The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
-     * @type {Array<'micromasters' | 'professional' | 'completion' | 'none'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>
+  /**
+   * The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+   * @type {Array<'micromasters' | 'professional' | 'completion' | 'none'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>
 
-    /**
-     * The course feature. Possible options are at api/v1/course_features/
-     * @type {Array<string>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly course_feature?: Array<string>
+  /**
+   * The course feature. Possible options are at api/v1/course_features/
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly course_feature?: Array<string>
 
-    /**
-     * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
-     * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>
+  /**
+   * The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
+   * @type {Array<'online' | 'hybrid' | 'in_person' | 'offline'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>
 
-    /**
-     * The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
-     * @type {Array<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>
+  /**
+   * The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music and Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
+   * @type {Array<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '14' | '15' | '16' | '17' | '18' | '20' | '21A' | '21G' | '21H' | '21L' | '21M' | '22' | '24' | 'CC' | 'CMS-W' | 'EC' | 'ES' | 'ESD' | 'HST' | 'IDS' | 'MAS' | 'PE' | 'SP' | 'STS' | 'WGS'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>
 
-    /**
-     *
-     * @type {boolean}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly free?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly free?: boolean | null
 
-    /**
-     *
-     * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>
+  /**
+   *
+   * @type {Array<'undergraduate' | 'graduate' | 'high_school' | 'noncredit' | 'advanced' | 'intermediate' | 'introductory'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly level?: Array<VectorLearningResourcesSearchRetrieveLevelEnum>
 
-    /**
-     * Number of results to return per page
-     * @type {number}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page
+   * @type {number}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly limit?: number
 
-    /**
-     * The ocw topic name.
-     * @type {Array<string>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly ocw_topic?: Array<string>
+  /**
+   * The ocw topic name.
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly ocw_topic?: Array<string>
 
-    /**
-     * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
-     * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see' | 'climate'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>
+  /**
+   * The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
+   * @type {Array<'mitx' | 'ocw' | 'bootcamps' | 'xpro' | 'mitpe' | 'see' | 'climate'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly offered_by?: Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>
 
-    /**
-     * The initial index from which to return the results
-     * @type {number}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results
+   * @type {number}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly offset?: number
 
-    /**
-     * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
-     * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube' | 'canvas' | 'climate'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>
+  /**
+   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
+   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube' | 'canvas' | 'climate'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>
 
-    /**
-     *
-     * @type {boolean}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly professional?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly professional?: boolean | null
 
-    /**
-     * The search text
-     * @type {string}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly q?: string
+  /**
+   * The search text
+   * @type {string}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly q?: string
 
-    /**
-     * The readable id of the resource
-     * @type {string}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly readable_id?: string
+  /**
+   * The readable id of the resource
+   * @type {string}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly readable_id?: string
 
-    /**
-     * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @type {Array<'course' | 'program' | 'learning_material'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
+  /**
+   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+   * @type {Array<'course' | 'program' | 'learning_material'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
 
-    /**
-     * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
-     * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article'>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
+  /**
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
 
-    /**
-     * The topic name. To see a list of options go to api/v1/topics/
-     * @type {Array<string>}
-     * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-     */
-    readonly topic?: Array<string>
+  /**
+   * The topic name. To see a list of options go to api/v1/topics/
+   * @type {Array<string>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly topic?: Array<string>
 }
 
 /**
@@ -10720,302 +12416,411 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
  * @extends {BaseAPI}
  */
 export class VectorLearningResourcesSearchApi extends BaseAPI {
-    /**
-     * Vector Search for learning resources
-     * @summary Vector Search
-     * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof VectorLearningResourcesSearchApi
-     */
-    public vectorLearningResourcesSearchRetrieve(requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {}, options?: RawAxiosRequestConfig) {
-        return VectorLearningResourcesSearchApiFp(this.configuration).vectorLearningResourcesSearchRetrieve(requestParameters.certification, requestParameters.certification_type, requestParameters.course_feature, requestParameters.delivery, requestParameters.department, requestParameters.free, requestParameters.level, requestParameters.limit, requestParameters.ocw_topic, requestParameters.offered_by, requestParameters.offset, requestParameters.platform, requestParameters.professional, requestParameters.q, requestParameters.readable_id, requestParameters.resource_category, requestParameters.resource_type, requestParameters.topic, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Vector Search for learning resources
+   * @summary Vector Search
+   * @param {VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VectorLearningResourcesSearchApi
+   */
+  public vectorLearningResourcesSearchRetrieve(
+    requestParameters: VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VectorLearningResourcesSearchApiFp(this.configuration)
+      .vectorLearningResourcesSearchRetrieve(
+        requestParameters.certification,
+        requestParameters.certification_type,
+        requestParameters.course_feature,
+        requestParameters.delivery,
+        requestParameters.department,
+        requestParameters.free,
+        requestParameters.level,
+        requestParameters.limit,
+        requestParameters.ocw_topic,
+        requestParameters.offered_by,
+        requestParameters.offset,
+        requestParameters.platform,
+        requestParameters.professional,
+        requestParameters.q,
+        requestParameters.readable_id,
+        requestParameters.resource_category,
+        requestParameters.resource_type,
+        requestParameters.topic,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
 
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveCertificationTypeEnum = {
-    Micromasters: 'micromasters',
-    Professional: 'professional',
-    Completion: 'completion',
-    None: 'none'
-} as const;
-export type VectorLearningResourcesSearchRetrieveCertificationTypeEnum = typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum[keyof typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum];
+  Micromasters: "micromasters",
+  Professional: "professional",
+  Completion: "completion",
+  None: "none",
+} as const
+export type VectorLearningResourcesSearchRetrieveCertificationTypeEnum =
+  (typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveCertificationTypeEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveDeliveryEnum = {
-    Online: 'online',
-    Hybrid: 'hybrid',
-    InPerson: 'in_person',
-    Offline: 'offline'
-} as const;
-export type VectorLearningResourcesSearchRetrieveDeliveryEnum = typeof VectorLearningResourcesSearchRetrieveDeliveryEnum[keyof typeof VectorLearningResourcesSearchRetrieveDeliveryEnum];
+  Online: "online",
+  Hybrid: "hybrid",
+  InPerson: "in_person",
+  Offline: "offline",
+} as const
+export type VectorLearningResourcesSearchRetrieveDeliveryEnum =
+  (typeof VectorLearningResourcesSearchRetrieveDeliveryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveDeliveryEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveDepartmentEnum = {
-    _1: '1',
-    _2: '2',
-    _3: '3',
-    _4: '4',
-    _5: '5',
-    _6: '6',
-    _7: '7',
-    _8: '8',
-    _9: '9',
-    _10: '10',
-    _11: '11',
-    _12: '12',
-    _14: '14',
-    _15: '15',
-    _16: '16',
-    _17: '17',
-    _18: '18',
-    _20: '20',
-    _21A: '21A',
-    _21G: '21G',
-    _21H: '21H',
-    _21L: '21L',
-    _21M: '21M',
-    _22: '22',
-    _24: '24',
-    Cc: 'CC',
-    CmsW: 'CMS-W',
-    Ec: 'EC',
-    Es: 'ES',
-    Esd: 'ESD',
-    Hst: 'HST',
-    Ids: 'IDS',
-    Mas: 'MAS',
-    Pe: 'PE',
-    Sp: 'SP',
-    Sts: 'STS',
-    Wgs: 'WGS'
-} as const;
-export type VectorLearningResourcesSearchRetrieveDepartmentEnum = typeof VectorLearningResourcesSearchRetrieveDepartmentEnum[keyof typeof VectorLearningResourcesSearchRetrieveDepartmentEnum];
+  _1: "1",
+  _2: "2",
+  _3: "3",
+  _4: "4",
+  _5: "5",
+  _6: "6",
+  _7: "7",
+  _8: "8",
+  _9: "9",
+  _10: "10",
+  _11: "11",
+  _12: "12",
+  _14: "14",
+  _15: "15",
+  _16: "16",
+  _17: "17",
+  _18: "18",
+  _20: "20",
+  _21A: "21A",
+  _21G: "21G",
+  _21H: "21H",
+  _21L: "21L",
+  _21M: "21M",
+  _22: "22",
+  _24: "24",
+  Cc: "CC",
+  CmsW: "CMS-W",
+  Ec: "EC",
+  Es: "ES",
+  Esd: "ESD",
+  Hst: "HST",
+  Ids: "IDS",
+  Mas: "MAS",
+  Pe: "PE",
+  Sp: "SP",
+  Sts: "STS",
+  Wgs: "WGS",
+} as const
+export type VectorLearningResourcesSearchRetrieveDepartmentEnum =
+  (typeof VectorLearningResourcesSearchRetrieveDepartmentEnum)[keyof typeof VectorLearningResourcesSearchRetrieveDepartmentEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveLevelEnum = {
-    Undergraduate: 'undergraduate',
-    Graduate: 'graduate',
-    HighSchool: 'high_school',
-    Noncredit: 'noncredit',
-    Advanced: 'advanced',
-    Intermediate: 'intermediate',
-    Introductory: 'introductory'
-} as const;
-export type VectorLearningResourcesSearchRetrieveLevelEnum = typeof VectorLearningResourcesSearchRetrieveLevelEnum[keyof typeof VectorLearningResourcesSearchRetrieveLevelEnum];
+  Undergraduate: "undergraduate",
+  Graduate: "graduate",
+  HighSchool: "high_school",
+  Noncredit: "noncredit",
+  Advanced: "advanced",
+  Intermediate: "intermediate",
+  Introductory: "introductory",
+} as const
+export type VectorLearningResourcesSearchRetrieveLevelEnum =
+  (typeof VectorLearningResourcesSearchRetrieveLevelEnum)[keyof typeof VectorLearningResourcesSearchRetrieveLevelEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveOfferedByEnum = {
-    Mitx: 'mitx',
-    Ocw: 'ocw',
-    Bootcamps: 'bootcamps',
-    Xpro: 'xpro',
-    Mitpe: 'mitpe',
-    See: 'see',
-    Climate: 'climate'
-} as const;
-export type VectorLearningResourcesSearchRetrieveOfferedByEnum = typeof VectorLearningResourcesSearchRetrieveOfferedByEnum[keyof typeof VectorLearningResourcesSearchRetrieveOfferedByEnum];
+  Mitx: "mitx",
+  Ocw: "ocw",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Mitpe: "mitpe",
+  See: "see",
+  Climate: "climate",
+} as const
+export type VectorLearningResourcesSearchRetrieveOfferedByEnum =
+  (typeof VectorLearningResourcesSearchRetrieveOfferedByEnum)[keyof typeof VectorLearningResourcesSearchRetrieveOfferedByEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrievePlatformEnum = {
-    Edx: 'edx',
-    Ocw: 'ocw',
-    Oll: 'oll',
-    Mitxonline: 'mitxonline',
-    Bootcamps: 'bootcamps',
-    Xpro: 'xpro',
-    Csail: 'csail',
-    Mitpe: 'mitpe',
-    See: 'see',
-    Scc: 'scc',
-    Ctl: 'ctl',
-    Whu: 'whu',
-    Susskind: 'susskind',
-    Globalalumni: 'globalalumni',
-    Simplilearn: 'simplilearn',
-    Emeritus: 'emeritus',
-    Podcast: 'podcast',
-    Youtube: 'youtube',
-    Canvas: 'canvas',
-    Climate: 'climate'
-} as const;
-export type VectorLearningResourcesSearchRetrievePlatformEnum = typeof VectorLearningResourcesSearchRetrievePlatformEnum[keyof typeof VectorLearningResourcesSearchRetrievePlatformEnum];
+  Edx: "edx",
+  Ocw: "ocw",
+  Oll: "oll",
+  Mitxonline: "mitxonline",
+  Bootcamps: "bootcamps",
+  Xpro: "xpro",
+  Csail: "csail",
+  Mitpe: "mitpe",
+  See: "see",
+  Scc: "scc",
+  Ctl: "ctl",
+  Whu: "whu",
+  Susskind: "susskind",
+  Globalalumni: "globalalumni",
+  Simplilearn: "simplilearn",
+  Emeritus: "emeritus",
+  Podcast: "podcast",
+  Youtube: "youtube",
+  Canvas: "canvas",
+  Climate: "climate",
+} as const
+export type VectorLearningResourcesSearchRetrievePlatformEnum =
+  (typeof VectorLearningResourcesSearchRetrievePlatformEnum)[keyof typeof VectorLearningResourcesSearchRetrievePlatformEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveResourceCategoryEnum = {
-    Course: 'course',
-    Program: 'program',
-    LearningMaterial: 'learning_material'
-} as const;
-export type VectorLearningResourcesSearchRetrieveResourceCategoryEnum = typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum[keyof typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum];
+  Course: "course",
+  Program: "program",
+  LearningMaterial: "learning_material",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceCategoryEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum]
 /**
  * @export
  */
 export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
-    Course: 'course',
-    Program: 'program',
-    LearningPath: 'learning_path',
-    Podcast: 'podcast',
-    PodcastEpisode: 'podcast_episode',
-    Video: 'video',
-    VideoPlaylist: 'video_playlist',
-    Article: 'article'
-} as const;
-export type VectorLearningResourcesSearchRetrieveResourceTypeEnum = typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum];
-
+  Course: "course",
+  Program: "program",
+  LearningPath: "learning_path",
+  Podcast: "podcast",
+  PodcastEpisode: "podcast_episode",
+  Video: "video",
+  VideoPlaylist: "video_playlist",
+  Article: "article",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
 
 /**
  * VideoShortsApi - axios parameter creator
  * @export
  */
-export const VideoShortsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * Get a paginated list of video shorts.
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        videoShortsList: async (limit?: number, offset?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/v0/video_shorts/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const VideoShortsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsList: async (
+      limit?: number,
+      offset?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v0/video_shorts/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            if (limit !== undefined) {
-                localVarQueryParameter['limit'] = limit;
-            }
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
 
-            if (offset !== undefined) {
-                localVarQueryParameter['offset'] = offset;
-            }
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {string} video_id A unique value identifying this video short.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsRetrieve: async (
+      video_id: string,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'video_id' is not null or undefined
+      assertParamExists("videoShortsRetrieve", "video_id", video_id)
+      const localVarPath = `/api/v0/video_shorts/{video_id}/`.replace(
+        `{${"video_id"}}`,
+        encodeURIComponent(String(video_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Retrieve a single video short.
-         * @param {string} video_id A unique value identifying this video short.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        videoShortsRetrieve: async (video_id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'video_id' is not null or undefined
-            assertParamExists('videoShortsRetrieve', 'video_id', video_id)
-            const localVarPath = `/api/v0/video_shorts/{video_id}/`
-                .replace(`{${"video_id"}}`, encodeURIComponent(String(video_id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * VideoShortsApi - functional programming interface
  * @export
  */
-export const VideoShortsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = VideoShortsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * Get a paginated list of video shorts.
-         * @param {number} [limit] Number of results to return per page.
-         * @param {number} [offset] The initial index from which to return the results.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async videoShortsList(limit?: number, offset?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<PaginatedVideoShortList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.videoShortsList(limit, offset, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['VideoShortsApi.videoShortsList']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * Retrieve a single video short.
-         * @param {string} video_id A unique value identifying this video short.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async videoShortsRetrieve(video_id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VideoShort>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.videoShortsRetrieve(video_id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['VideoShortsApi.videoShortsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const VideoShortsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    VideoShortsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async videoShortsList(
+      limit?: number,
+      offset?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedVideoShortList>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.videoShortsList(
+        limit,
+        offset,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["VideoShortsApi.videoShortsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {string} video_id A unique value identifying this video short.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async videoShortsRetrieve(
+      video_id: string,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<VideoShort>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.videoShortsRetrieve(video_id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["VideoShortsApi.videoShortsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * VideoShortsApi - factory interface
  * @export
  */
-export const VideoShortsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = VideoShortsApiFp(configuration)
-    return {
-        /**
-         * Get a paginated list of video shorts.
-         * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        videoShortsList(requestParameters: VideoShortsApiVideoShortsListRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<PaginatedVideoShortList> {
-            return localVarFp.videoShortsList(requestParameters.limit, requestParameters.offset, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Retrieve a single video short.
-         * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        videoShortsRetrieve(requestParameters: VideoShortsApiVideoShortsRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<VideoShort> {
-            return localVarFp.videoShortsRetrieve(requestParameters.video_id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const VideoShortsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = VideoShortsApiFp(configuration)
+  return {
+    /**
+     * Get a paginated list of video shorts.
+     * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsList(
+      requestParameters: VideoShortsApiVideoShortsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedVideoShortList> {
+      return localVarFp
+        .videoShortsList(
+          requestParameters.limit,
+          requestParameters.offset,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Retrieve a single video short.
+     * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    videoShortsRetrieve(
+      requestParameters: VideoShortsApiVideoShortsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<VideoShort> {
+      return localVarFp
+        .videoShortsRetrieve(requestParameters.video_id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for videoShortsList operation in VideoShortsApi.
@@ -11023,19 +12828,19 @@ export const VideoShortsApiFactory = function (configuration?: Configuration, ba
  * @interface VideoShortsApiVideoShortsListRequest
  */
 export interface VideoShortsApiVideoShortsListRequest {
-    /**
-     * Number of results to return per page.
-     * @type {number}
-     * @memberof VideoShortsApiVideoShortsList
-     */
-    readonly limit?: number
+  /**
+   * Number of results to return per page.
+   * @type {number}
+   * @memberof VideoShortsApiVideoShortsList
+   */
+  readonly limit?: number
 
-    /**
-     * The initial index from which to return the results.
-     * @type {number}
-     * @memberof VideoShortsApiVideoShortsList
-     */
-    readonly offset?: number
+  /**
+   * The initial index from which to return the results.
+   * @type {number}
+   * @memberof VideoShortsApiVideoShortsList
+   */
+  readonly offset?: number
 }
 
 /**
@@ -11044,12 +12849,12 @@ export interface VideoShortsApiVideoShortsListRequest {
  * @interface VideoShortsApiVideoShortsRetrieveRequest
  */
 export interface VideoShortsApiVideoShortsRetrieveRequest {
-    /**
-     * A unique value identifying this video short.
-     * @type {string}
-     * @memberof VideoShortsApiVideoShortsRetrieve
-     */
-    readonly video_id: string
+  /**
+   * A unique value identifying this video short.
+   * @type {string}
+   * @memberof VideoShortsApiVideoShortsRetrieve
+   */
+  readonly video_id: string
 }
 
 /**
@@ -11059,169 +12864,257 @@ export interface VideoShortsApiVideoShortsRetrieveRequest {
  * @extends {BaseAPI}
  */
 export class VideoShortsApi extends BaseAPI {
-    /**
-     * Get a paginated list of video shorts.
-     * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof VideoShortsApi
-     */
-    public videoShortsList(requestParameters: VideoShortsApiVideoShortsListRequest = {}, options?: RawAxiosRequestConfig) {
-        return VideoShortsApiFp(this.configuration).videoShortsList(requestParameters.limit, requestParameters.offset, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Get a paginated list of video shorts.
+   * @param {VideoShortsApiVideoShortsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VideoShortsApi
+   */
+  public videoShortsList(
+    requestParameters: VideoShortsApiVideoShortsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VideoShortsApiFp(this.configuration)
+      .videoShortsList(
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * Retrieve a single video short.
-     * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof VideoShortsApi
-     */
-    public videoShortsRetrieve(requestParameters: VideoShortsApiVideoShortsRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return VideoShortsApiFp(this.configuration).videoShortsRetrieve(requestParameters.video_id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * Retrieve a single video short.
+   * @param {VideoShortsApiVideoShortsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof VideoShortsApi
+   */
+  public videoShortsRetrieve(
+    requestParameters: VideoShortsApiVideoShortsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return VideoShortsApiFp(this.configuration)
+      .videoShortsRetrieve(requestParameters.video_id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * WebsitesApi - axios parameter creator
  * @export
  */
-export const WebsitesApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * View for user websites
-         * @param {UserWebsiteRequest} UserWebsiteRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        websitesCreate: async (UserWebsiteRequest: UserWebsiteRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'UserWebsiteRequest' is not null or undefined
-            assertParamExists('websitesCreate', 'UserWebsiteRequest', UserWebsiteRequest)
-            const localVarPath = `/api/v0/websites/`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const WebsitesApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * View for user websites
+     * @param {UserWebsiteRequest} UserWebsiteRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    websitesCreate: async (
+      UserWebsiteRequest: UserWebsiteRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'UserWebsiteRequest' is not null or undefined
+      assertParamExists(
+        "websitesCreate",
+        "UserWebsiteRequest",
+        UserWebsiteRequest,
+      )
+      const localVarPath = `/api/v0/websites/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        UserWebsiteRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * View for user websites
+     * @param {number} id A unique integer value identifying this user website.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    websitesDestroy: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("websitesDestroy", "id", id)
+      const localVarPath = `/api/v0/websites/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(UserWebsiteRequest, localVarRequestOptions, configuration)
+      const localVarRequestOptions = {
+        method: "DELETE",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * View for user websites
-         * @param {number} id A unique integer value identifying this user website.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        websitesDestroy: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('websitesDestroy', 'id', id)
-            const localVarPath = `/api/v0/websites/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * WebsitesApi - functional programming interface
  * @export
  */
-export const WebsitesApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = WebsitesApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * View for user websites
-         * @param {UserWebsiteRequest} UserWebsiteRequest
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async websitesCreate(UserWebsiteRequest: UserWebsiteRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserWebsite>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.websitesCreate(UserWebsiteRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['WebsitesApi.websitesCreate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * View for user websites
-         * @param {number} id A unique integer value identifying this user website.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async websitesDestroy(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.websitesDestroy(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['WebsitesApi.websitesDestroy']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const WebsitesApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = WebsitesApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * View for user websites
+     * @param {UserWebsiteRequest} UserWebsiteRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async websitesCreate(
+      UserWebsiteRequest: UserWebsiteRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserWebsite>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesCreate(
+        UserWebsiteRequest,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WebsitesApi.websitesCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * View for user websites
+     * @param {number} id A unique integer value identifying this user website.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async websitesDestroy(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
+    > {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesDestroy(
+        id,
+        options,
+      )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WebsitesApi.websitesDestroy"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * WebsitesApi - factory interface
  * @export
  */
-export const WebsitesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = WebsitesApiFp(configuration)
-    return {
-        /**
-         * View for user websites
-         * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        websitesCreate(requestParameters: WebsitesApiWebsitesCreateRequest, options?: RawAxiosRequestConfig): AxiosPromise<UserWebsite> {
-            return localVarFp.websitesCreate(requestParameters.UserWebsiteRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * View for user websites
-         * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        websitesDestroy(requestParameters: WebsitesApiWebsitesDestroyRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.websitesDestroy(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const WebsitesApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = WebsitesApiFp(configuration)
+  return {
+    /**
+     * View for user websites
+     * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    websitesCreate(
+      requestParameters: WebsitesApiWebsitesCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<UserWebsite> {
+      return localVarFp
+        .websitesCreate(requestParameters.UserWebsiteRequest, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * View for user websites
+     * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    websitesDestroy(
+      requestParameters: WebsitesApiWebsitesDestroyRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<void> {
+      return localVarFp
+        .websitesDestroy(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for websitesCreate operation in WebsitesApi.
@@ -11229,12 +13122,12 @@ export const WebsitesApiFactory = function (configuration?: Configuration, baseP
  * @interface WebsitesApiWebsitesCreateRequest
  */
 export interface WebsitesApiWebsitesCreateRequest {
-    /**
-     *
-     * @type {UserWebsiteRequest}
-     * @memberof WebsitesApiWebsitesCreate
-     */
-    readonly UserWebsiteRequest: UserWebsiteRequest
+  /**
+   *
+   * @type {UserWebsiteRequest}
+   * @memberof WebsitesApiWebsitesCreate
+   */
+  readonly UserWebsiteRequest: UserWebsiteRequest
 }
 
 /**
@@ -11243,12 +13136,12 @@ export interface WebsitesApiWebsitesCreateRequest {
  * @interface WebsitesApiWebsitesDestroyRequest
  */
 export interface WebsitesApiWebsitesDestroyRequest {
-    /**
-     * A unique integer value identifying this user website.
-     * @type {number}
-     * @memberof WebsitesApiWebsitesDestroy
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this user website.
+   * @type {number}
+   * @memberof WebsitesApiWebsitesDestroy
+   */
+  readonly id: number
 }
 
 /**
@@ -11258,231 +13151,365 @@ export interface WebsitesApiWebsitesDestroyRequest {
  * @extends {BaseAPI}
  */
 export class WebsitesApi extends BaseAPI {
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WebsitesApi
-     */
-    public websitesCreate(requestParameters: WebsitesApiWebsitesCreateRequest, options?: RawAxiosRequestConfig) {
-        return WebsitesApiFp(this.configuration).websitesCreate(requestParameters.UserWebsiteRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for user websites
+   * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WebsitesApi
+   */
+  public websitesCreate(
+    requestParameters: WebsitesApiWebsitesCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebsitesApiFp(this.configuration)
+      .websitesCreate(requestParameters.UserWebsiteRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WebsitesApi
-     */
-    public websitesDestroy(requestParameters: WebsitesApiWebsitesDestroyRequest, options?: RawAxiosRequestConfig) {
-        return WebsitesApiFp(this.configuration).websitesDestroy(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * View for user websites
+   * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WebsitesApi
+   */
+  public websitesDestroy(
+    requestParameters: WebsitesApiWebsitesDestroyRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebsitesApiFp(this.configuration)
+      .websitesDestroy(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
-
-
 
 /**
  * WidgetListsApi - axios parameter creator
  * @export
  */
-export const WidgetListsApiAxiosParamCreator = function (configuration?: Configuration) {
-    return {
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {PatchedWidgetListRequest} [PatchedWidgetListRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsPartialUpdate: async (id: number, PatchedWidgetListRequest?: PatchedWidgetListRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('widgetListsPartialUpdate', 'id', id)
-            const localVarPath = `/api/v0/widget_lists/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+export const WidgetListsApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {PatchedWidgetListRequest} [PatchedWidgetListRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsPartialUpdate: async (
+      id: number,
+      PatchedWidgetListRequest?: PatchedWidgetListRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("widgetListsPartialUpdate", "id", id)
+      const localVarPath = `/api/v0/widget_lists/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            const localVarRequestOptions = { method: 'PATCH', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      const localVarRequestOptions = {
+        method: "PATCH",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        PatchedWidgetListRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            localVarHeaderParameter['Content-Type'] = 'application/json';
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsRetrieve: async (
+      id: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("widgetListsRetrieve", "id", id)
+      const localVarPath = `/api/v0/widget_lists/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(PatchedWidgetListRequest, localVarRequestOptions, configuration)
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('widgetListsRetrieve', 'id', id)
-            const localVarPath = `/api/v0/widget_lists/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
 
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {WidgetListRequest} [WidgetListRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsUpdate: async (
+      id: number,
+      WidgetListRequest?: WidgetListRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'id' is not null or undefined
+      assertParamExists("widgetListsUpdate", "id", id)
+      const localVarPath = `/api/v0/widget_lists/{id}/`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
 
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
 
+      localVarHeaderParameter["Content-Type"] = "application/json"
 
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        WidgetListRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {WidgetListRequest} [WidgetListRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsUpdate: async (id: number, WidgetListRequest?: WidgetListRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'id' is not null or undefined
-            assertParamExists('widgetListsUpdate', 'id', id)
-            const localVarPath = `/api/v0/widget_lists/{id}/`
-                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(WidgetListRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-    }
-};
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
 
 /**
  * WidgetListsApi - functional programming interface
  * @export
  */
-export const WidgetListsApiFp = function(configuration?: Configuration) {
-    const localVarAxiosParamCreator = WidgetListsApiAxiosParamCreator(configuration)
-    return {
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {PatchedWidgetListRequest} [PatchedWidgetListRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async widgetListsPartialUpdate(id: number, PatchedWidgetListRequest?: PatchedWidgetListRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.widgetListsPartialUpdate(id, PatchedWidgetListRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['WidgetListsApi.widgetListsPartialUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async widgetListsRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.widgetListsRetrieve(id, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['WidgetListsApi.widgetListsRetrieve']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-        /**
-         * API for managing widget lists
-         * @param {number} id A unique integer value identifying this widget list.
-         * @param {WidgetListRequest} [WidgetListRequest]
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async widgetListsUpdate(id: number, WidgetListRequest?: WidgetListRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.widgetListsUpdate(id, WidgetListRequest, options);
-            const index = configuration?.serverIndex ?? 0;
-            const operationBasePath = operationServerMap['WidgetListsApi.widgetListsUpdate']?.[index]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
-        },
-    }
-};
+export const WidgetListsApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    WidgetListsApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {PatchedWidgetListRequest} [PatchedWidgetListRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async widgetListsPartialUpdate(
+      id: number,
+      PatchedWidgetListRequest?: PatchedWidgetListRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.widgetListsPartialUpdate(
+          id,
+          PatchedWidgetListRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WidgetListsApi.widgetListsPartialUpdate"]?.[index]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async widgetListsRetrieve(
+      id: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.widgetListsRetrieve(id, options)
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WidgetListsApi.widgetListsRetrieve"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * API for managing widget lists
+     * @param {number} id A unique integer value identifying this widget list.
+     * @param {WidgetListRequest} [WidgetListRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async widgetListsUpdate(
+      id: number,
+      WidgetListRequest?: WidgetListRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<WidgetList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.widgetListsUpdate(
+          id,
+          WidgetListRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WidgetListsApi.widgetListsUpdate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
 
 /**
  * WidgetListsApi - factory interface
  * @export
  */
-export const WidgetListsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
-    const localVarFp = WidgetListsApiFp(configuration)
-    return {
-        /**
-         * API for managing widget lists
-         * @param {WidgetListsApiWidgetListsPartialUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsPartialUpdate(requestParameters: WidgetListsApiWidgetListsPartialUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<WidgetList> {
-            return localVarFp.widgetListsPartialUpdate(requestParameters.id, requestParameters.PatchedWidgetListRequest, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * API for managing widget lists
-         * @param {WidgetListsApiWidgetListsRetrieveRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsRetrieve(requestParameters: WidgetListsApiWidgetListsRetrieveRequest, options?: RawAxiosRequestConfig): AxiosPromise<WidgetList> {
-            return localVarFp.widgetListsRetrieve(requestParameters.id, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * API for managing widget lists
-         * @param {WidgetListsApiWidgetListsUpdateRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        widgetListsUpdate(requestParameters: WidgetListsApiWidgetListsUpdateRequest, options?: RawAxiosRequestConfig): AxiosPromise<WidgetList> {
-            return localVarFp.widgetListsUpdate(requestParameters.id, requestParameters.WidgetListRequest, options).then((request) => request(axios, basePath));
-        },
-    };
-};
+export const WidgetListsApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = WidgetListsApiFp(configuration)
+  return {
+    /**
+     * API for managing widget lists
+     * @param {WidgetListsApiWidgetListsPartialUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsPartialUpdate(
+      requestParameters: WidgetListsApiWidgetListsPartialUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WidgetList> {
+      return localVarFp
+        .widgetListsPartialUpdate(
+          requestParameters.id,
+          requestParameters.PatchedWidgetListRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * API for managing widget lists
+     * @param {WidgetListsApiWidgetListsRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsRetrieve(
+      requestParameters: WidgetListsApiWidgetListsRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WidgetList> {
+      return localVarFp
+        .widgetListsRetrieve(requestParameters.id, options)
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * API for managing widget lists
+     * @param {WidgetListsApiWidgetListsUpdateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    widgetListsUpdate(
+      requestParameters: WidgetListsApiWidgetListsUpdateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WidgetList> {
+      return localVarFp
+        .widgetListsUpdate(
+          requestParameters.id,
+          requestParameters.WidgetListRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
 
 /**
  * Request parameters for widgetListsPartialUpdate operation in WidgetListsApi.
@@ -11490,19 +13517,19 @@ export const WidgetListsApiFactory = function (configuration?: Configuration, ba
  * @interface WidgetListsApiWidgetListsPartialUpdateRequest
  */
 export interface WidgetListsApiWidgetListsPartialUpdateRequest {
-    /**
-     * A unique integer value identifying this widget list.
-     * @type {number}
-     * @memberof WidgetListsApiWidgetListsPartialUpdate
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this widget list.
+   * @type {number}
+   * @memberof WidgetListsApiWidgetListsPartialUpdate
+   */
+  readonly id: number
 
-    /**
-     *
-     * @type {PatchedWidgetListRequest}
-     * @memberof WidgetListsApiWidgetListsPartialUpdate
-     */
-    readonly PatchedWidgetListRequest?: PatchedWidgetListRequest
+  /**
+   *
+   * @type {PatchedWidgetListRequest}
+   * @memberof WidgetListsApiWidgetListsPartialUpdate
+   */
+  readonly PatchedWidgetListRequest?: PatchedWidgetListRequest
 }
 
 /**
@@ -11511,12 +13538,12 @@ export interface WidgetListsApiWidgetListsPartialUpdateRequest {
  * @interface WidgetListsApiWidgetListsRetrieveRequest
  */
 export interface WidgetListsApiWidgetListsRetrieveRequest {
-    /**
-     * A unique integer value identifying this widget list.
-     * @type {number}
-     * @memberof WidgetListsApiWidgetListsRetrieve
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this widget list.
+   * @type {number}
+   * @memberof WidgetListsApiWidgetListsRetrieve
+   */
+  readonly id: number
 }
 
 /**
@@ -11525,19 +13552,19 @@ export interface WidgetListsApiWidgetListsRetrieveRequest {
  * @interface WidgetListsApiWidgetListsUpdateRequest
  */
 export interface WidgetListsApiWidgetListsUpdateRequest {
-    /**
-     * A unique integer value identifying this widget list.
-     * @type {number}
-     * @memberof WidgetListsApiWidgetListsUpdate
-     */
-    readonly id: number
+  /**
+   * A unique integer value identifying this widget list.
+   * @type {number}
+   * @memberof WidgetListsApiWidgetListsUpdate
+   */
+  readonly id: number
 
-    /**
-     *
-     * @type {WidgetListRequest}
-     * @memberof WidgetListsApiWidgetListsUpdate
-     */
-    readonly WidgetListRequest?: WidgetListRequest
+  /**
+   *
+   * @type {WidgetListRequest}
+   * @memberof WidgetListsApiWidgetListsUpdate
+   */
+  readonly WidgetListRequest?: WidgetListRequest
 }
 
 /**
@@ -11547,36 +13574,59 @@ export interface WidgetListsApiWidgetListsUpdateRequest {
  * @extends {BaseAPI}
  */
 export class WidgetListsApi extends BaseAPI {
-    /**
-     * API for managing widget lists
-     * @param {WidgetListsApiWidgetListsPartialUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WidgetListsApi
-     */
-    public widgetListsPartialUpdate(requestParameters: WidgetListsApiWidgetListsPartialUpdateRequest, options?: RawAxiosRequestConfig) {
-        return WidgetListsApiFp(this.configuration).widgetListsPartialUpdate(requestParameters.id, requestParameters.PatchedWidgetListRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * API for managing widget lists
+   * @param {WidgetListsApiWidgetListsPartialUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WidgetListsApi
+   */
+  public widgetListsPartialUpdate(
+    requestParameters: WidgetListsApiWidgetListsPartialUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WidgetListsApiFp(this.configuration)
+      .widgetListsPartialUpdate(
+        requestParameters.id,
+        requestParameters.PatchedWidgetListRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * API for managing widget lists
-     * @param {WidgetListsApiWidgetListsRetrieveRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WidgetListsApi
-     */
-    public widgetListsRetrieve(requestParameters: WidgetListsApiWidgetListsRetrieveRequest, options?: RawAxiosRequestConfig) {
-        return WidgetListsApiFp(this.configuration).widgetListsRetrieve(requestParameters.id, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * API for managing widget lists
+   * @param {WidgetListsApiWidgetListsRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WidgetListsApi
+   */
+  public widgetListsRetrieve(
+    requestParameters: WidgetListsApiWidgetListsRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WidgetListsApiFp(this.configuration)
+      .widgetListsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
 
-    /**
-     * API for managing widget lists
-     * @param {WidgetListsApiWidgetListsUpdateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WidgetListsApi
-     */
-    public widgetListsUpdate(requestParameters: WidgetListsApiWidgetListsUpdateRequest, options?: RawAxiosRequestConfig) {
-        return WidgetListsApiFp(this.configuration).widgetListsUpdate(requestParameters.id, requestParameters.WidgetListRequest, options).then((request) => request(this.axios, this.basePath));
-    }
+  /**
+   * API for managing widget lists
+   * @param {WidgetListsApiWidgetListsUpdateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WidgetListsApi
+   */
+  public widgetListsUpdate(
+    requestParameters: WidgetListsApiWidgetListsUpdateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WidgetListsApiFp(this.configuration)
+      .widgetListsUpdate(
+        requestParameters.id,
+        requestParameters.WidgetListRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
 }
