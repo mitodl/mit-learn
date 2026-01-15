@@ -20,7 +20,7 @@ renderWithProviders(<MyComponent />)
 
 // 3. Query & interact
 await user.click(screen.getByRole("button", { name: "Submit" }))
-expect(await screen.findByText("Success")).toBeInTheDocument()
+await screen.findByText("Success")
 ```
 
 ## Framework & Tools
@@ -114,6 +114,7 @@ screen.getByRole("button", { name: "Submit" }) // Preferred role-based queries w
 screen.getByLabelText("Email")
 screen.getByText("Hello")
 screen.getByTestId("custom-element")
+// getBy, findBy include asserting in doc, extra expect() unnecessary
 ```
 
 **User interactions:**
