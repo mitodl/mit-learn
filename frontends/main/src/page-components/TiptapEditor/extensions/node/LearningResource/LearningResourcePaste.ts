@@ -46,7 +46,8 @@ export const LearningResourceURLHandler = Extension.create({
 
         /**
          * 🔥 This part disables the Link toolbar button
-         * ONLY for resource URLs
+         * ONLY for auto-converted resource URLs (where text === URL)
+         * Allows user-created links (where text !== URL)
          */
         appendTransaction(transactions, oldState, newState) {
           const tr = newState.tr
@@ -62,6 +63,11 @@ export const LearningResourceURLHandler = Extension.create({
 
             const href = linkMark.attrs.href
             if (!extractResourceId(href)) return
+
+            // Only remove the link mark if the text is the same as the URL
+            // This allows user-created links (where text !== URL) to remain
+            const nodeText = node.text || ""
+            if (nodeText.trim() !== href.trim()) return
 
             tr.removeMark(pos, pos + node.nodeSize, linkMark.type)
             modified = true
