@@ -35,6 +35,10 @@ const SlideDown = styled.div<{
 
 const Opener = styled.div(({ theme }) => ({
   position: "relative",
+  margin: "0 24px",
+  [theme.breakpoints.down("md")]: {
+    margin: "0 16px",
+  },
   ":after": {
     content: "''",
     width: "100%",
