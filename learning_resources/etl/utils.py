@@ -412,7 +412,8 @@ def text_from_sjson_content(content: str):
         content (str): The sjson content
 
     Returns:
-        str: The content as a string without timestamps
+        str: The content as a string without timestamps. if parse error
+             is encountered, returns None
     """
     try:
         data = json.loads(content)
