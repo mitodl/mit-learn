@@ -149,7 +149,7 @@ const resources = factories.learningResources.resources({ count: 5 }) // Lists
 
 ```tsx
 const setupApis = () => {
-  const user = factories.user.user({ [Permission.Admin]: true })
+  const user = factories.user.user({ [Permission.ArticleEditor]: true })
   const data = factories.learningResources.resource()
   setMockResponse.get(urls.userMe.get(), user)
   setMockResponse.get(urls.learningResources.details({ id: data.id }), data)
