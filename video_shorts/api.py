@@ -8,7 +8,7 @@ import boto3
 from django.conf import settings
 
 from video_shorts.models import VideoShort
-from video_shorts.serializers import YouTubeMetadataSerializer
+from video_shorts.serializers import VideoShortWebhookSerializer
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,11 @@ def walk_video_shorts_from_s3(
     if limit is None:
         limit = settings.VIDEO_SHORTS_COUNT
 
-    s3 = boto3.resource("s3")
+    s3 = boto3.resource(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
     bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
     prefix = settings.VIDEO_SHORTS_S3_PREFIX.rstrip("/") + "/"
 
@@ -38,8 +42,8 @@ def walk_video_shorts_from_s3(
     for short in json_objects[:limit]:
         try:
             s3_object = bucket.Object(short.key).get()
-            metadata = json.loads(s3_object["Body"].read().decode("utf-8"))
-            video_short = upsert_video_short(metadata)
+            webhook_data = json.loads(s3_object["Body"].read().decode("utf-8"))
+            video_short = upsert_video_short(webhook_data)
             yield video_short
         except Exception:
             log.exception("Error processing %s", short.key)
@@ -48,9 +52,9 @@ def walk_video_shorts_from_s3(
 
 def upsert_video_short(data: dict) -> VideoShort:
     """Process a video short based on Youtube metadata"""
-    youtube_id = data.get("id")
-    existing_video_short = VideoShort.objects.filter(youtube_id=youtube_id).first()
-    video_short_serializer = YouTubeMetadataSerializer(
+    video_id = data.get("video_id")
+    existing_video_short = VideoShort.objects.filter(video_id=video_id).first()
+    video_short_serializer = VideoShortWebhookSerializer(
         data=data, instance=existing_video_short
     )
     video_short_serializer.is_valid(raise_exception=True)

@@ -4,6 +4,7 @@ from toolz import compose, curry
 
 from news_events.constants import FeedType
 from news_events.etl import (
+    articles_news,
     loaders,
     medium_mit_news,
     mitpe_events,
@@ -54,4 +55,11 @@ mitpe_events_etl = compose(
     load_sources(FeedType.events.name),
     mitpe_events.transform,
     mitpe_events.extract,
+)
+
+# Pipeline for Articles News
+articles_news_etl = compose(
+    load_sources(FeedType.news.name),
+    articles_news.transform,
+    articles_news.extract,
 )

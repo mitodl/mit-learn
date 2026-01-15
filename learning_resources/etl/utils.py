@@ -658,7 +658,9 @@ def transform_content_files(
 
 def get_learning_course_bucket_name(etl_source: str) -> str:
     """
-    Get the name of the platform's edx content bucket
+    Get the name of the platform's (old, deprecated) edx content bucket.
+    These archives will eventually be removed, with COURSE_ARCHIVE_BUCKET_NAME
+    holding archives for all sources.
 
     Args:
         etl_source(str): The ETL source that determines which bucket to use
@@ -671,7 +673,7 @@ def get_learning_course_bucket_name(etl_source: str) -> str:
         ETLSource.xpro.name: settings.XPRO_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.mitxonline.name: settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME,
         ETLSource.oll.name: settings.OLL_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_NAME,
+        ETLSource.canvas.name: settings.COURSE_ARCHIVE_BUCKET_NAME,
     }
     return bucket_names.get(etl_source)
 
@@ -687,6 +689,19 @@ def get_learning_course_bucket(etl_source: str) -> object:
         boto3.Bucket: the OCW S3 Bucket or None
     """
     bucket_name = get_learning_course_bucket_name(etl_source)
+    return get_bucket_by_name(bucket_name)
+
+
+def get_bucket_by_name(bucket_name: str) -> object:
+    """
+    Get an S3 Bucket by name
+
+    Args:
+        bucket_name(str): The name of the S3 bucket
+
+    Returns:
+        boto3.Bucket: the S3 Bucket or None
+    """
     if bucket_name:
         s3 = boto3.resource(
             "s3",

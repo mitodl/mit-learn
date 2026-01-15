@@ -189,8 +189,8 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
 }) => {
   return (
     <StoryCard mobile={mobile} forwardClicksToLink>
-      {item.image.url ? (
-        <Card.Image src={item.image.url} alt={item.image.alt || ""} />
+      {item.image?.url ? (
+        <Card.Image src={item.image?.url} alt={item.image.alt || ""} />
       ) : null}
       <Card.Title href={item.url} lines={2} style={{ marginBottom: -13 }}>
         {item.title}

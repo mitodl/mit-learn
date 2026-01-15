@@ -11,8 +11,7 @@ def mock_s3_bucket(settings):
     Set up a mock S3 bucket with standard settings for video shorts tests.
 
     This fixture:
-    - Configures required settings (AWS_STORAGE_BUCKET_NAME,
-      VIDEO_SHORTS_S3_PREFIX, etc.)
+    - Configures required settings (AWS_STORAGE_BUCKET_NAME etc)
     - Creates a mock S3 bucket using moto
     - Returns the bucket resource for test use
 
@@ -22,7 +21,6 @@ def mock_s3_bucket(settings):
     """
     # Configure settings
     settings.AWS_STORAGE_BUCKET_NAME = "test-bucket"
-    settings.VIDEO_SHORTS_S3_PREFIX = "youtube_shorts"
     settings.VIDEO_SHORTS_COUNT = 10  # Default limit
 
     # Create mock S3 bucket

@@ -1352,13 +1352,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedVideoShortList'
           description: ''
-  /api/v0/video_shorts/{youtube_id}/:
+  /api/v0/video_shorts/{video_id}/:
     get:
       operationId: video_shorts_retrieve
       description: Retrieve a single video short.
       parameters:
       - in: path
-        name: youtube_id
+        name: video_id
         schema:
           type: string
         description: A unique value identifying this video short.
@@ -6543,27 +6543,19 @@ components:
       type: object
       description: ModelSerializer for VideoShort model
       properties:
-        youtube_id:
+        video_id:
           type: string
           maxLength: 20
         title:
           type: string
           maxLength: 255
-        description:
-          type: string
         published_at:
           type: string
           format: date-time
-        thumbnail_url:
+        thumbnail_small_url:
           type: string
-        thumbnail_height:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        thumbnail_width:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
+        thumbnail_large_url:
+          type: string
         video_url:
           type: string
         created_on:
@@ -6577,13 +6569,9 @@ components:
       required:
       - created_on
       - published_at
-      - thumbnail_height
-      - thumbnail_url
-      - thumbnail_width
       - title
       - updated_on
-      - video_url
-      - youtube_id
+      - video_id
     WidgetInstance:
       type: object
       description: WidgetInstance serializer

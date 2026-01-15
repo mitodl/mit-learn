@@ -6,7 +6,8 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { EditorContent } from "@tiptap/react"
-import type { Editor } from "@tiptap/core"
+import type { Editor, Extension, JSONContent, Node, Mark } from "@tiptap/core"
+import { renderToReactElement } from "@tiptap/static-renderer/pm/react"
 import { ImageUploadButton } from "./vendor/components/tiptap-ui/image-upload-button"
 import { MediaEmbedButton } from "./extensions/ui/MediaEmbed/MediaEmbedButton"
 import { pxToRem } from "ol-components"
@@ -21,7 +22,6 @@ import "./vendor/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "./vendor/components/tiptap-node/code-block-node/code-block-node.scss"
 import "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
 import "./vendor/components/tiptap-node/list-node/list-node.scss"
-import "./vendor/components/tiptap-node/image-node/image-node.scss"
 import "./vendor/components/tiptap-node/heading-node/heading-node.scss"
 import "./vendor/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
@@ -49,21 +49,23 @@ import "./vendor/styles/_variables.scss"
 import "./vendor/components/tiptap-templates/simple/simple-editor.scss"
 
 import "./TiptapEditor.styles.scss"
+import { BannerViewer } from "./extensions/node/Banner/BannerNode"
+import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
+import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
+import { DividerViewer } from "./extensions/node/Divider/DividerNode"
+import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
 
-const StyledEditorContent = styled(EditorContent, {
-  shouldForwardProp: (prop) => prop !== "fullWidth",
-})<{
+const Container = styled.div<{
   readOnly: boolean
-  fullWidth: boolean
-}>(({ theme, readOnly, fullWidth }) => ({
+}>(({ theme, readOnly }) => ({
   maxWidth: "890px",
   minHeight: "calc(100vh - 350px)",
   backgroundColor: theme.custom.colors.white,
   borderRadius: "10px",
   margin: "0 auto",
 
-  ".tiptap.ProseMirror.simple-editor": {
-    padding: fullWidth ? "0 24px" : "3rem 3rem 5vh",
+  ".tiptap.ProseMirror.simple-editor, .tiptap-viewer": {
+    padding: "0 24px",
   },
   ...(readOnly
     ? {
@@ -76,7 +78,7 @@ const StyledEditorContent = styled(EditorContent, {
         },
       }
     : {}),
-  "&& .tiptap.ProseMirror": {
+  "&& .tiptap.ProseMirror, && .tiptap-viewer": {
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
     paddingBottom: "80px",
@@ -263,21 +265,52 @@ interface TiptapEditorProps {
   className?: string
 }
 
-export default function TiptapEditor({
-  editor,
-  readOnly,
-  fullWidth = false,
-  className,
-}: TiptapEditorProps) {
+const TiptapEditor = ({ editor, className }: TiptapEditorProps) => {
   return (
-    <div data-testid="editor">
-      <StyledEditorContent
+    <Container readOnly={false} data-testid="editor">
+      <EditorContent
         editor={editor}
         role="presentation"
-        fullWidth={fullWidth}
-        readOnly={!!readOnly}
-        className={`simple-editor-content ${className}`}
+        className={className}
       />
-    </div>
+    </Container>
   )
 }
+
+const TipTapViewer = ({
+  content,
+  extensions,
+}: {
+  content: JSONContent
+  extensions: Array<Extension | Node | Mark>
+}) => {
+  return (
+    <Container readOnly>
+      <div className="tiptap ProseMirror tiptap-viewer">
+        {renderToReactElement({
+          extensions,
+          content,
+          options: {
+            /*
+             * Node mappings are required for custom nodes that use ReactNodeViewRenderer.
+             * Without these mappings, the static renderer would fall back to renderHTML() output,
+             * which would produce unstyled HTML elements (e.g., <banner>, <byline>) instead of
+             * the styled React components. Mappings are NOT needed for nodes that only use renderHTML()
+             * with standard HTML tags that are styled from wrapping components.
+             * See https://tiptap.dev/docs/editor/api/utilities/static-renderer#react-nodeviews
+             */
+            nodeMapping: {
+              banner: BannerViewer,
+              byline: ArticleByLineInfoBarViewer,
+              divider: DividerViewer,
+              imageWithCaption: ImageWithCaptionViewer,
+              learningResource: LearningResourceCardViewer,
+            },
+          },
+        })}
+      </div>
+    </Container>
+  )
+}
+
+export { TiptapEditor, TipTapViewer }

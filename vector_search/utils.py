@@ -52,6 +52,7 @@ def qdrant_client():
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
+        timeout=settings.QDRANT_CLIENT_TIMEOUT,
     )
 
 

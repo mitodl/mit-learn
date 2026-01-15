@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from learning_resources.etl.constants import ETLSource
 from learning_resources.models import LearningResource
-from learning_resources.tasks import ingest_canvas_course
+from learning_resources.tasks import ingest_canvas_course, ingest_edx_course
 from learning_resources.utils import (
     resource_delete_actions,
 )
@@ -131,8 +131,8 @@ class VideoShortWebhookView(BaseWebhookView):
     def post(self, request):
         try:
             data = self.get_data(request)
-            youtube_data = data.get("youtube_metadata")
-            upsert_video_short(youtube_data)
+            video_data = data.get("video_metadata")
+            upsert_video_short(video_data)
             clear_views_cache()
             return self.success()
         except json.JSONDecodeError:
@@ -161,9 +161,14 @@ def process_create_content_file_request(data):
     """
     etl_source = data.get("source")
     content_path = data.get("content_path")
+    readable_id = data.get("course_readable_id") or data.get("course_id")
+    log.info("Processing %s content file: %s", etl_source, content_path)
     if etl_source == ETLSource.canvas.name:
-        log.info("Processing Canvas content file: %s", content_path)
         ingest_canvas_course.apply_async([content_path, False])
+    else:
+        ingest_edx_course.apply_async(
+            [etl_source, content_path], readable_id=readable_id, overwrite=False
+        )
 
 
 def process_delete_content_file_request(data):
@@ -171,15 +176,16 @@ def process_delete_content_file_request(data):
     Process a content file DELETE webhhook request based on the ETL source
     """
     etl_source = data.get("source")
-    if etl_source == ETLSource.canvas.name:
-        course_id = data.get("course_id")
-        if course_id:
-            try:
-                resource = LearningResource.objects.get(
-                    readable_id__istartswith=f"{course_id}-",
-                    etl_source=ETLSource.canvas.name,
-                )
-                resource.save()
-                resource_delete_actions(resource)
-            except LearningResource.DoesNotExist:
-                log.warning("Resource with readable_id %s does not exist", course_id)
+    course_id = data.get("course_id")
+    course_id_pattern = (
+        f"{course_id}-" if etl_source == ETLSource.canvas.name else course_id
+    )
+    if course_id:
+        try:
+            resource = LearningResource.objects.get(
+                readable_id__istartswith=course_id_pattern,
+                etl_source=etl_source,
+            )
+            resource_delete_actions(resource)
+        except LearningResource.DoesNotExist:
+            log.warning("Resource with readable_id %s does not exist", course_id)

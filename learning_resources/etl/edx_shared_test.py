@@ -435,3 +435,452 @@ def test_get_most_recent_course_archives_no_bucket(settings, mocker, platform):
     mock_warning = mocker.patch("learning_resources.etl.edx_shared.log.warning")
     assert get_most_recent_course_archives(platform) == []
     mock_warning.assert_called_once_with("No S3 bucket for platform %s", platform)
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "platform", "archive_filename", "expected_run_id"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            PlatformType.mitxonline.name,
+            "/mitxonline/courses/course-v1:MITxT+8.01.3x+3T2022/abcdefghijklmnop.tar.gz",
+            "course-v1:MITxT+8.01.3x+3T2022",
+        ),
+        (
+            ETLSource.xpro.name,
+            PlatformType.xpro.name,
+            "/xpro/courses/course-v1:xPRO+SysEngxB1+R12/abcdefghijklmnop.tar.gz",
+            "course-v1:xPRO+SysEngxB1+R12",
+        ),
+        (
+            ETLSource.mit_edx.name,
+            PlatformType.edx.name,
+            "/edx/courses/MITx-12.345x-3T2022/abcdefghijklmnop.tar.gz",
+            "MITx-12.345x-3T2022",
+        ),
+        (
+            ETLSource.oll.name,
+            PlatformType.edx.name,
+            "/oll/courses/course-v1:OLL+ABC123+R1_OLL.tar.gz",
+            "course-v1:OLL+ABC123+R1",
+        ),
+    ],
+)
+def test_run_for_edx_archive(etl_source, platform, archive_filename, expected_run_id):
+    """Test run_for_edx_archive returns the correct run for various platforms"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id=expected_run_id,
+    )
+    course.refresh_from_db()
+
+    result = run_for_edx_archive(etl_source, archive_filename)
+    assert result == run
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
+)
+def test_run_for_edx_archive_no_match(etl_source):
+    """Test run_for_edx_archive returns None when no matching run is found"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    archive_filename = (
+        f"{etl_source}/courses/non-existent-course/abcdefghijklmnop.tar.gz"
+    )
+    result = run_for_edx_archive(etl_source, archive_filename)
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mitxonline.name, ETLSource.xpro.name],
+)
+def test_run_for_edx_archive_with_id_filter(etl_source):
+    """Test run_for_edx_archive filters by ids when provided"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    # Create two courses with runs
+    course1 = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    run1 = LearningResourceRunFactory.create(
+        learning_resource=course1,
+        published=True,
+        run_id="course-v1:Test+Course1+R1",
+    )
+
+    course2 = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course2,
+        published=True,
+        run_id="course-v1:Test+Course2+R1",
+    )
+
+    # Only search for course1's id
+    result = run_for_edx_archive(
+        etl_source,
+        f"{etl_source}/courses/course-v1:Test+Course1+R1/abcdefghijklmnop.tar.gz",
+        course_id=course1.readable_id,
+    )
+    assert result == run1
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mitxonline.name, ETLSource.xpro.name],
+)
+def test_run_for_edx_archive_unpublished_course(etl_source):
+    """Test run_for_edx_archive doesn't return runs for unpublished courses (unless test_mode)"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    # Create unpublished course with published run
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=False,
+        test_mode=False,
+        create_runs=False,
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:Test+Course+R1",
+    )
+
+    result = run_for_edx_archive(
+        etl_source,
+        f"{etl_source}/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz",
+    )
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mitxonline.name, ETLSource.xpro.name],
+)
+def test_run_for_edx_archive_test_mode(etl_source):
+    """Test run_for_edx_archive returns runs for test_mode courses even if unpublished"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    # Create test_mode course
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=False,
+        test_mode=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+        run_id="course-v1:Test+Course+R1",
+    )
+
+    result = run_for_edx_archive(
+        etl_source,
+        f"{etl_source}/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz",
+    )
+    assert result == run
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "platform"),
+    [
+        (ETLSource.mitxonline.name, PlatformType.mitxonline.name),
+        (ETLSource.xpro.name, PlatformType.xpro.name),
+        (ETLSource.mit_edx.name, PlatformType.edx.name),
+    ],
+)
+def test_sync_edx_archive_success(
+    mocker, mock_mitxonline_learning_bucket, etl_source, platform
+):
+    """Test sync_edx_archive successfully processes a course archive"""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    # Create a course with a run
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:Test+Course+R1",
+    )
+    course.refresh_from_db()
+
+    # Mock the bucket and file operations
+    bucket = mock_mitxonline_learning_bucket.bucket
+    s3_key = "mitxonline/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
+
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=bucket,
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value='{"key": "data"}',
+    )
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[]
+    )
+
+    sync_edx_archive(etl_source, s3_key, overwrite=False)
+
+    mock_transform.assert_called_once()
+    mock_load.assert_called_once_with(run, '{"key": "data"}')
+    run.refresh_from_db()
+    assert run.checksum is not None
+
+
+@pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
+def test_sync_edx_archive_no_run_found(
+    mocker, mock_mitxonline_learning_bucket, etl_source
+):
+    """Test sync_edx_archive raises ValueError when no matching run is found"""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    bucket = mock_mitxonline_learning_bucket.bucket
+    s3_key = f"{etl_source}/courses/non-existent-course/abcdefghijklmnop.tar.gz"
+
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=bucket,
+    )
+
+    with pytest.raises(
+        ValueError, match=f"No {etl_source} run found for archive {s3_key}"
+    ):
+        sync_edx_archive(etl_source, s3_key, overwrite=False)
+
+
+@pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
+def test_sync_edx_archive_not_best_run(
+    mocker, mock_mitxonline_learning_bucket, etl_source
+):
+    """Test sync_edx_archive skips processing when run is not the best run"""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    # Create a course with multiple runs
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    # Create older run (not best) with earlier start date
+    from datetime import UTC, datetime
+
+    old_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:Test+Course+R1",
+        start_date=datetime(2022, 1, 1, tzinfo=UTC),
+    )
+    # Create newer run (will be best) with later start date
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:Test+Course+R2",
+        start_date=datetime(2023, 1, 1, tzinfo=UTC),
+    )
+    course.refresh_from_db()
+
+    # Verify the newer run is the best run
+    assert course.best_run.run_id == "course-v1:Test+Course+R2"
+
+    # Archive is for the old run, not the best run
+    bucket = mock_mitxonline_learning_bucket.bucket
+    s3_key = "20220101/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
+
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=bucket,
+    )
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive"
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.warning")
+
+    sync_edx_archive(etl_source, s3_key, overwrite=False)
+
+    # Should log warning and not process
+    assert mock_log.called
+    assert "not the best run" in mock_log.call_args[0][0]
+    assert old_run.run_id in mock_log.call_args[0][1]
+    mock_process.assert_not_called()
+
+
+@pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
+def test_sync_edx_archive_test_mode_all_runs(
+    mocker, mock_mitxonline_learning_bucket, etl_source
+):
+    """Test sync_edx_archive processes any run (not just best) for test_mode courses"""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    # Create test_mode course with multiple runs
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=False,
+        test_mode=True,
+        create_runs=False,
+    )
+    old_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+        run_id="course-v1:Test+Course+R1",
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=False,
+        run_id="course-v1:Test+Course+R2",
+    )
+
+    bucket = mock_mitxonline_learning_bucket.bucket
+    s3_key = "20220101/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
+
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=bucket,
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value='{"key": "data"}',
+    )
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[]
+    )
+
+    # Should process even though it's not the best run, because test_mode=True
+    sync_edx_archive(etl_source, s3_key, overwrite=False)
+
+    mock_transform.assert_called_once()
+    mock_load.assert_called_once_with(old_run, '{"key": "data"}')
+
+
+@pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
+def test_sync_edx_archive_with_overwrite(
+    mocker, mock_mitxonline_learning_bucket, etl_source
+):
+    """Test sync_edx_archive processes with overwrite=True"""
+    from learning_resources.etl.edx_shared import sync_edx_archive
+
+    platform = (
+        PlatformType.mitxonline.name
+        if etl_source == ETLSource.mitxonline.name
+        else PlatformType.xpro.name
+    )
+
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:Test+Course+R1",
+        checksum="old_checksum",
+    )
+    course.refresh_from_db()
+
+    bucket = mock_mitxonline_learning_bucket.bucket
+    s3_key = "20220101/courses/course-v1:Test+Course+R1/abcdefghijklmnop.tar.gz"
+
+    with Path.open(
+        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
+    ) as infile:
+        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=bucket,
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value='{"key": "data"}',
+    )
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[]
+    )
+
+    sync_edx_archive(etl_source, s3_key, overwrite=True)
+
+    # Should process even if checksum matches, because overwrite=True
+    mock_transform.assert_called_once()
+    mock_load.assert_called_once()
+    run.refresh_from_db()
+    assert run.checksum != "old_checksum"

@@ -5,12 +5,10 @@ from datetime import UTC, datetime
 import pytest
 
 from main.test_utils import assert_json_equal
+from video_shorts.api import VideoShortWebhookSerializer
 from video_shorts.factories import VideoShortFactory
 from video_shorts.models import VideoShort
-from video_shorts.serializers import (
-    VideoShortSerializer,
-    YouTubeMetadataSerializer,
-)
+from video_shorts.serializers import VideoShortSerializer
 
 pytestmark = [pytest.mark.django_db]
 
@@ -18,14 +16,9 @@ pytestmark = [pytest.mark.django_db]
 def test_video_short_serializer_read():
     """Test VideoShortSerializer serializes model correctly"""
     video_short = VideoShortFactory.create(
-        youtube_id="test_123",
+        video_id="test_123",
         title="Test Video",
-        description="Test description",
         published_at=datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC),
-        thumbnail_url="/shorts/test_123/test_123.jpg",
-        thumbnail_height=360,
-        thumbnail_width=480,
-        video_url="/shorts/test_123/test_123.mp4",
     )
 
     serializer = VideoShortSerializer(video_short)
@@ -37,71 +30,97 @@ def test_video_short_serializer_read():
     assert_json_equal(
         data,
         {
-            "youtube_id": "test_123",
+            "video_id": "test_123",
             "title": "Test Video",
-            "description": "Test description",
             "published_at": "2024-01-15T12:00:00Z",
-            "thumbnail_url": "/shorts/test_123/test_123.jpg",
-            "thumbnail_height": 360,
-            "thumbnail_width": 480,
+            "thumbnail_small_url": "/shorts/test_123/test_123_small.jpg",
+            "thumbnail_large_url": "/shorts/test_123/test_123_large.jpg",
             "video_url": "/shorts/test_123/test_123.mp4",
         },
     )
 
 
 def test_video_short_serializer_create():
-    """Test VideoShortSerializer creates VideoShort correctly"""
+    """Test VideoShortWebhookSerializer creates VideoShort correctly"""
     data = {
-        "youtube_id": "create_test",
+        "video_id": "create_test",
         "title": "Created Video",
-        "description": "Created description",
         "published_at": "2024-01-15T12:00:00Z",
-        "thumbnail_url": "/shorts/create_test/create_test.jpg",
-        "thumbnail_height": 720,
-        "thumbnail_width": 1280,
+        "thumbnail_small": {
+            "url": "/shorts/create_test/create_test_small.jpg",
+            "height": 480,
+            "width": 270,
+        },
+        "thumbnail_large": {
+            "url": "/shorts/create_test/create_test_large.jpg",
+            "height": 1920,
+            "width": 1080,
+        },
         "video_url": "/shorts/create_test/create_test.mp4",
     }
 
-    serializer = VideoShortSerializer(data=data)
-    assert serializer.is_valid()
+    serializer = VideoShortWebhookSerializer(data=data)
+    assert serializer.is_valid(raise_exception=True)
+    assert (
+        serializer.validated_data["video_url"] == "/shorts/create_test/create_test.mp4"
+    )
     video_short = serializer.save()
+    assert video_short.video_url == "/shorts/create_test/create_test.mp4"
+    assert (
+        video_short.thumbnail_small_url == "/shorts/create_test/create_test_small.jpg"
+    )
+    assert (
+        video_short.thumbnail_large_url == "/shorts/create_test/create_test_large.jpg"
+    )
 
     # Verify object was created
-    assert VideoShort.objects.filter(youtube_id="create_test").exists()
+    assert VideoShort.objects.filter(video_id="create_test").exists()
 
     # Serialize the created object and compare
-    result_serializer = VideoShortSerializer(video_short)
+    result_serializer = VideoShortWebhookSerializer(video_short)
     result_data = result_serializer.data
     result_data.pop("created_on")
     result_data.pop("updated_on")
 
-    assert_json_equal(result_data, data)
+    expected_data = {
+        "video_url": "/shorts/create_test/create_test.mp4",
+        "thumbnail_small_url": "/shorts/create_test/create_test_small.jpg",
+        "thumbnail_large_url": "/shorts/create_test/create_test_large.jpg",
+        **data,
+    }
+
+    assert_json_equal(result_data, expected_data)
 
 
 def test_video_short_serializer_update():
-    """Test VideoShortSerializer updates VideoShort correctly"""
+    """Test VideoShortWebhookSerializer updates VideoShort correctly"""
     video_short = VideoShortFactory.create(
-        youtube_id="update_test",
+        video_id="update_test",
         title="Original Title",
-        description="Original description",
     )
 
     # Get the serialized version of the original to ensure format consistency
     original_serializer = VideoShortSerializer(video_short)
 
     data = {
-        "youtube_id": "update_test",
+        "video_id": "update_test",
         "title": "Updated Title",
-        "description": "Updated description",
         "published_at": original_serializer.data["published_at"],
-        "thumbnail_url": video_short.thumbnail_url,
-        "thumbnail_height": video_short.thumbnail_height,
-        "thumbnail_width": video_short.thumbnail_width,
-        "video_url": video_short.video_url,
+        "thumbnail_small": {
+            "url": "/shorts/create_test/create_test_small.jpg",
+            "height": 480,
+            "width": 270,
+        },
+        "thumbnail_large": {
+            "url": "/shorts/create_test/create_test_large.jpg",
+            "height": 1920,
+            "width": 1080,
+        },
+        "video_url": original_serializer.data["video_url"],
     }
 
-    serializer = VideoShortSerializer(video_short, data=data)
-    assert serializer.is_valid()
+    serializer = VideoShortWebhookSerializer(video_short, data=data)
+    assert serializer.is_valid(raise_exception=True)
     updated = serializer.save()
 
     # Verify still only one instance
@@ -109,7 +128,6 @@ def test_video_short_serializer_update():
 
     # Verify the update worked
     assert updated.title == "Updated Title"
-    assert updated.description == "Updated description"
 
     # Serialize the updated object and compare
     result_serializer = VideoShortSerializer(updated)
@@ -118,43 +136,3 @@ def test_video_short_serializer_update():
     result_data.pop("updated_on")
 
     assert_json_equal(result_data, data)
-
-
-@pytest.mark.parametrize(
-    "prefix", ["youtube_shorts/", "youtube_shorts", "youtube_shorts//"]
-)
-def test_youtube_metadata_serializer(settings, sample_youtube_metadata, prefix):
-    """Test YouTubeMetadataSerializer transforms YouTube API data correctly"""
-    settings.VIDEO_SHORTS_S3_PREFIX = prefix
-
-    serializer = YouTubeMetadataSerializer(data=sample_youtube_metadata)
-    assert serializer.is_valid()
-
-    # Check that the internal value was transformed correctly
-    expected_data = {
-        "youtube_id": "k_AA4_fQIHc",
-        "title": "How far away is space?",
-        "description": (
-            "The Kármán line is 100 kilometers above Earth's surface. "
-            "For context,  that distance is shorter than a trip between "
-            "Boston and New York City or London and Paris.\n\n"
-            "Keep learning about spaceflight with MIT Prof. Jeff Hoffman "
-            "on MIT Learn: https://learn.mit.edu/search?resource=2766"
-        ),
-        "published_at": "2025-09-24T15:33:27Z",
-        "thumbnail_height": 360,
-        "thumbnail_width": 480,
-        "video_url": "/youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4",
-        "thumbnail_url": "/youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.jpg",
-    }
-
-    assert_json_equal(serializer.validated_data, expected_data)
-
-    # Verify it can save and create a VideoShort object
-    video_short = serializer.save()
-    assert video_short.youtube_id == "k_AA4_fQIHc"
-    assert video_short.title == "How far away is space?"
-    assert video_short.thumbnail_height == 360
-    assert video_short.thumbnail_width == 480
-    assert video_short.video_url == "/youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.mp4"
-    assert video_short.thumbnail_url == "/youtube_shorts/k_AA4_fQIHc/k_AA4_fQIHc.jpg"

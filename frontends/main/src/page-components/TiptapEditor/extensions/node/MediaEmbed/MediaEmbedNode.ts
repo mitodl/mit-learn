@@ -21,12 +21,12 @@ export const MediaEmbedNode = Node.create({
       src: { default: null },
       width: { default: "100%" },
       height: { default: "100%" },
-      frameborder: { default: 0 },
-      allowfullscreen: { default: "true" },
-      float: { default: null }, // ← NEW ("left" | "right" | null)
-      editable: { default: true },
+      frameBorder: { default: 0 },
+      allowFullScreen: { default: true },
+      editable: { default: true, renderHTML: false },
       layout: {
         default: "default", // 👈 NEW!
+        renderHTML: false,
       },
       caption: {
         default: "",
@@ -43,7 +43,8 @@ export const MediaEmbedNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["iframe", mergeAttributes(HTMLAttributes)]
+    const { editable, layout, ...iframeAttributes } = HTMLAttributes
+    return ["iframe", mergeAttributes(iframeAttributes)]
   },
 
   addCommands() {
@@ -51,10 +52,16 @@ export const MediaEmbedNode = Node.create({
       insertMedia:
         (src: string) =>
         ({ commands }: CommandProps) => {
-          return commands.insertContent({
+          // Insert media node followed by an empty paragraph
+          const mediaNode = {
             type: this.name,
             attrs: { src },
-          })
+          }
+          const emptyParagraph = {
+            type: "paragraph",
+          }
+
+          return commands.insertContent([mediaNode, emptyParagraph])
         },
     }
   },

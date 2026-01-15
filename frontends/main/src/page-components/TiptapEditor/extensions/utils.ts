@@ -51,17 +51,27 @@ export function calculateReadTime(
   return Math.round(readingTime)
 }
 
-export function extractLearningResourceIds(content: JSONContent): number[] {
-  const ids = new Set<number>()
+export function extractLearningResourceIds(
+  node: JSONContent | null | undefined,
+): number[] {
+  const ids: number[] = []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function walk(node: any) {
-    if (node.type === "learningResource" && node.attrs?.resourceId) {
-      ids.add(node.attrs.resourceId)
-    }
-    node.content?.forEach(walk)
+  if (!node || typeof node !== "object") {
+    return ids
   }
 
-  walk(content)
-  return Array.from(ids)
+  if (node.type === "learningResource" && node.attrs?.resourceId) {
+    const resourceId = node.attrs.resourceId
+    if (typeof resourceId === "number") {
+      ids.push(resourceId)
+    }
+  }
+
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      ids.push(...extractLearningResourceIds(child))
+    }
+  }
+
+  return ids
 }
