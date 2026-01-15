@@ -4,10 +4,38 @@ applyTo: "**/*.test.ts,**/*.test.tsx"
 
 # Frontend Testing Guidelines
 
+## Quick Reference
+
+```tsx
+// 1. Mock APIs
+import { setMockResponse, urls, factories } from "api/test-utils"
+setMockResponse.get(
+  urls.channels.list(),
+  factories.channels.channels({ count: 3 }),
+)
+
+// 2. Render with providers
+import { renderWithProviders, screen, user } from "@/test-utils"
+renderWithProviders(<MyComponent />)
+
+// 3. Query & interact
+await user.click(screen.getByRole("button", { name: "Submit" }))
+expect(await screen.findByText("Success")).toBeInTheDocument()
+```
+
 ## Framework & Tools
 
 - **Jest** + **JSDOM** + **React Testing Library** + **@testing-library/user-event**
 - Tests are co-located with source files and end in `.test.ts` or `.test.tsx`
+
+## Best Practices
+
+1. **Query by role/label/text** (not class names or implementation details)
+2. **Use factories for all test data** (don't manually construct objects)
+3. **Mock all API calls** with `setMockResponse` before rendering
+4. **Use `findBy*` for async content** (NOT `waitFor` combined with `getBy*`)
+5. **Write descriptive test names** from user perspective
+6. **User interactions:** prefer `@testing-library/user-event` over `fireEvent`
 
 ## Rendering Components
 
@@ -34,32 +62,33 @@ renderWithTheme(<StyledComponent />)
 
 Unmocked API calls will result in test failures.
 
-**MIT Learn APIs:**
+**Import pattern varies by API:**
 
 ```tsx
+// MIT Learn APIs - standard imports
 import { setMockResponse, urls, factories } from "api/test-utils"
 
-const channel = factories.channels.channel({ title: "Test" })
-setMockResponse.get(
-  urls.channels.details(channel.channel_type, channel.name),
-  channel,
-)
-```
-
-**MITxOnline APIs:**
-
-```tsx
+// MITxOnline APIs - separate test utils (note the aliases)
 import { setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
+```
 
+**Usage is the same regardless:**
+
+```tsx
+// MIT Learn example
+const channel = factories.channels.channel({ title: "Test" })
+setMockResponse.get(
+  urls.channels.details(channel.channel_type, channel.name),
+  channel,
+)
+
+// MITxOnline example
 const program = mitxFactories.programs.program()
-
-setMockResponse.get(mitxUrls.pages.programPages(program.readable_id), {
-  items: [program],
-})
+setMockResponse.get(mitxUrls.pages.programPages(program.readable_id), program)
 ```
 
 **Mock options:**
@@ -105,24 +134,21 @@ within(card).getByText("John Doe")
 
 ## Factories
 
-**Always prefer using factories for test data. Assume factories create realistic data, and avoid setting unnecessary overrides manually.**
+Use factories for test data. Override only properties you're testing.
 
 ```tsx
-const channel = factories.channels.channel() // Default
-const course = factories.learningResources.resource({
-  resource_type: "course", // good (if you need a course)
-  title: "Custom", // AVOID; prefer asserting about `course.title` instead.
-})
-const resources = factories.learningResources.resources({ count: 5 }) // List
+const channel = factories.channels.channel() // Use defaults
+const course = factories.learningResources.resource({ resource_type: "course" }) // Override when needed
+const resources = factories.learningResources.resources({ count: 5 }) // Lists
 ```
 
 ## Common Patterns
 
-**Setup helper:**
+**Setup helpers & auth:**
 
 ```tsx
 const setupApis = () => {
-  const user = factories.user.user({ is_authenticated: true })
+  const user = factories.user.user({ [Permission.Admin]: true })
   const data = factories.learningResources.resource()
   setMockResponse.get(urls.userMe.get(), user)
   setMockResponse.get(urls.learningResources.details({ id: data.id }), data)
@@ -130,15 +156,7 @@ const setupApis = () => {
 }
 ```
 
-**Testing auth:**
-
-```tsx
-import { Permission } from "api/hooks/user"
-const user = factories.user.user({ [Permission.Admin]: true })
-setMockResponse.get(urls.userMe.get(), user)
-```
-
-**Mocking dependencies:**
+**Mocking modules:**
 
 ```tsx
 jest.mock("./Component", () => ({
@@ -149,24 +167,15 @@ jest.mock("next/navigation", () =>
 )
 ```
 
-**Error handling:**
+**Expected errors:**
 
 ```tsx
 import { allowConsoleErrors } from "ol-test-utilities"
 const { consoleError } = allowConsoleErrors()
-// test code
+// Usually errors caught and logged
 expect(consoleError).toHaveBeenCalled()
+// In rare cases, TestingErrorBoundary can be used to test thrown errors.
 ```
-
-## Best Practices
-
-1. **Query by role/label/text** (not class names or implementation details)
-2. **Use factories for all test data** (don't manually construct objects)
-3. **Mock all API calls** with `setMockResponse` before rendering
-4. **Use `findBy*` for async content** (NOT `waitFor` combined with `getBy*`)
-5. **Write descriptive test names** from user perspective
-6. **Keep tests focused** but multiple related assertions are fine
-7. **User Interactions:** prefer `@testing-library/user-event` over `fireEvent`
 
 ## Troubleshooting
 
