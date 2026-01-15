@@ -8,7 +8,7 @@ import {
   ReactNodeViewContentProvider,
 } from "@tiptap/react"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import { Container, BannerBackground } from "ol-components"
+import { Container, BannerBackground, Breadcrumbs } from "ol-components"
 import styled from "@emotion/styled"
 import type { ExtendedNodeConfig } from "../types"
 
@@ -24,6 +24,10 @@ const FullWidthContainer = styled.div({
 const InnerContainer = styled(Container)({
   "&&": {
     maxWidth: "890px",
+  },
+
+  "& span a, & span a:hover": {
+    color: "#fff !important",
   },
 })
 
@@ -66,6 +70,14 @@ const BannerWrapper = () => {
       <FullWidthContainer>
         <StyledBannerBackground>
           <InnerContainer>
+            <Breadcrumbs
+              variant="dark"
+              ancestors={[
+                { href: "/", label: "Home" },
+                { href: "/articles", label: "MIT Stories" },
+              ]}
+              current="Article"
+            />
             <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
         </StyledBannerBackground>
