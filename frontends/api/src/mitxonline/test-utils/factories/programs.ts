@@ -17,7 +17,8 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     page: {
       feature_image_src: faker.image.url(),
       page_url: faker.internet.url(),
-      financial_assistance_form_url: faker.internet.url(),
+      // financial aid is somewhat unusual; default to no financial aid unless overridden
+      financial_assistance_form_url: "",
       description: faker.lorem.paragraph(),
       live: faker.datatype.boolean(),
       length: `${faker.number.int({ min: 1, max: 12 })} weeks`,

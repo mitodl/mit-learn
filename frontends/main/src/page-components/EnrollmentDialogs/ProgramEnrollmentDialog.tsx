@@ -7,7 +7,7 @@ import {
   PaginatedCourseWithCourseRunsSerializerV2List,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { canUpgrade } from "@/common/mitxonline"
+import { canUpgradeRun } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useQuery } from "@tanstack/react-query"
@@ -44,7 +44,7 @@ const getCourseOptions = ({
     data?.results.map((course) => {
       const run = getNextRun(course)
       const upgradeCaveat =
-        run && !canUpgrade(run) ? " (No certificate available)" : ""
+        run && !canUpgradeRun(run) ? " (No certificate available)" : ""
       const label = run
         ? `${course.title} - ${run.course_number}${upgradeCaveat}`
         : `${course.title} - (No available runs)`
@@ -141,7 +141,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           errorText={courses.isError ? "Error loading courses" : undefined}
           fullWidth
         />
-        <CertificateUpsell courseRun={run} />
+        <CertificateUpsell course={chosenCourse} courseRun={run} />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

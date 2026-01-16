@@ -10,6 +10,7 @@ import {
   ProgramEnrollmentsApi,
   PagesApi,
   CountriesApi,
+  ProductsApi,
 } from "@mitodl/mitxonline-api-axios/v2"
 import axios from "axios"
 
@@ -63,6 +64,8 @@ const programEnrollmentsApi = new ProgramEnrollmentsApi(
 
 const pagesApi = new PagesApi(undefined, BASE_PATH, axiosInstance)
 
+const productsApi = new ProductsApi(undefined, BASE_PATH, axiosInstance)
+
 export {
   usersApi,
   countriesApi,
@@ -76,4 +79,5 @@ export {
   courseCertificatesApi,
   axiosInstance,
   pagesApi,
+  productsApi,
 }
