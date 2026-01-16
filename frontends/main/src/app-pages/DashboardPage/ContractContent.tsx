@@ -413,30 +413,6 @@ const OrgProgramDisplay: React.FC<{
                 contractEnrollments,
               )
 
-              // Debug logging
-              console.log("OrgProgramDisplay - Course:", course.title)
-              console.log("OrgProgramDisplay - Contract ID:", contract?.id)
-              console.log(
-                "OrgProgramDisplay - All enrollments:",
-                courseRunEnrollments?.length,
-              )
-              console.log(
-                "OrgProgramDisplay - Filtered enrollments:",
-                contractEnrollments.length,
-              )
-              console.log(
-                "OrgProgramDisplay - Best enrollment:",
-                bestEnrollment ? "Found" : "None",
-              )
-              console.log(
-                "OrgProgramDisplay - Course runs:",
-                course.courseruns?.map((r) => ({
-                  id: r.id,
-                  courseware_id: r.courseware_id,
-                  b2b_contract: r.b2b_contract,
-                })),
-              )
-
               return (
                 <DashboardCardStyled
                   Component="li"
