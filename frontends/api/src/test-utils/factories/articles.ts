@@ -7,8 +7,13 @@ const article: Factory<RichTextArticle> = (overrides = {}) => ({
   id: faker.number.int(),
   title: faker.lorem.sentence(),
   content: {
-    text: faker.lorem.paragraph(),
-    author: faker.person.fullName(),
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: faker.lorem.paragraph() }],
+      },
+    ],
   },
   user: {
     first_name: faker.person.firstName(),

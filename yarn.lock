@@ -2205,6 +2205,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@happy-dom/jest-environment@npm:^20.1.0":
+  version: 20.1.0
+  resolution: "@happy-dom/jest-environment@npm:20.1.0"
+  dependencies:
+    happy-dom: "npm:^20.1.0"
+  peerDependencies:
+    "@jest/environment": ">=25.0.0"
+    "@jest/fake-timers": ">=25.0.0"
+    "@jest/types": ">=25.0.0"
+    jest-mock: ">=25.0.0"
+    jest-util: ">=25.0.0"
+  checksum: 10/04a1e911e6c2c9c7599ef46d3340dc2e71be147736f8eccfc2dc4ec26ba8af034985f88dcdbf40453f8674bb75ad9d86424e6cad79250cb6095c7cae61464e21
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.13.0":
   version: 0.13.0
   resolution: "@humanwhocodes/config-array@npm:0.13.0"
@@ -3279,12 +3294,12 @@ __metadata:
   linkType: hard
 
 "@mitodl/mitxonline-api-axios@npm:^2026.1.12":
-  version: 2026.1.12
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.1.12"
+  version: 2026.1.14
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.1.14"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/7c9e09e71e724062652c99811f52aaaa03e12fd8a67a807b98556741707081dd3126ed0e814c2c248b3c95aeb51586ab6252b6711ee07c59689464749b7aed37
+  checksum: 10/0a2a3fe8450acda8a891bab8f56eb241001d4706ad22d84cce9096f6cded97b4a7bb532f479780afcf495d6f041c0f3845c2bf02b4d2e5229e98faffc6863948
   languageName: node
   linkType: hard
 
@@ -7560,6 +7575,22 @@ __metadata:
   version: 13.12.2
   resolution: "@types/validator@npm:13.12.2"
   checksum: 10/564f60cfe112b45e1d747245d1f80db999bbc372b2b6a1c5454441b02c3d6bffbfff4365a10c3cd7874197f14ca5779b435794c7600bdcb541da948405a3b21a
+  languageName: node
+  linkType: hard
+
+"@types/whatwg-mimetype@npm:^3.0.2":
+  version: 3.0.2
+  resolution: "@types/whatwg-mimetype@npm:3.0.2"
+  checksum: 10/609607beeaa8b50b9e00541d8f571880d651b26b6b006103370099aba00784037de54433627c9fe775a5558e3d1fc09c2a48f54c8af91988e9bebeaf6a698eeb
+  languageName: node
+  linkType: hard
+
+"@types/ws@npm:^8.18.1":
+  version: 8.18.1
+  resolution: "@types/ws@npm:8.18.1"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/1ce05e3174dcacf28dae0e9b854ef1c9a12da44c7ed73617ab6897c5cbe4fccbb155a20be5508ae9a7dde2f83bd80f5cf3baa386b934fc4b40889ec963e94f3a
   languageName: node
   linkType: hard
 
@@ -12803,6 +12834,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"happy-dom@npm:^20.1.0":
+  version: 20.1.0
+  resolution: "happy-dom@npm:20.1.0"
+  dependencies:
+    "@types/node": "npm:^20.0.0"
+    "@types/whatwg-mimetype": "npm:^3.0.2"
+    "@types/ws": "npm:^8.18.1"
+    whatwg-mimetype: "npm:^3.0.0"
+    ws: "npm:^8.18.3"
+  checksum: 10/6f24d9d39b6dd387fe567adc621fba5e5a7fef83d5baa8cbc49cf75ecd09a91e460a242c6ac8d4ea3d2c01b134ec7f552d8c66d13ac109350ad2650450fe61de
+  languageName: node
+  linkType: hard
+
 "has-bigints@npm:^1.0.1, has-bigints@npm:^1.0.2":
   version: 1.0.2
   resolution: "has-bigints@npm:1.0.2"
@@ -15349,6 +15393,7 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
+    "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.0"
     "@mitodl/mitxonline-api-axios": "npm:^2026.1.12"
     "@mitodl/smoot-design": "npm:^6.19.0"
@@ -22830,6 +22875,21 @@ __metadata:
     utf-8-validate:
       optional: true
   checksum: 10/725964438d752f0ab0de582cd48d6eeada58d1511c3f613485b5598a83680bedac6187c765b0fe082e2d8cc4341fc57707c813ae780feee82d0c5efe6a4c61b6
+  languageName: node
+  linkType: hard
+
+"ws@npm:^8.18.3":
+  version: 8.19.0
+  resolution: "ws@npm:8.19.0"
+  peerDependencies:
+    bufferutil: ^4.0.1
+    utf-8-validate: ">=5.0.2"
+  peerDependenciesMeta:
+    bufferutil:
+      optional: true
+    utf-8-validate:
+      optional: true
+  checksum: 10/26e4901e93abaf73af9f26a93707c95b4845e91a7a347ec8c569e6e9be7f9df066f6c2b817b2d685544e208207898a750b78461e6e8d810c11a370771450c31b
   languageName: node
   linkType: hard
 

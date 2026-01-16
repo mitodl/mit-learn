@@ -58,15 +58,12 @@ const useLearningResourcesDetail = (id: number) => {
   return useQuery(learningResourceQueries.detail(id))
 }
 
-const useLearningResourcesBulkList = (
-  ids: number[],
-  options?: { enabled?: boolean },
-) => {
+const useLearningResourcesBulkList = (ids: number[]) => {
   const queryClient = useQueryClient()
 
   return useQuery({
     ...learningResourceQueries.list({ resource_id: ids }),
-    enabled: options?.enabled && ids.length > 0,
+    enabled: ids.length > 0,
 
     select: (data) => {
       const resources = data.results

@@ -48,11 +48,6 @@ const learningResourceKeys = {
     params,
   ],
   summaryListRoot: () => [...learningResourceKeys.root, "summaryList"],
-  bulkRoot: () => [...learningResourceKeys.root, "bulk"],
-  bulk: (ids: number[]) => [
-    ...learningResourceKeys.bulkRoot(),
-    ids.slice().sort((a, b) => a - b),
-  ],
   summaryList: (params: LearningResourcesSummaryListRequest) => [
     ...learningResourceKeys.summaryListRoot(),
     params,
