@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides, type PartialFactory } from "ol-test-utilities"
-import { ResourceType } from "./helpers"
 import * as u from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -15,11 +14,6 @@ import {
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 
-// Helper types for test factories
-type DashboardCourse = CourseWithCourseRunsSerializerV2
-
-type DashboardProgram = V2Program
-
 const makeCourses = factories.courses.courses
 const makeProgram = factories.programs.program
 const makeProgramCollection = factories.programs.programCollection
@@ -27,31 +21,18 @@ const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
-const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
+const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
+  ...overrides
+) => {
   // Use the existing factory that creates proper CourseWithCourseRunsSerializerV2 objects
   const course = factories.courses.course()
-  return mergeOverrides<DashboardCourse>(course, ...overrides)
+  return mergeOverrides<CourseWithCourseRunsSerializerV2>(course, ...overrides)
 }
 
-const dashboardProgram: PartialFactory<DashboardProgram> = (...overrides) => {
-  return mergeOverrides<DashboardProgram>(
-    {
-      id: faker.number.int(),
-      key: faker.string.uuid(),
-      type: ResourceType.Program,
-      title: faker.commerce.productName(),
-      programType: faker.helpers.arrayElement([
-        "MicroMasters",
-        "Professional Certificate",
-        "XSeries",
-      ]),
-      courseIds: Array.from({ length: 3 }, () => faker.number.int()),
-      collections: [],
-      description: faker.lorem.paragraph(),
-      reqTree: [],
-    },
-    ...overrides,
-  )
+const dashboardProgram: PartialFactory<V2Program> = (...overrides) => {
+  // Use the existing factory that creates proper V2Program objects
+  const program = makeProgram()
+  return mergeOverrides<V2Program>(program, ...overrides)
 }
 
 const setupEnrollments = (includeExpired: boolean) => {

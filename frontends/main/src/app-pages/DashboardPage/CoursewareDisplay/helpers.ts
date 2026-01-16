@@ -49,29 +49,9 @@ const getBestRun = (
 
   // If contract ID is provided, filter to runs matching that contract
   if (contractId !== undefined) {
-    // Debug logging
-    console.log("getBestRun - Looking for contract:", contractId)
-    console.log("getBestRun - Course:", course.title)
-    console.log(
-      "getBestRun - Available runs:",
-      course.courseruns.map((r) => ({
-        id: r.id,
-        courseware_id: r.courseware_id,
-        b2b_contract: r.b2b_contract,
-      })),
-    )
-
     const contractRuns = course.courseruns.filter(
       (run) => run.b2b_contract === contractId,
     )
-
-    console.log("getBestRun - Matching contract runs:", contractRuns.length)
-    if (contractRuns.length > 0) {
-      console.log("getBestRun - Selected run:", {
-        id: contractRuns[0].id,
-        courseware_id: contractRuns[0].courseware_id,
-      })
-    }
 
     if (contractRuns.length > 0) {
       // Prefer next_run_id if it's in the contract runs
@@ -85,12 +65,6 @@ const getBestRun = (
     }
     // If no matching contract runs found, return undefined
     // (don't fall back to non-contract runs for contract pages)
-    console.warn(
-      "getBestRun - No runs found for contract",
-      contractId,
-      "in course",
-      course.title,
-    )
     return undefined
   }
 

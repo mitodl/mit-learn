@@ -193,7 +193,7 @@ describe.each([
     const course = dashboardCourse({
       courseruns: [
         mitxonline.factories.courses.courseRun({
-          b2b_contract_id: b2bContractId,
+          b2b_contract: b2bContractId,
           courseware_url: coursewareUrl,
         }),
       ],
@@ -851,7 +851,7 @@ describe.each([
       const userData = mitxUser()
       const b2bContractId = faker.number.int()
       const run = mitxonline.factories.courses.courseRun({
-        b2b_contract_id: b2bContractId,
+        b2b_contract: b2bContractId,
       })
       const course = dashboardCourse({
         courseruns: [run],
@@ -886,7 +886,7 @@ describe.each([
     async ({ trigger, userData }) => {
       const b2bContractId = faker.number.int()
       const run = mitxonline.factories.courses.courseRun({
-        b2b_contract_id: b2bContractId,
+        b2b_contract: b2bContractId,
       })
       const course = dashboardCourse({
         courseruns: [run],

@@ -552,8 +552,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const resourceIsProgramCollection = isProgramCollection(resource)
 
   const openJustInTime = (href: string, readableId: string) => {
-    const userCountry = user?.profile?.country
-    const userYearOfBirth = user?.profile?.year_of_birth
+    const userCountry = user?.legal_address?.country
+    const userYearOfBirth = user?.user_profile?.year_of_birth
     const showJustInTimeDialog = !userCountry || !userYearOfBirth
 
     if (showJustInTimeDialog) {
@@ -591,7 +591,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Extract common data based on resource type
   let title: string,
-    enrollmentData: CourseRunEnrollmentRequestV2 | null | undefined
+    enrollmentData:
+      | CourseRunEnrollmentRequestV2
+      | V2UserProgramEnrollmentDetail
+      | null
+      | undefined
 
   if (resourceIsCourseWithRuns) {
     title = resource.title
@@ -609,10 +613,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     title = resource.program.title
     enrollmentData = enrollment
   } else {
-    title =
-      "title" in resource && typeof resource.title === "string"
-        ? resource.title
-        : "Unknown"
+    title = "Unknown"
+    enrollmentData = undefined
   }
 
   // Course-specific data
@@ -625,11 +627,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const enrollmentStatus = isAnyCourse
     ? hasValidCertificate
       ? EnrollmentStatus.Completed
-      : enrollmentData
+      : enrollmentData && "run" in enrollmentData
         ? getEnrollmentStatus(enrollmentData)
         : EnrollmentStatus.NotEnrolled
-    : "status" in (enrollmentData || {})
-      ? (enrollmentData as { status: EnrollmentStatus }).status
+    : enrollmentData && "status" in enrollmentData
+      ? enrollmentData.status
       : EnrollmentStatus.NotEnrolled
 
   // URLs
@@ -641,17 +643,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
-  // Check enrollment's b2b_contract_id first, then run's b2b_contract_id, finally fall back to contractId prop
+  // Check enrollment's b2b_contract_id first, then run's b2b_contract, finally fall back to contractId prop
   const b2bContractId =
-    enrollmentData?.b2b_contract_id ?? run?.b2b_contract_id ?? contractId
+    enrollmentData?.b2b_contract_id ?? run?.b2b_contract ?? contractId
 
   // Title link logic
   const titleHref = isAnyCourse
-    ? hasEnrolled || b2bContractId
+    ? hasEnrolled
       ? titleAction === "marketing"
         ? marketingUrl
         : (coursewareUrl ?? marketingUrl)
-      : undefined
+      : b2bContractId
+        ? (coursewareUrl ?? marketingUrl)
+        : undefined
     : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
