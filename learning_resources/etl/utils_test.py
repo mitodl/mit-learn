@@ -820,3 +820,46 @@ def test_get_url_from_module_id(
         assert result == expected_url_pattern
     else:
         assert result is None
+
+
+def test_process_olx_path_malformed_sjson(mocker, settings):
+    """Test that process_olx_path handles malformed SJSON content gracefully"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx_path = mocker.Mock()
+    olx_path.__str__ = mocker.Mock(return_value="path/to/malformed_content.sjson")
+
+    malformed_sjson_content = """{ "start": [0,2], "end": [2,4], "text": ["Valid text", "Another valid text" }"""
+    metadata = {
+        "content_type": CONTENT_TYPE_FILE,
+        "archive_checksum": "checksum123",
+        "file_extension": ".sjson",
+        "source_path": "path/to/malformed_content.sjson",
+    }
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                malformed_sjson_content.encode("utf-8"),
+                metadata,
+            ),
+        ],
+    )
+    tika_output = {
+        "content": malformed_sjson_content.encode("utf-8"),
+        "metadata": metadata,
+    }
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
+    )
+
+    script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
+
+    content = list(
+        utils.transform_content_files(
+            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
+            run,
+            overwrite=True,
+        )
+    )
+    # Since the SJSON is malformed, no content should be returned
+    assert content == []
