@@ -14,18 +14,20 @@ import {
 } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
 import {
-  mitxonlineCourse,
-  mitxonlineProgram,
-  programEnrollmentsToPrograms,
+  EnrollmentStatus,
+  getEnrollmentStatus,
+  getKey,
+  ResourceType,
   selectBestEnrollment,
-  transformEnrollmentToDashboard,
-  userEnrollmentsToDashboardCourses,
-} from "./transform"
+} from "./helpers"
 import { DashboardCard } from "./DashboardCard"
-import { DashboardCourse, DashboardProgram, EnrollmentStatus } from "./types"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseRunEnrollmentRequestV2,
+  V2ProgramRequirement,
+  V2UserProgramEnrollmentDetail,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 
@@ -100,38 +102,44 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const alphabeticalSort = (a: DashboardCourse, b: DashboardCourse) =>
-  a.title.localeCompare(b.title)
+const alphabeticalSort = (
+  a: CourseRunEnrollmentRequestV2,
+  b: CourseRunEnrollmentRequestV2,
+) => a.run.course.title.localeCompare(b.run.course.title)
 
-const startsSooner = (a: DashboardCourse, b: DashboardCourse) => {
-  if (!a.run.startDate && !b.run.startDate) return 0
-  if (!a.run.startDate) return 1
-  if (!b.run.startDate) return -1
-  const x = new Date(a.run.startDate)
-  const y = new Date(b.run.startDate)
+const startsSooner = (
+  a: CourseRunEnrollmentRequestV2,
+  b: CourseRunEnrollmentRequestV2,
+) => {
+  if (!a.run.start_date && !b.run.start_date) return 0
+  if (!a.run.start_date) return 1
+  if (!b.run.start_date) return -1
+  const x = new Date(a.run.start_date)
+  const y = new Date(b.run.start_date)
   return x.getTime() - y.getTime()
 }
-const sortEnrollments = (resources: DashboardCourse[]) => {
-  const expired: DashboardCourse[] = []
-  const completed: DashboardCourse[] = []
-  const started: DashboardCourse[] = []
-  const notStarted: DashboardCourse[] = []
-  resources.forEach((resource) => {
-    if (!resource.enrollment?.b2b_contract_id) {
-      if (resource.enrollment?.status === EnrollmentStatus.Completed) {
-        completed.push(resource)
+const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
+  const expired: CourseRunEnrollmentRequestV2[] = []
+  const completed: CourseRunEnrollmentRequestV2[] = []
+  const started: CourseRunEnrollmentRequestV2[] = []
+  const notStarted: CourseRunEnrollmentRequestV2[] = []
+  enrollments.forEach((enrollment) => {
+    if (!enrollment?.b2b_contract_id) {
+      const enrollmentStatus = getEnrollmentStatus(enrollment)
+      if (enrollmentStatus === EnrollmentStatus.Completed) {
+        completed.push(enrollment)
       } else if (
-        resource.run.endDate &&
-        new Date(resource.run.endDate) < new Date()
+        enrollment.run.end_date &&
+        new Date(enrollment.run.end_date) < new Date()
       ) {
-        expired.push(resource)
+        expired.push(enrollment)
       } else if (
-        resource.run.startDate &&
-        new Date(resource.run.startDate) < new Date()
+        enrollment.run.start_date &&
+        new Date(enrollment.run.start_date) < new Date()
       ) {
-        started.push(resource)
+        started.push(enrollment)
       } else {
-        notStarted.push(resource)
+        notStarted.push(enrollment)
       }
     }
   })
@@ -145,9 +153,9 @@ const sortEnrollments = (resources: DashboardCourse[]) => {
 }
 
 interface EnrollmentExpandCollapseProps {
-  shownCourseRunEnrollments: DashboardCourse[]
-  hiddenCourseRunEnrollments: DashboardCourse[]
-  programEnrollments?: DashboardProgram[]
+  shownCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
+  hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
+  programEnrollments?: V2UserProgramEnrollmentDetail[]
   isLoading?: boolean
 }
 
@@ -167,22 +175,31 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownCourseRunEnrollments.map((course) => (
-          <DashboardCardStyled
-            titleAction="marketing"
-            key={course.key}
-            Component="li"
-            dashboardResource={course}
-            showNotComplete={false}
-            isLoading={isLoading}
-          />
-        ))}
+        {shownCourseRunEnrollments.map((enrollment) => {
+          return (
+            <DashboardCardStyled
+              titleAction="marketing"
+              key={getKey({
+                resourceType: ResourceType.Course,
+                id: enrollment.run.course.id,
+                runId: enrollment.run.id,
+              })}
+              Component="li"
+              resource={enrollment}
+              showNotComplete={false}
+              isLoading={isLoading}
+            />
+          )
+        })}
         {programEnrollments?.map((program) => (
           <DashboardCardStyled
             titleAction="marketing"
-            key={program.key}
+            key={getKey({
+              resourceType: ResourceType.Program,
+              id: program.program.id,
+            })}
             Component="li"
-            dashboardResource={program}
+            resource={program}
             showNotComplete={false}
             isLoading={isLoading}
           />
@@ -192,12 +209,16 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenCourseRunEnrollments.map((course) => (
+              {hiddenCourseRunEnrollments.map((enrollment) => (
                 <DashboardCardStyled
                   titleAction="marketing"
-                  key={course.key}
+                  key={getKey({
+                    resourceType: ResourceType.Course,
+                    id: enrollment.run.course.id,
+                    runId: enrollment.run.id,
+                  })}
                   Component="li"
-                  dashboardResource={course}
+                  resource={enrollment}
                   showNotComplete={false}
                   isLoading={isLoading}
                 />
@@ -254,10 +275,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
-  const { data: rawProgram, isLoading: programLoading } = useQuery(
+  const { data: program, isLoading: programLoading } = useQuery(
     programsQueries.programDetail({ id: programId }),
   )
-  const program = rawProgram ? mitxonlineProgram(rawProgram) : undefined
 
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery(enrollmentQueries.programEnrollmentsList())
@@ -266,11 +286,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   })
 
   // Only fetch courses if we have a program with course IDs
-  const { data: rawProgramCourses, isLoading: programCoursesLoading } =
-    useQuery({
-      ...coursesQueries.coursesList({ id: program?.courseIds || [] }),
-      enabled: !!program && program.courseIds.length > 0 && enrolledInProgram,
-    })
+  const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
+    ...coursesQueries.coursesList({ id: program?.courses || [] }),
+    enabled: !!program && program.courses.length > 0 && enrolledInProgram,
+  })
 
   const isLoading =
     userEnrollmentsLoading ||
@@ -293,38 +312,13 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
   // Build sections from requirement tree
   const requirementSections =
-    program?.reqTree
+    program?.req_tree
       .filter((node) => node.data.node_type === "operator")
       .map((node) => {
         const courseIds = extractCoursesFromNode(node)
-        const sectionCourses = (rawProgramCourses?.results || [])
-          .filter((course) => courseIds.includes(course.id))
-          .map((course) => {
-            // Find all enrollments for this course
-            const courseEnrollments = enrollmentsByCourseId[course.id] || []
-
-            if (courseEnrollments.length === 0) {
-              // No enrollment - use first run
-              return mitxonlineCourse(course)
-            }
-
-            // If multiple enrollments exist, select the best one
-            const bestEnrollment =
-              courseEnrollments.length > 1
-                ? selectBestEnrollment(courseEnrollments)
-                : courseEnrollments[0]
-
-            // Find the matching run from course.courseruns
-            const matchingRun = course.courseruns.find(
-              (run) => run.id === bestEnrollment.run.id,
-            )
-
-            return mitxonlineCourse(
-              course,
-              transformEnrollmentToDashboard(bestEnrollment),
-              matchingRun,
-            )
-          })
+        const sectionCourses = (programCourses?.results || []).filter(
+          (course) => courseIds.includes(course.id),
+        )
 
         return {
           key: node.id,
@@ -338,9 +332,13 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const allProgramCourses = requirementSections.flatMap(
     (section) => section.courses,
   )
-  const completedCount = allProgramCourses.filter(
-    (course) => course.enrollment?.status === EnrollmentStatus.Completed,
-  ).length
+  const completedCount = allProgramCourses.filter((course) => {
+    const bestEnrollment = selectBestEnrollment(
+      course,
+      enrollmentsByCourseId[course.id] || [],
+    )
+    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+  }).length
 
   // Calculate total required courses, respecting operator_value if operator is specified
   const totalCount = requirementSections.reduce((sum, section) => {
@@ -376,7 +374,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
         <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-          MITx | {program?.programType}
+          MITx | {program?.program_type}
         </Typography>
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {program?.title}
@@ -391,9 +389,15 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         </Typography>
       </Stack>
       {requirementSections.map((section, index) => {
-        const sectionCompletedCount = section.courses.filter(
-          (course) => course.enrollment?.status === EnrollmentStatus.Completed,
-        ).length
+        const sectionCompletedCount = section.courses.filter((course) => {
+          const bestEnrollment = selectBestEnrollment(
+            course,
+            enrollmentsByCourseId[course.id] || [],
+          )
+          return (
+            getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+          )
+        }).length
 
         const sectionRequiredCount =
           section.node.data.operator === "min_number_of" &&
@@ -427,8 +431,11 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               {section.courses.map((course) => (
                 <DashboardCardStyled
                   titleAction="marketing"
-                  key={course.key}
-                  dashboardResource={course}
+                  key={getKey({
+                    resourceType: ResourceType.Course,
+                    id: course.id,
+                  })}
+                  resource={course}
                   showNotComplete={false}
                   variant="stacked"
                 />
@@ -445,16 +452,19 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
     useQuery({
       ...enrollmentQueries.courseRunEnrollmentsList(),
-      select: userEnrollmentsToDashboardCourses,
     })
   const { data: contracts, isLoading: contractsLoading } = useQuery(
     contractQueries.contractsList(),
   )
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery(enrollmentQueries.programEnrollmentsList())
-  const filteredProgramEnrollments = programEnrollments
-    ? programEnrollmentsToPrograms(programEnrollments, contracts)
-    : []
+  const filteredProgramEnrollments = programEnrollments?.filter(
+    (enrollment) => {
+      return !contracts?.some((contract) =>
+        contract.programs.includes(enrollment.program.id),
+      )
+    },
+  )
 
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],

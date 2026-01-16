@@ -5,7 +5,7 @@ import { VisuallyHidden } from "@mitodl/smoot-design"
 import CourseComplete from "@/public/images/icons/course-complete.svg"
 import CourseInProgress from "@/public/images/icons/course-in-progress.svg"
 import CourseUnenrolled from "@/public/images/icons/course-unenrolled.svg"
-import { EnrollmentStatus } from "./types"
+import { EnrollmentStatus } from "./helpers"
 
 const CompletedImage = styled(Image)({
   width: "16px",
