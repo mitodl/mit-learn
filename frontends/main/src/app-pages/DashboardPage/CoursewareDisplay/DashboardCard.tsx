@@ -482,7 +482,6 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   resource: DashboardResource
-  enrollment?: CourseRunEnrollmentRequestV2 | null
   titleAction?: "marketing" | "courseware"
   showNotComplete?: boolean
   offerUpgrade?: boolean
@@ -499,7 +498,6 @@ type DashboardCardProps = {
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
   resource,
-  enrollment,
   titleAction = "courseware",
   showNotComplete = true,
   offerUpgrade = true,
@@ -561,7 +559,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   if (resourceIsCourseWithRuns) {
     title = resource.title
-    enrollmentData = enrollment
+    enrollmentData = null
   } else if (resourceIsCourseRunEnrollment) {
     title = resource.run.course.title
     enrollmentData = resource
@@ -593,7 +591,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // URLs
   const marketingUrl = resourceIsCourseWithRuns
     ? resource.page?.page_url
-    : undefined
+    : resourceIsCourseRunEnrollment
+      ? resource.run.course.page?.page_url
+      : undefined
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled

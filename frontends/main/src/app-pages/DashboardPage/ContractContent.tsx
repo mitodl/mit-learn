@@ -325,8 +325,7 @@ const OrgProgramCollectionDisplay: React.FC<{
                 id: course.id,
                 runId: bestEnrollment?.run.id,
               })}
-              resource={course}
-              enrollment={bestEnrollment}
+              resource={bestEnrollment ?? course}
               noun="Module"
               offerUpgrade={false}
               titleAction="courseware"
@@ -421,8 +420,7 @@ const OrgProgramDisplay: React.FC<{
                     id: course.id,
                     runId: bestEnrollment?.run.id,
                   })}
-                  resource={course}
-                  enrollment={bestEnrollment}
+                  resource={bestEnrollment ?? course}
                   noun="Module"
                   offerUpgrade={false}
                   titleAction="courseware"
