@@ -307,12 +307,16 @@ def _process_resource_embeddings(serialized_resources):
 
 def update_learning_resource_payload(serialized_document):
     points = [vector_point_id(serialized_document["readable_id"])]
-    _set_payload(
-        points,
-        serialized_document,
-        param_map=QDRANT_RESOURCE_PARAM_MAP,
-        collection_name=RESOURCES_COLLECTION_NAME,
-    )
+    for point_batch in [
+        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
+        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
+    ]:
+        _set_payload(
+            point_batch,
+            serialized_document,
+            param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
 
 
 def update_content_file_payload(serialized_document):
