@@ -10,7 +10,7 @@ services:
   db:
     profiles:
       - backend
-    image: postgres:16
+    image: postgres:18
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 3s
