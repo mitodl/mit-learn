@@ -19,20 +19,6 @@ jest.mock("posthog-js/react", () => ({
 
 const mockOnSave = jest.fn()
 
-const getMakeRequestCalls = () => {
-  return (makeRequest as unknown as ReturnType<typeof jest.fn>).mock.calls
-}
-
-const findApiCall = (
-  method: string,
-  url: string,
-): [string, string, unknown] | undefined => {
-  const calls = getMakeRequestCalls()
-  return calls.find((call) => call[0] === method && call[1] === url) as
-    | [string, string, unknown]
-    | undefined
-}
-
 describe("ArticleEditor - Content Editing and Saving", () => {
   beforeEach(() => {
     mockOnSave.mockClear()
@@ -109,12 +95,14 @@ describe("ArticleEditor - Content Editing and Saving", () => {
               content: [
                 {
                   type: "heading",
-                  attrs: { level: 1 },
+                  attrs: { level: 1, textAlign: null },
                   content: [{ type: "text", text: "Updated Title" }],
                 },
                 {
                   type: "paragraph",
-                  content: [],
+                  attrs: {
+                    textAlign: null,
+                  },
                 },
               ],
             },
@@ -123,7 +111,9 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "paragraph",
-              content: [],
+              attrs: {
+                textAlign: null,
+              },
             },
           ],
         },
@@ -136,47 +126,25 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       await userEvent.keyboard("{Control>}a{/Control}{Delete}")
       await userEvent.type(heading, "Updated Title")
 
-      await waitFor(
-        () => {
-          const updateButton = screen.getByRole("button", {
-            name: /Update|Publish/,
-          })
-          expect(updateButton).not.toBeDisabled()
-        },
+      const updateButton = await screen.findByRole(
+        "button",
+        { name: /Update|Publish/ },
         { timeout: 3000 },
       )
 
-      const updateButton = screen.getByRole("button", {
-        name: /Update|Publish/,
-      })
       await userEvent.click(updateButton)
 
-      await waitFor(
-        () => {
-          const patchCall = findApiCall(
-            "patch",
-            urls.articles.details(article.id),
-          )
-          expect(patchCall).toBeDefined()
-        },
-        { timeout: 5000 },
+      expect(makeRequest).toHaveBeenCalledWith(
+        "patch",
+        urls.articles.details(article.id),
+        expect.objectContaining({
+          content: updatedArticle.content,
+          is_published: true,
+          title: updatedArticle.title,
+        }),
       )
 
-      const patchCall = findApiCall("patch", urls.articles.details(article.id))
-      expect(patchCall).toBeDefined()
-      if (patchCall) {
-        const requestBody = patchCall[2] as {
-          title: string
-          content: JSONContent
-        }
-        expect(requestBody.title).toBe("Updated Title")
-        expect(requestBody.content).toBeDefined()
-
-        const contentStr = JSON.stringify(requestBody.content)
-        expect(contentStr).toContain("Updated Title")
-      }
-
-      await waitFor(() => expect(mockOnSave).toHaveBeenCalled())
+      expect(mockOnSave).toHaveBeenCalled()
     })
   })
 
@@ -214,13 +182,14 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       const paragraph = screen.getByText("Original paragraph text")
       await userEvent.click(paragraph)
       await userEvent.keyboard("{Control>}a{/Control}")
-      await userEvent.type(paragraph, "Updated paragraph text")
+      await userEvent.type(paragraph, " with some more text")
+
+      const updateButton = await screen.findByRole("button", {
+        name: /Update|Publish/,
+      })
 
       await waitFor(
         () => {
-          const updateButton = screen.getByRole("button", {
-            name: /Update|Publish/,
-          })
           expect(updateButton).not.toBeDisabled()
         },
         { timeout: 3000 },
@@ -236,12 +205,14 @@ describe("ArticleEditor - Content Editing and Saving", () => {
               content: [
                 {
                   type: "heading",
-                  attrs: { level: 1 },
+                  attrs: { level: 1, textAlign: null },
                   content: [{ type: "text", text: "Article Title" }],
                 },
                 {
                   type: "paragraph",
-                  content: [],
+                  attrs: {
+                    textAlign: null,
+                  },
                 },
               ],
             },
@@ -250,38 +221,32 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "paragraph",
-              content: [{ type: "text", text: "Updated paragraph text" }],
+              content: [
+                {
+                  type: "text",
+                  text: "Original paragraph text with some more text",
+                },
+              ],
+              attrs: {
+                textAlign: null,
+              },
             },
           ],
         },
       }
       setMockResponse.patch(urls.articles.details(article.id), updatedArticle)
 
-      const updateButton = screen.getByRole("button", {
-        name: /Update|Publish/,
-      })
       await userEvent.click(updateButton)
 
-      await waitFor(
-        () => {
-          const patchCall = findApiCall(
-            "patch",
-            urls.articles.details(article.id),
-          )
-          expect(patchCall).toBeDefined()
-        },
-        { timeout: 5000 },
+      expect(makeRequest).toHaveBeenCalledWith(
+        "patch",
+        urls.articles.details(article.id),
+        expect.objectContaining({
+          content: updatedArticle.content,
+          is_published: true,
+          title: updatedArticle.title,
+        }),
       )
-
-      const patchCall = findApiCall("patch", urls.articles.details(article.id))
-      expect(patchCall).toBeDefined()
-      if (patchCall) {
-        const requestBody = patchCall[2] as { content: JSONContent }
-        expect(requestBody.content).toBeDefined()
-
-        const contentStr = JSON.stringify(requestBody.content)
-        expect(contentStr).toContain("Updated paragraph text")
-      }
     })
   })
 
@@ -543,6 +508,34 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             urls.articles.list(),
             expect.objectContaining({
               title: "My Article",
+              content: {
+                type: "doc",
+                content: [
+                  {
+                    type: "banner",
+                    content: [
+                      {
+                        type: "heading",
+                        attrs: { level: 1, textAlign: null },
+                        content: [{ type: "text", text: "My Article" }],
+                      },
+                      {
+                        type: "paragraph",
+                        attrs: {
+                          textAlign: null,
+                        },
+                      },
+                    ],
+                  },
+                  { type: "byline" },
+                  {
+                    type: "paragraph",
+                    attrs: {
+                      textAlign: null,
+                    },
+                  },
+                ],
+              },
               is_published: true,
             }),
           )
