@@ -54,6 +54,21 @@ type DashboardResource =
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
   | { type: "program-enrollment"; data: V2UserProgramEnrollmentDetail }
 
+/**
+ * Transforms old-format certificate links to new format.
+ * Old format: /certificate/{uuid}/
+ * New format: /certificate/course/{uuid}/ or /certificate/program/{uuid}/
+ */
+const fixCertificateLink = (
+  link: string | null | undefined,
+  type: "course" | "program",
+): string | undefined => {
+  if (!link) return undefined
+  // Pattern matches /certificate/{uuid}/ and captures the UUID
+  const pattern = /\/certificate\/([^/]+)\/?$/
+  return link.replace(pattern, `/certificate/${type}/$1/`)
+}
+
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
   variant?: "default" | "stacked"
@@ -655,7 +670,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         <TitleText>{title}</TitleText>
       )}
       {enrollmentData?.certificate?.link ? (
-        <SubtitleLink href={enrollmentData.certificate.link}>
+        <SubtitleLink
+          href={
+            (resourceIsCourseRunEnrollment
+              ? fixCertificateLink(enrollmentData.certificate.link, "course")
+              : resourceIsProgramEnrollment
+                ? fixCertificateLink(enrollmentData.certificate.link, "program")
+                : enrollmentData.certificate.link) ??
+            enrollmentData.certificate.link
+          }
+        >
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
@@ -694,9 +718,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         }
         readableId={
           resourceIsCourse
-            ? resource.data.readable_id
+            ? run?.courseware_id
             : resourceIsCourseRunEnrollment
-              ? resource.data.run.course.readable_id
+              ? resource.data.run.courseware_id
               : undefined
         }
         startDate={run?.start_date}
