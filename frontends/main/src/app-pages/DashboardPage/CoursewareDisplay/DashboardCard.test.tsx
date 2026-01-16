@@ -9,7 +9,11 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
-import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
+import {
+  DashboardCard,
+  DashboardType,
+  getDefaultContextMenuItems,
+} from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
@@ -92,7 +96,10 @@ describe.each([
       },
     })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={enrollment} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
 
     const card = getCard()
@@ -117,7 +124,10 @@ describe.each([
     })
     // No enrollment = not enrolled
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -149,7 +159,10 @@ describe.each([
       },
     })
     renderWithProviders(
-      <DashboardCard titleAction="courseware" resource={enrollment} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
 
     const card = getCard()
@@ -171,7 +184,10 @@ describe.each([
     })
     // No enrollment = not enrolled
     renderWithProviders(
-      <DashboardCard titleAction="courseware" resource={course} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -200,7 +216,10 @@ describe.each([
     })
     // No enrollment passed, but B2B contract in run allows access
     renderWithProviders(
-      <DashboardCard titleAction="courseware" resource={course} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -225,7 +244,7 @@ describe.each([
       <DashboardCard
         titleAction="marketing"
         Component={TheComponent}
-        resource={course}
+        resource={{ type: DashboardType.Course, data: course }}
         className="some-custom classes"
       />,
     )
@@ -264,7 +283,13 @@ describe.each([
         },
       })
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={enrollment} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
       )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
@@ -308,7 +333,13 @@ describe.each([
         certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
       })
       const { view } = renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={enrollment} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
       )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
@@ -324,7 +355,10 @@ describe.each([
         <DashboardCard
           titleAction="marketing"
           noun={courseNoun}
-          resource={enrollment}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
         />,
       )
 
@@ -416,7 +450,10 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollmentWithCourse}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollmentWithCourse,
+          }}
         />,
       )
       const card = getCard()
@@ -458,7 +495,10 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollment}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
           offerUpgrade={offerUpgrade}
         />,
       )
@@ -501,7 +541,10 @@ describe.each([
     })
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={enrollment} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
     const card = getCard()
     const upgradeRoot = within(card).getByTestId("upgrade-root")
@@ -528,7 +571,10 @@ describe.each([
       next_run_id: run.id, // Ensure getBestRun uses this run
     })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
     const card = getCard()
 
@@ -556,7 +602,14 @@ describe.each([
       const { view } = renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollmentOrNull ?? course}
+          resource={
+            enrollmentOrNull
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollmentOrNull,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
           showNotComplete={showNotComplete}
         />,
       )
@@ -574,7 +627,10 @@ describe.each([
       view.rerender(
         <DashboardCard
           titleAction="marketing"
-          resource={completedEnrollment}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: completedEnrollment,
+          }}
           showNotComplete={showNotComplete}
         />,
       )
@@ -620,7 +676,14 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollment ?? course}
+          resource={
+            enrollment
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollment,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
         />,
       )
       const card = getCard()
@@ -664,7 +727,10 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollment}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
           contextMenuItems={contextMenuItems}
         />,
       )
@@ -719,7 +785,14 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollmentWithCourse ?? course}
+          resource={
+            enrollmentWithCourse
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollmentWithCourse,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
         />,
       )
       const card = getCard()
@@ -770,7 +843,14 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          resource={enrollment ?? course}
+          resource={
+            enrollment
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollment,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
         />,
       )
       const card = getCard()
@@ -796,7 +876,10 @@ describe.each([
       run: { ...run, course },
     })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={enrollment} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
@@ -852,7 +935,10 @@ describe.each([
       // No enrollment = not enrolled, but has B2B contract
       const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
-        <DashboardCard titleAction="courseware" resource={course} />,
+        <DashboardCard
+          titleAction="courseware"
+          resource={{ type: DashboardType.Course, data: course }}
+        />,
       )
       const card = getCard()
       const triggerElement =
@@ -887,7 +973,10 @@ describe.each([
       // No enrollment = not enrolled, but has B2B contract
       setupEnrollmentApis({ user: userData, course })
       renderWithProviders(
-        <DashboardCard titleAction="courseware" resource={course} />,
+        <DashboardCard
+          titleAction="courseware"
+          resource={{ type: DashboardType.Course, data: course }}
+        />,
       )
       const card = getCard()
       const triggerElement =
@@ -912,7 +1001,7 @@ describe.each([
         <DashboardCard
           variant="stacked"
           titleAction="marketing"
-          resource={course}
+          resource={{ type: DashboardType.Course, data: course }}
         />,
       )
 
@@ -951,7 +1040,7 @@ describe.each([
               key={`course-${idx}`}
               variant="stacked"
               titleAction="marketing"
-              resource={course}
+              resource={{ type: DashboardType.Course, data: course }}
             />
           ))}
         </div>,
@@ -982,7 +1071,13 @@ describe.each([
         })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={programEnrollment} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
       )
 
       const card = getCard()
@@ -999,7 +1094,13 @@ describe.each([
         })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={programEnrollment} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
       )
 
       const card = getCard()

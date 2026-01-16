@@ -20,7 +20,7 @@ import {
   ResourceType,
   selectBestEnrollment,
 } from "./helpers"
-import { DashboardCard } from "./DashboardCard"
+import { DashboardCard, DashboardType } from "./DashboardCard"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
@@ -185,7 +185,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
                 runId: enrollment.run.id,
               })}
               Component="li"
-              resource={enrollment}
+              resource={{
+                type: DashboardType.CourseRunEnrollment,
+                data: enrollment,
+              }}
               showNotComplete={false}
               isLoading={isLoading}
             />
@@ -199,7 +202,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
               id: program.program.id,
             })}
             Component="li"
-            resource={program}
+            resource={{
+              type: DashboardType.ProgramEnrollment,
+              data: program,
+            }}
             showNotComplete={false}
             isLoading={isLoading}
           />
@@ -218,7 +224,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
                     runId: enrollment.run.id,
                   })}
                   Component="li"
-                  resource={enrollment}
+                  resource={{
+                    type: DashboardType.CourseRunEnrollment,
+                    data: enrollment,
+                  }}
                   showNotComplete={false}
                   isLoading={isLoading}
                 />
@@ -435,7 +444,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                     resourceType: ResourceType.Course,
                     id: course.id,
                   })}
-                  resource={course}
+                  resource={{ type: DashboardType.Course, data: course }}
                   showNotComplete={false}
                   variant="stacked"
                 />
