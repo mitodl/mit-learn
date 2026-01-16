@@ -189,7 +189,7 @@ describe("JustInTimeDialog", () => {
     // Setup course for enrollment
     const b2bContractId = faker.number.int()
     const run = mitxonline.factories.courses.courseRun({
-      b2b_contract_id: b2bContractId,
+      b2b_contract: b2bContractId,
     })
     const course = dashboardCourse({
       courseruns: [run],

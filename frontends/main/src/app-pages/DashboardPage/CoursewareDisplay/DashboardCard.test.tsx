@@ -111,7 +111,7 @@ describe.each([
       },
       courseruns: [
         mitxonline.factories.courses.courseRun({
-          b2b_contract_id: null,
+          b2b_contract: null,
         }),
       ],
     })
@@ -166,7 +166,7 @@ describe.each([
     const course = dashboardCourse({
       courseruns: [
         mitxonline.factories.courses.courseRun({
-          b2b_contract_id: null,
+          b2b_contract: null,
         }),
       ],
     })
