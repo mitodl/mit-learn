@@ -1263,8 +1263,6 @@ class CourseLearningMaterial(LearningResourceDetailModel):
         )
     )
 
-    url = models.URLField(null=False, max_length=2048)
-
     def __str__(self):
         return (
             f"CourseLearningMaterial: {self.id} - {self.learning_resource.readable_id}"
