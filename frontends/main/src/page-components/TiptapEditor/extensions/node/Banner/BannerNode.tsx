@@ -11,6 +11,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { Container, BannerBackground, Breadcrumbs } from "ol-components"
 import styled from "@emotion/styled"
 import type { ExtendedNodeConfig } from "../types"
+import { getTitle } from "../lib"
 
 const FullWidthContainer = styled.div({
   position: "relative",
@@ -56,15 +57,21 @@ const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
   },
 }))
 
-const BannerViewer = ({ children }: { children?: React.ReactNode }) => {
+const BannerViewer = ({
+  children,
+  node,
+}: {
+  children?: React.ReactNode
+  node?: ProseMirrorNode
+}) => {
   return (
     <ReactNodeViewContentProvider content={children}>
-      <BannerWrapper />
+      <BannerWrapper node={node} />
     </ReactNodeViewContentProvider>
   )
 }
 
-const BannerWrapper = () => {
+const BannerWrapper = (props?: { node?: ProseMirrorNode }) => {
   return (
     <NodeViewWrapper as="div">
       <FullWidthContainer>
@@ -76,7 +83,7 @@ const BannerWrapper = () => {
                 { href: "/", label: "Home" },
                 { href: "/articles", label: "MIT Stories" },
               ]}
-              current="Article"
+              current={getTitle(props?.node || ({} as ProseMirrorNode))}
             />
             <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
