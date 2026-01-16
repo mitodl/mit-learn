@@ -624,14 +624,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ? resource.run
       : undefined
   const hasValidCertificate = !!enrollmentData?.certificate?.uuid
-  const enrollmentStatus = isAnyCourse
+  const enrollmentStatus: EnrollmentStatus = isAnyCourse
     ? hasValidCertificate
       ? EnrollmentStatus.Completed
       : enrollmentData && "run" in enrollmentData
         ? getEnrollmentStatus(enrollmentData)
         : EnrollmentStatus.NotEnrolled
     : enrollmentData && "status" in enrollmentData
-      ? enrollmentData.status
+      ? (enrollmentData.status as EnrollmentStatus)
       : EnrollmentStatus.NotEnrolled
 
   // URLs
