@@ -32,10 +32,7 @@ import { programView } from "@/common/urls"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
-  V2Program,
-  V2ProgramCollection,
   CourseRunEnrollmentRequestV2,
-  V2Course,
   V2UserProgramEnrollmentDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -47,9 +44,6 @@ type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
 type DashboardResource =
   | CourseWithCourseRunsSerializerV2
-  | V2Course
-  | V2Program
-  | V2ProgramCollection
   | CourseRunEnrollmentRequestV2
   | V2UserProgramEnrollmentDetail
 
@@ -63,37 +57,16 @@ const isCourseWithRuns = (
   )
 }
 
-const isV2Course = (resource: DashboardResource): resource is V2Course => {
-  return "course_number" in resource && !("courseruns" in resource)
-}
-
 const isCourseRunEnrollment = (
   resource: DashboardResource,
 ): resource is CourseRunEnrollmentRequestV2 => {
   return "run" in resource && "enrollment_mode" in resource
 }
 
-const isProgram = (resource: DashboardResource): resource is V2Program => {
-  return (
-    "req_tree" in resource &&
-    !("courseruns" in resource) &&
-    !("program" in resource)
-  )
-}
-
 const isProgramEnrollment = (
   resource: DashboardResource,
 ): resource is V2UserProgramEnrollmentDetail => {
   return "program" in resource && "enrollments" in resource
-}
-
-const isProgramCollection = (
-  resource: DashboardResource,
-): resource is V2ProgramCollection => {
-  return (
-    "programs" in resource &&
-    Array.isArray((resource as V2ProgramCollection).programs)
-  )
 }
 
 const CardRoot = styled.div<{
@@ -545,11 +518,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Determine resource type
   const resourceIsCourseWithRuns = isCourseWithRuns(resource)
-  const resourceIsV2Course = isV2Course(resource)
   const resourceIsCourseRunEnrollment = isCourseRunEnrollment(resource)
-  const resourceIsProgram = isProgram(resource)
   const resourceIsProgramEnrollment = isProgramEnrollment(resource)
-  const resourceIsProgramCollection = isProgramCollection(resource)
 
   const openJustInTime = (href: string, readableId: string) => {
     const userCountry = user?.legal_address?.country
@@ -571,23 +541,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   }
 
   // Determine if this is any kind of course
-  const isAnyCourse =
-    resourceIsCourseWithRuns ||
-    resourceIsV2Course ||
-    resourceIsCourseRunEnrollment
+  const isAnyCourse = resourceIsCourseWithRuns || resourceIsCourseRunEnrollment
 
   // Compute default noun based on resource type
   const defaultNoun = isAnyCourse
     ? "Course"
-    : resourceIsProgram || resourceIsProgramEnrollment
+    : resourceIsProgramEnrollment
       ? "Program"
-      : "Collection"
+      : "Unknown"
   const displayNoun = noun ?? defaultNoun
-
-  // Early return for unsupported types
-  if (resourceIsProgramCollection) {
-    return <div>Program collection display not yet implemented</div>
-  }
 
   // Extract common data based on resource type
   let title: string,
@@ -600,18 +562,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   if (resourceIsCourseWithRuns) {
     title = resource.title
     enrollmentData = enrollment
-  } else if (resourceIsV2Course) {
-    title = resource.title
-    enrollmentData = enrollment
   } else if (resourceIsCourseRunEnrollment) {
     title = resource.run.course.title
     enrollmentData = resource
-  } else if (resourceIsProgram) {
-    title = resource.title
-    enrollmentData = enrollment
   } else if (resourceIsProgramEnrollment) {
     title = resource.program.title
-    enrollmentData = enrollment
+    enrollmentData = resource
   } else {
     title = "Unknown"
     enrollmentData = undefined
@@ -637,15 +593,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // URLs
   const marketingUrl = resourceIsCourseWithRuns
     ? resource.page?.page_url
-    : resourceIsV2Course
-      ? resource.page?.page_url
-      : undefined
+    : undefined
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
   // Check enrollment's b2b_contract_id first, then run's b2b_contract, finally fall back to contractId prop
   const b2bContractId =
-    enrollmentData?.b2b_contract_id ?? run?.b2b_contract ?? contractId
+    (enrollmentData && "run" in enrollmentData
+      ? enrollmentData.b2b_contract_id
+      : undefined) ??
+    run?.b2b_contract ??
+    contractId
 
   // Title link logic
   const titleHref = isAnyCourse
@@ -665,11 +623,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           if (b2bContractId) {
             const readableId = resourceIsCourseWithRuns
               ? resource.readable_id
-              : resourceIsV2Course
-                ? resource.readable_id
-                : resourceIsCourseRunEnrollment
-                  ? resource.run.course.readable_id
-                  : undefined
+              : resourceIsCourseRunEnrollment
+                ? resource.run.course.readable_id
+                : undefined
             if (!readableId || !coursewareUrl) return
             oneClickEnroll.mutate({
               href: coursewareUrl,
@@ -678,11 +634,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           } else {
             const readableId = resourceIsCourseWithRuns
               ? resource.readable_id
-              : resourceIsV2Course
-                ? resource.readable_id
-                : resourceIsCourseRunEnrollment
-                  ? resource.run.course.readable_id
-                  : undefined
+              : resourceIsCourseRunEnrollment
+                ? resource.run.course.readable_id
+                : undefined
             if (!readableId || !coursewareUrl) return
             openJustInTime(coursewareUrl, readableId)
           }
@@ -720,7 +674,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         </SubtitleLink>
       ) : null}
       {isAnyCourse &&
-      enrollmentData?.enrollment_mode !== EnrollmentMode.Verified &&
+      enrollmentData &&
+      "enrollment_mode" in enrollmentData &&
+      enrollmentData.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
@@ -745,20 +701,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         coursewareId={
           resourceIsCourseWithRuns
             ? run?.courseware_id
-            : resourceIsV2Course
-              ? resource.readable_id
-              : resourceIsCourseRunEnrollment
-                ? resource.run.courseware_id
-                : undefined
+            : resourceIsCourseRunEnrollment
+              ? resource.run.courseware_id
+              : undefined
         }
         readableId={
           resourceIsCourseWithRuns
             ? resource.readable_id
-            : resourceIsV2Course
-              ? resource.readable_id
-              : resourceIsCourseRunEnrollment
-                ? resource.run.course.readable_id
-                : undefined
+            : resourceIsCourseRunEnrollment
+              ? resource.run.course.readable_id
+              : undefined
         }
         startDate={run?.start_date}
         enrollmentStatus={enrollmentStatus}
@@ -770,13 +722,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         onClick={buttonClick}
       />
     </>
-  ) : resourceIsProgram ? (
-    <CoursewareButton
-      noun={displayNoun}
-      isProgram={true}
-      enrollmentStatus={enrollmentStatus}
-      href={buttonHref ?? programView(resource.id)}
-    />
   ) : resourceIsProgramEnrollment ? (
     <CoursewareButton
       noun={displayNoun}
@@ -793,7 +738,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : null
 
   const menuItems = contextMenuItems.concat(
-    isAnyCourse && enrollmentData?.id
+    isAnyCourse &&
+      enrollmentData &&
+      "run" in enrollmentData &&
+      enrollmentData.id
       ? getDefaultContextMenuItems(title, enrollmentData)
       : [],
   )
