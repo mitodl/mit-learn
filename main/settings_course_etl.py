@@ -10,9 +10,8 @@ EDX_PROGRAMS_API_URL = get_string("EDX_PROGRAMS_API_URL", None)
 EDX_API_ACCESS_TOKEN_URL = get_string("EDX_API_ACCESS_TOKEN_URL", None)
 EDX_API_CLIENT_ID = get_string("EDX_API_CLIENT_ID", None)
 EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
-EDX_LEARNING_COURSE_BUCKET_NAME = get_string("EDX_LEARNING_COURSE_BUCKET_NAME", None)
-EDX_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "EDX_LEARNING_COURSE_BUCKET_PREFIX", "simeon-mitx-course-tarballs"
+EDX_COURSE_BUCKET_PREFIX = get_string(
+    "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
 
 # Authentication for the github api
@@ -44,13 +43,15 @@ MICROMASTERS_CATALOG_API_URL = get_string("MICROMASTERS_CATALOG_API_URL", None)
 LEARNING_COURSE_ITERATOR_CHUNK_SIZE = get_int("LEARNING_COURSE_ITERATOR_CHUNK_SIZE", 20)
 
 # xPRO settings for course/resource ingestion
-XPRO_LEARNING_COURSE_BUCKET_NAME = get_string("XPRO_LEARNING_COURSE_BUCKET_NAME", None)
+XPRO_COURSE_BUCKET_PREFIX = get_string(
+    "XPRO_COURSE_BUCKET_PREFIX", "xpro/openedx/raw_data/course_xml/"
+)
 XPRO_CATALOG_API_URL = get_string("XPRO_CATALOG_API_URL", None)
 XPRO_COURSES_API_URL = get_string("XPRO_COURSES_API_URL", None)
 
 # MITx Online settings for course/resource ingestion
-MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME = get_string(
-    "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME", None
+MITX_ONLINE_COURSE_BUCKET_PREFIX = get_string(
+    "MITX_ONLINE_COURSE_BUCKET_PREFIX", "mitxonline/openedx/raw_data/course_xml/"
 )
 MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
@@ -58,9 +59,8 @@ MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
 
 
 # Open Learning Library settings
-OLL_LEARNING_COURSE_BUCKET_NAME = get_string("OLL_LEARNING_COURSE_BUCKET_NAME", None)
-OLL_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "OLL_LEARNING_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
+OLL_COURSE_BUCKET_PREFIX = get_string(
+    "OLL_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
 )
 
 # Canvas course settings
