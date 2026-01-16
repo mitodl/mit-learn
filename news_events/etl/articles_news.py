@@ -101,10 +101,11 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         # Extract content from JSON field
         content_json = article.get("content", {})
 
-        # Convert JSON content to plain text for summary
-        # This is a simple implementation - adjust based on your content structure
+        # Extract summary from banner paragraph node
+        summary_text = extract_summary_from_banner(content_json)
+
+        # Convert JSON content to plain text for full content
         content_text = extract_text_from_content(content_json)
-        summary_text = content_text[:500] if content_text else ""
 
         # Extract first image from content
         image_data = extract_image_from_content(content_json)
@@ -147,6 +148,95 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         entries.append(entry)
 
     return entries
+
+
+def _extract_text_from_paragraph(paragraph_node: dict) -> str:
+    """
+    Extract text content from a paragraph node.
+
+    Args:
+        paragraph_node (dict): Paragraph node containing text nodes
+
+    Returns:
+        str: Extracted and joined text content
+    """
+    paragraph_content = paragraph_node.get("content", [])
+    text_parts = []
+
+    for text_node in paragraph_content:
+        if isinstance(text_node, dict) and text_node.get("type") == "text":
+            text = text_node.get("text", "")
+            if text:
+                text_parts.append(text)
+
+    return " ".join(text_parts)
+
+
+def _find_paragraph_in_banner(content_array: list) -> str:
+    """
+    Find and extract text from paragraph inside banner node.
+
+    Args:
+        content_array (list): Array of content nodes
+
+    Returns:
+        str: Text from banner paragraph or empty string
+    """
+    for node in content_array:
+        if isinstance(node, dict) and node.get("type") == "banner":
+            banner_content = node.get("content", [])
+
+            for child in banner_content:
+                if isinstance(child, dict) and child.get("type") == "paragraph":
+                    summary = _extract_text_from_paragraph(child)
+                    if summary.strip():
+                        return summary
+
+    return ""
+
+
+def _find_first_paragraph(content_array: list) -> str:
+    """
+    Find and extract text from first non-empty paragraph in content.
+
+    Args:
+        content_array (list): Array of content nodes
+
+    Returns:
+        str: Text from first paragraph or empty string
+    """
+    for node in content_array:
+        if isinstance(node, dict) and node.get("type") == "paragraph":
+            summary = _extract_text_from_paragraph(node)
+            if summary.strip():
+                return summary
+
+    return ""
+
+
+def extract_summary_from_banner(content_json: dict) -> str:
+    """
+    Extract summary text from the paragraph node inside the banner node.
+    Falls back to first paragraph in content if banner paragraph is empty.
+
+    Args:
+        content_json (dict): The JSON content from Article
+
+    Returns:
+        str: Summary text from banner paragraph or first available paragraph
+    """
+    if not content_json:
+        return ""
+
+    content_array = content_json.get("content", [])
+
+    # Try to get summary from banner paragraph first
+    summary = _find_paragraph_in_banner(content_array)
+    if summary:
+        return summary
+
+    # Fallback to first non-empty paragraph
+    return _find_first_paragraph(content_array)
 
 
 def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901, PLR0912
