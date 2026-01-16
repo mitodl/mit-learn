@@ -123,6 +123,10 @@
       "description": "A list of regexes that match origins that are authorized to make cross-site HTTP requests",
       "required": false
     },
+    "COURSE_ARCHIVE_BUCKET_NAME": {
+      "description": "Name of the shared S3 bucket that stores course archive tarballs",
+      "required": false
+    },
     "CSAIL_BASE_URL": {
       "description": "CSAIL courses base URL",
       "required": false
@@ -179,8 +183,8 @@
       "description": "Base default URL for MITx courses hosted on edX",
       "required": false
     },
-    "EDX_LEARNING_COURSE_BUCKET_NAME": {
-      "description": "Name of the bucket with course run tar archives for MITx",
+    "EDX_COURSE_BUCKET_PREFIX": {
+      "description": "S3 prefix within the shared archive bucket for MITx on edX exports",
       "required": false
     },
     "EDX_LEARNING_COURSE_BUCKET_PREFIX": {
@@ -305,6 +309,10 @@
       "description": "The api url for MITx Online courses",
       "required": false
     },
+    "MITX_ONLINE_COURSE_BUCKET_PREFIX": {
+      "description": "S3 prefix within the shared archive bucket for MITx Online exports",
+      "required": false
+    },
     "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME": {
       "description": "Name of S3 bucket to upload MITx Online course media",
       "required": false
@@ -351,6 +359,10 @@
     },
     "OLL_LEARNING_COURSE_BUCKET_NAME": {
       "description": "Name of S3 bucket containing OLL content files",
+      "required": false
+    },
+    "OLL_COURSE_BUCKET_PREFIX": {
+      "description": "S3 prefix within the shared archive bucket for OLL exports",
       "required": false
     },
     "OLL_LEARNING_COURSE_BUCKET_PREFIX": {
@@ -629,6 +641,10 @@
       "description": "The api url for xpro courses",
       "required": false
     },
+    "XPRO_COURSE_BUCKET_PREFIX": {
+      "description": "S3 prefix within the shared archive bucket for xPRO exports",
+      "required": false
+    },
     "XPRO_LEARNING_COURSE_BUCKET_NAME": {
       "description": "Name of S3 bucket to upload xPRO course media",
       "required": false
@@ -711,6 +727,10 @@
     },
     "POSTHOG_TIMEOUT_MS": {
       "description": "Timeout for communication with PostHog API",
+      "required": false
+    },
+    "CANVAS_COURSE_BUCKET_PREFIX": {
+      "description": "S3 prefix within the shared archive bucket for Canvas exports",
       "required": false
     },
     "CANVAS_TUTORBOT_FOLDER": {

@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.51.1 (Released January 13, 2026)
+--------------
+
+- Product Page Updates (#2839)
+- feat: add course detail in resource card (#2834)
+- memory optimizations for embedding process (#2841)
+- fix: add delete button for image and media node (#2836)
+- fix: editor component migration into main app (#2833)
+
 Version 0.51.0 (Released January 08, 2026)
 --------------
 

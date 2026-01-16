@@ -15,12 +15,15 @@ from learning_resources.constants import (
     LearningResourceDelivery,
     LearningResourceType,
     OfferedBy,
-    PlatformType,
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.constants import CommitmentConfig, DurationConfig
-from learning_resources.etl.utils import parse_certification, parse_string_to_int
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.utils import (
+    get_s3_prefix_for_source,
+    parse_certification,
+    parse_string_to_int,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -175,9 +178,16 @@ def test_parse_dates():
 @pytest.mark.parametrize("folder", ["folder", "static"])
 @pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
 def test_transform_content_files(  # noqa: PLR0913
-    mocker, folder, has_metadata, matching_edx_module_id, overwrite, tika_content
+    mocker,
+    folder,
+    has_metadata,
+    matching_edx_module_id,
+    overwrite,
+    tika_content,
+    settings,
 ):
     """transform_content_files"""
+    settings.SKIP_TIKA = False
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
     file_extension = ".pdf" if folder == "static" else ".html"
@@ -289,16 +299,42 @@ def test_documents_from_olx():
 
 
 @pytest.mark.parametrize(
-    "platform", [PlatformType.mitxonline.name, PlatformType.xpro.name]
+    ("etl_source", "expected_setting"),
+    [
+        (ETLSource.mit_edx.name, "EDX_COURSE_BUCKET_PREFIX"),
+        (ETLSource.xpro.name, "XPRO_COURSE_BUCKET_PREFIX"),
+        (ETLSource.mitxonline.name, "MITX_ONLINE_COURSE_BUCKET_PREFIX"),
+        (ETLSource.oll.name, "OLL_COURSE_BUCKET_PREFIX"),
+        (ETLSource.canvas.name, "CANVAS_COURSE_BUCKET_PREFIX"),
+    ],
 )
-def test_get_learning_course_bucket(
-    aws_settings, mock_mitx_learning_bucket, mock_xpro_learning_bucket, platform
-):  # pylint: disable=unused-argument
+def test_get_s3_prefix_for_source(settings, etl_source, expected_setting):
+    """Test that get_s3_prefix_for_source returns correct prefix for each ETL source"""
+    expected_prefix = getattr(settings, expected_setting)
+    assert get_s3_prefix_for_source(etl_source) == expected_prefix
+
+
+@pytest.mark.parametrize(
+    "invalid_source",
+    [
+        "invalid_source",
+        "ocw",  # OCW is not in the mapping
+        "",
+        "MITX_ONLINE",  # wrong case
+    ],
+)
+def test_get_s3_prefix_for_source_invalid(invalid_source):
+    """Test that get_s3_prefix_for_source raises ValueError for invalid sources"""
+    with pytest.raises(
+        ValueError, match=f"No S3 prefix found for ETL source: {invalid_source}"
+    ):
+        get_s3_prefix_for_source(invalid_source)
+
+
+def test_get_bucket_by_name(aws_settings, mock_course_archive_bucket):  # pylint: disable=unused-argument
     """The correct bucket should be returned by the function"""
-    assert utils.get_learning_course_bucket(platform).name == (
-        aws_settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME
-        if platform == PlatformType.mitxonline.name
-        else aws_settings.XPRO_LEARNING_COURSE_BUCKET_NAME
+    assert utils.get_bucket_by_name(aws_settings.COURSE_ARCHIVE_BUCKET_NAME) == (
+        mock_course_archive_bucket.bucket
     )
 
 

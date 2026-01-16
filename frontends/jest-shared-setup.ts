@@ -60,7 +60,11 @@ class FakeResizeObserver {
   }
 }
 const polyfillResizeObserver = () => {
-  if (window.ResizeObserver !== undefined) {
+  if (
+    window.ResizeObserver !== undefined &&
+    // @ts-expect-error happyDOM specific property
+    window.happyDOM === undefined
+  ) {
     console.info(
       "ResizeObserver is already defined (expected if using the Happy DOM test environment). Skipping polyfill.",
     )

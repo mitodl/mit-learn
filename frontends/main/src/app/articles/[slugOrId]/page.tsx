@@ -1,7 +1,7 @@
 import React from "react"
 import { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { articleQueries } from "api/hooks/articles"
+import { articleQueries } from "api/hooks/articles/queries"
 import { standardizeMetadata } from "@/common/metadata"
 import { ArticleDetailPage } from "@/app-pages/Articles/ArticleDetailPage"
 import { getQueryClient } from "@/app/getQueryClient"

@@ -2,7 +2,7 @@ import type {
   V2ProgramRequirement,
   V2ProgramRequirementData,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { V2ProgramRequirementDataNodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -72,7 +72,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     course,
   }: Pick<Partial<V2ProgramRequirement["data"]>, "course"> = {}) {
     const data: V2ProgramRequirementData = {
-      node_type: V2ProgramRequirementDataNodeTypeEnum.Course,
+      node_type: NodeTypeEnum.Course,
       course: course ?? uniqueProgramId.enforce(faker.number.int),
       program: this.#root.data.program,
       required_program: null,
@@ -101,7 +101,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     }
     const data: V2ProgramRequirementData = {
       ...opts,
-      node_type: V2ProgramRequirementDataNodeTypeEnum.Operator,
+      node_type: NodeTypeEnum.Operator,
       course: null,
       required_program: null,
       program: this.#root.data.program,
@@ -116,7 +116,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addProgram(opts: { program?: number; title?: string } = {}) {
     const programId = opts.program ?? uniqueProgramId.enforce(faker.number.int)
     const data: V2ProgramRequirementData = {
-      node_type: "program",
+      node_type: NodeTypeEnum.Program,
       course: null,
       program: this.#root.data.program,
       required_program: programId,

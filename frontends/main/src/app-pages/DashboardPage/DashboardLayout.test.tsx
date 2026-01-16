@@ -15,7 +15,7 @@ import React from "react"
 import {
   DASHBOARD_HOME,
   MY_LISTS,
-  organizationView,
+  contractView,
   PROFILE,
   SETTINGS,
 } from "@/common/urls"
@@ -62,23 +62,25 @@ describe("DashboardLayout", () => {
   })
 
   test("Renders the expected tab links and labels", async () => {
+    const contract = mitxOnlineFactories.contracts.contract({
+      name: "Test Contract",
+    })
     const organizations = [
       mitxOnlineFactories.organizations.organization({
         slug: "org-test-org",
         name: "Test Organization",
+        contracts: [contract],
       }),
     ]
-    const contracts = [
-      mitxOnlineFactories.contracts.contract({
-        organization: organizations[0].id,
-        name: "Test Contract",
-      }),
-    ]
+    const contracts = [contract]
     setup({ organizations, contracts })
     const expectedUrls = [
       DASHBOARD_HOME,
-      ...organizations.map((org) =>
-        organizationView(org.slug.replace("org-", "")),
+      ...organizations.map((org, index) =>
+        contractView(
+          org.slug.replace("org-", ""),
+          contracts[index]?.slug ?? "",
+        ),
       ),
       MY_LISTS,
       PROFILE,

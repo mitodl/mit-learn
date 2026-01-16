@@ -947,6 +947,12 @@ export interface ContentFileWebHookRequest {
    * @memberof ContentFileWebHookRequest
    */
   course_id?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileWebHookRequest
+   */
+  course_readable_id?: string
 }
 
 /**
@@ -973,6 +979,12 @@ export interface ContentFileWebHookRequestRequest {
    * @memberof ContentFileWebHookRequestRequest
    */
   course_id?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileWebHookRequestRequest
+   */
+  course_readable_id?: string
 }
 
 /**
@@ -31131,6 +31143,7 @@ export const WebhooksApiAxiosParamCreator = function (
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string} [course_id]
+     * @param {string} [course_readable_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -31139,6 +31152,7 @@ export const WebhooksApiAxiosParamCreator = function (
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
       content_path?: string,
       course_id?: string,
+      course_readable_id?: string,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'source' is not null or undefined
@@ -31171,6 +31185,10 @@ export const WebhooksApiAxiosParamCreator = function (
 
       if (course_id !== undefined) {
         localVarQueryParameter["course_id"] = course_id
+      }
+
+      if (course_readable_id !== undefined) {
+        localVarQueryParameter["course_readable_id"] = course_readable_id
       }
 
       if (source !== undefined) {
@@ -31348,6 +31366,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
      * @param {ContentFileWebHookRequestRequest} ContentFileWebHookRequestRequest
      * @param {string} [content_path]
      * @param {string} [course_id]
+     * @param {string} [course_readable_id]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -31356,6 +31375,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest,
       content_path?: string,
       course_id?: string,
+      course_readable_id?: string,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -31369,6 +31389,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
           ContentFileWebHookRequestRequest,
           content_path,
           course_id,
+          course_readable_id,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -31487,6 +31508,7 @@ export const WebhooksApiFactory = function (
           requestParameters.ContentFileWebHookRequestRequest,
           requestParameters.content_path,
           requestParameters.course_id,
+          requestParameters.course_readable_id,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -31564,6 +31586,13 @@ export interface WebhooksApiWebhooksContentFilesCreateRequest {
    * @memberof WebhooksApiWebhooksContentFilesCreate
    */
   readonly course_id?: string
+
+  /**
+   *
+   * @type {string}
+   * @memberof WebhooksApiWebhooksContentFilesCreate
+   */
+  readonly course_readable_id?: string
 }
 
 /**
@@ -31639,6 +31668,7 @@ export class WebhooksApi extends BaseAPI {
         requestParameters.ContentFileWebHookRequestRequest,
         requestParameters.content_path,
         requestParameters.course_id,
+        requestParameters.course_readable_id,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
