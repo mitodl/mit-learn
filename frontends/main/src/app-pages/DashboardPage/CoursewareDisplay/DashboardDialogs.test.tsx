@@ -8,7 +8,7 @@ import {
   within,
 } from "@/test-utils"
 import { EnrollmentDisplay } from "./EnrollmentDisplay"
-import { DashboardCard } from "./DashboardCard"
+import { DashboardCard, DashboardType } from "./DashboardCard"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -209,7 +209,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -246,7 +249,10 @@ describe("JustInTimeDialog", () => {
     async ({ userOverrides, expectCountry, expectYob }) => {
       const { course } = setupJustInTimeTest({ userOverrides })
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{ type: DashboardType.Course, data: course }}
+        />,
       )
       const enrollButtons = await screen.findAllByTestId("courseware-button")
       await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -263,7 +269,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -296,7 +305,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -323,7 +335,10 @@ describe("JustInTimeDialog", () => {
     const { course, countries } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -348,7 +363,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -378,7 +396,10 @@ describe("JustInTimeDialog", () => {
     })
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" resource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
