@@ -10,7 +10,7 @@ import {
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
+import { DashboardCard, DashboardType } from "./CoursewareDisplay/DashboardCard"
 import {
   Link,
   PlainList,
@@ -325,7 +325,14 @@ const OrgProgramCollectionDisplay: React.FC<{
                 id: course.id,
                 runId: bestEnrollment?.run.id,
               })}
-              resource={bestEnrollment ?? course}
+              resource={
+                bestEnrollment
+                  ? {
+                      type: DashboardType.CourseRunEnrollment,
+                      data: bestEnrollment,
+                    }
+                  : { type: DashboardType.Course, data: course }
+              }
               noun="Module"
               offerUpgrade={false}
               titleAction="courseware"
@@ -420,7 +427,14 @@ const OrgProgramDisplay: React.FC<{
                     id: course.id,
                     runId: bestEnrollment?.run.id,
                   })}
-                  resource={bestEnrollment ?? course}
+                  resource={
+                    bestEnrollment
+                      ? {
+                          type: DashboardType.CourseRunEnrollment,
+                          data: bestEnrollment,
+                        }
+                      : { type: DashboardType.Course, data: course }
+                  }
                   noun="Module"
                   offerUpgrade={false}
                   titleAction="courseware"
