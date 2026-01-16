@@ -406,11 +406,11 @@ FeedNewsDetail {
 
 ## Summary
 
-✅ **Automatic sync** when articles are published  
-✅ **Scheduled backup** every hour  
-✅ **Manual trigger** via management command  
-✅ **Same pattern** as other news sources  
-✅ **Fully tested** with unit tests  
-✅ **Cache clearing** for fresh responses  
+✅ **Automatic sync** when articles are published
+✅ **Scheduled backup** every hour
+✅ **Manual trigger** via management command
+✅ **Same pattern** as other news sources
+✅ **Fully tested** with unit tests
+✅ **Cache clearing** for fresh responses
 
 Your articles are now part of the unified news feed system! 🎉
