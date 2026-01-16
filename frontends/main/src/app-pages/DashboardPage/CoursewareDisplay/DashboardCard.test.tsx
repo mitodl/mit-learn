@@ -10,7 +10,7 @@ import {
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
 import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
-import { dashboardCourse, dashboardProgram } from "./test-utils"
+import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -982,12 +982,15 @@ describe.each([
   describe("Program Cards", () => {
     test("renders program card with title", () => {
       setupUserApis()
-      const program = dashboardProgram({
-        title: "Test Program Title",
-      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV2({
+          program: mitxonline.factories.programs.program({
+            title: "Test Program Title",
+          }),
+        })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={program} />,
+        <DashboardCard titleAction="marketing" resource={programEnrollment} />,
       )
 
       const card = getCard()
@@ -996,12 +999,15 @@ describe.each([
 
     test("program card does not show course-specific elements", () => {
       setupUserApis()
-      const program = dashboardProgram({
-        title: "Test Program",
-      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV2({
+          program: mitxonline.factories.programs.program({
+            title: "Test Program",
+          }),
+        })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" resource={program} />,
+        <DashboardCard titleAction="marketing" resource={programEnrollment} />,
       )
 
       const card = getCard()
