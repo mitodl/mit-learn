@@ -69,15 +69,15 @@ const setupAPIs = () => {
       limit: 6,
       sortby: "-news_date",
     }),
-    newsEvents.newsItems({ count: 0 }),
+    newsEvents.newsItems({ count: 6 }),
   )
   setMockResponse.get(
     urls.newsEvents.list({
       feed_type: ["events"],
-      limit: 5,
+      limit: 6,
       sortby: "event_date",
     }),
-    newsEvents.eventItems({ count: 0 }),
+    newsEvents.eventItems({ count: 6 }),
   )
 
   setMockResponse.get(urls.topics.list({ is_toplevel: true }), {
@@ -175,11 +175,11 @@ describe("Home Page News and Events", () => {
       news,
     )
 
-    const events = newsEvents.eventItems({ count: 5 })
+    const events = newsEvents.eventItems({ count: 6 })
     setMockResponse.get(
       urls.newsEvents.list({
         feed_type: ["events"],
-        limit: 5,
+        limit: 6,
         sortby: "event_date",
       }),
       events,
@@ -227,11 +227,11 @@ describe("Home Page News and Events", () => {
       news,
     )
 
-    const events = newsEvents.eventItems({ count: 5 })
+    const events = newsEvents.eventItems({ count: 6 })
     setMockResponse.get(
       urls.newsEvents.list({
         feed_type: ["events"],
-        limit: 5,
+        limit: 6,
         sortby: "event_date",
       }),
       events,
@@ -263,6 +263,9 @@ describe("Home Page News and Events", () => {
 
     expect(links[4]).toHaveAttribute("href", events.results[4].url)
     within(links[4]).getByText(events.results[4].title)
+
+    expect(links[5]).toHaveAttribute("href", events.results[5].url)
+    within(links[5]).getByText(events.results[5].title)
   })
 })
 

@@ -12,6 +12,7 @@ import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
 } from "api/hooks/newsEvents"
+import { ButtonLink } from "@mitodl/smoot-design"
 import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
@@ -126,6 +127,13 @@ const EventDate = styled.div`
   background: ${theme.custom.colors.lightGray1};
 `
 
+const HeadingContainer = styled.div`
+  justify-content: center;
+  display: flex;
+  width: 100%;
+  margin-top: 40px;
+`
+
 const EventDay = styled.p`
   color: ${theme.custom.colors.red};
   font-family: ${theme.typography.fontFamily};
@@ -157,6 +165,12 @@ const EventTitle = styled(Link)`
   }
 `
 
+const SeeAllButton = styled(ButtonLink)`
+  box-sizing: content-box;
+  display: flex;
+  width: 152px;
+`
+
 const Chevron = styled(RiArrowRightSLine)`
   width: 24px;
   height: 24px;
@@ -183,7 +197,7 @@ const AboveLgOnly = styled.div(({ theme }) => ({
   },
 }))
 
-const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
+export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
   item,
   mobile,
 }) => {
@@ -196,7 +210,7 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
         {item.title}
       </Card.Title>
       <Card.Footer>
-        Published: <LocalDate date={item.news_details?.publish_date} />
+        <LocalDate date={item.news_details?.publish_date} />
       </Card.Footer>
     </StoryCard>
   )
@@ -211,7 +225,7 @@ const NewsEventsSection: React.FC = () => {
 
   const { data: events } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.Events],
-    limit: 5,
+    limit: 6,
     sortby: "event_date",
   })
 
@@ -261,6 +275,7 @@ const NewsEventsSection: React.FC = () => {
             <Typography component="h3" variant="h4">
               Stories
             </Typography>
+
             <StoriesSlider>
               {stories.map((item) => (
                 <Story
@@ -302,6 +317,11 @@ const NewsEventsSection: React.FC = () => {
                   </Grid2>
                 ))}
               </Grid2>
+              <HeadingContainer>
+                <SeeAllButton href="/articles/" size="large" responsive>
+                  See all stories
+                </SeeAllButton>
+              </HeadingContainer>
             </StoriesContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">

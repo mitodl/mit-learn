@@ -1,0 +1,572 @@
+"use client"
+
+import React, { useRef, useState } from "react"
+import Image from "next/image"
+import {
+  Container,
+  styled,
+  theme,
+  Typography,
+  Grid2,
+  Pagination,
+  PaginationItem,
+  css,
+  LoadingSpinner,
+} from "ol-components"
+import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import {
+  useNewsEventsList,
+  NewsEventsListFeedTypeEnum,
+} from "api/hooks/newsEvents"
+import type { NewsFeedItem } from "api/v0"
+import { LocalDate } from "ol-utilities"
+import { ArticleBanner } from "./ArticleBanner"
+
+const PAGE_SIZE = 20
+const MAX_PAGE = 50
+
+const getLastPage = (count: number): number => {
+  const pages = Math.ceil(count / PAGE_SIZE)
+  return pages > MAX_PAGE ? MAX_PAGE : pages
+}
+
+// Utility function to strip HTML tags and decode HTML entities
+const stripHtmlAndDecode = (html: string): string => {
+  if (!html) return ""
+
+  // First, decode HTML entities
+  const textarea = document.createElement("textarea")
+  textarea.innerHTML = html
+  const decoded = textarea.value
+
+  // Then strip HTML tags
+  const doc = new DOMParser().parseFromString(decoded, "text/html")
+  return doc.body.textContent || ""
+}
+
+const Section = styled.section`
+  background: ${theme.custom.colors.white};
+  padding: 80px 0;
+  ${theme.breakpoints.down("sm")} {
+    padding: 0;
+  }
+`
+
+const MainStorySection = styled.div`
+  max-width: 1000px;
+  margin: -300px auto 40px auto;
+  position: relative;
+  z-index: 10;
+
+  ${theme.breakpoints.down("sm")} {
+    margin: 40px auto 40px auto;
+    max-width: 100%;
+  }
+`
+
+const MainStoryCard = styled.div`
+  display: flex;
+  border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+  background: ${theme.custom.colors.darkGray2};
+  border-top: 4px solid #a31f34;
+  border-radius: 10px;
+
+  ${theme.breakpoints.down("sm")} {
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 24px;
+  }
+`
+
+const MainStoryImage = styled.div`
+  width: 50%;
+  min-height: 400px;
+  background-color: ${theme.custom.colors.darkGray1};
+  border-radius: 10px 0 0 10px;
+  overflow: hidden;
+  position: relative;
+
+  ${theme.breakpoints.down("sm")} {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: auto;
+    border-radius: 10px 10px 0 0;
+  }
+`
+
+const MainStoryContent = styled.div`
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 40px;
+  color: white;
+  justify-content: space-between;
+
+  ${theme.breakpoints.down("md")} {
+    padding: 24px;
+  }
+
+  ${theme.breakpoints.down("sm")} {
+    width: 100%;
+    padding: 24px;
+  }
+`
+const RegularStoryTitleWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  ${theme.breakpoints.down("sm")} {
+    gap: 8px;
+  }
+`
+
+const MainStoryContentContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const MainStoryTitle = styled.a`
+  color: ${theme.custom.colors.white};
+  ${{ ...theme.typography.h3 }}
+  text-decoration: none;
+  margin: 0;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  &:hover {
+    color: ${theme.custom.colors.white};
+  }
+
+  ${theme.breakpoints.down("md")} {
+    font-size: 18px;
+    line-height: 26px;
+  }
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.h4 }}
+    -webkit-line-clamp: 3;
+    font-size: 18px;
+    font-style: normal;
+    line-height: 26px;
+  }
+`
+
+const MainStorySummary = styled.p`
+  color: ${theme.custom.colors.white};
+  ${{ ...theme.typography.body1 }}
+  margin: 0;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+
+  ${theme.breakpoints.down("md")} {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  ${theme.breakpoints.down("sm")} {
+    font-size: 14px;
+    font-style: normal;
+    line-height: 22px;
+  }
+`
+
+const MainStoryDate = styled(Typography)`
+  color: ${theme.custom.colors.white};
+  ${{ ...theme.typography.body3 }}
+  margin: 0;
+`
+
+// Regular story card for grid
+const StoryCard = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  background: white;
+  border: 1px solid ${theme.custom.colors.lightGray2};
+  border-radius: 8px;
+  padding: 16px 16px 16px 24px;
+  overflow: hidden;
+
+  ${theme.breakpoints.down("sm")} {
+    flex-direction: row;
+    gap: 12px;
+    padding: 16px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+    border-radius: 0;
+  }
+`
+
+const StoryImage = styled.div`
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  height: 180px;
+  flex-shrink: 0;
+  background-color: ${theme.custom.colors.lightGray1};
+  border-radius: 8px;
+  order: 2;
+  align-self: flex-end;
+  overflow: hidden;
+  position: relative;
+
+  ${theme.breakpoints.down("sm")} {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    height: 80px;
+    order: 2;
+    align-self: flex-start;
+    border-radius: 4px;
+  }
+`
+
+const StoryContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  order: 1;
+  min-height: 180px;
+
+  ${theme.breakpoints.down("sm")} {
+    order: 1;
+    min-height: auto;
+    max-width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+`
+
+const StoryTitle = styled.a`
+  color: ${theme.custom.colors.darkGray2};
+  ${{ ...theme.typography.h5 }}
+  text-decoration: none;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 16px;
+
+  &:hover {
+    color: ${theme.custom.colors.red};
+  }
+
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.subtitle1 }}
+    margin-top: 0;
+    -webkit-line-clamp: 3;
+    font-size: 14px;
+  }
+`
+
+const StorySummary = styled.p`
+  color: ${theme.custom.colors.darkGray2};
+  ${{ ...theme.typography.body2 }}
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  word-break: break-word;
+
+  ${theme.breakpoints.down("sm")} {
+    ${{ ...theme.typography.body2 }}
+    -webkit-line-clamp: 2;
+    margin-top: 0;
+    color: ${theme.custom.colors.black};
+  }
+`
+
+const StoryDate = styled(Typography)`
+  color: ${theme.custom.colors.silverGrayDark};
+  ${{ ...theme.typography.body3 }}
+  margin-bottom: 16px;
+
+  ${theme.breakpoints.down("sm")} {
+    margin-bottom: 0;
+    margin-top: 0;
+  }
+`
+
+const StyledSection = styled(Section)`
+  background: ${theme.custom.colors.lightGray1};
+`
+
+const GridContainer = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+
+  ${theme.breakpoints.down("sm")} {
+    max-width: 100%;
+  }
+`
+
+const MobileContent = styled.div`
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 40px;
+  margin: 40px 0;
+
+  ${theme.breakpoints.down("sm")} {
+    margin: 0;
+  }
+`
+
+const MobileContainer = styled.section`
+  width: 100%;
+  margin: 0 -16px;
+
+  h3 {
+    margin: 0 16px 12px;
+  }
+`
+
+const AboveMdOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const BelowMdOnly = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: end;
+  margin-top: 24px;
+  margin-bottom: 80px;
+
+  ${({ theme }) => theme.breakpoints.down("md")} {
+    margin-top: 16px;
+    margin-bottom: 24px;
+  }
+
+  ul li button.Mui-selected {
+    ${({ theme }) => css({ ...theme.typography.subtitle1 })}
+    background-color: inherit;
+  }
+
+  ul li button svg {
+    background-color: ${({ theme }) => theme.custom.colors.lightGray2};
+    border-radius: 4px;
+    width: 1.5em;
+    height: 1.5em;
+    padding: 0.25em;
+  }
+`
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  width: 100%;
+`
+
+// Main Story Component (always displayed at top)
+const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+  return (
+    <MainStoryCard>
+      <MainStoryImage>
+        {item.image?.url && (
+          <Image
+            src={item.image.url}
+            alt={item.image.alt || item.title}
+            fill
+            style={{ objectFit: "cover" }}
+          />
+        )}
+      </MainStoryImage>
+      <MainStoryContent>
+        <MainStoryContentContainer>
+          <MainStoryTitle href={item.url}>{item.title}</MainStoryTitle>
+          {item.summary && (
+            <MainStorySummary>
+              {stripHtmlAndDecode(item.summary)}
+            </MainStorySummary>
+          )}
+        </MainStoryContentContainer>
+        <MainStoryDate variant="body3">
+          <LocalDate date={item.news_details?.publish_date} />
+        </MainStoryDate>
+      </MainStoryContent>
+    </MainStoryCard>
+  )
+}
+
+// Regular Story Component for grid
+const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+  return (
+    <StoryCard>
+      <StoryContent>
+        <RegularStoryTitleWrapper>
+          <StoryTitle href={item.url}>{item.title}</StoryTitle>
+          {item.summary && (
+            <StorySummary>{stripHtmlAndDecode(item.summary)}</StorySummary>
+          )}
+        </RegularStoryTitleWrapper>
+        <StoryDate variant="body3">
+          <LocalDate date={item.news_details?.publish_date} />
+        </StoryDate>
+      </StoryContent>
+      <a href={item.url} style={{ textDecoration: "none", order: 2 }}>
+        <StoryImage>
+          {item.image?.url && (
+            <Image
+              src={item.image.url}
+              alt={item.image.alt || item.title}
+              fill
+              style={{ objectFit: "cover" }}
+            />
+          )}
+        </StoryImage>
+      </a>
+    </StoryCard>
+  )
+}
+
+const ArticleListingPage: React.FC = () => {
+  const [page, setPage] = useState(1)
+  const scrollHook = useRef<HTMLDivElement>(null)
+  const [mainStory, setMainStory] = useState<NewsFeedItem | null>(null)
+
+  // First page fetches 21 records (1 main + 20 grid), rest fetch 20
+  const currentLimit = page === 1 ? 21 : PAGE_SIZE
+  const currentOffset = page === 1 ? 0 : 21 + (page - 2) * PAGE_SIZE
+
+  const {
+    data: news,
+    isLoading,
+    isFetching,
+  } = useNewsEventsList({
+    feed_type: [NewsEventsListFeedTypeEnum.News],
+    limit: currentLimit,
+    offset: currentOffset,
+    sortby: "-news_date",
+  })
+
+  const stories = news?.results || []
+
+  // Store the first story on initial load (main story stays fixed)
+  React.useEffect(() => {
+    if (page === 1 && news?.results && news.results.length > 0 && !mainStory) {
+      setMainStory(news.results[0] as NewsFeedItem)
+    }
+  }, [page, news?.results, mainStory])
+
+  // Grid stories: skip first story on page 1, show all on other pages
+  const gridStories = page === 1 ? stories.slice(1) : stories
+
+  return (
+    <>
+      <ArticleBanner
+        title="MIT Stories"
+        description="See what's happening in the world of learning with the latest news, insights, and upcoming events at MIT."
+        currentBreadcrumb="MIT Stories"
+      />
+
+      <StyledSection>
+        <div ref={scrollHook} />
+        <Container>
+          {isLoading && page === 1 ? (
+            <LoadingContainer>
+              <LoadingSpinner loading={isLoading} />
+            </LoadingContainer>
+          ) : (
+            <>
+              <BelowMdOnly>
+                <MobileContent>
+                  <MobileContainer>
+                    {mainStory && (
+                      <MainStorySection>
+                        <MainStory item={mainStory} />
+                      </MainStorySection>
+                    )}
+                    {gridStories.map((item) => (
+                      <Grid2 key={item.id} size={12}>
+                        <RegularStory item={item as NewsFeedItem} />
+                      </Grid2>
+                    ))}
+                  </MobileContainer>
+                </MobileContent>
+              </BelowMdOnly>
+
+              <AboveMdOnly>
+                {/* Main Story Section: Always visible */}
+                {mainStory && (
+                  <MainStorySection>
+                    <MainStory item={mainStory} />
+                  </MainStorySection>
+                )}
+
+                {/* Grid Section: Other articles */}
+                {isFetching && page > 1 ? (
+                  <LoadingContainer>
+                    <LoadingSpinner loading={isFetching} />
+                  </LoadingContainer>
+                ) : gridStories.length > 0 ? (
+                  <GridContainer>
+                    <Grid2 container rowSpacing="8px">
+                      {gridStories.map((item) => (
+                        <Grid2 key={item.id} size={12}>
+                          <RegularStory item={item as NewsFeedItem} />
+                        </Grid2>
+                      ))}
+                    </Grid2>
+                  </GridContainer>
+                ) : null}
+              </AboveMdOnly>
+            </>
+          )}
+        </Container>
+
+        {!isLoading && (
+          <Container>
+            <PaginationContainer>
+              <Pagination
+                count={getLastPage(news?.count ?? 0)}
+                page={page}
+                onChange={(_, newPage) => {
+                  setPage(newPage)
+                  setTimeout(() => {
+                    scrollHook.current?.scrollIntoView({
+                      block: "center",
+                      behavior: "smooth",
+                    })
+                  }, 0)
+                }}
+                renderItem={(item) => (
+                  <PaginationItem
+                    slots={{
+                      previous: RiArrowLeftLine,
+                      next: RiArrowRightLine,
+                    }}
+                    {...item}
+                  />
+                )}
+              />
+            </PaginationContainer>
+          </Container>
+        )}
+      </StyledSection>
+    </>
+  )
+}
+
+export { ArticleListingPage }

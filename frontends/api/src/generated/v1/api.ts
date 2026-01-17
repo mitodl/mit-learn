@@ -7284,6 +7284,12 @@ export interface RichTextArticle {
   updated_on: string
   /**
    *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  publish_date: string
+  /**
+   *
    * @type {boolean}
    * @memberof RichTextArticle
    */
@@ -9001,12 +9007,14 @@ export const ArticlesApiAxiosParamCreator = function (
     /**
      * Get a paginated list of articles
      * @summary List
+     * @param {boolean} [draft] Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     articlesList: async (
+      draft?: boolean,
       limit?: number,
       offset?: number,
       options: RawAxiosRequestConfig = {},
@@ -9026,6 +9034,10 @@ export const ArticlesApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
+
+      if (draft !== undefined) {
+        localVarQueryParameter["draft"] = draft
+      }
 
       if (limit !== undefined) {
         localVarQueryParameter["limit"] = limit
@@ -9254,12 +9266,14 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
     /**
      * Get a paginated list of articles
      * @summary List
+     * @param {boolean} [draft] Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
      * @param {number} [limit] Number of results to return per page.
      * @param {number} [offset] The initial index from which to return the results.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async articlesList(
+      draft?: boolean,
       limit?: number,
       offset?: number,
       options?: RawAxiosRequestConfig,
@@ -9270,6 +9284,7 @@ export const ArticlesApiFp = function (configuration?: Configuration) {
       ) => AxiosPromise<PaginatedRichTextArticleList>
     > {
       const localVarAxiosArgs = await localVarAxiosParamCreator.articlesList(
+        draft,
         limit,
         offset,
         options,
@@ -9421,6 +9436,7 @@ export const ArticlesApiFactory = function (
     ): AxiosPromise<PaginatedRichTextArticleList> {
       return localVarFp
         .articlesList(
+          requestParameters.draft,
           requestParameters.limit,
           requestParameters.offset,
           options,
@@ -9512,6 +9528,13 @@ export interface ArticlesApiArticlesDetailRetrieveRequest {
  * @interface ArticlesApiArticlesListRequest
  */
 export interface ArticlesApiArticlesListRequest {
+  /**
+   * Filter to show only draft articles. Only available for admins and article editors. If true, returns unpublished articles. If not specified, returns all articles.
+   * @type {boolean}
+   * @memberof ArticlesApiArticlesList
+   */
+  readonly draft?: boolean
+
   /**
    * Number of results to return per page.
    * @type {number}
@@ -9633,7 +9656,12 @@ export class ArticlesApi extends BaseAPI {
     options?: RawAxiosRequestConfig,
   ) {
     return ArticlesApiFp(this.configuration)
-      .articlesList(requestParameters.limit, requestParameters.offset, options)
+      .articlesList(
+        requestParameters.draft,
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 

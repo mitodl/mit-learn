@@ -37,7 +37,23 @@ class DefaultPagination(LimitOffsetPagination):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List", description="Get a paginated list of articles"),
+    list=extend_schema(
+        summary="List",
+        description="Get a paginated list of articles",
+        parameters=[
+            OpenApiParameter(
+                name="draft",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                description=(
+                    "Filter to show only draft articles. Only available for "
+                    "admins and article editors. If true, returns unpublished "
+                    "articles. If not specified, returns all articles."
+                ),
+                required=False,
+            )
+        ],
+    ),
     retrieve=extend_schema(summary="Retrieve", description="Retrieve a single article"),
     create=extend_schema(summary="Create", description="Create a new article"),
     destroy=extend_schema(summary="Destroy", description="Delete an article"),
@@ -60,6 +76,12 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
         # Admins/staff/learning_path_article_editors group see everything
         if is_admin_user(self.request) or is_article_group_user(self.request):
+            # Apply optional draft filter for admins/editors
+            draft_param = self.request.query_params.get("draft")
+            if draft_param and draft_param.lower() in ("true", "1"):
+                # If draft=true, return only unpublished articles
+                qs = qs.filter(is_published=False)
+            # Otherwise, return all articles (both published and unpublished)
             return qs
 
         # Normal users only see published articles
