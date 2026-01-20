@@ -425,7 +425,7 @@ describe("JustInTimeDialog", () => {
       },
     })
     setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(course.readable_id),
+      mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
       spies.createEnrollment,
     )
 

@@ -624,9 +624,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           e.preventDefault()
           if (b2bContractId) {
             const readableId = resourceIsCourse
-              ? resource.data.readable_id
+              ? run?.courseware_id
               : resourceIsCourseRunEnrollment
-                ? resource.data.run.course.readable_id
+                ? resource.data.run.courseware_id
                 : undefined
             if (!readableId || !coursewareUrl) return
             oneClickEnroll.mutate({
@@ -635,9 +635,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             })
           } else {
             const readableId = resourceIsCourse
-              ? resource.data.readable_id
+              ? run?.courseware_id
               : resourceIsCourseRunEnrollment
-                ? resource.data.run.course.readable_id
+                ? resource.data.run.courseware_id
                 : undefined
             if (!readableId || !coursewareUrl) return
             openJustInTime(coursewareUrl, readableId)

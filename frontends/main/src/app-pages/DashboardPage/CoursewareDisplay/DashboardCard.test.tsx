@@ -890,12 +890,14 @@ describe.each([
   const setupEnrollmentApis = (opts: {
     user: ReturnType<typeof mitxUser>
     course: ReturnType<typeof dashboardCourse>
+    run?: ReturnType<typeof mitxonline.factories.courses.courseRun>
   }) => {
     setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
 
-    const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(
-      opts.course.readable_id ?? undefined,
-    )
+    // Use run's courseware_id if provided, otherwise fall back to course's readable_id
+    const runId =
+      opts.run?.courseware_id ?? opts.course.readable_id ?? undefined
+    const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(runId)
     setMockResponse.post(enrollmentUrl, {
       result: "b2b-enroll-success",
       order: 1,
@@ -933,11 +935,16 @@ describe.each([
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
       // No enrollment = not enrolled, but has B2B contract
-      const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
+      const { enrollmentUrl } = setupEnrollmentApis({
+        user: userData,
+        course,
+        run,
+      })
       renderWithProviders(
         <DashboardCard
           titleAction="courseware"
           resource={{ type: DashboardType.Course, data: course }}
+          contractId={b2bContractId}
         />,
       )
       const card = getCard()
@@ -971,11 +978,12 @@ describe.each([
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
       // No enrollment = not enrolled, but has B2B contract
-      setupEnrollmentApis({ user: userData, course })
+      setupEnrollmentApis({ user: userData, course, run })
       renderWithProviders(
         <DashboardCard
           titleAction="courseware"
           resource={{ type: DashboardType.Course, data: course }}
+          contractId={b2bContractId}
         />,
       )
       const card = getCard()
