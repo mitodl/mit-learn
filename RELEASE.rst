@@ -1,6 +1,28 @@
 Release Notes
 =============
 
+Version 0.51.2 (Released January 20, 2026)
+--------------
+
+- fix: incorporating the feedback on editor (#2851)
+- chore(deps): update dependency ubuntu to v24 (#2035)
+- adding timeout value (#2857)
+- fix program collection ordering (#2860)
+- chore(deps): update actions/checkout action to v6 (#2745)
+- chore(deps): update actions/setup-python digest to 83679a8 (#2739)
+- chore(deps): update actions/setup-node action to v6 (#2746)
+- Webhook for edx contentfile archives (#2849)
+- org dashboard contract refactor (#2837)
+- Remove duplicate download credential button (#2856)
+- Revert "pre-filter neural query (#2828)" (#2854)
+- fix server import issue (#2853)
+- Prevent query devtools from erroring on image upload (#2827)
+- update mitxonline-api-axios client (#2852)
+- Render article editor content on the server #9760 (#2847)
+- feat: add news/stories pipeline which create news from article (#2844)
+- fix: change media url input behaviour (#2835)
+- Refactor video_shorts (#2845)
+
 Version 0.51.1 (Released January 13, 2026)
 --------------
 
