@@ -29,7 +29,7 @@ from learning_resources.etl.utils import (
     transform_price,
     transform_topics,
 )
-from main.utils import clean_data
+from main.utils import clean_data, now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -215,19 +215,23 @@ def _transform_run(course_run: dict, course: dict) -> dict:
     Returns:
         dict: normalized course run data
     """  # noqa: D401
+    now = now_in_utc()
+    enrollment_end = _parse_datetime(course_run.get("enrollment_end"))
+    end_date = _parse_datetime(course_run.get("end_date"))
     return {
         "title": course_run["title"],
         "run_id": course_run["courseware_id"],
         "start_date": _parse_datetime(
             course_run.get("start_date") or course_run.get("enrollment_start")
         ),
-        "end_date": _parse_datetime(course_run.get("end_date")),
+        "end_date": end_date,
         "enrollment_start": _parse_datetime(course_run.get("enrollment_start")),
-        "enrollment_end": _parse_datetime(course_run.get("enrollment_end")),
+        "enrollment_end": enrollment_end,
         "url": parse_page_attribute(course, "page_url", is_url=True),
         "published": bool(
             course_run.get("is_enrollable", False)
             and (course.get("page") or {}).get("live", False)
+            and course.get("include_in_learn_catalog") is True
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
@@ -238,6 +242,10 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         ],
         "status": RunStatus.current.value
         if parse_page_attribute(course, "page_url")
+        and (
+            (not end_date or end_date >= now)
+            and (not enrollment_end or enrollment_end >= now)
+        )
         else RunStatus.archived.value,
         "availability": course.get("availability"),
         "format": [Format.asynchronous.name],
@@ -291,6 +299,7 @@ def _transform_course(course):
             parse_page_attribute(course, "page_url")
             and parse_page_attribute(course, "live")
             and len([run for run in runs if run["published"]]) > 0
+            and course.get("include_in_learn_catalog") is True
         ),  # a course is only published if it has a live url and published runs
         "professional": False,
         "certification": has_certification,
