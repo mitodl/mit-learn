@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.51.2
+Version 0.51.2 (Released January 20, 2026)
 --------------
 
 - fix: incorporating the feedback on editor (#2851)
