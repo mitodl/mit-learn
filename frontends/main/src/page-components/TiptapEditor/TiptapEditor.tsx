@@ -53,6 +53,7 @@ import { BannerViewer } from "./extensions/node/Banner/BannerNode"
 import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarViewer"
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
+import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
 
 const Container = styled.div<{
@@ -195,6 +196,9 @@ export function InsertDropdownMenu({ editor }: TiptapEditorToolbarProps) {
           <MediaEmbedButton editor={editor} text="Video" />
         </DropdownMenuItem>
 
+        <DropdownMenuItem asChild>
+          <LearningResourceButton editor={editor} text="Course Card" />
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <DividerButton editor={editor} text="Divider" />
         </DropdownMenuItem>
