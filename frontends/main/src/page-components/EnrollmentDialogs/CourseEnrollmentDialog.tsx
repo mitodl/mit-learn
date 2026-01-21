@@ -199,14 +199,14 @@ const CertificateUpsell: React.FC<{
   courseRun?: CourseRunV2
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
+  const canUpgrade = product && courseRun && canUpgradeRun(courseRun)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: courseRun?.products?.[0]?.id ?? 0,
     }),
-    enabled: !!course?.page.financial_assistance_form_url,
+    enabled: canUpgrade && !!course?.page.financial_assistance_form_url,
   })
-  const enabled = product && courseRun && canUpgradeRun(courseRun)
-  const price = enabled
+  const price = canUpgrade
     ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
     : null
   const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
@@ -229,7 +229,7 @@ const CertificateUpsell: React.FC<{
           </CertificateReasonItem>
         ))}
       </CertificateReasonsList>
-      <CertificateBox disabled={!enabled}>
+      <CertificateBox disabled={!canUpgrade}>
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
@@ -248,8 +248,8 @@ const CertificateUpsell: React.FC<{
                   : "Financial assistance available"}
               </UnderlinedLink>
             ) : null}
-            <CertDate disabled={!enabled}>
-              {enabled ? deadlineUI : "Not available"}
+            <CertDate disabled={!canUpgrade}>
+              {canUpgrade ? deadlineUI : "Not available"}
             </CertDate>
           </Stack>
         </CertificatePriceRoot>
@@ -257,7 +257,7 @@ const CertificateUpsell: React.FC<{
           label="Add to Cart"
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
-          disabled={!enabled}
+          disabled={!canUpgrade}
           onClick={() => {
             if (!product) return
             const url = upgradeRunUrl(product)

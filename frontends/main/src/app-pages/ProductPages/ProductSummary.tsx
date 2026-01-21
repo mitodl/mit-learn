@@ -283,18 +283,17 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
   nextRun,
   course,
 }) => {
-  const hasFinancialAid = !!course?.page.financial_assistance_form_url
+  const canUpgrade = canUpgradeRun(nextRun)
+  const product = nextRun.products[0]
+  const hasFinancialAid = !!(
+    course?.page.financial_assistance_form_url && product
+  )
   const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({
-      productId: nextRun.products?.[0]?.id ?? 0,
-    }),
-    enabled: hasFinancialAid,
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: canUpgrade && hasFinancialAid,
   })
-  const price = canUpgradeRun(nextRun)
-    ? priceWithDiscount({
-        product: nextRun.products[0],
-        flexiblePrice: userFlexiblePrice.data,
-      })
+  const price = canUpgrade
+    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
     : null
 
   const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
