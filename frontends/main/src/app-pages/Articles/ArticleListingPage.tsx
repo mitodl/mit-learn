@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import React from "react"
 import Image from "next/image"
+import { useSearchParams } from "@mitodl/course-search-utils/next"
 import {
   Container,
   styled,
@@ -50,7 +51,7 @@ const Section = styled.section`
   }
 `
 
-const MainStorySection = styled.div`
+const FeaturedStorySection = styled.div`
   max-width: 1000px;
   margin: -290px auto 40px;
   position: relative;
@@ -135,31 +136,30 @@ const MainStoryContentContainer = styled.div`
   }
 `
 
-const MainStoryTitle = styled.a`
+const MainStoryTitle = styled.h2`
   color: ${theme.custom.colors.white};
   ${{ ...theme.typography.h3 }}
-  text-decoration: none;
   margin: 0;
-  cursor: pointer;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 
-  &:hover {
+  a {
     color: ${theme.custom.colors.white};
+    text-decoration: none;
+    cursor: pointer;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    &:hover {
+      color: ${theme.custom.colors.white};
+    }
   }
 
   ${theme.breakpoints.down("md")} {
-    font-size: 18px;
-    line-height: 26px;
+    ${{ ...theme.typography.h5 }}
   }
   ${theme.breakpoints.down("sm")} {
-    ${{ ...theme.typography.h4 }}
-    -webkit-line-clamp: 3;
-    font-size: 18px;
-    font-style: normal;
-    line-height: 26px;
+    ${{ ...theme.typography.h5 }}
   }
 `
 
@@ -254,26 +254,34 @@ const StoryContent = styled.div`
   }
 `
 
-const StoryTitle = styled.a`
+const StoryTitle = styled.h2`
   color: ${theme.custom.colors.darkGray2};
   ${{ ...theme.typography.h5 }}
-  text-decoration: none;
-  cursor: pointer;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 0;
   margin-top: 16px;
 
-  &:hover {
-    color: ${theme.custom.colors.red};
+  a {
+    color: ${theme.custom.colors.darkGray2};
+    text-decoration: none;
+    cursor: pointer;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    &:hover {
+      color: ${theme.custom.colors.red};
+    }
+  }
+
+  ${theme.breakpoints.down("md")} {
+    ${{ ...theme.typography.subtitle1 }}
   }
 
   ${theme.breakpoints.down("sm")} {
-    ${{ ...theme.typography.subtitle1 }}
+    ${{ ...theme.typography.subtitle2 }}
     margin-top: 0;
     -webkit-line-clamp: 3;
-    font-size: 14px;
   }
 `
 
@@ -289,11 +297,10 @@ const StorySummary = styled.p`
   overflow-wrap: break-word;
 
   ${theme.breakpoints.down("sm")} {
-    ${{ ...theme.typography.body2 }}
+    ${{ ...theme.typography.body3 }}
     -webkit-line-clamp: 2;
     margin-top: 0;
     color: ${theme.custom.colors.black};
-    font-size: 12px;
   }
 `
 
@@ -446,7 +453,9 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
       </MainStoryImage>
       <MainStoryContent>
         <MainStoryContentContainer>
-          <MainStoryTitle href={item.url}>{item.title}</MainStoryTitle>
+          <MainStoryTitle>
+            <a href={item.url}>{item.title}</a>
+          </MainStoryTitle>
           {item.summary && (
             <MainStorySummary>
               {stripHtmlAndDecode(item.summary)}
@@ -467,7 +476,9 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
     <StoryCard>
       <StoryContent>
         <RegularStoryTitleWrapper>
-          <StoryTitle href={item.url}>{item.title}</StoryTitle>
+          <StoryTitle>
+            <a href={item.url}>{item.title}</a>
+          </StoryTitle>
           {item.summary && (
             <StorySummary>{stripHtmlAndDecode(item.summary)}</StorySummary>
           )}
@@ -493,54 +504,40 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 }
 
 const ArticleListingPage: React.FC = () => {
-  const [page, setPage] = useState(1)
-  const scrollHook = useRef<HTMLDivElement>(null)
-  const [mainStory, setMainStory] = useState<NewsFeedItem | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = parseInt(searchParams.get("page") ?? "1", 10)
 
-  // First page fetches 21 records (1 main + 20 grid), rest fetch 20
-  const currentLimit = page === 1 ? 21 : PAGE_SIZE
-  const currentOffset = page === 1 ? 0 : 21 + (page - 2) * PAGE_SIZE
-
-  const {
-    data: news,
-    isLoading,
-    isFetching,
-  } = useNewsEventsList({
+  const { data: news, isLoading } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
-    limit: currentLimit,
-    offset: currentOffset,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
     sortby: "-news_date",
   })
 
-  const stories = news?.results || []
+  const stories = news?.results ?? []
 
-  // Store the first story on initial load (main story stays fixed)
-  React.useEffect(() => {
-    if (page === 1 && news?.results && news.results.length > 0 && !mainStory) {
-      setMainStory(news.results[0] as NewsFeedItem)
-    }
-  }, [page, news?.results, mainStory])
-
-  // Grid stories: skip first story on page 1, show all on other pages
+  // On page 1, first story is featured, rest are grid stories
+  // On other pages, all stories are grid stories
+  const mainStory =
+    page === 1 && stories.length > 0 ? (stories[0] as NewsFeedItem) : null
   const gridStories = page === 1 ? stories.slice(1) : stories
 
   return (
     <>
       <ArticleBannerStyled
-        title="MIT Stories"
-        description="See what's happening in the world of learning with the latest news, insights, and upcoming events at MIT."
-        currentBreadcrumb="MIT Stories"
+        title="News"
+        description="Insights, ideas, and stories from the world of learning at MIT."
+        currentBreadcrumb="News"
         backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
       />
 
       <StyledSection>
-        <div ref={scrollHook} />
         <Container>
-          {isLoading && page === 1 ? (
+          {isLoading ? (
             <LoadingContainer>
               <LoadingSpinner loading={isLoading} />
             </LoadingContainer>
-          ) : !mainStory && stories.length === 0 ? (
+          ) : stories.length === 0 ? (
             <EmptyState>
               <Typography variant="h4">No Articles Available</Typography>
               <Typography variant="body1" color="textSecondary">
@@ -553,10 +550,10 @@ const ArticleListingPage: React.FC = () => {
               <BelowMdOnly>
                 <MobileContent>
                   <MobileContainer>
-                    {mainStory && (
-                      <MainStorySection>
+                    {page === 1 && mainStory && (
+                      <FeaturedStorySection>
                         <MainStory item={mainStory} />
-                      </MainStorySection>
+                      </FeaturedStorySection>
                     )}
                     {gridStories.map((item) => (
                       <Grid2 key={item.id} size={12}>
@@ -568,19 +565,15 @@ const ArticleListingPage: React.FC = () => {
               </BelowMdOnly>
 
               <AboveMdOnly>
-                {/* Main Story Section: Always visible */}
-                {mainStory && (
-                  <MainStorySection>
+                {/* Main Story Section: Only visible on page 1 */}
+                {page === 1 && mainStory && (
+                  <FeaturedStorySection>
                     <MainStory item={mainStory} />
-                  </MainStorySection>
+                  </FeaturedStorySection>
                 )}
 
                 {/* Grid Section: Other articles */}
-                {isFetching && page > 1 ? (
-                  <LoadingContainer>
-                    <LoadingSpinner loading={isFetching} />
-                  </LoadingContainer>
-                ) : gridStories.length > 0 ? (
+                {gridStories.length > 0 ? (
                   <GridContainer>
                     <Grid2 container rowSpacing="8px">
                       {gridStories.map((item) => (
@@ -603,13 +596,15 @@ const ArticleListingPage: React.FC = () => {
                 count={getLastPage(news?.count ?? 0)}
                 page={page}
                 onChange={(_, newPage) => {
-                  setPage(newPage)
-                  setTimeout(() => {
-                    scrollHook.current?.scrollIntoView({
-                      block: "center",
-                      behavior: "smooth",
-                    })
-                  }, 0)
+                  setSearchParams((current) => {
+                    const copy = new URLSearchParams(current)
+                    if (newPage === 1) {
+                      copy.delete("page")
+                    } else {
+                      copy.set("page", newPage.toString())
+                    }
+                    return copy
+                  })
                 }}
                 renderItem={(item) => (
                   <PaginationItem

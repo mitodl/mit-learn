@@ -35,10 +35,10 @@ const BannerTitle = styled(Typography)`
   color: ${theme.custom.colors.white};
   margin-top: 8px;
   ${theme.breakpoints.down("md")} {
-    font-size: 34px;
+    ${{ ...theme.typography.h2 }}
   }
   ${theme.breakpoints.down("sm")} {
-    font-size: 28px;
+    ${{ ...theme.typography.h3 }}
   }
 ` as typeof Typography
 
@@ -46,7 +46,7 @@ const BannerDescription = styled(Typography)`
   color: ${theme.custom.colors.white};
   margin-top: 8px;
   ${theme.breakpoints.down("sm")} {
-    font-size: 14px;
+    ${{ ...theme.typography.body2 }}
   }
 `
 
