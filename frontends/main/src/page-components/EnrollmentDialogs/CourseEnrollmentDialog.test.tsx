@@ -504,5 +504,28 @@ describe("CourseEnrollmentDialog", () => {
         screen.queryByRole("link", { name: /financial assistance/i }),
       ).toBeNull()
     })
+
+    test("Does NOT show financial assistance when products array is empty", async () => {
+      const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+      const run = enrollableRun({
+        is_upgradable: false,
+        products: [],
+      })
+      const course = makeCourse({
+        courseruns: [run],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+
+      renderWithProviders(null)
+      await openDialog(course)
+
+      // Should show "Not available" for certificate
+      expect(screen.getByText("Not available")).toBeInTheDocument()
+
+      // Financial assistance link should NOT be present (because price is null)
+      expect(
+        screen.queryByRole("link", { name: /financial assistance/i }),
+      ).toBeNull()
+    })
   })
 })

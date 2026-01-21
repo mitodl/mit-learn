@@ -199,10 +199,10 @@ const CertificateUpsell: React.FC<{
   courseRun?: CourseRunV2
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
-  const canUpgrade = product && courseRun && canUpgradeRun(courseRun)
+  const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
-      productId: courseRun?.products?.[0]?.id ?? 0,
+      productId: product?.id ?? 0,
     }),
     enabled: canUpgrade && !!course?.page.financial_assistance_form_url,
   })

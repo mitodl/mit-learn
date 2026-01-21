@@ -456,6 +456,40 @@ describe("Course Financial Assistance", () => {
       within(priceRow).queryByRole("link", { name: /financial assistance/i }),
     ).toBeNull()
   })
+
+  test("Does NOT show financial assistance when certificate link is present but products array is empty", () => {
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const run = makeRun({
+      is_archived: false,
+      products: [],
+      is_enrollable: true,
+      is_upgradable: false,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Should show "Certificate deadline passed" since no products
+    expect(priceRow).toHaveTextContent("Certificate deadline passed")
+
+    // Certificate link should be present
+    const certLink = within(priceRow).getByRole("link", {
+      name: /Learn More/i,
+    })
+    expect(certLink).toBeInTheDocument()
+
+    // Financial assistance link should NOT be present
+    expect(
+      within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+    ).toBeNull()
+  })
 })
 
 describe("ProgramSummary", () => {
