@@ -330,16 +330,13 @@ def update_content_file_payload(serialized_document):
             collection_name=CONTENT_FILES_COLLECTION_NAME,
         )
     ]
-    for point_batch in [
-        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
-        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
-    ]:
-        _set_payload(
-            point_batch,
-            serialized_document,
-            param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
-            collection_name=CONTENT_FILES_COLLECTION_NAME,
-        )
+
+    _set_payload(
+        points,
+        serialized_document,
+        param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
 
 
 def _set_payload(points, document, param_map, collection_name):
@@ -358,11 +355,15 @@ def _set_payload(points, document, param_map, collection_name):
             payload[param_map[key]] = document[key]
     if not all([points, payload]):
         return
-    client.set_payload(
-        collection_name=collection_name,
-        payload=payload,
-        points=points,
-    )
+    for point_batch in [
+        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
+        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
+    ]:
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload,
+            points=point_batch,
+        )
 
 
 def should_generate_resource_embeddings(serialized_document):
