@@ -27,6 +27,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
+import { stripHtmlAndDecode } from "@/common/utils"
 import { ArticleBanner } from "./ArticleBanner"
 
 const PAGE_SIZE = 20
@@ -38,15 +39,6 @@ export const DEFAULT_BACKGROUND_IMAGE_URL =
 const getLastPage = (count: number): number => {
   const pages = Math.ceil(count / PAGE_SIZE)
   return pages > MAX_PAGE ? MAX_PAGE : pages
-}
-
-// Utility function to strip HTML tags and decode HTML entities
-const stripHtmlAndDecode = (html: string): string => {
-  if (!html) return ""
-
-  // Parse the HTML and extract text content; this both strips tags and decodes entities
-  const doc = new DOMParser().parseFromString(html, "text/html")
-  return doc.body.textContent || ""
 }
 
 const Section = styled.section`
