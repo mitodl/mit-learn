@@ -6,6 +6,11 @@ applyTo: "**/*.test.ts,**/*.test.tsx"
 
 ## Quick Reference
 
+```sh
+# From project root:
+yarn test filename_or_path
+```
+
 ```tsx
 // 1. Mock APIs
 import { setMockResponse, urls, factories } from "api/test-utils"

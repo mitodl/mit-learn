@@ -1,6 +1,6 @@
 import React from "react"
-import { factories } from "api/mitxonline-test-utils"
-import { factories as learnFactories } from "api/test-utils"
+import { factories, urls } from "api/mitxonline-test-utils"
+import { factories as learnFactories, setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
@@ -11,6 +11,7 @@ const shuffle = faker.helpers.shuffle
 const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
+const makeFlexiblePrice = factories.products.flexiblePrice
 const makeResource = learnFactories.learningResources.program
 const { RequirementTreeBuilder } = factories.requirements
 
@@ -310,6 +311,187 @@ describe("Course Price Row", () => {
   })
 })
 
+describe("Course Financial Assistance", () => {
+  test.each([
+    { hasFinancialAid: true, expectLink: true },
+    { hasFinancialAid: false, expectLink: false },
+  ])(
+    "Financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
+    async ({ hasFinancialAid, expectLink }) => {
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
+      const product = makeProduct()
+      const run = makeRun({
+        is_archived: false,
+        products: [product],
+        is_enrollable: true,
+        is_upgradable: true,
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+
+      // Mock the flexible price API response when financial aid is available
+      if (hasFinancialAid) {
+        const mockFlexiblePrice = makeFlexiblePrice({
+          id: product.id,
+          price: product.price,
+          product_flexible_price: null,
+        })
+        setMockResponse.get(
+          urls.products.userFlexiblePriceDetail(product.id),
+          mockFlexiblePrice,
+        )
+      }
+
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const summary = await screen.findByRole("region", {
+        name: "Course summary",
+      })
+      const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+      if (expectLink) {
+        const link = await within(priceRow).findByRole("link", {
+          name: /financial assistance/i,
+        })
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
+        expect(link).toHaveTextContent("Financial assistance available")
+      } else {
+        const link = within(priceRow).queryByRole("link", {
+          name: /financial assistance/i,
+        })
+        expect(link).toBeNull()
+        expect(link).toBeNull()
+      }
+    },
+  )
+
+  test("Displays user-specific discounted price when financial aid is available", async () => {
+    const originalPrice = "100.00"
+    const discountedAmount = "50.00"
+    const product = makeProduct({ price: originalPrice })
+    const flexiblePrice = makeFlexiblePrice({
+      id: product.id,
+      price: originalPrice,
+      product_flexible_price: {
+        id: faker.number.int(),
+        amount: discountedAmount,
+        discount_type: "dollars-off" as const,
+        discount_code: faker.string.alphanumeric(8),
+        redemption_type: "one-time" as const,
+        is_redeemed: false,
+        automatic: true,
+        max_redemptions: 1,
+        payment_type: null,
+        activation_date: faker.date.past().toISOString(),
+        expiration_date: faker.date.future().toISOString(),
+      },
+    })
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const run = makeRun({
+      is_archived: false,
+      products: [product],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    setMockResponse.get(
+      urls.products.userFlexiblePriceDetail(product.id),
+      flexiblePrice,
+    )
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = await screen.findByRole("region", {
+      name: "Course summary",
+    })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Wait for the flexible price API to be called and prices to be displayed
+    // The discounted price is calculated as: $100 - $50 = $50
+    await within(priceRow).findByText("Financial assistance applied")
+    expect(priceRow).toHaveTextContent("$50.00")
+    expect(priceRow).toHaveTextContent("$100.00")
+  })
+
+  test("Does NOT call flexible price API when financial aid URL is empty", () => {
+    const product = makeProduct({ price: "100.00" })
+    const run = makeRun({
+      is_archived: false,
+      products: [product],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: "" },
+    })
+
+    // We're NOT setting up a mock response for the flexible price API
+    // If it's called, the test will fail
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Should show the regular price
+    expect(priceRow).toHaveTextContent(`$${product.price}`)
+    // Should NOT show financial assistance link
+    expect(
+      within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+    ).toBeNull()
+  })
+
+  test("Does NOT show financial assistance when certificate link is present but products array is empty", () => {
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const run = makeRun({
+      is_archived: false,
+      products: [],
+      is_enrollable: true,
+      is_upgradable: false,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Should show "Certificate deadline passed" since no products
+    expect(priceRow).toHaveTextContent("Certificate deadline passed")
+
+    // Certificate link should be present
+    const certLink = within(priceRow).getByRole("link", {
+      name: /Learn More/i,
+    })
+    expect(certLink).toBeInTheDocument()
+
+    // Financial assistance link should NOT be present
+    expect(
+      within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+    ).toBeNull()
+  })
+})
+
 describe("ProgramSummary", () => {
   test("renders program summary", async () => {
     const program = factories.programs.program()
@@ -509,4 +691,42 @@ describe("Price & Certificate Row", () => {
     expect(certRow).toHaveTextContent("Certificate Track")
     expect(certRow).toHaveTextContent(program.page.price)
   })
+
+  test.each([
+    { hasFinancialAid: true, expectLink: true },
+    { hasFinancialAid: false, expectLink: false },
+  ])(
+    "Program financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
+    ({ hasFinancialAid, expectLink }) => {
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
+      const program = factories.programs.program({
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+      renderWithProviders(
+        <ProgramSummary program={program} programResource={null} />,
+      )
+
+      const summary = screen.getByRole("region", { name: "Program summary" })
+      const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+      if (expectLink) {
+        const link = within(priceRow).getByRole("link", {
+          name: /financial assistance/i,
+        })
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
+        expect(link).toHaveTextContent("Financial assistance available")
+      } else {
+        const link = within(priceRow).queryByRole("link", {
+          name: /financial assistance/i,
+        })
+        expect(link).toBeNull()
+      }
+    },
+  )
 })

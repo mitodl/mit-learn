@@ -84,6 +84,11 @@ const certificates = {
   ) => `${API_BASE_URL}/api/v2/program_certificates/${params.cert_uuid}/`,
 }
 
+const products = {
+  userFlexiblePriceDetail: (productId: number) =>
+    `${API_BASE_URL}/api/v0/products/${productId}/user_flexible_price/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -98,4 +103,5 @@ export {
   programEnrollments,
   contracts,
   certificates,
+  products,
 }
