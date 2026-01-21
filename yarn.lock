@@ -14088,7 +14088,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isomorphic-dompurify@npm:^2.35.0":
+"isomorphic-dompurify@npm:^2.27.0":
   version: 2.35.0
   resolution: "isomorphic-dompurify@npm:2.35.0"
   dependencies:
@@ -15506,7 +15506,7 @@ __metadata:
     formik: "npm:^2.4.6"
     http-proxy-middleware: "npm:^3.0.0"
     iso-639-1: "npm:^3.1.4"
-    isomorphic-dompurify: "npm:^2.35.0"
+    isomorphic-dompurify: "npm:^2.27.0"
     jest: "npm:^29.7.0"
     jest-extended: "npm:^7.0.0"
     jest-next-dynamic-ts: "npm:^0.1.1"

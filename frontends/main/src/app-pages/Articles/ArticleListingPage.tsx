@@ -28,6 +28,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
 import { stripHtmlAndDecode } from "@/common/utils"
+import DOMPurify from "isomorphic-dompurify"
 import { ArticleBanner } from "./ArticleBanner"
 
 const PAGE_SIZE = 20
@@ -39,6 +40,14 @@ export const DEFAULT_BACKGROUND_IMAGE_URL =
 const getLastPage = (count: number): number => {
   const pages = Math.ceil(count / PAGE_SIZE)
   return pages > MAX_PAGE ? MAX_PAGE : pages
+}
+
+const stripRawHtml = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true,
+  })
 }
 
 const Section = styled.section`
@@ -456,7 +465,7 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
           </MainStoryTitle>
           {item.summary && (
             <MainStorySummary>
-              {stripHtmlAndDecode(item.summary)}
+              {stripHtmlAndDecode(stripRawHtml(item.summary))}
             </MainStorySummary>
           )}
         </MainStoryContentContainer>
@@ -478,7 +487,9 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
             <a href={item.url}>{item.title}</a>
           </StoryTitle>
           {item.summary && (
-            <StorySummary>{stripHtmlAndDecode(item.summary)}</StorySummary>
+            <StorySummary>
+              {stripHtmlAndDecode(stripRawHtml(item.summary))}
+            </StorySummary>
           )}
         </RegularStoryTitleWrapper>
         <StoryDate variant="body3">
