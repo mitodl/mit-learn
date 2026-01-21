@@ -330,12 +330,16 @@ def update_content_file_payload(serialized_document):
             collection_name=CONTENT_FILES_COLLECTION_NAME,
         )
     ]
-    _set_payload(
-        points,
-        serialized_document,
-        param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
-        collection_name=CONTENT_FILES_COLLECTION_NAME,
-    )
+    for point_batch in [
+        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
+        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
+    ]:
+        _set_payload(
+            point_batch,
+            serialized_document,
+            param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
 
 
 def _set_payload(points, document, param_map, collection_name):
