@@ -103,6 +103,8 @@ const makeBrowserQueryClient = (
         /**
          * Public API content is server-rendered to the base page and cached by the CDN.
          * Keep staleTime >= CDN TTL so hydrated queries are not immediately refetched.
+         * The CDN TTL is specified by the s-max-age value in the Cache-Control header
+         * in next.config.js.
          *
          * Most content is stable for ~24 hours (ETL cadence), but if staleTime is shorter
          * than the CDN TTL, React Query will refetch on hydration once the cached HTML
