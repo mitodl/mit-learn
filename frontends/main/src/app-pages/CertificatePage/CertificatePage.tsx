@@ -20,6 +20,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import SharePopover from "./SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
+import { useUserMe } from "api/hooks/user"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -669,6 +670,8 @@ const CertificatePage: React.FC<{
   const [digitalCredentialDialogOpen, setDigitalCredentialDialogOpen] =
     useState(false)
 
+  const { data: userData } = useUserMe()
+
   const {
     data: courseCertificateData,
     isLoading: isCourseLoading,
@@ -757,10 +760,11 @@ const CertificatePage: React.FC<{
       ? "Module Certificate"
       : `${programCertificateData?.program.program_type} Certificate`
 
-  const verifiableCredential =
-    certificateType === CertificateType.Course
-      ? courseCertificateData?.verifiable_credential_json
-      : programCertificateData?.verifiable_credential_json
+  const certificateData = certificateType === CertificateType.Course ? courseCertificateData : programCertificateData
+
+  const isCertificateForCurrentUser = userData?.id === certificateData?.user.id
+
+  const verifiableCredential = isCertificateForCurrentUser ? certificateData?.verifiable_credential_json : null
 
   return (
     <Page>
@@ -783,38 +787,40 @@ const CertificatePage: React.FC<{
           <strong>{title}</strong> {displayType}
         </Typography>
       </Title>
-      <Buttons ref={shareButtonRef}>
-        <Button
-          variant="primary"
-          startIcon={<RiDownloadLine />}
-          onClick={download}
-        >
-          Download PDF
-        </Button>
-        {verifiableCredential ? (
+      {isCertificateForCurrentUser ? (
+        <Buttons ref={shareButtonRef}>
+          <Button
+            variant="primary"
+            startIcon={<RiDownloadLine />}
+            onClick={download}
+          >
+            Download PDF
+          </Button>
+          {verifiableCredential ? (
+            <Button
+              variant="bordered"
+              startIcon={<RiDownloadLine />}
+              onClick={() => setDigitalCredentialDialogOpen(true)}
+            >
+              Download Digital Credential
+            </Button>
+          ) : null}
           <Button
             variant="bordered"
-            startIcon={<RiDownloadLine />}
-            onClick={() => setDigitalCredentialDialogOpen(true)}
+            startIcon={<RiShareLine />}
+            onClick={() => setShareOpen(true)}
           >
-            Download Digital Credential
+            Share
           </Button>
-        ) : null}
-        <Button
-          variant="bordered"
-          startIcon={<RiShareLine />}
-          onClick={() => setShareOpen(true)}
-        >
-          Share
-        </Button>
-        <Button
-          variant="bordered"
-          startIcon={<RiPrinterLine />}
-          onClick={print}
-        >
-          Print
-        </Button>
-      </Buttons>
+          <Button
+            variant="bordered"
+            startIcon={<RiPrinterLine />}
+            onClick={print}
+          >
+            Print
+          </Button>
+        </Buttons>
+      ) : null}
       <PrintContainer ref={contentRef}>
         {certificateType === CertificateType.Course ? (
           <CourseCertificate certificate={courseCertificateData!} />

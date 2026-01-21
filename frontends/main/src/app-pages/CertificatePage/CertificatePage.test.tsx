@@ -1,10 +1,10 @@
 import React from "react"
 import moment from "moment"
-import { factories, setMockResponse } from "api/test-utils"
+import { factories, setMockResponse, urls } from "api/test-utils"
 import { screen, renderWithProviders, user } from "@/test-utils"
 import CertificatePage, { CertificateType } from "./CertificatePage"
 import SharePopover from "./SharePopover"
-import { urls } from "api/mitxonline-test-utils"
+import { urls as mitxUrls } from "api/mitxonline-test-utils"
 import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
@@ -12,10 +12,19 @@ import {
 } from "@/common/urls"
 
 describe("CertificatePage", () => {
+
+  beforeEach(() => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+  })
+
   it("renders a course certificate", async () => {
     const certificate = factories.mitxonline.courseCertificate()
     setMockResponse.get(
-      urls.certificates.courseCertificatesRetrieve({
+      mitxUrls.certificates.courseCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
@@ -81,7 +90,7 @@ describe("CertificatePage", () => {
   it("renders a program certificate", async () => {
     const certificate = factories.mitxonline.programCertificate()
     setMockResponse.get(
-      urls.certificates.programCertificatesRetrieve({
+      mitxUrls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
@@ -108,6 +117,65 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.uuid)
+  })
+
+  it("does not display buttons when certificate belongs to a different user", async () => {
+    const certificateOwner = factories.user.user({ id: 1 })
+    const loggedInUser = factories.user.user({ id: 2 })
+    const certificate = factories.mitxonline.programCertificate({
+      user: certificateOwner,
+    })
+
+    setMockResponse.get(
+      mitxUrls.certificates.programCertificatesRetrieve({
+        cert_uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    setMockResponse.get(urls.userMe.get(), loggedInUser)
+
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Program}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
+      />,
+    )
+
+    await screen.findAllByText(certificate.program.title)
+
+    expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Print" })).not.toBeInTheDocument()
+  })
+
+  it("displays buttons when certificate belongs to the current user", async () => {
+    const loggedInUser = factories.user.user({ id: 1 })
+    const certificate = factories.mitxonline.programCertificate({
+      user: loggedInUser,
+    })
+
+    setMockResponse.get(
+      mitxUrls.certificates.programCertificatesRetrieve({
+        cert_uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    setMockResponse.get(urls.userMe.get(), loggedInUser)
+
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Program}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/program/${certificate.uuid}`}
+      />,
+    )
+
+    await screen.findAllByText(certificate.program.title)
+
+    await screen.findByRole("button", { name: "Download PDF" })
+    await screen.findByRole("button", { name: "Share" })
+    await screen.findByRole("button", { name: "Print" })
   })
 })
 
