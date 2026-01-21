@@ -1,8 +1,9 @@
 import React from "react"
 import Image from "next/image"
-import { Dialog, Typography, styled } from "ol-components"
+import { Dialog, Link, Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
+import { DigitalCredentialsFAQLink } from "@/common/constants"
 
 const Content = styled.div({})
 
@@ -162,9 +163,17 @@ export const DigitalCredentialDialog = ({
           and digital resumes.
         </Typography>
 
-        <Typography variant="body2">
+        <Typography variant="body2" marginTop={"24px"}>
           Learners choose this option if they need to add a verified credential
-          to a social profile like LinkedIn.
+          to a social profile like LinkedIn.{" "}
+          <Link
+            href={DigitalCredentialsFAQLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            color={"red"}
+          >
+            Learn More.
+          </Link>
         </Typography>
 
         <InfoPanel>
