@@ -5,6 +5,7 @@ import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
+import { RiCloseLargeLine } from "@remixicon/react"
 
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
@@ -188,15 +189,6 @@ const Image = styled.img<{ layout: Layout; isLoading?: boolean }>(
       opacity: isLoading ? 0 : 1,
       transition: "opacity 0.3s ease-in-out",
     },
-    "& .remove-button": {
-      opacity: 0,
-      pointerEvents: "none",
-    },
-
-    "&:hover .remove-button": {
-      opacity: 1,
-      pointerEvents: "auto",
-    },
   }),
 )
 
@@ -231,16 +223,6 @@ const ImagePlaceholder = styled.div<{ layout: Layout }>(
 
 const ImageWrapper = styled("div")({
   position: "relative",
-
-  "& .remove-button": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
-
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
 })
 
 const Caption = styled.figcaption(({ theme }) => ({
@@ -302,26 +284,12 @@ export function ImageWithCaptionViewer({
 }
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",
-  top: -11,
-  right: -7,
-  zIndex: 999999,
-
-  background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "50%",
-  width: 24,
-  height: 24,
-
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
-
-  opacity: 0, // 👈 hidden
-  pointerEvents: "none", // 👈 not clickable when hidden
-  transition: "opacity 0.15s ease",
-
-  "&:hover": {
-    background: theme.custom.colors.lightGray1,
+  top: "-4px",
+  right: "-6px",
+  zIndex: 2,
+  display: "none",
+  ".ProseMirror-selectednode:hover &": {
+    display: "flex",
   },
   ".layout-full &": {
     right: 7,
@@ -423,14 +391,15 @@ export function ImageWithCaption({
 
         <ImageWrapper className="image-wrapper">
           {isEditable && (
-            <RemoveButton
-              type="button"
-              aria-label="Remove course card"
-              onClick={handleRemove}
-              className="remove-button"
-            >
-              ×
-            </RemoveButton>
+                                <RemoveButton
+                                variant="primary"
+                      edge="circular"
+                      size="small"
+                                onClick={handleRemove}
+                      aria-label="Remove"
+                              >
+                                <RiCloseLargeLine />
+                              </RemoveButton>
           )}
           <Image
             src={src}

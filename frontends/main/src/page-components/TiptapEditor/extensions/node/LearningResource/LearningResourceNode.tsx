@@ -6,6 +6,8 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { styled } from "ol-components"
 import { useLearningResource } from "./LearningResourceContext"
 import { ResourceCard } from "../../../../ResourceCard/ResourceCard"
+import { ActionButton } from "@mitodl/smoot-design"
+import { RiCloseLargeLine } from "@remixicon/react"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -18,16 +20,6 @@ declare module "@tiptap/core" {
 const NodeWrapper = styled(NodeViewWrapper)({
   position: "relative",
   marginBottom: "20px",
-
-  "& .remove-button": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
-
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
 })
 
 const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
@@ -46,36 +38,18 @@ const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
   "&& a span": {
     textDecoration: "none",
   },
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
 }))
 
-const RemoveButton = styled("button")(({ theme }) => ({
+const RemoveButton = styled(ActionButton)({
   position: "absolute",
-  top: -7,
-  right: -7,
+  top: "-4px",
+  right: "-6px",
   zIndex: 2,
-
-  background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "50%",
-  width: 24,
-  height: 24,
-
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
-
-  opacity: 0, // 👈 hidden
-  pointerEvents: "none", // 👈 not clickable when hidden
-  transition: "opacity 0.15s ease",
-
-  "&:hover": {
-    background: theme.custom.colors.lightGray1,
+  display: "none",
+  ".node-learningResource:hover &": {
+    display: "flex",
   },
-}))
+})
 
 export const LearningResourceCardViewer = ({
   node,
@@ -125,14 +99,16 @@ export const LearningResourceListCardWrapper = ({
   return (
     <NodeWrapper className="learning-resource-node">
       {editable && (
-        <RemoveButton
-          type="button"
-          aria-label="Remove course card"
-          onClick={handleRemove}
-          className="remove-button"
-        >
-          ×
-        </RemoveButton>
+
+                    <RemoveButton
+                    variant="primary"
+          edge="circular"
+          size="small"
+                    onClick={handleRemove}
+          aria-label="Close"
+                  >
+                    <RiCloseLargeLine />
+                  </RemoveButton>
       )}
       <StyledLearningResourceCard
         isLoading={isLoading && !data}
