@@ -191,6 +191,31 @@ def parse_departments(departments_data: list[dict or str]) -> list[str]:
     return dept_ids
 
 
+def is_fully_enrollable(run_data: dict) -> bool:
+    """
+    Determine if the run is really enrollable.
+    Some runs aren't really enrollable even though they have is_enrollable=True.
+    These should be published but not shown as offering certificates (free only).
+
+    Args:
+        run_data (dict): course run data
+
+    Returns:
+        bool: True if the run is fully enrollable, False otherwise
+    """
+    now = now_in_utc()
+    end_date = _parse_datetime(run_data.get("end_date"))
+    enrollment_end = _parse_datetime(run_data.get("enrollment_end"))
+    # Use enrollment_end if it exists, otherwise use end_date
+    certification_end = enrollment_end or end_date
+
+    return bool(
+        run_data.get("published", True)
+        and run_data.get("is_enrollable", False)
+        and (not certification_end or certification_end >= now)
+    )
+
+
 def _transform_image(mitxonline_data: dict) -> dict:
     """
     Transforms an image into our normalized data structure
@@ -215,37 +240,30 @@ def _transform_run(course_run: dict, course: dict) -> dict:
     Returns:
         dict: normalized course run data
     """  # noqa: D401
-    now = now_in_utc()
-    enrollment_end = _parse_datetime(course_run.get("enrollment_end"))
-    end_date = _parse_datetime(course_run.get("end_date"))
+    fully_enrollable = is_fully_enrollable(course_run)
     return {
         "title": course_run["title"],
         "run_id": course_run["courseware_id"],
         "start_date": _parse_datetime(
             course_run.get("start_date") or course_run.get("enrollment_start")
         ),
-        "end_date": end_date,
+        "end_date": _parse_datetime(course_run.get("end_date")),
         "enrollment_start": _parse_datetime(course_run.get("enrollment_start")),
-        "enrollment_end": enrollment_end,
+        "enrollment_end": _parse_datetime(course_run.get("enrollment_end")),
         "url": parse_page_attribute(course, "page_url", is_url=True),
         "published": bool(
             course_run.get("is_enrollable", False)
             and (course.get("page") or {}).get("live", False)
-            and course.get("include_in_learn_catalog") is True
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices": parse_prices(course),
+        "prices": parse_prices(course) if fully_enrollable else [],
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)
         ],
         "status": RunStatus.current.value
-        if parse_page_attribute(course, "page_url")
-        and (
-            (not end_date or end_date >= now)
-            and (not enrollment_end or enrollment_end >= now)
-        )
+        if (parse_page_attribute(course, "page_url") and fully_enrollable)
         else RunStatus.archived.value,
         "availability": course.get("availability"),
         "format": [Format.asynchronous.name],
@@ -299,7 +317,6 @@ def _transform_course(course):
             parse_page_attribute(course, "page_url")
             and parse_page_attribute(course, "live")
             and len([run for run in runs if run["published"]]) > 0
-            and course.get("include_in_learn_catalog") is True
         ),  # a course is only published if it has a live url and published runs
         "professional": False,
         "certification": has_certification,
