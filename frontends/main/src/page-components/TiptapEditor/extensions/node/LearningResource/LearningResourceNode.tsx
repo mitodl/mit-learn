@@ -20,6 +20,7 @@ declare module "@tiptap/core" {
 const NodeWrapper = styled(NodeViewWrapper)({
   position: "relative",
   marginBottom: "20px",
+  cursor: "pointer",
 })
 
 const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
@@ -38,6 +39,12 @@ const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
   "&& a span": {
     textDecoration: "none",
   },
+
+  ".learning-resource-node[data-editable='true'] &": {
+    pointerEvents: "none",
+    userSelect: "auto",
+    cursor: "default",
+  },
 }))
 
 const RemoveButton = styled(ActionButton)({
@@ -46,7 +53,8 @@ const RemoveButton = styled(ActionButton)({
   right: "-6px",
   zIndex: 2,
   display: "none",
-  ".node-learningResource:hover &": {
+  pointerEvents: "auto",
+  ".learning-resource-node:hover &": {
     display: "flex",
   },
 })
@@ -96,19 +104,35 @@ export const LearningResourceListCardWrapper = ({
       .run()
   }
 
-  return (
-    <NodeWrapper className="learning-resource-node">
-      {editable && (
+  // Handle select on click as the resource card pointer events are disabled in edit mode
+  const handleWrapperClick = (e: React.MouseEvent) => {
+    if (!editable) return
+    const target = e.target as HTMLElement
+    if (target.closest('[aria-label="Close"]')) return
+    const pos = getPos()
+    if (typeof getPos !== "function" || typeof pos !== "number") return
 
-                    <RemoveButton
-                    variant="primary"
+    editor.chain().focus().setNodeSelection(pos).run()
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  return (
+    <NodeWrapper
+      className="learning-resource-node"
+      data-editable={editable ? "true" : "false"}
+      onClick={editable ? handleWrapperClick : undefined}
+    >
+      {editable && (
+        <RemoveButton
+          variant="primary"
           edge="circular"
           size="small"
-                    onClick={handleRemove}
+          onClick={handleRemove}
           aria-label="Close"
-                  >
-                    <RiCloseLargeLine />
-                  </RemoveButton>
+        >
+          <RiCloseLargeLine />
+        </RemoveButton>
       )}
       <StyledLearningResourceCard
         isLoading={isLoading && !data}

@@ -391,15 +391,15 @@ export function ImageWithCaption({
 
         <ImageWrapper className="image-wrapper">
           {isEditable && (
-                                <RemoveButton
-                                variant="primary"
-                      edge="circular"
-                      size="small"
-                                onClick={handleRemove}
-                      aria-label="Remove"
-                              >
-                                <RiCloseLargeLine />
-                              </RemoveButton>
+            <RemoveButton
+              variant="primary"
+              edge="circular"
+              size="small"
+              onClick={handleRemove}
+              aria-label="Remove"
+            >
+              <RiCloseLargeLine />
+            </RemoveButton>
           )}
           <Image
             src={src}
