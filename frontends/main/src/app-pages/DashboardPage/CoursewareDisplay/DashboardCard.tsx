@@ -55,18 +55,22 @@ type DashboardResource =
   | { type: "program-enrollment"; data: V2UserProgramEnrollmentDetail }
 
 /**
- * Transforms old-format certificate links to new format.
- * Old format: /certificate/{uuid}/
- * New format: /certificate/course/{uuid}/ or /certificate/program/{uuid}/
+ * Gets the certificate link for a dashboard resource based on its type.
  */
-const fixCertificateLink = (
-  link: string | null | undefined,
-  type: "course" | "program",
-): string | undefined => {
-  if (!link) return undefined
-  // Pattern matches /certificate/{uuid}/ and captures the UUID
-  const pattern = /\/certificate\/([^/]+)\/?$/
-  return link.replace(pattern, `/certificate/${type}/$1/`)
+const getCertificateLink = (resource: DashboardResource): string | null => {
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/course/$1/")
+  }
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/program/$1/")
+  }
+  return null
 }
 
 const CardRoot = styled.div<{
@@ -318,18 +322,23 @@ const CoursewareButton = styled(
     }
 
     if (!hasEnrolled /* enrollment flow */) {
-      // Use one-click enrollment for both B2B and non-B2B
-      // The hook handles just-in-time dialog for incomplete profiles
       return (
         <Button
           size="small"
           variant="primary"
           className={className}
           disabled={oneClickEnroll.isPending || !coursewareId || !readableId}
-          onClick={() => {
-            if (!coursewareId || !readableId || !href) return
-            oneClickEnroll.mutate({ href, coursewareId: readableId })
-          }}
+          onClick={
+            onClick ??
+            (() => {
+              if (!coursewareId || !readableId || !href) return
+              if (b2bContractId) {
+                oneClickEnroll.mutate({ href, coursewareId: readableId })
+              } else {
+                alert("Non-B2B enrollment is not yet available.")
+              }
+            })
+          }
           endIcon={
             oneClickEnroll.isPending ? (
               <LoadingSpinner
@@ -521,7 +530,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const resourceIsProgramEnrollment =
     resource.type === DashboardType.ProgramEnrollment
 
-  const openJustInTime = (href: string, readableId: string) => {
+  const handleEnrollment = (
+    href: string,
+    readableId: string,
+    hasB2bContract: boolean,
+  ) => {
+    if (!hasB2bContract) {
+      alert("Non-B2B enrollment is not yet available.")
+      return
+    }
+
     const userCountry = user?.legal_address?.country
     const userYearOfBirth = user?.user_profile?.year_of_birth
     const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -552,26 +570,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const displayNoun = noun ?? defaultNoun
 
   // Extract common data based on resource type
-  let title: string,
-    enrollmentData:
-      | CourseRunEnrollmentRequestV2
-      | V2UserProgramEnrollmentDetail
-      | null
-      | undefined
-
-  if (resourceIsCourse) {
-    title = resource.data.title
-    enrollmentData = null
-  } else if (resourceIsCourseRunEnrollment) {
-    title = resource.data.run.course.title
-    enrollmentData = resource.data
-  } else if (resourceIsProgramEnrollment) {
-    title = resource.data.program.title
-    enrollmentData = resource.data
-  } else {
-    title = "Unknown"
-    enrollmentData = undefined
-  }
+  const title =
+    resource.type === DashboardType.Course
+      ? resource.data.title
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? resource.data.run.course.title
+        : resource.data.program.title
 
   // Course-specific data
   const run = resourceIsCourse
@@ -579,16 +583,23 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     : resourceIsCourseRunEnrollment
       ? resource.data.run
       : undefined
-  const hasValidCertificate = !!enrollmentData?.certificate?.uuid
+
+  const hasValidCertificate =
+    resource.type === DashboardType.CourseRunEnrollment
+      ? !!resource.data.certificate?.uuid
+      : resource.type === DashboardType.ProgramEnrollment
+        ? !!resource.data.certificate?.uuid
+        : false
+
   const enrollmentStatus: EnrollmentStatus = isAnyCourse
     ? hasValidCertificate
       ? EnrollmentStatus.Completed
-      : enrollmentData && "run" in enrollmentData
-        ? getEnrollmentStatus(enrollmentData)
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? getEnrollmentStatus(resource.data)
         : EnrollmentStatus.NotEnrolled
-    : enrollmentData && "status" in enrollmentData
-      ? (enrollmentData.status as EnrollmentStatus)
-      : EnrollmentStatus.NotEnrolled
+    : hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : EnrollmentStatus.Enrolled
 
   // URLs
   const marketingUrl = resourceIsCourse
@@ -601,11 +612,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
   // Check enrollment's b2b_contract_id first, then run's b2b_contract, finally fall back to contractId prop
   const b2bContractId =
-    (enrollmentData && "run" in enrollmentData
-      ? enrollmentData.b2b_contract_id
-      : undefined) ??
-    run?.b2b_contract ??
-    contractId
+    resource.type === DashboardType.CourseRunEnrollment
+      ? (resource.data.b2b_contract_id ?? run?.b2b_contract ?? contractId)
+      : (run?.b2b_contract ?? contractId)
 
   // Title link logic
   const titleHref = isAnyCourse
@@ -622,28 +631,30 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     isAnyCourse && !hasEnrolled
       ? (e) => {
           e.preventDefault()
-          if (b2bContractId) {
-            const readableId = resourceIsCourse
-              ? run?.courseware_id
-              : resourceIsCourseRunEnrollment
-                ? resource.data.run.courseware_id
-                : undefined
-            if (!readableId || !coursewareUrl) return
-            oneClickEnroll.mutate({
-              href: coursewareUrl,
-              coursewareId: readableId,
-            })
-          } else {
-            const readableId = resourceIsCourse
-              ? run?.courseware_id
-              : resourceIsCourseRunEnrollment
-                ? resource.data.run.courseware_id
-                : undefined
-            if (!readableId || !coursewareUrl) return
-            openJustInTime(coursewareUrl, readableId)
-          }
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
         }
       : undefined
+
+  const coursewareButtonClick:
+    | React.MouseEventHandler<HTMLButtonElement>
+    | undefined =
+    isAnyCourse && !hasEnrolled
+      ? () => {
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+        }
+      : buttonClick
   // Build sections
   const titleSection = isLoading ? (
     <>
@@ -669,25 +680,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {enrollmentData?.certificate?.link ? (
-        <SubtitleLink
-          href={
-            (resourceIsCourseRunEnrollment
-              ? fixCertificateLink(enrollmentData.certificate.link, "course")
-              : resourceIsProgramEnrollment
-                ? fixCertificateLink(enrollmentData.certificate.link, "program")
-                : enrollmentData.certificate.link) ??
-            enrollmentData.certificate.link
-          }
-        >
+      {getCertificateLink(resource) ? (
+        <SubtitleLink href={getCertificateLink(resource)!}>
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
       ) : null}
       {isAnyCourse &&
-      enrollmentData &&
-      "enrollment_mode" in enrollmentData &&
-      enrollmentData.enrollment_mode !== EnrollmentMode.Verified &&
+      resource.type === DashboardType.CourseRunEnrollment &&
+      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
@@ -730,7 +731,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         noun={displayNoun}
         isProgram={false}
         b2bContractId={b2bContractId}
-        onClick={buttonClick}
+        onClick={coursewareButtonClick}
       />
     </>
   ) : resourceIsProgramEnrollment ? (
@@ -749,11 +750,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : null
 
   const menuItems = contextMenuItems.concat(
-    isAnyCourse &&
-      enrollmentData &&
-      "run" in enrollmentData &&
-      enrollmentData.id
-      ? getDefaultContextMenuItems(title, enrollmentData)
+    resource.type === DashboardType.CourseRunEnrollment
+      ? getDefaultContextMenuItems(title, resource.data)
       : [],
   )
 
