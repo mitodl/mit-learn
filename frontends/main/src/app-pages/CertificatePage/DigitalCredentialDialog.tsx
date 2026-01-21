@@ -1,6 +1,7 @@
 import React from "react"
 import Image from "next/image"
 import { Dialog, Link, Typography, styled } from "ol-components"
+import ReactMarkdown from "react-markdown"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
 import { DigitalCredentialsFAQLink } from "@/common/constants"
@@ -197,7 +198,9 @@ export const DigitalCredentialDialog = ({
               <InfoTerm>Description:</InfoTerm>
               <InfoDetail>{achievement.description}</InfoDetail>
               <InfoTerm>Criteria:</InfoTerm>
-              <InfoDetail>{achievement.criteria?.narrative}</InfoDetail>
+              <InfoDetail>
+                <ReactMarkdown>{achievement.criteria?.narrative}</ReactMarkdown>
+              </InfoDetail>
             </InfoColumn>
           </Info>
           <Verify>
