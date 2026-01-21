@@ -1,10 +1,10 @@
 import React from "react"
 import moment from "moment"
-import { factories, setMockResponse, urls } from "api/test-utils"
+import { factories, setMockResponse } from "api/test-utils"
 import { screen, renderWithProviders, user } from "@/test-utils"
 import CertificatePage, { CertificateType } from "./CertificatePage"
 import SharePopover from "./SharePopover"
-import { urls as mitxUrls } from "api/mitxonline-test-utils"
+import * as mitxonline from "api/mitxonline-test-utils"
 import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
@@ -13,17 +13,14 @@ import {
 
 describe("CertificatePage", () => {
   beforeEach(() => {
-    const user = factories.user.user({
-      is_authenticated: true,
-      is_article_editor: true,
-    })
-    setMockResponse.get(urls.userMe.get(), user)
+    const mitxUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
   })
 
   it("renders a course certificate", async () => {
     const certificate = factories.mitxonline.courseCertificate()
     setMockResponse.get(
-      mitxUrls.certificates.courseCertificatesRetrieve({
+      mitxonline.urls.certificates.courseCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
@@ -89,7 +86,7 @@ describe("CertificatePage", () => {
   it("renders a program certificate", async () => {
     const certificate = factories.mitxonline.programCertificate()
     setMockResponse.get(
-      mitxUrls.certificates.programCertificatesRetrieve({
+      mitxonline.urls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
@@ -119,19 +116,22 @@ describe("CertificatePage", () => {
   })
 
   it("does not display buttons when certificate belongs to a different user", async () => {
-    const certificateOwner = factories.user.user({ id: 1 })
-    const loggedInUser = factories.user.user({ id: 2 })
+    const certificateOwner = mitxonline.factories.user.user({ id: 1 })
+    const loggedInUser = mitxonline.factories.user.user({ id: 2 })
     const certificate = factories.mitxonline.programCertificate({
-      user: certificateOwner,
+      user: {
+        id: certificateOwner.id,
+        name: certificateOwner.name,
+      },
     })
 
     setMockResponse.get(
-      mitxUrls.certificates.programCertificatesRetrieve({
+      mitxonline.urls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
     )
-    setMockResponse.get(urls.userMe.get(), loggedInUser)
+    setMockResponse.get(mitxonline.urls.userMe.get(), loggedInUser)
 
     renderWithProviders(
       <CertificatePage
@@ -155,18 +155,21 @@ describe("CertificatePage", () => {
   })
 
   it("displays buttons when certificate belongs to the current user", async () => {
-    const loggedInUser = factories.user.user({ id: 1 })
+    const loggedInUser = mitxonline.factories.user.user({ id: 1 })
     const certificate = factories.mitxonline.programCertificate({
-      user: loggedInUser,
+      user: {
+        id: loggedInUser.id,
+        name: loggedInUser.name,
+      },
     })
 
     setMockResponse.get(
-      mitxUrls.certificates.programCertificatesRetrieve({
+      mitxonline.urls.certificates.programCertificatesRetrieve({
         cert_uuid: certificate.uuid,
       }),
       certificate,
     )
-    setMockResponse.get(urls.userMe.get(), loggedInUser)
+    setMockResponse.get(mitxonline.urls.userMe.get(), loggedInUser)
 
     renderWithProviders(
       <CertificatePage

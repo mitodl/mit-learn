@@ -18,9 +18,9 @@ import type {
   V2CourseRunCertificate,
   SignatoryItem,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import SharePopover from "./SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
-import { useUserMe } from "api/hooks/user"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -670,7 +670,7 @@ const CertificatePage: React.FC<{
   const [digitalCredentialDialogOpen, setDigitalCredentialDialogOpen] =
     useState(false)
 
-  const { data: userData } = useUserMe()
+  const { data: userData } = useQuery(mitxUserQueries.me())
 
   const {
     data: courseCertificateData,
