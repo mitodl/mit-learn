@@ -605,8 +605,8 @@ def test_fetch_data(mock_responses, expected_results, mocker, settings):
             {
                 "published": True,
                 "is_enrollable": True,
-                "end_date": "2024-01-01T00:00:00Z",
-                "enrollment_end": "2024-01-01T00:00:00Z",
+                "end_date": "2124-01-01T00:00:00Z",
+                "enrollment_end": "2124-01-01T00:00:00Z",
             },
             True,
         ),
@@ -625,8 +625,8 @@ def test_fetch_data(mock_responses, expected_results, mocker, settings):
             {
                 "published": True,
                 "is_enrollable": False,
-                "end_date": "2024-01-01T00:00:00Z",
-                "enrollment_end": "2024-01-01T00:00:00Z",
+                "end_date": "2124-01-01T00:00:00Z",
+                "enrollment_end": "2124-01-01T00:00:00Z",
             },
             False,
         ),
@@ -681,7 +681,7 @@ def test_fetch_data(mock_responses, expected_results, mocker, settings):
     ],
 )
 def test_is_fully_enrollable(mocker, run_data, expected):
-    """Test that is_fully_enrollable correctly determines if a run is fully enrollable"""
+    """Test that is_fully_enrollable returns the correct boolean value based on run data"""
     mock_now = datetime(2023, 6, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
     assert is_fully_enrollable(run_data) == expected

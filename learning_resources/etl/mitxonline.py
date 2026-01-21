@@ -194,7 +194,7 @@ def parse_departments(departments_data: list[dict or str]) -> list[str]:
 def is_fully_enrollable(run_data: dict) -> bool:
     """
     Determine if the run is really enrollable.
-    Some runs aren't really enrollable even though they have is_enrollable=True.
+    Some runs aren't enrollable even though they have is_enrollable=True.
     These should be published but not shown as offering certificates (free only).
 
     Args:
