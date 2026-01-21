@@ -263,11 +263,11 @@ class ContentSummarizer:
             - list[dict[str, str]]: List of flashcards
         """
         try:
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=2048)
             logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
             response = structured_llm.invoke(
-                f"Generate flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
+                f"Generate {settings.CONTENT_SUMMARIZER_FLASHCARD_QUANTITY} flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
             )
             if response:
                 generated_flashcards = response.get("flashcards", [])

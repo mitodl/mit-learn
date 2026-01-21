@@ -9,120 +9,142 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper, {
 })<{
   layout: string
   hovering: boolean
-}>`
-  position: relative;
-  width: 100%;
-  margin: 24px 0;
-  text-align: center;
+}>(({ theme }) => ({
+  position: "relative",
+  width: "100%",
+  margin: "24px 0",
+  textAlign: "center",
 
-  .media-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
+  ".media-container": {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "16 / 9",
+    overflow: "hidden",
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border-radius: 6px;
-      display: block;
-    }
-  }
+    iframe: {
+      width: "100%",
+      height: "100%",
+      borderRadius: "6px",
+      display: "block",
+    },
+  },
 
-  .media-caption {
-    max-width: 900px;
-    margin: 8px auto 0;
+  "&.layout-full .media-container iframe": {
+    borderRadius: 0,
+  },
 
-    input {
-      width: 100%;
-      border: none;
-      text-align: left;
-      outline: none;
-      padding: 16px 0;
-      font-size: 14px;
-      border-bottom: 1px solid #dde1e6;
-    }
+  ".media-caption": {
+    maxWidth: "900px",
+    margin: "8px auto 0",
 
-    p {
-      font-size: 14px;
-      color: #555;
-      text-align: center;
-      font-style: italic;
-    }
-  }
+    input: {
+      width: "100%",
+      border: "none",
+      textAlign: "left",
+      outline: "none",
+      padding: "16px 0",
+      fontSize: "14px",
+      borderBottom: "1px solid #dde1e6",
+    },
 
-  .media-layout-toolbar {
-    position: absolute;
-    top: -43px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2000;
-    display: flex;
-    background: rgb(0 0 0 / 85%);
-    padding: 6px 10px;
-    border-radius: 8px;
-    gap: 8px;
-    width: 150px;
-    justify-content: center;
-    cursor: pointer;
+    p: {
+      fontSize: "14px",
+      color: "#555",
+      textAlign: "center",
+      fontStyle: "italic",
+    },
+  },
 
-    &::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgb(0 0 0 / 85%);
-    }
+  ".media-layout-toolbar": {
+    position: "absolute",
+    top: "-38px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 2000,
+    display: "flex",
+    background: "rgb(0 0 0 / 85%)",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    gap: "8px",
+    width: "150px",
+    justifyContent: "center",
+    cursor: "pointer",
 
-    button {
-      width: 40px;
-      height: 28px;
-      border: none;
-      border-radius: 4px;
-      background: transparent;
-      color: white;
-      cursor: pointer;
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      top: "100%",
+      left: "50%",
+      transform: "translateX(-50%)",
+      borderLeft: "8px solid transparent",
+      borderRight: "8px solid transparent",
+      borderTop: "8px solid rgb(0 0 0 / 85%)",
+    },
 
-      &.active {
-        background: #9be19b;
-        color: black;
-        font-weight: bold;
-      }
-    }
-  }
+    button: {
+      width: "40px",
+      height: "28px",
+      border: "none",
+      borderRadius: "4px",
+      background: "transparent",
+      color: "white",
+      cursor: "pointer",
 
-  /* Layout sizes */
-  &.default {
-    width: 100%;
-  }
+      "&.active": {
+        background: "#9be19b",
+        color: "black",
+        fontWeight: "bold",
+      },
+    },
+  },
 
-  &.wide {
-    width: 90vw;
-    margin-left: calc(-45vw + 50%);
-  }
+  // Layout sizes
+  "&.default": {
+    width: "100%",
+  },
 
-  &.full {
-    width: 100vw;
-    margin-left: calc(-50vw + 50%);
-  }
+  "&.wide": {
+    width: "90vw",
+    marginLeft: "calc(-45vw + 50%)",
+  },
 
-  .svg-icon {
-    fill: white;
-  }
+  "&.full": {
+    width: "100vw",
+    marginLeft: "calc(-50vw + 50%)",
+  },
 
-  .remove-button {
-    opacity: 0;
-    pointer-events: none;
-  }
+  ".svg-icon": {
+    fill: "white",
+  },
 
-  &:hover .remove-button {
-    opacity: 1;
-    pointer-events: auto;
-  }
-`
+  ".remove-button": {
+    opacity: 0,
+    pointerEvents: "none",
+  },
+
+  "&:hover .remove-button": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+
+  ".ProseMirror-selectednode &": {
+    "&.layout-default": {
+      border: `1px solid ${theme.custom.colors.red}`,
+      padding: "8px",
+      borderRadius: "10px",
+    },
+    "&.layout-wide .media-container": {
+      border: `1px solid ${theme.custom.colors.red}`,
+      padding: "8px",
+      borderRadius: "10px",
+    },
+    "&.layout-full .media-container": {
+      border: `1px solid ${theme.custom.colors.red}`,
+      padding: "8px 0",
+      borderWidth: "1px 0",
+    },
+  },
+}))
 
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",

@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.51.1"
+VERSION = "0.51.2"
 
 log = logging.getLogger()
 
@@ -882,6 +882,10 @@ SEMANTIC_CHUNKING_CONFIG = {
 }
 
 CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)
+# number of flashcards to generate
+CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
+    "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
+)
 
 # OpenTelemetry configuration
 OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003

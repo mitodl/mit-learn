@@ -15,6 +15,7 @@ export const MediaEmbedNode = Node.create({
 
   group: "block",
   atom: true,
+  selectable: true,
 
   addAttributes() {
     return {
