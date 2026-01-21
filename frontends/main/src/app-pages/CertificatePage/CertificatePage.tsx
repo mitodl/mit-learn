@@ -760,11 +760,16 @@ const CertificatePage: React.FC<{
       ? "Module Certificate"
       : `${programCertificateData?.program.program_type} Certificate`
 
-  const certificateData = certificateType === CertificateType.Course ? courseCertificateData : programCertificateData
+  const certificateData =
+    certificateType === CertificateType.Course
+      ? courseCertificateData
+      : programCertificateData
 
   const isCertificateForCurrentUser = userData?.id === certificateData?.user.id
 
-  const verifiableCredential = isCertificateForCurrentUser ? certificateData?.verifiable_credential_json : null
+  const verifiableCredential = isCertificateForCurrentUser
+    ? certificateData?.verifiable_credential_json
+    : null
 
   return (
     <Page>

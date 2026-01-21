@@ -12,7 +12,6 @@ import {
 } from "@/common/urls"
 
 describe("CertificatePage", () => {
-
   beforeEach(() => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -144,9 +143,15 @@ describe("CertificatePage", () => {
 
     await screen.findAllByText(certificate.program.title)
 
-    expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Print" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Download PDF" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Share" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Print" }),
+    ).not.toBeInTheDocument()
   })
 
   it("displays buttons when certificate belongs to the current user", async () => {
