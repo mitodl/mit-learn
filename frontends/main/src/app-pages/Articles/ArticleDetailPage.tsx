@@ -32,9 +32,7 @@ export const ArticleDetailPage = ({
 }) => {
   const { data: article, isLoading } = useArticleDetailRetrieve(articleId)
 
-  const showArticleDetail = useFeatureFlagEnabled(
-    FeatureFlags.ArticleEditorView,
-  )
+  const showArticleDetail = useFeatureFlagEnabled(FeatureFlags.ArticleViewer)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   /* Ensure queries are accessed during loading/flag check.

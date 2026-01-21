@@ -19,6 +19,8 @@ durable_cache = caches["durable"]
 class Features(StrEnum):
     """Enum for feature flags"""
 
+    article_viewer = "article-viewer"
+
 
 def configure():
     """

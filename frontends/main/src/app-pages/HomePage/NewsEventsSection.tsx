@@ -9,6 +9,7 @@ import {
   TypographyProps,
 } from "ol-components"
 import {
+  newsEventsKeys,
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
 } from "api/hooks/newsEvents"
@@ -16,6 +17,9 @@ import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
+import { useQueryClient } from "@tanstack/react-query"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -203,6 +207,8 @@ const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
 }
 
 const NewsEventsSection: React.FC = () => {
+  const queryClient = useQueryClient()
+  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleViewer)
   const { data: news } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
     limit: 6,
@@ -214,6 +220,13 @@ const NewsEventsSection: React.FC = () => {
     limit: 5,
     sortby: "event_date",
   })
+
+  // Invalidate cache when feature flag changes
+  React.useEffect(() => {
+    if (showArticleList) {
+      queryClient.invalidateQueries({ queryKey: newsEventsKeys.listRoot() })
+    }
+  }, [showArticleList, queryClient])
 
   if (!news || !events) {
     return null

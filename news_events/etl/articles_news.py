@@ -8,6 +8,8 @@ from news_events.etl import loaders
 
 log = logging.getLogger(__name__)
 
+LEARN_ARTICLES_URL = "/articles"
+
 
 def extract_single_article(article: Article) -> dict:
     """
@@ -51,7 +53,7 @@ def sync_single_article_to_news(article: Article):
     source, _ = FeedSource.objects.get_or_create(
         title="MIT Learn Articles",
         defaults={
-            "url": "/articles",
+            "url": LEARN_ARTICLES_URL,
             "feed_type": FeedType.news.name,
             "description": "Articles created by MIT Learn staff",
         },

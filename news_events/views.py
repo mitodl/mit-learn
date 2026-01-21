@@ -7,10 +7,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.pagination import LimitOffsetPagination
 
+from main.features import Features, is_enabled
 from main.filters import MultipleOptionsFilterBackend
 from main.permissions import AnonymousAccessReadonlyPermission
 from main.utils import cache_page_for_all_users, now_in_utc
 from news_events.constants import FeedType
+from news_events.etl.articles_news import LEARN_ARTICLES_URL
 from news_events.filters import FeedItemFilter, FeedSourceFilter
 from news_events.models import FeedItem, FeedSource
 from news_events.serializers import FeedItemSerializer, FeedSourceSerializer
@@ -45,17 +47,25 @@ class FeedItemViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = DefaultPagination
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = FeedItemFilter
-    queryset = (
-        FeedItem.objects.select_related(*FeedItem.related_selects)
-        .filter(
+
+    def get_queryset(self):
+        """Get the queryset, filtering out articles if the feature flag is disabled."""
+        queryset = FeedItem.objects.select_related(*FeedItem.related_selects).filter(
             Q(source__feed_type=FeedType.news.name)
             | Q(event_details__event_datetime__gte=now_in_utc())
         )
-        .order_by(
+
+        # Exclude articles feed items if the feature flag is disabled
+        if not is_enabled(
+            Features.article_viewer,
+            opt_unique_id=str(self.request.user.id),
+        ):
+            queryset = queryset.exclude(source__url=LEARN_ARTICLES_URL)
+
+        return queryset.order_by(
             "-news_details__publish_date",
             "-event_details__event_datetime",
         )
-    )
 
     @method_decorator(
         cache_page_for_all_users(
