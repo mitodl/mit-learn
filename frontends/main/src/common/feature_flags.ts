@@ -11,6 +11,7 @@ export enum FeatureFlags {
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
   ArticleEditorView = "article-editor-view",
+  ArticleListView = "article-list-view",
 }
 
 /**

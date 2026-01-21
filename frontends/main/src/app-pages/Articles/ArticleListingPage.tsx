@@ -15,11 +15,17 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
+  newsEventsKeys,
 } from "api/hooks/newsEvents"
 import type { NewsFeedItem } from "api/v0"
+import { notFound } from "next/navigation"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
 import { ArticleBanner } from "./ArticleBanner"
 
@@ -507,6 +513,18 @@ const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get("page") ?? "1", 10)
 
+  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleListView)
+  const queryClient = useQueryClient()
+
+  const flagsLoaded = useFeatureFlagsLoaded()
+
+  // Invalidate cache when feature flag changes
+  React.useEffect(() => {
+    if (showArticleList) {
+      queryClient.invalidateQueries({ queryKey: newsEventsKeys.listRoot() })
+    }
+  }, [showArticleList, queryClient])
+
   const { data: news, isLoading } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
     limit: PAGE_SIZE,
@@ -521,6 +539,13 @@ const ArticleListingPage: React.FC = () => {
   const mainStory =
     page === 1 && stories.length > 0 ? (stories[0] as NewsFeedItem) : null
   const gridStories = page === 1 ? stories.slice(1) : stories
+
+  if (!flagsLoaded && showArticleList === undefined) {
+    return <LoadingSpinner loading={!flagsLoaded} />
+  }
+  if (!showArticleList) {
+    return notFound()
+  }
 
   return (
     <>

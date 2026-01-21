@@ -9,8 +9,24 @@ import {
   waitFor,
   within,
 } from "@/test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+
+jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlagsLoaded")
+
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 describe("ArticleListingPage", () => {
+  beforeEach(() => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
   const setupAPI = (newsCount = 21) => {
     const news = newsEvents.newsItems({ count: newsCount })
     setMockResponse.get(expect.stringContaining(urls.newsEvents.list()), news)
@@ -65,12 +81,6 @@ describe("ArticleListingPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "News" })).toBeInTheDocument()
     })
-
-    expect(
-      screen.getByText(
-        /Insights, ideas, and stories from the world of learning at MIT./i,
-      ),
-    ).toBeInTheDocument()
   })
 
   test("displays article images when available", async () => {

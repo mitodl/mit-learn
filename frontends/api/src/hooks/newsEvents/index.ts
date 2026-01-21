@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { newsEventsQueries } from "./queries"
+import { newsEventsQueries, newsEventsKeys } from "./queries"
 import {
   NewsEventsApiNewsEventsListRequest,
   NewsEventsListFeedTypeEnum,
@@ -20,4 +20,5 @@ export {
   useNewsEventsDetail,
   NewsEventsListFeedTypeEnum,
   newsEventsQueries,
+  newsEventsKeys,
 }

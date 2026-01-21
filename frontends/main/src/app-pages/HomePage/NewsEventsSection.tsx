@@ -17,6 +17,8 @@ import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -217,6 +219,8 @@ export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
 }
 
 const NewsEventsSection: React.FC = () => {
+  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleListView)
+
   const { data: news } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
     limit: 6,
@@ -317,11 +321,13 @@ const NewsEventsSection: React.FC = () => {
                   </Grid2>
                 ))}
               </Grid2>
-              <HeadingContainer>
-                <SeeAllButton href="/articles/" size="large" responsive>
-                  See all stories
-                </SeeAllButton>
-              </HeadingContainer>
+              {showArticleList && (
+                <HeadingContainer>
+                  <SeeAllButton href="/articles/" size="large" responsive>
+                    See all stories
+                  </SeeAllButton>
+                </HeadingContainer>
+              )}
             </StoriesContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">
