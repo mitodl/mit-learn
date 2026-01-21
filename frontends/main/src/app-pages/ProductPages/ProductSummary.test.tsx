@@ -491,6 +491,111 @@ describe("Course Financial Assistance", () => {
   })
 })
 
+describe("Course In Programs Row", () => {
+  test("Does not render when programs array is null", () => {
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: null,
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).queryByTestId(
+      TestIds.CourseInProgramsRow,
+    )
+    expect(programsRow).toBeNull()
+  })
+
+  test("Does not render when programs array is empty", () => {
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: [],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).queryByTestId(
+      TestIds.CourseInProgramsRow,
+    )
+    expect(programsRow).toBeNull()
+  })
+
+  test("Renders link to one program", () => {
+    const program = {
+      id: 1,
+      readable_id: "program-1",
+      title: "Test Program 1",
+    }
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: [program],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toHaveTextContent("Part of the following program")
+    const link = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link).toHaveAttribute("href", "/programs/program-1")
+  })
+
+  test("Renders links to multiple programs", () => {
+    const programs = [
+      {
+        id: 1,
+        readable_id: "program-1",
+        title: "Test Program 1",
+      },
+      {
+        id: 2,
+        readable_id: "program-2",
+        title: "Test Program 2",
+      },
+      {
+        id: 3,
+        readable_id: "program-3",
+        title: "Test Program 3",
+      },
+    ]
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: programs,
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toHaveTextContent("Part of the following programs")
+
+    const link1 = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link1).toHaveAttribute("href", "/programs/program-1")
+
+    const link2 = within(programsRow).getByRole("link", {
+      name: "Test Program 2",
+    })
+    expect(link2).toHaveAttribute("href", "/programs/program-2")
+
+    const link3 = within(programsRow).getByRole("link", {
+      name: "Test Program 3",
+    })
+    expect(link3).toHaveAttribute("href", "/programs/program-3")
+  })
+})
+
 describe("ProgramSummary", () => {
   test("renders program summary", async () => {
     const program = factories.programs.program()

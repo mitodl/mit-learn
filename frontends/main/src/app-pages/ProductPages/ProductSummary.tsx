@@ -9,6 +9,7 @@ import {
   RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
+  RiMenuAddLine,
 } from "@remixicon/react"
 import { formatDate, NoSSR, pluralize } from "ol-utilities"
 import type {
@@ -23,6 +24,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
+import { programPageView } from "@/common/urls"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -384,6 +386,33 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
+const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
+  course,
+  ...others
+}) => {
+  if (!course.programs || course.programs.length === 0) return null
+  const label = `Part of the following ${pluralize("program", course.programs.length)}`
+  return (
+    <InfoRow {...others}>
+      <RiMenuAddLine aria-hidden="true" />
+      <InfoRowInner>
+        <Stack gap="4px">
+          <InfoLabel>{label}</InfoLabel>
+          {course.programs.map((p) => (
+            <UnderlinedLink
+              color="black"
+              key={p.readable_id}
+              href={programPageView(p.readable_id)}
+            >
+              {p.title}
+            </UnderlinedLink>
+          ))}
+        </Stack>
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
 const SidebarSummaryRoot = styled.section(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
@@ -405,6 +434,7 @@ enum TestIds {
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
   CertificateTrackRow = "certificate-track-row",
+  CourseInProgramsRow = "course-in-programs-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -457,6 +487,11 @@ const CourseSummary: React.FC<{
               course={course}
               nextRun={nextRun}
               data-testid={TestIds.PriceRow}
+            />
+            <CourseInProgramsRow
+              course={course}
+              nextRun={nextRun}
+              data-testid={TestIds.CourseInProgramsRow}
             />
           </>
         ) : (
