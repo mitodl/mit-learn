@@ -1,4 +1,5 @@
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import DOMPurify from "isomorphic-dompurify"
 
 const isInEnum = <T extends string>(
   value: string,
@@ -12,50 +13,23 @@ const matchOrganizationBySlug =
     return organization.slug.replace("org-", "") === orgSlug
   }
 
-// Utility function to strip HTML tags and decode HTML entities
+// Utility function to strip HTML tags and decode HTML entities using DOMPurify
 const stripHtmlAndDecode = (html: string): string => {
   if (!html) return ""
 
-  let text = html
+  // Sanitize the HTML and get plain text
+  // Using ALLOWED_TAGS: [] strips all HTML tags, leaving only text content
+  const clean = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [], // Remove all HTML tags
+    ALLOWED_ATTR: [], // Remove all attributes
+    KEEP_CONTENT: true, // Keep the text content
+  })
 
-  // First decode HTML entities to normalize the input
-  text = text
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&") // Do this last to avoid double-decoding
-    .replace(/&mdash;/g, "—")
-    .replace(/&ndash;/g, "–")
-    .replace(/&hellip;/g, "…")
+  // Remove URLs that might be left from embed code or inline links
+  const withoutUrls = clean.replace(/https?:\/\/[^\s]+/g, "")
 
-  // Remove dangerous tags with their content - iterate multiple times to handle nested cases
-  for (let i = 0; i < 3; i++) {
-    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    text = text.replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, "")
-  }
-
-  // Remove any remaining script/style/iframe opening tags (even without closing tags)
-  text = text.replace(/<script\b[^>]*>/gi, "")
-  text = text.replace(/<\/script>/gi, "")
-  text = text.replace(/<style\b[^>]*>/gi, "")
-  text = text.replace(/<\/style>/gi, "")
-  text = text.replace(/<iframe\b[^>]*>/gi, "")
-  text = text.replace(/<\/iframe>/gi, "")
-
-  // Remove all remaining HTML tags
-  text = text.replace(/<[^>]*>/g, "")
-
-  // Remove URLs that might be left from embed code
-  text = text.replace(/https?:\/\/[^\s]+/g, "")
-
-  // Collapse multiple whitespace into single space
-  text = text.replace(/\s+/g, " ")
-
-  return text.trim()
+  // Collapse multiple whitespace into single space and trim
+  return withoutUrls.replace(/\s+/g, " ").trim()
 }
 
 export { isInEnum, matchOrganizationBySlug, stripHtmlAndDecode }
