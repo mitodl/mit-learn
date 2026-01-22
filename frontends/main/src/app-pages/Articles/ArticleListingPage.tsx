@@ -167,21 +167,17 @@ const MainStorySummary = styled.p`
   color: ${theme.custom.colors.white};
   ${{ ...theme.typography.body1 }}
   margin: 0;
-  line-height: 1.6;
+  line-height: 22px;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: break-word;
-
   ${theme.breakpoints.down("md")} {
-    font-size: 16px;
-    line-height: 22px;
+    ${{ ...theme.typography.body1 }}
   }
   ${theme.breakpoints.down("sm")} {
-    font-size: 14px;
-    font-style: normal;
-    line-height: 22px;
+    ${{ ...theme.typography.body2 }}
   }
 `
 
@@ -317,6 +313,10 @@ const StoryDate = styled(Typography)`
 
 const StyledSection = styled(Section)`
   background: ${theme.custom.colors.lightGray1};
+
+  ul {
+    list-style: none;
+  }
 `
 
 const GridContainer = styled.div`
@@ -600,7 +600,7 @@ const ArticleListingPage: React.FC = () => {
                 {/* Grid Section: Other articles */}
                 {gridStories.length > 0 ? (
                   <GridContainer>
-                    <Grid2 container rowSpacing="8px" component="ul">
+                    <Grid2 container rowSpacing="8px" component={PlainList}>
                       {gridStories.map((item) => (
                         <Grid2 key={item.id} size={12} component="li">
                           <RegularStory item={item as NewsFeedItem} />
