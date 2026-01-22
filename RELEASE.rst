@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.52.1
+--------------
+
+- remove intermediate dashboard classes and use mitxonline api classes directly (#2868)
+- fix(deps): update dependency tiktoken to ^0.12.0 (#2744)
+- feat: add frontend for listing page (#2846)
+- chore(deps): update dependency urllib3 to v2.6.3 [security] (#2788)
+- fix(deps): update dependency django to v4.2.27 [security] (#2787)
+- Show buttons only for certificate owner (#2877)
+- Product Page Financial Aid Display (#2861)
+- wrap the credential narrative in react-markdown (#2878)
+- add a constant to store the digital credentials faq link and add the link to the dialog (#2873)
+- Cursor visibility and selection feedback on custom elements (#2869)
+- Article editor tests (#2850)
+
 Version 0.52.0 (Released January 22, 2026)
 --------------
 
