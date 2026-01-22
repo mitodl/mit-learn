@@ -19,12 +19,12 @@ import {
   useDestroyEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
-import { DashboardCourseEnrollment } from "./types"
 import {
   mitxUserQueries,
   useUpdateUserMutation,
 } from "api/mitxonline-hooks/user"
 import * as Yup from "yup"
+import { CourseRunEnrollmentRequestV2 } from "@mitodl/mitxonline-api-axios/v2"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -36,7 +36,7 @@ const SelectPlaceholder = styled("span")(({ theme }) => ({
 
 type DashboardDialogProps = {
   title: string
-  enrollment: DashboardCourseEnrollment
+  enrollment: CourseRunEnrollmentRequestV2
 }
 const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   title,
@@ -48,7 +48,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {
-      receive_emails: enrollment.receiveEmails ?? true,
+      receive_emails: enrollment.edx_emails_subscription ?? true,
     },
     onSubmit: async () => {
       await updateEnrollment.mutateAsync({

@@ -8,7 +8,7 @@ import {
   within,
 } from "@/test-utils"
 import { EnrollmentDisplay } from "./EnrollmentDisplay"
-import { DashboardCard } from "./DashboardCard"
+import { DashboardCard, DashboardType } from "./DashboardCard"
 import { dashboardCourse, setupEnrollments } from "./test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -19,7 +19,6 @@ import {
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { EnrollmentStatus } from "./types"
 import { getDescriptionFor } from "ol-test-utilities"
 import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
 import { PartialDeep } from "type-fest"
@@ -189,31 +188,31 @@ describe("JustInTimeDialog", () => {
 
     // Setup course for enrollment
     const b2bContractId = faker.number.int()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+    })
     const course = dashboardCourse({
-      enrollment: {
-        status: EnrollmentStatus.NotEnrolled,
-        b2b_contract_id: b2bContractId,
-      },
-      run: {
-        b2bContractId: b2bContractId,
-      },
-      marketingUrl: "https://example.com/course",
+      courseruns: [run],
+      next_run_id: run.id,
     })
 
     // Setup enrollment API
     setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(course.coursewareId || ""),
+      mitxonline.urls.b2b.courseEnrollment(course.readable_id),
       null,
     )
 
-    return { mitLearnUser, incompleteMitxUser, countries, course }
+    return { mitLearnUser, incompleteMitxUser, countries, course, run }
   }
 
   test("Opens just-in-time dialog when enrolling with incomplete mitxonline user data", async () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -250,7 +249,10 @@ describe("JustInTimeDialog", () => {
     async ({ userOverrides, expectCountry, expectYob }) => {
       const { course } = setupJustInTimeTest({ userOverrides })
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{ type: DashboardType.Course, data: course }}
+        />,
       )
       const enrollButtons = await screen.findAllByTestId("courseware-button")
       await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -267,7 +269,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -300,7 +305,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -327,7 +335,10 @@ describe("JustInTimeDialog", () => {
     const { course, countries } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -352,7 +363,10 @@ describe("JustInTimeDialog", () => {
     const { course } = setupJustInTimeTest()
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const enrollButtons = await screen.findAllByTestId("courseware-button")
@@ -377,12 +391,15 @@ describe("JustInTimeDialog", () => {
   })
 
   test("Submitting just-in-time dialog makes proper API calls", async () => {
-    const { course } = setupJustInTimeTest({
+    const { course, run } = setupJustInTimeTest({
       userOverrides: { user_profile: { year_of_birth: 1988 } },
     })
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
     const enrollButtons = await screen.findAllByTestId("courseware-button")
     await user.click(enrollButtons[0]) // Use the first (desktop) button
@@ -396,7 +413,7 @@ describe("JustInTimeDialog", () => {
     const option = screen.getByRole("option", { name: "Canada" })
     await user.click(option) // Select third option (first is "Please Select")
 
-    invariant(course.coursewareId)
+    invariant(course.readable_id)
     const spies = {
       createEnrollment: jest.fn(),
       patchUser: jest.fn(),
@@ -408,7 +425,7 @@ describe("JustInTimeDialog", () => {
       },
     })
     setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(course.coursewareId),
+      mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
       spies.createEnrollment,
     )
 
@@ -419,8 +436,6 @@ describe("JustInTimeDialog", () => {
     await user.click(submitButton)
     await expect(spies.patchUser).toHaveBeenCalled()
     await expect(spies.createEnrollment).toHaveBeenCalled()
-    expect(window.location.assign).toHaveBeenCalledWith(
-      course.run.coursewareUrl,
-    )
+    expect(window.location.assign).toHaveBeenCalledWith(run.courseware_url)
   })
 })

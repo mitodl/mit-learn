@@ -9,18 +9,6 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import {
-  EnrollmentStatus,
-  EnrollmentMode,
-  DashboardResourceType,
-} from "./types"
-import type {
-  DashboardResource,
-  DashboardCourse,
-  DashboardProgram,
-  DashboardProgramCollection,
-  DashboardCourseEnrollment,
-} from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
@@ -41,24 +29,48 @@ import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
+import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  CourseWithCourseRunsSerializerV2,
+  CourseRunEnrollmentRequestV2,
+  V2UserProgramEnrollmentDetail,
+} from "@mitodl/mitxonline-api-axios/v2"
 
-// Type guard functions
-const isDashboardCourse = (
-  resource: DashboardResource,
-): resource is DashboardCourse => {
-  return resource.type === DashboardResourceType.Course
-}
+const EnrollmentMode = {
+  Audit: "audit",
+  Verified: "verified",
+} as const
+type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
-const isDashboardProgram = (
-  resource: DashboardResource,
-): resource is DashboardProgram => {
-  return resource.type === DashboardResourceType.Program
-}
+export const DashboardType = {
+  Course: "course",
+  CourseRunEnrollment: "courserun-enrollment",
+  ProgramEnrollment: "program-enrollment",
+} as const
+export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 
-const isDashboardProgramCollection = (
-  resource: DashboardResource,
-): resource is DashboardProgramCollection => {
-  return resource.type === DashboardResourceType.ProgramCollection
+type DashboardResource =
+  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
+  | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
+  | { type: "program-enrollment"; data: V2UserProgramEnrollmentDetail }
+
+/**
+ * Gets the certificate link for a dashboard resource based on its type.
+ */
+const getCertificateLink = (resource: DashboardResource): string | null => {
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/course/$1/")
+  }
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/program/$1/")
+  }
+  return null
 }
 
 const CardRoot = styled.div<{
@@ -153,7 +165,7 @@ const MenuButton = styled(ActionButton)<{
 
 const getDefaultContextMenuItems = (
   title: string,
-  enrollment: DashboardCourseEnrollment,
+  enrollment: CourseRunEnrollmentRequestV2,
 ) => {
   return [
     {
@@ -200,7 +212,10 @@ const useOneClickEnroll = () => {
         { readable_id: coursewareId },
         {
           onSuccess: () => {
-            window.location.assign(href)
+            // Only redirect if href is provided
+            if (href) {
+              window.location.assign(href)
+            }
           },
         },
       )
@@ -218,7 +233,7 @@ type CoursewareButtonProps = {
   href?: string | null
   className?: string
   noun: string
-  resourceType?: DashboardResourceType
+  isProgram?: boolean
   b2bContractId?: number | null
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
@@ -228,12 +243,12 @@ const getCoursewareTextAndIcon = ({
   endDate,
   enrollmentStatus,
   noun,
-  resourceType,
+  isProgram,
 }: {
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
   noun: string
-  resourceType?: DashboardResourceType
+  isProgram?: boolean
 }) => {
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
     return { text: `Start ${noun}`, endIcon: null }
@@ -245,10 +260,7 @@ const getCoursewareTextAndIcon = ({
     return { text: `View ${noun}`, endIcon: null }
   }
   // Programs show "View Program" when enrolled, courses show "Continue"
-  if (
-    resourceType === DashboardResourceType.Program &&
-    enrollmentStatus === EnrollmentStatus.Enrolled
-  ) {
+  if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
     return { text: `View ${noun}`, endIcon: null }
   }
   return { text: "Continue", endIcon: <RiArrowRightLine /> }
@@ -264,7 +276,7 @@ const CoursewareButton = styled(
     href,
     className,
     noun,
-    resourceType,
+    isProgram,
     b2bContractId,
     onClick,
     ...others
@@ -273,7 +285,7 @@ const CoursewareButton = styled(
       endDate,
       noun,
       enrollmentStatus,
-      resourceType,
+      isProgram,
     })
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
@@ -281,7 +293,7 @@ const CoursewareButton = styled(
 
     const oneClickEnroll = useOneClickEnroll()
 
-    if (resourceType === DashboardResourceType.Program) {
+    if (isProgram) {
       return (
         <ButtonLink
           size="small"
@@ -310,42 +322,31 @@ const CoursewareButton = styled(
     }
 
     if (!hasEnrolled /* enrollment flow */) {
-      // For B2B courses, use one-click enrollment
-      if (b2bContractId) {
-        return (
-          <Button
-            size="small"
-            variant="primary"
-            className={className}
-            disabled={oneClickEnroll.isPending || !coursewareId}
-            onClick={() => {
-              if (!href || !coursewareId) return
-              oneClickEnroll.mutate({ href, coursewareId })
-            }}
-            endIcon={
-              oneClickEnroll.isPending ? (
-                <LoadingSpinner
-                  color="inherit"
-                  loading={oneClickEnroll.isPending}
-                  size={16}
-                />
-              ) : undefined
-            }
-            {...others}
-          >
-            {coursewareText.text}
-          </Button>
-        )
-      }
-
-      // For non-B2B courses, show alert
       return (
         <Button
           size="small"
           variant="primary"
           className={className}
-          onClick={() =>
-            alert("Non-B2B course enrollment is not yet implemented.")
+          disabled={oneClickEnroll.isPending || !coursewareId || !readableId}
+          onClick={
+            onClick ??
+            (() => {
+              if (!coursewareId || !readableId || !href) return
+              if (b2bContractId) {
+                oneClickEnroll.mutate({ href, coursewareId: readableId })
+              } else {
+                alert("Non-B2B enrollment is not yet available.")
+              }
+            })
+          }
+          endIcon={
+            oneClickEnroll.isPending ? (
+              <LoadingSpinner
+                color="inherit"
+                loading={oneClickEnroll.isPending}
+                size={16}
+              />
+            ) : undefined
           }
           {...others}
         >
@@ -489,95 +490,167 @@ const CourseStartCountdown: React.FC<{
 }
 
 type DashboardCardProps = {
-  Component?: React.ElementType
-  titleAction: "marketing" | "courseware"
-  dashboardResource: DashboardResource
+  resource: DashboardResource
+  titleAction?: "marketing" | "courseware"
   showNotComplete?: boolean
-  className?: string
-  noun?: string
   offerUpgrade?: boolean
+  noun?: string
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
   buttonHref?: string | null
   buttonClick?: React.MouseEventHandler<HTMLButtonElement>
+  Component?: React.ElementType
+  className?: string
   variant?: "default" | "stacked"
+  contractId?: number
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
-  dashboardResource,
+  resource,
+  titleAction = "courseware",
   showNotComplete = true,
-  Component,
-  className,
-  noun = "Course",
   offerUpgrade = true,
+  noun,
   contextMenuItems = [],
   isLoading = false,
   buttonHref,
-  titleAction,
   buttonClick,
+  Component,
+  className,
   variant = "default",
+  contractId,
 }) => {
   const oneClickEnroll = useOneClickEnroll()
+  const { data: user } = useQuery(mitxUserQueries.me())
 
-  // Extract all conditional logic upfront
-  const isCourse = isDashboardCourse(dashboardResource)
-  const isProgram = isDashboardProgram(dashboardResource)
-  const isProgramCollection = isDashboardProgramCollection(dashboardResource)
+  // Determine resource type from discriminated union
+  const resourceIsCourse = resource.type === DashboardType.Course
+  const resourceIsCourseRunEnrollment =
+    resource.type === DashboardType.CourseRunEnrollment
+  const resourceIsProgramEnrollment =
+    resource.type === DashboardType.ProgramEnrollment
 
-  // Early return for unsupported types
-  if (isProgramCollection) {
-    return <div>Program collection display not yet implemented</div>
+  const handleEnrollment = (
+    href: string,
+    readableId: string,
+    hasB2bContract: boolean,
+  ) => {
+    if (!hasB2bContract) {
+      alert("Non-B2B enrollment is not yet available.")
+      return
+    }
+
+    const userCountry = user?.legal_address?.country
+    const userYearOfBirth = user?.user_profile?.year_of_birth
+    const showJustInTimeDialog = !userCountry || !userYearOfBirth
+
+    if (showJustInTimeDialog) {
+      NiceModal.show(JustInTimeDialog, {
+        href,
+        readableId,
+      })
+    } else {
+      // Profile is complete, directly enroll
+      oneClickEnroll.mutate({
+        href,
+        coursewareId: readableId,
+      })
+    }
   }
-  if (!isCourse && !isProgram) {
-    return null
-  }
 
-  // Extract resource-specific data with proper type narrowing
-  const title = dashboardResource.title
-  const marketingUrl = isCourse ? dashboardResource.marketingUrl : undefined
-  const enrollment = isCourse ? dashboardResource.enrollment : undefined
-  const run = isCourse ? dashboardResource.run : undefined
-  const coursewareId = isCourse ? dashboardResource.coursewareId : null
-  const readableId = isCourse ? dashboardResource.readableId : null
-  const hasValidCertificate = isCourse ? !!run?.certificate?.link : false
-  const enrollmentStatus = hasValidCertificate
-    ? EnrollmentStatus.Completed
-    : enrollment?.status
+  // Determine if this is any kind of course
+  const isAnyCourse = resourceIsCourse || resourceIsCourseRunEnrollment
+
+  // Compute default noun based on resource type
+  const defaultNoun = isAnyCourse
+    ? "Course"
+    : resourceIsProgramEnrollment
+      ? "Program"
+      : "Unknown"
+  const displayNoun = noun ?? defaultNoun
+
+  // Extract common data based on resource type
+  const title =
+    resource.type === DashboardType.Course
+      ? resource.data.title
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? resource.data.run.course.title
+        : resource.data.program.title
+
+  // Course-specific data
+  const run = resourceIsCourse
+    ? getBestRun(resource.data, contractId)
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run
+      : undefined
+
+  const hasValidCertificate =
+    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
+
+  const enrollmentStatus: EnrollmentStatus = isAnyCourse
+    ? hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? getEnrollmentStatus(resource.data)
+        : EnrollmentStatus.NotEnrolled
+    : hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : EnrollmentStatus.Enrolled
+
+  // URLs
+  const marketingUrl = resourceIsCourse
+    ? resource.data.page?.page_url
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run.course.page?.page_url
+      : undefined
+  const coursewareUrl = run?.courseware_url
+  const hasEnrolled =
+    isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
+  // Check enrollment's b2b_contract_id first, then run's b2b_contract, finally fall back to contractId prop
+  const b2bContractId =
+    resource.type === DashboardType.CourseRunEnrollment
+      ? (resource.data.b2b_contract_id ?? run?.b2b_contract ?? contractId)
+      : (run?.b2b_contract ?? contractId)
 
   // Title link logic
-  const coursewareUrl = run?.coursewareUrl
-  const hasEnrolled =
-    enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
-
-  const b2bContractId = enrollment?.b2b_contract_id ?? run?.b2bContractId
-
-  // Title link logic - only set href for enrolled courses or B2B courses
-  const titleHref = isCourse
-    ? hasEnrolled || b2bContractId
+  const titleHref = isAnyCourse
+    ? hasEnrolled
       ? titleAction === "marketing"
         ? marketingUrl
         : (coursewareUrl ?? marketingUrl)
-      : undefined
-    : undefined // Programs don't have a title link yet
+      : b2bContractId
+        ? (coursewareUrl ?? marketingUrl)
+        : undefined
+    : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
-    isCourse && !hasEnrolled
+    isAnyCourse && !hasEnrolled
       ? (e) => {
           e.preventDefault()
-          // B2B courses use one-click enrollment
-          if (b2bContractId) {
-            if (!coursewareId || !coursewareUrl) return
-            oneClickEnroll.mutate({
-              href: coursewareUrl,
-              coursewareId: coursewareId,
-            })
-          } else {
-            // Non-B2B courses will show a dialog in the future
-            alert("Non-B2B course enrollment is not yet implemented.")
-          }
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
         }
       : undefined
 
+  const coursewareButtonClick:
+    | React.MouseEventHandler<HTMLButtonElement>
+    | undefined =
+    isAnyCourse && !hasEnrolled
+      ? () => {
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+        }
+      : buttonClick
   // Build sections
   const titleSection = isLoading ? (
     <>
@@ -603,20 +676,21 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ) : (
         <TitleText>{title}</TitleText>
       )}
-      {isCourse && run?.certificate?.link ? (
-        <SubtitleLink href={run.certificate.link}>
+      {getCertificateLink(resource) ? (
+        <SubtitleLink href={getCertificateLink(resource)!}>
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
       ) : null}
-      {isCourse &&
-      enrollment?.mode !== EnrollmentMode.Verified &&
+      {isAnyCourse &&
+      resource.type === DashboardType.CourseRunEnrollment &&
+      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={run?.canUpgrade ?? false}
-          certificateUpgradeDeadline={run?.certificateUpgradeDeadline}
-          certificateUpgradePrice={run?.certificateUpgradePrice}
+          canUpgrade={run?.is_upgradable ?? false}
+          certificateUpgradeDeadline={run?.upgrade_deadline}
+          certificateUpgradePrice={run?.products?.[0]?.price}
         />
       ) : null}
     </>
@@ -624,7 +698,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   const buttonSection = isLoading ? (
     <Skeleton variant="rectangular" width={120} height={32} />
-  ) : isCourse ? (
+  ) : isAnyCourse ? (
     <>
       <EnrollmentStatusIndicator
         status={enrollmentStatus}
@@ -632,36 +706,48 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       />
       <CoursewareButton
         data-testid="courseware-button"
-        coursewareId={coursewareId}
-        readableId={readableId}
-        startDate={run?.startDate}
+        coursewareId={
+          resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+        }
+        readableId={
+          resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+        }
+        startDate={run?.start_date}
         enrollmentStatus={enrollmentStatus}
-        href={buttonHref ?? run?.coursewareUrl}
-        endDate={run?.endDate}
-        noun={noun}
-        resourceType={DashboardResourceType.Course}
+        href={buttonHref ?? coursewareUrl}
+        endDate={run?.end_date}
+        noun={displayNoun}
+        isProgram={false}
         b2bContractId={b2bContractId}
-        onClick={buttonClick}
+        onClick={coursewareButtonClick}
       />
     </>
-  ) : isProgram ? (
+  ) : resourceIsProgramEnrollment ? (
     <CoursewareButton
-      noun="Program"
-      resourceType={DashboardResourceType.Program}
-      enrollmentStatus={dashboardResource.enrollment?.status}
-      href={buttonHref ?? programView(dashboardResource.id)}
+      noun={displayNoun}
+      isProgram={true}
+      enrollmentStatus={enrollmentStatus}
+      href={buttonHref ?? programView(resource.data.program.id)}
     />
   ) : null
 
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : isCourse && run?.startDate ? (
-    <CourseStartCountdown startDate={run.startDate} />
+  ) : isAnyCourse && run?.start_date ? (
+    <CourseStartCountdown startDate={run.start_date} />
   ) : null
 
   const menuItems = contextMenuItems.concat(
-    isCourse && enrollment?.id
-      ? getDefaultContextMenuItems(title, enrollment)
+    resource.type === DashboardType.CourseRunEnrollment
+      ? getDefaultContextMenuItems(title, resource.data)
       : [],
   )
 
@@ -675,7 +761,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           size="small"
           variant="text"
           aria-label="More options"
-          status={enrollment?.status}
+          status={enrollmentStatus ?? undefined}
           hidden={menuItems.length === 0}
         >
           <RiMore2Line />
