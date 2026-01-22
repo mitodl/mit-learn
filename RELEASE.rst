@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.52.0
+Version 0.52.0 (Released January 22, 2026)
 --------------
 
 - Resolve flashcard generation json decode error (#2867)
