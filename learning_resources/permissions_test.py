@@ -25,7 +25,7 @@ from main.factories import UserFactory
 
 @pytest.fixture(autouse=True)
 def drf_settings(settings):
-    """Default drf prefix setting"""  # noqa: D401
+    """Default drf prefix setting"""
     settings.DRF_NESTED_PARENT_LOOKUP_PREFIX = ""
 
 

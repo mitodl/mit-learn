@@ -24,7 +24,7 @@ def mock_s3_fixture():
 
 @pytest.fixture
 def aws_settings(settings):
-    """Default AWS test settings"""  # noqa: D401
+    """Default AWS test settings"""
     settings.AWS_ACCESS_KEY_ID = "aws_id"
     settings.AWS_SECRET_ACCESS_KEY = (  # pragma: allowlist secret`
         "aws_secret"  # noqa: S105
@@ -34,7 +34,7 @@ def aws_settings(settings):
 
 @pytest.fixture(autouse=True)
 def ocw_aws_settings(aws_settings):
-    """Default OCW test settings"""  # noqa: D401
+    """Default OCW test settings"""
     aws_settings.OCW_LEARNING_COURSE_BUCKET_NAME = (  # impossible bucket name
         "test-bucket"
     )
@@ -43,7 +43,7 @@ def ocw_aws_settings(aws_settings):
 
 @pytest.fixture(autouse=True)
 def posthog_aws_settings(aws_settings):
-    """Default PostHog test settings"""  # noqa: D401
+    """Default PostHog test settings"""
     aws_settings.POSTHOG_EVENT_BUCKET_NAME = (  # impossible bucket name
         "test-posthog-event-bucket"
     )
