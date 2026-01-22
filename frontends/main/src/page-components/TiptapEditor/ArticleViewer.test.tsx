@@ -66,7 +66,7 @@ describe("ArticleViewer", () => {
 
     renderWithProviders(<ArticleEditor article={article} readOnly />)
 
-    await screen.findByText("Test Title")
+    await screen.findByRole("heading", { name: "Test Title", level: 1 })
     await screen.findByText("Test subheading")
     await screen.findByText("Test content")
   })
