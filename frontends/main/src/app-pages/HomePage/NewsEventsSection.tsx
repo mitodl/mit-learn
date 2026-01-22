@@ -219,7 +219,7 @@ export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
 }
 
 const NewsEventsSection: React.FC = () => {
-  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleListView)
+  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
 
   const { data: news } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],

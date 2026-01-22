@@ -44,9 +44,7 @@ describe("ArticleListingPage", () => {
     setupAPI(0)
     renderWithProviders(<ArticleListingPage />)
 
-    await waitFor(() => {
-      expect(screen.getByText("No Articles Available")).toBeInTheDocument()
-    })
+    await screen.findByText("No Articles Available")
 
     expect(
       screen.getByText(
@@ -303,9 +301,7 @@ describe("ArticleListingPage", () => {
     setupAPI(0)
     renderWithProviders(<ArticleListingPage />)
 
-    await waitFor(() => {
-      expect(screen.getByText("No Articles Available")).toBeInTheDocument()
-    })
+    await screen.findByText("No Articles Available")
 
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
   })
