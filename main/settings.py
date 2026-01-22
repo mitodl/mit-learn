@@ -389,7 +389,6 @@ DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
-STATICFILES_DIRS = []
 
 # Important to define this so DEBUG works properly
 INTERNAL_IPS = (get_string("HOST_IP", "127.0.0.1"),)
