@@ -73,24 +73,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "content_categories",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(
-                            blank=True,
-                            choices=[
-                                ("Lecture Notes", "Lecture Notes"),
-                                ("Readings", "Readings"),
-                                ("Practice", "Practice"),
-                                ("Open Textbooks", "Open Textbooks"),
-                                ("Lecture Audio", "Lecture Audio"),
-                                ("Video", "Video"),
-                            ],
-                            max_length=128,
-                        ),
-                        size=None,
-                    ),
-                ),
-                (
                     "content_file",
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,

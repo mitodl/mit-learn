@@ -1254,19 +1254,8 @@ class CourseLearningMaterial(LearningResourceDetailModel):
         models.CharField(max_length=256, null=False, blank=False), null=True, blank=True
     )
 
-    content_categories = ArrayField(
-        models.CharField(
-            max_length=128,
-            choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
-            null=False,
-            blank=True,
-        )
-    )
-
     def __str__(self):
-        return (
-            f"CourseLearningMaterial: {self.id} - {self.learning_resource.readable_id}"
-        )
+        return f"CourseLearningMaterial: {self.readable_id}"
 
 
 class VideoChannel(TimestampedModel):

@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from learning_resources.constants import (
+    OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -28,6 +29,7 @@ from learning_resources.models import (
     Article,
     ContentFile,
     Course,
+    CourseLearningMaterial,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -840,6 +842,60 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+def load_course_learning_materials(
+    course_run: LearningResourceRun,
+    content_file_ids: list[int],
+):
+    """
+    Create learning material objects from ocw content files
+    """
+
+    for content_file_id in content_file_ids:
+        content_file = ContentFile.objects.get(id=content_file_id)
+        learning_material_tags = set(
+            content_file.content_tags.values_list("name", flat=True)
+        ) & set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+        if learning_material_tags:
+            load_learning_material(course_run, content_file, learning_material_tags)
+
+
+def load_learning_material(
+    course_run: LearningResourceRun,
+    content_file: ContentFile,
+    learning_material_tags: set[str],
+):
+    """
+    Create learning material object from ocw content file
+    """
+
+    resource_types = {
+        OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
+    }
+    resource_types = sorted(resource_types)
+    resource_type = resource_types[0]
+
+    with transaction.atomic():
+        learning_resource = LearningResource.objects.update_or_create(
+            readable_id=f"{course_run.run_id}-{content_file.key}",
+            etl_source=course_run.learning_resource.etl_source,
+            platform=course_run.learning_resource.platform,
+            defaults={
+                "resource_type": resource_type,
+                "title": content_file.title,
+                "url": content_file.url,
+                "published": True,
+                "etl_source": course_run.learning_resource.etl_source,
+            },
+        )
+
+        learning_material, _ = CourseLearningMaterial.update_or_create(
+            content_file=content_file,
+            learning_resource=learning_resource,
+            defaults={"content_tags": learning_material_tags},
+        )
+        return learning_material.id
 
 
 def load_problem_file(

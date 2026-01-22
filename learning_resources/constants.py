@@ -37,7 +37,11 @@ class LearningResourceType(ExtendedEnum):
     video = "Video"
     video_playlist = "Video Playlist"
     article = "Article"
-    learning_material = "Learning Material"
+    lecture_note = "Lecture Notes"
+    readings = "Readings"
+    practice = "Practice"
+    open_textbook = "Open Textbooks"
+    lecture_audio = "Lecture Audio"
 
 
 LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
@@ -118,21 +122,13 @@ class LearningResourceRelationTypes(TextChoices):
 
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
 
-VALID_COURSE_CONTENT_CATEGORY_CHOICES = [
-    ("Lecture Notes", "Lecture Notes"),
-    ("Readings", "Readings"),
-    ("Practice", "Practice"),
-    ("Open Textbooks", "Open Textbooks"),
-    ("Lecture Audio", "Lecture Audio"),
-    ("Videos", "Videos"),
-]
 
 OCW_CONTENT_CATEGORY_LECTURE_NOTES = "Lecture Notes"
 OCW_CONTENT_CATEGORY_READINGS = "Readings"
 OCW_CONTENT_CATEGORY_PRACTICE = "Practice"
 OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS = "Open Textbooks"
 OCW_CONTENT_CATEGORY_LECTURE_AUDIO = "Lecture Audio"
-OCW_CONTENT_CATEGORY_VIDEOS = "Videos"
+OCW_CONTENT_CATEGORY_VIDEOS = "Video"
 
 OCW_CONTENT_CATEGORIES = [
     OCW_CONTENT_CATEGORY_LECTURE_NOTES,
