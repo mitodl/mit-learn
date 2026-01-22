@@ -13,7 +13,9 @@ import {
   PaginationItem,
   css,
   LoadingSpinner,
+  PlainList,
 } from "ol-components"
+import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -172,24 +174,13 @@ const MainStoryTitle = styled.h2`
 
 const MainStorySummary = styled.p`
   color: ${theme.custom.colors.white};
-  ${{ ...theme.typography.body1 }}
+  ${{ ...theme.typography.p3 }}
   margin: 0;
-  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: break-word;
-
-  ${theme.breakpoints.down("md")} {
-    font-size: 16px;
-    line-height: 22px;
-  }
-  ${theme.breakpoints.down("sm")} {
-    font-size: 14px;
-    font-style: normal;
-    line-height: 22px;
-  }
 `
 
 const MainStoryDate = styled(Typography)`
@@ -419,7 +410,7 @@ const EmptyState = styled.div`
 `
 const ArticleBannerStyled = styled(ArticleBanner)`
   padding: 48px 0;
-  padding-bottom: 250px !important;
+  padding-bottom: 250px;
   position: relative;
   background-size: 150% !important;
   background-position: center !important;
@@ -432,6 +423,9 @@ const ArticleBannerStyled = styled(ArticleBanner)`
     z-index: 1;
   }
 
+  ${theme.breakpoints.down("sm")} {
+    margin-bottom: 0px;
+  }
   & > * {
     position: relative;
     z-index: 2;
@@ -461,7 +455,7 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
       <MainStoryContent>
         <MainStoryContentContainer>
           <MainStoryTitle>
-            <a href={item.url}>{item.title}</a>
+            <Link href={item.url}>{item.title}</Link>
           </MainStoryTitle>
           {item.summary && (
             <MainStorySummary>
@@ -484,7 +478,7 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
       <StoryContent>
         <RegularStoryTitleWrapper>
           <StoryTitle>
-            <a href={item.url}>{item.title}</a>
+            <Link href={item.url}>{item.title}</Link>
           </StoryTitle>
           {item.summary && (
             <StorySummary>
@@ -496,7 +490,7 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
           <LocalDate date={item.news_details?.publish_date} />
         </StoryDate>
       </StoryContent>
-      <a href={item.url} style={{ textDecoration: "none", order: 2 }}>
+      <Link href={item.url} style={{ textDecoration: "none", order: 2 }}>
         <StoryImage>
           {item.image?.url && (
             <Image
@@ -507,7 +501,7 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
             />
           )}
         </StoryImage>
-      </a>
+      </Link>
     </StoryCard>
   )
 }
@@ -516,7 +510,7 @@ const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get("page") ?? "1", 10)
 
-  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleListView)
+  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
   const queryClient = useQueryClient()
 
   const flagsLoaded = useFeatureFlagsLoaded()
@@ -583,11 +577,13 @@ const ArticleListingPage: React.FC = () => {
                         <MainStory item={mainStory} />
                       </FeaturedStorySection>
                     )}
-                    {gridStories.map((item) => (
-                      <Grid2 key={item.id} size={12}>
-                        <RegularStory item={item as NewsFeedItem} />
-                      </Grid2>
-                    ))}
+                    <PlainList>
+                      {gridStories.map((item) => (
+                        <li key={item.id}>
+                          <RegularStory item={item as NewsFeedItem} />
+                        </li>
+                      ))}
+                    </PlainList>
                   </MobileContainer>
                 </MobileContent>
               </BelowMdOnly>
@@ -603,9 +599,9 @@ const ArticleListingPage: React.FC = () => {
                 {/* Grid Section: Other articles */}
                 {gridStories.length > 0 ? (
                   <GridContainer>
-                    <Grid2 container rowSpacing="8px">
+                    <Grid2 container rowSpacing="8px" component="ul">
                       {gridStories.map((item) => (
-                        <Grid2 key={item.id} size={12}>
+                        <Grid2 key={item.id} size={12} component="li">
                           <RegularStory item={item as NewsFeedItem} />
                         </Grid2>
                       ))}

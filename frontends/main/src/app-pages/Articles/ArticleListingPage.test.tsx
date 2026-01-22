@@ -1,6 +1,7 @@
 import React from "react"
 import { ArticleListingPage } from "./ArticleListingPage"
 import { urls, setMockResponse } from "api/test-utils"
+import type { NewsFeedItem } from "api/v0"
 import { newsEvents } from "api/test-utils/factories"
 import {
   renderWithProviders,
@@ -97,17 +98,32 @@ describe("ArticleListingPage", () => {
   })
 
   test("displays article publish dates", async () => {
-    setupAPI(21)
+    const news = setupAPI(21)
     renderWithProviders(<ArticleListingPage />)
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
     })
 
-    // LocalDate component renders the dates in the UI
-    // We verify that the component renders without errors, which confirms dates are displayed
-    const articles = screen.getAllByRole("link")
-    expect(articles.length).toBeGreaterThan(0)
+    // Verify that LocalDate component renders dates for articles
+    // Check that there are multiple date elements rendered (one per article)
+    const listItems = screen.getAllByRole("listitem")
+    expect(listItems.length).toBeGreaterThan(0)
+
+    // Verify that dates are present in the document
+    // The first article should have a publish date
+    const firstArticle = news.results[0] as NewsFeedItem
+    const firstArticleDate = firstArticle.news_details?.publish_date
+    if (firstArticleDate) {
+      // LocalDate component will format the date, so check for parts of the date
+      const dateElements = screen.getAllByText((content, element) => {
+        return (
+          element?.tagName.toLowerCase() === "time" ||
+          content.includes(new Date(firstArticleDate).getFullYear().toString())
+        )
+      })
+      expect(dateElements.length).toBeGreaterThan(0)
+    }
   })
 
   test("links to article URLs correctly", async () => {

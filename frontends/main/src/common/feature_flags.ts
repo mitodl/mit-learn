@@ -10,8 +10,7 @@ export enum FeatureFlags {
   EnrollmentDashboard = "enrollment-dashboard",
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
-  ArticleEditorView = "article-editor-view",
-  ArticleListView = "article-list-view",
+  ArticleView = "article-viewer",
 }
 
 /**
