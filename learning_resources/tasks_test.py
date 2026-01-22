@@ -153,7 +153,6 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mit_edx.name,
         chunk_size=4,
-        s3_prefix="simeon-mitx-course-tarballs",
         overwrite=False,
         learning_resource_ids=[1],
     )
@@ -205,8 +204,6 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.oll.name,
         chunk_size=4,
-        s3_prefix="open-learning-library/courses",
-        override_base_prefix=True,
         overwrite=False,
         learning_resource_ids=None,
     )
@@ -218,7 +215,7 @@ def test_get_content_tasks(
     settings,
     mocker,
     mocked_celery,
-    mock_xpro_learning_bucket,
+    mock_course_archive_bucket,
     with_learning_resource_ids,
 ):
     """Test that get_content_tasks calls get_content_files with the correct args"""
@@ -247,10 +244,8 @@ def test_get_content_tasks(
         )
     else:
         learning_resource_ids = None
-    s3_prefix = "course-prefix"
     tasks.get_content_tasks(
         etl_source,
-        s3_prefix=s3_prefix,
         overwrite=True,
         learning_resource_ids=learning_resource_ids,
     )
@@ -271,20 +266,19 @@ def test_get_content_tasks(
             [learning_resource_ids[0], learning_resource_ids[1]],
             etl_source,
             ["foo.tar.gz"],
-            s3_prefix=s3_prefix,
             overwrite=True,
         )
     else:
         assert mock_get_content_files.call_count == 2
         mock_get_content_files.assert_any_call(
-            ANY, etl_source, ["foo.tar.gz"], s3_prefix=s3_prefix, overwrite=True
+            ANY, etl_source, ["foo.tar.gz"], overwrite=True
         )
 
 
 @mock_aws
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_get_content_tasks_test_mode(
-    settings, mocker, mocked_celery, mock_xpro_learning_bucket, test_mode
+    settings, mocker, mocked_celery, mock_course_archive_bucket, test_mode
 ):
     """Test that if a resource is marked as in test_mode, it's contentfiles are fetched"""
     mock_get_content_files = mocker.patch(
@@ -315,10 +309,8 @@ def test_get_content_tasks_test_mode(
 
         learning_resource_ids.append(resource.id)
 
-    s3_prefix = "course-prefix"
     tasks.get_content_tasks(
         etl_source,
-        s3_prefix=s3_prefix,
         overwrite=True,
     )
     assert mocked_celery.group.call_count == 1
@@ -330,18 +322,18 @@ def test_get_content_tasks_test_mode(
         mock_get_content_files.assert_not_called()
 
 
-def test_get_content_files(mocker, mock_xpro_learning_bucket):
+def test_get_content_files(mocker, mock_course_archive_bucket):
     """Test that get_content_files calls sync_edx_course_files with expected parameters"""
     mock_sync_edx_course_files = mocker.patch(
         "learning_resources.tasks.sync_edx_course_files"
     )
     mocker.patch(
-        "learning_resources.tasks.get_learning_course_bucket_name",
-        return_value=mock_xpro_learning_bucket.bucket.name,
+        "learning_resources.tasks.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
     )
-    tasks.get_content_files([1, 2], PlatformType.xpro.value, ["foo.tar.gz"])
+    tasks.get_content_files([1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"])
     mock_sync_edx_course_files.assert_called_once_with(
-        PlatformType.xpro.value, [1, 2], ["foo.tar.gz"], s3_prefix=None, overwrite=False
+        ETLSource.mit_edx.value, [1, 2], ["foo.tar.gz"], overwrite=False
     )
 
 
@@ -351,11 +343,11 @@ def test_get_content_files_missing_settings(mocker, settings):
         "learning_resources.tasks.sync_edx_course_files"
     )
     mock_log = mocker.patch("learning_resources.tasks.log.warning")
-    settings.XPRO_LEARNING_COURSE_BUCKET_NAME = None
-    platform = PlatformType.xpro.value
-    tasks.get_content_files([1, 2], platform, ["foo.tar.gz"])
+    settings.COURSE_ARCHIVE_BUCKET_NAME = None
+    source = ETLSource.mit_edx.value
+    tasks.get_content_files([1, 2], source, ["foo.tar.gz"])
     mock_sync_edx_course_files.assert_not_called()
-    mock_log.assert_called_once_with("Required settings missing for %s files", platform)
+    mock_log.assert_called_once_with("Required settings missing for %s files", source)
 
 
 def test_get_podcast_data(mocker):

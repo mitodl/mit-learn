@@ -206,19 +206,14 @@ const useProgramCollectionCourses = (
   })
   const isLoading = programsQuery.isLoading
 
-  const programsWithCourses = programsQuery.data?.results
-    .map((program) => {
-      if (!program) {
-        return null
-      }
-      const transformedProgram = transform.mitxonlineProgram(program)
-      return {
-        programId: program.id,
-        program: transformedProgram,
-        hasCourses: program.courses && program.courses.length > 0,
-      }
-    })
-    .filter(Boolean)
+  const programsWithCourses = programsQuery.data?.results.map((program) => {
+    const transformedProgram = transform.mitxonlineProgram(program)
+    return {
+      programId: program.id,
+      program: transformedProgram,
+      hasCourses: program.courses && program.courses.length > 0,
+    }
+  })
 
   const hasAnyCourses = programsWithCourses?.some((p) => p?.hasCourses)
 
@@ -247,13 +242,22 @@ const OrgProgramCollectionDisplay: React.FC<{
     }),
     enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
+  // Create mapping from course ID to program order
+  const courseIdToOrder = new Map<number, number>()
+  programsWithCourses?.forEach((item) => {
+    const firstCourseId = item.program.courseIds[0]
+    const programId = item.programId
+    const order =
+      collection.programs.find((p) => p.id === programId)?.order ?? Infinity
+    courseIdToOrder.set(firstCourseId, order)
+  })
   const rawCourses =
     courses.data?.results.sort((a, b) => {
-      return (
-        (firstCourseIds?.indexOf(a.id) ?? -1) -
-        (firstCourseIds?.indexOf(b.id) ?? -1)
-      )
+      const orderA = courseIdToOrder.get(a.id) ?? Infinity
+      const orderB = courseIdToOrder.get(b.id) ?? Infinity
+      return orderA - orderB
     }) ?? []
+
   const transformedCourses = transform.organizationCoursesWithContracts({
     courses: rawCourses,
     contract: contract,

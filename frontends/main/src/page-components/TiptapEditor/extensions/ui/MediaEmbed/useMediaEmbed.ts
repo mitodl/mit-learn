@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
-import { convertToEmbedUrl } from "./lib"
+import { convertToEmbedUrl } from "../../node/MediaEmbed/lib"
 import NiceModal from "@ebay/nice-modal-react"
 import MediaUrlInputDialog from "./MediaUrlInputDialog"
 import { Icon } from "./Icon"
@@ -17,10 +17,14 @@ export function useMediaEmbed(editor?: Editor | null) {
   const handleEmbed = useCallback(async () => {
     try {
       const url: string = await NiceModal.show(MediaUrlInputDialog)
-      console.log("URL received from modal:", url)
       if (!url) return
 
-      resolved?.commands.insertMedia(convertToEmbedUrl(url))
+      const embedUrl = convertToEmbedUrl(url)
+      if (!embedUrl) {
+        return
+      }
+
+      resolved?.commands.insertMedia(embedUrl)
     } catch {
       // modal was closed / cancelled
     }

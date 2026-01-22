@@ -2257,6 +2257,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@happy-dom/jest-environment@npm:^20.1.0":
+  version: 20.3.4
+  resolution: "@happy-dom/jest-environment@npm:20.3.4"
+  dependencies:
+    happy-dom: "npm:^20.3.4"
+  peerDependencies:
+    "@jest/environment": ">=25.0.0"
+    "@jest/fake-timers": ">=25.0.0"
+    "@jest/types": ">=25.0.0"
+    jest-mock: ">=25.0.0"
+    jest-util: ">=25.0.0"
+  checksum: 10/0ddc997f83373b5e96ea5d663aa0570715375a1092d6dae32fe34e0ba68c3630b7168aab39433a9eae3c2ea0c8e7397045436e1bfdc531d529ee43d770fe5b4c
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.13.0":
   version: 0.13.0
   resolution: "@humanwhocodes/config-array@npm:0.13.0"
@@ -3330,13 +3345,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2026.1.12":
-  version: 2026.1.12
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.1.12"
+"@mitodl/mitxonline-api-axios@npm:^2026.1.14":
+  version: 2026.1.21
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.1.21"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/7c9e09e71e724062652c99811f52aaaa03e12fd8a67a807b98556741707081dd3126ed0e814c2c248b3c95aeb51586ab6252b6711ee07c59689464749b7aed37
+  checksum: 10/68ebfaedcd59cf497adc3a765ef0268fb26d1c6454f6f159992a8f7311297148891989e5e891b3991136e9aaa3eac1f851a2079b0258e63f69e0fd8dce286c21
   languageName: node
   linkType: hard
 
@@ -7376,6 +7391,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:>=20.0.0":
+  version: 25.0.10
+  resolution: "@types/node@npm:25.0.10"
+  dependencies:
+    undici-types: "npm:~7.16.0"
+  checksum: 10/e5fc1fe0e585957f91ff3ad8ee01b051ce0c9da9658c5ba68d11d557522450783ab61ac2778355e8f566b83bc3bd18e78576569162e9729ed52af36999f81c9a
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:^20.0.0, @types/node@npm:^20.11.19":
   version: 20.16.11
   resolution: "@types/node@npm:20.16.11"
@@ -7612,6 +7636,22 @@ __metadata:
   version: 13.12.2
   resolution: "@types/validator@npm:13.12.2"
   checksum: 10/564f60cfe112b45e1d747245d1f80db999bbc372b2b6a1c5454441b02c3d6bffbfff4365a10c3cd7874197f14ca5779b435794c7600bdcb541da948405a3b21a
+  languageName: node
+  linkType: hard
+
+"@types/whatwg-mimetype@npm:^3.0.2":
+  version: 3.0.2
+  resolution: "@types/whatwg-mimetype@npm:3.0.2"
+  checksum: 10/609607beeaa8b50b9e00541d8f571880d651b26b6b006103370099aba00784037de54433627c9fe775a5558e3d1fc09c2a48f54c8af91988e9bebeaf6a698eeb
+  languageName: node
+  linkType: hard
+
+"@types/ws@npm:^8.18.1":
+  version: 8.18.1
+  resolution: "@types/ws@npm:8.18.1"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/1ce05e3174dcacf28dae0e9b854ef1c9a12da44c7ed73617ab6897c5cbe4fccbb155a20be5508ae9a7dde2f83bd80f5cf3baa386b934fc4b40889ec963e94f3a
   languageName: node
   linkType: hard
 
@@ -8594,7 +8634,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.1.12"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.1.14"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -11039,7 +11079,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"entities@npm:^4.4.0":
+"entities@npm:^4.4.0, entities@npm:^4.5.0":
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
   checksum: 10/ede2a35c9bce1aeccd055a1b445d41c75a14a2bb1cd22e242f20cf04d236cdcd7f9c859eb83f76885327bfae0c25bf03303665ee1ce3d47c5927b98b0e3e3d48
@@ -12864,6 +12904,20 @@ __metadata:
   dependencies:
     duplexer: "npm:^0.1.2"
   checksum: 10/2df97f359696ad154fc171dcb55bc883fe6e833bca7a65e457b9358f3cb6312405ed70a8da24a77c1baac0639906cd52358dc0ce2ec1a937eaa631b934c94194
+  languageName: node
+  linkType: hard
+
+"happy-dom@npm:^20.3.4":
+  version: 20.3.4
+  resolution: "happy-dom@npm:20.3.4"
+  dependencies:
+    "@types/node": "npm:>=20.0.0"
+    "@types/whatwg-mimetype": "npm:^3.0.2"
+    "@types/ws": "npm:^8.18.1"
+    entities: "npm:^4.5.0"
+    whatwg-mimetype: "npm:^3.0.0"
+    ws: "npm:^8.18.3"
+  checksum: 10/6dba6b4dfdaedf5def805685bbc23da7d2cdaea09d37bbc8423db0acbcdfddf04c003c8f8f43176ab53a8176ef3a3fd8811648aef977d19f465598ac1e08d563
   languageName: node
   linkType: hard
 
@@ -15462,8 +15516,9 @@ __metadata:
     "@emotion/cache": "npm:^11.13.1"
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
+    "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.1.12"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.1.14"
     "@mitodl/smoot-design": "npm:^6.19.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
@@ -15522,6 +15577,7 @@ __metadata:
     posthog-js: "npm:^1.297.2"
     react: "npm:^19.2.1"
     react-dom: "npm:^19.2.1"
+    react-markdown: "npm:^10.0.0"
     react-slick: "npm:^0.30.2"
     sharp: "npm:0.34.4"
     slick-carousel: "npm:^1.8.1"
@@ -21842,6 +21898,13 @@ __metadata:
   version: 6.19.8
   resolution: "undici-types@npm:6.19.8"
   checksum: 10/cf0b48ed4fc99baf56584afa91aaffa5010c268b8842f62e02f752df209e3dea138b372a60a963b3b2576ed932f32329ce7ddb9cb5f27a6c83040d8cd74b7a70
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~7.16.0":
+  version: 7.16.0
+  resolution: "undici-types@npm:7.16.0"
+  checksum: 10/db43439f69c2d94cc29f75cbfe9de86df87061d6b0c577ebe9bb3255f49b22c50162a7d7eb413b0458b6510b8ca299ac7cff38c3a29fbd31af9f504bcf7fbc0d
   languageName: node
   linkType: hard
 

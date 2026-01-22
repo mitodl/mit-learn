@@ -174,13 +174,24 @@ const MainStoryTitle = styled.h2`
 
 const MainStorySummary = styled.p`
   color: ${theme.custom.colors.white};
-  ${{ ...theme.typography.p3 }}
+  ${{ ...theme.typography.body1 }}
   margin: 0;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: break-word;
+
+  ${theme.breakpoints.down("md")} {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  ${theme.breakpoints.down("sm")} {
+    font-size: 14px;
+    font-style: normal;
+    line-height: 22px;
+  }
 `
 
 const MainStoryDate = styled(Typography)`
@@ -424,8 +435,9 @@ const ArticleBannerStyled = styled(ArticleBanner)`
   }
 
   ${theme.breakpoints.down("sm")} {
-    margin-bottom: 0px;
+    margin-bottom: 0;
   }
+
   & > * {
     position: relative;
     z-index: 2;

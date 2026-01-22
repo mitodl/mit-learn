@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.51.1"
+VERSION = "0.51.2"
 
 log = logging.getLogger()
 
@@ -830,6 +830,8 @@ QDRANT_BATCH_SIZE_BYTES = get_int(
     name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
 )  # default 10 MB limit for batch processing
 
+QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
@@ -880,6 +882,10 @@ SEMANTIC_CHUNKING_CONFIG = {
 }
 
 CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)
+# number of flashcards to generate
+CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
+    "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
+)
 
 # OpenTelemetry configuration
 OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003

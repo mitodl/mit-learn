@@ -1,5 +1,6 @@
 import React, { HTMLAttributes } from "react"
 import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
 import {
@@ -10,14 +11,19 @@ import {
   RiFileCopy2Line,
 } from "@remixicon/react"
 import { formatDate, NoSSR, pluralize } from "ol-utilities"
-import {
+import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import { LearningResource } from "api"
-import { getCourseCertificatePrice } from "@/common/mitxonline"
+import {
+  canUpgradeRun,
+  mitxonlineUrl,
+  priceWithDiscount,
+} from "@/common/mitxonline"
+import { useQuery } from "@tanstack/react-query"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -264,21 +270,66 @@ const CertificateBoxRoot = styled.div(({ theme }) => ({
   gap: "8px",
 }))
 
-const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({ nextRun }) => {
-  const certificatePrice = getCourseCertificatePrice(nextRun)
-  const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
+const StrickenText = styled.span(({ theme }) => ({
+  textDecoration: "line-through",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.body3,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body4,
+  },
+}))
 
+const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
+  nextRun,
+  course,
+}) => {
+  const canUpgrade = canUpgradeRun(nextRun)
+  const product = nextRun.products[0]
+  const hasFinancialAid = !!(
+    course?.page.financial_assistance_form_url && product
+  )
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: canUpgrade && hasFinancialAid,
+  })
+  const price = canUpgrade
+    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+    : null
+
+  const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
   return (
     <CertificateBoxRoot>
-      {certificatePrice ? (
+      {price ? (
         <>
           <InfoRowInner flexWrap={"nowrap"}>
             <InfoLabelValue
               label="Certificate Track"
-              value={certificatePrice}
+              value={
+                price.isDiscounted ? (
+                  <>
+                    <br />
+                    {price.finalPrice}{" "}
+                    <StrickenText>{price.originalPrice}</StrickenText>
+                  </>
+                ) : (
+                  price.finalPrice
+                )
+              }
             />
             {COURSE_CERT_INFO_LINK}
           </InfoRowInner>
+          {hasFinancialAid ? (
+            <UnderlinedLink
+              color="black"
+              href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {price.approvedFinancialAid
+                ? "Financial assistance applied"
+                : "Financial assistance available"}
+            </UnderlinedLink>
+          ) : null}
           {upgradeDeadline ? (
             <Typography
               typography={{ xs: "body3", sm: "body2" }}
@@ -319,7 +370,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   return (
     <InfoRow {...others}>
       <RiPriceTag3Line aria-hidden="true" />
-      <Stack gap="8px">
+      <Stack gap="8px" width="100%">
         <InfoLabelValue label="Price" value="Free to Learn" />
         <CourseCertificateBox course={course} nextRun={nextRun} />
       </Stack>
@@ -524,6 +575,17 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
         />
         {PROGRAM_CERT_INFO_LINK}
       </InfoRowInner>
+      {program.page.financial_assistance_form_url ? (
+        <UnderlinedLink
+          color="black"
+          href={mitxonlineUrl(program.page.financial_assistance_form_url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ minWidth: "fit-content" }}
+        >
+          Financial assistance available
+        </UnderlinedLink>
+      ) : null}
     </CertificateBoxRoot>
   )
 }

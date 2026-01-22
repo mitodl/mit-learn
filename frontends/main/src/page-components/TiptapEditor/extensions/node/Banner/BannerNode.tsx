@@ -48,6 +48,9 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
       color: theme.custom.colors.silverGrayLight,
       opacity: 0.4,
     },
+  '[contenteditable="true"] &': {
+    caretColor: theme.custom.colors.red,
+  },
 }))
 
 const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
