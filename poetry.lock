@@ -1706,6 +1706,24 @@ redis = ">=3,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1"
 hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
 
 [[package]]
+name = "django-removals"
+version = "1.1.6"
+description = "Tool for finding removed features in your Django project"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_removals-1.1.6-py3-none-any.whl", hash = "sha256:cb2643a6e927574eb792e0ea28e41d5d8bb20c8dc1ec917db50b904e0d0cadd7"},
+    {file = "django_removals-1.1.6.tar.gz", hash = "sha256:c452cabe5b2353f019c5b2731d24f3e1b308a5234f08124112dd5f66e623db24"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[package.extras]
+dev = ["ambient-package-update", "m2r2 (>=0.3,<1.0)", "pre-commit (>=4.3,<5.0)", "pytest-cov (>=7.0,<8.0)", "pytest-django (>=4.11,<5.0)", "pytest-mock (>=3.15,<4.0)", "sphinx (>=7.4,<8.0)", "sphinx-rtd-theme (>=3.0,<4.0)", "typer (>=0.19,<1.0)", "uv (>=0.9,<1.0)"]
+
+[[package]]
 name = "django-scim2"
 version = "0.19.1"
 description = "A partial implementation of the SCIM 2.0 provider specification for use with Django."

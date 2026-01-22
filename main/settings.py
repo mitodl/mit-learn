@@ -106,6 +106,7 @@ INSTALLED_APPS = (
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django.contrib.sites",
+    "django_removals",
     "django_scim",
     "social_django",
     "server_status",
@@ -258,7 +259,6 @@ MITOL_NEW_USER_LOGIN_URL = get_string(
 LOGIN_REDIRECT_URL = "/app"
 LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
-LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
 MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
 OIDC_LOGOUT_URL = get_string(
@@ -389,7 +389,7 @@ DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # noqa: PTH118
+STATICFILES_DIRS = []
 
 # Important to define this so DEBUG works properly
 INTERNAL_IPS = (get_string("HOST_IP", "127.0.0.1"),)
