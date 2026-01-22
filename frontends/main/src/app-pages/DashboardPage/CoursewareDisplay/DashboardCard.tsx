@@ -585,11 +585,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : undefined
 
   const hasValidCertificate =
-    resource.type === DashboardType.CourseRunEnrollment
-      ? !!resource.data.certificate?.uuid
-      : resource.type === DashboardType.ProgramEnrollment
-        ? !!resource.data.certificate?.uuid
-        : false
+    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
 
   const enrollmentStatus: EnrollmentStatus = isAnyCourse
     ? hasValidCertificate
