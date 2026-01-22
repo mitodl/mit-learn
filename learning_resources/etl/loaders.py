@@ -344,15 +344,12 @@ def load_run(
         ):
             # webhook may have been sent before run was created
             # so trigger a contentfile ingestion for the course.
-            log.error("GET CONTENT TASKS!")
             from learning_resources.tasks import get_content_tasks
 
             get_content_tasks(
                 etl_source=learning_resource.etl_source,
                 learning_resource_ids=[learning_resource.id],
             ).delay()
-        else:
-            log.error("NO GET CONTENT TASKS!")
     return learning_resource_run
 
 
