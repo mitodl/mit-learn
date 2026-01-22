@@ -806,9 +806,7 @@ QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
-QDRANT_DENSE_MODEL = get_string(
-    name="QDRANT_DENSE_MODEL", default="text-embedding-3-small"
-)
+QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )
