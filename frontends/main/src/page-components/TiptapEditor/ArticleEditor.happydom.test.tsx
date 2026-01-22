@@ -252,6 +252,16 @@ describe("ArticleEditor - Content Editing and Saving", () => {
 
   describe("Save button states", () => {
     test("save button is disabled when title is empty", async () => {
+      // Suppress act() warnings from MutationObserver updates in vendor code
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation((message) => {
+          if (typeof message === "string" && message.includes("act(...)")) {
+            return
+          }
+          console.warn(message)
+        })
+
       const initialContent: JSONContent = {
         type: "doc",
         content: [
@@ -281,20 +291,29 @@ describe("ArticleEditor - Content Editing and Saving", () => {
 
       await setupEditor(initialContent, 207, "Title")
 
-      const heading = screen.getByRole("heading", { level: 1 })
-      await userEvent.click(heading)
+      const updateButton = screen.getByRole("button", {
+        name: /Update|Publish/,
+      })
+      expect(updateButton).not.toBeDisabled()
+
+      // Wait for heading to be available
+      let heading: Element
+      await waitFor(() => {
+        const editor = screen.getByTestId("editor")
+        const h1 = editor.querySelector("h1")
+        expect(h1).toBeTruthy()
+        heading = h1!
+      })
+
+      await userEvent.click(heading!)
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.keyboard("{Delete}")
 
-      await waitFor(
-        () => {
-          const updateButton = screen.getByRole("button", {
-            name: /Update|Publish/,
-          })
-          expect(updateButton).toBeDisabled()
-        },
-        { timeout: 1000 },
-      )
+      await waitFor(() => {
+        expect(updateButton).toBeDisabled()
+      })
+
+      consoleError.mockRestore()
     })
 
     test("save button is enabled when a title is set", async () => {
@@ -332,11 +351,18 @@ describe("ArticleEditor - Content Editing and Saving", () => {
       })
       expect(updateButton).toBeDisabled()
 
-      const heading = screen.getByRole("heading", { level: 1 })
+      // Find the empty heading placeholder or the editor area
+      const editor = screen.getByTestId("editor")
+      const heading =
+        editor.querySelector("h1") || editor.querySelector("[data-placeholder]")
+      if (!heading) throw new Error("Heading element not found")
+
       await userEvent.click(heading)
       await userEvent.type(heading, "Article Title")
 
-      expect(updateButton).not.toBeDisabled()
+      await waitFor(() => {
+        expect(updateButton).not.toBeDisabled()
+      })
     })
   })
 
@@ -485,13 +511,20 @@ describe("ArticleEditor - Content Editing and Saving", () => {
 
       await screen.findByTestId("editor")
 
-      const heading = screen.getByRole("heading", { level: 1 })
+      const editor = screen.getByTestId("editor")
+      const heading =
+        editor.querySelector("h1") || editor.querySelector("[data-placeholder]")
+      if (!heading) throw new Error("Heading element not found")
+
       await userEvent.click(heading)
 
       await userEvent.keyboard("{Control>}a{/Control}")
       await userEvent.type(heading, "My Article", { delay: 0 })
 
-      await screen.findByRole("heading", { level: 1, name: "My Article" })
+      // Wait for the text to be updated in the editor
+      await waitFor(() => {
+        expect(heading.textContent).toContain("My Article")
+      })
 
       const publishButton = await screen.findByRole("button", {
         name: "Publish",
@@ -685,7 +718,7 @@ describe("ArticleEditor - Document Rendering", () => {
 
       await setupEditor(content)
 
-      await screen.findByText("Article Title")
+      await screen.findByRole("heading", { level: 1, name: "Article Title" })
       await screen.findByText("Banner subtitle")
     })
 
@@ -1324,7 +1357,9 @@ describe("ArticleEditor - Document Rendering", () => {
 
       await setupEditor(content)
 
-      expect(screen.getByText("Complex Article")).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Complex Article" }),
+      ).toBeInTheDocument()
       expect(screen.getByText("complex")).toBeInTheDocument()
       expect(screen.getByText("various")).toBeInTheDocument()
 
@@ -1469,7 +1504,9 @@ describe("ArticleEditor - Document Rendering", () => {
 
       await setupEditor(content)
 
-      expect(screen.getByText("Title Only")).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Title Only" }),
+      ).toBeInTheDocument()
       expect(screen.getByText("Content paragraph")).toBeInTheDocument()
     })
   })

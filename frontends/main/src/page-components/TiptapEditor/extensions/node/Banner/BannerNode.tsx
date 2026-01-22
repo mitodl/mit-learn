@@ -8,9 +8,10 @@ import {
   ReactNodeViewContentProvider,
 } from "@tiptap/react"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import { Container, BannerBackground } from "ol-components"
+import { Container, BannerBackground, Breadcrumbs } from "ol-components"
 import styled from "@emotion/styled"
 import type { ExtendedNodeConfig } from "../types"
+import { getTitle } from "../lib"
 
 const FullWidthContainer = styled.div({
   position: "relative",
@@ -24,6 +25,10 @@ const FullWidthContainer = styled.div({
 const InnerContainer = styled(Container)({
   "&&": {
     maxWidth: "890px",
+  },
+
+  "& span a, & span a:hover": {
+    color: "#fff !important",
   },
 })
 
@@ -55,20 +60,34 @@ const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
   },
 }))
 
-const BannerViewer = ({ children }: { children?: React.ReactNode }) => {
+const BannerViewer = ({
+  children,
+  node,
+}: {
+  children?: React.ReactNode
+  node?: ProseMirrorNode
+}) => {
   return (
     <ReactNodeViewContentProvider content={children}>
-      <BannerWrapper />
+      <BannerWrapper node={node} />
     </ReactNodeViewContentProvider>
   )
 }
 
-const BannerWrapper = () => {
+const BannerWrapper = (props?: { node?: ProseMirrorNode }) => {
   return (
     <NodeViewWrapper as="div">
       <FullWidthContainer>
         <StyledBannerBackground>
           <InnerContainer>
+            <Breadcrumbs
+              variant="dark"
+              ancestors={[
+                { href: "/", label: "Home" },
+                { href: "/articles", label: "MIT Stories" },
+              ]}
+              current={getTitle(props?.node || ({} as ProseMirrorNode))}
+            />
             <StyledNodeViewContent className="banner-content-editable" />
           </InnerContainer>
         </StyledBannerBackground>

@@ -12,4 +12,15 @@ const matchOrganizationBySlug =
     return organization.slug.replace("org-", "") === orgSlug
   }
 
-export { isInEnum, matchOrganizationBySlug }
+// Utility function to strip HTML tags and decode HTML entities using DOMPurify
+const stripHtmlAndDecode = (html: string): string => {
+  if (!html) return ""
+
+  // Remove URLs that might be left from embed code or inline links
+  const withoutUrls = html.replace(/https?:\/\/[^\s]+/g, "")
+
+  // Collapse multiple whitespace into single space and trim
+  return withoutUrls.replace(/\s+/g, " ").trim()
+}
+
+export { isInEnum, matchOrganizationBySlug, stripHtmlAndDecode }

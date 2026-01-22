@@ -28,6 +28,9 @@ def mock_articles(mocker):
     mock_article.created_on.isoformat.return_value = "2024-01-01T00:00:00Z"
     mock_article.updated_on = mocker.Mock()
 
+    mock_article.publish_date = mocker.Mock()
+    mock_article.publish_date.isoformat.return_value = "2024-01-01T00:00:00Z"
+
     mock_queryset = mocker.Mock()
     mock_queryset.select_related.return_value = [mock_article]
 
@@ -71,6 +74,7 @@ def test_transform_items():
             "content": {"blocks": [{"text": "Test content"}]},
             "user": MockUser(),
             "created_on": mock_datetime,
+            "publish_date": mock_datetime,
         }
     ]
 
@@ -252,6 +256,175 @@ def test_extract_image_returns_none_when_no_image():
     assert result is None
 
 
+def test_extract_summary_from_banner_with_banner_paragraph():
+    """Test extracting summary from banner paragraph"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "This is the banner summary text.",
+                            }
+                        ],
+                    }
+                ],
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "This is a regular paragraph."}],
+            },
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "This is the banner summary text."
+
+
+def test_extract_summary_from_banner_fallback_to_first_paragraph():
+    """Test fallback to first paragraph when no banner paragraph"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "heading",
+                        "content": [{"type": "text", "text": "Just a heading"}],
+                    }
+                ],
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "First regular paragraph text."}],
+            },
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "First regular paragraph text."
+
+
+def test_extract_summary_from_banner_no_banner_node():
+    """Test extracting summary when there's no banner node at all"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [
+                    {"type": "text", "text": "First paragraph without banner."}
+                ],
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Second paragraph."}],
+            },
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "First paragraph without banner."
+
+
+def test_extract_summary_from_banner_multiple_text_nodes():
+    """Test extracting summary with multiple text nodes in paragraph"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": "This is "},
+                            {"type": "text", "text": "a multi-part "},
+                            {"type": "text", "text": "summary."},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    # Note: joining with " ".join() adds spaces, so "This is " + " " + "a multi-part " becomes "This is  a multi-part "
+    assert result == "This is  a multi-part  summary."
+
+
+def test_extract_summary_from_banner_empty_content():
+    """Test extracting summary from empty content"""
+    result = articles_news.extract_summary_from_banner({})
+    assert result == ""
+
+    result = articles_news.extract_summary_from_banner(None)
+    assert result == ""
+
+
+def test_extract_summary_from_banner_no_paragraphs():
+    """Test extracting summary when there are no paragraphs"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "heading",
+                        "content": [{"type": "text", "text": "Only heading"}],
+                    }
+                ],
+            },
+            {
+                "type": "image",
+                "attrs": {"src": "http://example.com/image.jpg"},
+            },
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == ""
+
+
+def test_extract_summary_from_banner_empty_paragraphs():
+    """Test extracting summary when paragraphs are empty"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": "   "}],
+                    }
+                ],
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Non-empty paragraph."}],
+            },
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    # Should skip empty/whitespace-only banner paragraph and use first non-empty
+    assert result == "Non-empty paragraph."
+
+
 def test_transform(mock_articles):
     """Test full transform pipeline"""
     articles_data = articles_news.extract()
@@ -289,6 +462,7 @@ def test_extract_single_article():
         content = {"blocks": [{"text": "Test content"}]}
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
+        publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
     result = articles_news.extract_single_article(MockArticle())
@@ -319,6 +493,7 @@ def test_transform_single_article():
         },
         "user": MockUser(),
         "created_on": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
+        "publish_date": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     }
 
     result = articles_news.transform_single_article(article_data)
@@ -361,6 +536,7 @@ def test_sync_single_article_to_news(mocker):
         is_published = True
         created_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         updated_on = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
+        publish_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         user = User()
 
     # Sync the article

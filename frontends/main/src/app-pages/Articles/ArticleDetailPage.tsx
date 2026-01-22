@@ -31,10 +31,7 @@ export const ArticleDetailPage = ({
   learningResourceIds?: number[]
 }) => {
   const { data: article, isLoading } = useArticleDetailRetrieve(articleId)
-
-  const showArticleDetail = useFeatureFlagEnabled(
-    FeatureFlags.ArticleEditorView,
-  )
+  const showArticleDetail = useFeatureFlagEnabled(FeatureFlags.ArticleView)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   /* Ensure queries are accessed during loading/flag check.
