@@ -141,8 +141,8 @@ describe("ArticleListingPage", () => {
 
   test("displays article summaries with HTML stripped", async () => {
     const newsWithHtml = newsEvents.newsItems({ count: 1 })
-    newsWithHtml.results[0].summary =
-      "<p>This is a <strong>test</strong> summary</p>"
+    // Summaries are now cleaned by the backend, so they come without HTML
+    newsWithHtml.results[0].summary = "This is a test summary"
 
     setMockResponse.get(
       expect.stringContaining(urls.newsEvents.list()),
@@ -155,11 +155,10 @@ describe("ArticleListingPage", () => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
     })
 
-    // HTML tags should be stripped
+    // Summary should be displayed as plain text
     expect(
       screen.getAllByText(/This is a test summary/i).length,
     ).toBeGreaterThan(0)
-    expect(screen.queryByText(/<p>/)).not.toBeInTheDocument()
   })
 
   test("pagination navigates to next page", async () => {
