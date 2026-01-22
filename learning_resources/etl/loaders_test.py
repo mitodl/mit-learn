@@ -787,13 +787,23 @@ def test_load_course_fetch_only(mocker, course_exists):
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.parametrize("status", [RunStatus.archived.value, RunStatus.current.value])
 @pytest.mark.parametrize("certification", [True, False])
-def test_load_run(run_exists, status, certification):
+def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
+    today = now_in_utc()
+    mock_content_task = mocker.patch(
+        "learning_resources.tasks.get_content_tasks",
+        return_value=mocker.Mock(delay=mocker.Mock()),
+    )
     course = LearningResourceFactory.create(
-        is_course=True, runs=[], certification=certification
+        is_course=True,
+        runs=[],
+        certification=certification,
+        etl_source=ETLSource.xpro.value,
     )
     learning_resource_run = (
-        LearningResourceRunFactory.create(learning_resource=course)
+        LearningResourceRunFactory.create(
+            learning_resource=course,
+        )
         if run_exists
         else LearningResourceRunFactory.build()
     )
@@ -802,6 +812,8 @@ def test_load_run(run_exists, status, certification):
         LearningResourceRunFactory.build(
             run_id=learning_resource_run.run_id,
             prices=["70.00", "20.00"],
+            enrollment_start=today - timedelta(days=30),
+            enrollment_end=today + timedelta(days=30),
         )
     )
     props["status"] = status
@@ -834,6 +846,14 @@ def test_load_run(run_exists, status, certification):
     )
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
+
+    if run_exists:
+        mock_content_task.assert_not_called()
+    else:
+        mock_content_task.assert_called_once_with(
+            etl_source=course.etl_source, learning_resource_ids=[course.id]
+        )
+        mock_content_task.return_value.delay.assert_called_once()
 
 
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])

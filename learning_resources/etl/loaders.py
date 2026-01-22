@@ -18,6 +18,7 @@ from learning_resources.etl.constants import (
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
+    ETLSource,
     ProgramLoaderConfig,
     ResourceNextRunConfig,
 )
@@ -322,7 +323,7 @@ def load_run(
     with transaction.atomic():
         (
             learning_resource_run,
-            _,
+            created,
         ) = LearningResourceRun.objects.select_for_update().update_or_create(
             learning_resource=learning_resource,
             run_id=run_id,
@@ -331,6 +332,24 @@ def load_run(
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
+        if (
+            created
+            and learning_resource_run == learning_resource.best_run
+            and learning_resource.etl_source
+            in (
+                ETLSource.mit_edx.value,
+                ETLSource.mitxonline.value,
+                ETLSource.xpro.value,
+            )
+        ):
+            # webhook may have been sent before run was created
+            # so trigger a contentfile ingestion for the course.
+            from learning_resources.tasks import get_content_tasks
+
+            get_content_tasks(
+                etl_source=learning_resource.etl_source,
+                learning_resource_ids=[learning_resource.id],
+            ).delay()
     return learning_resource_run
 
 
