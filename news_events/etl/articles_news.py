@@ -239,7 +239,7 @@ def extract_summary_from_banner(content_json: dict) -> str:
     return _find_first_paragraph(content_array)
 
 
-def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901, PLR0912
+def extract_image_from_content(content_json: dict) -> dict | None:  # noqa: C901
     """
     Extract the first image from JSON content structure.
 
