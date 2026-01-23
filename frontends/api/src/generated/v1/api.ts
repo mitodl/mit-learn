@@ -1226,471 +1226,6 @@ export interface CourseLearningMaterialRequest {
   content_tags?: Array<string> | null
 }
 /**
- * Serializer for Article resources
- * @export
- * @interface CourseLearningMaterialResource
- */
-export interface CourseLearningMaterialResource {
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  id: number
-  /**
-   *
-   * @type {Array<LearningResourceTopic>}
-   * @memberof CourseLearningMaterialResource
-   */
-  topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  position: number | null
-  /**
-   *
-   * @type {LearningResourceOfferor}
-   * @memberof CourseLearningMaterialResource
-   */
-  offered_by: LearningResourceOfferor | null
-  /**
-   *
-   * @type {LearningResourcePlatform}
-   * @memberof CourseLearningMaterialResource
-   */
-  platform: LearningResourcePlatform | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResource
-   */
-  course_feature: Array<string> | null
-  /**
-   *
-   * @type {Array<LearningResourceDepartment>}
-   * @memberof CourseLearningMaterialResource
-   */
-  departments: Array<LearningResourceDepartment> | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  certification: boolean
-  /**
-   *
-   * @type {CourseResourceCertificationType}
-   * @memberof CourseLearningMaterialResource
-   */
-  certification_type: CourseResourceCertificationType
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResource
-   */
-  prices: Array<string>
-  /**
-   *
-   * @type {Array<LearningResourcePrice>}
-   * @memberof CourseLearningMaterialResource
-   */
-  resource_prices: Array<LearningResourcePrice>
-  /**
-   *
-   * @type {Array<LearningResourceRun>}
-   * @memberof CourseLearningMaterialResource
-   */
-  runs: Array<LearningResourceRun> | null
-  /**
-   *
-   * @type {LearningResourceImage}
-   * @memberof CourseLearningMaterialResource
-   */
-  image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof CourseLearningMaterialResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof CourseLearningMaterialResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  views: number
-  /**
-   *
-   * @type {Array<CourseResourceDeliveryInner>}
-   * @memberof CourseLearningMaterialResource
-   */
-  delivery: Array<CourseResourceDeliveryInner>
-  /**
-   * Return true if the resource is free/has a free option
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  free: boolean
-  /**
-   * Return the resource category of the resource
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  resource_category: string
-  /**
-   *
-   * @type {Array<CourseResourceFormatInner>}
-   * @memberof CourseLearningMaterialResource
-   */
-  format: Array<CourseResourceFormatInner>
-  /**
-   *
-   * @type {Array<CourseResourcePaceInner>}
-   * @memberof CourseLearningMaterialResource
-   */
-  pace: Array<CourseResourcePaceInner>
-  /**
-   *
-   * @type {LearningResourceRelationshipChildField}
-   * @memberof CourseLearningMaterialResource
-   */
-  children: LearningResourceRelationshipChildField | null
-  /**
-   * Return the best run id for the resource, if it has runs
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  best_run_id: number | null
-  /**
-   *
-   * @type {CourseLearningMaterialResourceResourceTypeEnum}
-   * @memberof CourseLearningMaterialResource
-   */
-  resource_type: CourseLearningMaterialResourceResourceTypeEnum
-  /**
-   *
-   * @type {CourseLearningMaterial}
-   * @memberof CourseLearningMaterialResource
-   */
-  course_learning_material: CourseLearningMaterial
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  full_description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  last_modified?: string | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  published?: boolean
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResource
-   */
-  languages?: Array<string> | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  url?: string | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResource
-   */
-  ocw_topics?: Array<string>
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  professional: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  next_start_date?: string | null
-  /**
-   *
-   * @type {AvailabilityEnum}
-   * @memberof CourseLearningMaterialResource
-   */
-  availability?: AvailabilityEnum | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  completeness?: number
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  license_cc?: boolean
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  test_mode?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  continuing_ed_credits?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  location?: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  duration?: string
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  min_weeks?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  max_weeks?: number | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResource
-   */
-  time_commitment?: string
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  min_weekly_hours?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResource
-   */
-  max_weekly_hours?: number | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResource
-   */
-  require_summaries: boolean
-}
-
-/**
- * Serializer for Article resources
- * @export
- * @interface CourseLearningMaterialResourceRequest
- */
-export interface CourseLearningMaterialResourceRequest {
-  /**
-   *
-   * @type {Array<LearningResourceTopic>}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  full_description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  last_modified?: string | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  published?: boolean
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  languages?: Array<string> | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  url?: string | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  ocw_topics?: Array<string>
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  next_start_date?: string | null
-  /**
-   *
-   * @type {AvailabilityEnum}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  availability?: AvailabilityEnum | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  completeness?: number
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  license_cc?: boolean
-  /**
-   *
-   * @type {boolean}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  test_mode?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  continuing_ed_credits?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  location?: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  duration?: string
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  min_weeks?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  max_weeks?: number | null
-  /**
-   *
-   * @type {string}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  time_commitment?: string
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  min_weekly_hours?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof CourseLearningMaterialResourceRequest
-   */
-  max_weekly_hours?: number | null
-}
-
-/**
- *
- * @export
- * @enum {string}
- */
-
-export const CourseLearningMaterialResourceResourceTypeEnumDescriptions = {
-  lecture_note: "",
-} as const
-
-export const CourseLearningMaterialResourceResourceTypeEnum = {
-  LectureNote: "lecture_note",
-} as const
-
-export type CourseLearningMaterialResourceResourceTypeEnum =
-  (typeof CourseLearningMaterialResourceResourceTypeEnum)[keyof typeof CourseLearningMaterialResourceResourceTypeEnum]
-
-/**
  * Serializer for CourseNumber
  * @export
  * @interface CourseNumber
@@ -3125,10 +2660,21 @@ export type LearningPathResourceResourceTypeEnum =
  * @export
  */
 export type LearningResource =
+  | ({
+      resource_type: "Lecture Audio"
+    } & LectureAudioCourseLearningMaterialResource)
+  | ({
+      resource_type: "Lecture Notes"
+    } & LectureNoteCourseLearningMaterialResource)
+  | ({
+      resource_type: "Open Textbooks"
+    } & OpenTextbookCourseLearningMaterialResource)
+  | ({ resource_type: "Practice" } & PracticeCourseLearningMaterialResource)
+  | ({ resource_type: "Readings" } & ReadingsCourseLearningMaterialResource)
+  | ({ resource_type: "Video" } & VideoCourseLearningMaterialResource)
   | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
-  | ({ resource_type: "lecture_note" } & CourseLearningMaterialResource)
   | ({ resource_type: "podcast" } & PodcastResource)
   | ({ resource_type: "podcast_episode" } & PodcastEpisodeResource)
   | ({ resource_type: "program" } & ProgramResource)
@@ -3877,10 +3423,25 @@ export interface LearningResourceRelationshipChildField {
  * @export
  */
 export type LearningResourceRequest =
+  | ({
+      resource_type: "Lecture Audio"
+    } & LectureAudioCourseLearningMaterialResourceRequest)
+  | ({
+      resource_type: "Lecture Notes"
+    } & LectureNoteCourseLearningMaterialResourceRequest)
+  | ({
+      resource_type: "Open Textbooks"
+    } & OpenTextbookCourseLearningMaterialResourceRequest)
+  | ({
+      resource_type: "Practice"
+    } & PracticeCourseLearningMaterialResourceRequest)
+  | ({
+      resource_type: "Readings"
+    } & ReadingsCourseLearningMaterialResourceRequest)
+  | ({ resource_type: "Video" } & VideoCourseLearningMaterialResourceRequest)
   | ({ resource_type: "article" } & ArticleResourceRequest)
   | ({ resource_type: "course" } & CourseResourceRequest)
   | ({ resource_type: "learning_path" } & LearningPathResourceRequest)
-  | ({ resource_type: "lecture_note" } & CourseLearningMaterialResourceRequest)
   | ({ resource_type: "podcast" } & PodcastResourceRequest)
   | ({ resource_type: "podcast_episode" } & PodcastEpisodeResourceRequest)
   | ({ resource_type: "program" } & ProgramResourceRequest)
@@ -4415,6 +3976,938 @@ export interface LearningResourcesSearchResponse {
   metadata: ContentFileSearchResponseMetadata
 }
 /**
+ * Serializer for LearningResource, minus program
+ * @export
+ * @interface LectureAudioCourseLearningMaterialResource
+ */
+export interface LectureAudioCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {LectureAudioCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  resource_type: LectureAudioCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for LearningResource, minus program
+ * @export
+ * @interface LectureAudioCourseLearningMaterialResourceRequest
+ */
+export interface LectureAudioCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureAudioCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const LectureAudioCourseLearningMaterialResourceResourceTypeEnumDescriptions =
+  {
+    "Lecture Audio": "",
+  } as const
+
+export const LectureAudioCourseLearningMaterialResourceResourceTypeEnum = {
+  LectureAudio: "Lecture Audio",
+} as const
+
+export type LectureAudioCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof LectureAudioCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof LectureAudioCourseLearningMaterialResourceResourceTypeEnum]
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Lecture Notes
+ * @export
+ * @interface LectureNoteCourseLearningMaterialResource
+ */
+export interface LectureNoteCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {LectureNoteCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  resource_type: LectureNoteCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Lecture Notes
+ * @export
+ * @interface LectureNoteCourseLearningMaterialResourceRequest
+ */
+export interface LectureNoteCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof LectureNoteCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const LectureNoteCourseLearningMaterialResourceResourceTypeEnumDescriptions =
+  {
+    "Lecture Notes": "",
+  } as const
+
+export const LectureNoteCourseLearningMaterialResourceResourceTypeEnum = {
+  LectureNotes: "Lecture Notes",
+} as const
+
+export type LectureNoteCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof LectureNoteCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof LectureNoteCourseLearningMaterialResourceResourceTypeEnum]
+
+/**
  * * `undergraduate` - Undergraduate * `graduate` - Graduate * `high_school` - High School * `noncredit` - Non-Credit * `advanced` - Advanced * `intermediate` - Intermediate * `introductory` - Introductory
  * @export
  * @enum {string}
@@ -4590,6 +5083,472 @@ export const OfferedByEnum = {
 } as const
 
 export type OfferedByEnum = (typeof OfferedByEnum)[keyof typeof OfferedByEnum]
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Open Textbook
+ * @export
+ * @interface OpenTextbookCourseLearningMaterialResource
+ */
+export interface OpenTextbookCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {OpenTextbookCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  resource_type: OpenTextbookCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Open Textbook
+ * @export
+ * @interface OpenTextbookCourseLearningMaterialResourceRequest
+ */
+export interface OpenTextbookCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof OpenTextbookCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const OpenTextbookCourseLearningMaterialResourceResourceTypeEnumDescriptions =
+  {
+    "Open Textbooks": "",
+  } as const
+
+export const OpenTextbookCourseLearningMaterialResourceResourceTypeEnum = {
+  OpenTextbooks: "Open Textbooks",
+} as const
+
+export type OpenTextbookCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof OpenTextbookCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof OpenTextbookCourseLearningMaterialResourceResourceTypeEnum]
 
 /**
  *
@@ -7075,6 +8034,472 @@ export type PodcastResourceResourceTypeEnum =
   (typeof PodcastResourceResourceTypeEnum)[keyof typeof PodcastResourceResourceTypeEnum]
 
 /**
+ * Serializer for CourseLearningMaterial resources with resource_type=Practice
+ * @export
+ * @interface PracticeCourseLearningMaterialResource
+ */
+export interface PracticeCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {PracticeCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  resource_type: PracticeCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Practice
+ * @export
+ * @interface PracticeCourseLearningMaterialResourceRequest
+ */
+export interface PracticeCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof PracticeCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const PracticeCourseLearningMaterialResourceResourceTypeEnumDescriptions =
+  {
+    Practice: "",
+  } as const
+
+export const PracticeCourseLearningMaterialResourceResourceTypeEnum = {
+  Practice: "Practice",
+} as const
+
+export type PracticeCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof PracticeCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof PracticeCourseLearningMaterialResourceResourceTypeEnum]
+
+/**
  * * `private` - private * `unlisted` - unlisted
  * @export
  * @enum {string}
@@ -7803,6 +9228,472 @@ export type ProgramResourceResourceTypeEnum =
   (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
 
 /**
+ * Serializer for CourseLearningMaterial resources with resource_type=Readings
+ * @export
+ * @interface ReadingsCourseLearningMaterialResource
+ */
+export interface ReadingsCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {ReadingsCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  resource_type: ReadingsCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for CourseLearningMaterial resources with resource_type=Readings
+ * @export
+ * @interface ReadingsCourseLearningMaterialResourceRequest
+ */
+export interface ReadingsCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof ReadingsCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const ReadingsCourseLearningMaterialResourceResourceTypeEnumDescriptions =
+  {
+    Readings: "",
+  } as const
+
+export const ReadingsCourseLearningMaterialResourceResourceTypeEnum = {
+  Readings: "Readings",
+} as const
+
+export type ReadingsCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof ReadingsCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof ReadingsCourseLearningMaterialResourceResourceTypeEnum]
+
+/**
  * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
  * @export
  * @enum {string}
@@ -8518,6 +10409,471 @@ export interface VideoChannelRequest {
    */
   title: string
 }
+/**
+ * Serializer for LearningResource, minus program
+ * @export
+ * @interface VideoCourseLearningMaterialResource
+ */
+export interface VideoCourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {VideoCourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  resource_type: VideoCourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ * Serializer for LearningResource, minus program
+ * @export
+ * @interface VideoCourseLearningMaterialResourceRequest
+ */
+export interface VideoCourseLearningMaterialResourceRequest {
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof VideoCourseLearningMaterialResourceRequest
+   */
+  max_weekly_hours?: number | null
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const VideoCourseLearningMaterialResourceResourceTypeEnumDescriptions = {
+  Video: "",
+} as const
+
+export const VideoCourseLearningMaterialResourceResourceTypeEnum = {
+  Video: "Video",
+} as const
+
+export type VideoCourseLearningMaterialResourceResourceTypeEnum =
+  (typeof VideoCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof VideoCourseLearningMaterialResourceResourceTypeEnum]
+
 /**
  * Serializer for the VideoPlaylist model
  * @export
