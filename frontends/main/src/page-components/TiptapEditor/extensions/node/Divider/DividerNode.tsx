@@ -50,7 +50,7 @@ const StyledDivider = styled.div(({ theme }) => ({
 export const DividerViewer = () => <StyledDivider />
 
 const DividerWrapper = ({ editor, getPos }: ReactNodeViewProps) => {
-  const select = (e: React.MouseEvent) => {
+  const selectNode = (e: React.MouseEvent) => {
     const pos = getPos()
     if (typeof pos !== "number") return
 
@@ -65,7 +65,7 @@ const DividerWrapper = ({ editor, getPos }: ReactNodeViewProps) => {
       tabIndex={0}
       role="separator"
       aria-orientation="horizontal"
-      onClick={select}
+      onClick={selectNode}
     >
       <StyledDivider />
     </NodeViewWrapper>

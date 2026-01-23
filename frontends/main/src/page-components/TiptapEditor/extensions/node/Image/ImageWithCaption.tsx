@@ -364,7 +364,7 @@ export function ImageWithCaption({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
-  const handleWrapperClick = (e: React.MouseEvent) => {
+  const selectNode = (e: React.MouseEvent) => {
     if (!isEditable) return
     const target = e.target as HTMLElement
     if (
@@ -381,7 +381,7 @@ export function ImageWithCaption({
   }
 
   return (
-    <NodeViewWrapper data-type="image-upload" onClick={handleWrapperClick}>
+    <NodeViewWrapper data-type="image-upload" onClick={selectNode}>
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">

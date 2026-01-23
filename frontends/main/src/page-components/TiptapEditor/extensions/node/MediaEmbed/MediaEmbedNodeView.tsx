@@ -1,7 +1,9 @@
 import React, { useState } from "react"
+import styled from "@emotion/styled"
 import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
-import styled from "@emotion/styled"
+import { RiCloseLargeLine } from "@remixicon/react"
+import { ActionButton } from "@mitodl/smoot-design"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -144,30 +146,27 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper, {
       borderWidth: "1px 0",
     },
   },
+  ".node-mediaEmbed &": {
+    cursor: "pointer",
+  },
 }))
 
-const RemoveButton = styled("button")(({ theme }) => ({
+const RemoveButton = styled(ActionButton)(({ theme }) => ({
   position: "absolute",
-  top: -7,
-  right: -7,
+  top: "-7px",
+  right: "-7px",
   zIndex: 2,
 
-  background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "50%",
-  width: 24,
-  height: 24,
-
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
-
-  opacity: 0, // 👈 hidden
-  pointerEvents: "none", // 👈 not clickable when hidden
-  transition: "opacity 0.15s ease",
-
-  "&:hover": {
-    background: theme.custom.colors.lightGray1,
+  display: "none",
+  ".node-mediaEmbed:hover &": {
+    display: "flex",
+  },
+  ".ProseMirror-selectednode:hover &": {
+    top: "-12px",
+    right: "-14px",
+  },
+  ".layout-full &, .ProseMirror-selectednode .layout-full &": {
+    right: "7px",
   },
 }))
 
@@ -195,6 +194,22 @@ export const MediaEmbedNodeView = ({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
+  const selectNode = (e: React.MouseEvent) => {
+    if (!editable) return
+    const target = e.target as HTMLElement
+    if (
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest('[aria-label="Close"]')
+    ) {
+      return
+    }
+    const pos = getPos()
+    if (typeof pos !== "number") return
+
+    editor.chain().focus().setNodeSelection(pos).run()
+  }
+
   return (
     <StyledNodeViewWrapper
       layout={layout}
@@ -202,15 +217,17 @@ export const MediaEmbedNodeView = ({
       className={`layout-${layout} media-embed ${layout}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
+      onClick={selectNode}
     >
       {editable && (
         <RemoveButton
-          type="button"
-          aria-label="Remove course card"
+          variant="primary"
+          edge="circular"
+          size="small"
           onClick={handleRemove}
-          className="remove-button"
+          aria-label="Close"
         >
-          ×
+          <RiCloseLargeLine />
         </RemoveButton>
       )}
       {/* Toolbar — identical to ImageUpload version */}
@@ -240,7 +257,13 @@ export const MediaEmbedNodeView = ({
       )}
 
       <div className="media-container">
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        <iframe
+          src={src}
+          frameBorder="0"
+          allowFullScreen
+          title={caption}
+          inert={editable}
+        />
       </div>
 
       <div className="media-caption">

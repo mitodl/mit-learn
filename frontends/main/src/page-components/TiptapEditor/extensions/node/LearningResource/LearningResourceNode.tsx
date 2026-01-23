@@ -40,9 +40,9 @@ const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
     textDecoration: "none",
   },
 
-  ".learning-resource-node[data-editable='true'] &": {
+  ".node-learningResource &": {
     pointerEvents: "none",
-    userSelect: "auto",
+    userSelect: "none",
     cursor: "default",
   },
 }))
@@ -54,7 +54,7 @@ const RemoveButton = styled(ActionButton)({
   zIndex: 2,
   display: "none",
   pointerEvents: "auto",
-  ".learning-resource-node:hover &": {
+  ".node-learningResource:hover &": {
     display: "flex",
   },
 })
@@ -105,7 +105,7 @@ export const LearningResourceListCardWrapper = ({
   }
 
   // Handle select on click as the resource card pointer events are disabled in edit mode
-  const handleWrapperClick = (e: React.MouseEvent) => {
+  const selectNode = (e: React.MouseEvent) => {
     if (!editable) return
     const target = e.target as HTMLElement
     if (target.closest('[aria-label="Close"]')) return
@@ -118,11 +118,7 @@ export const LearningResourceListCardWrapper = ({
   }
 
   return (
-    <NodeWrapper
-      className="learning-resource-node"
-      data-editable={editable ? "true" : "false"}
-      onClick={editable ? handleWrapperClick : undefined}
-    >
+    <NodeWrapper onClick={selectNode}>
       {editable && (
         <RemoveButton
           variant="primary"
