@@ -28,4 +28,4 @@ export const PostHogEvents = {
 } as const
 
 export const DigitalCredentialsFAQLink =
-  "https://mitlearn.zendesk.com/hc/en-us/sections/45261233162267-About-Digital-Credentials"
+  "https://support.learn.mit.edu/hc/en-us/sections/45261233162267-About-Digital-Credentials"
