@@ -877,7 +877,7 @@ def load_learning_material(
     resource_type = resource_types[0]
 
     with transaction.atomic():
-        learning_resource = LearningResource.objects.update_or_create(
+        learning_resource, _ = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             etl_source=course_run.learning_resource.etl_source,
             platform=course_run.learning_resource.platform,
@@ -890,10 +890,10 @@ def load_learning_material(
             },
         )
 
-        learning_material, _ = CourseLearningMaterial.update_or_create(
-            content_file=content_file,
+        learning_material, _ = CourseLearningMaterial.objects.update_or_create(
             learning_resource=learning_resource,
-            defaults={"content_tags": learning_material_tags},
+            content_file=content_file,
+            defaults={"content_tags": list(learning_material_tags)},
         )
         return learning_material.id
 

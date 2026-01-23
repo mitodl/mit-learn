@@ -1139,7 +1139,11 @@ class LearningResourceSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         """Serialize a LearningResource based on resource_type"""
-        serializer_cls = self.serializer_cls_mapping[instance.resource_type]
+        serializer_cls = (
+            LearningResourceBaseSerializer
+            if instance.course_learning_material
+            else self.serializer_cls_mapping[instance.resource_type]
+        )
 
         return serializer_cls(instance=instance, context=self.context).data
 
