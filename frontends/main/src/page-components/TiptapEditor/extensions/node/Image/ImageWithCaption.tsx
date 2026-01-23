@@ -394,7 +394,6 @@ export function ImageWithCaption({
             </button>
             {canExpand && (
               <>
-                {" "}
                 <button
                   className={layout === "wide" ? "active" : ""}
                   onClick={() => updateAttributes({ layout: "wide" })}
