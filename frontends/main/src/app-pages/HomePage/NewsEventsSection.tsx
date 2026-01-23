@@ -134,6 +134,9 @@ const HeadingContainer = styled.div`
   display: flex;
   width: 100%;
   margin-top: 40px;
+  ${theme.breakpoints.down("sm")} {
+    margin-top: 0;
+  }
 `
 
 const EventDay = styled.p`
@@ -289,6 +292,13 @@ const NewsEventsSection: React.FC = () => {
                 />
               ))}
             </StoriesSlider>
+            {showArticleList && (
+              <HeadingContainer>
+                <SeeAllButton href="/articles/" size="large" responsive>
+                  See all stories
+                </SeeAllButton>
+              </HeadingContainer>
+            )}
           </MobileContainer>
           <MobileContainer>
             <Typography component="h3" variant="h4">

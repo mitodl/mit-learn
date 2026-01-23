@@ -347,12 +347,12 @@ def frontend_absolute_url(relative_path: str) -> str:
     return urljoin(settings.APP_BASE_URL, relative_path)
 
 
-def clean_data(data: str) -> str:
+def clean_data(data: str, tags=None) -> str:
     """Remove unwanted html tags from text"""
+    if tags is None:
+        tags = ALLOWED_HTML_TAGS
     if data:
-        return nh3.clean(
-            data, tags=ALLOWED_HTML_TAGS, attributes=ALLOWED_HTML_ATTRIBUTES
-        )
+        return nh3.clean(data, tags=tags, attributes=ALLOWED_HTML_ATTRIBUTES)
     return ""
 
 
