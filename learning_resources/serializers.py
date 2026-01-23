@@ -1370,6 +1370,9 @@ class CourseLearningMaterialSerializer(serializers.ModelSerializer):
 class CourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for Article resources"""
 
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.lecture_note.name
+    )
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
 
 

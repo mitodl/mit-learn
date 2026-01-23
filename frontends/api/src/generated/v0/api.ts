@@ -1182,6 +1182,350 @@ export interface Course {
   course_numbers: Array<CourseNumber> | null
 }
 /**
+ * Serializer for the CourseLearningMaterial model
+ * @export
+ * @interface CourseLearningMaterial
+ */
+export interface CourseLearningMaterial {
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterial
+   */
+  id: number
+  /**
+   *
+   * @type {ContentFile}
+   * @memberof CourseLearningMaterial
+   */
+  content_file: ContentFile | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseLearningMaterial
+   */
+  content_tags?: Array<string> | null
+}
+/**
+ * Serializer for Article resources
+ * @export
+ * @interface CourseLearningMaterialResource
+ */
+export interface CourseLearningMaterialResource {
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof CourseLearningMaterialResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof CourseLearningMaterialResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof CourseLearningMaterialResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseLearningMaterialResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof CourseLearningMaterialResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof CourseLearningMaterialResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseLearningMaterialResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof CourseLearningMaterialResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof CourseLearningMaterialResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof CourseLearningMaterialResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {Array<MicroLearningPathRelationship>}
+   * @memberof CourseLearningMaterialResource
+   */
+  learning_path_parents: Array<MicroLearningPathRelationship>
+  /**
+   *
+   * @type {Array<MicroUserListRelationship>}
+   * @memberof CourseLearningMaterialResource
+   */
+  user_list_parents: Array<MicroUserListRelationship>
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof CourseLearningMaterialResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof CourseLearningMaterialResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof CourseLearningMaterialResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof CourseLearningMaterialResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {CourseLearningMaterialResourceResourceTypeEnum}
+   * @memberof CourseLearningMaterialResource
+   */
+  resource_type: CourseLearningMaterialResourceResourceTypeEnum
+  /**
+   *
+   * @type {CourseLearningMaterial}
+   * @memberof CourseLearningMaterialResource
+   */
+  course_learning_material: CourseLearningMaterial
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseLearningMaterialResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof CourseLearningMaterialResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof CourseLearningMaterialResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseLearningMaterialResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof CourseLearningMaterialResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof CourseLearningMaterialResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const CourseLearningMaterialResourceResourceTypeEnumDescriptions = {
+  lecture_note: "",
+} as const
+
+export const CourseLearningMaterialResourceResourceTypeEnum = {
+  LectureNote: "lecture_note",
+} as const
+
+export type CourseLearningMaterialResourceResourceTypeEnum =
+  (typeof CourseLearningMaterialResourceResourceTypeEnum)[keyof typeof CourseLearningMaterialResourceResourceTypeEnum]
+
+/**
  * Serializer for CourseNumber
  * @export
  * @interface CourseNumber
@@ -2584,6 +2928,7 @@ export type LearningResource =
   | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
+  | ({ resource_type: "lecture_note" } & CourseLearningMaterialResource)
   | ({ resource_type: "podcast" } & PodcastResource)
   | ({ resource_type: "podcast_episode" } & PodcastEpisodeResource)
   | ({ resource_type: "program" } & ProgramResource)
@@ -5429,7 +5774,7 @@ export type ProgramResourceResourceTypeEnum =
   (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
 
 /**
- * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos
+ * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
  * @export
  * @enum {string}
  */
@@ -5439,6 +5784,7 @@ export const RelationTypeEnumDescriptions = {
   LEARNING_PATH_ITEMS: "Learning Path Items",
   PODCAST_EPISODES: "Podcast Episodes",
   PLAYLIST_VIDEOS: "Playlist Videos",
+  COURSE_LEARNING_MATERIALS: "Course Learning Materials",
 } as const
 
 export const RelationTypeEnum = {
@@ -5458,6 +5804,10 @@ export const RelationTypeEnum = {
    * Playlist Videos
    */
   PlaylistVideos: "PLAYLIST_VIDEOS",
+  /**
+   * Course Learning Materials
+   */
+  CourseLearningMaterials: "COURSE_LEARNING_MATERIALS",
 } as const
 
 export type RelationTypeEnum =
@@ -11998,7 +12348,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -12158,7 +12508,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -12395,8 +12745,8 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
 
   /**
-   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article
-   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article'>}
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'lecture_note' | 'readings' | 'practice' | 'open_textbook' | 'lecture_audio'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
@@ -12597,6 +12947,11 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   Video: "video",
   VideoPlaylist: "video_playlist",
   Article: "article",
+  LectureNote: "lecture_note",
+  Readings: "readings",
+  Practice: "practice",
+  OpenTextbook: "open_textbook",
+  LectureAudio: "lecture_audio",
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
