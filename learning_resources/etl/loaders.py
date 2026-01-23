@@ -836,6 +836,13 @@ def load_content_files(
             file.published = False
             file.save()
 
+            learning_material = CourseLearningMaterial.objects.filter(
+                content_file=file
+            ).last()
+            if learning_material:
+                learning_material.published = False
+                learning_material.save()
+
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
         content_files_loaded_actions(run=course_run)
@@ -881,6 +888,7 @@ def load_learning_material(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             etl_source=course_run.learning_resource.etl_source,
             platform=course_run.learning_resource.platform,
+            offered_by=course_run.learning_resource.offered_by,
             defaults={
                 "resource_type": resource_type,
                 "title": content_file.title,

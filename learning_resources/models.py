@@ -1255,7 +1255,7 @@ class CourseLearningMaterial(LearningResourceDetailModel):
     )
 
     def __str__(self):
-        return f"CourseLearningMaterial: {self.readable_id}"
+        return f"CourseLearningMaterial: {self.learning_resource.readable_id}"
 
 
 class VideoChannel(TimestampedModel):

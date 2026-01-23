@@ -1140,8 +1140,8 @@ class LearningResourceSerializer(serializers.Serializer):
     def to_representation(self, instance):
         """Serialize a LearningResource based on resource_type"""
         serializer_cls = (
-            LearningResourceBaseSerializer
-            if instance.course_learning_material
+            CourseLearningMaterialResourceSerializer
+            if hasattr(instance, "course_learning_material")
             else self.serializer_cls_mapping[instance.resource_type]
         )
 
@@ -1355,6 +1355,22 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "summary",
             "flashcards",
         ]
+
+
+class CourseLearningMaterialSerializer(serializers.ModelSerializer):
+    """Serializer for the CourseLearningMaterial model"""
+
+    content_file = ContentFileSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = models.CourseLearningMaterial
+        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+
+
+class CourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for Article resources"""
+
+    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
 
 
 class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
