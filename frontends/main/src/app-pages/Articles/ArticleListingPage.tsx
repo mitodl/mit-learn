@@ -29,7 +29,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
-import { stripHtmlAndDecode } from "@/common/utils"
+import { linkifyText } from "@/common/utils"
 import { ArticleBanner } from "./ArticleBanner"
 
 const PAGE_SIZE = 20
@@ -173,6 +173,16 @@ const MainStorySummary = styled.p`
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: break-word;
+
+  a {
+    color: ${theme.custom.colors.white};
+    text-decoration: underline;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
   ${theme.breakpoints.down("md")} {
     ${{ ...theme.typography.body1 }}
   }
@@ -240,11 +250,13 @@ const StoryContent = styled.div`
   flex: 1;
   order: 1;
   min-height: 180px;
+  min-width: 0;
+  overflow: hidden;
 
   ${theme.breakpoints.down("sm")} {
     order: 1;
     min-height: auto;
-    max-width: 100%;
+    min-width: 0;
     justify-content: space-between;
     gap: 8px;
   }
@@ -291,6 +303,15 @@ const StorySummary = styled.p`
   overflow: hidden;
   line-height: 1.5;
   overflow-wrap: break-word;
+
+  a {
+    color: ${theme.custom.colors.red};
+    text-decoration: underline;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 
   ${theme.breakpoints.down("sm")} {
     ${{ ...theme.typography.body3 }}
@@ -461,9 +482,9 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
             <Link href={item.url}>{item.title}</Link>
           </MainStoryTitle>
           {item.summary && (
-            <MainStorySummary>
-              {stripHtmlAndDecode(item.summary)}
-            </MainStorySummary>
+            <MainStorySummary
+              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+            />
           )}
         </MainStoryContentContainer>
         <MainStoryDate variant="body3">
@@ -484,7 +505,9 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
             <Link href={item.url}>{item.title}</Link>
           </StoryTitle>
           {item.summary && (
-            <StorySummary>{stripHtmlAndDecode(item.summary)}</StorySummary>
+            <StorySummary
+              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+            />
           )}
         </RegularStoryTitleWrapper>
         <StoryDate variant="body3">

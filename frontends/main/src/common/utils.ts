@@ -12,15 +12,27 @@ const matchOrganizationBySlug =
     return organization.slug.replace("org-", "") === orgSlug
   }
 
-// Utility function to strip HTML tags and decode HTML entities using DOMPurify
-const stripHtmlAndDecode = (html: string): string => {
-  if (!html) return ""
-
-  // Remove URLs that might be left from embed code or inline links
-  const withoutUrls = html.replace(/https?:\/\/[^\s]+/g, "")
-
+// Utility function to collapse whitespace
+const collapseWhitespace = (text: string): string => {
+  if (!text) return ""
   // Collapse multiple whitespace into single space and trim
-  return withoutUrls.replace(/\s+/g, " ").trim()
+  return text.replace(/\s+/g, " ").trim()
 }
 
-export { isInEnum, matchOrganizationBySlug, stripHtmlAndDecode }
+// Convert URLs in plain text to clickable links
+const linkifyText = (text: string): string => {
+  if (!text) return ""
+  console.log("Linkifying text:", text)
+  // Regex to match URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+
+  // Replace URLs with anchor tags
+  return collapseWhitespace(
+    text.replace(
+      urlRegex,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+    ),
+  )
+}
+
+export { isInEnum, matchOrganizationBySlug, collapseWhitespace, linkifyText }
