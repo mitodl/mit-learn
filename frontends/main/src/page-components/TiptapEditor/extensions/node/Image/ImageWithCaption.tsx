@@ -6,6 +6,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
+import { ActionButton } from "@mitodl/smoot-design"
 
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
@@ -174,6 +175,10 @@ const Container = styled.figure(({ theme }) => ({
     padding: "8px",
     borderRadius: "10px",
   },
+
+  ".node-imageWithCaption &": {
+    cursor: "pointer",
+  },
 }))
 
 enum Layout {
@@ -218,6 +223,16 @@ const ImagePlaceholder = styled.div<{ layout: Layout }>(
       right: "50%",
       transform: "translateX(-50%)",
     }),
+    ".ProseMirror-selectednode &": {
+      ...(layout === Layout.wide && {
+        margin: 0,
+        width: "calc(92vw - 16px)",
+        maxWidth: "calc(1400px  - 16px)",
+      }),
+      ...(layout === Layout.full && {
+        margin: 0,
+      }),
+    },
   }),
 )
 
@@ -282,19 +297,23 @@ export function ImageWithCaptionViewer({
     </Container>
   )
 }
-const RemoveButton = styled("button")(({ theme }) => ({
+const RemoveButton = styled(ActionButton)({
   position: "absolute",
   top: "-4px",
   right: "-6px",
   zIndex: 2,
   display: "none",
-  ".ProseMirror-selectednode:hover &": {
+  ".node-imageWithCaption:hover &": {
     display: "flex",
   },
-  ".layout-full &": {
-    right: 7,
+  ".ProseMirror-selectednode:hover &": {
+    top: "-12px",
+    right: "-14px",
   },
-}))
+  ".layout-full &, .ProseMirror-selectednode .layout-full &": {
+    right: "7px",
+  },
+})
 
 export function ImageWithCaption({
   node,
@@ -345,11 +364,24 @@ export function ImageWithCaption({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
+  const handleWrapperClick = (e: React.MouseEvent) => {
+    if (!isEditable) return
+    const target = e.target as HTMLElement
+    if (
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest('[aria-label="Remove"]')
+    ) {
+      return
+    }
+    const pos = getPos()
+    if (typeof pos !== "number") return
+
+    editor.chain().focus().setNodeSelection(pos).run()
+  }
+
   return (
-    <NodeViewWrapper data-type="image-upload">
-      {isLoading && (
-        <ImagePlaceholder layout={layout} aria-label="Loading image" />
-      )}
+    <NodeViewWrapper data-type="image-upload" onClick={handleWrapperClick}>
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">
@@ -400,6 +432,9 @@ export function ImageWithCaption({
             >
               <RiCloseLargeLine />
             </RemoveButton>
+          )}
+          {isLoading && (
+            <ImagePlaceholder layout={layout} aria-label="Loading image" />
           )}
           <Image
             src={src}
