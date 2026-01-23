@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.52.0 (Released January 22, 2026)
+--------------
+
+- Resolve flashcard generation json decode error (#2867)
+- Refactor bulk contentfile ingestion (#2859)
+- Frontend Testing Instructions for LLMs (#2864)
+
 Version 0.51.2 (Released January 20, 2026)
 --------------
 

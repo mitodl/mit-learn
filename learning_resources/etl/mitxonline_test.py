@@ -3,7 +3,7 @@
 import json
 
 # pylint: disable=redefined-outer-name
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import ANY
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -27,6 +27,7 @@ from learning_resources.etl.mitxonline import (
     _transform_run,
     extract_courses,
     extract_programs,
+    is_fully_enrollable,
     parse_certificate_type,
     parse_page_attribute,
     parse_prices,
@@ -117,6 +118,10 @@ def test_mitxonline_transform_programs(
 ):
     """Test that mitxonline program data is correctly transformed into our normalized structure"""
     set_up_topics(is_mitx=True)
+
+    # Mock now_in_utc to return a date before the test data's end dates
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
 
     settings.MITX_ONLINE_PROGRAMS_API_URL = "http://localhost/test/programs/api"
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
@@ -227,16 +232,24 @@ def test_mitxonline_transform_programs(
                         )
                         > 0
                     ),
-                    "certification": bool(
-                        course_data.get("page", {}).get("page_url", None) is not None
+                    "certification": parse_certification(
+                        OFFERED_BY["code"],
+                        [
+                            _transform_run(course_run, course_data)
+                            for course_run in course_data["courseruns"]
+                        ],
                     ),
                     "certification_type": parse_certificate_type(
                         course_data["certificate_type"]
                     )
-                    if bool(
-                        course_data.get("page", {}).get("page_url", None) is not None
+                    if parse_certification(
+                        OFFERED_BY["code"],
+                        [
+                            _transform_run(course_run, course_data)
+                            for course_run in course_data["courseruns"]
+                        ],
                     )
-                    else None,
+                    else CertificationType.none.name,
                     "url": parse_page_attribute(course_data, "page_url", is_url=True),
                     "availability": course_data["availability"],
                     "format": [Format.asynchronous.name],
@@ -261,7 +274,11 @@ def test_mitxonline_transform_programs(
                                 course_run_data["is_enrollable"]
                                 and course_data["page"]["live"]
                             ),
-                            "prices": parse_prices(course_data),
+                            "prices": parse_prices(course_data)
+                            if is_fully_enrollable(
+                                course_run_data,
+                            )
+                            else [],
                             "instructors": [
                                 {"full_name": instructor["name"]}
                                 for instructor in parse_page_attribute(
@@ -269,7 +286,10 @@ def test_mitxonline_transform_programs(
                                 )
                             ],
                             "status": RunStatus.current.value
-                            if parse_page_attribute(course_data, "page_url")
+                            if (
+                                parse_page_attribute(course_data, "page_url")
+                                and is_fully_enrollable(course_run_data)
+                            )
                             else RunStatus.archived.value,
                             "availability": course_data["availability"],
                             "format": [Format.asynchronous.name],
@@ -313,9 +333,14 @@ def test_mitxonline_transform_programs(
     assert result == expected
 
 
-def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
+def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mocker):
     """Test that mitxonline courses data is correctly transformed into our normalized structure"""
     set_up_topics(is_mitx=True)
+
+    # Mock now_in_utc to return a date before the test data's end dates
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
     result = transform_courses(mock_mitxonline_courses_data["results"])
     expected = [
         {
@@ -336,6 +361,10 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
             "published": bool(
                 course_data.get("page", {}).get("page_url", None)
                 and course_data.get("page", {}).get("live", None)
+                and len(
+                    [run for run in course_data["courseruns"] if run["is_enrollable"]]
+                )
+                > 0
             ),
             "professional": False,
             "certification": parse_certification(
@@ -347,7 +376,15 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
             ),
             "certification_type": parse_certificate_type(
                 course_data["certificate_type"]
-            ),
+            )
+            if parse_certification(
+                OFFERED_BY["code"],
+                [
+                    _transform_run(course_run, course_data)
+                    for course_run in course_data["courseruns"]
+                ],
+            )
+            else CertificationType.none.name,
             "topics": transform_topics(course_data["topics"], OFFERED_BY["code"]),
             "url": (
                 urljoin(
@@ -358,52 +395,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data):
                 else None
             ),
             "runs": [
-                {
-                    "run_id": course_run_data["courseware_id"],
-                    "title": course_run_data["title"],
-                    "image": _transform_image(course_run_data),
-                    "url": (
-                        urljoin(
-                            settings.MITX_ONLINE_BASE_URL,
-                            course_data["page"]["page_url"],
-                        )
-                        if course_data.get("page", {}).get("page_url")
-                        else None
-                    ),
-                    "description": clean_data(
-                        course_run_data.get("page", {}).get("description", None)
-                    ),
-                    "start_date": any_instance_of(datetime, type(None)),
-                    "end_date": any_instance_of(datetime, type(None)),
-                    "enrollment_start": any_instance_of(datetime, type(None)),
-                    "enrollment_end": any_instance_of(datetime, type(None)),
-                    "published": bool(
-                        course_run_data["is_enrollable"] and course_data["page"]["live"]
-                    ),
-                    "prices": parse_prices(course_data),
-                    "instructors": [
-                        {"full_name": instructor["name"]}
-                        for instructor in parse_page_attribute(
-                            course_data, "instructors", is_list=True
-                        )
-                    ],
-                    "status": RunStatus.current.value
-                    if parse_page_attribute(course_data, "page_url")
-                    else RunStatus.archived.value,
-                    "availability": course_data["availability"],
-                    "format": [Format.asynchronous.name],
-                    "pace": [Pace.instructor_paced.name],
-                    "duration": course_data.get("duration"),
-                    "min_weeks": course_data.get("min_weeks"),
-                    "max_weeks": course_data.get("max_weeks"),
-                    "time_commitment": course_data.get("time_commitment"),
-                    "min_weekly_hours": parse_string_to_int(
-                        course_data.get("min_weekly_hours")
-                    ),
-                    "max_weekly_hours": parse_string_to_int(
-                        course_data.get("max_weekly_hours")
-                    ),
-                }
+                _transform_run(course_run_data, course_data)
                 for course_run_data in course_data["courseruns"]
             ],
             "course": {
@@ -603,3 +595,93 @@ def test_fetch_data(mock_responses, expected_results, mocker, settings):
         if mock_responses[i - 1]["next"]:
             parsed = urlparse(mock_responses[i - 1]["next"])
             assert kwargs["params"] == parse_qs(parsed.query)
+
+
+@pytest.mark.parametrize(
+    ("run_data", "expected"),
+    [
+        # Fully enrollable: all conditions met
+        (
+            {
+                "published": True,
+                "is_enrollable": True,
+                "end_date": "2124-01-01T00:00:00Z",
+                "enrollment_end": "2124-01-01T00:00:00Z",
+            },
+            True,
+        ),
+        # Fully enrollable: no end dates (open-ended)
+        (
+            {
+                "published": True,
+                "is_enrollable": True,
+                "end_date": None,
+                "enrollment_end": None,
+            },
+            True,
+        ),
+        # Not enrollable: is_enrollable is False
+        (
+            {
+                "published": True,
+                "is_enrollable": False,
+                "end_date": "2124-01-01T00:00:00Z",
+                "enrollment_end": "2124-01-01T00:00:00Z",
+            },
+            False,
+        ),
+        # Not enrollable: published is False
+        (
+            {
+                "published": False,
+                "is_enrollable": True,
+                "end_date": None,
+                "enrollment_end": None,
+            },
+            False,
+        ),
+        # Not enrollable: end_date in the past
+        (
+            {
+                "published": True,
+                "is_enrollable": True,
+                "end_date": "2022-01-01T00:00:00Z",
+                "enrollment_end": None,
+            },
+            False,
+        ),
+        # Not enrollable: enrollment_end in the past
+        (
+            {
+                "published": True,
+                "is_enrollable": True,
+                "end_date": None,
+                "enrollment_end": "2022-01-01T00:00:00Z",
+            },
+            False,
+        ),
+        # Enrollable: missing published key defaults to True
+        (
+            {
+                "is_enrollable": True,
+                "end_date": None,
+                "enrollment_end": None,
+            },
+            True,
+        ),
+        # Not enrollable: missing is_enrollable key defaults to False
+        (
+            {
+                "published": True,
+                "end_date": None,
+                "enrollment_end": None,
+            },
+            False,
+        ),
+    ],
+)
+def test_is_fully_enrollable(mocker, run_data, expected):
+    """Test that is_fully_enrollable returns the correct boolean value based on run data"""
+    mock_now = datetime(2023, 6, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    assert is_fully_enrollable(run_data) == expected

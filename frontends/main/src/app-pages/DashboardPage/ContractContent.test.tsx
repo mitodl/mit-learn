@@ -10,18 +10,12 @@ import ContractContent from "./ContractContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import {
-  organizationCoursesWithContracts,
-  mitxonlineProgram,
-  sortDashboardCourses,
-} from "./CoursewareDisplay/transform"
-import {
   createCoursesWithContractRuns,
   createTestContracts,
   setupOrgAndUser,
   setupProgramsAndCourses,
   setupOrgDashboardMocks,
 } from "./CoursewareDisplay/test-utils"
-import { EnrollmentStatus } from "./CoursewareDisplay/types"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
@@ -116,6 +110,23 @@ describe("ContractContent", () => {
       name: "Org X Contract",
       programs: [programB.id, programA.id],
     })
+
+    // Update course runs to reference the new contract ID
+    const updatedCoursesA = coursesA.map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => ({
+        ...run,
+        b2b_contract: contract.id,
+      })),
+    }))
+    const updatedCoursesB = coursesB.map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => ({
+        ...run,
+        b2b_contract: contract.id,
+      })),
+    }))
+
     orgX.contracts = [contract]
     setMockResponse.get(urls.contracts.contractsList(), [contract])
     // Need to update the orgX response to include the new contract
@@ -143,7 +154,28 @@ describe("ContractContent", () => {
         page_size: 200,
       }),
       {
-        results: [...coursesA, ...coursesB],
+        results: [...updatedCoursesA, ...updatedCoursesB],
+      },
+    )
+    // Add per-program course list mocks with new contract ID
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: updatedCoursesA,
+      },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programB.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: updatedCoursesB,
       },
     )
 
@@ -170,15 +202,25 @@ describe("ContractContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgX, programA, coursesA } = setupProgramsAndCourses()
+    const { orgX, programA: _programA, coursesA } = setupProgramsAndCourses()
+    const contract = orgX.contracts[0]
     const enrollments = [
       makeCourseEnrollment({
-        run: { course: { id: coursesA[0].id, title: coursesA[0].title } },
+        run: {
+          id: coursesA[0].courseruns[0].id,
+          course: { id: coursesA[0].id, title: coursesA[0].title },
+        },
         grades: [makeGrade({ passed: true })],
+        b2b_contract_id: contract.id,
       }),
       makeCourseEnrollment({
-        run: { course: { id: coursesA[1].id, title: coursesA[1].title } },
+        run: {
+          id: coursesA[1].courseruns[0].id,
+          course: { id: coursesA[1].id, title: coursesA[1].title },
+        },
         grades: [],
+        certificate: null,
+        b2b_contract_id: contract.id,
       }),
     ]
     // Override the default empty enrollments for this test
@@ -195,29 +237,29 @@ describe("ContractContent", () => {
     const cards = await within(programElA).findAllByTestId(
       "enrollment-card-desktop",
     )
-    expect(cards.length).toBeGreaterThan(0)
-    const sortedCourses = sortDashboardCourses(
-      mitxonlineProgram(programA),
-      organizationCoursesWithContracts({
-        courses: coursesA,
-        enrollments: enrollments,
-      }),
+    expect(cards.length).toBeGreaterThanOrEqual(2)
+
+    // Find the cards for our enrolled courses
+    const completedCard = cards.find((card) =>
+      card.textContent?.includes(coursesA[0].title),
+    )
+    const enrolledCard = cards.find((card) =>
+      card.textContent?.includes(coursesA[1].title),
     )
 
-    cards.forEach((card, i) => {
-      const course = sortedCourses[i]
-      expect(card).toHaveTextContent(course.title)
-      const indicator = within(card).getByTestId("enrollment-status")
+    expect(completedCard).toBeDefined()
+    expect(enrolledCard).toBeDefined()
 
-      // Check based on the actual enrollment status, not array position
-      if (course.enrollment?.status === EnrollmentStatus.Enrolled) {
-        expect(indicator).toHaveTextContent(/^Enrolled$/)
-      } else if (course.enrollment?.status === EnrollmentStatus.Completed) {
-        expect(indicator).toHaveTextContent(/^Completed$/)
-      } else {
-        expect(indicator).toHaveTextContent(/^Not Enrolled$/)
-      }
-    })
+    // Check enrollment status indicators
+    const completedIndicator = within(completedCard!).getByTestId(
+      "enrollment-status",
+    )
+    const enrolledIndicator = within(enrolledCard!).getByTestId(
+      "enrollment-status",
+    )
+
+    expect(completedIndicator).toHaveTextContent(/^Completed$/)
+    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
   })
 
   test("Renders program collections", async () => {
@@ -1275,6 +1317,8 @@ describe("ContractContent", () => {
     const courseWithMultipleRuns = {
       ...course,
       courseruns: runs,
+      next_run_id: runs[0].id,
+      next_run: null, // Clear any factory-generated next_run reference
     }
 
     // Randomly pick one of the runs to enroll in
@@ -1284,9 +1328,12 @@ describe("ContractContent", () => {
       run: {
         id: enrolledRun.id,
         course: { id: course.id, title: course.title },
+        courseware_url: enrolledRun.courseware_url,
       },
       b2b_contract_id: contracts[0].id,
+      b2b_organization_id: orgX.id,
       grades: [],
+      certificate: null,
     })
 
     setupOrgDashboardMocks(

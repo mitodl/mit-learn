@@ -23,16 +23,19 @@ News API Endpoint
 ### 1. ETL Module (`news_events/etl/articles_news.py`)
 
 **Extract Phase:**
+
 - Queries `Article.objects.filter(is_published=True)`
 - Returns list of article dictionaries
 
 **Transform Phase:**
+
 - Converts article data to feed item format
 - Extracts text from JSON content
 - Builds author information from User model
 - Creates article URLs using slug
 
 **Load Phase:**
+
 - Uses shared loader functions (`loaders.py`)
 - Creates/updates `FeedSource`, `FeedItem`, `FeedNewsDetail`
 - Handles image and detail relationships
@@ -82,6 +85,7 @@ def sync_article_to_news_on_publish(sender, instance, created, **kwargs):
 ### 6. Management Command
 
 Manual sync command:
+
 ```bash
 python manage.py sync_articles_to_news
 ```
@@ -123,6 +127,7 @@ get_articles_news.delay()
 ## Data Flow
 
 ### 1. Extract
+
 ```python
 Article.objects.filter(is_published=True)
     ↓
@@ -137,6 +142,7 @@ Article.objects.filter(is_published=True)
 ```
 
 ### 2. Transform
+
 ```python
 [{
     'title': 'MIT Learn Articles',
@@ -158,18 +164,17 @@ Article.objects.filter(is_published=True)
 ```
 
 ### 3. Load
+
 ```
 FeedSource
 ├── title: "MIT Learn Articles"
 ├── url: "/articles"
 └── feed_type: "news"
-
     → FeedItem (for each article)
        ├── guid: "article-1"
        ├── title: "My Article"
        ├── url: "/articles/my-article"
        └── source: FeedSource
-
            → FeedNewsDetail
               ├── authors: ['John Doe']
               ├── topics: []
@@ -187,7 +192,6 @@ def extract_text_from_content(content_json: dict) -> str:
     # For Draft.js
     blocks = content_json.get('blocks', [])
     return ' '.join([block.get('text', '') for block in blocks])
-
     # For ProseMirror
     def walk_nodes(node):
         if node.get('type') == 'text':
@@ -195,7 +199,6 @@ def extract_text_from_content(content_json: dict) -> str:
         children = node.get('content', [])
         return ' '.join(walk_nodes(child) for child in children)
     return walk_nodes(content_json)
-
     # For EditorJS
     blocks = content_json.get('blocks', [])
     return ' '.join([
@@ -211,7 +214,6 @@ If your Article model has images:
 ```python
 def transform_items(articles_data: list[dict]) -> list[dict]:
     # ... existing code ...
-
     # Add image extraction
     image_data = None
     if article.image_field:  # Replace with your field name
@@ -220,7 +222,6 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
             "alt": article.title,
             "description": article.title,
         }
-
     entry = {
         # ... existing fields ...
         "image": image_data,
@@ -249,6 +250,7 @@ entry = {
 ### 4. Adjust Sync Frequency
 
 In `.env` or environment variables:
+
 ```bash
 # Sync every 30 minutes
 NEWS_EVENTS_ARTICLES_NEWS_SCHEDULE_SECONDS=1800
@@ -272,6 +274,7 @@ Comment out the signal in `articles/signals.py`:
 ### Unit Tests
 
 Run the test suite:
+
 ```bash
 pytest news_events/etl/articles_news_test.py -v
 ```
@@ -279,6 +282,7 @@ pytest news_events/etl/articles_news_test.py -v
 ### Integration Test
 
 1. Create and publish an article:
+
 ```python
 from articles.models import Article
 from django.contrib.auth import get_user_model
@@ -295,6 +299,7 @@ article = Article.objects.create(
 ```
 
 2. Check news feed:
+
 ```python
 from news_events.models import FeedItem
 
@@ -321,11 +326,13 @@ print(f"Found {source.feed_items.count()} articles in news feed")
 ### Articles not appearing in news feed
 
 1. **Check if published:**
+
    ```python
    Article.objects.filter(is_published=True).count()
    ```
 
 2. **Run pipeline manually:**
+
    ```bash
    python manage.py sync_articles_to_news
    ```
@@ -397,8 +404,8 @@ FeedNewsDetail {
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
+| Variable                                     | Default         | Description                |
+| -------------------------------------------- | --------------- | -------------------------- |
 | `NEWS_EVENTS_ARTICLES_NEWS_SCHEDULE_SECONDS` | `3600` (1 hour) | How often to sync articles |
 
 ## Next Steps

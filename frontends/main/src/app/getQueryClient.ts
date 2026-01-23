@@ -101,10 +101,19 @@ const makeBrowserQueryClient = (
     defaultOptions: {
       queries: {
         /**
-         * Everything should be stable for ~24 hours (period of ETL tasks),
-         * but better to be conservative about freshness.
+         * Public API content is server-rendered to the base page and cached by the CDN.
+         * Keep staleTime >= CDN TTL so hydrated queries are not immediately refetched.
+         * The CDN TTL is specified by the s-max-age value in the Cache-Control header
+         * in next.config.js.
+         *
+         * Most content is stable for ~24 hours (ETL cadence), but if staleTime is shorter
+         * than the CDN TTL, React Query will refetch on hydration once the cached HTML
+         * is older than staleTime.
+         *
+         * This can cause visible content flicker for unstable endpoints (e.g. the
+         * featured learning resource list, which is intentionally randomized).
          */
-        staleTime: 15 * 60 * 1000,
+        staleTime: 30 * 60 * 1000,
 
         /**
          * Throw runtime errors instead of marking query as errored.

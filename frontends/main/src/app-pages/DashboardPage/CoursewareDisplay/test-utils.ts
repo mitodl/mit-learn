@@ -1,11 +1,5 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides, type PartialFactory } from "ol-test-utilities"
-import {
-  DashboardResourceType,
-  EnrollmentMode,
-  EnrollmentStatus,
-} from "./types"
-import type { DashboardCourse, DashboardProgram } from "./types"
 import * as u from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -27,55 +21,18 @@ const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
-const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
-  return mergeOverrides<DashboardCourse>(
-    {
-      key: faker.string.uuid(),
-      coursewareId: faker.string.uuid(),
-      readableId: `course-v1:${faker.string.alphanumeric(5)}+${faker.string.alphanumeric(5)}`,
-      type: DashboardResourceType.Course,
-      title: faker.commerce.productName(),
-      marketingUrl: faker.internet.url(),
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.future().toISOString(),
-        certificateUpgradeDeadline: faker.date.future().toISOString(),
-        certificateUpgradePrice: faker.commerce.price(),
-        canUpgrade: true,
-        coursewareUrl: faker.internet.url(),
-        b2bContractId: null,
-      },
-      enrollment: {
-        id: faker.number.int(),
-        status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
-        mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
-        grades: [],
-        run: factories.courses.courseRun(),
-      },
-    },
-    ...overrides,
-  )
+const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
+  ...overrides
+) => {
+  // Use the existing factory that creates proper CourseWithCourseRunsSerializerV2 objects
+  const course = factories.courses.course()
+  return mergeOverrides<CourseWithCourseRunsSerializerV2>(course, ...overrides)
 }
 
-const dashboardProgram: PartialFactory<DashboardProgram> = (...overrides) => {
-  return mergeOverrides<DashboardProgram>(
-    {
-      id: faker.number.int(),
-      key: faker.string.uuid(),
-      type: DashboardResourceType.Program,
-      title: faker.commerce.productName(),
-      programType: faker.helpers.arrayElement([
-        "MicroMasters",
-        "Professional Certificate",
-        "XSeries",
-      ]),
-      courseIds: Array.from({ length: 3 }, () => faker.number.int()),
-      collections: [],
-      description: faker.lorem.paragraph(),
-      reqTree: [],
-    },
-    ...overrides,
-  )
+const dashboardProgram: PartialFactory<V2Program> = (...overrides) => {
+  // Use the existing factory that creates proper V2Program objects
+  const program = makeProgram()
+  return mergeOverrides<V2Program>(program, ...overrides)
 }
 
 const setupEnrollments = (includeExpired: boolean) => {
@@ -236,7 +193,7 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(
     urls.courses.coursesList({
       id: programA.courses,
-      org_id: orgX.id,
+      contract_id: contract.id,
       page_size: 30,
     }),
     {
@@ -246,7 +203,7 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(
     urls.courses.coursesList({
       id: programB.courses,
-      org_id: orgX.id,
+      contract_id: contract.id,
       page_size: 30,
     }),
     {
@@ -372,14 +329,16 @@ function setupOrgDashboardMocks(
   }
 
   programs.forEach((program) => {
-    setMockResponse.get(
-      mitxonline.urls.courses.coursesList({
-        id: program.courses,
-        org_id: org.id,
-        page_size: 30,
-      }),
-      { results: courses },
-    )
+    if (contracts.length > 0) {
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          contract_id: contracts[0].id,
+          page_size: 30,
+        }),
+        { results: courses },
+      )
+    }
   })
 }
 

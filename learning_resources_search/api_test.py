@@ -2414,6 +2414,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
     }
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
+    settings.QDRANT_DENSE_MODEL = "text-embedding-3-small"
 
     mocker.patch(
         "learning_resources_search.api.get_vector_model_id",

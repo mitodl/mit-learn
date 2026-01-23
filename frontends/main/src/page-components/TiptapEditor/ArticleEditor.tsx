@@ -399,6 +399,13 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 <StyledToolbar>
                   <Spacer />
                   <ButtonLink
+                    variant="secondary"
+                    href="/articles/draft"
+                    size="small"
+                  >
+                    Drafts
+                  </ButtonLink>
+                  <ButtonLink
                     variant="primary"
                     href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
                     size="small"

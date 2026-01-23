@@ -54,6 +54,7 @@ import { ArticleByLineInfoBarViewer } from "./extensions/node/ArticleByLineInfoB
 import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption"
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
+import { MediaEmbedViewer } from "./extensions/node/MediaEmbed/MediaEmbedViewer"
 
 const Container = styled.div<{
   readOnly: boolean
@@ -305,6 +306,7 @@ const TipTapViewer = ({
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,
+              mediaEmbed: MediaEmbedViewer,
             },
           },
         })}

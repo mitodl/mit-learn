@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.51.2"
+VERSION = "0.52.0"
 
 log = logging.getLogger()
 
@@ -106,6 +106,7 @@ INSTALLED_APPS = (
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django.contrib.sites",
+    "django_removals",
     "django_scim",
     "social_django",
     "server_status",
@@ -258,7 +259,6 @@ MITOL_NEW_USER_LOGIN_URL = get_string(
 LOGIN_REDIRECT_URL = "/app"
 LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
-LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
 MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
 OIDC_LOGOUT_URL = get_string(
@@ -389,7 +389,6 @@ DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # noqa: PTH118
 
 # Important to define this so DEBUG works properly
 INTERNAL_IPS = (get_string("HOST_IP", "127.0.0.1"),)
@@ -806,9 +805,7 @@ QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
-QDRANT_DENSE_MODEL = get_string(
-    name="QDRANT_DENSE_MODEL", default="text-embedding-3-small"
-)
+QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
     name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
 )

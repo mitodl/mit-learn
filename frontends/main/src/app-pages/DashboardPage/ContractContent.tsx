@@ -9,9 +9,8 @@ import {
   programCollectionQueries,
 } from "api/mitxonline-hooks/programs"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import * as transform from "./CoursewareDisplay/transform"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { DashboardCard } from "./CoursewareDisplay/DashboardCard"
+import { DashboardCard, DashboardType } from "./CoursewareDisplay/DashboardCard"
 import {
   Link,
   PlainList,
@@ -20,23 +19,25 @@ import {
   styled,
   Typography,
 } from "ol-components"
-import {
-  DashboardProgram,
-  DashboardProgramCollection,
-  DashboardProgramCollectionProgram,
-} from "./CoursewareDisplay/types"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollmentRequestV2,
   V2UserProgramEnrollmentDetail,
   ContractPage,
   OrganizationPage,
+  V2ProgramCollection,
+  V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
+import {
+  ResourceType,
+  getKey,
+  selectBestEnrollment,
+} from "./CoursewareDisplay/helpers"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -191,10 +192,10 @@ const ProgramCollectionsList = styled(PlainList)({
 
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
-  programs: DashboardProgramCollectionProgram[],
+  programCollection: V2ProgramCollection,
   contractId: number,
 ) => {
-  const programIds = programs
+  const programIds = programCollection.programs
     .map((program) => program.id)
     .filter((id) => id !== undefined)
   const programsQuery = useQuery({
@@ -207,15 +208,16 @@ const useProgramCollectionCourses = (
   const isLoading = programsQuery.isLoading
 
   const programsWithCourses = programsQuery.data?.results.map((program) => {
-    const transformedProgram = transform.mitxonlineProgram(program)
     return {
       programId: program.id,
-      program: transformedProgram,
+      program: program,
       hasCourses: program.courses && program.courses.length > 0,
     }
   })
 
-  const hasAnyCourses = programsWithCourses?.some((p) => p?.hasCourses)
+  const hasAnyCourses = programsQuery.data?.results.some(
+    (p) => p?.courses && p.courses.length > 0,
+  )
 
   return {
     isLoading,
@@ -225,15 +227,15 @@ const useProgramCollectionCourses = (
 }
 
 const OrgProgramCollectionDisplay: React.FC<{
-  collection: DashboardProgramCollection
+  collection: V2ProgramCollection
   contract: ContractPage
   enrollments?: CourseRunEnrollmentRequestV2[]
 }> = ({ collection, contract, enrollments }) => {
   const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
-    useProgramCollectionCourses(collection.programs, contract.id)
+    useProgramCollectionCourses(collection, contract.id)
   const firstCourseIds = programsWithCourses
-    ?.map((p) => p?.program.courseIds[0])
+    ?.map((p) => p?.program.courses[0])
     .filter((id): id is number => id !== undefined)
   const courses = useQuery({
     ...coursesQueries.coursesList({
@@ -245,7 +247,7 @@ const OrgProgramCollectionDisplay: React.FC<{
   // Create mapping from course ID to program order
   const courseIdToOrder = new Map<number, number>()
   programsWithCourses?.forEach((item) => {
-    const firstCourseId = item.program.courseIds[0]
+    const firstCourseId = item.program.courses[0]
     const programId = item.programId
     const order =
       collection.programs.find((p) => p.id === programId)?.order ?? Infinity
@@ -257,12 +259,6 @@ const OrgProgramCollectionDisplay: React.FC<{
       const orderB = courseIdToOrder.get(b.id) ?? Infinity
       return orderA - orderB
     }) ?? []
-
-  const transformedCourses = transform.organizationCoursesWithContracts({
-    courses: rawCourses,
-    contract: contract,
-    enrollments: enrollments ?? [],
-  })
 
   const header = (
     <ProgramHeader>
@@ -311,24 +307,47 @@ const OrgProgramCollectionDisplay: React.FC<{
               style={{ marginBottom: "16px" }}
             />
           ))}
-        {transformedCourses.map((course) => (
-          <DashboardCardStyled
-            Component="li"
-            key={course.key}
-            dashboardResource={course}
-            noun="Module"
-            offerUpgrade={false}
-            titleAction="courseware"
-            buttonHref={course.run?.coursewareUrl}
-          />
-        ))}
+        {rawCourses.map((course) => {
+          // Filter enrollments to only those matching this contract
+          const contractEnrollments =
+            enrollments?.filter(
+              (enrollment) => enrollment.b2b_contract_id === contract.id,
+            ) ?? []
+          const bestEnrollment = selectBestEnrollment(
+            course,
+            contractEnrollments,
+          )
+          return (
+            <DashboardCardStyled
+              Component="li"
+              key={getKey({
+                resourceType: ResourceType.Course,
+                id: course.id,
+                runId: bestEnrollment?.run.id,
+              })}
+              resource={
+                bestEnrollment
+                  ? {
+                      type: DashboardType.CourseRunEnrollment,
+                      data: bestEnrollment,
+                    }
+                  : { type: DashboardType.Course, data: course }
+              }
+              noun="Module"
+              offerUpgrade={false}
+              titleAction="courseware"
+              buttonHref={bestEnrollment?.run.courseware_url}
+              contractId={contract.id}
+            />
+          )
+        })}
       </PlainList>
     </ProgramRoot>
   )
 }
 
 const OrgProgramDisplay: React.FC<{
-  program: DashboardProgram
+  program: V2Program
   contract?: ContractPage
   courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
   programEnrollments?: V2UserProgramEnrollmentDetail[]
@@ -340,16 +359,16 @@ const OrgProgramDisplay: React.FC<{
   courseRunEnrollments,
   programEnrollments,
   programLoading,
-  orgId,
+  orgId: _orgId,
 }) => {
   const programEnrollment = programEnrollments?.find(
     (enrollment) => enrollment.program.id === program.id,
   )
   const hasValidCertificate = !!programEnrollment?.certificate
-  const courses = useQuery(
+  const coursesQuery = useQuery(
     coursesQueries.coursesList({
-      id: program.courseIds,
-      org_id: orgId,
+      id: program.courses,
+      contract_id: contract?.id,
       page_size: 30,
     }),
   )
@@ -357,16 +376,11 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
 
-  const sanitizedHtml = DOMPurify.sanitize(program.description)
-  const rawCourses =
-    courses.data?.results.sort((a, b) => {
-      return program.courseIds.indexOf(a.id) - program.courseIds.indexOf(b.id)
+  const sanitizedHtml = DOMPurify.sanitize(program.page.description)
+  const courses =
+    coursesQuery.data?.results.sort((a, b) => {
+      return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
     }) ?? []
-  const transformedCourses = transform.organizationCoursesWithContracts({
-    courses: rawCourses,
-    contract: contract,
-    enrollments: courseRunEnrollments ?? [],
-  })
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -387,24 +401,48 @@ const OrgProgramDisplay: React.FC<{
             startIcon={<RiAwardFill />}
             href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
           >
-            View {program.programType} Certificate
+            View {program.program_type} Certificate
           </ProgramCertificateButton>
         )}
       </ProgramHeader>
       <PlainList>
-        {programLoading || courses.isLoading
+        {programLoading || coursesQuery.isLoading
           ? skeleton
-          : transformedCourses.map((course) => (
-              <DashboardCardStyled
-                Component="li"
-                key={course.key}
-                dashboardResource={course}
-                noun="Module"
-                offerUpgrade={false}
-                titleAction="courseware"
-                buttonHref={course.run?.coursewareUrl}
-              />
-            ))}
+          : courses.map((course) => {
+              // Filter enrollments to only those matching this contract
+              const contractEnrollments =
+                courseRunEnrollments?.filter(
+                  (enrollment) => enrollment.b2b_contract_id === contract?.id,
+                ) ?? []
+              const bestEnrollment = selectBestEnrollment(
+                course,
+                contractEnrollments,
+              )
+
+              return (
+                <DashboardCardStyled
+                  Component="li"
+                  key={getKey({
+                    resourceType: ResourceType.Course,
+                    id: course.id,
+                    runId: bestEnrollment?.run.id,
+                  })}
+                  resource={
+                    bestEnrollment
+                      ? {
+                          type: DashboardType.CourseRunEnrollment,
+                          data: bestEnrollment,
+                        }
+                      : { type: DashboardType.Course, data: course }
+                  }
+                  noun="Module"
+                  offerUpgrade={false}
+                  titleAction="courseware"
+                  buttonHref={bestEnrollment?.run.courseware_url}
+                  contractId={contract?.id}
+                />
+              )
+            })}
       </PlainList>
     </ProgramRoot>
   )
@@ -425,19 +463,19 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   contract,
 }) => {
   const orgId = org.id
-  const courseRunEnrollments = useQuery(
+  const courseRunEnrollmentsQuery = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
-  const programEnrollments = useQuery(
+  const programEnrollmentsQuery = useQuery(
     enrollmentQueries.programEnrollmentsList(),
   )
-  const programs = useQuery(
+  const programsQuery = useQuery(
     programsQueries.programsList({ org_id: orgId, contract_id: contract.id }),
   )
-  const programCollections = useQuery(
+  const programCollectionsQuery = useQuery(
     programCollectionQueries.programCollectionsList({}),
   )
-  const courses = useQuery(
+  const coursesQuery = useQuery(
     coursesQueries.coursesList({
       org_id: orgId,
       contract_id: contract.id,
@@ -447,24 +485,25 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
 
   // Helper to check if a program has any courses with contract-scoped runs
   const programHasContractRuns = (programId: number): boolean => {
-    const programData = programs.data?.results.find((p) => p.id === programId)
-    if (!programData?.courses || !courses.data?.results) return false
-
+    const programData = programsQuery.data?.results.find(
+      (p) => p.id === programId,
+    )
+    if (!programData?.courses || !coursesQuery.data?.results) return false
     // Since courses query is already filtered by contract_id,
     // we just need to check if any of the program's courses exist in the results
     return programData.courses.some((courseId) =>
-      courses.data.results.some((c) => c.id === courseId),
+      coursesQuery.data.results.some((c) => c.id === courseId),
     )
   }
 
   // Get IDs of all programs that are in collections
   const programsInCollections = new Set(
-    programCollections.data?.results.flatMap((collection) =>
+    programCollectionsQuery.data?.results.flatMap((collection) =>
       collection.programs.map((p) => p.id),
     ) ?? [],
   )
 
-  const transformedPrograms = programs.data?.results
+  const sortedPrograms = programsQuery.data?.results
     .filter((program) => !programsInCollections.has(program.id))
     .filter(() => {
       // If contract has no programs defined, show nothing
@@ -475,7 +514,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       return contract?.programs.includes(program.id)
     })
     .filter((program) => programHasContractRuns(program.id))
-    .map((program) => transform.mitxonlineProgram(program))
     .sort((a, b) => {
       if (!contract?.programs) return 0
       const indexA = contract.programs.indexOf(a.id)
@@ -492,7 +530,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   )
 
   // Wait for all program and collection data to load
-  if (programs.isLoading || programCollections.isLoading) {
+  if (programsQuery.isLoading || programCollectionsQuery.isLoading) {
     return (
       <>
         <Stack>
@@ -511,21 +549,24 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <WelcomeMessage contract={contract} />
       </Stack>
       <ContractRoot>
-        {!transformedPrograms
+        {!sortedPrograms
           ? skeleton
-          : transformedPrograms.map((program) => (
+          : sortedPrograms.map((program) => (
               <OrgProgramDisplay
-                key={program.key}
+                key={getKey({
+                  resourceType: ResourceType.Program,
+                  id: program.id,
+                })}
                 contract={contract}
                 program={program}
-                courseRunEnrollments={courseRunEnrollments.data}
-                programEnrollments={programEnrollments.data}
-                programLoading={programs.isLoading}
+                courseRunEnrollments={courseRunEnrollmentsQuery.data}
+                programEnrollments={programEnrollmentsQuery.data}
+                programLoading={programsQuery.isLoading}
                 orgId={orgId}
               />
             ))}
         <ProgramCollectionsList>
-          {(programCollections.data?.results ?? [])
+          {(programCollectionsQuery.data?.results ?? [])
             .filter(() => {
               // If contract has no programs defined, show nothing
               return contract?.programs && contract.programs.length > 0
@@ -547,19 +588,20 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               )
             })
             .map((collection) => {
-              const transformedCollection =
-                transform.mitxonlineProgramCollection(collection)
               return (
                 <OrgProgramCollectionDisplay
-                  key={collection.title}
-                  collection={transformedCollection}
+                  key={getKey({
+                    resourceType: ResourceType.ProgramCollection,
+                    id: collection.id,
+                  })}
+                  collection={collection}
                   contract={contract}
-                  enrollments={courseRunEnrollments.data}
+                  enrollments={courseRunEnrollmentsQuery.data}
                 />
               )
             })}
         </ProgramCollectionsList>
-        {programs.data?.results.length === 0 && (
+        {programsQuery.data?.results.length === 0 && (
           <HeaderRoot>
             <Typography variant="h3" component="h1">
               No programs found
