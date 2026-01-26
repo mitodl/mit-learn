@@ -581,6 +581,7 @@ def process_olx_path(  # noqa: PLR0913
                 file_extension == ".pdf"
                 and use_ocr
                 and settings.OCR_MODEL
+                and (Path(olx_path) / Path(source_path)).stat().st_size > 0
                 and (
                     len(PdfReader(Path(olx_path) / Path(source_path)).pages)
                     <= settings.OCR_PDF_MAX_PAGE_THRESHOLD
