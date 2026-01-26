@@ -118,8 +118,10 @@ def sync_edx_archive(
         bucket.download_file(s3_key, archive_path)
         run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
         if not run:
-            err = f"No {etl_source} run found for archive {s3_key}"
-            raise ValueError(err)
+            log.warning(
+                "No published/test_mode %s run found for archive %s", etl_source, s3_key
+            )
+            return
         course = run.learning_resource
         if course.published and not course.test_mode and course.best_run != run:
             # This is not the best run for the published course, so skip it
