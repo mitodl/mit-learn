@@ -23,6 +23,12 @@ const collapseWhitespace = (text: string): string => {
 const linkifyText = (text: string): string => {
   if (!text) return ""
   console.log("Linkifying text:", text)
+
+  // If text already contains anchor tags, return as-is (backend already handled links)
+  if (text.includes("<a ")) {
+    return collapseWhitespace(text)
+  }
+
   // Regex to match URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g
 
@@ -30,7 +36,7 @@ const linkifyText = (text: string): string => {
   return collapseWhitespace(
     text.replace(
       urlRegex,
-      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+      ' <a href="$1" target="_blank" rel="noopener noreferrer">$1</a> ',
     ),
   )
 }

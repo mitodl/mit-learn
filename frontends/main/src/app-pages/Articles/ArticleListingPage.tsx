@@ -386,7 +386,6 @@ const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
   margin-top: 24px;
-  margin-bottom: 80px;
 
   ${({ theme }) => theme.breakpoints.down("md")} {
     margin-top: 16px;
@@ -431,9 +430,9 @@ const EmptyState = styled.div`
     padding: 24px 16px;
   }
 `
-const ArticleBannerStyled = styled(ArticleBanner)`
+const ArticleBannerStyled = styled(ArticleBanner)<{ $page: number }>`
   padding: 48px 0;
-  padding-bottom: 250px;
+  ${({ $page }) => $page === 1 && "padding-bottom: 250px;"}
   position: relative;
   background-size: 150% !important;
   background-position: center !important;
@@ -455,7 +454,7 @@ const ArticleBannerStyled = styled(ArticleBanner)`
     z-index: 2;
   }
   ${theme.breakpoints.down("md")} {
-    padding-bottom: 198px;
+    ${({ $page }) => $page === 1 && "padding-bottom: 198px;"}
   }
   ${theme.breakpoints.down("sm")} {
     padding: 32px 0;
@@ -464,15 +463,18 @@ const ArticleBannerStyled = styled(ArticleBanner)`
 
 // Main Story Component (always displayed at top)
 const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+  const [imageError, setImageError] = React.useState(false)
+
   return (
     <MainStoryCard>
       <MainStoryImage>
-        {item.image?.url && (
+        {item.image?.url && !imageError && (
           <Image
             src={item.image.url}
             alt={item.image.alt || item.title}
             fill
             style={{ objectFit: "cover" }}
+            onError={() => setImageError(true)}
           />
         )}
       </MainStoryImage>
@@ -497,6 +499,8 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 
 // Regular Story Component for grid
 const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
+  const [imageError, setImageError] = React.useState(false)
+
   return (
     <StoryCard>
       <StoryContent>
@@ -516,12 +520,13 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
       </StoryContent>
       <Link href={item.url} style={{ textDecoration: "none", order: 2 }}>
         <StoryImage>
-          {item.image?.url && (
+          {item.image?.url && !imageError && (
             <Image
               src={item.image.url}
               alt={item.image.alt || item.title}
               fill
               style={{ objectFit: "cover" }}
+              onError={() => setImageError(true)}
             />
           )}
         </StoryImage>
@@ -571,6 +576,7 @@ const ArticleListingPage: React.FC = () => {
   return (
     <>
       <ArticleBannerStyled
+        $page={page}
         title="News"
         description="Insights, ideas, and stories from the world of learning at MIT."
         currentBreadcrumb="News"
