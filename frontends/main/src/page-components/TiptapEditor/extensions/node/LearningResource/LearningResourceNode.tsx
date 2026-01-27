@@ -104,21 +104,16 @@ export const LearningResourceListCardWrapper = ({
       .run()
   }
 
-  // Handle select on click as the resource card pointer events are disabled in edit mode
-  const selectNode = (e: React.MouseEvent) => {
+  const selectNode = () => {
     if (!editable) return
-    const target = e.target as HTMLElement
-    if (target.closest('[aria-label="Close"]')) return
     const pos = getPos()
     if (typeof getPos !== "function" || typeof pos !== "number") return
 
     editor.chain().focus().setNodeSelection(pos).run()
-    e.preventDefault()
-    e.stopPropagation()
   }
 
   return (
-    <NodeWrapper onClick={selectNode}>
+    <NodeWrapper onMouseDown={selectNode}>
       {editable && (
         <RemoveButton
           variant="primary"

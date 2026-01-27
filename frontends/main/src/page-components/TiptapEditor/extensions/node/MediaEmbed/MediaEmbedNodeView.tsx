@@ -183,20 +183,10 @@ export const MediaEmbedNodeView = ({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
-  const selectNode = (e: React.MouseEvent) => {
-    console.log("selectNode", e)
+  const selectNode = () => {
     if (!editable) return
-    const target = e.target as HTMLElement
-    if (
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest('[aria-label="Close"]')
-    ) {
-      return
-    }
     const pos = getPos()
     if (typeof pos !== "number") return
-
     editor.chain().focus().setNodeSelection(pos).run()
   }
 
@@ -207,7 +197,7 @@ export const MediaEmbedNodeView = ({
       className={`layout-${layout}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      onClick={selectNode}
+      onMouseDown={selectNode}
     >
       {editable && (
         <RemoveButton

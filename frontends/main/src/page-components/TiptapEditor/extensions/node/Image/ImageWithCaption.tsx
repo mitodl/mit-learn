@@ -364,30 +364,23 @@ export function ImageWithCaption({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
-  const selectNode = (e: React.MouseEvent) => {
+  const selectNode = () => {
     if (!isEditable) return
-    const target = e.target as HTMLElement
-    if (
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest('[aria-label="Remove"]')
-    ) {
-      return
-    }
     const pos = getPos()
     if (typeof pos !== "number") return
-
     editor.chain().focus().setNodeSelection(pos).run()
   }
 
   return (
-    <NodeViewWrapper data-type="image-upload" onClick={selectNode}>
+    <NodeViewWrapper data-type="image-upload" onMouseDown={selectNode}>
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">
             <button
               className={layout === "default" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "default" })}
+              onClick={() => {
+                updateAttributes({ layout: "default" })
+              }}
               title="Default width"
             >
               <DefaultWidth />
@@ -396,14 +389,18 @@ export function ImageWithCaption({
               <>
                 <button
                   className={layout === "wide" ? "active" : ""}
-                  onClick={() => updateAttributes({ layout: "wide" })}
+                  onClick={() => {
+                    updateAttributes({ layout: "wide" })
+                  }}
                   title="Wide"
                 >
                   <WideWidth />
                 </button>
                 <button
                   className={layout === "full" ? "active" : ""}
-                  onClick={() => updateAttributes({ layout: "full" })}
+                  onClick={() => {
+                    updateAttributes({ layout: "full" })
+                  }}
                   title="Full width"
                 >
                   <FullWidth />
@@ -411,7 +408,9 @@ export function ImageWithCaption({
               </>
             )}
             <button
-              onClick={openAltTextDialog}
+              onClick={() => {
+                openAltTextDialog()
+              }}
               title="Set Alt Text"
               className="alt-text-button"
             >
