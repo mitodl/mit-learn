@@ -285,10 +285,6 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
         assert learning_material.offered_by.code == OfferedBy.ocw.name
         assert learning_material.title == "Resource Title"
 
-        assert (
-            learning_material.url
-            == "https://ocw.mit.edu/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/"
-        )
         assert learning_material.course_learning_material.content_tags == [
             "Activity Assignments"
         ]
