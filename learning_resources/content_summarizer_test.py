@@ -417,3 +417,52 @@ def test_summarize_single_content_file_with_exception(
         error
         == f"Flashcards generation failed for CONTENT_FILE_ID: {content_file.id}\nError: INVALID_FORMAT\n\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("allowed_types", "allowed_exts", "file_type", "file_ext", "expected"),
+    [
+        ([CONTENT_TYPE_PAGE], [".pdf"], CONTENT_TYPE_PAGE, ".pdf", True),
+        (
+            [CONTENT_TYPE_PAGE],
+            [".pdf"],
+            CONTENT_TYPE_FILE,
+            ".pdf",
+            False,
+        ),  # Mismatched type
+        (
+            [CONTENT_TYPE_PAGE],
+            [".pdf"],
+            CONTENT_TYPE_PAGE,
+            ".txt",
+            False,
+        ),  # Mismatched extension
+        (
+            [CONTENT_TYPE_PAGE, CONTENT_TYPE_FILE],
+            [".pdf", ".txt"],
+            CONTENT_TYPE_FILE,
+            ".txt",
+            True,
+        ),
+    ],
+)
+def test_can_process_content_file(
+    allowed_types, allowed_exts, file_type, file_ext, expected
+):
+    """Test that _can_process_content_file requires BOTH valid type AND extension"""
+    summarizer = ContentSummarizer()
+    config = ContentSummarizerConfigurationFactory.create(
+        allowed_content_types=allowed_types,
+        allowed_extensions=allowed_exts,
+        is_active=True,
+    )
+    # Ensure the run uses the same platform as the config
+    run = LearningResourceRunFactory.create(learning_resource__platform=config.platform)
+    content_file = ContentFileFactory.create(
+        run=run,
+        content_type=file_type,
+        file_extension=file_ext,
+        content="some content",
+    )
+
+    assert summarizer._can_process_content_file(content_file) is expected  # noqa: SLF001
