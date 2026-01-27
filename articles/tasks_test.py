@@ -6,7 +6,6 @@ import pytest
 from requests import Response
 
 from articles.factories import ArticleFactory
-from articles.models import Article
 from articles.tasks import (
     call_fastly_purge_api,
     queue_fastly_full_purge,
@@ -43,7 +42,7 @@ class TestCallFastlyPurgeApi:
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "test-token")
-    def test_call_fastly_purge_api_success(self, mock_request, mock_fastly_response):  # noqa: ARG002
+    def test_call_fastly_purge_api_success(self, mock_request, mock_fastly_response):
         """Test successful Fastly API call"""
         mock_request.return_value = mock_fastly_response
 
@@ -63,7 +62,7 @@ class TestCallFastlyPurgeApi:
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "test-token")
-    def test_call_fastly_purge_api_full_purge(self, mock_request, mock_fastly_response):  # noqa: ARG002
+    def test_call_fastly_purge_api_full_purge(self, mock_request, mock_fastly_response):
         """Test full cache purge (wildcard)"""
         mock_request.return_value = mock_fastly_response
 
@@ -79,7 +78,7 @@ class TestCallFastlyPurgeApi:
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "")
-    def test_call_fastly_purge_api_no_token(self, mock_request, mock_fastly_response):  # noqa: ARG002
+    def test_call_fastly_purge_api_no_token(self, mock_request, mock_fastly_response):
         """Test API call without auth token"""
         mock_request.return_value = mock_fastly_response
 

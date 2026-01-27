@@ -21,7 +21,7 @@ This implementation adds automatic CDN (Fastly) cache purging for articles, simi
 - Tests for `Article.get_url()` method
 - Tests for slug generation on publish
 
-### 4. `/articles/tasks_test.py` - Task Tests  
+### 4. `/articles/tasks_test.py` - Task Tests
 - Complete test coverage for all CDN purge tasks
 - Tests for success cases, error handling, and edge cases
 - Mock Fastly API responses
@@ -55,7 +55,7 @@ def get_url(self):
     return None
 ```
 
-### 3. `/articles/apps.py`  
+### 3. `/articles/apps.py`
 Added signal registration in `ready()` method:
 ```python
 def ready(self):
@@ -98,19 +98,19 @@ pytest articles/ -v
 
 # Run specific test files
 pytest articles/tasks_test.py -v
-pytest articles/signals_test.py -v  
+pytest articles/signals_test.py -v
 pytest articles/models_test.py -v
 ```
 
 ## Key Features
 
-✅ **Automatic purging** - Happens on article save  
-✅ **Conditional purging** - Only published articles with slugs  
-✅ **Soft purge** - Preserves stale content for graceful degradation  
-✅ **List purge** - Ensures article lists stay fresh  
-✅ **Error handling** - Comprehensive logging and error recovery  
-✅ **Fully tested** - 100% test coverage  
-✅ **Well documented** - Complete usage and troubleshooting docs  
+✅ **Automatic purging** - Happens on article save
+✅ **Conditional purging** - Only published articles with slugs
+✅ **Soft purge** - Preserves stale content for graceful degradation
+✅ **List purge** - Ensures article lists stay fresh
+✅ **Error handling** - Comprehensive logging and error recovery
+✅ **Fully tested** - 100% test coverage
+✅ **Well documented** - Complete usage and troubleshooting docs
 
 ## Differences from mitxonline
 

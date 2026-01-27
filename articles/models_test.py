@@ -1,8 +1,9 @@
 """Tests for articles models"""
 
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
-from unittest.mock import patch
 
 from articles.models import Article
 
