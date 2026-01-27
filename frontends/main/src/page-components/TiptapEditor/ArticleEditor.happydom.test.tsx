@@ -1530,13 +1530,13 @@ describe("ArticleEditor - Document Rendering", () => {
         content: [
           {
             type: "paragraph",
-            // attrs: {
-            //   textAlign: null,
-            // },
+            attrs: {
+              textAlign: null,
+            },
             content: [
               {
-                type: "text",
                 text: "Content paragraph",
+                type: "text",
               },
             ],
           },
