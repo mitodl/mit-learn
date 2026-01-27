@@ -9,6 +9,13 @@ from main.factories import UserFactory
 pytestmark = [pytest.mark.django_db]
 
 
+@pytest.fixture(autouse=True)
+def _mock_cdn_purge(mocker):
+    """Auto-mock CDN purge tasks for all tests in this module"""
+    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
+    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
+
+
 def test_article_creation(staff_client, user):
     """Test article creation HTML sanitization."""
 
