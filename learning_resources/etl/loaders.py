@@ -894,7 +894,6 @@ def load_learning_material(
                 "title": content_file.title,
                 "url": content_file.url,
                 "published": True,
-                "etl_source": course_run.learning_resource.etl_source,
             },
         )
 
