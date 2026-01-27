@@ -75,3 +75,29 @@ export function extractLearningResourceIds(
 
   return ids
 }
+
+// Normalize JSON by sorting keys recursively for comparison
+function normalizeJSON(obj: unknown): unknown {
+  if (obj === null || typeof obj !== "object") {
+    return obj
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(normalizeJSON)
+  }
+  const sorted: Record<string, unknown> = {}
+  const keys = Object.keys(obj).sort()
+  for (const key of keys) {
+    sorted[key] = normalizeJSON((obj as Record<string, unknown>)[key])
+  }
+  return sorted
+}
+
+export function contentsMatch(
+  content1: JSONContent,
+  content2: JSONContent,
+): boolean {
+  return (
+    JSON.stringify(normalizeJSON(content1)) ===
+    JSON.stringify(normalizeJSON(content2))
+  )
+}
