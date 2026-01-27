@@ -2606,25 +2606,24 @@ export type LearningPathResourceResourceTypeEnum =
  * @export
  */
 export type LearningResource =
-  | ({
-      resource_type: "Lecture Audio"
-    } & LectureAudioCourseLearningMaterialResource)
-  | ({
-      resource_type: "Lecture Notes"
-    } & LectureNoteCourseLearningMaterialResource)
-  | ({
-      resource_type: "Open Textbooks"
-    } & OpenTextbookCourseLearningMaterialResource)
-  | ({ resource_type: "Practice" } & PracticeCourseLearningMaterialResource)
-  | ({ resource_type: "Readings" } & ReadingsCourseLearningMaterialResource)
-  | ({ resource_type: "Video" } & VideoCourseLearningMaterialResource)
   | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
+  | ({
+      resource_type: "lecture_audio"
+    } & LectureAudioCourseLearningMaterialResource)
+  | ({
+      resource_type: "lecture_note"
+    } & LectureNoteCourseLearningMaterialResource)
+  | ({
+      resource_type: "open_textbook"
+    } & OpenTextbookCourseLearningMaterialResource)
   | ({ resource_type: "podcast" } & PodcastResource)
   | ({ resource_type: "podcast_episode" } & PodcastEpisodeResource)
+  | ({ resource_type: "practice" } & PracticeCourseLearningMaterialResource)
   | ({ resource_type: "program" } & ProgramResource)
-  | ({ resource_type: "video" } & VideoResource)
+  | ({ resource_type: "reading" } & ReadingsCourseLearningMaterialResource)
+  | ({ resource_type: "video" } & VideoCourseLearningMaterialResource)
   | ({ resource_type: "video_playlist" } & VideoPlaylistResource)
 
 /**
@@ -3639,11 +3638,11 @@ export interface LectureAudioCourseLearningMaterialResource {
 
 export const LectureAudioCourseLearningMaterialResourceResourceTypeEnumDescriptions =
   {
-    "Lecture Audio": "",
+    lecture_audio: "",
   } as const
 
 export const LectureAudioCourseLearningMaterialResourceResourceTypeEnum = {
-  LectureAudio: "Lecture Audio",
+  LectureAudio: "lecture_audio",
 } as const
 
 export type LectureAudioCourseLearningMaterialResourceResourceTypeEnum =
@@ -3959,11 +3958,11 @@ export interface LectureNoteCourseLearningMaterialResource {
 
 export const LectureNoteCourseLearningMaterialResourceResourceTypeEnumDescriptions =
   {
-    "Lecture Notes": "",
+    lecture_note: "",
   } as const
 
 export const LectureNoteCourseLearningMaterialResourceResourceTypeEnum = {
-  LectureNotes: "Lecture Notes",
+  LectureNote: "lecture_note",
 } as const
 
 export type LectureNoteCourseLearningMaterialResourceResourceTypeEnum =
@@ -4430,11 +4429,11 @@ export interface OpenTextbookCourseLearningMaterialResource {
 
 export const OpenTextbookCourseLearningMaterialResourceResourceTypeEnumDescriptions =
   {
-    "Open Textbooks": "",
+    open_textbook: "",
   } as const
 
 export const OpenTextbookCourseLearningMaterialResourceResourceTypeEnum = {
-  OpenTextbooks: "Open Textbooks",
+  OpenTextbook: "open_textbook",
 } as const
 
 export type OpenTextbookCourseLearningMaterialResourceResourceTypeEnum =
@@ -6014,11 +6013,11 @@ export interface PracticeCourseLearningMaterialResource {
 
 export const PracticeCourseLearningMaterialResourceResourceTypeEnumDescriptions =
   {
-    Practice: "",
+    practice: "",
   } as const
 
 export const PracticeCourseLearningMaterialResourceResourceTypeEnum = {
-  Practice: "Practice",
+  Practice: "practice",
 } as const
 
 export type PracticeCourseLearningMaterialResourceResourceTypeEnum =
@@ -7055,11 +7054,11 @@ export interface ReadingsCourseLearningMaterialResource {
 
 export const ReadingsCourseLearningMaterialResourceResourceTypeEnumDescriptions =
   {
-    Readings: "",
+    reading: "",
   } as const
 
 export const ReadingsCourseLearningMaterialResourceResourceTypeEnum = {
-  Readings: "Readings",
+  Reading: "reading",
 } as const
 
 export type ReadingsCourseLearningMaterialResourceResourceTypeEnum =
@@ -7104,6 +7103,23 @@ export const RelationTypeEnum = {
 
 export type RelationTypeEnum =
   (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const ResourceType9d1EnumDescriptions = {
+  video: "",
+} as const
+
+export const ResourceType9d1Enum = {
+  Video: "video",
+} as const
+
+export type ResourceType9d1Enum =
+  (typeof ResourceType9d1Enum)[keyof typeof ResourceType9d1Enum]
 
 /**
  * * `news` - news * `events` - events
@@ -7883,10 +7899,10 @@ export interface VideoCourseLearningMaterialResource {
   best_run_id: number | null
   /**
    *
-   * @type {VideoCourseLearningMaterialResourceResourceTypeEnum}
+   * @type {ResourceType9d1Enum}
    * @memberof VideoCourseLearningMaterialResource
    */
-  resource_type: VideoCourseLearningMaterialResourceResourceTypeEnum
+  resource_type: ResourceType9d1Enum
   /**
    *
    * @type {CourseLearningMaterial}
@@ -8038,23 +8054,6 @@ export interface VideoCourseLearningMaterialResource {
    */
   require_summaries: boolean
 }
-
-/**
- *
- * @export
- * @enum {string}
- */
-
-export const VideoCourseLearningMaterialResourceResourceTypeEnumDescriptions = {
-  Video: "",
-} as const
-
-export const VideoCourseLearningMaterialResourceResourceTypeEnum = {
-  Video: "Video",
-} as const
-
-export type VideoCourseLearningMaterialResourceResourceTypeEnum =
-  (typeof VideoCourseLearningMaterialResourceResourceTypeEnum)[keyof typeof VideoCourseLearningMaterialResourceResourceTypeEnum]
 
 /**
  * Serializer for the VideoPlaylist model
@@ -8546,10 +8545,10 @@ export interface VideoResource {
   best_run_id: number | null
   /**
    *
-   * @type {VideoResourceResourceTypeEnum}
+   * @type {ResourceType9d1Enum}
    * @memberof VideoResource
    */
-  resource_type: VideoResourceResourceTypeEnum
+  resource_type: ResourceType9d1Enum
   /**
    *
    * @type {Video}
@@ -8707,23 +8706,6 @@ export interface VideoResource {
    */
   require_summaries: boolean
 }
-
-/**
- *
- * @export
- * @enum {string}
- */
-
-export const VideoResourceResourceTypeEnumDescriptions = {
-  video: "",
-} as const
-
-export const VideoResourceResourceTypeEnum = {
-  Video: "video",
-} as const
-
-export type VideoResourceResourceTypeEnum =
-  (typeof VideoResourceResourceTypeEnum)[keyof typeof VideoResourceResourceTypeEnum]
 
 /**
  * ModelSerializer for VideoShort model
@@ -13959,7 +13941,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;reading&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -14119,7 +14101,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;reading&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -14356,8 +14338,8 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
 
   /**
-   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;readings&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
-   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'lecture_note' | 'readings' | 'practice' | 'open_textbook' | 'lecture_audio'>}
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;lecture_note&#x60; - lecture notes * &#x60;reading&#x60; - readings * &#x60;practice&#x60; - practice * &#x60;open_textbook&#x60; - open textbooks * &#x60;lecture_audio&#x60; - lecture audio
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'lecture_note' | 'reading' | 'practice' | 'open_textbook' | 'lecture_audio'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
@@ -14559,7 +14541,7 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   VideoPlaylist: "video_playlist",
   Article: "article",
   LectureNote: "lecture_note",
-  Readings: "readings",
+  Reading: "reading",
   Practice: "practice",
   OpenTextbook: "open_textbook",
   LectureAudio: "lecture_audio",

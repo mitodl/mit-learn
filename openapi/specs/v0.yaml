@@ -1296,7 +1296,7 @@ paths:
             - video_playlist
             - article
             - lecture_note
-            - readings
+            - reading
             - practice
             - open_textbook
             - lecture_audio
@@ -1311,7 +1311,7 @@ paths:
               * `video_playlist` - video playlist
               * `article` - article
               * `lecture_note` - lecture notes
-              * `readings` - readings
+              * `reading` - readings
               * `practice` - practice
               * `open_textbook` - open textbooks
               * `lecture_audio` - lecture audio
@@ -1319,7 +1319,7 @@ paths:
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist\n* `article` - article\n* `lecture_note` - lecture notes\n\
-          * `readings` - readings\n* `practice` - practice\n* `open_textbook` - open\
+          * `reading` - readings\n* `practice` - practice\n* `open_textbook` - open\
           \ textbooks\n* `lecture_audio` - lecture audio"
       - in: query
         name: topic
@@ -3333,14 +3333,13 @@ components:
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
           podcast_episode: '#/components/schemas/PodcastEpisodeResource'
-          video: '#/components/schemas/VideoResource'
+          video: '#/components/schemas/VideoCourseLearningMaterialResource'
           video_playlist: '#/components/schemas/VideoPlaylistResource'
-          Lecture Notes: '#/components/schemas/LectureNoteCourseLearningMaterialResource'
-          Readings: '#/components/schemas/ReadingsCourseLearningMaterialResource'
-          Practice: '#/components/schemas/PracticeCourseLearningMaterialResource'
-          Open Textbooks: '#/components/schemas/OpenTextbookCourseLearningMaterialResource'
-          Lecture Audio: '#/components/schemas/LectureAudioCourseLearningMaterialResource'
-          Video: '#/components/schemas/VideoCourseLearningMaterialResource'
+          lecture_note: '#/components/schemas/LectureNoteCourseLearningMaterialResource'
+          reading: '#/components/schemas/ReadingsCourseLearningMaterialResource'
+          practice: '#/components/schemas/PracticeCourseLearningMaterialResource'
+          open_textbook: '#/components/schemas/OpenTextbookCourseLearningMaterialResource'
+          lecture_audio: '#/components/schemas/LectureAudioCourseLearningMaterialResource'
     LearningResourceBaseSchool:
       type: object
       description: |-
@@ -4062,7 +4061,7 @@ components:
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LectureAudioCourseLearningMaterialResourceResourceTypeEnum'
-          default: Lecture Audio
+          default: lecture_audio
           readOnly: true
         course_learning_material:
           allOf:
@@ -4190,7 +4189,7 @@ components:
     LectureAudioCourseLearningMaterialResourceResourceTypeEnum:
       type: string
       enum:
-      - Lecture Audio
+      - lecture_audio
     LectureNoteCourseLearningMaterialResource:
       type: object
       description: Serializer for CourseLearningMaterial resources with resource_type=Lecture
@@ -4355,7 +4354,7 @@ components:
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LectureNoteCourseLearningMaterialResourceResourceTypeEnum'
-          default: Lecture Notes
+          default: lecture_note
           readOnly: true
         course_learning_material:
           allOf:
@@ -4483,7 +4482,7 @@ components:
     LectureNoteCourseLearningMaterialResourceResourceTypeEnum:
       type: string
       enum:
-      - Lecture Notes
+      - lecture_note
     MicroLearningPathRelationship:
       type: object
       description: Serializer containing only parent and child ids for a learning
@@ -4734,7 +4733,7 @@ components:
         resource_type:
           allOf:
           - $ref: '#/components/schemas/OpenTextbookCourseLearningMaterialResourceResourceTypeEnum'
-          default: Open Textbooks
+          default: open_textbook
           readOnly: true
         course_learning_material:
           allOf:
@@ -4862,7 +4861,7 @@ components:
     OpenTextbookCourseLearningMaterialResourceResourceTypeEnum:
       type: string
       enum:
-      - Open Textbooks
+      - open_textbook
     PaginatedAttestationList:
       type: object
       required:
@@ -6026,7 +6025,7 @@ components:
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PracticeCourseLearningMaterialResourceResourceTypeEnum'
-          default: Practice
+          default: practice
           readOnly: true
         course_learning_material:
           allOf:
@@ -6154,7 +6153,7 @@ components:
     PracticeCourseLearningMaterialResourceResourceTypeEnum:
       type: string
       enum:
-      - Practice
+      - practice
     PreferencesSearch:
       type: object
       description: Serializer for profile search preference filters
@@ -6888,7 +6887,7 @@ components:
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ReadingsCourseLearningMaterialResourceResourceTypeEnum'
-          default: Readings
+          default: reading
           readOnly: true
         course_learning_material:
           allOf:
@@ -7016,7 +7015,7 @@ components:
     ReadingsCourseLearningMaterialResourceResourceTypeEnum:
       type: string
       enum:
-      - Readings
+      - reading
     RelationTypeEnum:
       enum:
       - PROGRAM_COURSES
@@ -7037,6 +7036,10 @@ components:
       - Podcast Episodes
       - Playlist Videos
       - Course Learning Materials
+    ResourceType9d1Enum:
+      type: string
+      enum:
+      - video
     ResourceTypeEnum:
       enum:
       - news
@@ -7602,8 +7605,8 @@ components:
           readOnly: true
         resource_type:
           allOf:
-          - $ref: '#/components/schemas/VideoCourseLearningMaterialResourceResourceTypeEnum'
-          default: Video
+          - $ref: '#/components/schemas/ResourceType9d1Enum'
+          default: video
           readOnly: true
         course_learning_material:
           allOf:
@@ -7728,10 +7731,6 @@ components:
       - title
       - user_list_parents
       - views
-    VideoCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - Video
     VideoPlaylist:
       type: object
       description: Serializer for the VideoPlaylist model
@@ -8204,7 +8203,7 @@ components:
           readOnly: true
         resource_type:
           allOf:
-          - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
+          - $ref: '#/components/schemas/ResourceType9d1Enum'
           default: video
           readOnly: true
         video:
@@ -8337,10 +8336,6 @@ components:
       - user_list_parents
       - video
       - views
-    VideoResourceResourceTypeEnum:
-      type: string
-      enum:
-      - video
     VideoShort:
       type: object
       description: ModelSerializer for VideoShort model

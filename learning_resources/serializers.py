@@ -1287,7 +1287,7 @@ class LectureNoteCourseLearningMaterialResourceSerializer(
     """
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.lecture_note.value
+        default=constants.LearningResourceType.lecture_note.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1297,7 +1297,7 @@ class ReadingsCourseLearningMaterialResourceSerializer(LearningResourceBaseSeria
     """Serializer for CourseLearningMaterial resources with resource_type=Readings"""
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.readings.value
+        default=constants.LearningResourceType.reading.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1307,7 +1307,7 @@ class PracticeCourseLearningMaterialResourceSerializer(LearningResourceBaseSeria
     """Serializer for CourseLearningMaterial resources with resource_type=Practice"""
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.practice.value
+        default=constants.LearningResourceType.practice.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1321,7 +1321,7 @@ class OpenTextbookCourseLearningMaterialResourceSerializer(
     """
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.open_textbook.value
+        default=constants.LearningResourceType.open_textbook.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1331,7 +1331,7 @@ class LectureAudioCourseLearningMaterialResourceSerializer(
     LearningResourceBaseSerializer
 ):
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.lecture_audio.value
+        default=constants.LearningResourceType.lecture_audio.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1339,7 +1339,7 @@ class LectureAudioCourseLearningMaterialResourceSerializer(
 
 class VideoCourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video.value
+        default=constants.LearningResourceType.video.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
