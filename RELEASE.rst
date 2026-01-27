@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.52.1
+Version 0.52.1 (Released January 27, 2026)
 --------------
 
 - remove intermediate dashboard classes and use mitxonline api classes directly (#2868)
