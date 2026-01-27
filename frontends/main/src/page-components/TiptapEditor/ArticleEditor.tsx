@@ -10,18 +10,6 @@ import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "ol-components"
-import Document from "@tiptap/extension-document"
-import { Placeholder, Selection } from "@tiptap/extensions"
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
-import { StarterKit } from "@tiptap/starter-kit"
-import { TaskItem, TaskList } from "@tiptap/extension-list"
-import { Heading } from "@tiptap/extension-heading"
-import { Image } from "@tiptap/extension-image"
-import { TextAlign } from "@tiptap/extension-text-align"
-import { Typography as TiptapTypography } from "@tiptap/extension-typography"
-import { Highlight } from "@tiptap/extension-highlight"
-import { Subscript } from "@tiptap/extension-subscript"
-import { Superscript } from "@tiptap/extension-superscript"
 
 import { Toolbar } from "./vendor/components/tiptap-ui-primitive/toolbar"
 import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
@@ -29,19 +17,8 @@ import { Spacer } from "./vendor/components/tiptap-ui-primitive/spacer"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "./TiptapEditor"
 import { ArticleProvider } from "./ArticleContext"
 
-import { DividerNode } from "./extensions/node/Divider/DividerNode"
-import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
-
-import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
-import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
-import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
-import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
-import { HorizontalRule } from "./vendor/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { ImageNode } from "./extensions/node/Image/ImageNode"
-import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNode"
-
-import type { ExtendedNodeConfig } from "./extensions/node/types"
-import { handleImageUpload, MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
+import { handleImageUpload } from "./vendor/lib/tiptap-utils"
+import { useArticleSchema, newArticleDocument } from "./useArticleSchema"
 
 import "./vendor/styles/_keyframe-animations.scss"
 import "./vendor/styles/_variables.scss"
@@ -55,8 +32,7 @@ import {
 import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import dynamic from "next/dynamic"
-import { BannerNode } from "./extensions/node/Banner/BannerNode"
-import { extractLearningResourceIds } from "./extensions/utils"
+import { extractLearningResourceIds, contentsMatch } from "./extensions/utils"
 import { LearningResourceProvider } from "./extensions/node/LearningResource/LearningResourceDataProvider"
 
 const LearningResourceDrawer = dynamic(
@@ -94,10 +70,9 @@ const StyledAlert = styled(Alert)({
   width: "690px",
   transform: "translateX(-50%)",
   zIndex: 1,
-})
-
-const ArticleDocument = Document.extend({
-  content: "banner byline block+",
+  "p:not(:first-child)": {
+    margin: "10px 0",
+  },
 })
 
 interface ArticleEditorProps {
@@ -112,6 +87,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const [title, setTitle] = React.useState(article?.title)
   const [isPublishing, setIsPublishing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [resetAttempted, setResetAttempted] = useState(false)
 
   const {
     mutate: createArticle,
@@ -129,29 +105,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const [content, setContent] = useState<JSONContent>(
-    article?.content || {
-      type: "doc",
-      content: [
-        {
-          type: "banner",
-          content: [
-            {
-              type: "heading",
-              attrs: { level: 1 },
-              content: [],
-            },
-            {
-              type: "paragraph",
-              content: [],
-            },
-          ],
-        },
-        {
-          type: "byline",
-        },
-        { type: "paragraph", content: [] },
-      ],
-    },
+    article?.content || newArticleDocument,
   )
   const [touched, setTouched] = useState(false)
 
@@ -214,94 +168,12 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
     )
   }
 
-  const extensions = [
-    ArticleDocument,
-    StarterKit.configure({
-      document: false, // Disable default document to use our ArticleDocument
-      horizontalRule: false,
-      heading: false,
-      link: {
-        openOnClick: false,
-        enableClickSelection: true,
-      },
-      trailingNode: {
-        node: "paragraph",
-      },
-    }),
-    Heading.configure({
-      levels: [1, 2, 3, 4, 5, 6],
-    }),
-    Placeholder.configure({
-      showOnlyCurrent: false,
-      includeChildren: true,
-      placeholder: ({ node, editor }): string => {
-        let parentNode: typeof node | null = null
-
-        editor.state.doc.descendants((n: ProseMirrorNode) => {
-          n.forEach((childNode: ProseMirrorNode) => {
-            if (childNode === node) {
-              parentNode = n
-            }
-          })
-          if (parentNode) {
-            return false
-          }
-          return undefined
-        })
-
-        if (parentNode) {
-          const parentExtension = editor.extensionManager.extensions.find(
-            (ext) => ext.name === parentNode!.type.name,
-          )
-
-          if (
-            parentExtension &&
-            "config" in parentExtension &&
-            parentExtension.config &&
-            typeof (parentExtension.config as ExtendedNodeConfig)
-              .getPlaceholders === "function"
-          ) {
-            const placeholder = (
-              parentExtension.config as ExtendedNodeConfig
-            ).getPlaceholders(node)
-            if (placeholder) {
-              return placeholder
-            }
-          }
-        }
-
-        if (node.type.name === "heading") {
-          return "Add a heading"
-        }
-        return "Add some text"
-      },
-    }),
-    HorizontalRule,
-    LearningResourceURLHandler,
-    LearningResourceNode,
-    TextAlign.configure({ types: ["heading", "paragraph"] }),
-    TaskList,
-    TaskItem.configure({ nested: true }),
-    Highlight.configure({ multicolor: true }),
-    TiptapTypography,
-    Superscript,
-    Subscript,
-    Selection,
-    Image,
-    MediaEmbedNode,
-    DividerNode,
-    ArticleByLineInfoBarNode,
-    ImageWithCaptionNode,
-    MediaEmbedURLHandler,
-    ImageNode.configure({
-      accept: "image/*",
-      maxSize: MAX_FILE_SIZE,
-      limit: 3,
-      upload: uploadHandler,
-      onError: (error) => setUploadError(error.message),
-    }),
-    BannerNode,
-  ]
+  const { extensions, schemaError } = useArticleSchema({
+    uploadHandler,
+    setUploadError,
+    enabled: isArticleEditor,
+    content,
+  })
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -342,8 +214,9 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
 
     if (article.content) {
       const currentContent = editor.getJSON()
-      if (JSON.stringify(article.content) !== JSON.stringify(currentContent)) {
+      if (!contentsMatch(article.content, currentContent)) {
         setContent(article.content)
+        setTouched(true)
         editor.commands.setContent(article.content)
       }
     }
@@ -385,7 +258,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   if (!editor) return null
 
   const isPending = isCreating || isUpdating
-  const error = createError || updateError || uploadError
+  const error = createError || updateError || uploadError || schemaError
 
   const resourceIds = extractLearningResourceIds(content)
 
@@ -461,6 +334,38 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 <Typography variant="body2" color="textPrimary">
                   {error instanceof Error ? error.message : error}
                 </Typography>
+                {schemaError && !readOnly ? (
+                  <>
+                    <Typography variant="body2">
+                      Reset to attempt to align the article to the content
+                      template.
+                    </Typography>
+                    {resetAttempted ? (
+                      <Typography variant="body2">
+                        Reset attempt failed.
+                      </Typography>
+                    ) : null}
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => {
+                        /**
+                         * setContent() generally does a good job of fixing invalid content to meet the schema.
+                         * We want to show schema errors (to editors only), though in most cases this
+                         * reset should accommodate changes we make to the schema allowing pre-existing articles
+                         * to remain editable.
+                         *
+                         * This provides a checkpoint for editors to accept schema changes on existing articles
+                         * which may otherwise break them.
+                         */
+                        editor.commands.setContent(article?.content)
+                        setResetAttempted(true)
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </>
+                ) : null}
               </StyledAlert>
             ) : null}
             <LearningResourceDrawer />

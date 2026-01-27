@@ -1509,5 +1509,48 @@ describe("ArticleEditor - Document Rendering", () => {
       ).toBeInTheDocument()
       expect(screen.getByText("Content paragraph")).toBeInTheDocument()
     })
+
+    test("Shows schema errors when content is invalid (missing banner and byline)", async () => {
+      const currentMock = consoleErrorSpy.getMockImplementation()
+      consoleErrorSpy.mockImplementation((message: unknown) => {
+        if (
+          typeof message === "string" &&
+          message.includes("Document schema check failed")
+        ) {
+          return
+        }
+        if (currentMock) {
+          currentMock(message)
+        }
+      })
+
+      // Content missing required banner and byline
+      const content: JSONContent = {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            // attrs: {
+            //   textAlign: null,
+            // },
+            content: [
+              {
+                type: "text",
+                text: "Content paragraph",
+              },
+            ],
+          },
+        ],
+      }
+      await setupEditor(content)
+
+      await screen.findByText(
+        "Document schema check failed: Invalid content for node doc: paragraph is not allowed in this position",
+      )
+
+      if (currentMock) {
+        consoleErrorSpy.mockImplementation(currentMock)
+      }
+    })
   })
 })
