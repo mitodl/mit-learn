@@ -652,7 +652,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         LearningResource.objects.filter(
                             published=True,
                             resource_type=resource_type,
-                            courselearningmaterial__isnull=True,
                         )
                         .order_by("id")
                         .values_list("id", flat=True),
@@ -859,7 +858,6 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=True,
                 resource_type=resource_type,
-                courselearningmaterial__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),
@@ -873,7 +871,6 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=False,
                 resource_type=resource_type,
-                courselearningmaterial__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),
