@@ -1295,11 +1295,7 @@ paths:
             - video
             - video_playlist
             - article
-            - lecture_note
-            - reading
-            - practice
-            - open_textbook
-            - lecture_audio
+            - course_learning_material
             type: string
             description: |-
               * `course` - course
@@ -1310,17 +1306,12 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `article` - article
-              * `lecture_note` - lecture notes
-              * `reading` - readings
-              * `practice` - practice
-              * `open_textbook` - open textbooks
-              * `lecture_audio` - lecture audio
+              * `course_learning_material` - course learning material
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `lecture_note` - lecture notes\n\
-          * `reading` - readings\n* `practice` - practice\n* `open_textbook` - open\
-          \ textbooks\n* `lecture_audio` - lecture audio"
+          \ - video playlist\n* `article` - article\n* `course_learning_material`\
+          \ - course learning material"
       - in: query
         name: topic
         schema:
@@ -2110,6 +2101,29 @@ components:
           readOnly: true
       required:
       - unit
+    ContentCategoryEnum:
+      enum:
+      - Lecture Notes
+      - Readings
+      - Practice
+      - Open Textbooks
+      - Lecture Audio
+      - Video
+      type: string
+      description: |-
+        * `Lecture Notes` - Lecture Notes
+        * `Readings` - Readings
+        * `Practice` - Practice
+        * `Open Textbooks` - Open Textbooks
+        * `Lecture Audio` - Lecture Audio
+        * `Video` - Video
+      x-enum-descriptions:
+      - Lecture Notes
+      - Readings
+      - Practice
+      - Open Textbooks
+      - Lecture Audio
+      - Video
     ContentFile:
       type: object
       description: Serializer class for course run ContentFiles
@@ -2342,9 +2356,308 @@ components:
             type: string
             maxLength: 256
           nullable: true
+        content_category:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ContentCategoryEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - content_file
       - id
+    CourseLearningMaterialResource:
+      type: object
+      description: Serializer for CourseLearningMaterial resources with resource_type=Lecture
+        Notes
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+        position:
+          type: integer
+          readOnly: true
+          nullable: true
+        offered_by:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
+          nullable: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
+          nullable: true
+        course_feature:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          nullable: true
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
+          nullable: true
+        certification:
+          type: boolean
+          readOnly: true
+        certification_type:
+          type: object
+          title: CourseResourceCertificationType
+          properties:
+            code:
+              enum:
+              - micromasters
+              - professional
+              - completion
+              - none
+            name:
+              type: string
+          required:
+          - code
+          - name
+          readOnly: true
+        prices:
+          type: array
+          items:
+            type: string
+            format: decimal
+            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        resource_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourcePrice'
+          readOnly: true
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceRun'
+          readOnly: true
+          nullable: true
+        image:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceImage'
+          nullable: true
+          readOnly: true
+        learning_path_parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/MicroLearningPathRelationship'
+          readOnly: true
+        user_list_parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/MicroUserListRelationship'
+          readOnly: true
+        views:
+          type: integer
+          readOnly: true
+        delivery:
+          type: array
+          items:
+            type: object
+            title: CourseResourceDeliveryInner
+            properties:
+              code:
+                enum:
+                - online
+                - hybrid
+                - in_person
+                - offline
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        free:
+          type: boolean
+          description: Return true if the resource is free/has a free option
+          readOnly: true
+        resource_category:
+          type: string
+          description: Return the resource category of the resource
+          readOnly: true
+        format:
+          type: array
+          items:
+            type: object
+            title: CourseResourceFormatInner
+            properties:
+              code:
+                enum:
+                - synchronous
+                - asynchronous
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        pace:
+          type: array
+          items:
+            type: object
+            title: CourseResourcePaceInner
+            properties:
+              code:
+                enum:
+                - self_paced
+                - instructor_paced
+              name:
+                type: string
+            required:
+            - code
+            - name
+          readOnly: true
+        children:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
+          nullable: true
+          readOnly: true
+        best_run_id:
+          type: integer
+          nullable: true
+          description: Return the best run id for the resource, if it has runs
+          readOnly: true
+        resource_type:
+          allOf:
+          - $ref: '#/components/schemas/CourseLearningMaterialResourceResourceTypeEnum'
+          default: course_learning_material
+          readOnly: true
+        course_learning_material:
+          allOf:
+          - $ref: '#/components/schemas/CourseLearningMaterial'
+          readOnly: true
+        readable_id:
+          type: string
+          maxLength: 512
+        title:
+          type: string
+          maxLength: 256
+        description:
+          type: string
+          nullable: true
+        full_description:
+          type: string
+          nullable: true
+        last_modified:
+          type: string
+          format: date-time
+          nullable: true
+        published:
+          type: boolean
+        languages:
+          type: array
+          items:
+            type: string
+            maxLength: 24
+          nullable: true
+        url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        ocw_topics:
+          type: array
+          items:
+            type: string
+            maxLength: 128
+        professional:
+          type: boolean
+          readOnly: true
+        next_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        availability:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        completeness:
+          type: number
+          format: double
+        license_cc:
+          type: boolean
+        test_mode:
+          type: boolean
+        continuing_ed_credits:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        location:
+          type: string
+          maxLength: 256
+        duration:
+          type: string
+          maxLength: 256
+        min_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weeks:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        time_commitment:
+          type: string
+          maxLength: 256
+        min_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        max_weekly_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
+      required:
+      - best_run_id
+      - certification
+      - certification_type
+      - children
+      - course_feature
+      - course_learning_material
+      - delivery
+      - departments
+      - format
+      - free
+      - id
+      - image
+      - learning_path_parents
+      - offered_by
+      - pace
+      - platform
+      - position
+      - prices
+      - professional
+      - readable_id
+      - require_summaries
+      - resource_category
+      - resource_prices
+      - resource_type
+      - runs
+      - title
+      - user_list_parents
+      - views
+    CourseLearningMaterialResourceResourceTypeEnum:
+      type: string
+      enum:
+      - course_learning_material
     CourseNumber:
       type: object
       description: Serializer for CourseNumber
@@ -3318,12 +3631,7 @@ components:
       - $ref: '#/components/schemas/PodcastEpisodeResource'
       - $ref: '#/components/schemas/VideoResource'
       - $ref: '#/components/schemas/VideoPlaylistResource'
-      - $ref: '#/components/schemas/LectureNoteCourseLearningMaterialResource'
-      - $ref: '#/components/schemas/ReadingsCourseLearningMaterialResource'
-      - $ref: '#/components/schemas/PracticeCourseLearningMaterialResource'
-      - $ref: '#/components/schemas/OpenTextbookCourseLearningMaterialResource'
-      - $ref: '#/components/schemas/LectureAudioCourseLearningMaterialResource'
-      - $ref: '#/components/schemas/VideoCourseLearningMaterialResource'
+      - $ref: '#/components/schemas/CourseLearningMaterialResource'
       discriminator:
         propertyName: resource_type
         mapping:
@@ -3333,13 +3641,9 @@ components:
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
           podcast_episode: '#/components/schemas/PodcastEpisodeResource'
-          video: '#/components/schemas/VideoCourseLearningMaterialResource'
+          video: '#/components/schemas/VideoResource'
           video_playlist: '#/components/schemas/VideoPlaylistResource'
-          lecture_note: '#/components/schemas/LectureNoteCourseLearningMaterialResource'
-          reading: '#/components/schemas/ReadingsCourseLearningMaterialResource'
-          practice: '#/components/schemas/PracticeCourseLearningMaterialResource'
-          open_textbook: '#/components/schemas/OpenTextbookCourseLearningMaterialResource'
-          lecture_audio: '#/components/schemas/LectureAudioCourseLearningMaterialResource'
+          course_learning_material: '#/components/schemas/CourseLearningMaterialResource'
     LearningResourceBaseSchool:
       type: object
       description: |-
@@ -3898,591 +4202,6 @@ components:
       - next
       - previous
       - results
-    LectureAudioCourseLearningMaterialResource:
-      type: object
-      description: Serializer for LearningResource, minus program
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/LectureAudioCourseLearningMaterialResourceResourceTypeEnum'
-          default: lecture_audio
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
-    LectureAudioCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - lecture_audio
-    LectureNoteCourseLearningMaterialResource:
-      type: object
-      description: Serializer for CourseLearningMaterial resources with resource_type=Lecture
-        Notes
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/LectureNoteCourseLearningMaterialResourceResourceTypeEnum'
-          default: lecture_note
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
-    LectureNoteCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - lecture_note
     MicroLearningPathRelationship:
       type: object
       description: Serializer containing only parent and child ids for a learning
@@ -4569,299 +4288,6 @@ components:
     NullEnum:
       enum:
       - null
-    OpenTextbookCourseLearningMaterialResource:
-      type: object
-      description: Serializer for CourseLearningMaterial resources with resource_type=Open
-        Textbook
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/OpenTextbookCourseLearningMaterialResourceResourceTypeEnum'
-          default: open_textbook
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
-    OpenTextbookCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - open_textbook
     PaginatedAttestationList:
       type: object
       required:
@@ -5862,298 +5288,6 @@ components:
       type: string
       enum:
       - podcast
-    PracticeCourseLearningMaterialResource:
-      type: object
-      description: Serializer for CourseLearningMaterial resources with resource_type=Practice
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/PracticeCourseLearningMaterialResourceResourceTypeEnum'
-          default: practice
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
-    PracticeCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - practice
     PreferencesSearch:
       type: object
       description: Serializer for profile search preference filters
@@ -6724,298 +5858,6 @@ components:
       type: string
       enum:
       - program
-    ReadingsCourseLearningMaterialResource:
-      type: object
-      description: Serializer for CourseLearningMaterial resources with resource_type=Readings
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/ReadingsCourseLearningMaterialResourceResourceTypeEnum'
-          default: reading
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
-    ReadingsCourseLearningMaterialResourceResourceTypeEnum:
-      type: string
-      enum:
-      - reading
     RelationTypeEnum:
       enum:
       - PROGRAM_COURSES
@@ -7036,10 +5878,6 @@ components:
       - Podcast Episodes
       - Playlist Videos
       - Course Learning Materials
-    ResourceType9d1Enum:
-      type: string
-      enum:
-      - video
     ResourceTypeEnum:
       enum:
       - news
@@ -7443,294 +6281,6 @@ components:
       required:
       - channel_id
       - title
-    VideoCourseLearningMaterialResource:
-      type: object
-      description: Serializer for LearningResource, minus program
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_category:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/ResourceType9d1Enum'
-          default: video
-          readOnly: true
-        course_learning_material:
-          allOf:
-          - $ref: '#/components/schemas/CourseLearningMaterial'
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - course_learning_material
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - learning_path_parents
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - runs
-      - title
-      - user_list_parents
-      - views
     VideoPlaylist:
       type: object
       description: Serializer for the VideoPlaylist model
@@ -8203,7 +6753,7 @@ components:
           readOnly: true
         resource_type:
           allOf:
-          - $ref: '#/components/schemas/ResourceType9d1Enum'
+          - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
           default: video
           readOnly: true
         video:
@@ -8336,6 +6886,10 @@ components:
       - user_list_parents
       - video
       - views
+    VideoResourceResourceTypeEnum:
+      type: string
+      enum:
+      - video
     VideoShort:
       type: object
       description: ModelSerializer for VideoShort model

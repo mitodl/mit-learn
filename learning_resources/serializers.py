@@ -1279,67 +1279,13 @@ class CourseLearningMaterialSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class LectureNoteCourseLearningMaterialResourceSerializer(
-    LearningResourceBaseSerializer
-):
+class CourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
     """
     Serializer for CourseLearningMaterial resources with resource_type=Lecture Notes
     """
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.lecture_note.name
-    )
-
-    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
-
-
-class ReadingsCourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for CourseLearningMaterial resources with resource_type=Readings"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.reading.name
-    )
-
-    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
-
-
-class PracticeCourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for CourseLearningMaterial resources with resource_type=Practice"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.practice.name
-    )
-
-    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
-
-
-class OpenTextbookCourseLearningMaterialResourceSerializer(
-    LearningResourceBaseSerializer
-):
-    """
-    Serializer for CourseLearningMaterial resources with resource_type=Open Textbook
-    """
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.open_textbook.name
-    )
-
-    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
-
-
-class LectureAudioCourseLearningMaterialResourceSerializer(
-    LearningResourceBaseSerializer
-):
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.lecture_audio.name
-    )
-
-    course_learning_material = CourseLearningMaterialSerializer(read_only=True)
-
-
-class VideoCourseLearningMaterialResourceSerializer(LearningResourceBaseSerializer):
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video.name
+        default=constants.LearningResourceType.course_learning_material.name
     )
 
     course_learning_material = CourseLearningMaterialSerializer(read_only=True)
@@ -1359,12 +1305,7 @@ class LearningResourceSerializer(serializers.Serializer):
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
             ArticleResourceSerializer,
-            ReadingsCourseLearningMaterialResourceSerializer,
-            OpenTextbookCourseLearningMaterialResourceSerializer,
-            PracticeCourseLearningMaterialResourceSerializer,
-            VideoCourseLearningMaterialResourceSerializer,
-            LectureNoteCourseLearningMaterialResourceSerializer,
-            LectureAudioCourseLearningMaterialResourceSerializer,
+            CourseLearningMaterialResourceSerializer,
         )
     }
 

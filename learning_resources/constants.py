@@ -37,11 +37,7 @@ class LearningResourceType(ExtendedEnum):
     video = "Video"
     video_playlist = "Video Playlist"
     article = "Article"
-    lecture_note = "Lecture Notes"
-    reading = "Readings"
-    practice = "Practice"
-    open_textbook = "Open Textbooks"
-    lecture_audio = "Lecture Audio"
+    course_learning_material = "Course Learning Material"
 
 
 LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
@@ -122,33 +118,50 @@ class LearningResourceRelationTypes(TextChoices):
 
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
 
+
+OCW_CONTENT_CATEGORY_LECTURE_NOTES = "Lecture Notes"
+OCW_CONTENT_CATEGORY_READINGS = "Readings"
+OCW_CONTENT_CATEGORY_PRACTICE = "Practice"
+OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS = "Open Textbooks"
+OCW_CONTENT_CATEGORY_LECTURE_AUDIO = "Lecture Audio"
+OCW_CONTENT_CATEGORY_VIDEOS = "Video"
+
+VALID_COURSE_CONTENT_CATEGORY_CHOICES = (
+    (OCW_CONTENT_CATEGORY_LECTURE_NOTES, OCW_CONTENT_CATEGORY_LECTURE_NOTES),
+    (OCW_CONTENT_CATEGORY_READINGS, OCW_CONTENT_CATEGORY_READINGS),
+    (OCW_CONTENT_CATEGORY_PRACTICE, OCW_CONTENT_CATEGORY_PRACTICE),
+    (OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS, OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS),
+    (OCW_CONTENT_CATEGORY_LECTURE_AUDIO, OCW_CONTENT_CATEGORY_LECTURE_AUDIO),
+    (OCW_CONTENT_CATEGORY_VIDEOS, OCW_CONTENT_CATEGORY_VIDEOS),
+)
+
 OCW_COURSE_CONTENT_CATEGORY_MAPPING = {
-    LearningResourceType.lecture_note.value: LearningResourceType.lecture_note.name,
-    LearningResourceType.reading.value: LearningResourceType.reading.name,
-    LearningResourceType.practice.value: LearningResourceType.practice.name,
-    "Exams": LearningResourceType.practice.name,
-    "Exams Solutions": LearningResourceType.practice.name,
-    "Supplemental Exam Materials": LearningResourceType.practice.name,
-    "Problem Sets": LearningResourceType.practice.name,
-    "Problem Set Solutions": LearningResourceType.practice.name,
-    "Recitations": LearningResourceType.practice.name,
-    "Tutorials": LearningResourceType.practice.name,
-    "Projects": LearningResourceType.practice.name,
-    "Assignments": LearningResourceType.practice.name,
-    "Laboratory Assignments": LearningResourceType.practice.name,
-    "Programming Assignments": LearningResourceType.practice.name,
-    "Activity Assignments": LearningResourceType.practice.name,
-    "Written Assignments": LearningResourceType.practice.name,
-    LearningResourceType.open_textbook.value: LearningResourceType.open_textbook.name,
-    LearningResourceType.lecture_audio.value: LearningResourceType.lecture_audio.name,
-    LearningResourceType.video.value: LearningResourceType.video.name,
-    "Lecture Videos": LearningResourceType.video.name,
-    "Problem-solving Videos": LearningResourceType.video.name,
-    "Other Video": LearningResourceType.video.name,
-    "Tutorial Videos": LearningResourceType.video.name,
-    "Instructor Insights": LearningResourceType.video.name,
-    "Demonstration Videos": LearningResourceType.video.name,
-    "Recitation Videos": LearningResourceType.video.name,
+    OCW_CONTENT_CATEGORY_LECTURE_NOTES: OCW_CONTENT_CATEGORY_LECTURE_NOTES,
+    OCW_CONTENT_CATEGORY_READINGS: OCW_CONTENT_CATEGORY_READINGS,
+    OCW_CONTENT_CATEGORY_PRACTICE: OCW_CONTENT_CATEGORY_PRACTICE,
+    "Exams": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Exams Solutions": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Supplemental Exam Materials": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Problem Sets": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Problem Set Solutions": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Recitations": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Tutorials": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Projects": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Assignments": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Laboratory Assignments": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Programming Assignments": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Activity Assignments": OCW_CONTENT_CATEGORY_PRACTICE,
+    "Written Assignments": OCW_CONTENT_CATEGORY_PRACTICE,
+    OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS: OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
+    OCW_CONTENT_CATEGORY_LECTURE_AUDIO: OCW_CONTENT_CATEGORY_LECTURE_AUDIO,
+    OCW_CONTENT_CATEGORY_VIDEOS: OCW_CONTENT_CATEGORY_VIDEOS,
+    "Lecture Videos": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Problem-solving Videos": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Other Video": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Tutorial Videos": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Instructor Insights": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Demonstration Videos": OCW_CONTENT_CATEGORY_VIDEOS,
+    "Recitation Videos": OCW_CONTENT_CATEGORY_VIDEOS,
 }
 
 

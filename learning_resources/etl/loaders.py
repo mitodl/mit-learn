@@ -877,11 +877,11 @@ def load_learning_material(
     Create learning material object from ocw content file
     """
 
-    resource_types = {
+    content_categories = {
         OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
     }
-    resource_types = sorted(resource_types)
-    resource_type = resource_types[0]
+    content_categories = sorted(content_categories)
+    content_category = content_categories[0]
 
     with transaction.atomic():
         learning_resource, _ = LearningResource.objects.update_or_create(
@@ -890,7 +890,7 @@ def load_learning_material(
             platform=course_run.learning_resource.platform,
             offered_by=course_run.learning_resource.offered_by,
             defaults={
-                "resource_type": resource_type,
+                "resource_type": LearningResourceType.course_learning_material.name,
                 "title": content_file.title,
                 "url": content_file.url,
                 "published": True,
@@ -901,7 +901,10 @@ def load_learning_material(
         learning_material, _ = CourseLearningMaterial.objects.update_or_create(
             learning_resource=learning_resource,
             content_file=content_file,
-            defaults={"content_tags": list(learning_material_tags)},
+            defaults={
+                "content_tags": list(learning_material_tags),
+                "content_category": content_category,
+            },
         )
         return learning_material.id
 
