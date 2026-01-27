@@ -2,7 +2,6 @@
 
 import React from "react"
 import { PlainList, Stack, Typography } from "ol-components"
-import { ResourceCard } from "@/page-components/ResourceCard/ResourceCard"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
@@ -29,6 +28,8 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import dynamic from "next/dynamic"
 import type { Breakpoint } from "@mui/system"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -44,6 +45,7 @@ const WhatSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
+
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -105,7 +107,7 @@ const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
   return Object.fromEntries(array.map((item) => [String(item[key]), item]))
 }
 
-const StyledResourceCard = styled(ResourceCard)<{
+const StyledResourceCard = styled(MitxOnlineCourseCard)<{
   onlyAbove?: Breakpoint
   onlyBelow?: Breakpoint
 }>(({ theme, onlyAbove, onlyBelow }) => ({
@@ -123,10 +125,12 @@ type RequirementSubsectionInfo = {
   titleId: string
   resourceIds: string[]
 }
+
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
   fontSize: theme.typography.pxToRem(20), // boosted size
 })) as typeof Typography
+
 const ReqTitleNote = styled("span")(({ theme }) => ({
   ...theme.typography.body1,
   color: theme.custom.colors.silverGrayDark,
@@ -135,6 +139,7 @@ const ReqTitleNote = styled("span")(({ theme }) => ({
 type RequirementsSectionProps = {
   program: V2Program
 }
+
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
 }) => {
@@ -150,15 +155,20 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
         ?.map((c) => c.readable_id)
         .filter((id) => id !== undefined) ?? [],
   }
-  const readableIds = [...(readable.required ?? []), ...readable.elective]
-  const resources = useQuery({
-    ...learningResourceQueries.list({
-      readable_id: readableIds,
-      platform: ["mitxonline"],
-      resource_type: [ResourceTypeEnum.Course],
-      limit: readableIds.length,
+
+  const courseIds = [
+    ...(requirements.courses?.required ?? []),
+    ...(requirements.courses?.electives ?? []),
+  ]
+    .map((course) => course.id)
+    .filter((id): id is number => id !== undefined)
+
+  const courses = useQuery({
+    ...coursesQueries.coursesList({
+      id: courseIds,
+      page_size: courseIds.length || undefined,
     }),
-    enabled: readableIds.length > 0,
+    enabled: courseIds.length > 0,
     select: (data) => keyBy(data.results, "readable_id"),
   })
 
@@ -218,22 +228,26 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
             </ReqSubsectionTitle>
             <RequirementsListing>
               {resourceIds.map((readableId) => {
-                const resource = resources.data?.[readableId]
-                if (!resources.isLoading && !resource) return null
+                const course = courses.data?.[readableId]
+                const isCourseLoading = courses.isLoading || !courses.data
+                if (!isCourseLoading && !course) {
+                  return null
+                }
                 return (
                   <li key={readableId}>
                     <StyledResourceCard
                       onlyAbove="sm"
-                      resource={resource}
+                      course={course}
+                      href={`/courses/${encodeURIComponent(readableId)}`}
                       size="small"
-                      isLoading={resources.isLoading}
+                      isLoading={isCourseLoading}
                     />
                     <StyledResourceCard
                       onlyBelow="sm"
-                      list
-                      resource={resource}
+                      course={course}
+                      href={`/courses/${encodeURIComponent(readableId)}`}
                       size="small"
-                      isLoading={resources.isLoading}
+                      isLoading={isCourseLoading}
                     />
                   </li>
                 )
@@ -260,7 +274,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
-  const programResource = programResources.data?.results?.[0]
+  const programResource = programResources.data?.results?.[0] ?? null
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
@@ -274,9 +288,8 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   if (!page || !program || !programResource) {
     if (!isLoading) {
       return notFound()
-    } else {
-      return null
     }
+    return null
   }
 
   const navLinks = getNavLinks(page)
