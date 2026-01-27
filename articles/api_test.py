@@ -9,6 +9,10 @@ def test_article_published_actions_triggers_hook(mocker, user):
     from articles.api import article_published_actions
     from articles.models import Article
 
+    # Mock CDN purge tasks
+    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
+    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
+
     # Create a published article
     article = Article.objects.create(
         title="Published Article",
@@ -67,6 +71,10 @@ def test_article_published_actions_logs_execution(mocker, user, caplog):
     """Test that article_published_actions logs when triggering plugins"""
     from articles.api import article_published_actions
     from articles.models import Article
+
+    # Mock CDN purge tasks
+    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
+    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
 
     # Create a published article
     article = Article.objects.create(

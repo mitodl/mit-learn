@@ -9,3 +9,7 @@ class ArticlesConfig(AppConfig):
 
     hookimpl = HookimplMarker(name)
     hookspec = HookspecMarker(name)
+
+    def ready(self):
+        """Import signals when the app is ready"""
+        import articles.signals  # noqa: F401
