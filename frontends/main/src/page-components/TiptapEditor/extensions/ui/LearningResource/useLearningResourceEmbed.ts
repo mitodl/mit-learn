@@ -3,7 +3,7 @@ import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
 import NiceModal from "@ebay/nice-modal-react"
 import CourseUrlInputDialog from "./ResourceUrlInputDialog"
-import { Icon } from "./Icon" // you create this SVG
+import { Icon } from "./Icon"
 
 export const LEARNING_RESOURCE_SHORTCUT_KEY = "Mod+Shift+R"
 
