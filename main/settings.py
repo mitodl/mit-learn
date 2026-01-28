@@ -779,7 +779,7 @@ DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY = get_float(
     name="DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY", default=90
 )
 DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT = get_float(
-    name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=1
+    name="DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT", default=0
 )
 """
 the schedule (in minutes) for the embeddings task

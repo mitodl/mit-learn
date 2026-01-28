@@ -32,7 +32,7 @@ from learning_resources_search.serializers import (
     PercolateQuerySerializer,
     PercolateQuerySubscriptionRequestSerializer,
 )
-from main.utils import cache_page_for_anonymous_users
+from main.utils import cache_page_for_all_users
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class LearningResourcesSearchView(ESView):
     permission_classes = ()
 
     @method_decorator(
-        cache_page_for_anonymous_users(
+        cache_page_for_all_users(
             settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="search"
         )
     )
