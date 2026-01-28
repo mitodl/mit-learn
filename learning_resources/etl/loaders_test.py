@@ -53,6 +53,7 @@ from learning_resources.etl.loaders import (
     load_video_channels,
     load_videos,
 )
+from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
     ArticleFactory,
@@ -786,13 +787,23 @@ def test_load_course_fetch_only(mocker, course_exists):
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.parametrize("status", [RunStatus.archived.value, RunStatus.current.value])
 @pytest.mark.parametrize("certification", [True, False])
-def test_load_run(run_exists, status, certification):
+def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
+    today = now_in_utc()
+    mock_content_task = mocker.patch(
+        "learning_resources.tasks.get_content_tasks",
+        return_value=mocker.Mock(delay=mocker.Mock()),
+    )
     course = LearningResourceFactory.create(
-        is_course=True, runs=[], certification=certification
+        is_course=True,
+        runs=[],
+        certification=certification,
+        etl_source=ETLSource.xpro.value,
     )
     learning_resource_run = (
-        LearningResourceRunFactory.create(learning_resource=course)
+        LearningResourceRunFactory.create(
+            learning_resource=course,
+        )
         if run_exists
         else LearningResourceRunFactory.build()
     )
@@ -801,6 +812,8 @@ def test_load_run(run_exists, status, certification):
         LearningResourceRunFactory.build(
             run_id=learning_resource_run.run_id,
             prices=["70.00", "20.00"],
+            enrollment_start=today - timedelta(days=30),
+            enrollment_end=today + timedelta(days=30),
         )
     )
     props["status"] = status
@@ -833,6 +846,14 @@ def test_load_run(run_exists, status, certification):
     )
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
+
+    if run_exists:
+        mock_content_task.assert_not_called()
+    else:
+        mock_content_task.assert_called_once_with(
+            etl_source=course.etl_source, learning_resource_ids=[course.id]
+        )
+        mock_content_task.return_value.delay.assert_called_once()
 
 
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])
@@ -1048,7 +1069,7 @@ def test_load_content_files(mocker, is_published, calc_score):
 
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_load_test_mode_resource_content_files(
-    mocker, mock_xpro_learning_bucket, mock_mitx_learning_bucket, test_mode
+    mocker, mock_course_archive_bucket, test_mode
 ):
     """Test that load_content_files calls the expected functions"""
 
@@ -1076,24 +1097,25 @@ def test_load_test_mode_resource_content_files(
         "learning_resources_search.plugins.tasks.deindex_run_content_files",
         autospec=True,
     )
-    bucket = mock_mitx_learning_bucket.bucket
+    bucket = mock_course_archive_bucket.bucket
     with Path.open(
         Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
     ) as infile:
         bucket.put_object(
-            Key=f"20220101/course/{course.runs.first().run_id}.tar.gz",
+            Key=f"{get_s3_prefix_for_source(course.etl_source)}/{course.runs.first().run_id}/foo.tar.gz",
             Body=infile.read(),
             ACL="public-read",
         )
     mocker.patch(
-        "learning_resources.etl.edx_shared.get_learning_course_bucket",
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
         return_value=bucket,
     )
     sync_edx_course_files(
         course.etl_source,
         [course.id],
-        [f"20220101/course/{course.runs.first().run_id}.tar.gz"],
-        s3_prefix="course",
+        [
+            f"{get_s3_prefix_for_source(course.etl_source)}/{course.runs.first().run_id}/foo.tar.gz"
+        ],
     )
 
     if test_mode:

@@ -12,4 +12,27 @@ const matchOrganizationBySlug =
     return organization.slug.replace("org-", "") === orgSlug
   }
 
-export { isInEnum, matchOrganizationBySlug }
+// Utility function to collapse whitespace
+const collapseWhitespace = (text: string): string => {
+  if (!text) return ""
+  // Collapse multiple whitespace into single space and trim
+  return text.replace(/\s+/g, " ").trim()
+}
+
+// Convert URLs in plain text to clickable links
+const linkifyText = (text: string): string => {
+  if (!text) return ""
+  console.log("Linkifying text:", text)
+  // Regex to match URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+
+  // Replace URLs with anchor tags
+  return collapseWhitespace(
+    text.replace(
+      urlRegex,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+    ),
+  )
+}
+
+export { isInEnum, matchOrganizationBySlug, collapseWhitespace, linkifyText }

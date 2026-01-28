@@ -15,6 +15,7 @@ export const MediaEmbedNode = Node.create({
 
   group: "block",
   atom: true,
+  selectable: true,
 
   addAttributes() {
     return {
@@ -52,10 +53,16 @@ export const MediaEmbedNode = Node.create({
       insertMedia:
         (src: string) =>
         ({ commands }: CommandProps) => {
-          return commands.insertContent({
+          // Insert media node followed by an empty paragraph
+          const mediaNode = {
             type: this.name,
             attrs: { src },
-          })
+          }
+          const emptyParagraph = {
+            type: "paragraph",
+          }
+
+          return commands.insertContent([mediaNode, emptyParagraph])
         },
     }
   },

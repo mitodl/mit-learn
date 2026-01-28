@@ -9,42 +9,57 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
-import { DashboardCard, getDefaultContextMenuItems } from "./DashboardCard"
-import { dashboardCourse, dashboardProgram } from "./test-utils"
+import {
+  DashboardCard,
+  DashboardType,
+  getDefaultContextMenuItems,
+} from "./DashboardCard"
+import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
-import { EnrollmentMode, EnrollmentStatus } from "./types"
 import { cartesianProduct } from "ol-test-utilities"
 
+const EnrollmentMode = {
+  Audit: "audit",
+  Verified: "verified",
+} as const
+type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
+
 const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  const run = mitxonline.factories.courses.courseRun({
+    start_date: moment().subtract(90, "days").toISOString(), // Started 90 days ago
+    end_date: moment().subtract(30, "days").toISOString(), // Ended 30 days ago
+  })
   return dashboardCourse(
     {
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.past().toISOString(),
-      },
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
     },
     ...overrides,
   )
 }
 const currentDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  const run = mitxonline.factories.courses.courseRun({
+    start_date: moment().subtract(30, "days").toISOString(), // Started 30 days ago
+    end_date: moment().add(30, "days").toISOString(), // Ends 30 days from now
+  })
   return dashboardCourse(
     {
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.future().toISOString(),
-      },
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
     },
     ...overrides,
   )
 }
 const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
+  const run = mitxonline.factories.courses.courseRun({
+    start_date: moment().add(30, "days").toISOString(), // Starts 30 days from now
+    end_date: moment().add(90, "days").toISOString(), // Ends 90 days from now
+  })
   return dashboardCourse(
     {
-      run: {
-        startDate: faker.date.future().toISOString(),
-        endDate: faker.date.future().toISOString(),
-      },
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
     },
     ...overrides,
   )
@@ -67,14 +82,24 @@ describe.each([
 
   test("It shows course title and links to marketingUrl if titleAction is marketing and enrolled", async () => {
     setupUserApis()
+    const marketingUrl = "?some-marketing-url"
     const course = dashboardCourse({
-      marketingUrl: "?some-marketing-url",
-      enrollment: {
-        status: EnrollmentStatus.Enrolled,
+      page: {
+        page_url: marketingUrl,
+      },
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [], // No passing grade = enrolled but not completed
+      run: {
+        ...mitxonline.factories.enrollment.courseEnrollment().run,
+        course: course,
       },
     })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
 
     const card = getCard()
@@ -82,22 +107,27 @@ describe.each([
     const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
-    expect(courseLink).toHaveAttribute("href", course.marketingUrl)
+    expect(courseLink).toHaveAttribute("href", marketingUrl)
   })
 
   test("It shows course title as clickable text (not link) if titleAction is marketing and not enrolled (non-B2B)", async () => {
     setupUserApis()
     const course = dashboardCourse({
-      marketingUrl: "?some-marketing-url",
-      enrollment: {
-        status: EnrollmentStatus.NotEnrolled,
+      page: {
+        page_url: "?some-marketing-url",
       },
-      run: {
-        b2bContractId: null,
-      },
+      courseruns: [
+        mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+        }),
+      ],
     })
+    // No enrollment = not enrolled
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -113,13 +143,26 @@ describe.each([
 
   test("It shows course title and links to courseware if titleAction is courseware and enrolled", async () => {
     setupUserApis()
+    const coursewareUrl = faker.internet.url()
+    const courseRun = mitxonline.factories.courses.courseRun({
+      courseware_url: coursewareUrl,
+    })
     const course = dashboardCourse({
-      enrollment: {
-        status: EnrollmentStatus.Enrolled,
+      courseruns: [courseRun],
+      next_run_id: null, // Ensure getBestRun uses the single run
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [], // No passing grade = enrolled but not completed
+      run: {
+        ...courseRun,
+        course: course,
       },
     })
     renderWithProviders(
-      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
 
     const card = getCard()
@@ -127,21 +170,24 @@ describe.each([
     const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
-    expect(courseLink).toHaveAttribute("href", course.run.coursewareUrl)
+    expect(courseLink).toHaveAttribute("href", coursewareUrl)
   })
 
   test("It shows course title as clickable text (not link) if titleAction is courseware and not enrolled (non-B2B)", async () => {
     setupUserApis()
     const course = dashboardCourse({
-      enrollment: {
-        status: EnrollmentStatus.NotEnrolled,
-      },
-      run: {
-        b2bContractId: null,
-      },
+      courseruns: [
+        mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+        }),
+      ],
     })
+    // No enrollment = not enrolled
     renderWithProviders(
-      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -158,17 +204,22 @@ describe.each([
   test("It shows course title as link if not enrolled but has B2B contract", async () => {
     setupUserApis()
     const b2bContractId = faker.number.int()
+    const coursewareUrl = faker.internet.url()
     const course = dashboardCourse({
-      enrollment: {
-        status: EnrollmentStatus.NotEnrolled,
-        b2b_contract_id: b2bContractId,
-      },
-      run: {
-        b2bContractId: b2bContractId,
-      },
+      courseruns: [
+        mitxonline.factories.courses.courseRun({
+          b2b_contract: b2bContractId,
+          courseware_url: coursewareUrl,
+        }),
+      ],
+      next_run_id: null, // Ensure getBestRun uses the single run
     })
+    // No enrollment passed, but B2B contract in run allows access
     renderWithProviders(
-      <DashboardCard titleAction="courseware" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="courseware"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
 
     const card = getCard()
@@ -177,7 +228,7 @@ describe.each([
     const courseLink = within(card).getByRole("link", {
       name: course.title,
     })
-    expect(courseLink).toHaveAttribute("href", course.run.coursewareUrl)
+    expect(courseLink).toHaveAttribute("href", coursewareUrl)
   })
 
   test("Accepts a classname", () => {
@@ -193,7 +244,7 @@ describe.each([
       <DashboardCard
         titleAction="marketing"
         Component={TheComponent}
-        dashboardResource={course}
+        resource={{ type: DashboardType.Course, data: course }}
         className="some-custom classes"
       />,
     )
@@ -205,32 +256,17 @@ describe.each([
 
   test.each([
     {
-      course: pastDashboardCourse({
-        enrollment: {
-          status: EnrollmentStatus.Enrolled,
-          mode: EnrollmentMode.Audit,
-        },
-      }),
+      course: pastDashboardCourse(),
       expected: { enabled: true },
       case: "past",
     },
     {
-      course: currentDashboardCourse({
-        enrollment: {
-          status: EnrollmentStatus.Enrolled,
-          mode: EnrollmentMode.Audit,
-        },
-      }),
+      course: currentDashboardCourse(),
       expected: { enabled: true },
       case: "current",
     },
     {
-      course: futureDashboardCourse({
-        enrollment: {
-          status: EnrollmentStatus.Enrolled,
-          mode: EnrollmentMode.Audit,
-        },
-      }),
+      course: futureDashboardCourse(),
       expected: { enabled: false },
       case: "future",
     },
@@ -238,8 +274,22 @@ describe.each([
     "Courseware CTA and is enabled/disabled (enabled=$expected.enabled) based on date (case: $case)",
     ({ course, expected }) => {
       setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Audit,
+        grades: [], // Enrolled but not completed
+        run: {
+          ...course.courseruns[0],
+          course: course,
+        },
+      })
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
       )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
@@ -254,42 +304,47 @@ describe.each([
 
   test.each([
     {
-      course: pastDashboardCourse({
-        enrollment: { status: EnrollmentStatus.Enrolled },
-      }),
+      createCourse: pastDashboardCourse,
+      enrollmentData: { grades: [] },
       expected: { label: "View", usesCourseNoun: true },
       case: "past",
     },
     {
-      course: currentDashboardCourse({
-        enrollment: { status: EnrollmentStatus.Enrolled },
-      }),
+      createCourse: currentDashboardCourse,
+      enrollmentData: { grades: [] },
       expected: { label: "Continue", usesCourseNoun: false },
       case: "current",
     },
     {
-      course: futureDashboardCourse({
-        enrollment: { status: EnrollmentStatus.Enrolled },
-      }),
+      createCourse: futureDashboardCourse,
+      enrollmentData: { grades: [] },
       expected: { label: "Continue", usesCourseNoun: false },
-      label: "future",
+      case: "future",
     },
   ])(
     "Courseware CTA shows correct label based on courseNoun prop and dates (case $case)",
-    ({ course, expected }) => {
+    ({ createCourse, enrollmentData, expected }) => {
       setupUserApis()
+      const course = createCourse()
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: enrollmentData.grades,
+        run: { ...run, course: course }, // Include course in run
+        certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
+      })
       const { view } = renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
       )
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
 
-      if (
-        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
-        !course.enrollment
-      ) {
-        expect(coursewareCTA).toHaveTextContent("Start Course")
-      } else if (expected.usesCourseNoun) {
+      if (expected.usesCourseNoun) {
         expect(coursewareCTA).toHaveTextContent(`${expected.label} Course`)
       } else {
         expect(coursewareCTA).toHaveTextContent(expected.label)
@@ -300,16 +355,14 @@ describe.each([
         <DashboardCard
           titleAction="marketing"
           noun={courseNoun}
-          dashboardResource={course}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
         />,
       )
 
-      if (
-        course.enrollment?.status === EnrollmentStatus.NotEnrolled ||
-        !course.enrollment
-      ) {
-        expect(coursewareCTA).toHaveTextContent(`Start ${courseNoun}`)
-      } else if (expected.usesCourseNoun) {
+      if (expected.usesCourseNoun) {
         expect(coursewareCTA).toHaveTextContent(
           `${expected.label} ${courseNoun}`,
         )
@@ -323,39 +376,85 @@ describe.each([
   test.each([
     {
       overrides: {
-        run: {
-          canUpgrade: true,
-          certificateUpgradeDeadline: faker.date.future().toISOString(),
-          certificateUpgradePrice: faker.commerce.price(),
-        },
-        enrollment: { mode: EnrollmentMode.Audit },
+        courseruns: [
+          mitxonline.factories.courses.courseRun({
+            is_upgradable: true,
+            upgrade_deadline: faker.date.future().toISOString(),
+            products: [
+              {
+                id: faker.number.int(),
+                price: faker.commerce.price(),
+                description: faker.lorem.sentence(),
+                is_active: true,
+                product_flexible_price: null,
+              },
+            ],
+          }),
+        ],
       },
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Audit,
+      }),
       expectation: { visible: true },
     },
     {
       overrides: {
-        run: {
-          canUpgrade: true,
-          certificateUpgradeDeadline: faker.date.future().toISOString(),
-          certificateUpgradePrice: faker.commerce.price(),
-        },
-        enrollment: { mode: EnrollmentMode.Verified },
+        courseruns: [
+          mitxonline.factories.courses.courseRun({
+            is_upgradable: true,
+            upgrade_deadline: faker.date.future().toISOString(),
+            products: [
+              {
+                id: faker.number.int(),
+                price: faker.commerce.price(),
+                description: faker.lorem.sentence(),
+                is_active: true,
+                product_flexible_price: null,
+              },
+            ],
+          }),
+        ],
       },
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Verified,
+      }),
       expectation: { visible: false },
     },
     {
       overrides: {
-        run: { canUpgrade: false },
+        courseruns: [
+          mitxonline.factories.courses.courseRun({
+            is_upgradable: false,
+          }),
+        ],
       },
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Audit,
+      }),
       expectation: { visible: false },
     },
   ])(
-    "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.canUpgrade)",
-    ({ overrides, expectation }) => {
+    "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.courseruns[0].is_upgradable)",
+    ({ overrides, enrollment, expectation }) => {
       setupUserApis()
-      const course = dashboardCourse(overrides)
+      const run = overrides.courseruns[0]
+      const course = dashboardCourse({
+        ...overrides,
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      // Merge course into enrollment
+      const enrollmentWithCourse = {
+        ...enrollment,
+        run: { ...run, course },
+      }
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollmentWithCourse,
+          }}
+        />,
       )
       const card = getCard()
       const upgradeRoot = within(card).queryByTestId("upgrade-root")
@@ -371,19 +470,35 @@ describe.each([
     "Never shows upgrade banner if `offerUpgrade` is false",
     ({ offerUpgrade, expected }) => {
       setupUserApis()
+      const run = mitxonline.factories.courses.courseRun({
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        products: [
+          {
+            id: faker.number.int(),
+            price: faker.commerce.price(),
+            description: faker.lorem.sentence(),
+            is_active: true,
+            product_flexible_price: null,
+          },
+        ],
+      })
       const course = dashboardCourse({
-        run: {
-          canUpgrade: true,
-          certificateUpgradeDeadline: faker.date.future().toISOString(),
-          certificateUpgradePrice: faker.commerce.price(),
-        },
-        enrollment: { mode: EnrollmentMode.Audit },
+        courseruns: [run],
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Audit,
+        run: { ...run, course },
       })
 
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={course}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
           offerUpgrade={offerUpgrade}
         />,
       )
@@ -403,17 +518,33 @@ describe.each([
       .add(3, "hours")
       .toISOString()
 
+    const run = mitxonline.factories.courses.courseRun({
+      is_upgradable: true,
+      upgrade_deadline: certificateUpgradeDeadline,
+      products: [
+        {
+          id: faker.number.int(),
+          price: certificateUpgradePrice,
+          description: faker.lorem.sentence(),
+          is_active: true,
+          product_flexible_price: null,
+        },
+      ],
+    })
     const course = dashboardCourse({
-      run: {
-        canUpgrade: true,
-        certificateUpgradeDeadline,
-        certificateUpgradePrice,
-      },
-      enrollment: { mode: EnrollmentMode.Audit },
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: { ...run, course },
     })
 
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
     const card = getCard()
     const upgradeRoot = within(card).getByTestId("upgrade-root")
@@ -432,9 +563,18 @@ describe.each([
       .add(5, "days")
       .add(3, "hours")
       .toISOString()
-    const enrollment = dashboardCourse({ run: { startDate } })
+    const run = mitxonline.factories.courses.courseRun({
+      start_date: startDate,
+    })
+    const course = dashboardCourse({
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
+    })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={enrollment} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
     )
     const card = getCard()
 
@@ -445,19 +585,31 @@ describe.each([
     "Shows incomplete status when showNotComplete is true",
     ({ showNotComplete }) => {
       setupUserApis()
-      const enrollment = faker.helpers.arrayElement([
-        { status: EnrollmentStatus.NotEnrolled },
-        { status: EnrollmentStatus.Enrolled },
-        undefined,
+      // Test with no enrollment, and with enrolled (no passing grade)
+      const run = mitxonline.factories.courses.courseRun()
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      const enrollmentOrNull = faker.helpers.arrayElement([
+        null,
+        mitxonline.factories.enrollment.courseEnrollment({
+          grades: [],
+          run: { ...run, course },
+          certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
+        }),
       ])
-      const course = dashboardCourse({ enrollment })
-      if (!enrollment) {
-        course.enrollment = undefined
-      }
       const { view } = renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={course}
+          resource={
+            enrollmentOrNull
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollmentOrNull,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
           showNotComplete={showNotComplete}
         />,
       )
@@ -466,12 +618,19 @@ describe.each([
       const indicator = within(card).queryByTestId("enrollment-status")
       expect(!!indicator).toBe(showNotComplete)
 
+      // Now test with completed enrollment
+      const completedEnrollment =
+        mitxonline.factories.enrollment.courseEnrollment({
+          grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+          run: { ...run, course },
+        })
       view.rerender(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={dashboardCourse({
-            enrollment: { status: EnrollmentStatus.Completed },
-          })}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: completedEnrollment,
+          }}
           showNotComplete={showNotComplete}
         />,
       )
@@ -482,28 +641,49 @@ describe.each([
 
   test.each([
     {
-      status: EnrollmentStatus.Completed,
-      expectedLabel: "Completed",
+      enrollmentData: null,
+      expectedLabel: "Not Enrolled",
       hiddenImage: true,
     },
     {
-      status: EnrollmentStatus.Enrolled,
+      enrollmentData: { grades: [] },
       expectedLabel: "Enrolled",
       hiddenImage: true,
     },
     {
-      status: EnrollmentStatus.NotEnrolled,
-      expectedLabel: "Not Enrolled",
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      },
+      expectedLabel: "Completed",
       hiddenImage: true,
     },
   ])(
     "Enrollment indicator shows meaningful text",
-    ({ status, expectedLabel, hiddenImage }) => {
+    ({ enrollmentData, expectedLabel, hiddenImage }) => {
       setupUserApis()
+      const run = mitxonline.factories.courses.courseRun()
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      const enrollment = enrollmentData
+        ? mitxonline.factories.enrollment.courseEnrollment({
+            grades: enrollmentData.grades,
+            run: { ...run, course }, // Include course in run
+            certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
+          })
+        : null
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={dashboardCourse({ enrollment: { status } })}
+          resource={
+            enrollment
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollment,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
         />,
       )
       const card = getCard()
@@ -538,17 +718,19 @@ describe.each([
     async ({ contextMenuItems }) => {
       setupUserApis()
       const course = dashboardCourse()
-      course.enrollment = {
-        id: faker.number.int(),
-        status: EnrollmentStatus.Completed,
-        mode: EnrollmentMode.Verified,
-        grades: [],
-        run: mitxonline.factories.courses.courseRun(),
-      }
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { ...run, course },
+      })
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={course}
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
           contextMenuItems={contextMenuItems}
         />,
       )
@@ -559,7 +741,7 @@ describe.each([
       await user.click(contextMenuButton)
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems("Test Course", course.enrollment!),
+        ...getDefaultContextMenuItems("Test Course", enrollment),
       ]
       const menuItems = screen.getAllByRole("menuitem")
       for (let i = 0; i < expectedMenuItems.length; i++) {
@@ -575,24 +757,45 @@ describe.each([
   )
 
   test.each([
-    { status: EnrollmentStatus.Completed },
-    { status: EnrollmentStatus.Enrolled },
-    { status: EnrollmentStatus.NotEnrolled },
-    { status: undefined },
+    {
+      enrollment: null,
+      expectedVisible: false,
+    },
+    {
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+      }),
+      expectedVisible: true,
+    },
+    {
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      }),
+      expectedVisible: true,
+    },
   ])(
     "Context menu button is not shown when enrollment status is not Completed or Enrolled",
-    ({ status }) => {
+    ({ enrollment, expectedVisible }) => {
       setupUserApis()
+      const course = dashboardCourse()
+      const run = course.courseruns[0]
+      const enrollmentWithCourse = enrollment
+        ? { ...enrollment, run: { ...run, course } }
+        : null
       renderWithProviders(
         <DashboardCard
           titleAction="marketing"
-          dashboardResource={dashboardCourse({ enrollment: { status } })}
+          resource={
+            enrollmentWithCourse
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollmentWithCourse,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
         />,
       )
       const card = getCard()
-      const expectedVisible =
-        status === EnrollmentStatus.Completed ||
-        status === EnrollmentStatus.Enrolled
       const contextMenuButton = within(card).queryByRole("button", {
         name: "More options",
         hidden: !expectedVisible,
@@ -604,23 +807,51 @@ describe.each([
   )
 
   test.each([
-    { status: EnrollmentStatus.Completed, expectedText: "View Course" },
-    { status: EnrollmentStatus.Enrolled, expectedText: "Continue" },
-    { status: EnrollmentStatus.NotEnrolled, expectedText: "Start Course" },
+    {
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      },
+      expectedText: "View Course",
+    },
+    {
+      enrollmentData: { grades: [] },
+      expectedText: "Continue",
+    },
+    {
+      enrollmentData: null,
+      expectedText: "Start Course",
+    },
   ])(
-    "CoursewareButton shows correct text based on enrollment status ($status)",
-    ({ status, expectedText }) => {
+    "CoursewareButton shows correct text based on enrollment status",
+    ({ enrollmentData, expectedText }) => {
       setupUserApis()
-      const course = dashboardCourse()
-      course.enrollment = {
-        id: faker.number.int(),
-        status: status,
-        mode: EnrollmentMode.Audit,
-        grades: [],
-        run: mitxonline.factories.courses.courseRun(),
-      }
+      const run = mitxonline.factories.courses.courseRun({
+        start_date: moment().subtract(30, "days").toISOString(),
+        end_date: moment().add(30, "days").toISOString(),
+      })
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      const enrollment = enrollmentData
+        ? mitxonline.factories.enrollment.courseEnrollment({
+            grades: enrollmentData.grades,
+            run: { ...run, course }, // Include course in run
+            certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
+          })
+        : null
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={
+            enrollment
+              ? {
+                  type: DashboardType.CourseRunEnrollment,
+                  data: enrollment,
+                }
+              : { type: DashboardType.Course, data: course }
+          }
+        />,
       )
       const card = getCard()
       const coursewareButton = within(card).getByTestId("courseware-button")
@@ -631,18 +862,24 @@ describe.each([
 
   test("CoursewareButton shows 'View Course' when course has ended even if not completed", () => {
     setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      start_date: faker.date.past().toISOString(),
+      end_date: faker.date.past().toISOString(), // Course has ended
+    })
     const course = dashboardCourse({
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.past().toISOString(), // Course has ended
-      },
-      enrollment: {
-        status: EnrollmentStatus.Enrolled, // User is enrolled but not completed
-        mode: EnrollmentMode.Audit,
-      },
+      courseruns: [run],
+      next_run_id: run.id, // Ensure getBestRun uses this run
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      grades: [], // User is enrolled but not completed
+      run: { ...run, course },
     })
     renderWithProviders(
-      <DashboardCard titleAction="marketing" dashboardResource={course} />,
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
     )
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
@@ -653,12 +890,14 @@ describe.each([
   const setupEnrollmentApis = (opts: {
     user: ReturnType<typeof mitxUser>
     course: ReturnType<typeof dashboardCourse>
+    run?: ReturnType<typeof mitxonline.factories.courses.courseRun>
   }) => {
     setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
 
-    const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(
-      opts.course.coursewareId ?? undefined,
-    )
+    // Use run's courseware_id if provided, otherwise fall back to course's readable_id
+    const runId =
+      opts.run?.courseware_id ?? opts.course.readable_id ?? undefined
+    const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(runId)
     setMockResponse.post(enrollmentUrl, {
       result: "b2b-enroll-success",
       order: 1,
@@ -688,18 +927,25 @@ describe.each([
     async ({ trigger }) => {
       const userData = mitxUser()
       const b2bContractId = faker.number.int()
-      const course = dashboardCourse({
-        enrollment: {
-          status: EnrollmentStatus.NotEnrolled,
-          b2b_contract_id: b2bContractId,
-        },
-        run: {
-          b2bContractId: b2bContractId,
-        },
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: b2bContractId,
       })
-      const { enrollmentUrl } = setupEnrollmentApis({ user: userData, course })
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      // No enrollment = not enrolled, but has B2B contract
+      const { enrollmentUrl } = setupEnrollmentApis({
+        user: userData,
+        course,
+        run,
+      })
       renderWithProviders(
-        <DashboardCard titleAction="courseware" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="courseware"
+          resource={{ type: DashboardType.Course, data: course }}
+          contractId={b2bContractId}
+        />,
       )
       const card = getCard()
       const triggerElement =
@@ -724,18 +970,21 @@ describe.each([
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger, userData }) => {
       const b2bContractId = faker.number.int()
-      const course = dashboardCourse({
-        enrollment: {
-          status: EnrollmentStatus.NotEnrolled,
-          b2b_contract_id: b2bContractId,
-        },
-        run: {
-          b2bContractId: b2bContractId,
-        },
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: b2bContractId,
       })
-      setupEnrollmentApis({ user: userData, course })
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id, // Ensure getBestRun uses this run
+      })
+      // No enrollment = not enrolled, but has B2B contract
+      setupEnrollmentApis({ user: userData, course, run })
       renderWithProviders(
-        <DashboardCard titleAction="courseware" dashboardResource={course} />,
+        <DashboardCard
+          titleAction="courseware"
+          resource={{ type: DashboardType.Course, data: course }}
+          contractId={b2bContractId}
+        />,
       )
       const card = getCard()
       const triggerElement =
@@ -760,7 +1009,7 @@ describe.each([
         <DashboardCard
           variant="stacked"
           titleAction="marketing"
-          dashboardResource={course}
+          resource={{ type: DashboardType.Course, data: course }}
         />,
       )
 
@@ -771,20 +1020,35 @@ describe.each([
 
     test("renders multiple stacked cards correctly", () => {
       setupUserApis()
+      const run1 = mitxonline.factories.courses.courseRun()
+      const run2 = mitxonline.factories.courses.courseRun()
+      const run3 = mitxonline.factories.courses.courseRun()
       const courses = [
-        dashboardCourse({ title: "First Stacked Course" }),
-        dashboardCourse({ title: "Second Stacked Course" }),
-        dashboardCourse({ title: "Third Stacked Course" }),
+        dashboardCourse({
+          title: "First Stacked Course",
+          courseruns: [run1],
+          next_run_id: run1.id,
+        }),
+        dashboardCourse({
+          title: "Second Stacked Course",
+          courseruns: [run2],
+          next_run_id: run2.id,
+        }),
+        dashboardCourse({
+          title: "Third Stacked Course",
+          courseruns: [run3],
+          next_run_id: run3.id,
+        }),
       ]
 
       renderWithProviders(
         <div>
-          {courses.map((course) => (
+          {courses.map((course, idx) => (
             <DashboardCard
-              key={course.key}
+              key={`course-${idx}`}
               variant="stacked"
               titleAction="marketing"
-              dashboardResource={course}
+              resource={{ type: DashboardType.Course, data: course }}
             />
           ))}
         </div>,
@@ -807,12 +1071,21 @@ describe.each([
   describe("Program Cards", () => {
     test("renders program card with title", () => {
       setupUserApis()
-      const program = dashboardProgram({
-        title: "Test Program Title",
-      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV2({
+          program: mitxonline.factories.programs.program({
+            title: "Test Program Title",
+          }),
+        })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
       )
 
       const card = getCard()
@@ -821,12 +1094,21 @@ describe.each([
 
     test("program card does not show course-specific elements", () => {
       setupUserApis()
-      const program = dashboardProgram({
-        title: "Test Program",
-      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV2({
+          program: mitxonline.factories.programs.program({
+            title: "Test Program",
+          }),
+        })
 
       renderWithProviders(
-        <DashboardCard titleAction="marketing" dashboardResource={program} />,
+        <DashboardCard
+          titleAction="marketing"
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
       )
 
       const card = getCard()

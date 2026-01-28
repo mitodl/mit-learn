@@ -55,6 +55,16 @@ const Container = styled.figure(({ theme }) => ({
       left: "50%",
       transform: "translateX(-50%)",
     },
+
+    ".ProseMirror-selectednode &.layout-wide .image-wrapper": {
+      border: `1px solid ${theme.custom.colors.red}`,
+      padding: "8px",
+      borderRadius: "8px",
+      img: {
+        width: "calc(92vw - 16px)",
+        maxWidth: "calc(1400px - 16px)",
+      },
+    },
   },
   "&.layout-full .image-wrapper": {
     width: "100vw",
@@ -62,6 +72,12 @@ const Container = styled.figure(({ theme }) => ({
     position: "relative",
     left: "50%",
     transform: "translateX(-50%)",
+  },
+
+  ".ProseMirror-selectednode &.layout-full .image-wrapper": {
+    border: `1px solid ${theme.custom.colors.red}`,
+    borderWidth: "1px 0",
+    padding: "8px",
   },
 
   "&.layout-full img": {
@@ -151,6 +167,12 @@ const Container = styled.figure(({ theme }) => ({
       display: "flex",
     },
   },
+
+  ".ProseMirror-selectednode &.layout-default": {
+    border: `1px solid ${theme.custom.colors.red}`,
+    padding: "8px",
+    borderRadius: "10px",
+  },
 }))
 
 enum Layout {
@@ -230,6 +252,9 @@ const Caption = styled.figcaption(({ theme }) => ({
     textAlign: "left",
     marginTop: 0,
   },
+  ".ProseMirror-selectednode .layout-default&&&&&": {
+    border: "none",
+  },
 }))
 
 export function ImageWithCaptionViewer({
@@ -277,7 +302,7 @@ export function ImageWithCaptionViewer({
 }
 const RemoveButton = styled("button")(({ theme }) => ({
   position: "absolute",
-  top: -7,
+  top: -11,
   right: -7,
   zIndex: 999999,
 
@@ -297,6 +322,9 @@ const RemoveButton = styled("button")(({ theme }) => ({
 
   "&:hover": {
     background: theme.custom.colors.lightGray1,
+  },
+  ".layout-full &": {
+    right: 7,
   },
 }))
 

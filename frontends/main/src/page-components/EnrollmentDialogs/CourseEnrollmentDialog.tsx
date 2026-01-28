@@ -7,6 +7,7 @@ import {
   Stack,
   Typography,
   PlainList,
+  Link,
 } from "ol-components"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import {
@@ -17,13 +18,17 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
-  canUpgrade,
-  getCourseCertificatePrice,
+  canUpgradeRun,
+  mitxonlineUrl,
+  PriceWithDiscount,
+  priceWithDiscount,
   upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { useQuery } from "@tanstack/react-query"
+import { productQueries } from "api/mitxonline-hooks/products"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
@@ -41,9 +46,13 @@ const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
   },
 })) as typeof SimpleSelectField
 
+const UnderlinedLink = styled(Link)({
+  textDecoration: "underline",
+})
+
 const StyledFormDialog = styled(FormDialog)({
   ".MuiPaper-root": {
-    maxWidth: "702px",
+    maxWidth: "750px",
   },
 })
 
@@ -167,13 +176,40 @@ const CERT_REASONS = [
   "Enhance your college & earn a promotion",
   "Enhance your college application with an earned certificate from MIT",
 ]
+
+const StrickenText = styled.span(({ theme }) => ({
+  textDecoration: "line-through",
+  color: theme.custom.colors.silverGrayDark,
+  ...theme.typography.body2,
+}))
+const NumericPriceDisplay: React.FC<{
+  price: PriceWithDiscount | null
+}> = ({ price }) => {
+  if (!price) return null
+  if (!price.isDiscounted) return price.finalPrice
+  return (
+    <span>
+      {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+    </span>
+  )
+}
+
 const CertificateUpsell: React.FC<{
+  course?: CourseWithCourseRunsSerializerV2
   courseRun?: CourseRunV2
-}> = ({ courseRun }) => {
-  const enabled = courseRun ? canUpgrade(courseRun) : false
+}> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
-  const price =
-    courseRun && enabled ? getCourseCertificatePrice(courseRun) : null
+  const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({
+      productId: product?.id ?? 0,
+    }),
+    enabled: canUpgrade && !!course?.page.financial_assistance_form_url,
+  })
+  const price = canUpgrade
+    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+    : null
+  const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
   const deadlineUI = courseRun?.upgrade_deadline ? (
     <>
       Payment due: <LocalDate date={courseRun.upgrade_deadline} />
@@ -193,13 +229,27 @@ const CertificateUpsell: React.FC<{
           </CertificateReasonItem>
         ))}
       </CertificateReasonsList>
-      <CertificateBox disabled={!enabled}>
+      <CertificateBox disabled={!canUpgrade}>
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
-            <strong>Get Certificate{price ? `: ${price}` : ""}</strong>
-            <CertDate disabled={!enabled}>
-              {enabled ? deadlineUI : "Not available"}
+            <strong>
+              Get Certificate <NumericPriceDisplay price={price} />
+            </strong>
+            {hasFinancialAssistance && price ? (
+              <UnderlinedLink
+                color="black"
+                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {price.approvedFinancialAid
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </UnderlinedLink>
+            ) : null}
+            <CertDate disabled={!canUpgrade}>
+              {canUpgrade ? deadlineUI : "Not available"}
             </CertDate>
           </Stack>
         </CertificatePriceRoot>
@@ -207,7 +257,7 @@ const CertificateUpsell: React.FC<{
           label="Add to Cart"
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
-          disabled={!enabled}
+          disabled={!canUpgrade}
           onClick={() => {
             if (!product) return
             const url = upgradeRunUrl(product)
@@ -230,7 +280,9 @@ const getRunOptions = (
         .map((d) => formatDate(d))
         .join(" - ")
       return {
-        label: canUpgrade(run) ? dates : `${dates} (No certificate available)`,
+        label: canUpgradeRun(run)
+          ? dates
+          : `${dates} (No certificate available)`,
         value: `${run.id}`,
       }
     })
@@ -299,7 +351,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        <CertificateUpsell courseRun={run} />
+        <CertificateUpsell course={course} courseRun={run} />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

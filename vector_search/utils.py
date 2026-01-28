@@ -52,6 +52,7 @@ def qdrant_client():
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
+        timeout=settings.QDRANT_CLIENT_TIMEOUT,
     )
 
 
@@ -329,6 +330,7 @@ def update_content_file_payload(serialized_document):
             collection_name=CONTENT_FILES_COLLECTION_NAME,
         )
     ]
+
     _set_payload(
         points,
         serialized_document,
@@ -353,11 +355,15 @@ def _set_payload(points, document, param_map, collection_name):
             payload[param_map[key]] = document[key]
     if not all([points, payload]):
         return
-    client.set_payload(
-        collection_name=collection_name,
-        payload=payload,
-        points=points,
-    )
+    for point_batch in [
+        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
+        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
+    ]:
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload,
+            points=point_batch,
+        )
 
 
 def should_generate_resource_embeddings(serialized_document):

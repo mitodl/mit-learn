@@ -1014,3 +1014,37 @@ def test_embed_topics_remove_topics(mocker):
     assert (
         mock_remove_points_matching_params.mock_calls[0][1][0]["name"] == "remove-topic"
     )
+
+
+def test_set_payload_batched(mocker):
+    """
+    Test that _set_payload processes points in batches
+    """
+    batch_size = 2
+    settings.QDRANT_POINT_UPLOAD_BATCH_SIZE = batch_size
+    mock_client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    points = [f"point_{i}" for i in range(5)]
+    document = {"key1": "val1", "key2": "val2", "ignored": "val3"}
+    param_map = {"key1": "payload_key1", "key2": "payload_key2"}
+    collection_name = "test_collection"
+
+    from vector_search.utils import _set_payload
+
+    _set_payload(points, document, param_map, collection_name)
+
+    assert mock_client.set_payload.call_count == 3
+
+    # Check first batch
+    call1_kwargs = mock_client.set_payload.mock_calls[0].kwargs
+    assert call1_kwargs["collection_name"] == collection_name
+    assert call1_kwargs["payload"] == {"payload_key1": "val1", "payload_key2": "val2"}
+    assert call1_kwargs["points"] == ["point_0", "point_1"]
+
+    # Check second batch
+    call2_kwargs = mock_client.set_payload.mock_calls[1].kwargs
+    assert call2_kwargs["points"] == ["point_2", "point_3"]
+
+    # Check third batch
+    call3_kwargs = mock_client.set_payload.mock_calls[2].kwargs
+    assert call3_kwargs["points"] == ["point_4"]

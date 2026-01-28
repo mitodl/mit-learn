@@ -16,15 +16,26 @@ const StyledDivider = styled.div(({ theme }) => ({
   display: "block",
   width: "100%",
   textAlign: "center",
-  outline: "none",
   margin: "0 auto",
   lineHeight: "1em",
   marginBottom: "40px",
+  padding: "8px",
+  borderRadius: "4px",
+  transition: "outline-color 0.2s ease",
+  outline: "1px solid transparent",
   "&::after": {
     content: '". . ."',
     fontSize: "50px",
     color: theme.custom.colors.darkGray2,
     letterSpacing: "6px",
+    transition: "color 0.2s ease",
+  },
+  ".ProseMirror-selectednode &": {
+    outline: `1px solid ${theme.custom.colors.red}`,
+    outlineOffset: "-1px",
+    "&::after": {
+      color: theme.custom.colors.red,
+    },
   },
 }))
 
@@ -48,7 +59,7 @@ export const DividerNode = Node.create({
   group: "block",
   atom: true,
   draggable: false,
-  selectable: false,
+  selectable: true,
 
   parseHTML() {
     return [{ tag: 'div[data-type="divider"]' }]

@@ -55,6 +55,7 @@ import { ImageWithCaptionViewer } from "./extensions/node/Image/ImageWithCaption
 import { DividerViewer } from "./extensions/node/Divider/DividerNode"
 import { LearningResourceButton } from "./extensions/ui/LearningResource/LearningResourceButton"
 import { LearningResourceCardViewer } from "./extensions/node/LearningResource/LearningResourceNode"
+import { MediaEmbedViewer } from "./extensions/node/MediaEmbed/MediaEmbedViewer"
 
 const Container = styled.div<{
   readOnly: boolean
@@ -289,7 +290,7 @@ const TipTapViewer = ({
   extensions: Array<Extension | Node | Mark>
 }) => {
   return (
-    <Container readOnly>
+    <Container readOnly data-testid="editor">
       <div className="tiptap ProseMirror tiptap-viewer">
         {renderToReactElement({
           extensions,
@@ -309,6 +310,7 @@ const TipTapViewer = ({
               divider: DividerViewer,
               imageWithCaption: ImageWithCaptionViewer,
               learningResource: LearningResourceCardViewer,
+              mediaEmbed: MediaEmbedViewer,
             },
           },
         })}

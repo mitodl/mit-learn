@@ -10,19 +10,14 @@ import ContractContent from "./ContractContent"
 import { setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import {
-  organizationCoursesWithContracts,
-  mitxonlineProgram,
-  sortDashboardCourses,
-} from "./CoursewareDisplay/transform"
-import {
   createCoursesWithContractRuns,
   createTestContracts,
   setupOrgAndUser,
   setupProgramsAndCourses,
   setupOrgDashboardMocks,
 } from "./CoursewareDisplay/test-utils"
-import { EnrollmentStatus } from "./CoursewareDisplay/types"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
@@ -115,6 +110,23 @@ describe("ContractContent", () => {
       name: "Org X Contract",
       programs: [programB.id, programA.id],
     })
+
+    // Update course runs to reference the new contract ID
+    const updatedCoursesA = coursesA.map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => ({
+        ...run,
+        b2b_contract: contract.id,
+      })),
+    }))
+    const updatedCoursesB = coursesB.map((course) => ({
+      ...course,
+      courseruns: course.courseruns.map((run) => ({
+        ...run,
+        b2b_contract: contract.id,
+      })),
+    }))
+
     orgX.contracts = [contract]
     setMockResponse.get(urls.contracts.contractsList(), [contract])
     // Need to update the orgX response to include the new contract
@@ -142,7 +154,28 @@ describe("ContractContent", () => {
         page_size: 200,
       }),
       {
-        results: [...coursesA, ...coursesB],
+        results: [...updatedCoursesA, ...updatedCoursesB],
+      },
+    )
+    // Add per-program course list mocks with new contract ID
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: updatedCoursesA,
+      },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programB.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      {
+        results: updatedCoursesB,
       },
     )
 
@@ -169,15 +202,25 @@ describe("ContractContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgX, programA, coursesA } = setupProgramsAndCourses()
+    const { orgX, programA: _programA, coursesA } = setupProgramsAndCourses()
+    const contract = orgX.contracts[0]
     const enrollments = [
       makeCourseEnrollment({
-        run: { course: { id: coursesA[0].id, title: coursesA[0].title } },
+        run: {
+          id: coursesA[0].courseruns[0].id,
+          course: { id: coursesA[0].id, title: coursesA[0].title },
+        },
         grades: [makeGrade({ passed: true })],
+        b2b_contract_id: contract.id,
       }),
       makeCourseEnrollment({
-        run: { course: { id: coursesA[1].id, title: coursesA[1].title } },
+        run: {
+          id: coursesA[1].courseruns[0].id,
+          course: { id: coursesA[1].id, title: coursesA[1].title },
+        },
         grades: [],
+        certificate: null,
+        b2b_contract_id: contract.id,
       }),
     ]
     // Override the default empty enrollments for this test
@@ -194,29 +237,29 @@ describe("ContractContent", () => {
     const cards = await within(programElA).findAllByTestId(
       "enrollment-card-desktop",
     )
-    expect(cards.length).toBeGreaterThan(0)
-    const sortedCourses = sortDashboardCourses(
-      mitxonlineProgram(programA),
-      organizationCoursesWithContracts({
-        courses: coursesA,
-        enrollments: enrollments,
-      }),
+    expect(cards.length).toBeGreaterThanOrEqual(2)
+
+    // Find the cards for our enrolled courses
+    const completedCard = cards.find((card) =>
+      card.textContent?.includes(coursesA[0].title),
+    )
+    const enrolledCard = cards.find((card) =>
+      card.textContent?.includes(coursesA[1].title),
     )
 
-    cards.forEach((card, i) => {
-      const course = sortedCourses[i]
-      expect(card).toHaveTextContent(course.title)
-      const indicator = within(card).getByTestId("enrollment-status")
+    expect(completedCard).toBeDefined()
+    expect(enrolledCard).toBeDefined()
 
-      // Check based on the actual enrollment status, not array position
-      if (course.enrollment?.status === EnrollmentStatus.Enrolled) {
-        expect(indicator).toHaveTextContent(/^Enrolled$/)
-      } else if (course.enrollment?.status === EnrollmentStatus.Completed) {
-        expect(indicator).toHaveTextContent(/^Completed$/)
-      } else {
-        expect(indicator).toHaveTextContent(/^Not Enrolled$/)
-      }
-    })
+    // Check enrollment status indicators
+    const completedIndicator = within(completedCard!).getByTestId(
+      "enrollment-status",
+    )
+    const enrolledIndicator = within(enrolledCard!).getByTestId(
+      "enrollment-status",
+    )
+
+    expect(completedIndicator).toHaveTextContent(/^Completed$/)
+    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
   })
 
   test("Renders program collections", async () => {
@@ -253,6 +296,8 @@ describe("ContractContent", () => {
     // Mock the bulk course API call with first course from each program
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
 
     // Mock the program collection courses query with contract_id
@@ -291,8 +336,77 @@ describe("ContractContent", () => {
     expect(courseCards.length).toBe(2)
 
     // Verify the first course from each program is displayed in collection order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB!.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA!.title)
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
+  })
+
+  test("Program collection courses are sorted by program order property", async () => {
+    const { orgX, programA, programB, programCollection, coursesA, coursesB } =
+      setupProgramsAndCourses()
+
+    // Set up the collection with programs in reverse order (A first in array, but higher order number)
+    programCollection.programs = [
+      {
+        id: programA.id,
+        title: programA.title,
+        order: 2, // Higher order - should appear second
+      },
+      {
+        id: programB.id,
+        title: programB.title,
+        order: 1, // Lower order - should appear first
+      },
+    ]
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+
+    // Mock the programs API call - return in array order (A, B)
+    const programIds = [programA.id, programB.id]
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: programIds,
+        contract_id: orgX.contracts[0].id,
+      }),
+      { results: [programA, programB] }, // API returns A first
+    )
+
+    // Mock the courses API call - return in array order (A's first course, B's first course)
+    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
+    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
+    const firstCourseIds = [programA.courses[0], programB.courses[0]]
+
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: firstCourseIds,
+        contract_id: orgX.contracts[0].id,
+      }),
+      { results: [firstCourseA, firstCourseB] }, // API returns A's course first
+    )
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const collectionItems = await screen.findAllByTestId(
+      "org-program-collection-root",
+    )
+    const collection = within(collectionItems[0])
+
+    const courseCards = await collection.findAllByTestId(
+      "enrollment-card-desktop",
+    )
+    expect(courseCards.length).toBe(2)
+
+    // Verify courses are displayed by program order property (B with order:1, then A with order:2)
+    // NOT by array position or API response order
+    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
+    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
   })
 
   test("Program collection displays the first course from each program", async () => {
@@ -386,6 +500,8 @@ describe("ContractContent", () => {
     const firstCourseIds = [programB.courses[0], programA.courses[0]]
     const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
     const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    invariant(firstCourseA)
+    invariant(firstCourseB)
     setMockResponse.get(
       urls.courses.coursesList({
         id: firstCourseIds,
@@ -1201,6 +1317,8 @@ describe("ContractContent", () => {
     const courseWithMultipleRuns = {
       ...course,
       courseruns: runs,
+      next_run_id: runs[0].id,
+      next_run: null, // Clear any factory-generated next_run reference
     }
 
     // Randomly pick one of the runs to enroll in
@@ -1210,9 +1328,12 @@ describe("ContractContent", () => {
       run: {
         id: enrolledRun.id,
         course: { id: course.id, title: course.title },
+        courseware_url: enrolledRun.courseware_url,
       },
       b2b_contract_id: contracts[0].id,
+      b2b_organization_id: orgX.id,
       grades: [],
+      certificate: null,
     })
 
     setupOrgDashboardMocks(

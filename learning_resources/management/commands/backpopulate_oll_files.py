@@ -39,8 +39,8 @@ class Command(TestResourceIdMixin, BaseCommand):
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run Populate OLL course run files"""
-        if not settings.OLL_LEARNING_COURSE_BUCKET_NAME:
-            self.stderr.write("OLL contentfile settings not configured, skipping")
+        if not settings.COURSE_ARCHIVE_BUCKET_NAME:
+            self.stderr.write("Course archive bucket name not configured, skipping")
             return
         chunk_size = options["chunk_size"]
         resource_ids = (

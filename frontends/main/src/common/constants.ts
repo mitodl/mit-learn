@@ -26,3 +26,6 @@ export const PostHogEvents = {
   ClickedNavBrowseFree: "clicked_nav_browse_free",
   ClickedNavBrowseCertificate: "clicked_nav_browse_certificate",
 } as const
+
+export const DigitalCredentialsFAQLink =
+  "https://mitlearn.zendesk.com/hc/en-us/sections/45261233162267-About-Digital-Credentials"
