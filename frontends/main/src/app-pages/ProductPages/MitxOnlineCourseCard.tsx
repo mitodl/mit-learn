@@ -2,7 +2,6 @@
 
 import React from "react"
 import { BaseLearningResourceCard } from "ol-components"
-import type { Size } from "ol-components"
 import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
@@ -92,7 +91,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
     return (
       <BaseLearningResourceCard
         isLoading
-        size={size as Size}
+        size={size}
         className={className}
         headingLevel={headingLevel}
       />
@@ -114,7 +113,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   return (
     <BaseLearningResourceCard
       className={className}
-      size={size as Size}
+      size={size}
       href={href}
       headingLevel={headingLevel}
       imageSrc={imageSrc}
