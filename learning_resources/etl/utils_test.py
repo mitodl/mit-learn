@@ -863,3 +863,64 @@ def test_process_olx_path_malformed_sjson(mocker, settings):
     )
     # Since the SJSON is malformed, no content should be returned
     assert content == []
+
+
+def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
+    """
+    Test that process_olx_path logs an error and skips encrypted PDFs
+    """
+    settings.OCR_MODEL = "test_model"
+    settings.SKIP_TIKA = False
+
+    run = LearningResourceRunFactory.create()
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    # Create the file so stat() works
+    source_rel_path = "static/encrypted.pdf"
+    full_path = olx_path / source_rel_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    full_path.write_bytes(b"fake pdf content")
+
+    # Mock documents_from_olx to yield this file
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                b"fake pdf content",
+                {
+                    "content_type": CONTENT_TYPE_FILE,
+                    "mime_type": "application/pdf",
+                    "archive_checksum": "checksum",
+                    "file_extension": ".pdf",
+                    "source_path": source_rel_path,
+                },
+            )
+        ],
+    )
+
+    # Mock mocks
+    mocker.patch("learning_resources.etl.utils.get_video_metadata", return_value={})
+    mocker.patch(
+        "learning_resources.etl.utils.get_url_from_module_id",
+        return_value="http://example.com",
+    )
+    mock_log = mocker.patch("learning_resources.etl.utils.log")
+
+    # Mock PdfReader to raise FileNotDecryptedError
+    mocker.patch(
+        "learning_resources.etl.utils.PdfReader",
+        side_effect=utils.FileNotDecryptedError,
+    )
+
+    results = list(
+        utils.process_olx_path(
+            str(olx_path),
+            run,
+            overwrite=True,
+            use_ocr=True,
+        )
+    )
+
+    assert len(results) == 0
+    mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
