@@ -8,6 +8,7 @@ import {
 import type {
   V2Program,
   ProgramPageItem,
+  CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
@@ -17,10 +18,8 @@ import { notFound } from "next/navigation"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
-import { ResourceTypeEnum } from "api"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { faker } from "@faker-js/faker/locale/en"
-import type { ResourceCardProps } from "@/page-components/ResourceCard/ResourceCard"
 
 const RequirementTreeBuilder = factories.requirements.RequirementTreeBuilder
 
@@ -29,33 +28,13 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
-jest.mock("@/page-components/ResourceCard/ResourceCard", () => {
-  return {
-    // Resource card is tested thoroughly elsewhere; lets mock it to make tests faster/easier to write
-    ResourceCard: (props: ResourceCardProps) => {
-      let testId: string = "resource-card"
-      if (props.list) {
-        testId = "resource-list-card"
-      }
-      return (
-        <div data-testid={testId} data-resource-id={props.resource?.id}>
-          {props.isLoading
-            ? "Loading..."
-            : `resource-${props.resource?.id ?? "None"}`}
-        </div>
-      )
-    },
-  }
-})
-
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
 const makeProgramResource = learnFactories.learningResources.program
-const makeCourseResource = learnFactories.learningResources.course
 const programResourcesUrl = (readable: string) =>
   learnUrls.learningResources.list({
     readable_id: [readable],
-    resource_type: [ResourceTypeEnum.Program],
+    resource_type: ["program"],
   })
 
 const makeReqs = ({
@@ -120,7 +99,7 @@ const setupApis = ({
 }: {
   program: V2Program
   page: ProgramPageItem
-}) => {
+}): { courses: CourseWithCourseRunsSerializerV2[] } => {
   setMockResponse.get(
     urls.programs.programsList({ readable_id: program.readable_id }),
     { results: [program] },
@@ -138,21 +117,20 @@ const setupApis = ({
     results: [resource],
   })
 
-  const courses = [
+  const courses: CourseWithCourseRunsSerializerV2[] = [
     ...(program.requirements.courses?.required ?? []),
     ...(program.requirements.courses?.electives ?? []),
   ].map((c) =>
-    makeCourseResource({
+    factories.courses.course({
       id: c.id,
       readable_id: c.readable_id,
     }),
   )
+
   setMockResponse.get(
-    learnUrls.learningResources.list({
-      readable_id: courses.map((c) => c.readable_id),
-      resource_type: [ResourceTypeEnum.Course],
-      platform: ["mitxonline"],
-      limit: courses.length,
+    urls.courses.coursesList({
+      id: courses.map((course) => course.id),
+      page_size: courses.length,
     }),
     { results: courses },
   )
@@ -163,6 +141,8 @@ const setupApis = ({
   )
 
   setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
+
+  return { courses }
 }
 
 describe("ProgramPage", () => {
@@ -345,46 +325,59 @@ describe("ProgramPage", () => {
       }),
     })
     const page = makePage({ program_details: program })
-    setupApis({ program, page })
+    const { courses } = setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
-    const section = await screen.findByRole("region", {
-      name: "Courses",
-    })
+    const section = await screen.findByRole("region", { name: "Courses" })
     within(section).getByRole("heading", { name: `${titles.required}` })
     within(section).getByRole("heading", {
       name: `${titles.elective}: Complete ${numElective} out of ${numOutOf}`,
     })
     const [reqList, electiveList] = within(section).getAllByRole("list")
+
     await waitFor(() => {
-      expect(within(reqList).queryByText("Loading")).toBe(null)
+      expect(within(reqList).getAllByRole("listitem").length).toBe(numReq)
     })
     await waitFor(() => {
-      expect(within(reqList).queryByText("Loading")).toBe(null)
-    })
-    await waitFor(() => {
-      expect(within(electiveList).queryByText("Loading")).toBe(null)
+      expect(within(electiveList).getAllByRole("listitem").length).toBe(
+        numOutOf,
+      )
     })
 
     within(reqList)
       .getAllByRole("listitem")
-      .forEach((item, i) => {
-        const resourceId = program.requirements.courses?.required?.[i].id
-        invariant(resourceId)
-        const card = within(item).getByTestId("resource-card") // desktop
-        const listCard = within(item).getByTestId("resource-list-card") //mobile
-        expect(card.dataset.resourceId).toEqual(String(resourceId))
-        expect(listCard.dataset.resourceId).toEqual(String(resourceId))
+      .forEach((item, index) => {
+        const readableId =
+          program.requirements.courses?.required?.[index].readable_id
+        invariant(readableId)
+        const course = courses.find((c) => c.readable_id === readableId)
+        invariant(course)
+        const links = within(item).getAllByRole("link", {
+          name: course.title,
+        })
+        expect(links.length).toBeGreaterThanOrEqual(1)
+        expect(links[0]).toHaveAttribute(
+          "href",
+          `/courses/${encodeURIComponent(readableId)}`,
+        )
       })
+
     within(electiveList)
       .getAllByRole("listitem")
-      .forEach((item, i) => {
-        const resourceId = program.requirements.courses?.electives?.[i].id
-        invariant(resourceId)
-        const card = within(item).getByTestId("resource-card") // desktop
-        const listCard = within(item).getByTestId("resource-list-card") //mobile
-        expect(card.dataset.resourceId).toEqual(String(resourceId))
-        expect(listCard.dataset.resourceId).toEqual(String(resourceId))
+      .forEach((item, index) => {
+        const readableId =
+          program.requirements.courses?.electives?.[index].readable_id
+        invariant(readableId)
+        const course = courses.find((c) => c.readable_id === readableId)
+        invariant(course)
+        const links = within(item).getAllByRole("link", {
+          name: course.title,
+        })
+        expect(links.length).toBeGreaterThanOrEqual(1)
+        expect(links[0]).toHaveAttribute(
+          "href",
+          `/courses/${encodeURIComponent(readableId)}`,
+        )
       })
   })
 

@@ -111,6 +111,7 @@ export { default as FormGroup } from "@mui/material/FormGroup"
 export { default as Slider } from "@mui/material/Slider"
 
 export * from "./components/BannerPage/BannerPage"
+export * from "./components/BaseLearningResourceCard/BaseLearningResourceCard"
 export * from "./components/Breadcrumbs/Breadcrumbs"
 export * from "./components/Card/Card"
 export * from "./components/Card/ListCardCondensed"
