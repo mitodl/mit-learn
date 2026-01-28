@@ -1,6 +1,10 @@
 import React from "react"
 import { Node, mergeAttributes } from "@tiptap/core"
-import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react"
+import {
+  ReactNodeViewRenderer,
+  NodeViewWrapper,
+  type ReactNodeViewProps,
+} from "@tiptap/react"
 import styled from "@emotion/styled"
 
 declare module "@tiptap/core" {
@@ -33,21 +37,32 @@ const StyledDivider = styled.div(({ theme }) => ({
   ".ProseMirror-selectednode &": {
     outline: `1px solid ${theme.custom.colors.red}`,
     outlineOffset: "-1px",
+    backgroundColor: "var(--tt-selection-color)",
     "&::after": {
       color: theme.custom.colors.red,
     },
+  },
+  ".node-divider &": {
+    cursor: "pointer",
   },
 }))
 
 export const DividerViewer = () => <StyledDivider />
 
-const DividerWrapper = () => {
+const DividerWrapper = ({ editor, getPos }: ReactNodeViewProps) => {
+  const selectNode = () => {
+    const pos = getPos()
+    if (typeof pos !== "number") return
+    editor.chain().focus().setNodeSelection(pos).run()
+  }
+
   return (
     <NodeViewWrapper
       data-type="divider"
       tabIndex={0}
       role="separator"
       aria-orientation="horizontal"
+      onMouseDown={selectNode}
     >
       <StyledDivider />
     </NodeViewWrapper>

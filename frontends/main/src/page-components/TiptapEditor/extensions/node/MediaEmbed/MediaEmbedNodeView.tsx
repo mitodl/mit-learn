@@ -1,7 +1,9 @@
 import React, { useState } from "react"
+import styled from "@emotion/styled"
 import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
-import styled from "@emotion/styled"
+import { RiCloseLargeLine } from "@remixicon/react"
+import { ActionButton } from "@mitodl/smoot-design"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -15,100 +17,16 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   margin: "24px 0",
   textAlign: "center",
 
-  ".media-container": {
-    position: "relative",
-    width: "100%",
-    aspectRatio: "16 / 9",
-    overflow: "hidden",
-
-    iframe: {
-      width: "100%",
-      height: "100%",
-      borderRadius: "6px",
-      display: "block",
-    },
-  },
-
-  "&.layout-full .media-container iframe": {
-    borderRadius: 0,
-  },
-
-  ".media-caption": {
-    maxWidth: "900px",
-    margin: "8px auto 0",
-
-    input: {
-      width: "100%",
-      border: "none",
-      textAlign: "left",
-      outline: "none",
-      padding: "16px 0",
-      fontSize: "14px",
-      borderBottom: "1px solid #dde1e6",
-    },
-
-    p: {
-      fontSize: "14px",
-      color: "#555",
-      textAlign: "center",
-      fontStyle: "italic",
-    },
-  },
-
-  ".media-layout-toolbar": {
-    position: "absolute",
-    top: "-38px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 2000,
-    display: "flex",
-    background: "rgb(0 0 0 / 85%)",
-    padding: "6px 10px",
-    borderRadius: "8px",
-    gap: "8px",
-    width: "150px",
-    justifyContent: "center",
-    cursor: "pointer",
-
-    "&::after": {
-      content: '""',
-      position: "absolute",
-      top: "100%",
-      left: "50%",
-      transform: "translateX(-50%)",
-      borderLeft: "8px solid transparent",
-      borderRight: "8px solid transparent",
-      borderTop: "8px solid rgb(0 0 0 / 85%)",
-    },
-
-    button: {
-      width: "40px",
-      height: "28px",
-      border: "none",
-      borderRadius: "4px",
-      background: "transparent",
-      color: "white",
-      cursor: "pointer",
-
-      "&.active": {
-        background: "#9be19b",
-        color: "black",
-        fontWeight: "bold",
-      },
-    },
-  },
-
-  // Layout sizes
-  "&.default": {
+  "&.layout-default": {
     width: "100%",
   },
 
-  "&.wide": {
+  "&.layout-wide": {
     width: "90vw",
     marginLeft: "calc(-45vw + 50%)",
   },
 
-  "&.full": {
+  "&.layout-full": {
     width: "100vw",
     marginLeft: "calc(-50vw + 50%)",
   },
@@ -117,59 +35,129 @@ const StyledNodeViewWrapper = styled(NodeViewWrapper, {
     fill: "white",
   },
 
-  ".remove-button": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
-
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
-
   ".ProseMirror-selectednode &": {
     "&.layout-default": {
       border: `1px solid ${theme.custom.colors.red}`,
       padding: "8px",
       borderRadius: "10px",
     },
-    "&.layout-wide .media-container": {
-      border: `1px solid ${theme.custom.colors.red}`,
-      padding: "8px",
-      borderRadius: "10px",
-    },
-    "&.layout-full .media-container": {
-      border: `1px solid ${theme.custom.colors.red}`,
-      padding: "8px 0",
-      borderWidth: "1px 0",
-    },
+  },
+  ".node-mediaEmbed &": {
+    cursor: "pointer",
   },
 }))
 
-const RemoveButton = styled("button")(({ theme }) => ({
+const RemoveButton = styled(ActionButton)({
   position: "absolute",
-  top: -7,
-  right: -7,
+  top: "-7px",
+  right: "-7px",
   zIndex: 2,
 
-  background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "50%",
-  width: 24,
-  height: 24,
+  display: "none",
+  ".node-mediaEmbed:hover &": {
+    display: "flex",
+  },
+  ".ProseMirror-selectednode:hover &": {
+    top: "-12px",
+    right: "-14px",
+  },
+  ".layout-full &, .ProseMirror-selectednode .layout-full &": {
+    right: "7px",
+  },
+})
 
+const MediaLayoutToolbar = styled.div({
+  position: "absolute",
+  top: "-38px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  zIndex: 2000,
+  display: "flex",
+  background: "rgb(0 0 0 / 85%)",
+  padding: "6px 10px",
+  borderRadius: "8px",
+  gap: "8px",
+  width: "150px",
+  justifyContent: "center",
   cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
 
-  opacity: 0, // 👈 hidden
-  pointerEvents: "none", // 👈 not clickable when hidden
-  transition: "opacity 0.15s ease",
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    top: "100%",
+    left: "50%",
+    transform: "translateX(-50%)",
+    borderLeft: "8px solid transparent",
+    borderRight: "8px solid transparent",
+    borderTop: "8px solid rgb(0 0 0 / 85%)",
+  },
 
-  "&:hover": {
-    background: theme.custom.colors.lightGray1,
+  button: {
+    width: "40px",
+    height: "28px",
+    border: "none",
+    borderRadius: "4px",
+    background: "transparent",
+    color: "white",
+    cursor: "pointer",
+
+    "&.active": {
+      background: "#9be19b",
+      color: "black",
+      fontWeight: "bold",
+    },
+  },
+})
+
+const MediaContainer = styled.div(({ theme }) => ({
+  position: "relative",
+  width: "100%",
+  aspectRatio: "16 / 9",
+  overflow: "hidden",
+
+  iframe: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "6px",
+    display: "block",
+  },
+
+  ".layout-full & iframe": {
+    borderRadius: 0,
+  },
+  ".ProseMirror-selectednode .layout-wide &": {
+    border: `1px solid ${theme.custom.colors.red}`,
+    padding: "8px",
+    borderRadius: "10px",
+  },
+  ".ProseMirror-selectednode .layout-full &": {
+    border: `1px solid ${theme.custom.colors.red}`,
+    padding: "8px 0",
+    borderWidth: "1px 0",
   },
 }))
+
+const MediaCaption = styled.div({
+  maxWidth: "900px",
+  margin: "8px auto 0",
+
+  input: {
+    width: "100%",
+    border: "none",
+    textAlign: "left",
+    outline: "none",
+    padding: "16px 0",
+    fontSize: "14px",
+    borderBottom: "1px solid #dde1e6",
+  },
+
+  p: {
+    fontSize: "14px",
+    color: "#555",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+})
 
 interface MediaEmbedNodeProps {
   node: NodeViewProps["node"]
@@ -195,27 +183,36 @@ export const MediaEmbedNodeView = ({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
+  const selectNode = () => {
+    if (!editable) return
+    const pos = getPos()
+    if (typeof pos !== "number") return
+    editor.chain().focus().setNodeSelection(pos).run()
+  }
+
   return (
     <StyledNodeViewWrapper
       layout={layout}
       hovering={hovering}
-      className={`layout-${layout} media-embed ${layout}`}
+      className={`layout-${layout}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
+      onMouseDown={selectNode}
     >
       {editable && (
         <RemoveButton
-          type="button"
-          aria-label="Remove course card"
+          variant="primary"
+          edge="circular"
+          size="small"
           onClick={handleRemove}
-          className="remove-button"
+          aria-label="Close"
         >
-          ×
+          <RiCloseLargeLine />
         </RemoveButton>
       )}
       {/* Toolbar — identical to ImageUpload version */}
       {editable && hovering && (
-        <div className="media-layout-toolbar">
+        <MediaLayoutToolbar>
           <button
             className={layout === "default" ? "active" : ""}
             onClick={() => updateAttributes({ layout: "default" })}
@@ -236,14 +233,20 @@ export const MediaEmbedNodeView = ({
           >
             <FullWidth />
           </button>
-        </div>
+        </MediaLayoutToolbar>
       )}
 
-      <div className="media-container">
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
-      </div>
+      <MediaContainer>
+        <iframe
+          src={src}
+          frameBorder="0"
+          allowFullScreen
+          title={caption}
+          inert={editable}
+        />
+      </MediaContainer>
 
-      <div className="media-caption">
+      <MediaCaption>
         {editable ? (
           <input
             type="text"
@@ -254,7 +257,7 @@ export const MediaEmbedNodeView = ({
         ) : (
           caption && <p>{caption}</p>
         )}
-      </div>
+      </MediaCaption>
     </StyledNodeViewWrapper>
   )
 }

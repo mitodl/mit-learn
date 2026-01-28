@@ -463,9 +463,11 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                 </Typography>
               </StyledAlert>
             ) : null}
-            <LearningResourceDrawer />
             {readOnly ? (
-              <TipTapViewer content={content} extensions={extensions} />
+              <>
+                <LearningResourceDrawer />
+                <TipTapViewer content={content} extensions={extensions} />
+              </>
             ) : (
               <TiptapEditor editor={editor} />
             )}
