@@ -886,13 +886,13 @@ def load_learning_material(
     with transaction.atomic():
         learning_resource, _ = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
-            etl_source=course_run.learning_resource.etl_source,
             platform=course_run.learning_resource.platform,
-            offered_by=course_run.learning_resource.offered_by,
             defaults={
                 "resource_type": LearningResourceType.course_learning_material.name,
                 "title": content_file.title,
                 "url": content_file.url,
+                "etl_source": course_run.learning_resource.etl_source,
+                "offered_by": course_run.learning_resource.offered_by,
                 "published": True,
             },
         )

@@ -59,6 +59,7 @@ from learning_resources.factories import (
     ArticleFactory,
     ContentFileFactory,
     CourseFactory,
+    CourseLearningMaterialFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -78,6 +79,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
+    CourseLearningMaterial,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -2097,3 +2099,103 @@ def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant)
     assert (
         mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
     )
+
+
+@pytest.mark.django_db
+def test_load_course_learning_materials(mocker):
+    """
+    Test that load_course_learning_materials runs load_learning_material
+    if a ocw content file has content_tags in OCW_COURSE_CONTENT_CATEGORY_MAPPING
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    relevant_content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+    irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
+
+    learning_material_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[relevant_content_tag],
+    )
+
+    other_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[irrelevant_content_tag],
+    )
+
+    load_learning_material_mock = mocker.patch(
+        "learning_resources.etl.loaders.load_learning_material",
+        autospec=True,
+    )
+
+    loaders.load_course_learning_materials(
+        course_run=ocw_course.learning_resource.runs.first(),
+        content_file_ids=[
+            learning_material_content_file.id,
+            other_content_file.id,
+        ],
+    )
+
+    assert load_learning_material_mock.call_count == 1
+    load_learning_material_mock.assert_called_with(
+        ocw_course.learning_resource.runs.first(),
+        learning_material_content_file,
+        {"Programming Assignments"},
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("learning_material_exists", [True, False])
+def test_load_learning_material(mocker, learning_material_exists):
+    """
+    Test that load_learning_material creates a LearningMaterial
+    for the given content file and links it to the course run
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+
+    content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[content_tag],
+    )
+
+    if learning_material_exists:
+        existing_learning_material = CourseLearningMaterialFactory.create(
+            content_file=content_file,
+        )
+
+        existing_learning_material.learning_resource.readable_id = (
+            f"{ocw_course.learning_resource.runs.first().run_id}-{content_file.key}"
+        )
+        existing_learning_material.learning_resource.platform = (
+            ocw_course.learning_resource.platform
+        )
+        existing_learning_material.learning_resource.save()
+
+    loaders.load_learning_material(
+        ocw_course.learning_resource.runs.first(),
+        content_file,
+        {"Programming Assignments"},
+    )
+
+    assert CourseLearningMaterial.objects.count() == 1
+
+    learning_material = CourseLearningMaterial.objects.last()
+
+    assert learning_material.learning_resource.title == content_file.title
+    assert learning_material.learning_resource.url == content_file.url
+    assert learning_material.content_file.id == content_file.id
