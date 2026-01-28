@@ -22,7 +22,6 @@ const collapseWhitespace = (text: string): string => {
 // Convert URLs in plain text to clickable links
 const linkifyText = (text: string): string => {
   if (!text) return ""
-  console.log("Linkifying text:", text)
 
   // If text already contains anchor tags, return as-is (backend already handled links)
   if (text.includes("<a ")) {

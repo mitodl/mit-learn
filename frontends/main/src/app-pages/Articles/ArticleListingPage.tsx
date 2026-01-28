@@ -430,38 +430,38 @@ const EmptyState = styled.div`
     padding: 24px 16px;
   }
 `
-const ArticleBannerStyled = styled(ArticleBanner)<{ $page: number }>`
-  padding: 48px 0;
-  ${({ $page }) => $page === 1 && "padding-bottom: 250px;"}
-  position: relative;
-  background-size: 150% !important;
-  background-position: center !important;
+const ArticleBannerStyled = styled(ArticleBanner)<{ page: number }>(
+  ({ page, theme }) => ({
+    padding: "48px 0",
+    paddingBottom: page === 1 ? "250px" : undefined,
+    position: "relative",
+    backgroundSize: "150% !important",
+    backgroundPosition: "center !important",
 
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgb(0 0 0 / 85%);
-    z-index: 1;
-  }
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      background: "rgb(0 0 0 / 85%)",
+      zIndex: 1,
+    },
 
-  ${theme.breakpoints.down("sm")} {
-    margin-bottom: 0;
-  }
+    "& > *": {
+      position: "relative",
+      zIndex: 2,
+    },
 
-  & > * {
-    position: relative;
-    z-index: 2;
-  }
-  ${theme.breakpoints.down("md")} {
-    ${({ $page }) => $page === 1 && "padding-bottom: 198px;"}
-  }
-  ${theme.breakpoints.down("sm")} {
-    padding: 32px 0;
-  }
-`
+    [theme.breakpoints.down("md")]: {
+      paddingBottom: page === 1 ? "198px" : undefined,
+    },
 
-// Main Story Component (always displayed at top)
+    [theme.breakpoints.down("sm")]: {
+      padding: "32px 0",
+      marginBottom: 0,
+    },
+  }),
+)
+
 const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   const [imageError, setImageError] = React.useState(false)
 
@@ -497,7 +497,6 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   )
 }
 
-// Regular Story Component for grid
 const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   const [imageError, setImageError] = React.useState(false)
 
@@ -576,7 +575,7 @@ const ArticleListingPage: React.FC = () => {
   return (
     <>
       <ArticleBannerStyled
-        $page={page}
+        page={page}
         title="News"
         description="Insights, ideas, and stories from the world of learning at MIT."
         currentBreadcrumb="News"
