@@ -30,6 +30,7 @@ import type {
   VideoResource,
   LearningResourceRelationship,
   LearningResourceSummary,
+  CourseLearningMaterialResource,
 } from "api"
 import {
   AvailabilityEnum,
@@ -324,6 +325,8 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
       return video(overrides)
     case ResourceTypeEnum.Article:
       return article(overrides)
+    case ResourceTypeEnum.CourseLearningMaterial:
+      return courseLearningMaterial(overrides)
 
     default:
       throw Error(`Invalid resource type: ${overrides.resource_type}`)
@@ -548,7 +551,19 @@ const article: LearningResourceFactory<ArticleResource> = (overrides = {}) => {
     overrides,
   )
 }
+
 const articles = makePaginatedFactory(article)
+
+const courseLearningMaterial: LearningResourceFactory<
+  CourseLearningMaterialResource
+> = (overrides = {}) => {
+  return mergeOverrides<CourseLearningMaterialResource>(
+    _learningResourceShared(),
+    { resource_type: ResourceTypeEnum.CourseLearningMaterial },
+    {},
+    overrides,
+  )
+}
 
 const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
   overrides = {},

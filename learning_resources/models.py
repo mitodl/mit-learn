@@ -1225,6 +1225,46 @@ class PodcastEpisode(LearningResourceDetailModel):
         ordering = ("id",)
 
 
+class CourseLearningMaterialQuerySet(LearningResourceDetailQuerySet):
+    """QuerySet for CourseLearningMaterial"""
+
+    def for_serialization(self):
+        """Return queryset for serialization"""
+        return self
+
+
+class CourseLearningMaterial(LearningResourceDetailModel):
+    """Data model for course learning materials"""
+
+    objects = CourseLearningMaterialQuerySet.as_manager()
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        related_name="course_learning_material",
+        on_delete=models.CASCADE,
+    )
+
+    content_file = models.OneToOneField(
+        ContentFile,
+        related_name="learning_material",
+        on_delete=models.CASCADE,
+    )
+
+    content_tags = ArrayField(
+        models.CharField(max_length=256, null=False, blank=False), null=True, blank=True
+    )
+
+    content_category = models.CharField(  # noqa: DJ001
+        max_length=128,
+        choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"CourseLearningMaterial: {self.learning_resource.readable_id}"
+
+
 class VideoChannel(TimestampedModel):
     """Data model for video channels"""
 
