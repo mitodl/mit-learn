@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.0
+Version 0.53.0 (Released January 28, 2026)
 --------------
 
 - Make summarizer/flashcard filters consistent (#2893)
