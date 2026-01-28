@@ -1,19 +1,13 @@
 "use client"
 
 import React from "react"
-import { LearningResourceCard } from "ol-components"
-import type { LearningResourceCardProps } from "ol-components"
+import { BaseLearningResourceCard } from "ol-components"
+import type { Size } from "ol-components"
 import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import type {
-  AvailabilityEnum,
-  CourseResource,
-  LearningResourcePrice,
-  LearningResourceRun,
-} from "api"
+import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
 
 type MitxOnlineCourseCardProps = {
   course?: CourseWithCourseRunsSerializerV2
@@ -24,141 +18,66 @@ type MitxOnlineCourseCardProps = {
   className?: string
 }
 
-const buildResourcePrices = (
+const formatCurrency = (amount: number): string => {
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  })
+}
+
+const formatCoursePrice = (
   course: CourseWithCourseRunsSerializerV2,
-): LearningResourcePrice[] => {
-  const prices: LearningResourcePrice[] = []
+): string | null => {
   const { min_price: minPrice, max_price: maxPrice } = course
 
-  if (minPrice !== null && minPrice !== undefined) {
-    prices.push({ amount: String(minPrice), currency: "USD" })
+  if (
+    minPrice !== null &&
+    minPrice !== undefined &&
+    maxPrice !== null &&
+    maxPrice !== undefined &&
+    minPrice !== maxPrice
+  ) {
+    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
   }
 
-  if (maxPrice !== null && maxPrice !== undefined && maxPrice !== minPrice) {
-    prices.push({ amount: String(maxPrice), currency: "USD" })
+  const single = minPrice ?? maxPrice
+  if (single !== null && single !== undefined) {
+    return formatCurrency(single)
   }
 
-  return prices
+  return null
 }
 
-const mapRunToLearningResourceRun = (
-  run: CourseRunV2,
-  availability: AvailabilityEnum,
-): LearningResourceRun => {
-  return {
-    id: run.id ?? 0,
-    instructors: null,
-    image: null,
-    level: [],
-    delivery: [],
-    format: [],
-    pace: [],
-    resource_prices: [],
-    run_id: String(run.id ?? ""),
-    title: run.title,
-    description: null,
-    full_description: null,
-    last_modified: null,
-    published: run.live,
-    languages: null,
-    url: run.courseware_url ?? null,
-    slug: null,
-    semester: null,
-    year: null,
-    start_date: run.start_date ?? null,
-    end_date: run.end_date ?? null,
-    enrollment_start: run.enrollment_start ?? null,
-    enrollment_end: run.enrollment_end ?? null,
-    prices: null,
-    checksum: null,
-    availability,
-    location: undefined,
-  }
-}
-
-const mapCourseToCourseResource = (
+const getBestRunForCourse = (
   course: CourseWithCourseRunsSerializerV2,
-): CourseResource => {
-  const availability: AvailabilityEnum =
-    course.availability === "anytime" ? "anytime" : "dated"
-
-  const resourcePrices = buildResourcePrices(course)
-
-  const runs: LearningResourceRun[] = (course.courseruns ?? []).map((run) =>
-    mapRunToLearningResourceRun(run, availability),
-  )
-
-  const bestRunId =
-    course.next_run_id ??
-    (course.courseruns && course.courseruns.length > 0
-      ? (course.courseruns[0]?.id ?? null)
-      : null)
-
-  const imageUrl = course.page?.feature_image_src ?? DEFAULT_RESOURCE_IMG
-
-  const courseResource: CourseResource = {
-    id: course.id ?? 0,
-    resource_type: "course",
-    title: course.title,
-    readable_id: course.readable_id,
-    description: course.page?.description ?? null,
-    full_description: course.page?.description ?? null,
-    last_modified: null,
-    published: course.page?.live ?? true,
-    languages: null,
-    url: course.page?.page_url ?? null,
-    availability,
-    certification: Boolean(course.certificate_type),
-    certification_type: {
-      code: "none",
-      name: "",
-    },
-    resource_prices: resourcePrices,
-    free: (course.min_price ?? course.max_price ?? 0) === 0,
-    image: {
-      id: 0,
-      url: imageUrl,
-      alt: null,
-      description: null,
-    },
-    runs,
-    best_run_id: bestRunId,
-    topics: [],
-    position: null,
-    offered_by: null,
-    platform: null,
-    course_feature: null,
-    departments: null,
-    learning_path_parents: [],
-    user_list_parents: [],
-    views: 0,
-    delivery: [],
-    resource_category: "",
-    format: [],
-    pace: [],
-    children: null,
-    prices: [],
-    ocw_topics: [],
-    professional: false,
-    next_start_date: null,
-    completeness: undefined,
-    license_cc: undefined,
-    test_mode: undefined,
-    continuing_ed_credits: null,
-    location: undefined,
-    duration: undefined,
-    min_weeks: null,
-    max_weeks: null,
-    time_commitment: undefined,
-    min_weekly_hours: null,
-    max_weekly_hours: null,
-    require_summaries: false,
-    course: {
-      course_numbers: null,
-    },
+): CourseRunV2 | undefined => {
+  const { courseruns } = course
+  if (!courseruns || courseruns.length === 0) {
+    return undefined
   }
 
-  return courseResource
+  if (course.next_run_id) {
+    const nextRun = courseruns.find((run) => run.id === course.next_run_id)
+    if (nextRun) {
+      return nextRun
+    }
+  }
+  return courseruns[0]
+}
+
+const getStartDisplay = (
+  course: CourseWithCourseRunsSerializerV2,
+): React.ReactNode => {
+  if (course.availability === "anytime") {
+    return "Anytime"
+  }
+
+  const bestRun = getBestRunForCourse(course)
+  if (!bestRun || !bestRun.start_date) {
+    return null
+  }
+
+  return <LocalDate date={bestRun.start_date} format="MMM DD, YYYY" />
 }
 
 const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
@@ -171,9 +90,9 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <LearningResourceCard
+      <BaseLearningResourceCard
         isLoading
-        size={size as LearningResourceCardProps["size"]}
+        size={size as Size}
         className={className}
         headingLevel={headingLevel}
       />
@@ -184,13 +103,29 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
     return null
   }
 
+  const startDisplay = getStartDisplay(course)
+  const priceText = formatCoursePrice(course)
+  const hasCertificate = Boolean(course.certificate_type)
+  const imageSrc = course.page?.feature_image_src ?? DEFAULT_RESOURCE_IMG
+
+  const startLabel =
+    course.availability === "anytime" || !startDisplay ? "Starts: " : undefined
+
   return (
-    <LearningResourceCard
-      resource={mapCourseToCourseResource(course)}
-      href={href}
-      size={size as LearningResourceCardProps["size"]}
+    <BaseLearningResourceCard
       className={className}
+      size={size as Size}
+      href={href}
       headingLevel={headingLevel}
+      imageSrc={imageSrc}
+      imageAlt=""
+      title={course.title}
+      resourceType="Course"
+      coursePrice={priceText}
+      hasCertificate={hasCertificate}
+      startLabel={startLabel}
+      startDate={startDisplay}
+      ariaLabel={`Course: ${course.title}`}
     />
   )
 }
