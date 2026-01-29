@@ -25,6 +25,12 @@ def call_fastly_purge_api(relative_url):
         - Dict of the response (resp.json), or False if there was an error.
     """
     logger = logging.getLogger("fastly_purge")
+
+    # Skip Fastly purge if API key is not configured properly
+    if not settings.FASTLY_API_KEY:
+        logger.info(f"Skipping Fastly purge for {relative_url} (dev environment)")  # noqa: G004
+        return {"status": "ok", "skipped": True}
+
     netloc = urlparse(settings.APP_BASE_URL)[1]
 
     headers = {"host": netloc}
@@ -32,8 +38,8 @@ def call_fastly_purge_api(relative_url):
     if relative_url != "*":
         headers["fastly-soft-purge"] = "1"
 
-    if settings.FASTLY_AUTH_TOKEN:
-        headers["fastly-key"] = settings.FASTLY_AUTH_TOKEN
+    if settings.FASTLY_API_KEY:
+        headers["fastly-key"] = settings.FASTLY_API_KEY
 
     api_url = urljoin(settings.FASTLY_URL, relative_url)
 
@@ -48,7 +54,7 @@ def call_fastly_purge_api(relative_url):
         return resp.json()
 
 
-@app.task
+@app.task()
 def queue_fastly_purge_article(article_id):
     """
     Purges the given article_id from the Fastly cache.
@@ -104,7 +110,7 @@ def queue_fastly_full_purge():
     return False
 
 
-@app.task
+@app.task()
 @single_task(10)
 def queue_fastly_purge_articles_list():
     """

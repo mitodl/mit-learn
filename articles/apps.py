@@ -11,5 +11,6 @@ class ArticlesConfig(AppConfig):
     hookspec = HookspecMarker(name)
 
     def ready(self):
-        """Import signals when the app is ready"""
+        """Import signals and tasks when the app is ready"""
         import articles.signals  # noqa: F401
+        import articles.tasks  # noqa: F401

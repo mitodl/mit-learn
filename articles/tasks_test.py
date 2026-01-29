@@ -42,7 +42,7 @@ class TestCallFastlyPurgeApi:
     @patch("articles.tasks.requests.request")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
-    @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "test-token")
+    @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     def test_call_fastly_purge_api_success(self, mock_request, mock_fastly_response):  # noqa: ARG002
         """Test successful Fastly API call"""
         mock_request.return_value = mock_fastly_response
@@ -62,7 +62,7 @@ class TestCallFastlyPurgeApi:
     @patch("articles.tasks.requests.request")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
-    @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "test-token")
+    @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     def test_call_fastly_purge_api_full_purge(self, mock_request, mock_fastly_response):  # noqa: ARG002
         """Test full cache purge (wildcard)"""
         mock_request.return_value = mock_fastly_response
@@ -78,18 +78,18 @@ class TestCallFastlyPurgeApi:
     @patch("articles.tasks.requests.request")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
-    @patch("django.conf.settings.FASTLY_AUTH_TOKEN", "")
+    @patch("django.conf.settings.FASTLY_API_KEY", "")
     def test_call_fastly_purge_api_no_token(self, mock_request, mock_fastly_response):  # noqa: ARG002
-        """Test API call without auth token"""
+        """Test API call without auth token - skips in dev"""
         mock_request.return_value = mock_fastly_response
 
         result = call_fastly_purge_api("/api/v1/articles/test/")
 
-        assert result == {"status": "ok", "id": "123-456"}
+        # Should skip purge when API key is empty (dev environment)
+        assert result == {"status": "ok", "skipped": True}
 
-        # Verify no auth key was sent
-        call_kwargs = mock_request.call_args.kwargs
-        assert "fastly-key" not in call_kwargs["headers"]
+        # Verify API was not called
+        mock_request.assert_not_called()
 
     @patch("articles.tasks.requests.request")
     def test_call_fastly_purge_api_error(

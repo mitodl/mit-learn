@@ -27,13 +27,13 @@ CDN Cache Purged
 Two new environment variables control the Fastly CDN integration:
 
 ```python
-FASTLY_AUTH_TOKEN = get_string("FASTLY_AUTH_TOKEN", "")
-FASTLY_URL = get_string("FASTLY_URL", "")
+FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
 ```
 
 **Environment Variables:**
-- `FASTLY_AUTH_TOKEN`: Your Fastly API authentication token
-- `FASTLY_URL`: The Fastly API base URL (e.g., `https://api.fastly.com`)
+- `FASTLY_API_KEY`: Your Fastly API authentication key
+- `FASTLY_URL`: The Fastly API base URL (defaults to `https://api.fastly.com`)
 
 ### 2. Tasks (`articles/tasks.py`)
 
@@ -161,11 +161,11 @@ No special admin interface is needed - purging happens automatically when you sa
 
 ### Development/Testing
 
-For local development, you can leave the Fastly settings empty. The code will still run but won't actually purge anything:
+For local development, you can leave the Fastly API key empty. The code will still run but won't actually purge anything:
 
 ```bash
 # .env file
-FASTLY_AUTH_TOKEN=
+FASTLY_API_KEY=
 FASTLY_URL=
 ```
 
@@ -174,7 +174,7 @@ FASTLY_URL=
 Set these environment variables in your production environment:
 
 ```bash
-FASTLY_AUTH_TOKEN=your-fastly-api-token-here
+FASTLY_API_KEY=your-fastly-api-key-here
 FASTLY_URL=https://api.fastly.com
 ```
 
@@ -240,7 +240,7 @@ INFO: Purge request processed OK.
 **Check:**
 1. Is the article published? (`is_published=True`)
 2. Does the article have a slug?
-3. Are `FASTLY_AUTH_TOKEN` and `FASTLY_URL` configured?
+3. Are `FASTLY_API_KEY` and `FASTLY_URL` configured?
 4. Check Celery logs for task execution
 5. Check `fastly_purge` logger for API errors
 
@@ -250,7 +250,7 @@ This is normal behavior for draft articles. Only published articles with slugs a
 
 ### Fastly API returns 403 Forbidden
 
-Your `FASTLY_AUTH_TOKEN` is invalid or expired. Generate a new token from your Fastly account.
+Your `FASTLY_API_KEY` is invalid or expired. Generate a new API key from your Fastly account.
 
 ### Celery tasks not running
 
