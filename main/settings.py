@@ -509,6 +509,10 @@ REACT_GA_DEBUG = get_bool("REACT_GA_DEBUG", False)  # noqa: FBT003
 RECAPTCHA_SITE_KEY = get_string("RECAPTCHA_SITE_KEY", "")
 RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 
+# Fastly CDN settings
+FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
+
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
@@ -642,10 +646,6 @@ MITOL_SIMILAR_RESOURCES_COUNT = get_int("MITOL_SIMILAR_RESOURCES_COUNT", 3)
 OPEN_RESOURCES_MIN_DOC_FREQ = get_int("OPEN_RESOURCES_MIN_DOC_FREQ", 1)
 OPEN_RESOURCES_MIN_TERM_FREQ = get_int("OPEN_RESOURCES_MIN_TERM_FREQ", 1)
 
-# Fastly CDN settings
-FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
-FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
-
 
 # features flags
 def get_all_config_keys():
@@ -675,9 +675,6 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
 )
 REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
 
-# Fastly CDN settings
-FASTLY_AUTH_TOKEN = get_string("FASTLY_AUTH_TOKEN", "")
-FASTLY_URL = get_string("FASTLY_URL", "")
 
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
     MIDDLEWARE = (

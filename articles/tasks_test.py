@@ -92,6 +92,9 @@ class TestCallFastlyPurgeApi:
         mock_request.assert_not_called()
 
     @patch("articles.tasks.requests.request")
+    @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
+    @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
+    @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     def test_call_fastly_purge_api_error(
         self, mock_request, mock_fastly_error_response
     ):
