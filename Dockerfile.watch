@@ -1,0 +1,36 @@
+FROM node:22.21
+
+# Install Cypress system dependencies
+RUN apt-get update && apt-get install -y \
+    xvfb \
+    libgtk2.0-0 \
+    libgtk-3-0 \
+    libgbm-dev \
+    libnotify-dev \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libxtst6 \
+    xauth \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Copy all package.json files to enable yarn install
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn .yarn
+COPY frontends/package.json frontends/
+COPY frontends/api/package.json frontends/api/
+COPY frontends/main/package.json frontends/main/
+COPY frontends/ol-components/package.json frontends/ol-components/
+COPY frontends/ol-test-utilities/package.json frontends/ol-test-utilities/
+COPY frontends/ol-utilities/package.json frontends/ol-utilities/
+
+# Install all dependencies (including Cypress npm package)
+RUN yarn install --immutable
+
+# Install Cypress binary
+RUN npx cypress install --force
+
+# Verify Cypress binary is installed
+RUN npx cypress verify

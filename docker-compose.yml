@@ -36,6 +36,8 @@ services:
       # Both the browser and NextJS server (containerized) make requests to
       # api.open.odl.local, forward those to host
       - "api.open.odl.local:host-gateway"
+      - "mitxonline.odl.local:host-gateway"
+      - "learn.odl.local:host-gateway"
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env

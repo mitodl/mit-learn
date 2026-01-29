@@ -30,12 +30,15 @@ services:
   watch:
     profiles:
       - frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.watch
     working_dir: /src
-    image: node:22.21
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         yarn install --immutable
+        npx cypress install
         if [ "$${NODE_ENV}" = "production" ]; then
           yarn build
           echo "WARNING: Production preview will NOT re-render on file changes."
