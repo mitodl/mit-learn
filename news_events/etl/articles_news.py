@@ -152,13 +152,13 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
 
 def _extract_text_from_paragraph(paragraph_node: dict) -> str:
     """
-    Extract text content from a paragraph node.
+    Extract text content from a paragraph node, preserving links as HTML anchor tags.
 
     Args:
         paragraph_node (dict): Paragraph node containing text nodes
 
     Returns:
-        str: Extracted and joined text content
+        str: Extracted text content with links as HTML anchor tags
     """
     paragraph_content = paragraph_node.get("content", [])
     text_parts = []
@@ -167,9 +167,31 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
         if isinstance(text_node, dict) and text_node.get("type") == "text":
             text = text_node.get("text", "")
             if text:
+                # Check if this text has link marks
+                marks = text_node.get("marks", [])
+                link_mark = None
+
+                # Find link mark if it exists
+                for mark in marks:
+                    if isinstance(mark, dict) and mark.get("type") == "link":
+                        link_mark = mark
+                        break
+
+                # If there's a link, wrap in anchor tag
+                if link_mark:
+                    attrs = link_mark.get("attrs", {})
+                    href = attrs.get("href", "")
+                    target = attrs.get("target", "_blank")
+                    rel = attrs.get("rel", "noopener noreferrer nofollow")
+
+                    if href:
+                        text = (
+                            f'<a href="{href}" target="{target}" rel="{rel}">{text}</a>'
+                        )
+
                 text_parts.append(text)
 
-    return " ".join(text_parts)
+    return "".join(text_parts)
 
 
 def _find_paragraph_in_banner(content_array: list) -> str:

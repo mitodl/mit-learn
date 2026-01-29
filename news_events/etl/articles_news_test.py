@@ -359,8 +359,107 @@ def test_extract_summary_from_banner_multiple_text_nodes():
 
     result = articles_news.extract_summary_from_banner(content_json)
 
-    # Note: joining with " ".join() adds spaces, so "This is " + " " + "a multi-part " becomes "This is  a multi-part "
-    assert result == "This is  a multi-part  summary."
+    # Text parts are joined without extra spaces
+    assert result == "This is a multi-part summary."
+
+
+def test_extract_summary_from_banner_with_links():
+    """Test extracting summary with links preserves anchor tags"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": "Visit "},
+                            {
+                                "type": "text",
+                                "text": "MIT Learn",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "https://learn.mit.edu",
+                                            "target": "_blank",
+                                            "rel": "noopener noreferrer nofollow",
+                                        },
+                                    }
+                                ],
+                            },
+                            {"type": "text", "text": " for more information."},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert (
+        result
+        == 'Visit <a href="https://learn.mit.edu" target="_blank" rel="noopener noreferrer nofollow">MIT Learn</a> for more information.'
+    )
+
+
+def test_extract_summary_from_banner_with_multiple_links():
+    """Test extracting summary with multiple links"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": "Check out "},
+                            {
+                                "type": "text",
+                                "text": "MIT",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "https://mit.edu",
+                                            "target": "_blank",
+                                            "rel": "noopener noreferrer nofollow",
+                                        },
+                                    }
+                                ],
+                            },
+                            {"type": "text", "text": " and "},
+                            {
+                                "type": "text",
+                                "text": "Google",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "https://google.com",
+                                            "target": "_blank",
+                                            "rel": "noopener noreferrer",
+                                        },
+                                    }
+                                ],
+                            },
+                            {"type": "text", "text": " for details."},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert (
+        result
+        == 'Check out <a href="https://mit.edu" target="_blank" rel="noopener noreferrer nofollow">MIT</a> and <a href="https://google.com" target="_blank" rel="noopener noreferrer">Google</a> for details.'
+    )
 
 
 def test_extract_summary_from_banner_empty_content():
