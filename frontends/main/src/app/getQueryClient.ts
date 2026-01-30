@@ -3,10 +3,48 @@
 import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { cache } from "react"
+import { notFound } from "next/navigation"
 
 const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
+
+interface AugmentedQueryClient extends QueryClient {
+  fetchQueryOr404: QueryClient["fetchQuery"]
+}
+
+/**
+ * Augment a QueryClient instance with custom prefetch methods.
+ */
+function augmentQueryClient<T extends QueryClient>(
+  client: T,
+): T & AugmentedQueryClient {
+  const augmented = client as T & AugmentedQueryClient
+
+  /**
+   * Fetch and automatically call notFound() on 404 errors.
+   * Uses fetchQuery internally, which throws on error and populates the cache.
+   *
+   * This should be used wherever we are fetching critical data that must exist for the page to render.
+   */
+  augmented.fetchQueryOr404 = async (options) => {
+    try {
+      return await client.fetchQuery(options)
+    } catch (error: unknown) {
+      /* If the response is a 404, call notFound() to return proper 404 status
+       * This ensures the base page response is a 404, not a 200 with a not found message.
+       */
+      const axiosError = error as AxiosError
+      if (axiosError?.response?.status === 404) {
+        notFound()
+      }
+
+      throw error
+    }
+  }
+
+  return augmented
+}
 
 /**
  * Get or create a server-side QueryClient for consistent retry behavior.
@@ -27,7 +65,7 @@ const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
  * make API calls and only sets up the hydration boundary and registers hooks in
  * readiness for the dehydrated state to be sent to the client.
  */
-const getServerQueryClient = cache(() => {
+export const getServerQueryClient = cache(() => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -84,7 +122,7 @@ const getServerQueryClient = cache(() => {
     },
   })
 
-  return queryClient
+  return augmentQueryClient(queryClient)
 })
 
 type BrowserClientConfig = {
@@ -149,7 +187,7 @@ const makeBrowserQueryClient = (
 
 let browserQueryClient: QueryClient | undefined = undefined
 
-function getQueryClient() {
+function getQueryClient(): QueryClient & AugmentedQueryClient {
   if (isServer) {
     return getServerQueryClient()
   } else {
@@ -162,7 +200,8 @@ function getQueryClient() {
       initBrowserDevTools(browserQueryClient)
     }
 
-    return browserQueryClient
+    // Browser client doesn't have custom prefetch methods
+    return browserQueryClient as QueryClient & AugmentedQueryClient
   }
 }
 

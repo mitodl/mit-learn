@@ -38,19 +38,20 @@ export const generateMetadata = async (
 const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
-  /**
-   * TODO: Consider removing react-query from this page
-   * fetching via client, and calling notFound() if data missing.
-   * This approach blocked by wagtail api requiring auth.
-   */
+
   const queryClient = getQueryClient()
 
-  await Promise.all([
-    queryClient.prefetchQuery(pagesQueries.coursePages(readableId)),
-    queryClient.prefetchQuery(
-      coursesQueries.coursesList({ readable_id: readableId }),
-    ),
-  ])
+  const coursePages = await queryClient.fetchQuery(
+    pagesQueries.coursePages(readableId),
+  )
+
+  if (coursePages.items.length === 0) {
+    notFound()
+  }
+
+  await queryClient.prefetchQuery(
+    coursesQueries.coursesList({ readable_id: readableId }),
+  )
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

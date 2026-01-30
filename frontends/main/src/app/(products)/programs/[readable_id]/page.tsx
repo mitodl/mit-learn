@@ -20,6 +20,8 @@ export const generateMetadata = async (
       pagesQueries.programPages(decodeURIComponent(params.readable_id)),
     )
 
+    console.log("data1", data)
+
     if (data.items.length === 0) {
       notFound()
     }
@@ -40,19 +42,22 @@ export const generateMetadata = async (
 const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
-  /**
-   * TODO: Consider removing react-query from this page
-   * fetching via client, and calling notFound() if data missing.
-   * This approach blocked by wagtail api requiring auth.
-   */
+
   const queryClient = getQueryClient()
 
-  await Promise.all([
-    queryClient.prefetchQuery(pagesQueries.programPages(readableId)),
-    queryClient.prefetchQuery(
-      programsQueries.programsList({ readable_id: readableId }),
-    ),
-  ])
+  const programPages = await queryClient.fetchQuery(
+    pagesQueries.programPages(readableId),
+  )
+
+  console.log("data-programPages", programPages)
+
+  if (programPages.items.length === 0) {
+    notFound()
+  }
+
+  await queryClient.prefetchQuery(
+    programsQueries.programsList({ readable_id: readableId }),
+  )
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

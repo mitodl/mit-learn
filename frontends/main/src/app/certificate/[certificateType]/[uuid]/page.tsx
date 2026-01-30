@@ -26,7 +26,7 @@ export async function generateMetadata({
     const queryClient = getQueryClient()
 
     if (certificateType === CertificateType.Course) {
-      const data = await queryClient.fetchQuery(
+      const data = await queryClient.fetchQueryOr404(
         certificateQueries.courseCertificatesRetrieve({
           cert_uuid: uuid,
         }),
@@ -38,7 +38,7 @@ export async function generateMetadata({
 
       userName = data?.user?.name
     } else {
-      const data = await queryClient.fetchQuery(
+      const data = await queryClient.fetchQueryOr404(
         certificateQueries.programCertificatesRetrieve({
           cert_uuid: uuid,
         }),
