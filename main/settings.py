@@ -895,14 +895,12 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
         """
         Rules:
-        - Focus ONLY on core concepts, methods, definitions,
-          reasoning, and cause-effect relationships.
-        - Questions must test understanding or application,
-          not recall of names, timestamps, or anecdotes.
-        - Avoid trivia, meta information
-        - avoid details about the speaker or course logistics.
-        - Prefer "why", "how", "compare", "explain", or "apply" style questions.
-        - Each answer should be concise but complete (1-3 sentences).
+        - Focus on core concepts, definitions, principles, and key relationships
+        - Questions should test understanding, not trivia
+          (never ask about the speaker, timestamps, or lecture logistics)
+        - Include a mix of: conceptual questions,
+          definition recalls, and application/reasoning questions
+        - Answers should be concise but complete
 
         Transcript:
         {content}
