@@ -7,9 +7,10 @@ from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
 from itertools import islice
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import markdown2
+import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import caches
@@ -22,6 +23,47 @@ log = logging.getLogger(__name__)
 
 # This is the Django ImageField max path size
 IMAGE_PATH_MAX_LENGTH = 100
+
+
+def call_fastly_purge_api(relative_url):
+    """
+    Call the Fastly purge API.
+
+    We aren't using the official Fastly SDK here because it doesn't work for
+    this - the version of it that works with the current API only allows you
+    to purge *everything*, not individual pages.
+
+    Args:
+        - relative_url  The relative URL to purge.
+    Returns:
+        - Dict of the response (resp.json), or False if there was an error.
+    """
+    # Skip Fastly purge if API key is not configured properly
+    if not settings.FASTLY_API_KEY:
+        log.info(f"Skipping Fastly purge for {relative_url} (dev environment)")  # noqa: G004
+        return {"status": "ok", "skipped": True}
+
+    netloc = urlparse(settings.APP_BASE_URL)[1]
+
+    headers = {"host": netloc}
+
+    if relative_url != "*":
+        headers["fastly-soft-purge"] = "1"
+
+    if settings.FASTLY_API_KEY:
+        headers["fastly-key"] = settings.FASTLY_API_KEY
+
+    api_url = urljoin(settings.FASTLY_URL, relative_url)
+
+    resp = requests.request("PURGE", api_url, headers=headers, timeout=30)
+
+    if resp.status_code >= 400:  # noqa: PLR2004
+        log.error(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
+        log.error(f"Fastly returned: {resp.text}")  # noqa: G004
+        return False
+    else:
+        log.info(f"Fastly returned: {resp.text}")  # noqa: G004
+        return resp.json()
 
 
 def cache_page_for_anonymous_users(*cache_args, **cache_kwargs):
