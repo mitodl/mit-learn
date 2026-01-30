@@ -89,6 +89,11 @@ const products = {
     `${API_BASE_URL}/api/v0/products/${productId}/user_flexible_price/`,
 }
 
+const baskets = {
+  createFromProduct: (productId: number) =>
+    `${API_BASE_URL}/api/v0/baskets/create_from_product/${productId}/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -104,4 +109,5 @@ export {
   contracts,
   certificates,
   products,
+  baskets,
 }
