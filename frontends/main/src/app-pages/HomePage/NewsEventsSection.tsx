@@ -135,7 +135,7 @@ const HeadingContainer = styled.div`
   width: 100%;
   margin-top: 40px;
   ${theme.breakpoints.down("sm")} {
-    margin-top: 0;
+    margin-top: 20px;
   }
 `
 
