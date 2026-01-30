@@ -885,8 +885,8 @@ CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
 )
 
 
-CONTENT_SUMMARIZER_FLASHCARD_PEROMPT = get_string(
-    "CONTENT_SUMMARIZER_FLASHCARD_PEROMPT",
+CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
+    "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",
     (
         f"""
         You are an expert instructor creating study flashcards.
