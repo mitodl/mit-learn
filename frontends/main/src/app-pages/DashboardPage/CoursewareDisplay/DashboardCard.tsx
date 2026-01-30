@@ -29,6 +29,7 @@ import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
+import { useAddToBasket } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -421,13 +422,24 @@ const UpgradeBanner: React.FC<
     canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
+    productId?: number | null
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
+  productId,
   ...others
 }) => {
+  const addToBasket = useAddToBasket()
+
+  const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    if (!productId || addToBasket.isPending) return
+
+    addToBasket.mutate(productId)
+  }
+
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
@@ -437,7 +449,7 @@ const UpgradeBanner: React.FC<
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
     <SubtitleLinkRoot {...others}>
-      <SubtitleLink href="#">
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
         Add a certificate for {formattedPrice}
       </SubtitleLink>
@@ -691,6 +703,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           canUpgrade={run?.is_upgradable ?? false}
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.products?.[0]?.price}
+          productId={run?.products?.[0]?.id}
         />
       ) : null}
     </>

@@ -1,5 +1,6 @@
 import {
   B2bApi,
+  BasketsApi,
   CoursesApi,
   CourseCertificatesApi,
   EnrollmentsApi,
@@ -29,6 +30,7 @@ const BASE_PATH =
 const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
 const countriesApi = new CountriesApi(undefined, BASE_PATH, axiosInstance)
 const b2bApi = new B2bApi(undefined, BASE_PATH, axiosInstance)
+const basketsApi = new BasketsApi(undefined, BASE_PATH, axiosInstance)
 const programsApi = new ProgramsApi(undefined, BASE_PATH, axiosInstance)
 const programCollectionsApi = new ProgramCollectionsApi(
   undefined,
@@ -70,6 +72,7 @@ export {
   usersApi,
   countriesApi,
   b2bApi,
+  basketsApi,
   courseRunEnrollmentsApi,
   programEnrollmentsApi,
   programsApi,
