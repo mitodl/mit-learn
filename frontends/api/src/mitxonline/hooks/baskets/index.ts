@@ -3,12 +3,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { basketsApi } from "../../clients"
 import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v2"
 
+interface UseAddToBasketOptions {
+  onError?: (error: Error) => void
+}
+
 /**
  * Hook to add a product to the user's basket.
  * Creates or updates the basket, adding the specified product.
- * On success, automatically redirects to the checkout page.
+ * On success, automatically redirects to the MITx Online cart page.
  */
-const useAddToBasket = () => {
+const useAddToBasket = (options?: UseAddToBasketOptions) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (productId: number): Promise<BasketWithProduct> => {
@@ -23,32 +27,15 @@ const useAddToBasket = () => {
         queryKey: basketQueries.checkout().queryKey,
       })
 
-      // Get checkout data and submit form to CyberSource
-      try {
-        const checkoutResponse = await basketsApi.basketsCheckoutRetrieve()
-        const { url, payload } = checkoutResponse.data
-
-        if (url && payload) {
-          // Create a form and submit it to CyberSource
-          const form = document.createElement("form")
-          form.method = "POST"
-          form.action = url
-
-          // Add all payload fields as hidden inputs
-          Object.entries(payload).forEach(([key, value]) => {
-            const input = document.createElement("input")
-            input.type = "hidden"
-            input.name = key
-            input.value = String(value)
-            form.appendChild(input)
-          })
-
-          document.body.appendChild(form)
-          form.submit()
-        }
-      } catch (error) {
-        console.error("Failed to get checkout URL:", error)
-      }
+      // Redirect to MITx Online cart page
+      const cartUrl = new URL(
+        "/cart/",
+        process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+      ).toString()
+      window.location.assign(cartUrl)
+    },
+    onError: (error: Error) => {
+      options?.onError?.(error)
     },
   })
 }

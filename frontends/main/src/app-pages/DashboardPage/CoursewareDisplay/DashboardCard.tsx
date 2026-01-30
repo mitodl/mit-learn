@@ -9,7 +9,7 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
   RiAddLine,
@@ -42,6 +42,10 @@ const EnrollmentMode = {
   Verified: "verified",
 } as const
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
+
+const AlertBanner = styled(Alert)({
+  marginBottom: "16px",
+})
 
 export const DashboardType = {
   Course: "course",
@@ -423,15 +427,21 @@ const UpgradeBanner: React.FC<
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
+    onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
+  onError,
   ...others
 }) => {
-  const addToBasket = useAddToBasket()
+  const addToBasket = useAddToBasket({
+    onError: (error) => {
+      onError?.(error as Error)
+    },
+  })
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -447,11 +457,22 @@ const UpgradeBanner: React.FC<
   const calendarDays = calendarDaysUntil(certificateUpgradeDeadline)
   if (calendarDays === null) return null
   const formattedPrice = `$${certificateUpgradePrice}`
+  const buttonText = addToBasket.isPending
+    ? "Adding to cart..."
+    : `Add a certificate for ${formattedPrice}`
   return (
     <SubtitleLinkRoot {...others}>
-      <SubtitleLink href="#" onClick={handleUpgradeClick}>
+      <SubtitleLink
+        href="#"
+        onClick={handleUpgradeClick}
+        aria-disabled={addToBasket.isPending}
+        style={{
+          pointerEvents: addToBasket.isPending ? "none" : "auto",
+          opacity: addToBasket.isPending ? 0.6 : 1,
+        }}
+      >
         <RiAddLine size="16px" />
-        Add a certificate for {formattedPrice}
+        {buttonText}
       </SubtitleLink>
       <NoSSR>
         {/* This uses local time. */}
@@ -534,6 +555,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 }) => {
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
+  const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
+
+  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
   // Determine resource type from discriminated union
   const resourceIsCourse = resource.type === DashboardType.Course
@@ -704,6 +728,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.products?.[0]?.price}
           productId={run?.products?.[0]?.id}
+          onError={(error) => {
+            setUpgradeError(
+              error instanceof Error
+                ? error.message
+                : "There was a problem adding the certificate to your cart.",
+            )
+          }}
         />
       ) : null}
     </>
@@ -786,6 +817,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Single return block with unified layout
   return (
     <>
+      {upgradeError && (
+        <AlertBanner severity="error" closable={true}>
+          <span>
+            {upgradeError}{" "}
+            <Link color="red" href={`mailto:${supportEmail}`}>
+              Contact Support
+            </Link>{" "}
+            for assistance.
+          </span>
+        </AlertBanner>
+      )}
       <CardRoot
         screenSize="desktop"
         data-testid="enrollment-card-desktop"
