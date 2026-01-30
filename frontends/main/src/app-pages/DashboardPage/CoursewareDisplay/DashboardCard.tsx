@@ -445,7 +445,7 @@ const UpgradeBanner: React.FC<
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
-    if (!productId || addToBasket.isPending) return
+    if (!productId) return
 
     addToBasket.mutate(productId)
   }
@@ -457,22 +457,11 @@ const UpgradeBanner: React.FC<
   const calendarDays = calendarDaysUntil(certificateUpgradeDeadline)
   if (calendarDays === null) return null
   const formattedPrice = `$${certificateUpgradePrice}`
-  const buttonText = addToBasket.isPending
-    ? "Adding to cart..."
-    : `Add a certificate for ${formattedPrice}`
   return (
     <SubtitleLinkRoot {...others}>
-      <SubtitleLink
-        href="#"
-        onClick={handleUpgradeClick}
-        aria-disabled={addToBasket.isPending}
-        style={{
-          pointerEvents: addToBasket.isPending ? "none" : "auto",
-          opacity: addToBasket.isPending ? 0.6 : 1,
-        }}
-      >
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
-        {buttonText}
+        Add a certificate for {formattedPrice}
       </SubtitleLink>
       <NoSSR>
         {/* This uses local time. */}
