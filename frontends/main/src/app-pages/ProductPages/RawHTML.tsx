@@ -1,18 +1,38 @@
-import DOMPurify from "isomorphic-dompurify"
 import { styled } from "@mitodl/smoot-design"
-import React, { memo } from "react"
+import React, { memo, useState, useEffect } from "react"
 import classnames from "classnames"
+
+// Lazy load DOMPurify only on client to avoid SSR jsdom stylesheet issue
+let DOMPurify: typeof import("isomorphic-dompurify").default | null = null
+
+const sanitizeHTML = async (html: string): Promise<string> => {
+  if (typeof window === "undefined") {
+    return html
+  }
+  if (!DOMPurify) {
+    const mod = await import("isomorphic-dompurify")
+    DOMPurify = mod.default
+  }
+  return DOMPurify.sanitize(html)
+}
 
 const UnstyledRawHTML: React.FC<{
   html: string
   className?: string
   Component?: React.ElementType
 }> = memo(({ html, className, Component = "div" }) => {
+  const [sanitizedHtml, setSanitizedHtml] = useState<string>(html)
+
+  useEffect(() => {
+    // Sanitize on client side only
+    sanitizeHTML(html).then(setSanitizedHtml)
+  }, [html])
+
   return (
     <Component
       className={classnames("raw-html", className)}
       data-testid="raw"
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   )
 })
