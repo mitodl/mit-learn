@@ -202,14 +202,14 @@ pytest articles/ -v
 
 The test suite includes:
 
-✅ Successful API calls  
-✅ API error handling  
-✅ Published vs unpublished articles  
-✅ Articles with and without slugs  
-✅ Signal triggering on save  
-✅ URL generation  
-✅ Full cache purge  
-✅ Articles list purge  
+✅ Successful API calls
+✅ API error handling
+✅ Published vs unpublished articles
+✅ Articles with and without slugs
+✅ Signal triggering on save
+✅ URL generation
+✅ Full cache purge
+✅ Articles list purge
 
 ## Monitoring and Logging
 
