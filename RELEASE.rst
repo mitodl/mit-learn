@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.1
+Version 0.53.1 (Released February 02, 2026)
 --------------
 
 - Fix canvas ingestion exception (#2897)
