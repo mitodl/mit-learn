@@ -717,11 +717,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.products?.[0]?.price}
           productId={run?.products?.[0]?.id}
-          onError={(error) => {
+          onError={() => {
             setUpgradeError(
-              error instanceof Error
-                ? error.message
-                : "There was a problem adding the certificate to your cart.",
+              "There was a problem adding the certificate to your cart.",
             )
           }}
         />
