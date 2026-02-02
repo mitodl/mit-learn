@@ -437,17 +437,17 @@ const UpgradeBanner: React.FC<
   onError,
   ...others
 }) => {
-  const addToBasket = useAddToBasket({
-    onError: (error) => {
-      onError?.(error as Error)
-    },
-  })
+  const addToBasket = useAddToBasket()
 
   const handleUpgradeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     if (!productId) return
 
-    addToBasket.mutate(productId)
+    addToBasket.mutate(productId, {
+      onError: (error) => {
+        onError?.(error as Error)
+      },
+    })
   }
 
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {

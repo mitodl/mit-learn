@@ -3,16 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { basketsApi } from "../../clients"
 import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v2"
 
-interface UseAddToBasketOptions {
-  onError?: (error: Error) => void
-}
-
 /**
  * Hook to add a product to the user's basket.
  * Creates or updates the basket, adding the specified product.
  * On success, automatically redirects to the MITx Online cart page.
  */
-const useAddToBasket = (options?: UseAddToBasketOptions) => {
+const useAddToBasket = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (productId: number): Promise<BasketWithProduct> => {
@@ -33,9 +29,6 @@ const useAddToBasket = (options?: UseAddToBasketOptions) => {
         process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
       ).toString()
       window.location.assign(cartUrl)
-    },
-    onError: (error: Error) => {
-      options?.onError?.(error)
     },
   })
 }
