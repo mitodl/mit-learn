@@ -1,54 +1,52 @@
 import React from "react"
 import styled from "@emotion/styled"
 
-const StyledWrapper = styled.div<{ layout: string }>`
-  position: relative;
-  width: 100%;
-  margin: 24px 0;
-  text-align: center;
+const StyledWrapper = styled.div({
+  position: "relative",
+  width: "100%",
+  margin: "24px 0",
+  textAlign: "center",
 
-  .media-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
+  "&.layout-default": {
+    width: "100%",
+  },
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border-radius: 6px;
-      display: block;
-    }
-  }
+  "&.layout-wide": {
+    width: "90vw",
+    marginLeft: "calc(-45vw + 50%)",
+  },
 
-  .media-caption {
-    max-width: 900px;
-    margin: 8px auto 0;
+  "&.layout-full": {
+    width: "100vw",
+    marginLeft: "calc(-50vw + 50%)",
+  },
+})
 
-    p {
-      font-size: 14px;
-      color: #555;
-      text-align: center;
-      font-style: italic;
-    }
-  }
+const MediaContainer = styled.div({
+  position: "relative",
+  width: "100%",
+  aspectRatio: "16 / 9",
+  overflow: "hidden",
 
-  /* Layout sizes */
-  &.default {
-    width: 100%;
-  }
+  iframe: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "6px",
+    display: "block",
+  },
+})
 
-  &.wide {
-    width: 90vw;
-    margin-left: calc(-45vw + 50%);
-  }
+const MediaCaption = styled.div({
+  maxWidth: "900px",
+  margin: "8px auto 0",
 
-  &.full {
-    width: 100vw;
-    margin-left: calc(-50vw + 50%);
-  }
-`
-
+  p: {
+    fontSize: "14px",
+    color: "#555",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+})
 interface MediaEmbedNode {
   attrs: {
     src?: string
@@ -63,15 +61,15 @@ export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
   const layout = node?.attrs?.layout || "default"
 
   return (
-    <StyledWrapper layout={layout} className={`layout-${layout} media-embed`}>
-      <div className="media-container">
+    <StyledWrapper className={`layout-${layout}`}>
+      <MediaContainer>
         <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
-      </div>
+      </MediaContainer>
 
       {caption && (
-        <div className="media-caption">
+        <MediaCaption>
           <p>{caption}</p>
-        </div>
+        </MediaCaption>
       )}
     </StyledWrapper>
   )

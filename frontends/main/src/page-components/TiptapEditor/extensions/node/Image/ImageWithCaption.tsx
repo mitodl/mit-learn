@@ -5,6 +5,8 @@ import styled from "@emotion/styled"
 import NiceModal from "@ebay/nice-modal-react"
 import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
+import { RiCloseLargeLine } from "@remixicon/react"
+import { ActionButton } from "@mitodl/smoot-design"
 
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
@@ -173,6 +175,10 @@ const Container = styled.figure(({ theme }) => ({
     padding: "8px",
     borderRadius: "10px",
   },
+
+  ".node-imageWithCaption &": {
+    cursor: "pointer",
+  },
 }))
 
 enum Layout {
@@ -187,15 +193,6 @@ const Image = styled.img<{ layout: Layout; isLoading?: boolean }>(
       borderRadius: layout === Layout.full ? 0 : "8px",
       opacity: isLoading ? 0 : 1,
       transition: "opacity 0.3s ease-in-out",
-    },
-    "& .remove-button": {
-      opacity: 0,
-      pointerEvents: "none",
-    },
-
-    "&:hover .remove-button": {
-      opacity: 1,
-      pointerEvents: "auto",
     },
   }),
 )
@@ -226,21 +223,21 @@ const ImagePlaceholder = styled.div<{ layout: Layout }>(
       right: "50%",
       transform: "translateX(-50%)",
     }),
+    ".ProseMirror-selectednode &": {
+      ...(layout === Layout.wide && {
+        margin: 0,
+        width: "calc(92vw - 16px)",
+        maxWidth: "calc(1400px  - 16px)",
+      }),
+      ...(layout === Layout.full && {
+        margin: 0,
+      }),
+    },
   }),
 )
 
 const ImageWrapper = styled("div")({
   position: "relative",
-
-  "& .remove-button": {
-    opacity: 0,
-    pointerEvents: "none",
-  },
-
-  "&:hover .remove-button": {
-    opacity: 1,
-    pointerEvents: "auto",
-  },
 })
 
 const Caption = styled.figcaption(({ theme }) => ({
@@ -300,33 +297,23 @@ export function ImageWithCaptionViewer({
     </Container>
   )
 }
-const RemoveButton = styled("button")(({ theme }) => ({
+const RemoveButton = styled(ActionButton)({
   position: "absolute",
-  top: -11,
-  right: -7,
-  zIndex: 999999,
-
-  background: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "50%",
-  width: 24,
-  height: 24,
-
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
-
-  opacity: 0, // 👈 hidden
-  pointerEvents: "none", // 👈 not clickable when hidden
-  transition: "opacity 0.15s ease",
-
-  "&:hover": {
-    background: theme.custom.colors.lightGray1,
+  top: "-4px",
+  right: "-6px",
+  zIndex: 2,
+  display: "none",
+  ".node-imageWithCaption:hover &": {
+    display: "flex",
   },
-  ".layout-full &": {
-    right: 7,
+  ".ProseMirror-selectednode:hover &": {
+    top: "-12px",
+    right: "-14px",
   },
-}))
+  ".layout-full &, .ProseMirror-selectednode .layout-full &": {
+    right: "7px",
+  },
+})
 
 export function ImageWithCaption({
   node,
@@ -377,34 +364,43 @@ export function ImageWithCaption({
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run()
   }
 
+  const selectNode = () => {
+    if (!isEditable) return
+    const pos = getPos()
+    if (typeof pos !== "number") return
+    editor.chain().focus().setNodeSelection(pos).run()
+  }
+
   return (
-    <NodeViewWrapper data-type="image-upload">
-      {isLoading && (
-        <ImagePlaceholder layout={layout} aria-label="Loading image" />
-      )}
+    <NodeViewWrapper data-type="image-upload" onMouseDown={selectNode}>
       <Container className={`layout-${layout}`}>
         {isEditable && (
           <div className="media-layout-toolbar">
             <button
               className={layout === "default" ? "active" : ""}
-              onClick={() => updateAttributes({ layout: "default" })}
+              onClick={() => {
+                updateAttributes({ layout: "default" })
+              }}
               title="Default width"
             >
               <DefaultWidth />
             </button>
             {canExpand && (
               <>
-                {" "}
                 <button
                   className={layout === "wide" ? "active" : ""}
-                  onClick={() => updateAttributes({ layout: "wide" })}
+                  onClick={() => {
+                    updateAttributes({ layout: "wide" })
+                  }}
                   title="Wide"
                 >
                   <WideWidth />
                 </button>
                 <button
                   className={layout === "full" ? "active" : ""}
-                  onClick={() => updateAttributes({ layout: "full" })}
+                  onClick={() => {
+                    updateAttributes({ layout: "full" })
+                  }}
                   title="Full width"
                 >
                   <FullWidth />
@@ -412,7 +408,9 @@ export function ImageWithCaption({
               </>
             )}
             <button
-              onClick={openAltTextDialog}
+              onClick={() => {
+                openAltTextDialog()
+              }}
               title="Set Alt Text"
               className="alt-text-button"
             >
@@ -424,13 +422,17 @@ export function ImageWithCaption({
         <ImageWrapper className="image-wrapper">
           {isEditable && (
             <RemoveButton
-              type="button"
-              aria-label="Remove course card"
+              variant="primary"
+              edge="circular"
+              size="small"
               onClick={handleRemove}
-              className="remove-button"
+              aria-label="Remove"
             >
-              ×
+              <RiCloseLargeLine />
             </RemoveButton>
+          )}
+          {isLoading && (
+            <ImagePlaceholder layout={layout} aria-label="Loading image" />
           )}
           <Image
             src={src}

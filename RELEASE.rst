@@ -1,6 +1,49 @@
 Release Notes
 =============
 
+Version 0.53.0 (Released January 28, 2026)
+--------------
+
+- Make summarizer/flashcard filters consistent (#2893)
+- update the domain (#2890)
+- Log warning instear of raise value for runless webhooks (#2894)
+- chore(deps): update dependency ruff to v0.14.14 (#2889)
+- chore(deps): update actions/setup-node digest to 6044e13 (#2886)
+- chore(deps): update actions/setup-python digest to a309ff8 (#2887)
+- chore(deps): update codecov/codecov-action action to v5.5.2 (#2888)
+- Fix large payload updates in qdrant (#2879)
+- Revert "No more contentfile scheduled tasks (#2872)" (#2885)
+- Add django system checks to CI (#2881)
+- fix: sanitize the articles text which comes from medium source (#2880)
+- Margin on opener bar (#2863)
+- Default QDRANT_DENSE_MODEL to None (#2884)
+- No more contentfile scheduled tasks (#2872)
+- chore(deps): update dependency ruff to v0.14.13 (#2723)
+- [pre-commit.ci] pre-commit autoupdate (#2727)
+- fix(deps): update dependency dj-database-url to v3 (#2761)
+- fix(deps): update dependency pypdfium2 to v5 (#2766)
+- MITx Online courses with enrollment_end/end_date in the past should not offer certifications (#2876)
+- Kick off contentfile ingestion for new best runs (#2883)
+- chore(deps): update dependency type-fest to v5 (#2754)
+- chore(deps): update peter-evans/create-or-update-comment action to v5 (#2756)
+- chore(deps): update peter-evans/find-comment action to v4 (#2757)
+- Increase cache stale time to match CDN TTL setting (#2874)
+
+Version 0.52.1 (Released January 27, 2026)
+--------------
+
+- remove intermediate dashboard classes and use mitxonline api classes directly (#2868)
+- fix(deps): update dependency tiktoken to ^0.12.0 (#2744)
+- feat: add frontend for listing page (#2846)
+- chore(deps): update dependency urllib3 to v2.6.3 [security] (#2788)
+- fix(deps): update dependency django to v4.2.27 [security] (#2787)
+- Show buttons only for certificate owner (#2877)
+- Product Page Financial Aid Display (#2861)
+- wrap the credential narrative in react-markdown (#2878)
+- add a constant to store the digital credentials faq link and add the link to the dialog (#2873)
+- Cursor visibility and selection feedback on custom elements (#2869)
+- Article editor tests (#2850)
+
 Version 0.52.0 (Released January 22, 2026)
 --------------
 

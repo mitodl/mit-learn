@@ -8,6 +8,7 @@ export const ImageWithCaptionNode = Node.create({
   group: "block",
   draggable: true,
   selectable: true,
+  atom: true,
 
   addAttributes() {
     return {

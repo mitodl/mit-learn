@@ -24,7 +24,7 @@ from learning_resources.etl.canvas_utils import (
     parse_web_content,
 )
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import get_edx_module_id
+from learning_resources.etl.utils import get_edx_module_id, process_olx_path
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -1884,3 +1884,17 @@ def test_transform_canvas_problem_files_pdf_calls_llm_for_ocr(  # noqa: PLR0913
         else "existing content"
     )
     assert results[0]["problem_title"] == "problemset1"
+
+
+def test_empty_pdf_is_skipped(tmp_path):
+    """Empty PDF files should be handled gracefully, not raise an exception."""
+    empty_pdf = tmp_path / "empty.pdf"
+    empty_pdf.write_bytes(b"")
+
+    # Should not raise EmptyFileError
+    result = list(
+        process_olx_path(
+            str(empty_pdf), LearningResourceRunFactory.create(), overwrite=True
+        )
+    )
+    assert result == []

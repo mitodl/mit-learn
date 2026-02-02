@@ -61,7 +61,7 @@ class ContentSummarizer:
 
         return (
             content_file.content_type in summarizer_config.allowed_content_types
-            or content_file.file_extension in summarizer_config.allowed_extensions
+            and content_file.file_extension in summarizer_config.allowed_extensions
         )
 
     def get_unprocessed_content_file_ids(
