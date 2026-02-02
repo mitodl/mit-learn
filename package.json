@@ -21,13 +21,15 @@
     "storybook": "yarn workspace ol-components storybook",
     "lint-check": "yarn workspace frontends run lint-check",
     "typecheck": "yarn workspace frontends run typecheck",
-    "cypress": "cypress run",
-    "cypress:rc": "CYPRESS_BASE_URL=https://rc.learn.mit.edu/ cypress run",
-    "cypress:ci": "CYPRESS_BASE_URL=https://ci.learn.mit.edu/ cypress run",
-    "cypress:prod": "CYPRESS_BASE_URL=https://ci.learn.mit.edu/ cypress run"
+    "playwright": "playwright test",
+    "playwright:rc": "PLAYWRIGHT_BASE_URL=https://rc.learn.mit.edu playwright test",
+    "playwright:ci": "PLAYWRIGHT_BASE_URL=https://ci.learn.mit.edu playwright test",
+    "playwright:ui": "playwright test --ui",
+    "playwright:report": "playwright show-report"
   },
   "packageManager": "yarn@4.11.0",
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@testing-library/cypress": "^10.1.0",
     "cypress": "^15.9.0",
     "syncpack": "^13.0.0"
