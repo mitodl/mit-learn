@@ -29,7 +29,7 @@ import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
-import { useAddToBasket } from "api/mitxonline-hooks/baskets"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -438,14 +438,19 @@ const UpgradeBanner: React.FC<
   ...others
 }) => {
   const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
 
   const handleUpgradeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     if (!productId) return
 
-    addToBasket.mutate(productId, {
-      onError: (error) => {
-        onError?.(error as Error)
+    clearBasket.mutate(undefined, {
+      onSuccess: () => {
+        addToBasket.mutate(productId, {
+          onError: (error) => {
+            onError?.(error as Error)
+          },
+        })
       },
     })
   }

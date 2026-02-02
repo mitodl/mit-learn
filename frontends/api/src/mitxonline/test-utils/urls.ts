@@ -92,6 +92,7 @@ const products = {
 const baskets = {
   createFromProduct: (productId: number) =>
     `${API_BASE_URL}/api/v0/baskets/create_from_product/${productId}/`,
+  clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
 }
 
 export {

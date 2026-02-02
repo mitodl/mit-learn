@@ -586,7 +586,10 @@ describe.each([
       run: { ...run, course },
     })
 
-    // Mock basket API
+    // Mock basket APIs
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+
     const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
     setMockResponse.post(basketUrl, { id: 1, items: [] })
 
@@ -602,7 +605,15 @@ describe.each([
     })
     await user.click(upgradeLink)
 
-    // Verify basket API was called
+    // Verify clear basket API was called first
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "DELETE",
+        url: clearUrl,
+      }),
+    )
+
+    // Verify create basket API was called
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "POST",
@@ -644,7 +655,10 @@ describe.each([
       run: { ...run, course },
     })
 
-    // Mock basket API to fail
+    // Mock basket APIs - clear succeeds but create fails
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+
     const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
     setMockResponse.post(basketUrl, { error: "Server error" }, { code: 500 })
 
