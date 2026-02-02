@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.53.2
+--------------
+
+- add learning material resources (#2901)
+- Editor Schema Validation (#2900)
+- fix: purge CDN cache when article is published (#2896)
+- fix: improvements in editor exprience (#2892)
+
 Version 0.53.1 (Released February 02, 2026)
 --------------
 
