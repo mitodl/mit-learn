@@ -509,6 +509,10 @@ REACT_GA_DEBUG = get_bool("REACT_GA_DEBUG", False)  # noqa: FBT003
 RECAPTCHA_SITE_KEY = get_string("RECAPTCHA_SITE_KEY", "")
 RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 
+# Fastly CDN settings
+FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
+
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
@@ -670,6 +674,8 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
     "MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS", 60 * 60
 )
 REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
+
+
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
     MIDDLEWARE = (
         *MIDDLEWARE,

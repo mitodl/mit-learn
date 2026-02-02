@@ -53,6 +53,14 @@ class Article(TimestampedModel):
         self.slug = slug
         super().save(*args, **kwargs)
 
+    def get_url(self):
+        """
+        Return the relative URL for this article.
+        """
+        if self.slug:
+            return f"/api/v1/articles/{self.slug}/"
+        return None
+
 
 class ArticleImageUpload(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

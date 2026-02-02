@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from articles.api import article_published_actions
+from articles.api import article_published_actions, purge_article_on_save
 from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from learning_resources.permissions import is_admin_user
@@ -98,11 +98,13 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         clear_views_cache()
         article = serializer.save(user=self.request.user)
+        purge_article_on_save(article)
         article_published_actions(article=article)
 
     def perform_update(self, serializer):
         clear_views_cache()
         article = serializer.save()
+        purge_article_on_save(article)
         article_published_actions(article=article)
 
     def destroy(self, request, *args, **kwargs):
