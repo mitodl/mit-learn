@@ -38,7 +38,6 @@ services:
     command:
       - |
         yarn install --immutable
-        npx cypress install
         if [ "$${NODE_ENV}" = "production" ]; then
           yarn build
           echo "WARNING: Production preview will NOT re-render on file changes."
