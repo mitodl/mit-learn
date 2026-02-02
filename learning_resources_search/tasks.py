@@ -73,6 +73,7 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
     "autoretry_for": (NotFoundError,),
     "retry_kwargs": {"max_retries": 5},
     "default_retry_delay": 2,
+    "rate_limit": settings.CELERY_SEARCH_RATE_LIMIT,
 }
 
 
@@ -113,7 +114,7 @@ def upsert_content_file(file_id):
     )
 
 
-@app.task
+@app.task(rate_limit=settings.CELERY_SEARCH_RATE_LIMIT)
 def upsert_percolate_query(percolate_id):
     """Task that makes a request to add an ES document"""
     percolate_query = PercolateQuery.objects.get(id=percolate_id)
@@ -126,7 +127,7 @@ def upsert_percolate_query(percolate_id):
     )
 
 
-@app.task
+@app.task(rate_limit=settings.CELERY_SEARCH_RATE_LIMIT)
 def deindex_document(doc_id, object_type, **kwargs):
     """Task that makes a request to remove an ES document"""
     return api.deindex_document(doc_id, object_type, **kwargs)
@@ -284,7 +285,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def index_learning_resources(ids, index_name, index_types):
     """
@@ -310,7 +311,11 @@ def index_learning_resources(ids, index_name, index_types):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def percolate_learning_resource(resource_id):
     """
     Task that percolates a document following an index operation
@@ -319,7 +324,11 @@ def percolate_learning_resource(resource_id):
     percolate_matches_for_document(resource_id)
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def bulk_deindex_learning_resources(ids, resource_type):
     """
     Deindex learning resourse by a list of ids
@@ -340,7 +349,11 @@ def bulk_deindex_learning_resources(ids, resource_type):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def bulk_deindex_percolators(ids):
     """
     Deindex percolators by a list of ids
@@ -365,7 +378,7 @@ def bulk_deindex_percolators(ids):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def bulk_index_percolate_queries(percolate_ids, index_types):
     """
@@ -394,7 +407,11 @@ def bulk_index_percolate_queries(percolate_ids, index_types):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def index_course_content_files(course_ids, index_types):
     """
     Index content files for a list of course ids
@@ -422,7 +439,7 @@ def index_course_content_files(course_ids, index_types):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def index_content_files(
     content_file_ids,
@@ -454,7 +471,11 @@ def index_content_files(
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def deindex_content_files(content_file_ids, learning_resource_id):
     """
     Deindex a list of content files
@@ -475,7 +496,11 @@ def deindex_content_files(content_file_ids, learning_resource_id):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def index_run_content_files(run_id, index_types=IndexestoUpdate.all_indexes.value):
     """
     Index content files for a LearningResourceRun
@@ -498,7 +523,11 @@ def index_run_content_files(run_id, index_types=IndexestoUpdate.all_indexes.valu
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def deindex_run_content_files(run_id, unpublished_only):
     """
     Deindex content files for a LearningResourceRun
@@ -672,7 +701,11 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     )
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def finish_update_index(results):  # noqa: ARG001
     clear_views_cache()
 
@@ -884,7 +917,7 @@ def get_update_learning_resource_tasks(resource_type):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError, SystemExit),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def finish_recreate_index(results, backing_indices):
     """
