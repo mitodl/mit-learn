@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "PORT=${PORT:-8062} TZ=UTC next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "TZ=UTC next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
@@ -17,7 +17,6 @@
     "@mitodl/smoot-design": "^6.19.0",
     "@mui/material": "^6.4.5",
     "@mui/material-nextjs": "^6.4.3",
-    "@next/bundle-analyzer": "^14.2.15",
     "@react-pdf/renderer": "^4.3.0",
     "@remixicon/react": "^4.2.0",
     "@sentry/nextjs": "^10.0.0",
