@@ -15,6 +15,7 @@ ARTICLE_TYPE = "article"
 CONTENT_FILE_TYPE = "content_file"
 PODCAST_TYPE = "podcast"
 PODCAST_EPISODE_TYPE = "podcast_episode"
+LEARNING_MATERIAL_TYPE = "learning_material"
 LEARNING_PATH_TYPE = "learning_path"
 VIDEO_TYPE = "video"
 VIDEO_PLAYLIST_TYPE = "video_playlist"
@@ -61,6 +62,7 @@ LEARNING_RESOURCE_TYPES = (
     VIDEO_TYPE,
     VIDEO_PLAYLIST_TYPE,
     ARTICLE_TYPE,
+    LEARNING_MATERIAL_TYPE,
 )
 
 
@@ -241,6 +243,12 @@ LEARNING_RESOURCE_MAP = {
                     "primary": {"type": "boolean"},
                 },
             }
+        }
+    },
+    "learning_material": {
+        "properties": {
+            "content_tags": {"type": "keyword"},
+            "content_category": {"type": "keyword"},
         }
     },
     "video": {
@@ -448,6 +456,7 @@ MAPPING = {
     PROGRAM_TYPE: LEARNING_RESOURCE_MAP,
     PODCAST_TYPE: LEARNING_RESOURCE_MAP,
     ARTICLE_TYPE: LEARNING_RESOURCE_MAP,
+    LEARNING_MATERIAL_TYPE: {**LEARNING_RESOURCE_MAP, **CONTENT_FILE_MAP},
     PODCAST_EPISODE_TYPE: LEARNING_RESOURCE_MAP,
     LEARNING_PATH_TYPE: LEARNING_RESOURCE_MAP,
     VIDEO_TYPE: LEARNING_RESOURCE_MAP,
