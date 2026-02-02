@@ -37,7 +37,7 @@ docker cp mit-learn-watch-1:cypress/screenshots /tmp/screenshots
 
 ## Writing Tests
 
-Create test files in `cypress/e2e/` with the `.cy.ts` or `.cy.js` extension:
+Create test files in `cypress/e2e/` with the `.cy.ts`:
 
 ```typescript
 describe("My Feature", () => {
@@ -50,5 +50,3 @@ describe("My Feature", () => {
 ```
 
 Uses `@testing-library/cypress` for accessible queries like `findByRole`, `findByText`, etc.
-
-## Known Issues
