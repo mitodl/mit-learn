@@ -443,7 +443,7 @@ const UpgradeBanner: React.FC<
     },
   })
 
-  const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleUpgradeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     if (!productId) return
 
