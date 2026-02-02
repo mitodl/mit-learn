@@ -13,8 +13,7 @@ import type { ResourceSearchRequest } from "@/page-components/SearchDisplay/vali
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
 
-export async function generateMetadata(props: PageProps<"/search">) {
-  const searchParams = await props.searchParams
+export async function generateMetadata({ searchParams }: PageProps<"/search">) {
   return safeGenerateMetadata(async () => {
     return getMetadataAsync({
       title: "Search",

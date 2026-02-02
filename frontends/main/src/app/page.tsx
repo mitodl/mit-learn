@@ -14,10 +14,9 @@ import {
 } from "api/hooks/newsEvents"
 import { getQueryClient } from "@/app/getQueryClient"
 
-export async function generateMetadata(
-  props: PageProps<"/">,
-): Promise<Metadata> {
-  const searchParams = await props.searchParams
+export async function generateMetadata({
+  searchParams,
+}: PageProps<"/">): Promise<Metadata> {
   return safeGenerateMetadata(async () => {
     return await getMetadataAsync({
       title: "Learn with MIT",

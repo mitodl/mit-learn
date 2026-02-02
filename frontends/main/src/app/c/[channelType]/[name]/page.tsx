@@ -25,10 +25,10 @@ import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
 
-export async function generateMetadata(
-  props: PageProps<"/c/[channelType]/[name]">,
-) {
-  const searchParams = await props.searchParams
+export async function generateMetadata({
+  searchParams,
+  params,
+}: PageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
   return safeGenerateMetadata(async () => {
