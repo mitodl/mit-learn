@@ -164,7 +164,6 @@ class TestSettings(TestCase):
             ):
                 self.reload_settings()
 
-
     def test_server_side_cursors_enabled(self):
         """DISABLE_SERVER_SIDE_CURSORS should be false if MITOL_DB_DISABLE_SS_CURSORS is false"""
         with mock.patch.dict(
