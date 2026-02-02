@@ -16,7 +16,7 @@ describe("Smoke Test - Homepage", () => {
 describe("Smoke Test - Program Page B2C", () => {
   // TODO: This will need an update once we have a consistent B2C program to put onto CI/RC/Prod
   it("should load the page successfully", () => {
-    // For some reason, on RC this page returns a 500 on first load. I'm not sure what's going on, but it loads fine after that?
+    // We can remove this once https://github.com/mitodl/mit-learn/pull/2906 lands
     cy.visit("/programs/program-v1:MITx+CTL.SCM", { failOnStatusCode: false })
     // This will only pass on RC as written.
     cy.findByRole("main").should("exist")
