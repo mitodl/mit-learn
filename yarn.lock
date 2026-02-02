@@ -17768,6 +17768,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
+    "@storybook/nextjs": "npm:^8.2.9"
+    storybook: "npm:^8.2.9"
     syncpack: "npm:^13.0.0"
   languageName: unknown
   linkType: soft

@@ -24,6 +24,8 @@
   },
   "packageManager": "yarn@4.11.0",
   "devDependencies": {
+    "@storybook/nextjs": "^8.2.9",
+    "storybook": "^8.2.9",
     "syncpack": "^13.0.0"
   },
   "resolutions": {
