@@ -1083,6 +1083,7 @@ describe("Course In Programs Row", () => {
       id: 1,
       readable_id: "program-1",
       title: "Test Program 1",
+      type: "program",
     }
     const run = makeRun()
     const course = makeCourse({
@@ -1108,16 +1109,19 @@ describe("Course In Programs Row", () => {
         id: 1,
         readable_id: "program-1",
         title: "Test Program 1",
+        type: "program",
       },
       {
         id: 2,
         readable_id: "program-2",
         title: "Test Program 2",
+        type: "program",
       },
       {
         id: 3,
         readable_id: "program-3",
         title: "Test Program 3",
+        type: "program",
       },
     ]
     const run = makeRun()
@@ -1154,6 +1158,7 @@ describe("Course In Programs Row", () => {
       id: 1,
       readable_id: "program-1",
       title: "Test Program 1",
+      type: "program",
     }
     const course = makeCourse({
       next_run_id: null,

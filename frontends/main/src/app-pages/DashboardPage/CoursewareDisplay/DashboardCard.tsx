@@ -34,7 +34,7 @@ import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentRequestV2,
-  V2UserProgramEnrollmentDetail,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const EnrollmentMode = {
@@ -53,7 +53,7 @@ export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
-  | { type: "program-enrollment"; data: V2UserProgramEnrollmentDetail }
+  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.

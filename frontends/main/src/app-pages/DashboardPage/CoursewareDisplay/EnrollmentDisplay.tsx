@@ -27,7 +27,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
   CourseRunEnrollmentRequestV2,
   V2ProgramRequirement,
-  V2UserProgramEnrollmentDetail,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -160,7 +160,7 @@ const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
 interface EnrollmentExpandCollapseProps {
   shownCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
   hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V2UserProgramEnrollmentDetail[]
+  programEnrollments?: V3UserProgramEnrollment[]
   isLoading?: boolean
   onUpgradeError?: (error: string) => void
 }

@@ -126,7 +126,7 @@ const setupApis = ({
     learnFactories.user.user({ is_authenticated: false }),
   )
 
-  setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
+  setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
   return { courses }
 }
