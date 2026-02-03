@@ -12,6 +12,7 @@ const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.PodcastEpisode]: "Podcast Episode",
   [ResourceTypeEnum.Video]: "Video",
   [ResourceTypeEnum.VideoPlaylist]: "Video Playlist",
+  [ResourceTypeEnum.LearningMaterial]: "Learning Material",
 }
 const getReadableResourceType = (resourceType: ResourceTypeEnum): string =>
   readableResourceTypes[resourceType]

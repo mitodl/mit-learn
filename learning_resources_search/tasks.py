@@ -263,7 +263,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
         delta = datetime.timedelta(days=7)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
-        published=True, created_on__gt=since
+        published=True, created_on__gt=since, learning_material__isnull=True
     )
     rows = _get_percolated_rows(new_learning_resources, subscription_type)
     template_data = _group_percolated_rows(rows)
@@ -630,7 +630,9 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     index_types=IndexestoUpdate.reindexing_index.value,
                 )
                 for ids in chunks(
-                    LearningResource.objects.filter(published=True)
+                    LearningResource.objects.filter(
+                        published=True, learning_material__isnull=True
+                    )
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                     .values_list("id", flat=True),
@@ -648,7 +650,8 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     )
                     for ids in chunks(
                         LearningResource.objects.filter(
-                            published=True, resource_type=resource_type
+                            published=True,
+                            resource_type=resource_type,
                         )
                         .order_by("id")
                         .values_list("id", flat=True),
@@ -852,7 +855,10 @@ def get_update_learning_resource_tasks(resource_type):
             ids, resource_type, index_types=IndexestoUpdate.current_index.value
         )
         for ids in chunks(
-            LearningResource.objects.filter(published=True, resource_type=resource_type)
+            LearningResource.objects.filter(
+                published=True,
+                resource_type=resource_type,
+            )
             .order_by("id")
             .values_list("id", flat=True),
             chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
@@ -863,7 +869,8 @@ def get_update_learning_resource_tasks(resource_type):
         bulk_deindex_learning_resources.si(ids, resource_type)
         for ids in chunks(
             LearningResource.objects.filter(
-                published=False, resource_type=resource_type
+                published=False,
+                resource_type=resource_type,
             )
             .order_by("id")
             .values_list("id", flat=True),
