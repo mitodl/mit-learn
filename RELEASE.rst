@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.53.3
+--------------
+
+- fix: make course run selection more stringent (#2913)
+- Remove youtube transcript scheduled task (#2916)
+- implement dashboard certificate upgrade (#2905)
+- Shanbady/flashcard prompt refinement (#2907)
+- add learning material resources (#2901)
+- Editor Schema Validation (#2900)
+- fix: purge CDN cache when article is published (#2896)
+- fix: improvements in editor exprience (#2892)
+
 Version 0.53.1 (Released February 02, 2026)
 --------------
 
