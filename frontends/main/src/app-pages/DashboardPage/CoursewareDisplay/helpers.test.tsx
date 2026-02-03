@@ -114,8 +114,14 @@ describe("helpers", () => {
     })
 
     test("returns first run if no next_run_id specified", () => {
-      const run1 = factories.courses.courseRun({ id: 1, live: true })
-      const run2 = factories.courses.courseRun({ id: 2, live: true })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: true,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: true,
+      })
       const course = factories.courses.course({
         courseruns: [run1, run2],
         next_run_id: null,
@@ -126,8 +132,14 @@ describe("helpers", () => {
     })
 
     test("returns next_run_id run when specified", () => {
-      const run1 = factories.courses.courseRun({ id: 1, live: true })
-      const run2 = factories.courses.courseRun({ id: 2, live: true })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: true,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: true,
+      })
       const course = factories.courses.course({
         courseruns: [run1, run2],
         next_run_id: 2,
@@ -142,17 +154,17 @@ describe("helpers", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         b2b_contract: null,
-        live: true,
+        is_enrollable: true,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
         b2b_contract: contractId,
-        live: true,
+        is_enrollable: true,
       })
       const run3 = factories.courses.courseRun({
         id: 3,
         b2b_contract: contractId,
-        live: true,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2, run3],
@@ -168,12 +180,12 @@ describe("helpers", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         b2b_contract: contractId,
-        live: true,
+        is_enrollable: true,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
         b2b_contract: contractId,
-        live: true,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2],
@@ -188,7 +200,7 @@ describe("helpers", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         b2b_contract: 200,
-        live: true,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1],
@@ -200,30 +212,17 @@ describe("helpers", () => {
     })
 
     test("returns undefined when no runs are enrollable", () => {
-      const pastStart = "2024-01-01T00:00:00Z"
-      const pastEnd = "2024-01-15T00:00:00Z"
-      const futureStart = "2099-01-01T00:00:00Z"
-
       const run1 = factories.courses.courseRun({
         id: 1,
-        live: true,
-        enrollment_start: pastStart,
-        enrollment_end: pastEnd,
-        is_self_paced: false,
+        is_enrollable: false,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
-        live: true,
-        enrollment_start: futureStart,
-        enrollment_end: null,
-        is_self_paced: false,
+        is_enrollable: false,
       })
       const run3 = factories.courses.courseRun({
         id: 3,
-        live: false,
-        enrollment_start: pastStart,
-        enrollment_end: null,
-        is_self_paced: true,
+        is_enrollable: false,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2, run3],
@@ -234,23 +233,14 @@ describe("helpers", () => {
       expect(result).toBeUndefined()
     })
 
-    test("skips non-live runs even if enrollment window is open", () => {
-      const pastStart = "2024-01-01T00:00:00Z"
-      const futureEnd = "2099-01-01T00:00:00Z"
-
+    test("skips unenrollable runs when selecting default", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
-        live: false,
-        enrollment_start: pastStart,
-        enrollment_end: futureEnd,
-        is_self_paced: false,
+        is_enrollable: false,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
-        live: true,
-        enrollment_start: pastStart,
-        enrollment_end: futureEnd,
-        is_self_paced: false,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2],
@@ -261,23 +251,14 @@ describe("helpers", () => {
       expect(result).toEqual(run2)
     })
 
-    test("allows self-paced runs after enrollment end", () => {
-      const pastStart = "2024-01-01T00:00:00Z"
-      const pastEnd = "2024-01-15T00:00:00Z"
-
+    test("prefers enrollable runs when others are not", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
-        live: true,
-        enrollment_start: pastStart,
-        enrollment_end: pastEnd,
-        is_self_paced: true,
+        is_enrollable: true,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
-        live: true,
-        enrollment_start: pastStart,
-        enrollment_end: pastEnd,
-        is_self_paced: false,
+        is_enrollable: false,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2],

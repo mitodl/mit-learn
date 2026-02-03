@@ -211,7 +211,7 @@ describe.each([
         mitxonline.factories.courses.courseRun({
           b2b_contract: b2bContractId,
           courseware_url: coursewareUrl,
-          live: true,
+          is_enrollable: true,
         }),
       ],
       next_run_id: null, // Ensure getBestRun uses the single run
@@ -768,6 +768,7 @@ describe.each([
       .add(3, "hours")
       .toISOString()
     const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
       start_date: startDate,
       live: true,
     })
@@ -1134,7 +1135,7 @@ describe.each([
       const b2bContractId = faker.number.int()
       const run = mitxonline.factories.courses.courseRun({
         b2b_contract: b2bContractId,
-        live: true,
+        is_enrollable: true,
       })
       const course = dashboardCourse({
         courseruns: [run],
@@ -1178,7 +1179,7 @@ describe.each([
       const b2bContractId = faker.number.int()
       const run = mitxonline.factories.courses.courseRun({
         b2b_contract: b2bContractId,
-        live: true,
+        is_enrollable: true,
       })
       const course = dashboardCourse({
         courseruns: [run],
