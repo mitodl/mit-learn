@@ -488,7 +488,7 @@ def get_url_from_module_id(
             # Link to the parent video
             return f"{base_jump_url}{video_meta.split('@')[-1]}"
         return f"{root_url}/{module_id}"
-    elif module_id.startswith("block") and is_valid_uuid(module_id.split("@")[-1]):
+    elif is_valid_uuid(module_id.split("@")[-1]):
         return f"{base_jump_url}{module_id.split('@')[-1]}"
     else:
         return None
@@ -765,6 +765,7 @@ def _build_result(  # noqa: PLR0913
         "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
         **content_dict,
     }
+
     title = get_title_for_content(
         content_dict.get("content"),
         olx_path,
@@ -772,8 +773,8 @@ def _build_result(  # noqa: PLR0913
         edx_module_id,
         video_srt_metadata,
     )
-    if title:
-        data["title"] = title
+
+    data["title"] = metadata.get("content_title") or title
     return data
 
 
