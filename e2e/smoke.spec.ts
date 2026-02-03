@@ -5,18 +5,13 @@ test.describe("Smoke Test - Homepage", () => {
   test("should load the homepage successfully", async ({ page }) => {
     await page.goto("/")
     await expect(page.locator("main")).toBeVisible()
-  })
-
-  test("should have correct page title", async ({ page }) => {
-    await page.goto("/")
-    await expect(page).toHaveTitle(/.+/)
+    await expect(page).toHaveTitle("Learn with MIT | MIT Learn")
   })
 })
 
 test.describe("Smoke Test - Program Page B2C", () => {
-  // TODO: This will need an update once we have a consistent B2C program to put onto CI/RC/Prod
   test("should load the page successfully", async ({ page }) => {
-    // We can remove this once https://github.com/mitodl/mit-learn/pull/2906 lands
+    // TODO: This will need to be parameterized based on expected for its environment
     await page.goto("/programs/program-v1:MITx+CTL.SCM")
 
     // This will only pass on RC as written.
