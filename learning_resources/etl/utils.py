@@ -691,8 +691,65 @@ def get_title_from_module_id(
     return None
 
 
-def _build_result(
-    metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
+def _title_from_xml(xml_content):
+    try:
+        root = ElementTree.fromstring(xml_content)
+        return root.get("display_name")
+    except ElementTree.ParseError:
+        log.exception("Error parsing XML for title extraction")
+
+
+def get_title_for_content(
+    content: str,
+    olx_path: str,
+    source_path: str,
+    edx_module_id: str,
+    video_srt_metadata: dict | None = None,
+) -> str:
+    """
+    Get the title for a source path based on its module ID
+
+    Args:
+        source_path (str): The source path
+        edx_module_id (str): The module ID
+
+    Returns:
+        str: The title for the source path
+    """
+    title = get_title_from_module_id(edx_module_id, video_srt_metadata)
+    if title:
+        return title
+
+    if source_path.endswith(".xml"):
+        # Try to extract title from XML
+        title = _title_from_xml(content)
+        if title:
+            return title
+    elif source_path.endswith(".html"):
+        # Try to extract title from HTML
+        try:
+            file_root = Path(source_path).stem
+            xml_path = Path(olx_path, "html", f"{file_root}.xml")
+            with Path.open(xml_path, "rb") as f:
+                xml_content = f.read().decode("utf-8")
+                title = _title_from_xml(xml_content)
+                if title:
+                    return title
+            html_content = content
+            title_match = re.search(
+                r"<title>(.*?)</title>", html_content, re.IGNORECASE
+            )
+            if title_match:
+                return title_match.group(1).strip()
+
+        except Exception:
+            log.exception("Error parsing HTML for title extraction: %s", source_path)
+    # Fallback: derive title from source path
+    return Path(source_path).stem.replace("_", " ").replace("-", " ").title()
+
+
+def _build_result(  # noqa: PLR0913
+    olx_path, metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
@@ -708,7 +765,13 @@ def _build_result(
         "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
         **content_dict,
     }
-    title = get_title_from_module_id(edx_module_id, video_srt_metadata)
+    title = get_title_for_content(
+        content_dict.get("content"),
+        olx_path,
+        source_path,
+        edx_module_id,
+        video_srt_metadata,
+    )
     if title:
         data["title"] = title
     return data
@@ -752,7 +815,9 @@ def process_olx_path(  # noqa: PLR0913
                 existing_record, is_tutor_problem_file_import
             )
 
-        yield _build_result(metadata, key, run, video_srt_metadata, content_dict)
+        yield _build_result(
+            olx_path, metadata, key, run, video_srt_metadata, content_dict
+        )
 
 
 def transform_content_files(
