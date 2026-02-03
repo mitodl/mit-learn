@@ -40,7 +40,6 @@
     "lodash": "^4.17.21",
     "lodash.throttle": "^4.1.1",
     "material-ui-popup-state": "^5.1.0",
-    "next": "15.5.9",
     "ol-test-utilities": "0.0.0",
     "ol-utilities": "0.0.0",
     "react": "^19.2.1",
@@ -76,14 +75,16 @@
     "@types/react-slick": "^0",
     "dotenv": "^17.0.0",
     "lodash": "^4.17.21",
+    "next": "^16.1.6",
     "prop-types": "^15.8.1",
     "sass": "^1.93.3",
     "sass-embedded": "^1.93.3",
-    "storybook": "^8.2.9",
+    "storybook": "^8.3.5",
     "typescript": "^5.5.4",
     "webpack": "^5.94.0"
   },
   "peerDependencies": {
-    "@mitodl/smoot-design": "*"
+    "@mitodl/smoot-design": "*",
+    "next": "^16.1.6"
   }
 }
