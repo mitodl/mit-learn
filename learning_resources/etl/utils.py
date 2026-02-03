@@ -479,7 +479,11 @@ def get_url_from_module_id(
     )
     base_jump_url = f"{root_url}/courses/{run_id}/jump_to_id/"
     if module_id.startswith("asset"):
-        video_meta = video_srt_metadata.get(module_id, {}) if video_srt_metadata else {}
+        video_meta = (
+            video_srt_metadata.get(module_id, {}).get("module_id", {})
+            if video_srt_metadata
+            else {}
+        )
         if video_meta:
             # Link to the parent video
             return f"{base_jump_url}{video_meta.split('@')[-1]}"
@@ -503,6 +507,7 @@ def parse_video_transcripts_xml(
 
         # Get the video url_name from the root video element
         video_url_name = root.get("url_name")
+        video_title = root.get("display_name")
         if not video_url_name:
             log.warning("No url_name found in video XML")
             return {}
@@ -513,7 +518,10 @@ def parse_video_transcripts_xml(
             if transcript_src:
                 transcript_mapping[
                     get_edx_module_id(f"static/{transcript_src}", run)
-                ] = get_edx_module_id(str(path), run)
+                ] = {
+                    "module_id": get_edx_module_id(str(path), run),
+                    "title": video_title,
+                }
     except ElementTree.ParseError:
         log.exception("Error parsing video XML for %s:  %s", run, path)
     return transcript_mapping
@@ -528,6 +536,7 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     if not video_path.exists():
         log.debug("No video directory found in OLX path: %s", olx_path)
         return video_transcript_mapping
+
     for root, _, files in os.walk(str(Path(olx_path, "video"))):
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
@@ -538,7 +547,6 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
                 # Parse the XML and get transcript mappings
                 transcript_mapping = parse_video_transcripts_xml(run, video_xml, f)
                 video_transcript_mapping.update(transcript_mapping)
-
     return video_transcript_mapping
 
 
@@ -658,13 +666,38 @@ def _get_cached_content(existing_record, is_tutor_problem) -> dict:
     }
 
 
+def get_title_from_module_id(
+    module_id: str,
+    video_srt_metadata: dict | None = None,
+) -> str:
+    """
+    Get the title for a module based on its ID
+
+    Args:
+        module_id (str): The module ID
+
+    Returns:
+        str: The title for the module
+    """
+    if not module_id:
+        return None
+    if module_id.startswith("asset"):
+        return (
+            video_srt_metadata.get(module_id, {}).get("title", "")
+            if video_srt_metadata
+            else ""
+        )
+
+    return None
+
+
 def _build_result(
     metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
     edx_module_id = get_edx_module_id(source_path, run)
-    return {
+    data = {
         "key": key,
         "published": True,
         "content_type": metadata["content_type"],
@@ -675,6 +708,10 @@ def _build_result(
         "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
         **content_dict,
     }
+    title = get_title_from_module_id(edx_module_id, video_srt_metadata)
+    if title:
+        data["title"] = title
+    return data
 
 
 def process_olx_path(  # noqa: PLR0913
