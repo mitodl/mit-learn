@@ -90,12 +90,6 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_youtube_data",
             "schedule": crontab(minute=30, hour=8),  # 4:30am EST
         },
-        "update-youtube-transcripts": {
-            "task": "learning_resources.tasks.get_youtube_transcripts",
-            "schedule": get_int(
-                "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS", 60 * 60 * 12
-            ),  # default is 12 hours
-        },
         "update_medium_mit_news": {
             "task": "news_events.tasks.get_medium_mit_news",
             "schedule": get_int(
