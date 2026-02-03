@@ -445,7 +445,7 @@ const UpgradeBanner: React.FC<
       addToBasket.reset()
       clearBasket.reset()
 
-      await clearBasket.mutateAsync(undefined)
+      await clearBasket.mutateAsync()
       await addToBasket.mutateAsync(productId)
     } catch (error) {
       onError?.(error as Error)
