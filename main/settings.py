@@ -890,6 +890,31 @@ CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
     "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
 )
 
+
+CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
+    "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",
+    (
+        f"""
+        You are an expert instructor creating study flashcards.
+        Generate exactly {CONTENT_SUMMARIZER_FLASHCARD_QUANTITY}
+        high-quality flashcards from the transcript below.
+        """
+        """
+        Rules:
+        - Focus ONLY on core concepts, methods, definitions,
+          reasoning, and cause-effect relationships.
+        - Questions must test understanding or application,
+          not recall of names, timestamps, or anecdotes.
+        - Avoid trivia, meta information
+        - avoid details about the speaker or course logistics.
+        - Prefer "why", "how", "compare", "explain", or "apply" style questions.
+        - Each answer should be concise but complete (1-3 sentences).
+
+        Transcript:
+        {content}
+        """
+    ),
+)
 # OpenTelemetry configuration
 OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
