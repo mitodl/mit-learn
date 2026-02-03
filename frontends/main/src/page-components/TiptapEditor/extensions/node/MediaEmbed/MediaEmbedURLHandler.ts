@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core"
-import { Plugin, TextSelection } from "@tiptap/pm/state"
+import { NodeSelection, Plugin } from "@tiptap/pm/state"
 
 import { convertToEmbedUrl } from "./lib"
 
@@ -36,26 +36,28 @@ export const MediaEmbedURLHandler = Extension.create({
 
             event.preventDefault()
 
-            const startPos = $from.before()
-            const endPos = startPos + parent.nodeSize
+            // Check if paragraph is inside mediaEmbedInput node
+            const grandParent = $from.node($from.depth - 1)
+            const isInsideMediaEmbedInput =
+              grandParent?.type.name === "mediaEmbedInput"
+
+            let startPos, endPos
+            if (isInsideMediaEmbedInput) {
+              // Replace the entire mediaEmbedInput node
+              startPos = $from.before($from.depth - 1)
+              endPos = startPos + grandParent.nodeSize
+            } else {
+              // Replace just the paragraph
+              startPos = $from.before()
+              endPos = startPos + parent.nodeSize
+            }
 
             const mediaNode = state.schema.nodes.mediaEmbed.create({
               src: embedSrc,
             })
 
-            // Create an empty paragraph for the user to continue typing
-            const newParagraph = state.schema.nodes.paragraph.create()
-
-            // Replace the current paragraph with media node + new paragraph
-            let tr = state.tr.replaceWith(startPos, endPos, [
-              mediaNode,
-              newParagraph,
-            ])
-
-            // Set cursor at the start of the new paragraph
-            const cursorPos = startPos + mediaNode.nodeSize + 1
-            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)))
-
+            const tr = state.tr.replaceWith(startPos, endPos, mediaNode)
+            tr.setSelection(NodeSelection.create(tr.doc, startPos))
             view.dispatch(tr)
 
             return true

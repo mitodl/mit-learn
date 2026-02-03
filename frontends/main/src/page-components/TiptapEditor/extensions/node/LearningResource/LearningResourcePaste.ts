@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core"
-import { Plugin } from "@tiptap/pm/state"
+import { NodeSelection, Plugin } from "@tiptap/pm/state"
 
 function extractResourceId(url: string): number | null {
   const match = url.match(/resource=(\d+)/)
@@ -29,8 +29,21 @@ export const LearningResourceURLHandler = Extension.create({
 
             event.preventDefault()
 
-            const startPos = $from.before()
-            const endPos = startPos + parent.nodeSize
+            // Check if paragraph is inside learningResourceInput node
+            const grandParent = $from.node($from.depth - 1)
+            const isInsideLearningResourceInput =
+              grandParent?.type.name === "learningResourceInput"
+
+            let startPos, endPos
+            if (isInsideLearningResourceInput) {
+              // Replace the entire learningResourceInput node
+              startPos = $from.before($from.depth - 1)
+              endPos = startPos + grandParent.nodeSize
+            } else {
+              // Replace just the paragraph
+              startPos = $from.before()
+              endPos = startPos + parent.nodeSize
+            }
 
             const node = state.schema.nodes.learningResource.create({
               resourceId,
@@ -38,6 +51,7 @@ export const LearningResourceURLHandler = Extension.create({
             })
 
             const tr = state.tr.replaceWith(startPos, endPos, node)
+            tr.setSelection(NodeSelection.create(tr.doc, startPos))
             view.dispatch(tr)
 
             return true
