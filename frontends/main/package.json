@@ -48,7 +48,7 @@
     "jsdom": "^27",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",
-    "next": "15.5.9",
+    "next": "16.0.10",
     "next-nprogress-bar": "^2.4.2",
     "ol-components": "0.0.0",
     "ol-utilities": "0.0.0",
