@@ -5,13 +5,13 @@ import { basketsApi } from "../../clients"
 
 const basketKeys = {
   root: ["mitxonline", "baskets"],
-  checkout: () => [...basketKeys.root, "checkout"],
+  basketState: () => [...basketKeys.root, "state"],
 }
 
 const basketQueries = {
-  checkout: () =>
+  basketState: () =>
     queryOptions({
-      queryKey: basketKeys.checkout(),
+      queryKey: basketKeys.basketState(),
       queryFn: async (): Promise<CheckoutPayload> => {
         const response = await basketsApi.basketsCheckoutRetrieve()
         return response.data

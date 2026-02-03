@@ -20,7 +20,7 @@ const useAddToBasket = () => {
     onSuccess: async () => {
       // Invalidate checkout query to ensure fresh data
       queryClient.invalidateQueries({
-        queryKey: basketQueries.checkout().queryKey,
+        queryKey: basketQueries.basketState().queryKey,
       })
 
       // Redirect to MITx Online cart page
@@ -44,7 +44,7 @@ const useClearBasket = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: basketQueries.checkout().queryKey,
+        queryKey: basketQueries.basketState().queryKey,
       })
     },
   })
