@@ -829,6 +829,7 @@ describe("ContractContent", () => {
         if (run.b2b_contract === contracts[0].id) {
           return {
             ...run,
+            is_enrollable: true,
             start_date: specificStartDate,
             end_date: specificEndDate,
           }
@@ -898,6 +899,7 @@ describe("ContractContent", () => {
         }
         return {
           ...run,
+          is_enrollable: true,
           title: `CORRECT RUN - ${run.title}`,
           courseware_url: "https://correct-run.example.com",
           start_date: "2024-12-01T00:00:00Z", // Future date relative to mocked time

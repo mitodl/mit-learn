@@ -114,8 +114,14 @@ describe("helpers", () => {
     })
 
     test("returns first run if no next_run_id specified", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const run2 = factories.courses.courseRun({ id: 2 })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: true,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: true,
+      })
       const course = factories.courses.course({
         courseruns: [run1, run2],
         next_run_id: null,
@@ -126,8 +132,14 @@ describe("helpers", () => {
     })
 
     test("returns next_run_id run when specified", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const run2 = factories.courses.courseRun({ id: 2 })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: true,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: true,
+      })
       const course = factories.courses.course({
         courseruns: [run1, run2],
         next_run_id: 2,
@@ -139,14 +151,20 @@ describe("helpers", () => {
 
     test("filters by contract ID when provided", () => {
       const contractId = 100
-      const run1 = factories.courses.courseRun({ id: 1, b2b_contract: null })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        b2b_contract: null,
+        is_enrollable: true,
+      })
       const run2 = factories.courses.courseRun({
         id: 2,
         b2b_contract: contractId,
+        is_enrollable: true,
       })
       const run3 = factories.courses.courseRun({
         id: 3,
         b2b_contract: contractId,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2, run3],
@@ -154,7 +172,7 @@ describe("helpers", () => {
       })
 
       const result = getBestRun(course, contractId)
-      expect(result).toEqual(run2) // First matching contract run
+      expect(result).toEqual(run2)
     })
 
     test("prefers next_run_id within contract runs", () => {
@@ -162,10 +180,12 @@ describe("helpers", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         b2b_contract: contractId,
+        is_enrollable: true,
       })
       const run2 = factories.courses.courseRun({
         id: 2,
         b2b_contract: contractId,
+        is_enrollable: true,
       })
       const course = factories.courses.course({
         courseruns: [run1, run2],
@@ -177,7 +197,11 @@ describe("helpers", () => {
     })
 
     test("returns undefined if no runs match contract", () => {
-      const run1 = factories.courses.courseRun({ id: 1, b2b_contract: 200 })
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        b2b_contract: 200,
+        is_enrollable: true,
+      })
       const course = factories.courses.course({
         courseruns: [run1],
         next_run_id: null,
@@ -185,6 +209,64 @@ describe("helpers", () => {
 
       const result = getBestRun(course, 100)
       expect(result).toBeUndefined()
+    })
+
+    test("returns undefined when no runs are enrollable", () => {
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: false,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: false,
+      })
+      const run3 = factories.courses.courseRun({
+        id: 3,
+        is_enrollable: false,
+      })
+      const course = factories.courses.course({
+        courseruns: [run1, run2, run3],
+        next_run_id: null,
+      })
+
+      const result = getBestRun(course)
+      expect(result).toBeUndefined()
+    })
+
+    test("skips unenrollable runs when selecting default", () => {
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: false,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [run1, run2],
+        next_run_id: null,
+      })
+
+      const result = getBestRun(course)
+      expect(result).toEqual(run2)
+    })
+
+    test("prefers enrollable runs when others are not", () => {
+      const run1 = factories.courses.courseRun({
+        id: 1,
+        is_enrollable: true,
+      })
+      const run2 = factories.courses.courseRun({
+        id: 2,
+        is_enrollable: false,
+      })
+      const course = factories.courses.course({
+        courseruns: [run1, run2],
+        next_run_id: null,
+      })
+
+      const result = getBestRun(course)
+      expect(result).toEqual(run1)
     })
   })
 
