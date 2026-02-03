@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { Radio } from "./Radio"
 import type { RadioProps } from "./Radio"
 

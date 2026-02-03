@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { Popover } from "./Popover"
 import type { PopoverProps } from "./Popover"
 import { Button } from "@mitodl/smoot-design"

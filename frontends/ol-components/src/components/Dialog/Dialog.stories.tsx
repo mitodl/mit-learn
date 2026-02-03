@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { Dialog, DialogProps } from "./Dialog"
 import Typography from "@mui/material/Typography"
 
