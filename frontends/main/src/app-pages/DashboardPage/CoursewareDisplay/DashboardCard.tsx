@@ -29,6 +29,7 @@ import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { programView } from "@/common/urls"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -421,13 +422,36 @@ const UpgradeBanner: React.FC<
     canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
+    productId?: number | null
+    onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
+  productId,
+  onError,
   ...others
 }) => {
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
+
+  const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    if (!productId) return
+
+    try {
+      // Reset mutation state to allow retry after error
+      addToBasket.reset()
+      clearBasket.reset()
+
+      await clearBasket.mutateAsync()
+      await addToBasket.mutateAsync(productId)
+    } catch (error) {
+      onError?.(error as Error)
+    }
+  }
+
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
@@ -437,7 +461,7 @@ const UpgradeBanner: React.FC<
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
     <SubtitleLinkRoot {...others}>
-      <SubtitleLink href="#">
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
         Add a certificate for {formattedPrice}
       </SubtitleLink>
@@ -503,6 +527,7 @@ type DashboardCardProps = {
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
+  onUpgradeError?: (error: string) => void
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -519,6 +544,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   className,
   variant = "default",
   contractId,
+  onUpgradeError,
 }) => {
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
@@ -691,6 +717,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           canUpgrade={run?.is_upgradable ?? false}
           certificateUpgradeDeadline={run?.upgrade_deadline}
           certificateUpgradePrice={run?.products?.[0]?.price}
+          productId={run?.products?.[0]?.id}
+          onError={() => {
+            onUpgradeError?.(
+              "There was a problem adding the certificate to your cart.",
+            )
+          }}
         />
       ) : null}
     </>

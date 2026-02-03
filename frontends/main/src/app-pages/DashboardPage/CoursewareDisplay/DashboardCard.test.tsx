@@ -5,6 +5,7 @@ import {
   setMockResponse,
   setupLocationMock,
   user,
+  waitFor,
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
@@ -554,6 +555,208 @@ describe.each([
     expect(upgradeRoot).toHaveTextContent(
       `Add a certificate for $${certificateUpgradePrice}`,
     )
+  })
+
+  test("Clicking upgrade link adds product to basket and redirects to cart", async () => {
+    const assign = jest.mocked(window.location.assign)
+    setupUserApis()
+
+    const productId = faker.number.int()
+    const certificateUpgradePrice = faker.commerce.price()
+    const certificateUpgradeDeadline = faker.date.future().toISOString()
+
+    const run = mitxonline.factories.courses.courseRun({
+      is_upgradable: true,
+      upgrade_deadline: certificateUpgradeDeadline,
+      products: [
+        {
+          id: productId,
+          price: certificateUpgradePrice,
+          description: faker.lorem.sentence(),
+          is_active: true,
+          product_flexible_price: null,
+        },
+      ],
+    })
+    const course = dashboardCourse({
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: { ...run, course },
+    })
+
+    // Mock basket APIs
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
+    )
+
+    const card = getCard()
+    const upgradeLink = within(card).getByRole("link", {
+      name: /Add a certificate/,
+    })
+    await user.click(upgradeLink)
+
+    // Verify clear basket API was called first
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "DELETE",
+        url: clearUrl,
+      }),
+    )
+
+    // Verify create basket API was called
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        url: basketUrl,
+      }),
+    )
+
+    // Verify redirect to cart page
+    const expectedCartUrl = new URL(
+      "/cart/",
+      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+    ).toString()
+    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
+  })
+
+  test("Calls error callback when basket API fails", async () => {
+    setupUserApis()
+
+    const productId = faker.number.int()
+    const run = mitxonline.factories.courses.courseRun({
+      is_upgradable: true,
+      upgrade_deadline: faker.date.future().toISOString(),
+      products: [
+        {
+          id: productId,
+          price: faker.commerce.price(),
+          description: faker.lorem.sentence(),
+          is_active: true,
+          product_flexible_price: null,
+        },
+      ],
+    })
+    const course = dashboardCourse({
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: { ...run, course },
+    })
+
+    // Mock basket APIs - clear succeeds but create fails
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
+    setMockResponse.post(basketUrl, { error: "Server error" }, { code: 500 })
+
+    const onUpgradeError = jest.fn()
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+        onUpgradeError={onUpgradeError}
+      />,
+    )
+
+    const card = getCard()
+    const upgradeLink = within(card).getByRole("link", {
+      name: /Add a certificate/,
+    })
+    await user.click(upgradeLink)
+
+    // Should call error callback with message
+    await waitFor(() => {
+      expect(onUpgradeError).toHaveBeenCalledWith(
+        "There was a problem adding the certificate to your cart.",
+      )
+    })
+  })
+
+  test("Error callback is called when upgrade fails", async () => {
+    setupUserApis()
+
+    const productId = faker.number.int()
+    const run = mitxonline.factories.courses.courseRun({
+      is_upgradable: true,
+      upgrade_deadline: faker.date.future().toISOString(),
+      products: [
+        {
+          id: productId,
+          price: faker.commerce.price(),
+          description: faker.lorem.sentence(),
+          is_active: true,
+          product_flexible_price: null,
+        },
+      ],
+    })
+    const course = dashboardCourse({
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: { ...run, course },
+    })
+
+    // Mock basket APIs - clear succeeds but create fails
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
+    setMockResponse.post(basketUrl, { error: "Server error" }, { code: 500 })
+
+    const onUpgradeError = jest.fn()
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+        onUpgradeError={onUpgradeError}
+      />,
+    )
+
+    const card = getCard()
+    const upgradeLink = within(card).getByRole("link", {
+      name: /Add a certificate/,
+    })
+
+    // Click upgrade - should call error callback
+    await user.click(upgradeLink)
+
+    await waitFor(() => {
+      expect(onUpgradeError).toHaveBeenCalledWith(
+        "There was a problem adding the certificate to your cart.",
+      )
+    })
+
+    // Reset the mock
+    onUpgradeError.mockClear()
+
+    // Re-setup mocks for second attempt
+    setMockResponse.delete(clearUrl, undefined)
+    setMockResponse.post(basketUrl, { error: "Server error" }, { code: 500 })
+
+    // Second attempt - error callback should be called again
+    await user.click(upgradeLink)
+
+    await waitFor(() => {
+      expect(onUpgradeError).toHaveBeenCalledWith(
+        "There was a problem adding the certificate to your cart.",
+      )
+    })
   })
 
   test("Shows number of days until course starts", () => {

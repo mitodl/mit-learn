@@ -12,6 +12,7 @@ import {
   styled,
   theme,
 } from "ol-components"
+import { Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
@@ -45,6 +46,10 @@ const Wrapper = styled.div(({ theme }) => ({
     padding: "0",
   },
 }))
+
+const AlertBanner = styled(Alert)({
+  marginBottom: "16px",
+})
 
 const DashboardCardStyled = styled(DashboardCard)({
   borderRadius: "8px",
@@ -157,6 +162,7 @@ interface EnrollmentExpandCollapseProps {
   hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
   programEnrollments?: V2UserProgramEnrollmentDetail[]
   isLoading?: boolean
+  onUpgradeError?: (error: string) => void
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
@@ -164,6 +170,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   hiddenCourseRunEnrollments,
   programEnrollments,
   isLoading,
+  onUpgradeError,
 }) => {
   const [shown, setShown] = React.useState(false)
 
@@ -191,6 +198,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
               }}
               showNotComplete={false}
               isLoading={isLoading}
+              onUpgradeError={onUpgradeError}
             />
           )
         })}
@@ -208,6 +216,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             }}
             showNotComplete={false}
             isLoading={isLoading}
+            onUpgradeError={onUpgradeError}
           />
         ))}
       </EnrollmentsList>
@@ -230,6 +239,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
                   }}
                   showNotComplete={false}
                   isLoading={isLoading}
+                  onUpgradeError={onUpgradeError}
                 />
               ))}
             </HiddenEnrollmentsList>
@@ -458,6 +468,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 }
 
 const AllEnrollmentsDisplay: React.FC = () => {
+  const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
     useQuery({
       ...enrollmentQueries.courseRunEnrollmentsList(),
@@ -475,6 +486,8 @@ const AllEnrollmentsDisplay: React.FC = () => {
     },
   )
 
+  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
+
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
   )
@@ -485,6 +498,21 @@ const AllEnrollmentsDisplay: React.FC = () => {
       <Title variant="h5" component="h2">
         My Learning
       </Title>
+      {upgradeError && (
+        <AlertBanner
+          severity="error"
+          closable={true}
+          onClose={() => setUpgradeError(null)}
+        >
+          <span>
+            {upgradeError}{" "}
+            <Link color="red" href={`mailto:${supportEmail}`}>
+              Contact Support
+            </Link>{" "}
+            for assistance.
+          </span>
+        </AlertBanner>
+      )}
       <EnrollmentExpandCollapse
         shownCourseRunEnrollments={shownEnrollments}
         hiddenCourseRunEnrollments={expired}
@@ -494,6 +522,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
           programEnrollmentsLoading ||
           contractsLoading
         }
+        onUpgradeError={setUpgradeError}
       />
     </Wrapper>
   ) : null
