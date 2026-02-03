@@ -47,35 +47,13 @@ const getBestRun = (
 ): CourseRunV2 | undefined => {
   if (!course.courseruns || course.courseruns.length === 0) return undefined
 
-  const enrollableRuns = course.courseruns.filter((run) => run.is_enrollable)
-  if (enrollableRuns.length === 0) return undefined
+  const candidateRuns = course.courseruns
+    .filter((run) => run.is_enrollable)
+    .filter((run) => !contractId || run.b2b_contract === contractId)
+  if (candidateRuns.length === 0) return undefined
+  const nextRun = candidateRuns.find((run) => run.id === course.next_run_id)
 
-  // If contract ID is provided, filter to runs matching that contract
-  if (contractId !== undefined) {
-    const contractRuns = enrollableRuns.filter(
-      (run) => run.b2b_contract === contractId,
-    )
-
-    if (contractRuns.length > 0) {
-      // Prefer next_run_id if it's in the contract runs
-      if (course.next_run_id) {
-        const nextRun = contractRuns.find(
-          (run) => run.id === course.next_run_id,
-        )
-        if (nextRun) return nextRun
-      }
-      return contractRuns[0]
-    }
-    // If no matching contract runs found, return undefined
-    // (don't fall back to non-contract runs for contract pages)
-    return undefined
-  }
-
-  // Fallback to standard logic
-  if (course.next_run_id) {
-    return enrollableRuns.find((run) => run.id === course.next_run_id)
-  }
-  return enrollableRuns[0]
+  return nextRun ?? candidateRuns[0]
 }
 
 /**
