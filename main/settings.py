@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.53.0"
+VERSION = "0.53.1"
 
 log = logging.getLogger()
 
@@ -509,6 +509,10 @@ REACT_GA_DEBUG = get_bool("REACT_GA_DEBUG", False)  # noqa: FBT003
 RECAPTCHA_SITE_KEY = get_string("RECAPTCHA_SITE_KEY", "")
 RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 
+# Fastly CDN settings
+FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
+
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
@@ -670,6 +674,8 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
     "MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS", 60 * 60
 )
 REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
+
+
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
     MIDDLEWARE = (
         *MIDDLEWARE,
@@ -884,6 +890,31 @@ CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
     "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
 )
 
+
+CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
+    "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",
+    (
+        f"""
+        You are an expert instructor creating study flashcards.
+        Generate exactly {CONTENT_SUMMARIZER_FLASHCARD_QUANTITY}
+        high-quality flashcards from the transcript below.
+        """
+        """
+        Rules:
+        - Focus ONLY on core concepts, methods, definitions,
+          reasoning, and cause-effect relationships.
+        - Questions must test understanding or application,
+          not recall of names, timestamps, or anecdotes.
+        - Avoid trivia, meta information
+        - avoid details about the speaker or course logistics.
+        - Prefer "why", "how", "compare", "explain", or "apply" style questions.
+        - Each answer should be concise but complete (1-3 sentences).
+
+        Transcript:
+        {content}
+        """
+    ),
+)
 # OpenTelemetry configuration
 OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
