@@ -9,7 +9,7 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
   RiAddLine,
@@ -42,10 +42,6 @@ const EnrollmentMode = {
   Verified: "verified",
 } as const
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
-
-const AlertBanner = styled(Alert)({
-  marginBottom: "16px",
-})
 
 export const DashboardType = {
   Course: "course",
@@ -440,19 +436,20 @@ const UpgradeBanner: React.FC<
   const addToBasket = useAddToBasket()
   const clearBasket = useClearBasket()
 
-  const handleUpgradeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     if (!productId) return
 
-    clearBasket.mutate(undefined, {
-      onSuccess: () => {
-        addToBasket.mutate(productId, {
-          onError: (error) => {
-            onError?.(error as Error)
-          },
-        })
-      },
-    })
+    try {
+      // Reset mutation state to allow retry after error
+      addToBasket.reset()
+      clearBasket.reset()
+
+      await clearBasket.mutateAsync(undefined)
+      await addToBasket.mutateAsync(productId)
+    } catch (error) {
+      onError?.(error as Error)
+    }
   }
 
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
@@ -530,6 +527,7 @@ type DashboardCardProps = {
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
+  onUpgradeError?: (error: string) => void
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -546,12 +544,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   className,
   variant = "default",
   contractId,
+  onUpgradeError,
 }) => {
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
-  const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
-
-  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
   // Determine resource type from discriminated union
   const resourceIsCourse = resource.type === DashboardType.Course
@@ -723,7 +719,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           certificateUpgradePrice={run?.products?.[0]?.price}
           productId={run?.products?.[0]?.id}
           onError={() => {
-            setUpgradeError(
+            onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
             )
           }}
@@ -809,17 +805,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Single return block with unified layout
   return (
     <>
-      {upgradeError && (
-        <AlertBanner severity="error" closable={true}>
-          <span>
-            {upgradeError}{" "}
-            <Link color="red" href={`mailto:${supportEmail}`}>
-              Contact Support
-            </Link>{" "}
-            for assistance.
-          </span>
-        </AlertBanner>
-      )}
       <CardRoot
         screenSize="desktop"
         data-testid="enrollment-card-desktop"
