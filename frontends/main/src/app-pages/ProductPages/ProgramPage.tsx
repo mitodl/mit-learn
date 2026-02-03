@@ -21,9 +21,7 @@ import ProductPageTemplate, {
 } from "./ProductPageTemplate"
 import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
-import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { learningResourceQueries } from "api/hooks/learningResources"
-import { ResourceTypeEnum } from "api"
+import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import dynamic from "next/dynamic"
 import type { Breakpoint } from "@mui/system"
@@ -123,7 +121,7 @@ type RequirementSubsectionInfo = {
   title: string
   note?: string
   titleId: string
-  resourceIds: string[]
+  courseIds: number[]
 }
 
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
@@ -140,38 +138,30 @@ type RequirementsSectionProps = {
   program: V2Program
 }
 
+const getCompletionText = ({
+  requiredCount,
+  electiveCount,
+}: {
+  requiredCount?: number
+  electiveCount?: number
+}) => {
+  if (requiredCount && electiveCount) {
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
+  }
+  if (requiredCount) {
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)}.`
+  }
+  if (electiveCount) {
+    return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
+  }
+  return "" // Program has no requirements at all. Something went wrong.
+}
+
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
 }) => {
-  const requirements = program.requirements
-
-  const readable = {
-    required:
-      requirements.courses?.required
-        ?.map((c) => c.readable_id)
-        .filter((id) => id !== undefined) ?? [],
-    elective:
-      requirements.courses?.electives
-        ?.map((c) => c.readable_id)
-        .filter((id) => id !== undefined) ?? [],
-  }
-
-  const courseIds = [
-    ...(requirements.courses?.required ?? []),
-    ...(requirements.courses?.electives ?? []),
-  ]
-    .map((course) => course.id)
-    .filter((id): id is number => id !== undefined)
-
-  const courses = useQuery({
-    ...coursesQueries.coursesList({
-      id: courseIds,
-      page_size: courseIds.length || undefined,
-    }),
-    enabled: courseIds.length > 0,
-    select: (data) => keyBy(data.results, "readable_id"),
-  })
-
+  const courses = useQuery(coursesQueries.coursesForProgram(program))
+  const coursesById = keyBy(courses.data?.results ?? [], "id")
   /**
    * req_tree allows for multiple elective sections, however
    * the V2Program.requirements schema, from which we get course readable IDs,
@@ -185,7 +175,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
     required && {
       title: required.title,
       titleId: HeadingIds.RequirementsRequired,
-      resourceIds: readable.required,
+      courseIds: required.courseIds,
     },
     electives && {
       title: electives.title,
@@ -193,7 +183,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
         ? `Complete ${electives.requiredCourseCount} out of ${electives.courseIds.length}`
         : "",
       titleId: HeadingIds.RequirementsElectives,
-      resourceIds: readable.elective,
+      courseIds: electives.courseIds,
     },
   ].filter((subsec) => subsec !== undefined)
 
@@ -213,13 +203,14 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           Courses
         </Typography>
         <Typography variant="body1" component="p">
-          {electives
-            ? `To complete this program, you must take ${readable.required.length} required courses and ${electives.requiredCourseCount} elective courses.`
-            : `To complete this program, you must take ${readable.required.length} required courses.`}
+          {getCompletionText({
+            requiredCount: required?.requiredCourseCount,
+            electiveCount: electives?.requiredCourseCount,
+          })}
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>
-        {subsections.map(({ title, note, titleId, resourceIds }) => (
+        {subsections.map(({ title, note, titleId, courseIds }) => (
           <div key={titleId}>
             <ReqSubsectionTitle component="h3" id={titleId}>
               {title}
@@ -227,25 +218,25 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
               {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
             </ReqSubsectionTitle>
             <RequirementsListing>
-              {resourceIds.map((readableId) => {
-                const course = courses.data?.[readableId]
+              {courseIds.map((courseId) => {
+                const course = coursesById[courseId]
                 const isCourseLoading = courses.isLoading || !courses.data
                 if (!isCourseLoading && !course) {
                   return null
                 }
                 return (
-                  <li key={readableId}>
+                  <li key={courseId}>
                     <StyledResourceCard
                       onlyAbove="sm"
                       course={course}
-                      href={`/courses/${encodeURIComponent(readableId)}`}
+                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
                       size="small"
                       isLoading={isCourseLoading}
                     />
                     <StyledResourceCard
                       onlyBelow="sm"
                       course={course}
-                      href={`/courses/${encodeURIComponent(readableId)}`}
+                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
                       size="small"
                       isLoading={isCourseLoading}
                     />
@@ -265,16 +256,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const programs = useQuery(
     programsQueries.programsList({ readable_id: readableId }),
   )
-  const programResources = useQuery(
-    learningResourceQueries.list({
-      readable_id: [readableId],
-      resource_type: [ResourceTypeEnum.Program],
-    }),
-  )
 
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
-  const programResource = programResources.data?.results?.[0] ?? null
+
+  const courses = useQuery(coursesQueries.coursesForProgram(program))
+
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
@@ -282,10 +269,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     return flagsLoaded ? notFound() : null
   }
 
-  const isLoading =
-    pages.isLoading || programs.isLoading || programResources.isLoading
+  const isLoading = pages.isLoading || programs.isLoading
 
-  if (!page || !program || !programResource) {
+  if (!page || !program) {
     if (!isLoading) {
       return notFound()
     }
@@ -316,7 +302,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <ProgramSummary
           enrollButton={<ProgramEnrollmentButton program={program} />}
           program={program}
-          programResource={programResource}
+          courses={courses.data?.results}
         />
       }
       navLinks={navLinks}
