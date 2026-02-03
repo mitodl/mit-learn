@@ -47,9 +47,29 @@ const getBestRun = (
 ): CourseRunV2 | undefined => {
   if (!course.courseruns || course.courseruns.length === 0) return undefined
 
+  const isRunEnrolllable = (run: CourseRunV2) => {
+    if (!run.live) return false
+
+    const now = new Date()
+    const enrollmentStart = run.enrollment_start
+      ? new Date(run.enrollment_start)
+      : null
+    const enrollmentEnd = run.enrollment_end
+      ? new Date(run.enrollment_end)
+      : null
+
+    const afterStart = enrollmentStart ? now >= enrollmentStart : true
+    const beforeEnd = enrollmentEnd ? now <= enrollmentEnd : true
+
+    return run.is_self_paced || (afterStart && beforeEnd)
+  }
+
+  const enrollableRuns = course.courseruns.filter(isRunEnrolllable)
+  if (enrollableRuns.length === 0) return undefined
+
   // If contract ID is provided, filter to runs matching that contract
   if (contractId !== undefined) {
-    const contractRuns = course.courseruns.filter(
+    const contractRuns = enrollableRuns.filter(
       (run) => run.b2b_contract === contractId,
     )
 
@@ -70,9 +90,9 @@ const getBestRun = (
 
   // Fallback to standard logic
   if (course.next_run_id) {
-    return course.courseruns.find((run) => run.id === course.next_run_id)
+    return enrollableRuns.find((run) => run.id === course.next_run_id)
   }
-  return course.courseruns[0]
+  return enrollableRuns[0]
 }
 
 /**
