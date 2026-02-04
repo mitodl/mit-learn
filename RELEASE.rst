@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.53.1 (Released February 02, 2026)
+--------------
+
+- Fix canvas ingestion exception (#2897)
+- use mitxonline requirements directly on program product page (#2902)
+- Editor cursor selection for custom elements (#2891)
+- feat: add dialog and button for learning resource input (#2870)
+
 Version 0.53.0 (Released January 28, 2026)
 --------------
 

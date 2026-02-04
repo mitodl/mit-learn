@@ -19,7 +19,7 @@ from articles.models import Article
 from articles.serializers import RichTextArticleSerializer
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
-from main.utils import cache_page_for_all_users, clear_views_cache
+from main.utils import cache_page_per_user, clear_views_cache
 
 from .permissions import CanEditArticle, CanViewArticle, is_article_group_user
 from .serializers import ArticleImageUploadSerializer
@@ -88,7 +88,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return qs.filter(is_published=True)
 
     @method_decorator(
-        cache_page_for_all_users(
+        cache_page_per_user(  # Need user-specific caching here (see filtering above)
             settings.REDIS_VIEW_CACHE_DURATION, cache="redis", key_prefix="articles"
         )
     )

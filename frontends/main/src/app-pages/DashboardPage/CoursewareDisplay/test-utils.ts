@@ -125,6 +125,7 @@ const setupProgramsAndCourses = () => {
     courseruns: course.courseruns.map((run) => ({
       ...run,
       b2b_contract: contract.id,
+      is_enrollable: true,
     })),
   }))
   coursesB.results = coursesB.results.map((course) => ({
@@ -132,6 +133,7 @@ const setupProgramsAndCourses = () => {
     courseruns: course.courseruns.map((run) => ({
       ...run,
       b2b_contract: contract.id,
+      is_enrollable: true,
     })),
   }))
 
@@ -368,6 +370,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: contractIds[0], // Associated with org contract
+        is_enrollable: true,
         start_date: faker.date.future().toISOString(),
         end_date: faker.date.future().toISOString(),
         title: `${course.title} - Org Contract Run`,
@@ -377,6 +380,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: faker.number.int(), // Different contract ID
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
         end_date: faker.date.past().toISOString(),
         title: `${course.title} - Other Org Run`,
@@ -386,6 +390,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: null,
+        is_enrollable: true,
         start_date: faker.date.future().toISOString(),
         end_date: faker.date.future().toISOString(),
         title: `${course.title} - General Run`,

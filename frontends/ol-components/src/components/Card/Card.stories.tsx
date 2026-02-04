@@ -1,5 +1,5 @@
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { Card } from "./Card"
 import type { CardProps } from "./Card"
 import { ActionButton } from "@mitodl/smoot-design"

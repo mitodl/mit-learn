@@ -1,9 +1,9 @@
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { FormDialog, FormDialogProps } from "./FormDialog"
 import { TextField } from "@mitodl/smoot-design"
 import MuiButton from "@mui/material/Button"
-import { action } from "@storybook/addon-actions"
+import { action } from "storybook/actions"
 
 const DialogDemo = (props: FormDialogProps) => {
   const [open, setOpen] = React.useState(false)

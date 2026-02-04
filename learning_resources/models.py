@@ -343,7 +343,7 @@ class LearningResourceInstructor(TimestampedModel):
 class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
-    def for_serialization(self, *, user: Optional["User"] = None):
+    def for_serialization(self):
         """Return the list of prefetches"""
         return self.prefetch_related(
             Prefetch(
@@ -372,23 +372,6 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
-                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
-                )
-                if user is not None
-                and user.is_authenticated
-                and (
-                    user.is_staff
-                    or user.is_superuser
-                    or user.groups.filter(
-                        name=constants.GROUP_STAFF_LISTS_EDITORS
-                    ).exists()
-                )
-                else LearningResourceRelationship.objects.none(),
-                to_attr="_learning_path_parents",
-            ),
-            Prefetch(
-                "parents",
-                queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
                 ),
                 to_attr="_podcasts",
@@ -405,13 +388,6 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 queryset=LearningResourceRelationship.objects.select_related(
                     "child"
                 ).order_by("position"),
-            ),
-            Prefetch(
-                "user_lists",
-                queryset=UserListRelationship.objects.filter(parent__author=user)
-                if user is not None and user.is_authenticated
-                else UserListRelationship.objects.none(),
-                to_attr="_user_list_parents",
             ),
             Prefetch(
                 "views",
@@ -627,22 +603,6 @@ class LearningResource(TimestampedModel):
             relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
             parent__channel__isnull=False,
         ).count()
-
-    @cached_property
-    def user_list_parents(self) -> list["LearningResourceRelationship"]:
-        """Return a list of user lists that the resource is in"""
-        return getattr(self, "_user_list_parents", [])
-
-    @cached_property
-    def learning_path_parents(self) -> list["LearningResourceRelationship"]:
-        """Return a list of learning paths that the resource is in"""
-        return getattr(
-            self,
-            "_learning_path_parents",
-            self.parents.filter(
-                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS
-            ),
-        )
 
     @cached_property
     def podcasts(self) -> list["LearningResourceRelationship"]:

@@ -174,6 +174,9 @@ module.exports = {
         "testing-library/no-node-access": "off",
       },
     },
+    // Note: eslint-plugin-storybook is incompatible with Storybook 10 (ESM) and ESLint 8 (CommonJS)
+    // Storybook linting rules are disabled until we upgrade to ESLint 9+ or the plugin is updated
+    // To re-enable, add: { files: ["./**/*.stories.{ts,tsx}"], extends: ["plugin:storybook/recommended"] }
   ],
 }
 

@@ -388,38 +388,6 @@ def test_learning_path_endpoint_membership_get(client, user, is_editor):
         assert resp.status_code == 403
 
 
-@pytest.mark.parametrize("is_editor", [True, False])
-def test_get_resource_learning_paths(user_client, user, is_editor):
-    """Test that the learning paths are returned for a resource"""
-    update_editor_group(user, is_editor)
-    course = factories.CourseFactory.create()
-    path_items = sorted(
-        factories.LearningPathRelationshipFactory.create_batch(
-            3, child=course.learning_resource
-        ),
-        key=lambda item: item.id,
-    )
-    resp = user_client.get(
-        reverse("lr:v1:courses_api-detail", args=[course.learning_resource.id])
-    )
-    expected = (
-        [
-            {
-                "id": path_item.id,
-                "parent": path_item.parent_id,
-                "child": course.learning_resource.id,
-            }
-            for path_item in path_items
-        ]
-        if is_editor
-        else []
-    )
-    response_data = sorted(
-        resp.data.get("learning_path_parents"), key=lambda item: item["id"]
-    )
-    assert response_data == expected
-
-
 @pytest.mark.skip_nplusone_check
 def test_set_learning_path_relationships(client, staff_user):
     """Test the learning_paths endpoint for setting multiple userlist relationships"""
@@ -439,10 +407,10 @@ def test_set_learning_path_relationships(client, staff_user):
     )
     assert resp.status_code == 200
     for learning_path in learning_paths:
-        assert course.learning_resource.learning_path_parents.filter(
+        assert course.learning_resource.parents.filter(
             parent__id=learning_path.learning_resource.id
         ).exists()
-    assert not course.learning_resource.learning_path_parents.filter(
+    assert not course.learning_resource.parents.filter(
         parent__id=previous_learning_path.learning_resource.id
     ).exists()
 
