@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "workspace:*",
+  "version": "0.0.0",
   "private": true,
   "sideEffects": false,
   "exports": {
@@ -17,7 +17,7 @@
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts"
   },
   "peerDependencies": {
-    "react": "^19"
+    "react": "^19.2.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",

@@ -21,7 +21,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { getDescriptionFor } from "ol-test-utilities"
 import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
-import { PartialDeep } from "type-fest"
+import type { PartialDeep } from "type-fest"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
