@@ -123,8 +123,6 @@ const nextConfig = {
     // Turbopack filesystem caching is enabled by default in Next.js 16.1+
     // Explicitly enable it for clarity (optional - already default)
     turbopackFileSystemCacheForDev: true,
-    // Enable for production builds (experimental)
-    turbopackFileSystemCacheForBuild: true,
   },
 }
 
