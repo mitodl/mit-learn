@@ -5,7 +5,6 @@ import type {
   LearningpathsApiLearningpathsListRequest as ListRequest,
   PaginatedLearningPathRelationshipList,
 } from "../../generated/v1"
-import { clearListMemberships } from "../learningResources/queries"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 
 const learningPathKeys = {
@@ -51,7 +50,6 @@ const learningPathQueries = {
           ...data,
           results: data.results.map((relation) => ({
             ...relation,
-            resource: clearListMemberships(relation.resource),
           })),
         }
       },
