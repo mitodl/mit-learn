@@ -9904,16 +9904,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -10092,7 +10082,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -10106,7 +10095,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     ArticleResourceRequest:
       type: object
@@ -10702,16 +10690,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -10895,7 +10873,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -10909,7 +10886,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     CourseResourceRequest:
       type: object
@@ -11272,16 +11248,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -11465,7 +11431,6 @@ components:
       - id
       - image
       - learning_material
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -11479,7 +11444,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     LearningMaterialResourceRequest:
       type: object
@@ -11718,16 +11682,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -11909,7 +11863,6 @@ components:
       - id
       - image
       - learning_path
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -11921,7 +11874,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     LearningPathResourceRequest:
       type: object
@@ -14360,16 +14312,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -14552,7 +14494,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -14567,7 +14508,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     PodcastEpisodeResourceRequest:
       type: object
@@ -14778,16 +14718,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -14970,7 +14900,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -14985,7 +14914,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     PodcastResourceRequest:
       type: object
@@ -15334,16 +15262,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -15526,7 +15444,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -15541,7 +15458,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - views
     ProgramResourceRequest:
       type: object
@@ -16155,16 +16071,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -16347,7 +16253,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -16361,7 +16266,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - video_playlist
       - views
     VideoPlaylistResourceRequest:
@@ -16559,16 +16463,6 @@ components:
           - $ref: '#/components/schemas/LearningResourceImage'
           nullable: true
           readOnly: true
-        learning_path_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroLearningPathRelationship'
-          readOnly: true
-        user_list_parents:
-          type: array
-          items:
-            $ref: '#/components/schemas/MicroUserListRelationship'
-          readOnly: true
         views:
           type: integer
           readOnly: true
@@ -16757,7 +16651,6 @@ components:
       - free
       - id
       - image
-      - learning_path_parents
       - offered_by
       - pace
       - platform
@@ -16772,7 +16665,6 @@ components:
       - resource_type
       - runs
       - title
-      - user_list_parents
       - video
       - views
     VideoResourceRequest:
