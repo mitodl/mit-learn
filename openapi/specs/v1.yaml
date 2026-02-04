@@ -4078,6 +4078,7 @@ paths:
             - free
             - delivery
             - resource_category
+            - learning_material_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -4093,6 +4094,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_category` - resource_category
+              * `learning_material_category` - learning_material_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -4276,7 +4278,7 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
-        name: learning_material_content_category
+        name: learning_material_category
         schema:
           type: array
           items:
@@ -4596,6 +4598,7 @@ paths:
             - free
             - delivery
             - resource_category
+            - learning_material_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -4611,6 +4614,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_category` - resource_category
+              * `learning_material_category` - learning_material_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -4794,7 +4798,7 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
-        name: learning_material_content_category
+        name: learning_material_category
         schema:
           type: array
           items:
@@ -5139,6 +5143,7 @@ paths:
             - free
             - delivery
             - resource_category
+            - learning_material_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -5154,6 +5159,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_category` - resource_category
+              * `learning_material_category` - learning_material_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -5337,7 +5343,7 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
-        name: learning_material_content_category
+        name: learning_material_category
         schema:
           type: array
           items:
@@ -5673,6 +5679,7 @@ paths:
             - free
             - delivery
             - resource_category
+            - learning_material_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -5688,6 +5695,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_category` - resource_category
+              * `learning_material_category` - learning_material_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -5871,7 +5879,7 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
-        name: learning_material_content_category
+        name: learning_material_category
         schema:
           type: array
           items:
@@ -9820,6 +9828,7 @@ components:
       - free
       - delivery
       - resource_category
+      - learning_material_category
       type: string
       description: |-
         * `resource_type` - resource_type
@@ -9835,6 +9844,7 @@ components:
         * `free` - free
         * `delivery` - delivery
         * `resource_category` - resource_category
+        * `learning_material_category` - learning_material_category
       x-enum-descriptions:
       - resource_type
       - certification
@@ -9849,6 +9859,7 @@ components:
       - free
       - delivery
       - resource_category
+      - learning_material_category
     ArticleImageUploadRequest:
       type: object
       properties:
@@ -14064,7 +14075,7 @@ components:
             type: string
             minLength: 1
           description: The course feature. Possible options are at api/v1/course_features/
-        learning_material_content_category:
+        learning_material_category:
           type: array
           items:
             type: string

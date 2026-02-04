@@ -268,7 +268,7 @@ LEARNING_RESOURCE_AGGREGATIONS = [
     "free",
     "delivery",
     "resource_category",
-    "learning_material_content_category",
+    "learning_material_category",
 ]
 
 CONTENT_FILE_AGGREGATIONS = ["topic", "content_feature_type", "platform", "offered_by"]
@@ -407,7 +407,7 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
         child=serializers.CharField(),
         help_text="The course feature. Possible options are at api/v1/course_features/",
     )
-    learning_material_content_category = serializers.ListField(
+    learning_material_category = serializers.ListField(
         required=False,
         child=serializers.CharField(),
         help_text="The content category for learning materials.",

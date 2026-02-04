@@ -9,5 +9,5 @@ export const facetNames = [
   "offered_by",
   "free",
   "professional",
-  "learning_material_content_category",
+  "learning_material_category",
 ] as UseResourceSearchParamsProps["facets"]

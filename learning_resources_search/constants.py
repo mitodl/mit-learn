@@ -100,7 +100,7 @@ SEARCH_FILTERS = {
     "offered_by": FilterConfig("offered_by.code", nested=True),
     "delivery": FilterConfig("delivery.code", nested=True),
     "resource_category": FilterConfig("resource_category"),
-    "learning_material_content_category": FilterConfig(
+    "learning_material_category": FilterConfig(
         "learning_material.content_category", nested=False
     ),
 }

@@ -40,7 +40,7 @@ import {
 } from "./base"
 
 /**
- * * `resource_type` - resource_type * `certification` - certification * `certification_type` - certification_type * `offered_by` - offered_by * `platform` - platform * `topic` - topic * `department` - department * `level` - level * `course_feature` - course_feature * `professional` - professional * `free` - free * `delivery` - delivery * `resource_category` - resource_category
+ * * `resource_type` - resource_type * `certification` - certification * `certification_type` - certification_type * `offered_by` - offered_by * `platform` - platform * `topic` - topic * `department` - department * `level` - level * `course_feature` - course_feature * `professional` - professional * `free` - free * `delivery` - delivery * `resource_category` - resource_category * `learning_material_category` - learning_material_category
  * @export
  * @enum {string}
  */
@@ -59,6 +59,7 @@ export const AggregationsEnumDescriptions = {
   free: "free",
   delivery: "delivery",
   resource_category: "resource_category",
+  learning_material_category: "learning_material_category",
 } as const
 
 export const AggregationsEnum = {
@@ -114,6 +115,10 @@ export const AggregationsEnum = {
    * resource_category
    */
   ResourceCategory: "resource_category",
+  /**
+   * learning_material_category
+   */
+  LearningMaterialCategory: "learning_material_category",
 } as const
 
 export type AggregationsEnum =
@@ -5824,7 +5829,7 @@ export interface PercolateQuerySubscriptionRequestRequest {
    * @type {Array<string>}
    * @memberof PercolateQuerySubscriptionRequestRequest
    */
-  learning_material_content_category?: Array<string>
+  learning_material_category?: Array<string>
   /**
    * Show resource counts by category
    * @type {Array<AggregationsEnum>}
@@ -18634,7 +18639,7 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesSearchRetrieveLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -18666,7 +18671,7 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesSearchRetrieveLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -18743,9 +18748,9 @@ export const LearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["id"] = id
       }
 
-      if (learning_material_content_category) {
-        localVarQueryParameter["learning_material_content_category"] =
-          learning_material_content_category
+      if (learning_material_category) {
+        localVarQueryParameter["learning_material_category"] =
+          learning_material_category
       }
 
       if (level) {
@@ -18857,7 +18862,7 @@ export const LearningResourcesSearchApiFp = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesSearchRetrieveLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -18889,7 +18894,7 @@ export const LearningResourcesSearchApiFp = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesSearchRetrieveLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -18926,7 +18931,7 @@ export const LearningResourcesSearchApiFp = function (
           dev_mode,
           free,
           id,
-          learning_material_content_category,
+          learning_material_category,
           level,
           limit,
           max_incompleteness_penalty,
@@ -18996,7 +19001,7 @@ export const LearningResourcesSearchApiFactory = function (
           requestParameters.dev_mode,
           requestParameters.free,
           requestParameters.id,
-          requestParameters.learning_material_content_category,
+          requestParameters.learning_material_category,
           requestParameters.level,
           requestParameters.limit,
           requestParameters.max_incompleteness_penalty,
@@ -19029,7 +19034,7 @@ export const LearningResourcesSearchApiFactory = function (
 export interface LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest {
   /**
    * Show resource counts by category
-   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category'>}
+   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category' | 'learning_material_category'>}
    * @memberof LearningResourcesSearchApiLearningResourcesSearchRetrieve
    */
   readonly aggregations?: Array<LearningResourcesSearchRetrieveAggregationsEnum>
@@ -19102,7 +19107,7 @@ export interface LearningResourcesSearchApiLearningResourcesSearchRetrieveReques
    * @type {Array<string>}
    * @memberof LearningResourcesSearchApiLearningResourcesSearchRetrieve
    */
-  readonly learning_material_content_category?: Array<string>
+  readonly learning_material_category?: Array<string>
 
   /**
    *
@@ -19255,7 +19260,7 @@ export class LearningResourcesSearchApi extends BaseAPI {
         requestParameters.dev_mode,
         requestParameters.free,
         requestParameters.id,
-        requestParameters.learning_material_content_category,
+        requestParameters.learning_material_category,
         requestParameters.level,
         requestParameters.limit,
         requestParameters.max_incompleteness_penalty,
@@ -19296,6 +19301,7 @@ export const LearningResourcesSearchRetrieveAggregationsEnum = {
   Free: "free",
   Delivery: "delivery",
   ResourceCategory: "resource_category",
+  LearningMaterialCategory: "learning_material_category",
 } as const
 export type LearningResourcesSearchRetrieveAggregationsEnum =
   (typeof LearningResourcesSearchRetrieveAggregationsEnum)[keyof typeof LearningResourcesSearchRetrieveAggregationsEnum]
@@ -19501,7 +19507,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionCheckListLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -19534,7 +19540,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionCheckListLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -19612,9 +19618,9 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["id"] = id
       }
 
-      if (learning_material_content_category) {
-        localVarQueryParameter["learning_material_content_category"] =
-          learning_material_content_category
+      if (learning_material_category) {
+        localVarQueryParameter["learning_material_category"] =
+          learning_material_category
       }
 
       if (level) {
@@ -19717,7 +19723,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionListLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -19749,7 +19755,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionListLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -19826,9 +19832,9 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["id"] = id
       }
 
-      if (learning_material_content_category) {
-        localVarQueryParameter["learning_material_content_category"] =
-          learning_material_content_category
+      if (learning_material_category) {
+        localVarQueryParameter["learning_material_category"] =
+          learning_material_category
       }
 
       if (level) {
@@ -19927,7 +19933,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -19961,7 +19967,7 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionSubscribeCreateLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -20040,9 +20046,9 @@ export const LearningResourcesUserSubscriptionApiAxiosParamCreator = function (
         localVarQueryParameter["id"] = id
       }
 
-      if (learning_material_content_category) {
-        localVarQueryParameter["learning_material_content_category"] =
-          learning_material_content_category
+      if (learning_material_category) {
+        localVarQueryParameter["learning_material_category"] =
+          learning_material_category
       }
 
       if (level) {
@@ -20216,7 +20222,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionCheckListLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -20249,7 +20255,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionCheckListLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -20287,7 +20293,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           dev_mode,
           free,
           id,
-          learning_material_content_category,
+          learning_material_category,
           level,
           limit,
           max_incompleteness_penalty,
@@ -20334,7 +20340,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionListLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -20366,7 +20372,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionListLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -20403,7 +20409,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           dev_mode,
           free,
           id,
-          learning_material_content_category,
+          learning_material_category,
           level,
           limit,
           max_incompleteness_penalty,
@@ -20449,7 +20455,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
      * @param {boolean | null} [dev_mode] If true return raw open search results with score explanations
      * @param {boolean | null} [free]
      * @param {Array<number>} [id] The id value for the learning resource
-     * @param {Array<string>} [learning_material_content_category] The content category for learning materials.
+     * @param {Array<string>} [learning_material_category] The content category for learning materials.
      * @param {Array<LearningResourcesUserSubscriptionSubscribeCreateLevelEnum>} [level]
      * @param {number} [limit] Number of results to return per page
      * @param {number | null} [max_incompleteness_penalty] Maximum score penalty for incomplete OCW courses in percent. An OCW course with completeness &#x3D; 0 will have this score penalty. Partially complete courses have a linear penalty proportional to the degree of incompleteness. Only affects results if there is a search term.
@@ -20483,7 +20489,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
       dev_mode?: boolean | null,
       free?: boolean | null,
       id?: Array<number>,
-      learning_material_content_category?: Array<string>,
+      learning_material_category?: Array<string>,
       level?: Array<LearningResourcesUserSubscriptionSubscribeCreateLevelEnum>,
       limit?: number,
       max_incompleteness_penalty?: number | null,
@@ -20519,7 +20525,7 @@ export const LearningResourcesUserSubscriptionApiFp = function (
           dev_mode,
           free,
           id,
-          learning_material_content_category,
+          learning_material_category,
           level,
           limit,
           max_incompleteness_penalty,
@@ -20622,7 +20628,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.dev_mode,
           requestParameters.free,
           requestParameters.id,
-          requestParameters.learning_material_content_category,
+          requestParameters.learning_material_category,
           requestParameters.level,
           requestParameters.limit,
           requestParameters.max_incompleteness_penalty,
@@ -20668,7 +20674,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.dev_mode,
           requestParameters.free,
           requestParameters.id,
-          requestParameters.learning_material_content_category,
+          requestParameters.learning_material_category,
           requestParameters.level,
           requestParameters.limit,
           requestParameters.max_incompleteness_penalty,
@@ -20713,7 +20719,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
           requestParameters.dev_mode,
           requestParameters.free,
           requestParameters.id,
-          requestParameters.learning_material_content_category,
+          requestParameters.learning_material_category,
           requestParameters.level,
           requestParameters.limit,
           requestParameters.max_incompleteness_penalty,
@@ -20766,7 +20772,7 @@ export const LearningResourcesUserSubscriptionApiFactory = function (
 export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest {
   /**
    * Show resource counts by category
-   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category'>}
+   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category' | 'learning_material_category'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckList
    */
   readonly aggregations?: Array<LearningResourcesUserSubscriptionCheckListAggregationsEnum>
@@ -20839,7 +20845,7 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
    * @type {Array<string>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckList
    */
-  readonly learning_material_content_category?: Array<string>
+  readonly learning_material_category?: Array<string>
 
   /**
    *
@@ -20976,7 +20982,7 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
 export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionListRequest {
   /**
    * Show resource counts by category
-   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category'>}
+   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category' | 'learning_material_category'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionList
    */
   readonly aggregations?: Array<LearningResourcesUserSubscriptionListAggregationsEnum>
@@ -21049,7 +21055,7 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
    * @type {Array<string>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionList
    */
-  readonly learning_material_content_category?: Array<string>
+  readonly learning_material_category?: Array<string>
 
   /**
    *
@@ -21179,7 +21185,7 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
 export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreateRequest {
   /**
    * Show resource counts by category
-   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category'>}
+   * @type {Array<'resource_type' | 'certification' | 'certification_type' | 'offered_by' | 'platform' | 'topic' | 'department' | 'level' | 'course_feature' | 'professional' | 'free' | 'delivery' | 'resource_category' | 'learning_material_category'>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreate
    */
   readonly aggregations?: Array<LearningResourcesUserSubscriptionSubscribeCreateAggregationsEnum>
@@ -21252,7 +21258,7 @@ export interface LearningResourcesUserSubscriptionApiLearningResourcesUserSubscr
    * @type {Array<string>}
    * @memberof LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionSubscribeCreate
    */
-  readonly learning_material_content_category?: Array<string>
+  readonly learning_material_category?: Array<string>
 
   /**
    *
@@ -21433,7 +21439,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.dev_mode,
         requestParameters.free,
         requestParameters.id,
-        requestParameters.learning_material_content_category,
+        requestParameters.learning_material_category,
         requestParameters.level,
         requestParameters.limit,
         requestParameters.max_incompleteness_penalty,
@@ -21481,7 +21487,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.dev_mode,
         requestParameters.free,
         requestParameters.id,
-        requestParameters.learning_material_content_category,
+        requestParameters.learning_material_category,
         requestParameters.level,
         requestParameters.limit,
         requestParameters.max_incompleteness_penalty,
@@ -21528,7 +21534,7 @@ export class LearningResourcesUserSubscriptionApi extends BaseAPI {
         requestParameters.dev_mode,
         requestParameters.free,
         requestParameters.id,
-        requestParameters.learning_material_content_category,
+        requestParameters.learning_material_category,
         requestParameters.level,
         requestParameters.limit,
         requestParameters.max_incompleteness_penalty,
@@ -21591,6 +21597,7 @@ export const LearningResourcesUserSubscriptionCheckListAggregationsEnum = {
   Free: "free",
   Delivery: "delivery",
   ResourceCategory: "resource_category",
+  LearningMaterialCategory: "learning_material_category",
 } as const
 export type LearningResourcesUserSubscriptionCheckListAggregationsEnum =
   (typeof LearningResourcesUserSubscriptionCheckListAggregationsEnum)[keyof typeof LearningResourcesUserSubscriptionCheckListAggregationsEnum]
@@ -21800,6 +21807,7 @@ export const LearningResourcesUserSubscriptionListAggregationsEnum = {
   Free: "free",
   Delivery: "delivery",
   ResourceCategory: "resource_category",
+  LearningMaterialCategory: "learning_material_category",
 } as const
 export type LearningResourcesUserSubscriptionListAggregationsEnum =
   (typeof LearningResourcesUserSubscriptionListAggregationsEnum)[keyof typeof LearningResourcesUserSubscriptionListAggregationsEnum]
@@ -22001,6 +22009,7 @@ export const LearningResourcesUserSubscriptionSubscribeCreateAggregationsEnum =
     Free: "free",
     Delivery: "delivery",
     ResourceCategory: "resource_category",
+    LearningMaterialCategory: "learning_material_category",
   } as const
 export type LearningResourcesUserSubscriptionSubscribeCreateAggregationsEnum =
   (typeof LearningResourcesUserSubscriptionSubscribeCreateAggregationsEnum)[keyof typeof LearningResourcesUserSubscriptionSubscribeCreateAggregationsEnum]
