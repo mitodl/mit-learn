@@ -83,3 +83,5 @@ Playwright uses built-in locators like `getByRole`, `getByText`, etc. for access
 - **UI Mode**: Run `yarn playwright:ui` for interactive debugging
 - **Traces**: View traces in the HTML report after test failures
 - **Videos**: Check `test-results/` directory for failure videos
+
+By default, on failure it'll serve up an HTML report with traces and screenshots for debugging, accessible at localhost:9229
