@@ -1,13 +1,13 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { SelectField } from "./SelectField"
 import type { SelectFieldProps } from "./SelectField"
 import { MenuItem } from "../MenuItem/MenuItem"
 
 import Stack from "@mui/material/Stack"
 import Grid from "@mui/material/Grid"
-import { fn } from "@storybook/test"
+import { fn } from "storybook/test"
 
 const SIZES = ["small", "medium", "large"] satisfies SelectFieldProps["size"][]
 const meta: Meta<typeof SelectField> = {

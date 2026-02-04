@@ -1,7 +1,13 @@
 import { resolve } from "path"
 import * as dotenv from "dotenv"
-import * as webpack from "webpack"
-import { StorybookConfig } from "@storybook/nextjs"
+import type { StorybookConfig } from "@storybook/nextjs"
+import { fileURLToPath } from "node:url"
+import { dirname } from "path"
+import { createRequire } from "module"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const require = createRequire(import.meta.url)
 
 dotenv.config({ path: resolve(__dirname, "../../../.env") })
 
@@ -15,13 +21,7 @@ const config: StorybookConfig = {
 
   staticDirs: ["./public"],
 
-  addons: [
-    "@storybook/addon-links",
-    "@storybook/addon-essentials",
-    "@storybook/addon-interactions",
-    "@storybook/addon-webpack5-compiler-swc",
-    "@storybook/addon-mdx-gfm",
-  ],
+  addons: ["@storybook/addon-links", "@storybook/addon-docs"],
 
   framework: {
     name: "@storybook/nextjs",
@@ -31,12 +31,13 @@ const config: StorybookConfig = {
   docs: {},
 
   webpackFinal: async (config: any) => {
+    const webpack = require("webpack")
     config.plugins.push(
       new webpack.DefinePlugin({
-        APP_SETTINGS: {
-          EMBEDLY_KEY: JSON.stringify(process.env.EMBEDLY_KEY),
-          PUBLIC_URL: JSON.stringify(process.env.PUBLIC_URL),
-        },
+        APP_SETTINGS: JSON.stringify({
+          EMBEDLY_KEY: process.env.EMBEDLY_KEY,
+          PUBLIC_URL: process.env.PUBLIC_URL,
+        }),
       }),
     )
 
