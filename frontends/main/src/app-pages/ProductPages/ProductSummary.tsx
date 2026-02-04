@@ -193,14 +193,17 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   )
 }
 
+const SELF_PACED = "self_paced"
+const INSTRUCTOR_PACED = "instructor_paced"
+
 const PACE_DATA = {
-  instructor_paced: {
+  [INSTRUCTOR_PACED]: {
     label: "Instructor-Paced",
     description:
       "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
   },
-  self_paced: {
+  [SELF_PACED]: {
     label: "Self-Paced",
     description:
       "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
@@ -209,9 +212,7 @@ const PACE_DATA = {
 }
 
 const getCourseRunPacing = (run: CourseRunV2) => {
-  return run.is_self_paced || run.is_archived
-    ? "self_paced"
-    : "instructor_paced"
+  return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
 }
 const CoursePaceRow: React.FC<CourseInfoRowProps> = ({
   nextRun,
@@ -522,13 +523,14 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
 const getProgramPacing = (
   programCourses: CourseWithCourseRunsSerializerV2[],
 ) => {
-  // Program shows instructor-paced if any course is instructor-paced
-  const selfPaced = programCourses.every((c) => {
-    const run = c.courseruns.find((cr) => cr.id === c.next_run_id)
-    if (!run) return false
-    return getCourseRunPacing(run) === "self_paced"
-  })
-  return selfPaced ? "self_paced" : "instructor_paced"
+  const programCourseRuns = programCourses
+    .map((c) => c.courseruns.find((cr) => cr.id === c.next_run_id))
+    .filter((cr) => cr !== undefined)
+
+  if (programCourseRuns.length === 0) return null
+  return programCourseRuns.every((cr) => getCourseRunPacing(cr) === SELF_PACED)
+    ? SELF_PACED
+    : INSTRUCTOR_PACED
 }
 
 const ProgramPaceRow: React.FC<
@@ -536,7 +538,8 @@ const ProgramPaceRow: React.FC<
     courses?: CourseWithCourseRunsSerializerV2[]
   } & HTMLAttributes<HTMLDivElement>
 > = ({ courses, ...others }) => {
-  const pace = courses?.length ? PACE_DATA[getProgramPacing(courses)] : null
+  const paceCode = courses?.length ? getProgramPacing(courses) : null
+  const pace = paceCode ? PACE_DATA[paceCode] : null
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />

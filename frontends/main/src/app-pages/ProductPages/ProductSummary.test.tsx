@@ -617,6 +617,9 @@ describe("Program Pacing Row", () => {
       // counts as self-paced.
       courseruns: [makeRun({ is_self_paced: false, is_archived: true })],
     }),
+    noRuns: makeCourse({
+      courseruns: [],
+    }),
   }
 
   test.each([
@@ -626,6 +629,14 @@ describe("Program Pacing Row", () => {
     {
       courses: [courses.selfPaced, courses.instructorPaced],
       expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.instructorPaced],
+      expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.selfPaced],
+      expected: "Self-Paced",
     },
   ])("Shows correct pacing information", ({ courses, expected }) => {
     const program = factories.programs.program()
