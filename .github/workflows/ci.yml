@@ -107,7 +107,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Dependencies are consistent
-        run: yarn syncpack list-mismatches
+        run: yarn workspace frontends run syncpack lint
 
       - name: Format check
         run: yarn workspace frontends fmt-check
