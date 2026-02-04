@@ -965,7 +965,7 @@ class LearningResourceRelationship(TimestampedModel):
     position = models.PositiveIntegerField(default=0)
 
     relation_type = models.CharField(
-        max_length=max(map(len, LearningResourceRelationTypes.values)),
+        max_length=256,
         choices=LearningResourceRelationTypes.choices,
         default=None,
     )
@@ -1223,6 +1223,46 @@ class PodcastEpisode(LearningResourceDetailModel):
 
     class Meta:
         ordering = ("id",)
+
+
+class LearningMaterialQuerySet(LearningResourceDetailQuerySet):
+    """QuerySet for LearningMaterial"""
+
+    def for_serialization(self):
+        """Return queryset for serialization"""
+        return self
+
+
+class LearningMaterial(LearningResourceDetailModel):
+    """Data model for course learning materials"""
+
+    objects = LearningMaterialQuerySet.as_manager()
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        related_name="learning_material",
+        on_delete=models.CASCADE,
+    )
+
+    content_file = models.OneToOneField(
+        ContentFile,
+        related_name="learning_material",
+        on_delete=models.CASCADE,
+    )
+
+    content_tags = ArrayField(
+        models.CharField(max_length=256, null=False, blank=False), null=True, blank=True
+    )
+
+    content_category = models.CharField(  # noqa: DJ001
+        max_length=128,
+        choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"LearningMaterial: {self.learning_resource.readable_id}"
 
 
 class VideoChannel(TimestampedModel):

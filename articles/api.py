@@ -3,8 +3,43 @@
 import logging
 
 from articles.hooks import get_plugin_manager
+from articles.tasks import (
+    queue_fastly_purge_article,
+    queue_fastly_purge_articles_list,
+)
 
 log = logging.getLogger(__name__)
+
+
+def purge_article_on_save(article):
+    """
+    Purge the article from the CDN cache when it's saved.
+
+    This will trigger a CDN purge for:
+    - The specific article page (if published and has a slug)
+    - The articles list page
+
+    Args:
+        article: The article instance being saved
+    """
+    # Only purge if the article is published
+    if article.is_published and article.slug:
+        log.info(
+            "Article %s (%s) saved, queueing CDN purge...",
+            article.id,
+            article.slug,
+        )
+
+        # Purge the specific article page
+        queue_fastly_purge_article.delay(article.id)
+
+        # Also purge the articles list since it may now include this article
+        queue_fastly_purge_articles_list.delay()
+    else:
+        log.debug(
+            "Article %s is not published or has no slug, skipping CDN purge.",
+            article.id,
+        )
 
 
 def article_published_actions(*, article):

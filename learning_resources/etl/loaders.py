@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from learning_resources.constants import (
+    OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -28,6 +29,7 @@ from learning_resources.models import (
     Article,
     ContentFile,
     Course,
+    LearningMaterial,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -834,12 +836,88 @@ def load_content_files(
             file.published = False
             file.save()
 
+            learning_material = LearningMaterial.objects.filter(
+                content_file=file
+            ).last()
+
+            if learning_material:
+                resource = learning_material.learning_resource
+                resource.published = False
+                resource.save()
+
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
         content_files_loaded_actions(run=course_run)
 
         return content_files_ids
     return None
+
+
+def load_learning_materials(
+    course_run: LearningResourceRun,
+    content_file_ids: list[int],
+):
+    """
+    Create learning material objects from ocw content files
+    """
+    material_ids = []
+
+    for content_file_id in content_file_ids:
+        content_file = ContentFile.objects.get(id=content_file_id)
+        learning_material_tags = set(
+            content_file.content_tags.values_list("name", flat=True)
+        ) & set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+        if learning_material_tags:
+            material_ids.append(
+                load_learning_material(course_run, content_file, learning_material_tags)
+            )
+
+    course_run.learning_resource.resources.set(
+        LearningResource.objects.filter(id__in=material_ids).only("id"),
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
+        },
+    )
+
+
+def load_learning_material(
+    course_run: LearningResourceRun,
+    content_file: ContentFile,
+    learning_material_tags: set[str],
+):
+    """
+    Create learning material object from ocw content file
+    """
+
+    content_categories = {
+        OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
+    }
+    content_categories = sorted(content_categories)
+    content_category = content_categories[0]
+
+    with transaction.atomic():
+        learning_resource, _ = LearningResource.objects.update_or_create(
+            readable_id=f"{course_run.run_id}-{content_file.key}",
+            platform=course_run.learning_resource.platform,
+            defaults={
+                "resource_type": LearningResourceType.learning_material.name,
+                "title": content_file.title,
+                "url": content_file.url,
+                "etl_source": course_run.learning_resource.etl_source,
+                "offered_by": course_run.learning_resource.offered_by,
+                "published": True,
+            },
+        )
+
+        LearningMaterial.objects.update_or_create(
+            learning_resource=learning_resource,
+            content_file=content_file,
+            defaults={
+                "content_tags": list(learning_material_tags),
+                "content_category": content_category,
+            },
+        )
+        return learning_resource.id
 
 
 def load_problem_file(

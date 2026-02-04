@@ -11,6 +11,13 @@ from news_events.plugins import ArticleNewsPlugin
 pytestmark = [pytest.mark.django_db]
 
 
+@pytest.fixture(autouse=True)
+def _mock_cdn_purge(mocker):
+    """Auto-mock CDN purge tasks for all tests in this module"""
+    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
+    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
+
+
 def test_article_published_hook_calls_sync_task():
     """Test that article_published hook schedules the sync task on commit"""
     user = UserFactory.create()

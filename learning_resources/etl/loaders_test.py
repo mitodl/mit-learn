@@ -59,6 +59,7 @@ from learning_resources.factories import (
     ArticleFactory,
     ContentFileFactory,
     CourseFactory,
+    LearningMaterialFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -78,6 +79,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
+    LearningMaterial,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -1035,6 +1037,9 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert course.runs.count() == 2
 
     deleted_content_file = ContentFileFactory.create(run=course_run)
+    deleted_content_file_learning_material = LearningMaterialFactory.create(
+        content_file=deleted_content_file
+    )
     returned_content_file_id = deleted_content_file.id + 1
 
     content_data = [{"a": "b"}, {"a": "c"}]
@@ -1064,7 +1069,10 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert mock_bulk_delete.call_count == 0 if is_published else 1
     assert mock_calc_score.call_count == (1 if calc_score else 0)
     deleted_content_file.refresh_from_db()
+    deleted_content_file_learning_material.refresh_from_db()
+
     assert not deleted_content_file.published
+    assert not deleted_content_file_learning_material.learning_resource.published
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
@@ -2097,3 +2105,114 @@ def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant)
     assert (
         mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
     )
+
+
+@pytest.mark.django_db
+def test_load_learning_materials(mocker):
+    """
+    Test that load_learning_materials runs load_learning_material
+    if a ocw content file has content_tags in OCW_COURSE_CONTENT_CATEGORY_MAPPING
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    relevant_content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+    irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
+
+    learning_material_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[relevant_content_tag],
+    )
+
+    other_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[irrelevant_content_tag],
+    )
+
+    load_learning_materials_spy = mocker.spy(loaders, "load_learning_material")
+
+    loaders.load_learning_materials(
+        course_run=ocw_course.learning_resource.runs.first(),
+        content_file_ids=[
+            learning_material_content_file.id,
+            other_content_file.id,
+        ],
+    )
+
+    assert load_learning_materials_spy.call_count == 1
+    load_learning_materials_spy.assert_called_with(
+        ocw_course.learning_resource.runs.first(),
+        learning_material_content_file,
+        {"Programming Assignments"},
+    )
+
+    learning_material = LearningMaterial.objects.last()
+
+    resource_relationships = ocw_course.learning_resource.children.all()
+    assert resource_relationships.count() == 1
+
+    assert (
+        resource_relationships.first().child.id
+        == learning_material.learning_resource.id
+    )
+    assert (
+        resource_relationships.first().relation_type
+        == LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS.value
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("learning_material_exists", [True, False])
+def test_load_learning_material(mocker, learning_material_exists):
+    """
+    Test that load_learning_material creates a LearningMaterial
+    for the given content file and links it to the course run
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+
+    content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[content_tag],
+    )
+
+    if learning_material_exists:
+        existing_learning_material = LearningMaterialFactory.create(
+            content_file=content_file,
+        )
+
+        existing_learning_material.learning_resource.readable_id = (
+            f"{ocw_course.learning_resource.runs.first().run_id}-{content_file.key}"
+        )
+        existing_learning_material.learning_resource.platform = (
+            ocw_course.learning_resource.platform
+        )
+        existing_learning_material.learning_resource.save()
+
+    loaders.load_learning_material(
+        ocw_course.learning_resource.runs.first(),
+        content_file,
+        {"Programming Assignments"},
+    )
+
+    assert LearningMaterial.objects.count() == 1
+
+    learning_material = LearningMaterial.objects.last()
+
+    assert learning_material.learning_resource.title == content_file.title
+    assert learning_material.learning_resource.url == content_file.url
+    assert learning_material.content_file.id == content_file.id

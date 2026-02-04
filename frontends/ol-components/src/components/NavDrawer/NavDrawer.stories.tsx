@@ -1,5 +1,5 @@
 import React, { MouseEvent } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { NavData, NavDrawer } from "./NavDrawer"
 import MuiButton from "@mui/material/Button"
 import styled from "@emotion/styled"
