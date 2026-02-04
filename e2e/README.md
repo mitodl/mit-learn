@@ -1,6 +1,13 @@
 # Playwright E2E Testing
 
-Playwright is set up for end-to-end testing of the MIT Learn frontend.
+Playwright is set up for end-to-end testing of the MIT Learn frontend. Tests are located in the `e2e/` directory and can be run inside the `watch` Docker container.
+
+We would like this to be able to run in several contexts:
+
+- Locally, against the Dockerized mit-learn services using synthetic data we populate by script.
+- Against the RC environment, using known good OR synthetic data we populate via script. Eventually, we'd like this to be an automated quality gate.
+
+With good test coverage running in these contexts, we can have more confidence that changes to the frontend won't break critical user flows, and by establishing and maintaining a synthetic dataset, we may also be able to formalize and automate getting representative data onto local machines to reduce the need for manual testcase setup.
 
 ## Setup
 
@@ -20,6 +27,8 @@ docker-compose up -d watch
 ```bash
 docker-compose up -d  # Start backend, nginx, and watch services
 ```
+
+You should also ensure that mitxonline is running locally for any pages which need API data.
 
 **Run tests:**
 
