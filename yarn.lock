@@ -17000,9 +17000,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
   dependencies:
+    "@playwright/test": "npm:^1.58.1"
     frontends: "workspace:^"
     type-fest: "npm:^5.4.3"
-    "@playwright/test": "npm:^1.58.1"
   languageName: unknown
   linkType: soft
 
