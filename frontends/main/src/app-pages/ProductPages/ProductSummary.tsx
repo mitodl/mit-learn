@@ -17,7 +17,6 @@ import type {
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
-import { LearningResource } from "api"
 import {
   canUpgradeRun,
   mitxonlineUrl,
@@ -194,26 +193,33 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   )
 }
 
+const SELF_PACED = "self_paced"
+const INSTRUCTOR_PACED = "instructor_paced"
+
 const PACE_DATA = {
-  instructor_paced: {
+  [INSTRUCTOR_PACED]: {
     label: "Instructor-Paced",
     description:
       "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
   },
-  self_paced: {
+  [SELF_PACED]: {
     label: "Self-Paced",
     description:
       "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
   },
 }
+
+const getCourseRunPacing = (run: CourseRunV2) => {
+  return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
+}
 const CoursePaceRow: React.FC<CourseInfoRowProps> = ({
   nextRun,
   ...others
 }) => {
-  const isSelfPaced = nextRun.is_self_paced || nextRun.is_archived
-  const pace = PACE_DATA[isSelfPaced ? "self_paced" : "instructor_paced"]
+  const paceCode = getCourseRunPacing(nextRun)
+  const pace = PACE_DATA[paceCode]
 
   return (
     <InfoRow {...others}>
@@ -514,26 +520,39 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
   )
 }
 
+const getProgramPacing = (
+  programCourses: CourseWithCourseRunsSerializerV2[],
+) => {
+  const programCourseRuns = programCourses
+    .map((c) => c.courseruns.find((cr) => cr.id === c.next_run_id))
+    .filter((cr) => cr !== undefined)
+
+  if (programCourseRuns.length === 0) return null
+  return programCourseRuns.every((cr) => getCourseRunPacing(cr) === SELF_PACED)
+    ? SELF_PACED
+    : INSTRUCTOR_PACED
+}
+
 const ProgramPaceRow: React.FC<
-  { programResource: LearningResource | null } & HTMLAttributes<HTMLDivElement>
-> = ({ programResource, ...others }) => {
-  const paces = (programResource?.pace ?? []).sort((a, _b) =>
-    // Put instructor-paced first if both exist
-    a.code === "instructor_paced" ? -1 : 1,
-  )
-  if (!paces?.length) return null
-  const pace = PACE_DATA[paces[0].code]
+  {
+    courses?: CourseWithCourseRunsSerializerV2[]
+  } & HTMLAttributes<HTMLDivElement>
+> = ({ courses, ...others }) => {
+  const paceCode = courses?.length ? getProgramPacing(courses) : null
+  const pace = paceCode ? PACE_DATA[paceCode] : null
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
-        <LearnMoreDialog
-          buttonText="What's this?"
-          href={pace.href}
-          description={pace.description}
-          title={`What are ${pace.label} courses?`}
-        />
+        <InfoLabelValue label="Course Format" value={pace?.label} />{" "}
+        {pace ? (
+          <LearnMoreDialog
+            buttonText="What's this?"
+            href={pace.href}
+            description={pace.description}
+            title={`What are ${pace.label} courses?`}
+          />
+        ) : null}
       </InfoRowInner>
     </InfoRow>
   )
@@ -610,9 +629,12 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
 
 const ProgramSummary: React.FC<{
   program: V2Program
-  programResource: LearningResource | null
+  /**
+   * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
+   */
+  courses?: CourseWithCourseRunsSerializerV2[]
   enrollButton?: React.ReactNode
-}> = ({ program, programResource, enrollButton }) => {
+}> = ({ program, courses, enrollButton }) => {
   return (
     <SidebarSummaryRoot aria-labelledby="program-summary">
       <VisuallyHidden>
@@ -628,10 +650,7 @@ const ProgramSummary: React.FC<{
           program={program}
           data-testid={TestIds.DurationRow}
         />
-        <ProgramPaceRow
-          programResource={programResource ?? null}
-          data-testid={TestIds.PaceRow}
-        />
+        <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
         <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
       </Stack>
     </SidebarSummaryRoot>

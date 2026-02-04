@@ -1,6 +1,6 @@
 import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
-import { factories as learnFactories, setMockResponse } from "api/test-utils"
+import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
@@ -12,7 +12,6 @@ const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
 const makeFlexiblePrice = factories.products.flexiblePrice
-const makeResource = learnFactories.learningResources.program
 const { RequirementTreeBuilder } = factories.requirements
 
 describe("CourseSummary", () => {
@@ -495,9 +494,7 @@ describe("Course Financial Assistance", () => {
 describe("ProgramSummary", () => {
   test("renders program summary", async () => {
     const program = factories.programs.program()
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     within(summary).getByRole("heading", { name: "Program summary" })
@@ -539,9 +536,7 @@ describe("Program RequirementsRow", () => {
       req_tree: requirements.serialize(),
     })
 
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
@@ -572,9 +567,7 @@ describe("Program RequirementsRow", () => {
       req_tree: requirements.serialize(),
     })
 
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
@@ -599,9 +592,7 @@ describe("Program Duration Row", () => {
         page: { length, effort },
       })
 
-      renderWithProviders(
-        <ProgramSummary program={program} programResource={null} />,
-      )
+      renderWithProviders(<ProgramSummary program={program} />)
       const summary = screen.getByRole("region", { name: "Program summary" })
 
       if (!length) {
@@ -615,42 +606,63 @@ describe("Program Duration Row", () => {
 })
 
 describe("Program Pacing Row", () => {
-  const SELF_PACED = { code: "self_paced", name: "Self-Paced" } as const
-  const INSTRUCTOR_PACED = {
-    code: "instructor_paced",
-    name: "Instructor-Paced",
-  } as const
+  const courses = {
+    selfPaced: makeCourse({
+      courseruns: [makeRun({ is_self_paced: true })],
+    }),
+    instructorPaced: makeCourse({
+      courseruns: [makeRun({ is_self_paced: false, is_archived: false })],
+    }),
+    archived: makeCourse({
+      // counts as self-paced.
+      courseruns: [makeRun({ is_self_paced: false, is_archived: true })],
+    }),
+    noRuns: makeCourse({
+      courseruns: [],
+    }),
+  }
+
   test.each([
-    { pace: [SELF_PACED], expected: "Self-Paced" },
-    { pace: [INSTRUCTOR_PACED], expected: "Instructor-Paced" },
-    { pace: [SELF_PACED, INSTRUCTOR_PACED], expected: "Instructor-Paced" },
-  ])("Shows correct pacing information", ({ pace, expected }) => {
+    { courses: [courses.selfPaced], expected: "Self-Paced" },
+    { courses: [courses.archived], expected: "Self-Paced" },
+    { courses: [courses.instructorPaced], expected: "Instructor-Paced" },
+    {
+      courses: [courses.selfPaced, courses.instructorPaced],
+      expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.instructorPaced],
+      expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.selfPaced],
+      expected: "Self-Paced",
+    },
+  ])("Shows correct pacing information", ({ courses, expected }) => {
     const program = factories.programs.program()
-    const resource = makeResource({ pace })
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={resource} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} courses={courses} />)
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
     expect(paceRow).toHaveTextContent(`Course Format: ${expected}`)
   })
 
   test.each([
-    { pace: [SELF_PACED], dialogName: /What are Self-Paced/ },
+    { courses: [courses.selfPaced], dialogName: /What are Self-Paced/ },
     {
-      pace: [INSTRUCTOR_PACED],
+      courses: [courses.instructorPaced],
       dialogName: /What are Instructor-Paced/,
     },
     {
-      pace: [SELF_PACED, INSTRUCTOR_PACED],
+      courses: [courses.selfPaced, courses.instructorPaced],
       dialogName: /What are Instructor-Paced/,
     },
-  ])("Renders expected dialog", async ({ pace, dialogName }) => {
+    {
+      courses: [courses.archived],
+      dialogName: /What are Self-Paced/,
+    },
+  ])("Renders expected dialog", async ({ courses, dialogName }) => {
     const program = factories.programs.program()
-    const resource = makeResource({ pace })
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={resource} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} courses={courses} />)
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
     const button = within(paceRow).getByRole("button", { name: "What's this?" })
@@ -668,9 +680,7 @@ describe("Program Pacing Row", () => {
 describe("Price & Certificate Row", () => {
   test("Shows 'Free to Learn'", () => {
     const program = factories.programs.program()
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const priceRow = within(summary).getByTestId(TestIds.PriceRow)
@@ -681,9 +691,7 @@ describe("Price & Certificate Row", () => {
   test("Renders certificate information", () => {
     const program = factories.programs.program()
     invariant(program.page.price)
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const certRow = within(summary).getByTestId(TestIds.PriceRow)
@@ -704,9 +712,7 @@ describe("Price & Certificate Row", () => {
       const program = factories.programs.program({
         page: { financial_assistance_form_url: financialAidUrl },
       })
-      renderWithProviders(
-        <ProgramSummary program={program} programResource={null} />,
-      )
+      renderWithProviders(<ProgramSummary program={program} />)
 
       const summary = screen.getByRole("region", { name: "Program summary" })
       const priceRow = within(summary).getByTestId(TestIds.PriceRow)

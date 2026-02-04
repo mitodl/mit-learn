@@ -125,7 +125,9 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     )
   const nextRunId = has(overrides, "next_run_id")
     ? (overrides.next_run_id ?? null)
-    : faker.helpers.arrayElement(runs).id
+    : runs.length > 0
+      ? faker.helpers.arrayElement(runs).id
+      : null
   const defaults: CourseWithCourseRunsSerializerV2 = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
