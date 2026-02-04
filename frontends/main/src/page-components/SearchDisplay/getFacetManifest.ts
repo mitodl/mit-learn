@@ -24,7 +24,7 @@ export const getFacetManifest = (
       ],
     },
     {
-      name: "resource_type",
+      name: "learning_material_content_category",
       title: "Resource Type",
       type: "static",
       expandedOnLoad: true,

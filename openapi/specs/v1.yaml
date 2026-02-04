@@ -4276,6 +4276,14 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
+        name: learning_material_content_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The content category for learning materials.
+      - in: query
         name: level
         schema:
           type: array
@@ -4785,6 +4793,14 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
+      - in: query
+        name: learning_material_content_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The content category for learning materials.
       - in: query
         name: level
         schema:
@@ -5321,6 +5337,14 @@ paths:
             type: integer
         description: The id value for the learning resource
       - in: query
+        name: learning_material_content_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The content category for learning materials.
+      - in: query
         name: level
         schema:
           type: array
@@ -5846,6 +5870,14 @@ paths:
           items:
             type: integer
         description: The id value for the learning resource
+      - in: query
+        name: learning_material_content_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The content category for learning materials.
       - in: query
         name: level
         schema:
@@ -14032,6 +14064,12 @@ components:
             type: string
             minLength: 1
           description: The course feature. Possible options are at api/v1/course_features/
+        learning_material_content_category:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: The content category for learning materials.
         aggregations:
           type: array
           items:

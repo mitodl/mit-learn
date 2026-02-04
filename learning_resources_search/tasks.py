@@ -630,9 +630,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                     index_types=IndexestoUpdate.reindexing_index.value,
                 )
                 for ids in chunks(
-                    LearningResource.objects.filter(
-                        published=True, learning_material__isnull=True
-                    )
+                    LearningResource.objects.filter(published=True)
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                     .values_list("id", flat=True),

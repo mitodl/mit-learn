@@ -78,12 +78,13 @@ UPDATE_CONFLICT_SETTING = "proceed"
 class FilterConfig:
     path: str
     case_sensitive: bool = False
+    nested: bool = False
 
 
 SEARCH_FILTERS = {
     "resource_type": FilterConfig("resource_type"),
     "certification": FilterConfig("certification"),
-    "certification_type": FilterConfig("certification_type.code"),
+    "certification_type": FilterConfig("certification_type.code", nested=True),
     "professional": FilterConfig("professional"),
     "free": FilterConfig("free"),
     "id": FilterConfig("id", case_sensitive=True),
@@ -91,14 +92,17 @@ SEARCH_FILTERS = {
     "content_feature_type": FilterConfig("content_feature_type"),
     "run_id": FilterConfig("run_id", case_sensitive=True),
     "resource_id": FilterConfig("resource_id", case_sensitive=True),
-    "topic": FilterConfig("topics.name"),
+    "topic": FilterConfig("topics.name", nested=True),
     "ocw_topic": FilterConfig("ocw_topics"),
-    "level": FilterConfig("runs.level.code"),
-    "department": FilterConfig("departments.department_id"),
-    "platform": FilterConfig("platform.code"),
-    "offered_by": FilterConfig("offered_by.code"),
-    "delivery": FilterConfig("delivery.code"),
+    "level": FilterConfig("runs.level.code", nested=True),
+    "department": FilterConfig("departments.department_id", nested=True),
+    "platform": FilterConfig("platform.code", nested=True),
+    "offered_by": FilterConfig("offered_by.code", nested=True),
+    "delivery": FilterConfig("delivery.code", nested=True),
     "resource_category": FilterConfig("resource_category"),
+    "learning_material_content_category": FilterConfig(
+        "learning_material.content_category", nested=False
+    ),
 }
 
 SEARCH_NESTED_FILTERS = {

@@ -460,7 +460,7 @@ def generate_suggest_clause(text):
 
 
 def generate_aggregation_clause(
-    aggregation_name: str, path: str, _current_path_length=1
+    aggregation_name: str, path: str, nested: bool, _current_path_length=1
 ):
     """
     Generate a search aggregation clause for a search query.
@@ -468,17 +468,16 @@ def generate_aggregation_clause(
     Args:
         aggregation_name (str): name of aggregation
         path (str): Search index on which to aggregate
+        nested (bool): Whether the field is nested or not
 
     Returns:
         An OpenSearch query clause for use in aggregation.
 
-    NOTE: Properties with periods are assumed to be nested. E.g., path='a.b.c'
-    will generate a doubly-nested query clause.
     """
     path_pieces = path.split(".")
     current_path = ".".join(path_pieces[0:_current_path_length])
 
-    if current_path == path:
+    if current_path == path or not nested:
         bucket_agg = {"terms": {"field": path, "size": 10000}}
         if _current_path_length == 1:
             return bucket_agg
@@ -496,7 +495,7 @@ def generate_aggregation_clause(
         "nested": {"path": current_path},
         "aggs": {
             aggregation_name: generate_aggregation_clause(
-                aggregation_name, path, _current_path_length + 1
+                aggregation_name, path, nested, _current_path_length + 1
             )
         },
     }
@@ -518,7 +517,8 @@ def generate_aggregation_clauses(search_params, filter_clauses):
             # Each aggregation clause contains a filter which includes all the filters
             # except it's own
             path = SEARCH_FILTERS[aggregation].path
-            unfiltered_aggs = generate_aggregation_clause(aggregation, path)
+            nested = SEARCH_FILTERS[aggregation].nested
+            unfiltered_aggs = generate_aggregation_clause(aggregation, path, nested)
             other_filters = [
                 filter_clauses[key] for key in filter_clauses if key != aggregation
             ]
