@@ -3,7 +3,7 @@ import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
 import { screen, renderWithProviders, user } from "@/test-utils"
 import CertificatePage, { CertificateType } from "./CertificatePage"
-import SharePopover from "./SharePopover"
+import SharePopover from "@/components/SharePopover/SharePopover"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
   FACEBOOK_SHARE_BASE_URL,

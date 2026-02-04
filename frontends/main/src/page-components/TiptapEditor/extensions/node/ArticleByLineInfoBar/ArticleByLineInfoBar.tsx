@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState, useRef } from "react"
 import { NodeViewWrapper } from "@tiptap/react"
 import type { ReactNodeViewProps } from "@tiptap/react"
 import styled from "@emotion/styled"
@@ -9,6 +9,9 @@ import type { JSONContent } from "@tiptap/core"
 import { useUserMe } from "api/hooks/user"
 import { useArticle } from "../../../ArticleContext"
 import { calculateReadTime } from "../../utils"
+import SharePopover from "@/components/SharePopover/SharePopover"
+
+const { NEXT_PUBLIC_ORIGIN } = process.env
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
@@ -72,10 +75,22 @@ export const ArticleByLineInfoBarContent = ({
   content,
   isEditable = false,
 }: ArticleByLineInfoBarContentProps) => {
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareButtonRef = useRef<HTMLDivElement>(null)
+
+  const article = useArticle()
+
   const readTime = calculateReadTime(content)
 
   return (
     <StyledWrapper>
+      <SharePopover
+        open={shareOpen}
+        title={article?.title ?? ""}
+        anchorEl={shareButtonRef.current}
+        onClose={() => setShareOpen(false)}
+        pageUrl={`${NEXT_PUBLIC_ORIGIN}/articles/${article?.slug}`}
+      />
       <InnerContainer noAuthor={!author}>
         {author && (
           <InfoContainer>
@@ -101,14 +116,17 @@ export const ArticleByLineInfoBarContent = ({
             </InfoText>
           </InfoContainer>
         )}
-        <ActionButton
-          size="small"
-          variant="bordered"
-          edge="circular"
-          aria-label="Share this article"
-        >
-          <RiShareFill />
-        </ActionButton>
+        <div ref={shareButtonRef}>
+          <ActionButton
+            size="small"
+            variant="bordered"
+            edge="circular"
+            aria-label="Share this article"
+            onClick={() => setShareOpen(true)}
+          >
+            <RiShareFill />
+          </ActionButton>
+        </div>
       </InnerContainer>
     </StyledWrapper>
   )
