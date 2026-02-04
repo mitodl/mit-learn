@@ -304,6 +304,29 @@ describe.each([
     },
   )
 
+  test("Courseware CTA is disabled when no enrollable runs exist", () => {
+    setupUserApis()
+    const course = dashboardCourse({
+      courseruns: [
+        mitxonline.factories.courses.courseRun({
+          is_enrollable: false,
+        }),
+      ],
+    })
+
+    renderWithProviders(
+      <DashboardCard
+        titleAction="marketing"
+        resource={{ type: DashboardType.Course, data: course }}
+      />,
+    )
+
+    const card = getCard()
+    const coursewareCTA = within(card).getByTestId("courseware-button")
+
+    expect(coursewareCTA).toBeDisabled()
+  })
+
   test.each([
     {
       createCourse: pastDashboardCourse,
