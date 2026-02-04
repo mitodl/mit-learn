@@ -38,6 +38,5 @@ test.describe("Smoke Test - Program Page B2C", () => {
     // Certificate Track label only exists if there's a price afaict
     // Should we have a stronger assertion? The value comes from the CMS, so it can change underneath us.
     await expect(page.getByText("Certificate Track")).toBeVisible()
-    await expect(page.getByText("arlvkjwarnvl")).toBeVisible()
   })
 })

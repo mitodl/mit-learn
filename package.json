@@ -37,6 +37,7 @@
     "@types/react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "frontends": "workspace:^",
     "type-fest": "^5.4.3"
   }
