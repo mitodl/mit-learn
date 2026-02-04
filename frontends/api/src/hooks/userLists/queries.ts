@@ -5,7 +5,6 @@ import type {
   PaginatedUserListRelationshipList,
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
-import { clearListMemberships } from "../learningResources/queries"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 
 const userlistKeys = {
@@ -52,7 +51,6 @@ const userlistQueries = {
           ...data,
           results: data.results.map((relation) => ({
             ...relation,
-            resource: clearListMemberships(relation.resource),
           })),
         }
       },
