@@ -232,7 +232,7 @@ type CoursewareButtonProps = {
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
   href?: string | null
-  hasEnrollableRuns?: boolean
+  disabled?: boolean
   className?: string
   noun: string
   isProgram?: boolean
@@ -276,7 +276,7 @@ const CoursewareButton = styled(
     endDate,
     enrollmentStatus,
     href,
-    hasEnrollableRuns = true,
+    disabled,
     className,
     noun,
     isProgram,
@@ -317,7 +317,7 @@ const CoursewareButton = styled(
           variant="primary"
           className={className}
           onClick={onClick}
-          disabled={!hasEnrollableRuns}
+          disabled={disabled}
           {...others}
         >
           {coursewareText.text}
@@ -332,10 +332,7 @@ const CoursewareButton = styled(
           variant="primary"
           className={className}
           disabled={
-            oneClickEnroll.isPending ||
-            !coursewareId ||
-            !readableId ||
-            !hasEnrollableRuns
+            oneClickEnroll.isPending || !coursewareId || !readableId || disabled
           }
           onClick={
             onClick ??
@@ -648,6 +645,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const hasEnrollableRuns = resourceIsCourse
     ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
     : true
+  const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
 
   // Title link logic
   const titleHref = isAnyCourse
@@ -770,7 +768,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         noun={displayNoun}
         isProgram={false}
         b2bContractId={b2bContractId}
-        hasEnrollableRuns={hasEnrollableRuns}
+        disabled={disableEnrollment}
         onClick={coursewareButtonClick}
       />
     </>
