@@ -19,7 +19,7 @@ const learningResourceInputConfig: ExtendedNodeConfig = {
 
   getPlaceholders: (childNode: ProseMirrorNode) => {
     if (childNode.type.name === "paragraph") {
-      return "Paste course url here"
+      return "Paste course URL here"
     }
     return null
   },

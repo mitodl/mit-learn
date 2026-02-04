@@ -19,7 +19,7 @@ const mediaEmbedInputConfig: ExtendedNodeConfig = {
 
   getPlaceholders: (childNode: ProseMirrorNode) => {
     if (childNode.type.name === "paragraph") {
-      return "Paste media url here"
+      return "Paste media URL here"
     }
     return null
   },
