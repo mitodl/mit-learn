@@ -1,6 +1,23 @@
+import os
 import random
 
-from locust import HttpUser, TaskSet, between, constant, tag, task
+from locust import HttpUser, TaskSet, between, constant, events, tag, task
+
+
+@events.init_command_line_parser.add_listener
+def add_custom_options(parser):
+    parser.add_argument(
+        "--consistent-queries",
+        action="store_true",
+        default=False,
+        help="Use consistent query parameters (no random pagination) for cache testing",
+    )
+    parser.add_argument(
+        "--session-id",
+        type=str,
+        default=None,
+        help="Session ID for authenticated requests.",
+    )
 
 
 class Site(TaskSet):
@@ -92,7 +109,9 @@ class SearchPage(TaskSet):
         }
 
     def _walk_pages(self):
-        """Return a random range of page numbers"""
+        """Return a range of page numbers (consistent or random based on option)"""
+        if self.user.environment.parsed_options.consistent_queries:
+            return range(1)  # Just page 0
         return range(random.randint(1, 10))  # noqa: S311
 
     @tag("search")
@@ -169,3 +188,29 @@ class LearnUser(HttpUser):
 
 class AnonymousUser(LearnUser):
     """Anonymous user"""
+
+
+class AuthenticatedUser(LearnUser):
+    """
+    Authenticated user that uses a session cookie.
+
+    Log in as the user you want to test with in a browser.
+    Then copy the session cookie value and paste into the UI
+    under the "Custom Parameters" section for "Session ID"
+
+    From the command line, run locust with the session:
+        locust --session-id="<session_key>" -u 10 -r 1 --tags search
+
+    Requires DISABLE_APISIX_USER_MIDDLEWARE=True in your backend env.
+    """
+
+    def on_start(self):
+        """Set up session cookie for authenticated requests."""
+        session_id = self.environment.parsed_options.session_id
+        if session_id:
+            # Get cookie name from env or use default
+            cookie_name = os.environ.get("SESSION_COOKIE_NAME", "sessionid")
+            self.client.cookies.set(cookie_name, session_id)
+        else:
+            msg = "AuthenticatedUser requires --session-id argument"
+            raise ValueError(msg)

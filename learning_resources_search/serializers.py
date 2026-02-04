@@ -16,12 +16,10 @@ from rest_framework.utils.urls import replace_query_param
 
 from learning_resources.constants import (
     DEPARTMENTS,
-    GROUP_STAFF_LISTS_EDITORS,
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
     RESOURCE_CATEGORY_VALUES,
     CertificationType,
     LearningResourceDelivery,
-    LearningResourceRelationTypes,
     LearningResourceType,
     LevelType,
     OfferedBy,
@@ -32,14 +30,11 @@ from learning_resources.models import (
     Course,
     LearningResource,
     LearningResourceRelationship,
-    UserListRelationship,
 )
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseNumberSerializer,
     LearningResourceSerializer,
-    MicroLearningPathRelationshipSerializer,
-    MicroUserListRelationshipSerializer,
 )
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
@@ -654,67 +649,9 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     search
     """
 
-    def update_path_parents(self, hits):
-        """Fill in learning_path_parents for path editors"""
-
-        request = self.context.get("request")
-        if request and request.user and request.user.is_authenticated:
-            learning_path_parents_dict = {}
-            hit_ids = [hit.get("_id") for hit in hits]
-
-            # Get learning path parents for all returned resources
-            learning_path_parents = LearningResourceRelationship.objects.filter(
-                child__id__in=hit_ids,
-                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
-            ).values("id", "child_id", "parent_id")
-            for parent in learning_path_parents:
-                learning_path_parents_dict.setdefault(
-                    str(parent["child_id"]), []
-                ).append(parent)
-
-            for hit in hits:
-                if hit["_id"] in learning_path_parents_dict:
-                    hit["_source"]["learning_path_parents"] = (
-                        MicroLearningPathRelationshipSerializer(
-                            instance=learning_path_parents_dict[hit["_id"]], many=True
-                        ).data
-                    )
-
-    def update_list_parents(self, hits, user):
-        """Fill in user_list_parents for users"""
-        user_list_parents_dict = {}
-        hit_ids = [hit.get("_id") for hit in hits]
-
-        # Get user_list_parents for all returned resources
-        user_list_parents = UserListRelationship.objects.filter(
-            parent__author=user, child_id__in=hit_ids
-        ).values("id", "child_id", "parent_id")
-        for parent in user_list_parents:
-            user_list_parents_dict.setdefault(str(parent["child_id"]), []).append(
-                parent
-            )
-
-        for hit in hits:
-            if hit["_id"] in user_list_parents_dict:
-                hit["_source"]["user_list_parents"] = (
-                    MicroUserListRelationshipSerializer(
-                        instance=user_list_parents_dict[hit["_id"]], many=True
-                    ).data
-                )
-
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
-        request = self.context.get("request")
-        if request and request.user and request.user.is_authenticated:
-            self.update_list_parents(hits, request.user)
-            if (
-                request.user.is_staff
-                or request.user.is_superuser
-                or request.user.groups.filter(name=GROUP_STAFF_LISTS_EDITORS).first()
-                is not None
-            ):
-                self.update_path_parents(hits)
         return (hit.get("_source") for hit in hits)
 
 

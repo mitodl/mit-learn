@@ -16,6 +16,7 @@ from django.conf import settings
 from django.core.cache import caches
 from django.views.decorators.cache import cache_page
 from nh3 import nh3
+from rest_framework.response import Response
 
 from main.constants import ALLOWED_HTML_ATTRIBUTES, ALLOWED_HTML_TAGS
 
@@ -23,6 +24,72 @@ log = logging.getLogger(__name__)
 
 # This is the Django ImageField max path size
 IMAGE_PATH_MAX_LENGTH = 100
+
+
+def _sorted_query_string(query_dict):
+    """Build a sorted query string for consistent cache keys."""
+    items = []
+    for key in sorted(query_dict.keys()):
+        # Sort values within each key for consistent cache keys
+        # (topic=a&topic=b and topic=b&topic=a should match)
+        items.extend(f"{key}={value}" for value in sorted(query_dict.getlist(key)))
+    return "&".join(items)
+
+
+def _cache_page_ignoring_cookies(
+    timeout, cache="default", key_prefix="", *, only_anonymous=False
+):
+    """
+    Build cache key from URL path + query params only, so users share the same
+    cached response regardless of session/auth state.
+
+    Unlike Django's cache_page which respects Vary headers (including Cookie),
+    this decorator creates a consistent cache key regardless of session/auth state.
+
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+        only_anonymous: If True, only cache for anonymous users; authenticated
+            users bypass the cache entirely.
+    """
+
+    def inner_decorator(func):
+        @wraps(func)
+        def inner_function(request, *args, **kwargs):
+            # Skip caching entirely if timeout is 0 or negative
+            if timeout <= 0:
+                return func(request, *args, **kwargs)
+
+            # Skip caching for authenticated users if only_anonymous is set
+            if only_anonymous and request.user.is_authenticated:
+                return func(request, *args, **kwargs)
+
+            # Build cache key from path + sorted query string (ignore cookies)
+            query_string = _sorted_query_string(request.GET)
+            raw_key = f"{key_prefix}:{request.path}:{query_string}"
+            url_hash = md5(raw_key.encode()).hexdigest()  # noqa: S324
+            cache_key = f"views.decorators.cache.cache_page.{key_prefix}.GET.{url_hash}"
+
+            cache_backend = caches[cache]
+
+            # Try to get from cache
+            cached_data = cache_backend.get(cache_key)
+            if cached_data is not None:
+                return Response(cached_data)
+
+            # Execute view
+            response = func(request, *args, **kwargs)
+
+            # Only cache successful responses
+            if response.status_code == 200:  # noqa: PLR2004
+                cache_backend.set(cache_key, response.data, timeout)
+
+            return response
+
+        return inner_function
+
+    return inner_decorator
 
 
 def call_fastly_purge_api(relative_url):
@@ -66,22 +133,25 @@ def call_fastly_purge_api(relative_url):
         return resp.json()
 
 
-def cache_page_for_anonymous_users(*cache_args, **cache_kwargs):
-    def inner_decorator(func):
-        @wraps(func)
-        def inner_function(request, *args, **kwargs):
-            if not request.user.is_authenticated:
-                return cache_page(*cache_args, **cache_kwargs)(func)(
-                    request, *args, **kwargs
-                )
-            return func(request, *args, **kwargs)
+def cache_page_for_anonymous_users(timeout, cache="default", key_prefix=""):
+    """
+    Cache decorator for anonymous users only, ignoring Vary headers.
 
-        return inner_function
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+    """
+    return _cache_page_ignoring_cookies(
+        timeout, cache=cache, key_prefix=key_prefix, only_anonymous=True
+    )
 
-    return inner_decorator
 
+def cache_page_per_user(*cache_args, **cache_kwargs):
+    """
+    Create a cache per page and user/session
+    """
 
-def cache_page_for_all_users(*cache_args, **cache_kwargs):
     def inner_decorator(func):
         @wraps(func)
         def inner_function(request, *args, **kwargs):
@@ -92,6 +162,26 @@ def cache_page_for_all_users(*cache_args, **cache_kwargs):
         return inner_function
 
     return inner_decorator
+
+
+def cache_page_for_all_users(timeout, cache="default", key_prefix=""):
+    """
+    Cache decorator that ignores authentication and Vary headers.
+
+    Builds cache key from URL path + query params only, so all users
+    (anonymous or authenticated) share the same cached response.
+
+    Unlike Django's cache_page which respects Vary headers (including Cookie),
+    this decorator creates a consistent cache key regardless of session/auth state.
+
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+    """
+    return _cache_page_ignoring_cookies(
+        timeout, cache=cache, key_prefix=key_prefix, only_anonymous=False
+    )
 
 
 class FeatureFlag(Flag):

@@ -339,6 +339,12 @@ def generate_learning_resources_text_clause(
                         },
                     }
                 },
+            ]
+        }
+        # Only include has_child query if content_file_score_weight > 0
+        # (None means use default/unweighted, 0 means explicitly disabled)
+        if content_file_score_weight is None or content_file_score_weight:
+            text_query["should"].append(
                 {
                     "has_child": {
                         "type": "content_file",
@@ -351,9 +357,8 @@ def generate_learning_resources_text_clause(
                         },
                         "score_mode": "avg",
                     }
-                },
-            ]
-        }
+                }
+            )
     else:
         text_query = {}
 
@@ -722,7 +727,12 @@ def construct_search(search_params):  # noqa: C901
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    if not use_hybrid_search:
+    if (
+        search_params.get("q")
+        and not search_params.get("sortby")
+        and not use_hybrid_search
+    ):
+        # Only use DFS for keyword search, sorting by relevance (no explicit sort)
         search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))

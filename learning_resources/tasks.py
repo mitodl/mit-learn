@@ -618,7 +618,7 @@ def scrape_marketing_pages(self):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_RATE_LIMIT,
 )
 def marketing_page_for_resources(resource_ids):
     for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
