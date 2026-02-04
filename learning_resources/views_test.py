@@ -239,7 +239,6 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-
     with django_assert_num_queries(22):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
