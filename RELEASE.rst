@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.3
+Version 0.53.3 (Released February 04, 2026)
 --------------
 
 - fix: make course run selection more stringent (#2913)
