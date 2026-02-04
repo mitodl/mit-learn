@@ -35,8 +35,6 @@ export const clearListMemberships = (
   resource: LearningResource,
 ): LearningResource => ({
   ...resource,
-  user_list_parents: [],
-  learning_path_parents: [],
 })
 
 const learningResourceKeys = {
