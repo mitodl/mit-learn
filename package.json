@@ -26,5 +26,9 @@
   "resolutions": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "frontends": "workspace:^",
+    "type-fest": "^5.4.3"
   }
 }

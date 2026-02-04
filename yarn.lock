@@ -12825,7 +12825,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"frontends@workspace:frontends":
+"frontends@workspace:^, frontends@workspace:frontends":
   version: 0.0.0-use.local
   resolution: "frontends@workspace:frontends"
   dependencies:
@@ -16962,6 +16962,9 @@ __metadata:
 "mit-learn@workspace:.":
   version: 0.0.0-use.local
   resolution: "mit-learn@workspace:."
+  dependencies:
+    frontends: "workspace:^"
+    type-fest: "npm:^5.4.3"
   languageName: unknown
   linkType: soft
 
@@ -21404,6 +21407,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tagged-tag@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "tagged-tag@npm:1.0.0"
+  checksum: 10/e37653df3e495daa7ea7790cb161b810b00075bba2e4d6c93fb06a709e747e3ae9da11a120d0489833203926511b39e038a2affbd9d279cfb7a2f3fcccd30b5d
+  languageName: node
+  linkType: hard
+
 "tapable@npm:^2.0.0, tapable@npm:^2.1.1, tapable@npm:^2.2.0, tapable@npm:^2.2.1":
   version: 2.2.1
   resolution: "tapable@npm:2.2.1"
@@ -21931,6 +21941,15 @@ __metadata:
   version: 3.13.1
   resolution: "type-fest@npm:3.13.1"
   checksum: 10/9a8a2359ada34c9b3affcaf3a8f73ee14c52779e89950db337ce66fb74c3399776c697c99f2532e9b16e10e61cfdba3b1c19daffb93b338b742f0acd0117ce12
+  languageName: node
+  linkType: hard
+
+"type-fest@npm:^5.4.3":
+  version: 5.4.3
+  resolution: "type-fest@npm:5.4.3"
+  dependencies:
+    tagged-tag: "npm:^1.0.0"
+  checksum: 10/2e09e5fe3ce29eefa85b29911aed570b12567559a8c091b6f898877d94ce0ad1c7031fdd0d05808358354bfdfed203e9792ad341db639df689ad28c1431d0bef
   languageName: node
   linkType: hard
 
