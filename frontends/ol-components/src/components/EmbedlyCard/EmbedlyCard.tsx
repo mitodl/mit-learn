@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef } from "react"
 import styled from "@emotion/styled"
 import isURL from "validator/lib/isURL"
 import {
@@ -54,12 +54,12 @@ const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
   url,
   aspectRatio,
 }) => {
-  const [container, setContainer] = useState<HTMLElement | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null)
 
   const renderCard = useCallback((div: HTMLElement | null) => {
     if (!div) return
     div.addEventListener(EmbedlyEventTypes.CardCreated, insertCardStylesheet)
-    setContainer(div)
+    containerRef.current = div
   }, [])
 
   useEffect(() => {
@@ -79,8 +79,8 @@ const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
      * to integrate with React: When the URL changes, we need to manually remove
      * the IFrame and insert a new anchor, which Embedly can then manipulate.
      */
-    if (!container) return
-    container.innerHTML = ""
+    if (!containerRef.current) return
+    containerRef.current.innerHTML = ""
     if (!isURL(url)) return
     const a = document.createElement("a")
     a.dataset.cardChrome = "0"
@@ -89,8 +89,8 @@ const EmbedlyCard: React.FC<EmbedlyCardProps> = ({
     a.href = url
     a.classList.add("embedly-card")
     a.dataset["testid"] = "embedly-card"
-    container.appendChild(a)
-  }, [container, url])
+    containerRef.current.appendChild(a)
+  }, [url])
 
   return (
     <Container

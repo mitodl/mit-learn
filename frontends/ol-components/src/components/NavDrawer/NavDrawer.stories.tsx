@@ -6,6 +6,11 @@ import styled from "@emotion/styled"
 import { RiPencilRulerLine } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 
+const StyledButton = styled(MuiButton)({
+  position: "absolute",
+  right: "20px",
+})
+
 const NavDrawerDemo = () => {
   const [open, setOpen] = useToggle(false)
 
@@ -43,11 +48,6 @@ const NavDrawerDemo = () => {
       },
     ],
   }
-
-  const StyledButton = styled(MuiButton)({
-    position: "absolute",
-    right: "20px",
-  })
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react"
+import React, { useCallback, useEffect, useRef } from "react"
 import type { LearningResource } from "api"
 import {
   SortableItem,
@@ -56,7 +56,10 @@ const ItemsListingSortable: React.FC<{
   const moveLearningPathListItem = useLearningPathListItemMove()
   const moveUserListListItem = useUserListListItemMove()
 
-  const [sorted, setSorted] = React.useState<LearningResourceListItem[]>([])
+  const prevItemsRef = useRef<LearningResourceListItem[] | undefined>(undefined)
+  const [sorted, setSorted] = React.useState<LearningResourceListItem[]>(
+    () => items,
+  )
 
   const ListCardComponent = condensed
     ? LearningResourceListCardCondensed
@@ -69,7 +72,15 @@ const ItemsListingSortable: React.FC<{
    *  - `items` is the source of truth (most likely, this is coming from an API)
    *    so sync `items` -> `sorted` when `items` changes.
    */
-  useEffect(() => setSorted(items), [items])
+  useEffect(() => {
+    if (prevItemsRef.current !== items) {
+      prevItemsRef.current = items
+      // Defer setState to avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setSorted(items)
+      })
+    }
+  }, [items])
 
   const renderDragging: RenderActive = useCallback(
     (active) => {

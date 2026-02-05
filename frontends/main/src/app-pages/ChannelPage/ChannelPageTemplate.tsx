@@ -72,23 +72,18 @@ const ChannelPageTemplate: React.FC<ChannelSkeletonProps> = ({
   channelType,
   name,
 }) => {
-  const getChannelTemplate = (channelType: string) => {
-    switch (channelType) {
-      case ChannelTypeEnum.Unit:
-        return UnitChannelTemplate
-      case ChannelTypeEnum.Topic:
-        return TopicChannelTemplate
-      default:
-        return DefaultChannelTemplate
-    }
+  switch (channelType) {
+    case ChannelTypeEnum.Unit:
+      return <UnitChannelTemplate name={name}>{children}</UnitChannelTemplate>
+    case ChannelTypeEnum.Topic:
+      return <TopicChannelTemplate name={name}>{children}</TopicChannelTemplate>
+    default:
+      return (
+        <DefaultChannelTemplate name={name} channelType={channelType}>
+          {children}
+        </DefaultChannelTemplate>
+      )
   }
-  const ChannelTemplate = getChannelTemplate(channelType)
-
-  return (
-    <ChannelTemplate name={name} channelType={channelType}>
-      {children}
-    </ChannelTemplate>
-  )
 }
 
 export {

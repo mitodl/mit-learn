@@ -46,7 +46,7 @@ const DescriptionExpanded = styled(Description)({
 
 const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
   const firstRender = useRef(true)
-  const clampedOnFirstRender = useRef(false)
+  const [clampedOnFirstRender, setClampedOnFirstRender] = useState(false)
   const [isClamped, setClamped] = useState(false)
   const [isExpanded, setExpanded] = useState(false)
   const descriptionRendered = useCallback((node: HTMLDivElement) => {
@@ -55,7 +55,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
       setClamped(clamped)
       if (firstRender.current) {
         firstRender.current = false
-        clampedOnFirstRender.current = clamped
+        setClampedOnFirstRender(clamped)
         return
       }
     }
@@ -87,7 +87,7 @@ const ResourceDescription = ({ resource }: { resource?: LearningResource }) => {
         dangerouslySetInnerHTML={{ __html: resource.description || "" }}
         lang={getResourceLanguage(resource)}
       />
-      {(isClamped || clampedOnFirstRender.current) && (
+      {(isClamped || clampedOnFirstRender) && (
         <Link
           scroll={false}
           color="red"

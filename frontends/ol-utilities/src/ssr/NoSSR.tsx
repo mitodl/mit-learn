@@ -11,7 +11,9 @@ export const NoSSR: React.FC<NoSSRProps> = ({ children, onSSR = null }) => {
   const [isClient, setClient] = useState(false)
 
   useEffect(() => {
-    setClient(true)
+    queueMicrotask(() => {
+      setClient(true)
+    })
   }, [])
 
   return isClient ? children : onSSR
