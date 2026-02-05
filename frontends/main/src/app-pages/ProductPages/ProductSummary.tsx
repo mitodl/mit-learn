@@ -144,7 +144,7 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
                 setExpanded((current) => !current)
               }}
             >
-              {expanded ? "Fewer Dates" : "More Dates"}
+              {expanded ? "Show Less" : "More Dates"}
             </UnderlinedLink>
           </InfoRowInner>
         ) : null}
@@ -508,14 +508,16 @@ const CourseSummary: React.FC<{
         <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        {enrollButton}
-        {!nextRun ? (
-          <Alert severity="warning">
-            No sessions of this course are currently open for enrollment. More
-            sessions may be added in the future.
-          </Alert>
-        ) : null}
-        {nextRun?.is_archived ? <ArchivedAlert /> : null}
+        <Stack gap="8px">
+          {enrollButton}
+          {!nextRun ? (
+            <Alert severity="warning">
+              No sessions of this course are currently open for enrollment. More
+              sessions may be added in the future.
+            </Alert>
+          ) : null}
+          {nextRun?.is_archived ? <ArchivedAlert /> : null}
+        </Stack>
         {nextRun ? (
           <CourseDatesRow
             course={course}

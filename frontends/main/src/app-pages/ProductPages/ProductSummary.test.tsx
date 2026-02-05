@@ -231,7 +231,7 @@ describe("Course Dates Row", () => {
     expect(moreDatesButton).toBeInTheDocument()
   })
 
-  test("Clicking 'More Dates' expands to show all enrollable dates, clicking 'Fewer Dates' collapses back", async () => {
+  test("Clicking 'More Dates' expands to show all enrollable dates, clicking 'Show Less' collapses back", async () => {
     const run1 = makeRun({
       is_enrollable: true,
       start_date: "2026-03-01",
@@ -277,13 +277,13 @@ describe("Course Dates Row", () => {
     expect(datesRow).toHaveTextContent(formatDate(run2.start_date))
     expect(datesRow).toHaveTextContent(formatDate(run3.start_date))
 
-    // Button text should change to "Fewer Dates"
+    // Button text should change to "Show Less"
     const fewerDatesButton = within(datesRow).getByRole("button", {
-      name: "Fewer Dates",
+      name: "Show Less",
     })
     expect(fewerDatesButton).toBeInTheDocument()
 
-    // Click "Fewer Dates" to collapse
+    // Click "Show Less" to collapse
     await user.click(fewerDatesButton)
 
     // Should be back to showing only the next_run date
