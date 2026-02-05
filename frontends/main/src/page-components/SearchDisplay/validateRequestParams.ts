@@ -21,6 +21,8 @@ const validateRequestParams = (
 ): LearningResourcesSearchRetrieveRequest => {
   return Object.entries(resourceSearchValidators).reduce(
     (acc, [key, validator]) => {
+      console.log("Validating key:", key)
+      console.log(validator)
       const paramKey = key as keyof LearningResourcesSearchRetrieveRequest
 
       if (searchParams[paramKey]) {

@@ -3309,11 +3309,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "@mitodl/course-search-utils@npm:3.5.0"
+"@mitodl/course-search-utils@https://github.com/mitodl/course-search-utils.git#b8bf7202bb812360bc49a71714559f01c7d8ad6a":
+  version: 3.4.1
+  resolution: "@mitodl/course-search-utils@https://github.com/mitodl/course-search-utils.git#commit=b8bf7202bb812360bc49a71714559f01c7d8ad6a"
   dependencies:
-    "@mitodl/mit-learn-api-axios": "npm:2025.10.28"
+    "@mitodl/open-api-axios": "npm:2024.9.16"
     "@remixicon/react": "npm:^4.2.0"
     axios: "npm:^1.6.7"
     fuse.js: "npm:^7.0.0"
@@ -3331,17 +3331,7 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/f7b31dc385bc9220b54ec580f21c9a7c90c5a4e69ee86617642f8934bdd79bfd1f2bac4dfdbeadd7edf71c768e67fd5b3af0cd526fdaaacbcfb13eec9a4f7afb
-  languageName: node
-  linkType: hard
-
-"@mitodl/mit-learn-api-axios@npm:2025.10.28":
-  version: 2025.10.28
-  resolution: "@mitodl/mit-learn-api-axios@npm:2025.10.28"
-  dependencies:
-    "@types/node": "npm:^22.0.0"
-    axios: "npm:^1.6.5"
-  checksum: 10/0832d24ab89078c315dc01ce40a3350752dee76a1a26649807c846858365e13834dc2ba76c8f4324667f5982690675445ad7c1b44e9d847bccfd7290b29df9b6
+  checksum: 10/9e829608b9e9a3a5e521afa9bd52f18a4dba4ec67ddda3eec888ccceba6378dde13fda109d0209c2642f84b46909bb16c142cb2892f7ff9b09343ac4ad2756a7
   languageName: node
   linkType: hard
 
@@ -3352,6 +3342,16 @@ __metadata:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
   checksum: 10/68ebfaedcd59cf497adc3a765ef0268fb26d1c6454f6f159992a8f7311297148891989e5e891b3991136e9aaa3eac1f851a2079b0258e63f69e0fd8dce286c21
+  languageName: node
+  linkType: hard
+
+"@mitodl/open-api-axios@npm:2024.9.16":
+  version: 2024.9.16
+  resolution: "@mitodl/open-api-axios@npm:2024.9.16"
+  dependencies:
+    "@types/node": "npm:^20.11.19"
+    axios: "npm:^1.6.5"
+  checksum: 10/ff40f62d087e3168e1d9ba0887cc41d3db4d2eb868e43317feb18510cf1f7d9b535d32acd478b9dd1bacfee8ea7e4967d2ed84499f5bf431317c614555f19416
   languageName: node
   linkType: hard
 
@@ -15517,7 +15517,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.0.0"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/course-search-utils": "npm:^3.5.0"
+    "@mitodl/course-search-utils": "https://github.com/mitodl/course-search-utils.git#b8bf7202bb812360bc49a71714559f01c7d8ad6a"
     "@mitodl/mitxonline-api-axios": "npm:^2026.1.14"
     "@mitodl/smoot-design": "npm:^6.19.0"
     "@mui/material": "npm:^6.4.5"

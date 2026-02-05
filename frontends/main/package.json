@@ -13,7 +13,7 @@
     "@ebay/nice-modal-react": "^1.2.13",
     "@emotion/cache": "^11.13.1",
     "@emotion/styled": "^11.11.0",
-    "@mitodl/course-search-utils": "^3.5.0",
+    "@mitodl/course-search-utils": "https://github.com/mitodl/course-search-utils.git#b8bf7202bb812360bc49a71714559f01c7d8ad6a",
     "@mitodl/mitxonline-api-axios": "^2026.1.14",
     "@mitodl/smoot-design": "^6.19.0",
     "@mui/material": "^6.4.5",

@@ -361,7 +361,7 @@ def generate_learning_resources_text_clause(
 
 
 def generate_filter_clause(
-    path: str, value: str, *, case_sensitive: bool, _current_path_length=1
+    path: str, value: str, *, case_sensitive: bool, nested: bool, _current_path_length=1
 ):
     """
     Generate search clause for a single filter path abd value.
@@ -379,7 +379,7 @@ def generate_filter_clause(
     """
     path_pieces = path.split(".")
     current_path = ".".join(path_pieces[0:_current_path_length])
-    if current_path == path:
+    if current_path == path or not nested:
         case_sensitivity = {} if case_sensitive else {"case_insensitive": True}
         return {"term": {path: {"value": value, **case_sensitivity}}}
 
@@ -390,6 +390,7 @@ def generate_filter_clause(
                 path,
                 value,
                 case_sensitive=case_sensitive,
+                nested=nested,
                 _current_path_length=_current_path_length + 1,
             ),
         }
@@ -417,6 +418,7 @@ def generate_filter_clauses(search_params):
                     filter_config.path,
                     filter_value,
                     case_sensitive=filter_config.case_sensitive,
+                    nested=filter_config.nested
                 )
                 for filter_value in search_params.get(filter_name)
             ]
@@ -495,7 +497,7 @@ def generate_aggregation_clause(
         "nested": {"path": current_path},
         "aggs": {
             aggregation_name: generate_aggregation_clause(
-                aggregation_name, path, nested, _current_path_length + 1
+                aggregation_name, path, nested=nested, _current_path_length=_current_path_length + 1
             )
         },
     }
