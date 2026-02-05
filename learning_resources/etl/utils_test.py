@@ -261,6 +261,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 "content": "existing content"
                 if (matching_edx_module_id and not overwrite)
                 else tika_output["content"],
+                "title": metadata["title"] if has_metadata else "Uuid",
                 "key": edx_module_id,
                 "published": True,
                 "content_title": metadata["title"] if has_metadata else "",
@@ -635,8 +636,14 @@ def test_is_valid_uuid(uuid_string, expected):
             </video>""",
             "test_video.xml",
             {
-                "asset-v1:test_run+type@asset+block@test_transcript.srt": "block-v1:test_run+type@video+block@test_video",
-                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": "block-v1:test_run+type@video+block@test_video",
+                "asset-v1:test_run+type@asset+block@test_transcript.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@test_video",
+                    "title": None,
+                },
+                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@test_video",
+                    "title": None,
+                },
             },
         ),
         (
@@ -645,7 +652,10 @@ def test_is_valid_uuid(uuid_string, expected):
             </video>""",
             "another_video.xml",
             {
-                "asset-v1:test_run+type@asset+block@another_transcript.srt": "block-v1:test_run+type@video+block@another_video"
+                "asset-v1:test_run+type@asset+block@another_transcript.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@another_video",
+                    "title": None,
+                }
             },
         ),
         (
@@ -707,8 +717,14 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
 
         # Mock parse_video_transcripts_xml to return expected mapping
         expected_mapping = {
-            "asset-v1:test_run+type@asset+block@test_transcript1.srt": "block-v1:test_run+type@video+block@test_video",
-            "asset-v1:test_run+type@asset+block@test_transcript2.srt": "block-v1:test_run+type@video+block@test_video",
+            "asset-v1:test_run+type@asset+block@test_transcript1.srt": {
+                "module_id": "block-v1:test_run+type@video+block@test_video",
+                "title": None,
+            },
+            "asset-v1:test_run+type@asset+block@test_transcript2.srt": {
+                "module_id": "block-v1:test_run+type@video+block@test_video",
+                "title": None,
+            },
         }
         mock_parse = mocker.patch(
             "learning_resources.etl.utils.parse_video_transcripts_xml",
@@ -808,7 +824,9 @@ def test_get_url_from_module_id(
     # Setup metadata
     video_srt_metadata = (
         {
-            "asset-v1:test+type@asset+block@transcript.srt": "block-v1:test+type@video+block@test_video"
+            "asset-v1:test+type@asset+block@transcript.srt": {
+                "module_id": "block-v1:test+type@video+block@test_video"
+            }
         }
         if has_video_meta
         else None

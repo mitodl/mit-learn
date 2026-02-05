@@ -774,7 +774,7 @@ def _build_result(  # noqa: PLR0913
         video_srt_metadata,
     )
 
-    data["title"] = metadata.get("content_title") or title
+    data["title"] = content_dict.get("content_title") or title
     return data
 
 
