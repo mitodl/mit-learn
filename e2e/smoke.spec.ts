@@ -1,11 +1,39 @@
 /* eslint-disable import/no-extraneous-dependencies,import/no-duplicates,import/no-restricted-paths */
 import { test, expect } from "@playwright/test"
 
+export const login = async (
+  page: Page,
+  email: string,
+  password: string,
+  redirectTo: string,
+) => {
+  await page.goto("/")
+  await page.getByText("Log In").click()
+  await page.getByLabel("Email").fill(email)
+  await page.getByRole("Button", { name: "Next" }).click()
+  await page.getByLabel("Password", { exact: true }).fill(password)
+  await page.getByRole("Button", { name: "Next" }).click()
+  await page.waitForURL(`**/${redirectTo}`)
+  // TODO: Figure out how to assert that you're back on the homepage logged in
+  // TODO: This might only work on the homepage? Not sure what the redirect behavior is broadly
+}
+
 test.describe("Smoke Test - Homepage", () => {
   test("should load the homepage successfully", async ({ page }) => {
     await page.goto("/")
     await expect(page.locator("main")).toBeVisible()
     await expect(page).toHaveTitle("Learn with MIT | MIT Learn")
+  })
+
+  // This _really_ only works on RC since it's the only place this very insecure test account exists
+  // If we end up special casing a user for any reason, we'll need to store secrets securely
+  test("can login", async ({ page }) => {
+    await login(
+      page,
+      "daniel.subak+test@gmail.com",
+      "dansubaktest",
+      "dashboard",
+    )
   })
 })
 
