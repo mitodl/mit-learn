@@ -24,8 +24,25 @@ REQUIRED_SETTINGS = {
 }
 
 
+S3_MEDIA_SETTINGS = {
+    "MITOL_USE_S3": "True",
+    "AWS_ACCESS_KEY_ID": "test123",
+    "AWS_SECRET_ACCESS_KEY": "test456",
+    "AWS_STORAGE_BUCKET_NAME": "test_bucket",
+    "MEDIA_URL": "/media/",
+}
+
+
 class TestSettings(TestCase):
     """Validate that settings work as expected."""
+
+    def tearDown(self):
+        """Clean up after each test by reloading settings with base environment."""
+        if hasattr(sys.modules["main.settings"], "DEFAULT_FILE_STORAGE"):
+            delattr(sys.modules["main.settings"], "DEFAULT_FILE_STORAGE")
+        clean_env = {**REQUIRED_SETTINGS, "MITOL_USE_S3": "False"}
+        with mock.patch.dict("os.environ", clean_env, clear=True):
+            importlib.reload(sys.modules["main.settings"])
 
     def reload_settings(self, module: str = "main.settings"):
         """
@@ -212,3 +229,26 @@ class TestSettings(TestCase):
                 "update_next-start-date-every-1-days"
                 in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
+
+    def test_media_url_settings_no_domain(self):
+        """Test that MEDIA_URL does not contain a custom domain when not set"""
+        base_media_url = "/media/"
+        env_vars = {**REQUIRED_SETTINGS, **S3_MEDIA_SETTINGS}
+        env_vars["AWS_S3_CUSTOM_DOMAIN"] = ""
+
+        with mock.patch.dict("os.environ", env_vars, clear=True):
+            settings_vars = self.reload_settings()
+            media_url = settings_vars["MEDIA_URL"]
+            assert media_url == base_media_url
+
+    def test_media_url_settings_with_domain(self):
+        """Test that MEDIA_URL is set correctly based on S3 and custom domain"""
+        base_media_url = "/media/"
+        custom_domain = "custom.cdn.com"
+        env_vars = {**REQUIRED_SETTINGS, **S3_MEDIA_SETTINGS}
+        env_vars["AWS_S3_CUSTOM_DOMAIN"] = custom_domain
+
+        with mock.patch.dict("os.environ", env_vars, clear=True):
+            settings_vars = self.reload_settings()
+            media_url = settings_vars["MEDIA_URL"]
+            assert media_url == f"https://{custom_domain}{base_media_url}"

@@ -516,6 +516,12 @@ FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
+
+# Serve media files from a custom domain instead of S3 if provided
+AWS_S3_CUSTOM_DOMAIN = get_string("AWS_S3_CUSTOM_DOMAIN", None)
+if AWS_S3_CUSTOM_DOMAIN and MITOL_USE_S3:
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}{MEDIA_URL}"
+
 AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", False)  # noqa: FBT003
 AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", False)  # noqa: FBT003
 AWS_STORAGE_BUCKET_NAME = get_string("AWS_STORAGE_BUCKET_NAME", False)  # noqa: FBT003
