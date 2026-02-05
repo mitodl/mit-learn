@@ -28,10 +28,6 @@
     "playwright:report": "playwright show-report"
   },
   "packageManager": "yarn@4.11.0",
-  "devDependencies": {
-    "@playwright/test": "^1.58.1",
-    "syncpack": "^13.0.0"
-  },
   "resolutions": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
