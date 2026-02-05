@@ -30,10 +30,7 @@ const extractImageMetadata = (
   }
   return {
     src: imageWithCaption.attrs.src,
-    alt:
-      imageWithCaption.attrs.caption ||
-      imageWithCaption.attrs.title ||
-      imageWithCaption.attrs.alt,
+    alt: imageWithCaption.attrs.caption || imageWithCaption.attrs.alt,
   }
 }
 
