@@ -98,25 +98,35 @@ const learningResourceQueries = {
   detail: (id: number) =>
     queryOptions({
       queryKey: learningResourceKeys.detail(id),
-      queryFn: () => learningResourcesApi.learningResourcesRetrieve({ id }),
+      queryFn: () =>
+        learningResourcesApi
+          .learningResourcesRetrieve({ id })
+          .then((res) => res.data),
     }),
   items: (id: number, params: ItemsListRequest) =>
     queryOptions({
       queryKey: learningResourceKeys.items(id, params),
       queryFn: () => {
-        return learningResourcesApi.learningResourcesItemsList(params)
+        return learningResourcesApi
+          .learningResourcesItemsList(params)
+          .then((res) => res.data)
       },
     }),
   similar: (id: number) =>
     queryOptions({
       queryKey: learningResourceKeys.similar(id),
-      queryFn: () => learningResourcesApi.learningResourcesSimilarList({ id }),
+      queryFn: () =>
+        learningResourcesApi
+          .learningResourcesSimilarList({ id })
+          .then((res) => res.data),
     }),
   vectorSimilar: (id: number) =>
     queryOptions({
       queryKey: learningResourceKeys.vectorSimilar(id),
       queryFn: () =>
-        learningResourcesApi.learningResourcesVectorSimilarList({ id }),
+        learningResourcesApi
+          .learningResourcesVectorSimilarList({ id })
+          .then((res) => res.data),
     }),
   list: (params: LearningResourcesListRequest) =>
     queryOptions({
