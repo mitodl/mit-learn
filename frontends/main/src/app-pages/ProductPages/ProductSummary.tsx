@@ -1,4 +1,4 @@
-import React, { HTMLAttributes } from "react"
+import React, { HTMLAttributes, useState } from "react"
 import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
@@ -11,7 +11,7 @@ import {
   RiFileCopy2Line,
   RiMenuAddLine,
 } from "@remixicon/react"
-import { formatDate, NoSSR, pluralize } from "ol-utilities"
+import { formatDate, isInPast, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
@@ -67,32 +67,33 @@ const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
   />
 )
 
-const InfoLabel = styled.span<{ underline?: boolean }>(
-  ({ theme, underline }) => [
-    {
-      fontWeight: theme.typography.fontWeightBold,
-    },
-    underline && { textDecoration: "underline" },
-  ],
-)
-const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
-  label,
-  value,
-}) =>
+const InfoLabel = styled.span<{
+  underline?: boolean
+  variant?: "light" | "normal"
+}>(({ theme, underline, variant = "normal" }) => [
+  variant === "normal" && {
+    fontWeight: theme.typography.fontWeightBold,
+  },
+  variant === "light" && {
+    color: theme.custom.colors.silverGrayDark,
+  },
+  underline && { textDecoration: "underline" },
+])
+const InfoLabelValue: React.FC<{
+  label: string
+  value: React.ReactNode
+  labelVariant?: "light" | "normal"
+}> = ({ label, value, labelVariant }) =>
   value ? (
     <span>
-      <InfoLabel>{label}</InfoLabel>
+      <InfoLabel variant={labelVariant}>{label}</InfoLabel>
       {": "}
       {value}
     </span>
   ) : null
 
-const getStartDate = (
-  course: CourseWithCourseRunsSerializerV2,
-  run: CourseRunV2,
-) => {
-  if (course.availability === "anytime") return "Anytime"
-  if (!run?.start_date) return null
+const RunDate: React.FC<{ date?: string | null }> = ({ date }) => {
+  if (!date) return null
   return (
     <NoSSR
       onSSR={
@@ -103,24 +104,17 @@ const getStartDate = (
         />
       }
     >
-      {formatDate(run.start_date)}
+      {formatDate(date)}
     </NoSSR>
   )
 }
-const getEndDate = (run: CourseRunV2) => {
-  if (!run.end_date) return null
+
+const runStartsAnytime = (run: CourseRunV2) => {
   return (
-    <NoSSR
-      onSSR={
-        <Skeleton
-          variant="text"
-          sx={{ display: "inline-block" }}
-          width="80px"
-        />
-      }
-    >
-      {formatDate(run.end_date)}
-    </NoSSR>
+    !run.is_archived &&
+    run.is_self_paced &&
+    run.start_date &&
+    isInPast(run.start_date)
   )
 }
 
@@ -133,16 +127,71 @@ const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
   nextRun,
   ...others
 }) => {
-  const starts = getStartDate(course, nextRun)
-  const ends = getEndDate(nextRun)
-  if (!starts) return null
+  const [expanded, setExpanded] = useState(false)
+  const enrollable = course.courseruns
+    .filter((cr) => cr.is_enrollable)
+    .sort((a, b) => {
+      // Put the next run first
+      if (a.id === course.next_run_id) return -1
+      if (b.id === course.next_run_id) return 1
+      if (!a.start_date || !b.start_date) return 0
+      // Otherwise sort by start date
+      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+    })
+
+  const manyDates = enrollable.length > 1
+
   return (
     <InfoRow {...others}>
       <RiCalendarLine aria-hidden="true" />
-      <InfoRowInner>
-        <InfoLabelValue label="Start" value={starts} />
-        <InfoLabelValue label="End" value={ends} />
-      </InfoRowInner>
+      <Stack gap="16px" width="100%">
+        {manyDates ? (
+          <InfoRowInner>
+            <InfoLabel>Dates Available</InfoLabel>
+            <UnderlinedLink
+              target="_blank"
+              rel="noopener noreferrer"
+              color="black"
+              href=""
+              role="button"
+              onClick={(event) => {
+                event.preventDefault()
+                setExpanded((current) => !current)
+              }}
+            >
+              {expanded ? "Fewer Dates" : "More Dates"}
+            </UnderlinedLink>
+          </InfoRowInner>
+        ) : null}
+        {enrollable
+          .filter((_cr, i) => expanded || i === 0)
+          .filter((cr) => cr.start_date)
+          .map((cr) => {
+            const anytime = runStartsAnytime(cr)
+            const labelVariant = manyDates ? "light" : "normal"
+            return (
+              <Stack
+                key={cr.id}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <InfoLabelValue
+                  label="Start"
+                  value={anytime ? "Anytime" : <RunDate date={cr.start_date} />}
+                  labelVariant={labelVariant}
+                />
+                {cr.end_date ? (
+                  <InfoLabelValue
+                    label="End"
+                    value={<RunDate date={cr.end_date} />}
+                    labelVariant={labelVariant}
+                  />
+                ) : null}
+              </Stack>
+            )
+          })}
+      </Stack>
     </InfoRow>
   )
 }
