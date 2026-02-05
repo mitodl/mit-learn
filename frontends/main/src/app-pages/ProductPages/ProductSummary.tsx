@@ -11,7 +11,7 @@ import {
   RiFileCopy2Line,
   RiMenuAddLine,
 } from "@remixicon/react"
-import { formatDate, isInPast, NoSSR, pluralize } from "ol-utilities"
+import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
@@ -92,22 +92,9 @@ const InfoLabelValue: React.FC<{
     </span>
   ) : null
 
-const RunDate: React.FC<{ date?: string | null }> = ({ date }) => {
-  if (!date) return null
-  return (
-    <NoSSR
-      onSSR={
-        <Skeleton
-          variant="text"
-          sx={{ display: "inline-block" }}
-          width="80px"
-        />
-      }
-    >
-      {formatDate(date)}
-    </NoSSR>
-  )
-}
+const dateLoading = (
+  <Skeleton variant="text" sx={{ display: "inline-block" }} width="80px" />
+)
 
 const runStartsAnytime = (run: CourseRunV2) => {
   return (
@@ -131,9 +118,6 @@ const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
   const enrollable = course.courseruns
     .filter((cr) => cr.is_enrollable)
     .sort((a, b) => {
-      // Put the next run first
-      if (a.id === course.next_run_id) return -1
-      if (b.id === course.next_run_id) return 1
       if (!a.start_date || !b.start_date) return 0
       // Otherwise sort by start date
       return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
@@ -164,7 +148,7 @@ const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
           </InfoRowInner>
         ) : null}
         {enrollable
-          .filter((_cr, i) => expanded || i === 0)
+          .filter((cr) => expanded || cr.id === course.next_run_id)
           .filter((cr) => cr.start_date)
           .map((cr) => {
             const anytime = runStartsAnytime(cr)
@@ -175,16 +159,23 @@ const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
                 direction="row"
                 justifyContent="space-between"
                 alignItems="center"
+                data-testid="date-entry"
               >
                 <InfoLabelValue
                   label="Start"
-                  value={anytime ? "Anytime" : <RunDate date={cr.start_date} />}
+                  value={
+                    anytime ? (
+                      "Anytime"
+                    ) : (
+                      <LocalDate onSSR={dateLoading} date={cr.start_date} />
+                    )
+                  }
                   labelVariant={labelVariant}
                 />
                 {cr.end_date ? (
                   <InfoLabelValue
                     label="End"
-                    value={<RunDate date={cr.end_date} />}
+                    value={<LocalDate onSSR={dateLoading} date={cr.end_date} />}
                     labelVariant={labelVariant}
                   />
                 ) : null}
