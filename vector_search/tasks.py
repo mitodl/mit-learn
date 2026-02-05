@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit="300/m",
 )
 def generate_embeddings(ids, resource_type, overwrite):
     """
@@ -76,7 +76,7 @@ def generate_embeddings(ids, resource_type, overwrite):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_VECTOR_SEARCH_RATE_LIMIT,
 )
 def remove_embeddings(ids, resource_type):
     """

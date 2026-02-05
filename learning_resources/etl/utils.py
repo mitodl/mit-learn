@@ -29,9 +29,10 @@ from defusedxml import ElementTree
 from django.conf import settings
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
-from litellm import completion
 from PIL import Image
 from pycountry import currencies
+from pypdf import PdfReader
+from pypdf.errors import FileNotDecryptedError
 from tika import parser as tika_parser
 
 from learning_resources.constants import (
@@ -45,6 +46,9 @@ from learning_resources.constants import (
     LevelType,
     OfferedBy,
     RunStatus,
+)
+from learning_resources.converters.opendataloader_llm_converter import (
+    OpenDataLoaderLLMConverter,
 )
 from learning_resources.etl.constants import (
     RESOURCE_DELIVERY_MAPPING,
@@ -409,10 +413,14 @@ def text_from_sjson_content(content: str):
         content (str): The sjson content
 
     Returns:
-        str: The content as a string without timestamps
+        str: The content as a string without timestamps. if parse error
+             is encountered, returns None
     """
-    data = json.loads(content)
-    return " ".join(data.get("text", []))
+    try:
+        data = json.loads(content)
+        return " ".join(data.get("text", []))
+    except json.decoder.JSONDecodeError:
+        log.exception("Error parsing sjson content")
 
 
 def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
@@ -534,97 +542,180 @@ def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
     return video_transcript_mapping
 
 
-def process_olx_path(
+def _should_reprocess(existing_record, metadata: dict, overwrite) -> bool:
+    """Determine if content needs to be reprocessed."""
+    if not existing_record:
+        return True
+    if overwrite:
+        return True
+    return existing_record.archive_checksum != metadata.get("archive_checksum")
+
+
+def _get_existing_record(source_path: str, key: str, run, is_tutor_problem):
+    """Fetch existing record based on import type."""
+    if is_tutor_problem:
+        return TutorProblemFile.objects.filter(source_path=source_path, run=run).first()
+    return ContentFile.objects.filter(key=key, run=run).first()
+
+
+def _should_use_ocr(file_extension: str, file_path: Path, use_ocr) -> bool:
+    """Check if OCR processing should be used for the file."""
+    return (
+        file_extension == ".pdf"
+        and use_ocr
+        and settings.OCR_MODEL
+        and file_path.stat().st_size > 0
+    )
+
+
+def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
+    """Extract content from PDF using OCR. Returns None if skipped."""
+    try:
+        page_count = len(PdfReader(file_path).pages)
+        if page_count > settings.OCR_PDF_MAX_PAGE_THRESHOLD and not is_tutor_problem:
+            return None
+        return {
+            "content": _pdf_to_markdown(file_path),
+            "content_title": "",
+        }
+    except FileNotDecryptedError:
+        log.exception("Skipping encrypted pdf %s", file_path)
+        return None
+
+
+def _extract_content_with_tika(
+    document, mime_type: str | None, file_extension: str, key: str
+) -> dict | None:
+    """Extract content using Tika. Returns None if extraction fails."""
+    headers = {"Content-Type": mime_type} if mime_type else {}
+    tika_output = extract_text_metadata(document, other_headers=headers)
+
+    if tika_output is None:
+        log.info("No tika response for %s", key)
+        return None
+
+    content = (tika_output.get("content") or "").strip()
+    content = _transform_content_by_type(content, file_extension)
+
+    if not content:
+        return None
+
+    tika_metadata = tika_output.get("metadata") or {}
+    return {
+        "content": content,
+        "content_title": tika_metadata.get("title", ""),
+    }
+
+
+def _transform_content_by_type(content: str, file_extension: str) -> str:
+    """Apply file-type-specific content transformations."""
+    transformers = {
+        ".srt": text_from_srt_content,
+        ".sjson": text_from_sjson_content,
+    }
+    transformer = transformers.get(file_extension)
+    return transformer(content) if transformer else content
+
+
+def _extract_content(  # noqa: PLR0913
+    document,
+    metadata: dict,
+    olx_path: str,
+    key: str,
+    *,
+    use_ocr=False,
+    is_tutor_problem=False,
+) -> dict | None:
+    """Extract content from document using appropriate method."""
+    if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
+        return {"content": "", "content_title": ""}
+
+    source_path = metadata.get("source_path")
+    file_extension = metadata.get("file_extension")
+    file_path = Path(olx_path) / Path(source_path)
+
+    if _should_use_ocr(
+        file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
+    ):
+        return _extract_content_with_ocr(file_path, is_tutor_problem)
+
+    content_dict = _extract_content_with_tika(
+        document, metadata.get("mime_type"), file_extension, key
+    )
+    if content_dict:
+        content_dict["content_title"] = (
+            metadata.get("title") or content_dict["content_title"] or ""
+        )[: get_max_contentfile_length("content_title")]
+
+    return content_dict
+
+
+def _get_cached_content(existing_record, is_tutor_problem) -> dict:
+    """Get content from existing record."""
+    return {
+        "content": existing_record.content,
+        "content_title": "" if is_tutor_problem else existing_record.content_title,
+    }
+
+
+def _build_result(
+    metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
+) -> dict:
+    """Build the final result dictionary."""
+    source_path = metadata.get("source_path")
+    edx_module_id = get_edx_module_id(source_path, run)
+    return {
+        "key": key,
+        "published": True,
+        "content_type": metadata["content_type"],
+        "archive_checksum": metadata.get("archive_checksum"),
+        "file_extension": metadata.get("file_extension"),
+        "source_path": source_path,
+        "edx_module_id": edx_module_id,
+        "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
+        **content_dict,
+    }
+
+
+def process_olx_path(  # noqa: PLR0913
     olx_path: str,
     run: LearningResourceRun,
     *,
-    overwrite,
+    overwrite: bool,
     valid_file_types=VALID_TEXT_FILE_TYPES,
     is_tutor_problem_file_import=False,
+    use_ocr=False,
 ) -> Generator[dict, None, None]:
+    """Process OLX path and yield content dictionaries."""
     video_srt_metadata = get_video_metadata(olx_path, run)
+
     for document, metadata in documents_from_olx(
         olx_path, valid_file_types=valid_file_types
     ):
         source_path = metadata.get("source_path")
-        edx_module_id = get_edx_module_id(source_path, run)
-        key = edx_module_id
-        content_type = metadata["content_type"]
-        mime_type = metadata.get("mime_type")
-        file_extension = metadata.get("file_extension")
+        key = get_edx_module_id(source_path, run)
 
-        if is_tutor_problem_file_import:
-            existing_record = TutorProblemFile.objects.filter(
-                source_path=source_path, run=run
-            ).first()
-        else:
-            existing_record = ContentFile.objects.filter(key=key, run=run).first()
-
-        if (
-            not existing_record
-            or existing_record.archive_checksum != metadata.get("archive_checksum")
-        ) or overwrite:
-            if settings.SKIP_TIKA and settings.ENVIRONMENT != "production":
-                content_dict = {
-                    "content": "",
-                    "content_title": "",
-                }
-            elif (
-                file_extension == ".pdf"
-                and is_tutor_problem_file_import
-                and settings.CANVAS_PDF_TRANSCRIPTION_MODEL
-            ):
-                markdown_content = _pdf_to_markdown(Path(olx_path) / Path(source_path))
-                content_dict = {
-                    "content": markdown_content,
-                    "content_title": "",
-                }
-            else:
-                tika_output = extract_text_metadata(
-                    document,
-                    other_headers={"Content-Type": mime_type} if mime_type else {},
-                )
-                if tika_output is None:
-                    log.info("No tika response for %s", key)
-                    continue
-
-                tika_content = tika_output.get("content") or ""
-                tika_metadata = tika_output.get("metadata") or {}
-                content = tika_content.strip()
-                if file_extension == ".srt":
-                    content = text_from_srt_content(content)
-                elif file_extension == ".sjson":
-                    content = text_from_sjson_content(content)
-
-                if not content:
-                    continue
-
-                content_dict = {
-                    "content": content,
-                    "content_title": (
-                        metadata.get("title") or tika_metadata.get("title") or ""
-                    )[: get_max_contentfile_length("content_title")],
-                }
-        else:
-            content_dict = {
-                "content": existing_record.content,
-                "content_title": ""
-                if is_tutor_problem_file_import
-                else existing_record.content_title,
-            }
-        yield (
-            {
-                "key": key,
-                "published": True,
-                "content_type": content_type,
-                "archive_checksum": metadata.get("archive_checksum"),
-                "file_extension": file_extension,
-                "source_path": source_path,
-                "edx_module_id": edx_module_id,
-                "url": get_url_from_module_id(edx_module_id, run, video_srt_metadata),
-                **content_dict,
-            }
+        existing_record = _get_existing_record(
+            source_path, key, run, is_tutor_problem_file_import
         )
+
+        if _should_reprocess(existing_record, metadata, overwrite):
+            content_dict = _extract_content(
+                document,
+                metadata,
+                olx_path,
+                key,
+                use_ocr=use_ocr,
+                is_tutor_problem=is_tutor_problem_file_import,
+            )
+            if content_dict is None:
+                continue
+        else:
+            content_dict = _get_cached_content(
+                existing_record, is_tutor_problem_file_import
+            )
+
+        yield _build_result(metadata, key, run, video_srt_metadata, content_dict)
 
 
 def transform_content_files(
@@ -647,37 +738,39 @@ def transform_content_files(
         yield from process_olx_path(olx_path, run, overwrite=overwrite)
 
 
-def get_learning_course_bucket_name(etl_source: str) -> str:
+def get_s3_prefix_for_source(etl_source: str) -> str:
     """
-    Get the name of the platform's edx content bucket
+    Get the S3 prefix for a given ETL source
 
     Args:
-        etl_source(str): The ETL source that determines which bucket to use
-
+        etl_source(str): The ETL source
     Returns:
-        str: The name of the edx archive bucket for the platform
+        str: The S3 prefix
     """
-    bucket_names = {
-        ETLSource.mit_edx.name: settings.EDX_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.xpro.name: settings.XPRO_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.mitxonline.name: settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.oll.name: settings.OLL_LEARNING_COURSE_BUCKET_NAME,
-        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_NAME,
+    prefix_mapping = {
+        ETLSource.mit_edx.name: settings.EDX_COURSE_BUCKET_PREFIX,
+        ETLSource.xpro.name: settings.XPRO_COURSE_BUCKET_PREFIX,
+        ETLSource.mitxonline.name: settings.MITX_ONLINE_COURSE_BUCKET_PREFIX,
+        ETLSource.oll.name: settings.OLL_COURSE_BUCKET_PREFIX,
+        ETLSource.canvas.name: settings.CANVAS_COURSE_BUCKET_PREFIX,
     }
-    return bucket_names.get(etl_source)
+    prefix = prefix_mapping.get(etl_source)
+    if not prefix:
+        msg = f"No S3 prefix found for ETL source: {etl_source}"
+        raise ValueError(msg)
+    return prefix
 
 
-def get_learning_course_bucket(etl_source: str) -> object:
+def get_bucket_by_name(bucket_name: str) -> object:
     """
-    Get the ETLSource-specific learning course S3 Bucket holding content file data
+    Get an S3 Bucket by name
 
     Args:
-        etl_source(str): The ETL source of the course data
+        bucket_name(str): The name of the S3 bucket
 
-    Returns:
-        boto3.Bucket: the OCW S3 Bucket or None
+    Returns:S
+        boto3.Bucket: the S3 Bucket or None
     """
-    bucket_name = get_learning_course_bucket_name(etl_source)
     if bucket_name:
         s3 = boto3.resource(
             "s3",
@@ -1072,38 +1165,8 @@ def _pdf_to_markdown(pdf_path):
     """
     Convert a PDF file to markdown using an llm
     """
-    markdown = ""
-    for im in pdf_to_base64_images(pdf_path):
-        response = completion(
-            api_base=settings.LITELLM_API_BASE,
-            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-            model=settings.CANVAS_PDF_TRANSCRIPTION_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": settings.CANVAS_TRANSCRIPTION_PROMPT,
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{im}",
-                            },
-                        },
-                    ],
-                }
-            ],
-        )
-        markdown_snippet = (
-            response.json()["choices"][0]["message"]["content"]
-            .removeprefix("```markdown\n")
-            .removesuffix("\n```")
-        )
-
-        markdown += markdown_snippet
-    return markdown
+    converter = OpenDataLoaderLLMConverter(pdf_path)
+    return converter.convert_to_markdown()
 
 
 def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):

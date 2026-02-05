@@ -1,6 +1,8 @@
+import { useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { AxiosProgressEvent } from "axios"
 
-import { articlesApi } from "../../clients"
+import { articlesApi, mediaApi } from "../../clients"
 import type {
   ArticlesApiArticlesListRequest as ArticleListRequest,
   RichTextArticle as Article,
@@ -27,10 +29,22 @@ const useArticleDetail = (id: number | undefined) => {
   })
 }
 
+const useArticleDetailRetrieve = (identifier: string | undefined) => {
+  return useQuery({
+    ...articleQueries.articlesDetailRetrieve(identifier ?? ""),
+    enabled: identifier !== undefined,
+  })
+}
+
 const useArticleCreate = () => {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Article, "id">) =>
+    mutationFn: (
+      data: Omit<
+        Article,
+        "id" | "user" | "created_on" | "updated_on" | "publish_date"
+      >,
+    ) =>
       articlesApi
         .articlesCreate({ RichTextArticleRequest: data })
         .then((response) => response.data),
@@ -39,6 +53,50 @@ const useArticleCreate = () => {
     },
   })
 }
+
+export const useMediaUpload = () => {
+  const nextProgressCb = useRef<((percent: number) => void) | undefined>(
+    undefined,
+  )
+
+  const mutation = useMutation({
+    mutationFn: async (data: { file: File }) => {
+      const response = await mediaApi.mediaUpload(
+        { image_file: data.file },
+        {
+          onUploadProgress: (e: AxiosProgressEvent) => {
+            const percent = Math.round((e.loaded * 100) / (e.total ?? 1))
+            nextProgressCb.current?.(percent)
+          },
+        },
+      )
+
+      return response.data
+    },
+    onSettled: () => {
+      nextProgressCb.current = undefined
+    },
+  })
+
+  return {
+    ...mutation,
+    /**
+     * Set a callback to be called on the next upload progress event.
+     *
+     * NOTES:
+     * - This callback will be cleared after the mutation settles (either success or error).
+     * - This is a separate method, not part of the mutate/mutateAsync options,
+     *   to avoid errors with function serialization. (E.g., Tanstack Query
+     *   devtools attempt to serialize mutation options.)
+     */
+    setNextProgressCallback: (
+      callback: ((percent: number) => void) | undefined,
+    ) => {
+      nextProgressCb.current = callback
+    },
+  }
+}
+
 const useArticleDestroy = () => {
   const client = useQueryClient()
   return useMutation({
@@ -60,6 +118,10 @@ const useArticlePartialUpdate = () => {
         .then((response) => response.data),
     onSuccess: (article: Article) => {
       client.invalidateQueries({ queryKey: articleKeys.detail(article.id) })
+      const identifier = article.slug || article.id.toString()
+      client.invalidateQueries({
+        queryKey: articleKeys.articlesDetailRetrieve(identifier),
+      })
     },
   })
 }
@@ -70,4 +132,6 @@ export {
   useArticleCreate,
   useArticleDestroy,
   useArticlePartialUpdate,
+  articleQueries,
+  useArticleDetailRetrieve,
 }

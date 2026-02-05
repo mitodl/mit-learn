@@ -138,24 +138,25 @@ describe("OrganizationCards", () => {
     })
 
     it("renders Continue buttons with correct organization URLs", async () => {
+      const contract1 = mitxOnlineFactories.contracts.contract({
+        id: 1,
+        name: "Contract 1",
+        organization: 1,
+        slug: "contract-1",
+      })
+      const contract2 = mitxOnlineFactories.contracts.contract({
+        id: 2,
+        name: "Contract 2",
+        organization: 1,
+        slug: "contract-2",
+      })
       const organization: OrganizationPage = {
         id: 1,
         name: "Test Organization",
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-test-org",
-        contracts: [
-          mitxOnlineFactories.contracts.contract({
-            id: 1,
-            name: "Contract 1",
-            organization: 1,
-          }),
-          mitxOnlineFactories.contracts.contract({
-            id: 2,
-            name: "Contract 2",
-            organization: 1,
-          }),
-        ],
+        contracts: [contract1, contract2],
       }
 
       setup({ organizations: [organization] })
@@ -165,12 +166,19 @@ describe("OrganizationCards", () => {
       })
       expect(continueButtons).toHaveLength(4) // 2 contracts × 2 screen sizes (mobile + desktop)
 
-      continueButtons.forEach((button) => {
-        expect(button).toHaveAttribute(
-          "href",
-          "/dashboard/organization/test-org",
-        )
-      })
+      // Check that we have the correct number of buttons for each contract
+      const contract1Buttons = continueButtons.filter(
+        (button) =>
+          button.getAttribute("href") ===
+          "/dashboard/organization/test-org/contract/contract-1",
+      )
+      const contract2Buttons = continueButtons.filter(
+        (button) =>
+          button.getAttribute("href") ===
+          "/dashboard/organization/test-org/contract/contract-2",
+      )
+      expect(contract1Buttons).toHaveLength(2) // mobile + desktop
+      expect(contract2Buttons).toHaveLength(2) // mobile + desktop
     })
 
     it("renders cards for both mobile and desktop screen sizes", async () => {
@@ -238,11 +246,13 @@ describe("OrganizationCards", () => {
             id: 1,
             name: "Org1 Contract 1",
             organization: 1,
+            slug: "org1-contract-1",
           }),
           mitxOnlineFactories.contracts.contract({
             id: 2,
             name: "Org1 Contract 2",
             organization: 1,
+            slug: "org1-contract-2",
           }),
         ],
       }
@@ -257,6 +267,7 @@ describe("OrganizationCards", () => {
             id: 3,
             name: "Org2 Contract 1",
             organization: 2,
+            slug: "org2-contract-1",
           }),
         ],
       }
@@ -286,22 +297,28 @@ describe("OrganizationCards", () => {
       expect(screen.getAllByText("Org1 Contract 2")).toHaveLength(2) // mobile + desktop
       expect(screen.getAllByText("Org2 Contract 1")).toHaveLength(2) // mobile + desktop
 
-      // Check Continue button URLs point to correct organizations
-      const org1Buttons = screen
-        .getAllByRole("link", { name: "Continue" })
-        .filter(
-          (button) =>
-            button.getAttribute("href") === "/dashboard/organization/one",
-        )
-      const org2Buttons = screen
-        .getAllByRole("link", { name: "Continue" })
-        .filter(
-          (button) =>
-            button.getAttribute("href") === "/dashboard/organization/two",
-        )
+      // Check Continue button URLs point to correct organizations and contracts
+      const allButtons = screen.getAllByRole("link", { name: "Continue" })
 
-      expect(org1Buttons).toHaveLength(4) // 2 contracts × 2 screen sizes
-      expect(org2Buttons).toHaveLength(2) // 1 contract × 2 screen sizes
+      const org1Contract1Buttons = allButtons.filter(
+        (button) =>
+          button.getAttribute("href") ===
+          "/dashboard/organization/one/contract/org1-contract-1",
+      )
+      const org1Contract2Buttons = allButtons.filter(
+        (button) =>
+          button.getAttribute("href") ===
+          "/dashboard/organization/one/contract/org1-contract-2",
+      )
+      const org2Contract1Buttons = allButtons.filter(
+        (button) =>
+          button.getAttribute("href") ===
+          "/dashboard/organization/two/contract/org2-contract-1",
+      )
+
+      expect(org1Contract1Buttons).toHaveLength(2) // mobile + desktop
+      expect(org1Contract2Buttons).toHaveLength(2) // mobile + desktop
+      expect(org2Contract1Buttons).toHaveLength(2) // mobile + desktop
     })
   })
 
@@ -335,19 +352,19 @@ describe("OrganizationCards", () => {
     })
 
     it("handles slug transformation correctly (removes 'org-' prefix)", async () => {
+      const contract = mitxOnlineFactories.contracts.contract({
+        id: 1,
+        name: "Test Contract",
+        organization: 1,
+        slug: "test-contract",
+      })
       const organization: OrganizationPage = {
         id: 1,
         name: "Test Organization",
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "org-my-company",
-        contracts: [
-          mitxOnlineFactories.contracts.contract({
-            id: 1,
-            name: "Test Contract",
-            organization: 1,
-          }),
-        ],
+        contracts: [contract],
       }
 
       setup({ organizations: [organization] })
@@ -357,24 +374,24 @@ describe("OrganizationCards", () => {
       })
       expect(continueButtons[0]).toHaveAttribute(
         "href",
-        "/dashboard/organization/my-company",
+        "/dashboard/organization/my-company/contract/test-contract",
       )
     })
 
     it("handles slug without 'org-' prefix", async () => {
+      const contract = mitxOnlineFactories.contracts.contract({
+        id: 1,
+        name: "Test Contract",
+        organization: 1,
+        slug: "test-contract",
+      })
       const organization: OrganizationPage = {
         id: 1,
         name: "Test Organization",
         description: "Test description",
         logo: "https://example.com/logo.png",
         slug: "my-company", // No 'org-' prefix
-        contracts: [
-          mitxOnlineFactories.contracts.contract({
-            id: 1,
-            name: "Test Contract",
-            organization: 1,
-          }),
-        ],
+        contracts: [contract],
       }
 
       setup({ organizations: [organization] })
@@ -384,7 +401,7 @@ describe("OrganizationCards", () => {
       })
       expect(continueButtons[0]).toHaveAttribute(
         "href",
-        "/dashboard/organization/my-company",
+        "/dashboard/organization/my-company/contract/test-contract",
       )
     })
 

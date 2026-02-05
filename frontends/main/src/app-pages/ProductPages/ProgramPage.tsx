@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Stack, Typography } from "ol-components"
+import { PlainList, Stack, Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
@@ -10,7 +10,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds } from "./util"
+import { HeadingIds, parseReqTree } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML, { UnstyledRawHTML } from "./RawHTML"
 import AboutSection from "./AboutSection"
@@ -19,12 +19,20 @@ import ProductPageTemplate, {
   ProductNavbar,
   WhoCanTake,
 } from "./ProductPageTemplate"
-import { ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
-import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { learningResourceQueries } from "api/hooks/learningResources"
-import { ResourceTypeEnum } from "api"
+import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import dynamic from "next/dynamic"
+import type { Breakpoint } from "@mui/system"
+import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
+
+const LearningResourceDrawer = dynamic(
+  () =>
+    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
+)
 
 type ProgramPageProps = {
   readableId: string
@@ -35,6 +43,7 @@ const WhatSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
+
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -48,6 +57,12 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
       label: "About",
       variant: "primary",
       content: page.about,
+    },
+    {
+      id: HeadingIds.Requirements,
+      label: "Courses",
+      variant: "secondary",
+      content: true,
     },
     {
       id: HeadingIds.What,
@@ -75,36 +90,192 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
 
+const RequirementsListing = styled(PlainList)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: "24px",
+  flexWrap: "wrap",
+  marginTop: "24px",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+  },
+}))
+
+const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
+  return Object.fromEntries(array.map((item) => [String(item[key]), item]))
+}
+
+const StyledResourceCard = styled(MitxOnlineCourseCard)<{
+  onlyAbove?: Breakpoint
+  onlyBelow?: Breakpoint
+}>(({ theme, onlyAbove, onlyBelow }) => ({
+  ...(onlyAbove
+    ? { [theme.breakpoints.down(onlyAbove)]: { display: "none" } }
+    : null),
+  ...(onlyBelow
+    ? { [theme.breakpoints.up(onlyBelow)]: { display: "none" } }
+    : null),
+}))
+
+type RequirementSubsectionInfo = {
+  title: string
+  note?: string
+  titleId: string
+  courseIds: number[]
+}
+
+const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h5,
+  fontSize: theme.typography.pxToRem(20), // boosted size
+})) as typeof Typography
+
+const ReqTitleNote = styled("span")(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.silverGrayDark,
+}))
+
+type RequirementsSectionProps = {
+  program: V2Program
+}
+
+const getCompletionText = ({
+  requiredCount,
+  electiveCount,
+}: {
+  requiredCount?: number
+  electiveCount?: number
+}) => {
+  if (requiredCount && electiveCount) {
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
+  }
+  if (requiredCount) {
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)}.`
+  }
+  if (electiveCount) {
+    return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
+  }
+  return "" // Program has no requirements at all. Something went wrong.
+}
+
+const RequirementsSection: React.FC<RequirementsSectionProps> = ({
+  program,
+}) => {
+  const courses = useQuery(coursesQueries.coursesForProgram(program))
+  const coursesById = keyBy(courses.data?.results ?? [], "id")
+  /**
+   * req_tree allows for multiple elective sections, however
+   * the V2Program.requirements schema, from which we get course readable IDs,
+   * only supports at most one elective section and one required section.
+   */
+  const parsedReqs = parseReqTree(program.req_tree)
+  const required = parsedReqs.find((req) => !req.elective)
+  const electives = parsedReqs.find((req) => req.elective)
+
+  const subsections: RequirementSubsectionInfo[] = [
+    required && {
+      title: required.title,
+      titleId: HeadingIds.RequirementsRequired,
+      courseIds: required.courseIds,
+    },
+    electives && {
+      title: electives.title,
+      note: electives
+        ? `Complete ${electives.requiredCourseCount} out of ${electives.courseIds.length}`
+        : "",
+      titleId: HeadingIds.RequirementsElectives,
+      courseIds: electives.courseIds,
+    },
+  ].filter((subsec) => subsec !== undefined)
+
+  return (
+    <Stack
+      gap={{ xs: "24px", sm: "32px" }}
+      component="section"
+      aria-labelledby={HeadingIds.Requirements}
+    >
+      <div>
+        <Typography
+          variant="h4"
+          component="h2"
+          id={HeadingIds.Requirements}
+          sx={{ marginBottom: "4px" }}
+        >
+          Courses
+        </Typography>
+        <Typography variant="body1" component="p">
+          {getCompletionText({
+            requiredCount: required?.requiredCourseCount,
+            electiveCount: electives?.requiredCourseCount,
+          })}
+        </Typography>
+      </div>
+      <Stack gap={{ xs: "32px", sm: "56px" }}>
+        {subsections.map(({ title, note, titleId, courseIds }) => (
+          <div key={titleId}>
+            <ReqSubsectionTitle component="h3" id={titleId}>
+              {title}
+              {note ? ": " : ""}
+              {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
+            </ReqSubsectionTitle>
+            <RequirementsListing>
+              {courseIds.map((courseId) => {
+                const course = coursesById[courseId]
+                const isCourseLoading = courses.isLoading || !courses.data
+                if (!isCourseLoading && !course) {
+                  return null
+                }
+                return (
+                  <li key={courseId}>
+                    <StyledResourceCard
+                      onlyAbove="sm"
+                      course={course}
+                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                      size="small"
+                      isLoading={isCourseLoading}
+                    />
+                    <StyledResourceCard
+                      onlyBelow="sm"
+                      course={course}
+                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                      size="small"
+                      isLoading={isCourseLoading}
+                    />
+                  </li>
+                )
+              })}
+            </RequirementsListing>
+          </div>
+        ))}
+      </Stack>
+    </Stack>
+  )
+}
+
 const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.programPages(readableId))
   const programs = useQuery(
     programsQueries.programsList({ readable_id: readableId }),
   )
-  const programResources = useQuery(
-    learningResourceQueries.list({
-      readable_id: [readableId],
-      resource_type: [ResourceTypeEnum.Program],
-    }),
-  )
+
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
-  const programResource = programResources.data?.results?.[0]
-  const enabled = useFeatureFlagEnabled(FeatureFlags.ProductPageCourse)
+
+  const courses = useQuery(coursesQueries.coursesForProgram(program))
+
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
     return flagsLoaded ? notFound() : null
   }
 
-  const isLoading =
-    pages.isLoading || programs.isLoading || programResources.isLoading
+  const isLoading = pages.isLoading || programs.isLoading
 
-  if (!page || !program || !programResource) {
+  if (!page || !program) {
     if (!isLoading) {
       return notFound()
-    } else {
-      return null
     }
+    return null
   }
 
   const navLinks = getNavLinks(page)
@@ -112,9 +283,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const imageSrc = page.feature_image
     ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
+
+  const tags = ["MITx", program.program_type].filter((t): t is string => !!t)
+
   return (
     <ProductPageTemplate
-      offeredBy="MITx"
+      tags={tags}
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={
@@ -125,7 +299,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       sidebarSummary={
-        <ProgramSummary program={program} programResource={programResource} />
+        <ProgramSummary
+          enrollButton={<ProgramEnrollmentButton program={program} />}
+          program={program}
+          courses={courses.data?.results}
+        />
       }
       navLinks={navLinks}
     >
@@ -134,6 +312,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         {page.about ? (
           <AboutSection productNoun="Program" aboutHtml={page.about} />
         ) : null}
+        <RequirementsSection program={program} />
         {page.what_you_learn ? (
           <WhatSection aria-labelledby={HeadingIds.What}>
             <Typography variant="h4" component="h2" id={HeadingIds.What}>
@@ -155,6 +334,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         ) : null}
         <WhoCanTake productNoun="Program" />
       </Stack>
+      <LearningResourceDrawer />
     </ProductPageTemplate>
   )
 }

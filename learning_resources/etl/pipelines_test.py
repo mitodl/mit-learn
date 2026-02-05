@@ -9,7 +9,7 @@ import pytest
 from moto import mock_aws
 
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3_ocw
-from learning_resources.constants import OfferedBy, PlatformType
+from learning_resources.constants import LearningResourceType, OfferedBy, PlatformType
 from learning_resources.etl import pipelines
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
@@ -248,7 +248,9 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
         skip_content_files=skip_content_files,
     )
 
-    resource = LearningResource.objects.first()
+    resource = LearningResource.objects.filter(
+        resource_type=LearningResourceType.course.name
+    ).first()
     assert resource.readable_id == "16.01+fall_2005"
     assert [num["value"] for num in resource.course.course_numbers] == [
         "16.01",
@@ -266,6 +268,27 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
     assert run.content_files.count() == (0 if skip_content_files else 5)
     assert mock_cf_actions.call_count == (0 if skip_content_files else 1)
     assert mock_calc_score.call_count == (0 if skip_content_files else 1)
+
+    learning_materials = LearningResource.objects.filter(
+        resource_type=LearningResourceType.learning_material.name
+    )
+
+    assert learning_materials.count() == (0 if skip_content_files else 1)
+
+    if not skip_content_files:
+        learning_material = learning_materials.first()
+        assert (
+            learning_material.readable_id
+            == "97db384ef34009a64df7cb86cf701979-courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/resource/"
+        )
+        assert learning_material.platform.code == PlatformType.ocw.name
+        assert learning_material.offered_by.code == OfferedBy.ocw.name
+        assert learning_material.title == "Resource Title"
+
+        assert learning_material.learning_material.content_tags == [
+            "Activity Assignments"
+        ]
+        assert learning_material.learning_material.content_category == "Practice"
 
 
 @mock_aws

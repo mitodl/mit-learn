@@ -2,7 +2,7 @@ import type {
   V2ProgramRequirement,
   V2ProgramRequirementData,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { V2ProgramRequirementDataNodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -72,7 +72,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     course,
   }: Pick<Partial<V2ProgramRequirement["data"]>, "course"> = {}) {
     const data: V2ProgramRequirementData = {
-      node_type: V2ProgramRequirementDataNodeTypeEnum.Course,
+      node_type: NodeTypeEnum.Course,
       course: course ?? uniqueProgramId.enforce(faker.number.int),
       program: this.#root.data.program,
       required_program: null,
@@ -88,6 +88,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addOperator(opts: {
     operator: "min_number_of" | "all_of"
     operator_value?: string
+    title?: string
   }) {
     invariant(opts.operator, "operator is required")
     if (opts.operator === "min_number_of") {
@@ -100,11 +101,11 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     }
     const data: V2ProgramRequirementData = {
       ...opts,
-      node_type: V2ProgramRequirementDataNodeTypeEnum.Operator,
+      node_type: NodeTypeEnum.Operator,
       course: null,
       required_program: null,
       program: this.#root.data.program,
-      title: null,
+      title: opts.title ?? faker.lorem.words(3),
       elective_flag: opts.operator === "min_number_of" ? true : false,
     }
     const operatorNode = new RequirementTreeBuilder({ data })
@@ -115,7 +116,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
   addProgram(opts: { program?: number; title?: string } = {}) {
     const programId = opts.program ?? uniqueProgramId.enforce(faker.number.int)
     const data: V2ProgramRequirementData = {
-      node_type: "program",
+      node_type: NodeTypeEnum.Program,
       course: null,
       program: this.#root.data.program,
       required_program: programId,
@@ -129,10 +130,17 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     return programNode
   }
 
-  serialize(): V2ProgramRequirement {
+  #serialize(): V2ProgramRequirement {
     const node = { id: this.id, data: this.data }
-    const children = this.children?.map((child) => child.serialize())
+    const children = this.children?.map((child) => child.#serialize())
     return children ? { ...node, children } : node
+  }
+  serialize(): V2ProgramRequirement[] {
+    invariant(
+      this.#root === this,
+      "serialize can only be called on the root node",
+    )
+    return this.#serialize().children ?? []
   }
 }
 

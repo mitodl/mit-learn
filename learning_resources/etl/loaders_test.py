@@ -53,11 +53,13 @@ from learning_resources.etl.loaders import (
     load_video_channels,
     load_videos,
 )
+from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
     ArticleFactory,
     ContentFileFactory,
     CourseFactory,
+    LearningMaterialFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -77,6 +79,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
+    LearningMaterial,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -382,7 +385,7 @@ def test_load_program_bad_platform(mocker):
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.hybrid.name, None])
 @pytest.mark.parametrize("has_upcoming_run", [True, False])
 @pytest.mark.parametrize("has_departments", [True, False])
-def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915, C901
+def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     mock_upsert_tasks,
     course_exists,
     is_published,
@@ -497,11 +500,10 @@ def test_load_course(  # noqa: PLR0913,PLR0912,PLR0915, C901
     result = load_course(props, blocklist, [], config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
-    if is_published and is_run_published and not blocklisted:
-        if has_upcoming_run:
-            assert result.next_start_date == start_date
-        else:
-            assert result.next_start_date.date() == now.date()
+    if is_published and is_run_published and not blocklisted and has_upcoming_run:
+        assert result.next_start_date == start_date
+    else:
+        assert result.next_start_date is None
     assert result.prices == (
         [Decimal("0.00"), Decimal("49.00")]
         if is_run_published and result.certification
@@ -787,13 +789,23 @@ def test_load_course_fetch_only(mocker, course_exists):
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.parametrize("status", [RunStatus.archived.value, RunStatus.current.value])
 @pytest.mark.parametrize("certification", [True, False])
-def test_load_run(run_exists, status, certification):
+def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
+    today = now_in_utc()
+    mock_content_task = mocker.patch(
+        "learning_resources.tasks.get_content_tasks",
+        return_value=mocker.Mock(delay=mocker.Mock()),
+    )
     course = LearningResourceFactory.create(
-        is_course=True, runs=[], certification=certification
+        is_course=True,
+        runs=[],
+        certification=certification,
+        etl_source=ETLSource.xpro.value,
     )
     learning_resource_run = (
-        LearningResourceRunFactory.create(learning_resource=course)
+        LearningResourceRunFactory.create(
+            learning_resource=course,
+        )
         if run_exists
         else LearningResourceRunFactory.build()
     )
@@ -802,6 +814,8 @@ def test_load_run(run_exists, status, certification):
         LearningResourceRunFactory.build(
             run_id=learning_resource_run.run_id,
             prices=["70.00", "20.00"],
+            enrollment_start=today - timedelta(days=30),
+            enrollment_end=today + timedelta(days=30),
         )
     )
     props["status"] = status
@@ -834,6 +848,14 @@ def test_load_run(run_exists, status, certification):
     )
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
+
+    if run_exists:
+        mock_content_task.assert_not_called()
+    else:
+        mock_content_task.assert_called_once_with(
+            etl_source=course.etl_source, learning_resource_ids=[course.id]
+        )
+        mock_content_task.return_value.delay.assert_called_once()
 
 
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])
@@ -1015,6 +1037,9 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert course.runs.count() == 2
 
     deleted_content_file = ContentFileFactory.create(run=course_run)
+    deleted_content_file_learning_material = LearningMaterialFactory.create(
+        content_file=deleted_content_file
+    )
     returned_content_file_id = deleted_content_file.id + 1
 
     content_data = [{"a": "b"}, {"a": "c"}]
@@ -1044,12 +1069,15 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert mock_bulk_delete.call_count == 0 if is_published else 1
     assert mock_calc_score.call_count == (1 if calc_score else 0)
     deleted_content_file.refresh_from_db()
+    deleted_content_file_learning_material.refresh_from_db()
+
     assert not deleted_content_file.published
+    assert not deleted_content_file_learning_material.learning_resource.published
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_load_test_mode_resource_content_files(
-    mocker, mock_xpro_learning_bucket, mock_mitx_learning_bucket, test_mode
+    mocker, mock_course_archive_bucket, test_mode
 ):
     """Test that load_content_files calls the expected functions"""
 
@@ -1077,24 +1105,25 @@ def test_load_test_mode_resource_content_files(
         "learning_resources_search.plugins.tasks.deindex_run_content_files",
         autospec=True,
     )
-    bucket = mock_mitx_learning_bucket.bucket
+    bucket = mock_course_archive_bucket.bucket
     with Path.open(
         Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
     ) as infile:
         bucket.put_object(
-            Key=f"20220101/course/{course.runs.first().run_id}.tar.gz",
+            Key=f"{get_s3_prefix_for_source(course.etl_source)}/{course.runs.first().run_id}/foo.tar.gz",
             Body=infile.read(),
             ACL="public-read",
         )
     mocker.patch(
-        "learning_resources.etl.edx_shared.get_learning_course_bucket",
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
         return_value=bucket,
     )
     sync_edx_course_files(
         course.etl_source,
         [course.id],
-        [f"20220101/course/{course.runs.first().run_id}.tar.gz"],
-        s3_prefix="course",
+        [
+            f"{get_s3_prefix_for_source(course.etl_source)}/{course.runs.first().run_id}/foo.tar.gz"
+        ],
     )
 
     if test_mode:
@@ -1748,15 +1777,17 @@ def test_load_run_dependent_values(certification):
     course = LearningResourceFactory.create(
         is_course=True, certification=certification, runs=[]
     )
+    assert course.runs.count() == 0
     closest_date = now_in_utc() + timedelta(days=1)
     furthest_date = now_in_utc() + timedelta(days=2)
-    run = LearningResourceRunFactory.create(
+    best_run = LearningResourceRunFactory.create(
         learning_resource=course,
         published=True,
         availability=Availability.dated.name,
         prices=[Decimal("0.00"), Decimal("20.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=closest_date,
+        enrollment_start=None,
         location="Portland, ME",
         duration="3 - 4 weeks",
         min_weeks=3,
@@ -1772,6 +1803,7 @@ def test_load_run_dependent_values(certification):
         prices=[Decimal("0.00"), Decimal("50.00")],
         resource_prices=LearningResourcePriceFactory.create_batch(2),
         start_date=furthest_date,
+        enrollment_start=None,
         location="Portland, OR",
         duration="7 - 9 weeks",
         min_weeks=7,
@@ -1781,15 +1813,23 @@ def test_load_run_dependent_values(certification):
         max_weekly_hours=19,
     )
     result = load_run_dependent_values(course)
-    assert result.next_start_date == course.next_start_date == closest_date
-    assert result.prices == course.prices == ([] if not certification else run.prices)
+    course.refresh_from_db()
+    assert (
+        result.prices == course.prices == ([] if not certification else best_run.prices)
+    )
+    assert (
+        result.next_start_date
+        == course.next_start_date
+        == best_run.start_date
+        == closest_date
+    )
     assert (
         list(result.resource_prices)
         == list(course.resource_prices.all())
-        == ([] if not certification else list(run.resource_prices.all()))
+        == ([] if not certification else list(best_run.resource_prices.all()))
     )
     assert result.availability == course.availability == Availability.dated.name
-    assert result.location == course.location == run.location
+    assert result.location == course.location == best_run.location
     for key in [
         "duration",
         "time_commitment",
@@ -1798,7 +1838,7 @@ def test_load_run_dependent_values(certification):
         "min_weekly_hours",
         "max_weekly_hours",
     ]:
-        assert getattr(result, key) == getattr(course, key) == getattr(run, key)
+        assert getattr(result, key) == getattr(course, key) == getattr(best_run, key)
 
 
 def test_load_run_dependent_values_resets_next_start_date():
@@ -1827,6 +1867,57 @@ def test_load_run_dependent_values_resets_next_start_date():
     # Verify that next_start_date was reset to None
     assert result.next_start_date is None
     assert course.next_start_date is None
+
+
+@pytest.mark.parametrize(
+    ("has_start_date", "has_enrollment_start", "expect_next_start_date"),
+    [
+        (True, True, True),
+        (True, False, True),
+        (False, True, False),  # next_run requires start_date > now
+        (False, False, False),
+    ],
+)
+def test_load_run_dependent_values_next_start_date(
+    has_start_date, has_enrollment_start, expect_next_start_date
+):
+    """Test that next_start_date is correctly set from the next_run (future runs only)"""
+    course = LearningResourceFactory.create(is_course=True, published=True, runs=[])
+
+    now = now_in_utc()
+    future_start = now + timedelta(days=30)
+    future_enrollment_start = now + timedelta(days=15)
+
+    # Create a run with future dates
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=future_start if has_start_date else None,
+        enrollment_start=future_enrollment_start if has_enrollment_start else None,
+    )
+
+    # Call load_run_dependent_values
+    result = load_run_dependent_values(course)
+
+    # Refresh course from database
+    course.refresh_from_db()
+
+    # Verify that next_start_date is set correctly
+    if expect_next_start_date:
+        # next_start_date should be the max of start_date and enrollment_start
+        expected_date = max(
+            filter(
+                None,
+                [
+                    future_start if has_start_date else None,
+                    future_enrollment_start if has_enrollment_start else None,
+                ],
+            )
+        )
+        assert result.next_start_date == expected_date
+    else:
+        # No future dates, so next_start_date should be None
+        assert result.next_start_date is None
 
 
 @pytest.mark.parametrize(
@@ -2014,3 +2105,114 @@ def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant)
     assert (
         mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
     )
+
+
+@pytest.mark.django_db
+def test_load_learning_materials(mocker):
+    """
+    Test that load_learning_materials runs load_learning_material
+    if a ocw content file has content_tags in OCW_COURSE_CONTENT_CATEGORY_MAPPING
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    relevant_content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+    irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
+
+    learning_material_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[relevant_content_tag],
+    )
+
+    other_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[irrelevant_content_tag],
+    )
+
+    load_learning_materials_spy = mocker.spy(loaders, "load_learning_material")
+
+    loaders.load_learning_materials(
+        course_run=ocw_course.learning_resource.runs.first(),
+        content_file_ids=[
+            learning_material_content_file.id,
+            other_content_file.id,
+        ],
+    )
+
+    assert load_learning_materials_spy.call_count == 1
+    load_learning_materials_spy.assert_called_with(
+        ocw_course.learning_resource.runs.first(),
+        learning_material_content_file,
+        {"Programming Assignments"},
+    )
+
+    learning_material = LearningMaterial.objects.last()
+
+    resource_relationships = ocw_course.learning_resource.children.all()
+    assert resource_relationships.count() == 1
+
+    assert (
+        resource_relationships.first().child.id
+        == learning_material.learning_resource.id
+    )
+    assert (
+        resource_relationships.first().relation_type
+        == LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS.value
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("learning_material_exists", [True, False])
+def test_load_learning_material(mocker, learning_material_exists):
+    """
+    Test that load_learning_material creates a LearningMaterial
+    for the given content file and links it to the course run
+    """
+
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+
+    content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+
+    content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[content_tag],
+    )
+
+    if learning_material_exists:
+        existing_learning_material = LearningMaterialFactory.create(
+            content_file=content_file,
+        )
+
+        existing_learning_material.learning_resource.readable_id = (
+            f"{ocw_course.learning_resource.runs.first().run_id}-{content_file.key}"
+        )
+        existing_learning_material.learning_resource.platform = (
+            ocw_course.learning_resource.platform
+        )
+        existing_learning_material.learning_resource.save()
+
+    loaders.load_learning_material(
+        ocw_course.learning_resource.runs.first(),
+        content_file,
+        {"Programming Assignments"},
+    )
+
+    assert LearningMaterial.objects.count() == 1
+
+    learning_material = LearningMaterial.objects.last()
+
+    assert learning_material.learning_resource.title == content_file.title
+    assert learning_material.learning_resource.url == content_file.url
+    assert learning_material.content_file.id == content_file.id

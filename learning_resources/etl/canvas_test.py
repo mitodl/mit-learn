@@ -24,7 +24,7 @@ from learning_resources.etl.canvas_utils import (
     parse_web_content,
 )
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import get_edx_module_id
+from learning_resources.etl.utils import get_edx_module_id, process_olx_path
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -94,6 +94,11 @@ DEFAULT_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
         </organizations>
     </manifest>
 """
+
+
+@pytest.fixture
+def sample_pdf_content():
+    return Path("test_pdfs/notes.pdf").read_bytes()
 
 
 @pytest.fixture(autouse=True)
@@ -443,8 +448,8 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
 
 @pytest.mark.parametrize("overwrite", [True, False])
 @pytest.mark.parametrize("existing_file", [True, False])
-def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
-    tmp_path, mocker, settings, overwrite, existing_file
+def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(  # noqa: PLR0913
+    tmp_path, mocker, settings, overwrite, existing_file, sample_pdf_content
 ):
     """
     Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
@@ -452,11 +457,12 @@ def test_transform_canvas_problem_files_pdf_calls_pdf_to_markdown(
     """
 
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
-    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
+    settings.OCR_MODEL = "fake-model"
+
     pdf_filename = "problemset1/problem.pdf"
-    pdf_content = b"%PDF-1.4 fake pdf content"
+
     zip_path = make_canvas_zip(
-        tmp_path, files=[(f"tutorbot/{pdf_filename}", pdf_content)]
+        tmp_path, files=[(f"tutorbot/{pdf_filename}", sample_pdf_content)]
     )
 
     # return a file with pdf extension
@@ -524,7 +530,7 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
     there is an existing file.
     """
     settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
-    settings.CANVAS_PDF_TRANSCRIPTION_MODEL = "fake-model"
+    settings.OCR_MODEL = "fake-model"
     csv_filename = "problemset2/problem.csv"
     csv_content = "a,b,c\n1,2,3"
     zip_path = make_canvas_zip(
@@ -1031,7 +1037,7 @@ def test_parse_files_meta_excludes_tutorbot_folder(tmp_path, settings):
     assert result["unpublished"][0]["path"].name == "tutorfile.html"
 
 
-def test_embedded_files_from_html(tmp_path, mocker):
+def test_embedded_files_from_html(tmp_path, mocker, sample_pdf_content):
     """
     Test that _embedded_files_from_html processes files embedded in HTML content
     even if they are not in modules_meta.xml or files_meta.xml.
@@ -1083,7 +1089,7 @@ def test_embedded_files_from_html(tmp_path, mocker):
         tmp_path, module_xml=module_xml, manifest_xml=manifest_xml
     )
     with zipfile.ZipFile(zip_path, "a") as zf:
-        zf.writestr("web_resources/file1.pdf", "content of file1")
+        zf.writestr("web_resources/file1.pdf", sample_pdf_content)
         zf.writestr("web_resources/file2.html", "content of file2")
         zf.writestr("web_resources/html_page.html", html_content)
 
@@ -1742,7 +1748,9 @@ def test_get_published_items_for_attachment_module(mocker, tmp_path):
     assert Path("web_resources/visible_attachment_module.txt").resolve() in published
 
 
-def test_ingestion_finishes_with_missing_xml_files(tmp_path, mocker):
+def test_ingestion_finishes_with_missing_xml_files(
+    tmp_path, mocker, sample_pdf_content
+):
     """
     Test that canvas course ingestion succeeds even if some config XML files are missing
     """
@@ -1787,7 +1795,7 @@ def test_ingestion_finishes_with_missing_xml_files(tmp_path, mocker):
         manifest_xml=manifest_xml,
         files=[
             ("course_settings/files_meta.xml", files_xml),
-            ("web_resources/file1.pdf", "content of file1"),
+            ("web_resources/file1.pdf", sample_pdf_content),
             ("web_resources/file2.html", "content of file2"),
             ("web_resources/html_page.html", ""),
         ],
@@ -1804,3 +1812,89 @@ def test_ingestion_finishes_with_missing_xml_files(tmp_path, mocker):
     )
     assert run is not None
     assert len(content_results) > 0
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+@pytest.mark.parametrize("existing_file", [True, False])
+def test_transform_canvas_problem_files_pdf_calls_llm_for_ocr(  # noqa: PLR0913
+    tmp_path, mocker, settings, overwrite, existing_file, sample_pdf_content
+):
+    """
+    Test that transform_canvas_problem_files calls _pdf_to_markdown for PDF files.
+    if overwrite is True or there is no existing file. Tikka should not be called
+    """
+
+    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
+    settings.OCR_MODEL = "test model"
+
+    pdf_filename = "problemset1/problem.pdf"
+
+    zip_path = make_canvas_zip(
+        tmp_path, files=[(f"tutorbot/{pdf_filename}", sample_pdf_content)]
+    )
+
+    # return a file with pdf extension
+    fake_file_data = {
+        "run": "run",
+        "content_type": "application/pdf",
+        "archive_checksum": "checksum",
+        "source_path": f"tutorbot/{pdf_filename}",
+        "file_extension": ".pdf",
+    }
+
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=iter([[mocker.Mock(), fake_file_data]]),
+    )
+
+    # Patch _pdf_to_markdown to return a known value
+    pdf_to_md = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown",
+        return_value="markdown content from pdf",
+    )
+
+    tika = mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+    )
+
+    run = LearningResourceRunFactory.create()
+
+    if existing_file:
+        TutorProblemFileFactory.create(
+            run=run,
+            type="problem",
+            archive_checksum="checksum",
+            source_path=f"tutorbot/{pdf_filename}",
+            content="existing content",
+            file_name="problem1.pdf",
+        )
+
+    results = list(transform_canvas_problem_files(zip_path, run, overwrite=overwrite))
+
+    if overwrite or not existing_file:
+        pdf_to_md.assert_called_once()
+    else:
+        pdf_to_md.assert_not_called()
+
+    tika.assert_not_called()
+
+    assert (
+        results[0]["content"] == "markdown content from pdf"
+        if overwrite or not existing_file
+        else "existing content"
+    )
+    assert results[0]["problem_title"] == "problemset1"
+
+
+def test_empty_pdf_is_skipped(tmp_path):
+    """Empty PDF files should be handled gracefully, not raise an exception."""
+    empty_pdf = tmp_path / "empty.pdf"
+    empty_pdf.write_bytes(b"")
+
+    # Should not raise EmptyFileError
+    result = list(
+        process_olx_path(
+            str(empty_pdf), LearningResourceRunFactory.create(), overwrite=True
+        )
+    )
+    assert result == []

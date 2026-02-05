@@ -1,6 +1,6 @@
 import React from "react"
-import { factories } from "api/mitxonline-test-utils"
-import { factories as learnFactories } from "api/test-utils"
+import { factories, urls } from "api/mitxonline-test-utils"
+import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
@@ -11,7 +11,7 @@ const shuffle = faker.helpers.shuffle
 const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
-const makeResource = learnFactories.learningResources.program
+const makeFlexiblePrice = factories.products.flexiblePrice
 const { RequirementTreeBuilder } = factories.requirements
 
 describe("CourseSummary", () => {
@@ -72,21 +72,20 @@ describe("CourseSummary", () => {
     },
   )
 
-  test.each([
-    {
-      overrides: { is_archived: true },
-      expectLabel: "Access Course Materials",
-    },
-    { overrides: { is_archived: false }, expectLabel: "Enroll Now" },
-  ])("Renders expected enrollment button", ({ overrides, expectLabel }) => {
-    const run = makeRun(overrides)
+  test("Renders enrollButton prop when provided", () => {
+    const run = makeRun()
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: shuffle([run, makeRun()]),
     })
-    renderWithProviders(<CourseSummary course={course} />)
+    const enrollButton = <button>Test Enroll Button</button>
+    renderWithProviders(
+      <CourseSummary course={course} enrollButton={enrollButton} />,
+    )
     const summary = screen.getByRole("region", { name: "Course summary" })
-    const button = within(summary).getByRole("button", { name: expectLabel })
+    const button = within(summary).getByRole("button", {
+      name: "Test Enroll Button",
+    })
     expect(button).toBeInTheDocument()
   })
 })
@@ -286,7 +285,12 @@ describe("Course Price Row", () => {
   })
 
   test("Offers certificate upgrade if not archived and has product", () => {
-    const run = makeRun({ is_archived: false, products: [makeProduct()] })
+    const run = makeRun({
+      is_archived: false,
+      products: [makeProduct()],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: shuffle([run, makeRun()]),
@@ -306,12 +310,191 @@ describe("Course Price Row", () => {
   })
 })
 
+describe("Course Financial Assistance", () => {
+  test.each([
+    { hasFinancialAid: true, expectLink: true },
+    { hasFinancialAid: false, expectLink: false },
+  ])(
+    "Financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
+    async ({ hasFinancialAid, expectLink }) => {
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
+      const product = makeProduct()
+      const run = makeRun({
+        is_archived: false,
+        products: [product],
+        is_enrollable: true,
+        is_upgradable: true,
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+
+      // Mock the flexible price API response when financial aid is available
+      if (hasFinancialAid) {
+        const mockFlexiblePrice = makeFlexiblePrice({
+          id: product.id,
+          price: product.price,
+          product_flexible_price: null,
+        })
+        setMockResponse.get(
+          urls.products.userFlexiblePriceDetail(product.id),
+          mockFlexiblePrice,
+        )
+      }
+
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const summary = await screen.findByRole("region", {
+        name: "Course summary",
+      })
+      const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+      if (expectLink) {
+        const link = await within(priceRow).findByRole("link", {
+          name: /financial assistance/i,
+        })
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
+        expect(link).toHaveTextContent("Financial assistance available")
+      } else {
+        const link = within(priceRow).queryByRole("link", {
+          name: /financial assistance/i,
+        })
+        expect(link).toBeNull()
+        expect(link).toBeNull()
+      }
+    },
+  )
+
+  test("Displays user-specific discounted price when financial aid is available", async () => {
+    const originalPrice = "100.00"
+    const discountedAmount = "50.00"
+    const product = makeProduct({ price: originalPrice })
+    const flexiblePrice = makeFlexiblePrice({
+      id: product.id,
+      price: originalPrice,
+      product_flexible_price: {
+        id: faker.number.int(),
+        amount: discountedAmount,
+        discount_type: "dollars-off" as const,
+        discount_code: faker.string.alphanumeric(8),
+        redemption_type: "one-time" as const,
+        is_redeemed: false,
+        automatic: true,
+        max_redemptions: 1,
+        payment_type: null,
+        activation_date: faker.date.past().toISOString(),
+        expiration_date: faker.date.future().toISOString(),
+      },
+    })
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const run = makeRun({
+      is_archived: false,
+      products: [product],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    setMockResponse.get(
+      urls.products.userFlexiblePriceDetail(product.id),
+      flexiblePrice,
+    )
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = await screen.findByRole("region", {
+      name: "Course summary",
+    })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Wait for the flexible price API to be called and prices to be displayed
+    // The discounted price is calculated as: $100 - $50 = $50
+    await within(priceRow).findByText("Financial assistance applied")
+    expect(priceRow).toHaveTextContent("$50.00")
+    expect(priceRow).toHaveTextContent("$100.00")
+  })
+
+  test("Does NOT call flexible price API when financial aid URL is empty", () => {
+    const product = makeProduct({ price: "100.00" })
+    const run = makeRun({
+      is_archived: false,
+      products: [product],
+      is_enrollable: true,
+      is_upgradable: true,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: "" },
+    })
+
+    // We're NOT setting up a mock response for the flexible price API
+    // If it's called, the test will fail
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Should show the regular price
+    expect(priceRow).toHaveTextContent(`$${product.price}`)
+    // Should NOT show financial assistance link
+    expect(
+      within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+    ).toBeNull()
+  })
+
+  test("Does NOT show financial assistance when certificate link is present but products array is empty", () => {
+    const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
+    const run = makeRun({
+      is_archived: false,
+      products: [],
+      is_enrollable: true,
+      is_upgradable: false,
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: { financial_assistance_form_url: financialAidUrl },
+    })
+
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    // Should show "Certificate deadline passed" since no products
+    expect(priceRow).toHaveTextContent("Certificate deadline passed")
+
+    // Certificate link should be present
+    const certLink = within(priceRow).getByRole("link", {
+      name: /Learn More/i,
+    })
+    expect(certLink).toBeInTheDocument()
+
+    // Financial assistance link should NOT be present
+    expect(
+      within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+    ).toBeNull()
+  })
+})
+
 describe("ProgramSummary", () => {
   test("renders program summary", async () => {
     const program = factories.programs.program()
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     within(summary).getByRole("heading", { name: "Program summary" })
@@ -319,7 +502,7 @@ describe("ProgramSummary", () => {
 })
 
 describe("Program RequirementsRow", () => {
-  test("Renders requirements if present", () => {
+  test("Renders requirement count with required + elective courses", () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -337,27 +520,32 @@ describe("Program RequirementsRow", () => {
     const program = factories.programs.program({
       requirements: {
         courses: {
-          required: required.children?.map((n) => n.id) ?? [],
-          electives: electives.children?.map((n) => n.id) ?? [],
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
+          electives:
+            electives.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
         },
         programs: { required: [], electives: [] },
       },
-      req_tree: [requirements.serialize()],
+      req_tree: requirements.serialize(),
     })
 
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
 
     // The text is split more nicely on screen, but via html tags not spaces
-    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
-    expect(reqRow).toHaveTextContent("4 Elective CoursesComplete 2 of 4")
+    expect(reqRow).toHaveTextContent("5 Courses to complete program")
   })
 
-  test("Does not show electives if there are none", () => {
+  test("Renders requirement count correctly if no electives", () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -367,23 +555,24 @@ describe("Program RequirementsRow", () => {
     const program = factories.programs.program({
       requirements: {
         courses: {
-          required: required.children?.map((n) => n.id) ?? [],
+          required:
+            required.children?.map((n) => ({
+              id: n.id,
+              readable_id: `readale-${n.id}`,
+            })) ?? [],
           electives: [],
         },
         programs: { required: [], electives: [] },
       },
-      req_tree: [requirements.serialize()],
+      req_tree: requirements.serialize(),
     })
 
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const reqRow = within(summary).getByTestId(TestIds.RequirementsRow)
 
-    expect(reqRow).toHaveTextContent("3 Required CoursesComplete All")
-    expect(reqRow).not.toHaveTextContent("Elective")
+    expect(reqRow).toHaveTextContent("3 Courses to complete program")
   })
 })
 
@@ -403,9 +592,7 @@ describe("Program Duration Row", () => {
         page: { length, effort },
       })
 
-      renderWithProviders(
-        <ProgramSummary program={program} programResource={null} />,
-      )
+      renderWithProviders(<ProgramSummary program={program} />)
       const summary = screen.getByRole("region", { name: "Program summary" })
 
       if (!length) {
@@ -419,42 +606,63 @@ describe("Program Duration Row", () => {
 })
 
 describe("Program Pacing Row", () => {
-  const SELF_PACED = { code: "self_paced", name: "Self-Paced" } as const
-  const INSTRUCTOR_PACED = {
-    code: "instructor_paced",
-    name: "Instructor-Paced",
-  } as const
+  const courses = {
+    selfPaced: makeCourse({
+      courseruns: [makeRun({ is_self_paced: true })],
+    }),
+    instructorPaced: makeCourse({
+      courseruns: [makeRun({ is_self_paced: false, is_archived: false })],
+    }),
+    archived: makeCourse({
+      // counts as self-paced.
+      courseruns: [makeRun({ is_self_paced: false, is_archived: true })],
+    }),
+    noRuns: makeCourse({
+      courseruns: [],
+    }),
+  }
+
   test.each([
-    { pace: [SELF_PACED], expected: "Self-Paced" },
-    { pace: [INSTRUCTOR_PACED], expected: "Instructor-Paced" },
-    { pace: [SELF_PACED, INSTRUCTOR_PACED], expected: "Instructor-Paced" },
-  ])("Shows correct pacing information", ({ pace, expected }) => {
+    { courses: [courses.selfPaced], expected: "Self-Paced" },
+    { courses: [courses.archived], expected: "Self-Paced" },
+    { courses: [courses.instructorPaced], expected: "Instructor-Paced" },
+    {
+      courses: [courses.selfPaced, courses.instructorPaced],
+      expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.instructorPaced],
+      expected: "Instructor-Paced",
+    },
+    {
+      courses: [courses.noRuns, courses.selfPaced],
+      expected: "Self-Paced",
+    },
+  ])("Shows correct pacing information", ({ courses, expected }) => {
     const program = factories.programs.program()
-    const resource = makeResource({ pace })
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={resource} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} courses={courses} />)
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
-    expect(paceRow).toHaveTextContent(`Program Format: ${expected}`)
+    expect(paceRow).toHaveTextContent(`Course Format: ${expected}`)
   })
 
   test.each([
-    { pace: [SELF_PACED], dialogName: /What are Self-Paced/ },
+    { courses: [courses.selfPaced], dialogName: /What are Self-Paced/ },
     {
-      pace: [INSTRUCTOR_PACED],
+      courses: [courses.instructorPaced],
       dialogName: /What are Instructor-Paced/,
     },
     {
-      pace: [SELF_PACED, INSTRUCTOR_PACED],
+      courses: [courses.selfPaced, courses.instructorPaced],
       dialogName: /What are Instructor-Paced/,
     },
-  ])("Renders expected dialog", async ({ pace, dialogName }) => {
+    {
+      courses: [courses.archived],
+      dialogName: /What are Self-Paced/,
+    },
+  ])("Renders expected dialog", async ({ courses, dialogName }) => {
     const program = factories.programs.program()
-    const resource = makeResource({ pace })
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={resource} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} courses={courses} />)
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
     const button = within(paceRow).getByRole("button", { name: "What's this?" })
@@ -472,30 +680,59 @@ describe("Program Pacing Row", () => {
 describe("Price & Certificate Row", () => {
   test("Shows 'Free to Learn'", () => {
     const program = factories.programs.program()
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
     const priceRow = within(summary).getByTestId(TestIds.PriceRow)
 
     expect(priceRow).toHaveTextContent("Free to Learn")
   })
-})
 
-describe("Program Certificate Track Row", () => {
   test("Renders certificate information", () => {
     const program = factories.programs.program()
-    renderWithProviders(
-      <ProgramSummary program={program} programResource={null} />,
-    )
+    invariant(program.page.price)
+    renderWithProviders(<ProgramSummary program={program} />)
 
     const summary = screen.getByRole("region", { name: "Program summary" })
-    const certRow = within(summary).getByTestId(TestIds.CertificateTrackRow)
+    const certRow = within(summary).getByTestId(TestIds.PriceRow)
 
     expect(certRow).toHaveTextContent("Certificate Track")
-    expect(certRow).toHaveTextContent(
-      `${program.min_price}\u2013$${program.max_price}`,
-    )
+    expect(certRow).toHaveTextContent(program.page.price)
   })
+
+  test.each([
+    { hasFinancialAid: true, expectLink: true },
+    { hasFinancialAid: false, expectLink: false },
+  ])(
+    "Program financial aid link is displayed if and only if URL is non-empty (hasFinancialAid=$hasFinancialAid)",
+    ({ hasFinancialAid, expectLink }) => {
+      const financialAidUrl = hasFinancialAid
+        ? `/financial-aid/${faker.string.alphanumeric(10)}`
+        : ""
+      const program = factories.programs.program({
+        page: { financial_assistance_form_url: financialAidUrl },
+      })
+      renderWithProviders(<ProgramSummary program={program} />)
+
+      const summary = screen.getByRole("region", { name: "Program summary" })
+      const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+      if (expectLink) {
+        const link = within(priceRow).getByRole("link", {
+          name: /financial assistance/i,
+        })
+        const expectedUrl = new URL(
+          financialAidUrl,
+          process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+        ).toString()
+        expect(link).toHaveAttribute("href", expectedUrl)
+        expect(link).toHaveTextContent("Financial assistance available")
+      } else {
+        const link = within(priceRow).queryByRole("link", {
+          name: /financial assistance/i,
+        })
+        expect(link).toBeNull()
+      }
+    },
+  )
 })

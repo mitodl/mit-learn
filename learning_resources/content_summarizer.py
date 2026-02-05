@@ -61,7 +61,7 @@ class ContentSummarizer:
 
         return (
             content_file.content_type in summarizer_config.allowed_content_types
-            or content_file.file_extension in summarizer_config.allowed_extensions
+            and content_file.file_extension in summarizer_config.allowed_extensions
         )
 
     def get_unprocessed_content_file_ids(
@@ -263,11 +263,12 @@ class ContentSummarizer:
             - list[dict[str, str]]: List of flashcards
         """
         try:
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=2048)
             logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
+
             response = structured_llm.invoke(
-                f"Generate flashcards from the following transcript. Each flashcard should have a question and answer. Transcript:{content}"  # noqa: E501
+                settings.CONTENT_SUMMARIZER_FLASHCARD_PROMPT.format(content=content)
             )
             if response:
                 generated_flashcards = response.get("flashcards", [])

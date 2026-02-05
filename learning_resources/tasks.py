@@ -19,13 +19,14 @@ from learning_resources.etl.canvas import (
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
+    sync_edx_archive,
     sync_edx_course_files,
 )
 from learning_resources.etl.loaders import load_run_dependent_values
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
-    get_learning_course_bucket,
-    get_learning_course_bucket_name,
+    get_bucket_by_name,
+    get_s3_prefix_for_source,
 )
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -81,7 +82,9 @@ def update_next_start_date_and_prices():
     for resource in resources:
         load_run_dependent_values(resource)
         if resource.published:
-            resource_upserted_actions(resource, percolate=False)
+            resource_upserted_actions(
+                resource, percolate=False, generate_embeddings=True
+            )
     clear_views_cache()
     return len(resources)
 
@@ -176,7 +179,6 @@ def get_content_files(
     etl_source: str,
     keys: list[str],
     *,
-    s3_prefix: str | None = None,
     overwrite: bool = False,
 ):
     """
@@ -185,22 +187,18 @@ def get_content_files(
     if not (
         settings.AWS_ACCESS_KEY_ID
         and settings.AWS_SECRET_ACCESS_KEY
-        and get_learning_course_bucket_name(etl_source) is not None
+        and settings.COURSE_ARCHIVE_BUCKET_NAME is not None
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(
-        etl_source, ids, keys, s3_prefix=s3_prefix, overwrite=overwrite
-    )
+    sync_edx_course_files(etl_source, ids, keys, overwrite=overwrite)
     clear_views_cache()
 
 
-def get_content_tasks(  # noqa: PLR0913
+def get_content_tasks(
     etl_source: str,
     *,
     chunk_size: int | None = None,
-    s3_prefix: str | None = None,
-    override_base_prefix: bool = False,
     overwrite: bool = False,
     learning_resource_ids: list[int] | None = None,
     # Updated parameter
@@ -212,9 +210,7 @@ def get_content_tasks(  # noqa: PLR0913
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
 
     blocklisted_ids = load_course_blocklist()
-    archive_keys = get_most_recent_course_archives(
-        etl_source, s3_prefix=s3_prefix, override_base_prefix=override_base_prefix
-    )
+    archive_keys = get_most_recent_course_archives(etl_source)
 
     if learning_resource_ids:
         learning_resources = (
@@ -235,9 +231,7 @@ def get_content_tasks(  # noqa: PLR0913
 
     return celery.group(
         [
-            get_content_files.si(
-                ids, etl_source, archive_keys, s3_prefix=s3_prefix, overwrite=overwrite
-            )
+            get_content_files.si(ids, etl_source, archive_keys, overwrite=overwrite)
             for ids in chunks(
                 learning_resources,
                 chunk_size=chunk_size,
@@ -255,7 +249,6 @@ def import_all_mit_edx_files(
         get_content_tasks(
             ETLSource.mit_edx.name,
             chunk_size=chunk_size,
-            s3_prefix=settings.EDX_LEARNING_COURSE_BUCKET_PREFIX,
             overwrite=overwrite,
             learning_resource_ids=learning_resource_ids,
         )
@@ -271,8 +264,6 @@ def import_all_oll_files(
         get_content_tasks(
             ETLSource.oll.name,
             chunk_size=chunk_size,
-            s3_prefix=settings.OLL_LEARNING_COURSE_BUCKET_PREFIX,
-            override_base_prefix=True,
             overwrite=overwrite,
             learning_resource_ids=learning_resource_ids,
         )
@@ -522,8 +513,21 @@ def summarize_unprocessed_content(
 
 @app.task(acks_late=True)
 def ingest_canvas_course(archive_path, overwrite):
-    bucket = get_learning_course_bucket(ETLSource.canvas.name)
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
+
+
+@app.task(acks_late=True)
+def ingest_edx_course(
+    etl_source: str,
+    archive_path: str,
+    *,
+    course_id: str | None = None,
+    overwrite: bool = False,
+):
+    return sync_edx_archive(
+        etl_source, archive_path, course_id=course_id, overwrite=overwrite
+    )
 
 
 @app.task(acks_late=True)
@@ -535,8 +539,8 @@ def sync_canvas_courses(canvas_course_ids, overwrite):
         overwrite (bool): Whether to overwrite existing content files
     """
 
-    bucket = get_learning_course_bucket(ETLSource.canvas.name)
-    s3_prefix = f"{settings.CANVAS_COURSE_BUCKET_PREFIX}"
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
+    s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)
     exports = bucket.objects.filter(Prefix=s3_prefix)
     log.info("syncing all canvas courses")
     latest_archives = {}
@@ -614,7 +618,7 @@ def scrape_marketing_pages(self):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_RATE_LIMIT,
 )
 def marketing_page_for_resources(resource_ids):
     for learning_resource in LearningResource.objects.filter(id__in=resource_ids):

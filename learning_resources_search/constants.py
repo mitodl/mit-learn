@@ -25,6 +25,22 @@ BOTH_INDEXES = "all_indexes"
 HYBRID_COMBINED_INDEX = "combined_hybrid"
 LEARNING_RESOURCE = "learning_resource"
 HYBRID_SEARCH_MODE = "hybrid"
+HYBRID_SEARCH_PIPELINE_NAME = "hybrid_search_pipeline"
+
+HYBRID_SEARCH_PIPELINE_BODY = {
+    "description": "Post processor for hybrid search",
+    "phase_results_processors": [
+        {
+            "normalization-processor": {
+                "normalization": {"technique": "min_max"},
+                "combination": {
+                    "technique": "arithmetic_mean",
+                    "parameters": {"weights": [0.8, 0.2]},
+                },
+            }
+        }
+    ],
+}
 
 
 class IndexestoUpdate(Enum):
@@ -322,7 +338,13 @@ LEARNING_RESOURCE_MAP = {
     "max_weekly_hours": {"type": "integer"},
 }
 
-EMBEDDING_FIELDS = {"vector_embedding": {"type": "knn_vector"}}
+EMBEDDING_FIELDS = {
+    "vector_embedding": {
+        "type": "knn_vector",
+        "space_type": "cosinesimil",
+        "method": {"name": "hnsw", "space_type": "cosinesimil", "engine": "faiss"},
+    }
+}
 
 
 CONTENT_FILE_MAP = {

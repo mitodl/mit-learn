@@ -1,10 +1,10 @@
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import Chip from "@mui/material/Chip"
 import type { ChipProps } from "@mui/material/Chip"
 import Stack from "@mui/material/Stack"
 
-import { fn } from "@storybook/test"
+import { fn } from "storybook/test"
 import { ChipLink } from "./ChipLink"
 import {
   RiPencilFill,

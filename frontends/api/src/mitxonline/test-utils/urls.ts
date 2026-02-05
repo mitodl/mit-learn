@@ -18,14 +18,15 @@ const countries = {
 }
 
 const enrollment = {
-  enrollmentsList: () => `${API_BASE_URL}/api/v1/enrollments/`,
   courseEnrollment: (id?: number) =>
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
+  enrollmentsListV1: () => `${API_BASE_URL}/api/v1/enrollments/`,
   enrollmentsListV2: () => `${API_BASE_URL}/api/v2/enrollments/`,
 }
 
 const programEnrollments = {
   enrollmentsList: () => `${API_BASE_URL}/api/v1/program_enrollments/`,
+  enrollmentsListV2: () => `${API_BASE_URL}/api/v2/program_enrollments/`,
 }
 
 const b2b = {
@@ -35,7 +36,7 @@ const b2b = {
 
 const programs = {
   programsList: (opts?: ProgramsApiProgramsListV2Request) =>
-    `${API_BASE_URL}/api/v2/programs/${queryify(opts)}`,
+    `${API_BASE_URL}/api/v2/programs/${queryify(opts, { explode: false })}`,
   programDetail: (id: number) => `${API_BASE_URL}/api/v2/programs/${id}/`,
 }
 
@@ -83,6 +84,17 @@ const certificates = {
   ) => `${API_BASE_URL}/api/v2/program_certificates/${params.cert_uuid}/`,
 }
 
+const products = {
+  userFlexiblePriceDetail: (productId: number) =>
+    `${API_BASE_URL}/api/v0/products/${productId}/user_flexible_price/`,
+}
+
+const baskets = {
+  createFromProduct: (productId: number) =>
+    `${API_BASE_URL}/api/v0/baskets/create_from_product/${productId}/`,
+  clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -97,4 +109,6 @@ export {
   programEnrollments,
   contracts,
   certificates,
+  products,
+  baskets,
 }

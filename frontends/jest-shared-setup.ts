@@ -4,14 +4,19 @@ import "cross-fetch/polyfill"
 import { resetAllWhenMocks } from "jest-when"
 import * as matchers from "jest-extended"
 import { mockRouter } from "ol-test-utilities/mocks/nextNavigation"
+import { setDefaultTimezone } from "ol-test-utilities"
 
 expect.extend(matchers)
 
+setDefaultTimezone("UTC")
+
 // env vars
 process.env.NEXT_PUBLIC_MITOL_API_BASE_URL =
-  "http://api.test.learn.odl.local:8063"
+  "http://api.test.learn.odl.local:8065"
 process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL =
-  "http://api.test.mitxonline.odl.local:8053"
+  "http://api.test.learn.odl.local:8065/mitxonline"
+process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
+  "http://mitxonline.odl.local:8065"
 process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
 process.env.NEXT_PUBLIC_EMBEDLY_KEY = "fake-embedly-key"
 
@@ -55,14 +60,16 @@ class FakeResizeObserver {
   }
 }
 const polyfillResizeObserver = () => {
-  if (window.ResizeObserver !== undefined) {
-    /**
-     * If this throws... I guess our test env supports it natively now.
-     * Welcome to the future!
-     */
-    throw new Error("ResizeObserver is already defined.")
+  if (
+    window.ResizeObserver !== undefined &&
+    // @ts-expect-error happyDOM specific property
+    window.happyDOM === undefined
+  ) {
+    console.info(
+      "ResizeObserver is already defined (expected if using the Happy DOM test environment). Skipping polyfill.",
+    )
   }
-  window.ResizeObserver = FakeResizeObserver
+  window.ResizeObserver = window.ResizeObserver || FakeResizeObserver
 }
 polyfillResizeObserver()
 

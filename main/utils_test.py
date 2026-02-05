@@ -3,12 +3,18 @@
 import datetime
 from math import ceil
 from tempfile import NamedTemporaryFile
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.http import QueryDict
+from rest_framework.response import Response
 
 from main.factories import UserFactory
 from main.utils import (
+    _sorted_query_string,
+    cache_page_for_all_users,
+    cache_page_for_anonymous_users,
     chunks,
     clean_data,
     extract_values,
@@ -241,3 +247,301 @@ def test_frontend_absolute_url(settings):
 def test_clean_data(input_text, output_text):
     """clean_data function should return expected output"""
     assert clean_data(input_text) == output_text
+
+
+def _create_mock_request(*, is_authenticated=False, path="/test/", query=""):
+    """Create a mock request object for testing cache decorators."""
+    request = MagicMock()
+    request.user.is_authenticated = is_authenticated
+    request.path = path
+    request.GET = QueryDict(query)
+    return request
+
+
+def _create_view():
+    """Create a simple view function that tracks call count."""
+    call_count = {"count": 0}
+
+    def view(request):
+        call_count["count"] += 1
+        return Response({"result": "fresh", "call": call_count["count"]})
+
+    view.call_count = call_count
+    return view
+
+
+def test_sorted_query_string_empty():
+    """Empty query dict returns empty string."""
+    query_dict = QueryDict("")
+    assert _sorted_query_string(query_dict) == ""
+
+
+def test_sorted_query_string_single_param():
+    """Single parameter is formatted correctly."""
+    query_dict = QueryDict("foo=bar")
+    assert _sorted_query_string(query_dict) == "foo=bar"
+
+
+def test_sorted_query_string_multiple_params_sorted():
+    """Multiple parameters are sorted alphabetically by key."""
+    query_dict = QueryDict("z=last&a=first&m=middle")
+    assert _sorted_query_string(query_dict) == "a=first&m=middle&z=last"
+
+
+def test_sorted_query_string_multi_value():
+    """Multi-value parameters are expanded and sorted."""
+    query_dict = QueryDict("topic=math&topic=science&a=first")
+    result = _sorted_query_string(query_dict)
+    assert result == "a=first&topic=math&topic=science"
+
+
+@patch("main.utils.caches")
+def test_cache_page_for_anonymous_users_caches_anonymous(mock_caches):
+    """Anonymous user requests are cached."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_anonymous_users(300)(view)
+
+    request = _create_mock_request(is_authenticated=False)
+    response1 = decorated(request)
+
+    assert view.call_count["count"] == 1
+    mock_cache.set.assert_called_once()
+    assert response1.data["result"] == "fresh"
+
+
+@patch("main.utils.caches")
+def test_cache_page_for_anonymous_users_skips_authenticated(mock_caches):
+    """Authenticated user requests bypass the cache."""
+    mock_cache = MagicMock()
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_anonymous_users(300)(view)
+
+    request = _create_mock_request(is_authenticated=True)
+    response1 = decorated(request)
+    response2 = decorated(request)
+
+    assert view.call_count["count"] == 2
+    mock_cache.get.assert_not_called()
+    mock_cache.set.assert_not_called()
+    assert response1.data["call"] == 1
+    assert response2.data["call"] == 2
+
+
+@patch("main.utils.caches")
+def test_cache_page_for_all_users_caches_anonymous(mock_caches):
+    """Anonymous user requests are cached with cache_page_for_all_users."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request = _create_mock_request(is_authenticated=False)
+    response1 = decorated(request)
+
+    assert view.call_count["count"] == 1
+    mock_cache.set.assert_called_once()
+    assert response1.data["result"] == "fresh"
+
+
+@patch("main.utils.caches")
+def test_cache_page_for_all_users_caches_authenticated(mock_caches):
+    """Authenticated user requests are also cached with cache_page_for_all_users."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request = _create_mock_request(is_authenticated=True)
+    response1 = decorated(request)
+
+    assert view.call_count["count"] == 1
+    mock_cache.set.assert_called_once()
+    assert response1.data["result"] == "fresh"
+
+
+@patch("main.utils.caches")
+def test_cache_returns_cached_response(mock_caches):
+    """Subsequent requests return cached data."""
+    mock_cache = MagicMock()
+    cached_data = {"result": "cached", "call": 0}
+    mock_cache.get.return_value = cached_data
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request = _create_mock_request()
+    response = decorated(request)
+
+    assert view.call_count["count"] == 0
+    assert response.data == cached_data
+
+
+@patch("main.utils.caches")
+def test_cache_key_consistent_for_same_url(mock_caches):
+    """Same URL generates same cache key regardless of request object."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request1 = _create_mock_request(path="/api/test/", query="a=1&b=2")
+    request2 = _create_mock_request(path="/api/test/", query="a=1&b=2")
+
+    decorated(request1)
+    key1 = mock_cache.get.call_args_list[0][0][0]
+
+    decorated(request2)
+    key2 = mock_cache.get.call_args_list[1][0][0]
+
+    assert key1 == key2
+
+
+@patch("main.utils.caches")
+def test_cache_key_consistent_with_reordered_params(mock_caches):
+    """Query params in different order produce same cache key."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request1 = _create_mock_request(path="/api/test/", query="b=2&a=1")
+    request2 = _create_mock_request(path="/api/test/", query="a=1&b=2")
+
+    decorated(request1)
+    key1 = mock_cache.get.call_args_list[0][0][0]
+
+    decorated(request2)
+    key2 = mock_cache.get.call_args_list[1][0][0]
+
+    assert key1 == key2
+
+
+@patch("main.utils.caches")
+def test_cache_key_different_for_different_paths(mock_caches):
+    """Different paths produce different cache keys."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    request1 = _create_mock_request(path="/api/test1/")
+    request2 = _create_mock_request(path="/api/test2/")
+
+    decorated(request1)
+    key1 = mock_cache.get.call_args_list[0][0][0]
+
+    decorated(request2)
+    key2 = mock_cache.get.call_args_list[1][0][0]
+
+    assert key1 != key2
+
+
+@patch("main.utils.caches")
+def test_cache_timeout_zero_skips_caching(mock_caches):
+    """Timeout of 0 or negative skips caching entirely."""
+    mock_cache = MagicMock()
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(0)(view)
+
+    request = _create_mock_request()
+    response1 = decorated(request)
+    response2 = decorated(request)
+
+    assert view.call_count["count"] == 2
+    mock_cache.get.assert_not_called()
+    mock_cache.set.assert_not_called()
+    assert response1.data["call"] == 1
+    assert response2.data["call"] == 2
+
+
+@patch("main.utils.caches")
+def test_cache_only_caches_200_responses(mock_caches):
+    """Non-200 responses are not cached."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    def error_view(request):
+        response = Response({"error": "not found"}, status=404)
+        response.status_code = 404
+        return response
+
+    decorated = cache_page_for_all_users(300)(error_view)
+    request = _create_mock_request()
+    decorated(request)
+
+    mock_cache.set.assert_not_called()
+
+
+@patch("main.utils.caches")
+def test_cache_uses_specified_backend(mock_caches):
+    """Cache decorator uses the specified cache backend."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300, cache="redis")(view)
+
+    request = _create_mock_request()
+    decorated(request)
+
+    mock_caches.__getitem__.assert_called_with("redis")
+
+
+@patch("main.utils.caches")
+def test_cache_key_includes_prefix(mock_caches):
+    """Cache key includes the specified prefix."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300, key_prefix="search")(view)
+
+    request = _create_mock_request(path="/api/test/")
+    decorated(request)
+
+    cache_key = mock_cache.get.call_args[0][0]
+    assert "search" in cache_key
+    assert cache_key.startswith("views.decorators.cache.cache_page.search.GET.")
+
+
+@patch("main.utils.caches")
+def test_cache_key_format(mock_caches):
+    """Cache key follows expected format: views.decorators.cache.cache_page.{prefix}.GET.{hash}."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300, key_prefix="myprefix")(view)
+
+    request = _create_mock_request(path="/api/test/")
+    decorated(request)
+
+    cache_key = mock_cache.get.call_args[0][0]
+    assert cache_key.startswith("views.decorators.cache.cache_page.myprefix.GET.")
+    # The rest should be a 32-character MD5 hash
+    hash_part = cache_key.split(".")[-1]
+    assert len(hash_part) == 32
+    assert all(c in "0123456789abcdef" for c in hash_part)

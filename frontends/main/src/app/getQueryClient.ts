@@ -87,15 +87,33 @@ const getServerQueryClient = cache(() => {
   return queryClient
 })
 
-const makeBrowserQueryClient = (): QueryClient => {
+type BrowserClientConfig = {
+  maxRetries: number
+}
+const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
+  maxRetries: MAX_RETRIES,
+}
+const makeBrowserQueryClient = (
+  config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,
+): QueryClient => {
+  const { maxRetries } = config
   return new QueryClient({
     defaultOptions: {
       queries: {
         /**
-         * Everything should be stable for ~24 hours (period of ETL tasks),
-         * but better to be conservative about freshness.
+         * Public API content is server-rendered to the base page and cached by the CDN.
+         * Keep staleTime >= CDN TTL so hydrated queries are not immediately refetched.
+         * The CDN TTL is specified by the s-max-age value in the Cache-Control header
+         * in next.config.js.
+         *
+         * Most content is stable for ~24 hours (ETL cadence), but if staleTime is shorter
+         * than the CDN TTL, React Query will refetch on hydration once the cached HTML
+         * is older than staleTime.
+         *
+         * This can cause visible content flicker for unstable endpoints (e.g. the
+         * featured learning resource list, which is intentionally randomized).
          */
-        staleTime: 15 * 60 * 1000,
+        staleTime: 30 * 60 * 1000,
 
         /**
          * Throw runtime errors instead of marking query as errored.
@@ -120,7 +138,7 @@ const makeBrowserQueryClient = (): QueryClient => {
            * Includes statuses undefined and 0 as we want to retry on network errors.
            */
           if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
-            return failureCount < MAX_RETRIES
+            return failureCount < maxRetries
           }
           return false
         },
@@ -141,9 +159,46 @@ function getQueryClient() {
     // have a suspense boundary BELOW the creation of the query client
     if (!browserQueryClient) {
       browserQueryClient = makeBrowserQueryClient()
+      initBrowserDevTools(browserQueryClient)
     }
+
     return browserQueryClient
   }
+}
+
+declare global {
+  interface Window {
+    __TANSTACK_QUERY_CLIENT__?: QueryClient
+  }
+}
+/**
+ * Initialize Tanstack Query browser dev tools.
+ *
+ * - This can be enabled in production, it only affects people with the extension installed.
+ * - See https://tanstack.com/query/v5/docs/framework/react/devtools
+ */
+function initBrowserDevTools(browserQueryClient: QueryClient) {
+  if (process.env.NODE_ENV === "development") {
+    // Log a tip about using Tanstack Query devtools
+    // But only once... We don't want to spam devs on every hot reload
+    if (!window.__TANSTACK_QUERY_CLIENT__) {
+      const parts = [
+        {
+          text: "API Query Debugging\n",
+          style: "color: blue; font-weight: bold;",
+        },
+        {
+          text: "Tip: You can use Tanstack Query devtools to inspect query data, even if the data was fetched server-side. See https://tanstack.com/query/v5/docs/framework/react/devtools",
+          style: "color: unset; font-weight: normal;",
+        },
+      ]
+      console.log(
+        parts.map(({ text }) => `%c${text}`).join(""),
+        ...parts.map(({ style }) => style),
+      )
+    }
+  }
+  window.__TANSTACK_QUERY_CLIENT__ = browserQueryClient
 }
 
 /**

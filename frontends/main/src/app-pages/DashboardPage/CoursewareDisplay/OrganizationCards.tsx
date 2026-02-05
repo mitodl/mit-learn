@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { DashboardCardRoot } from "./DashboardCard"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { organizationView } from "@/common/urls"
+import { contractView } from "@/common/urls"
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { RiArrowRightLine } from "@remixicon/react"
 
@@ -104,7 +104,7 @@ const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
 }) => {
   const contractContent =
     org.contracts?.map((contract) => {
-      const href = organizationView(org.slug.replace("org-", ""))
+      const href = contractView(org.slug.replace("org-", ""), contract.slug)
       return (
         <CardContent key={contract.id} direction="row">
           <TitleLink size="medium" color="black" href={href}>

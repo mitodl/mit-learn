@@ -7,14 +7,16 @@ from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
 from itertools import islice
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import markdown2
+import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import caches
 from django.views.decorators.cache import cache_page
 from nh3 import nh3
+from rest_framework.response import Response
 
 from main.constants import ALLOWED_HTML_ATTRIBUTES, ALLOWED_HTML_TAGS
 
@@ -24,22 +26,132 @@ log = logging.getLogger(__name__)
 IMAGE_PATH_MAX_LENGTH = 100
 
 
-def cache_page_for_anonymous_users(*cache_args, **cache_kwargs):
+def _sorted_query_string(query_dict):
+    """Build a sorted query string for consistent cache keys."""
+    items = []
+    for key in sorted(query_dict.keys()):
+        # Sort values within each key for consistent cache keys
+        # (topic=a&topic=b and topic=b&topic=a should match)
+        items.extend(f"{key}={value}" for value in sorted(query_dict.getlist(key)))
+    return "&".join(items)
+
+
+def _cache_page_ignoring_cookies(
+    timeout, cache="default", key_prefix="", *, only_anonymous=False
+):
+    """
+    Build cache key from URL path + query params only, so users share the same
+    cached response regardless of session/auth state.
+
+    Unlike Django's cache_page which respects Vary headers (including Cookie),
+    this decorator creates a consistent cache key regardless of session/auth state.
+
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+        only_anonymous: If True, only cache for anonymous users; authenticated
+            users bypass the cache entirely.
+    """
+
     def inner_decorator(func):
         @wraps(func)
         def inner_function(request, *args, **kwargs):
-            if not request.user.is_authenticated:
-                return cache_page(*cache_args, **cache_kwargs)(func)(
-                    request, *args, **kwargs
-                )
-            return func(request, *args, **kwargs)
+            # Skip caching entirely if timeout is 0 or negative
+            if timeout <= 0:
+                return func(request, *args, **kwargs)
+
+            # Skip caching for authenticated users if only_anonymous is set
+            if only_anonymous and request.user.is_authenticated:
+                return func(request, *args, **kwargs)
+
+            # Build cache key from path + sorted query string (ignore cookies)
+            query_string = _sorted_query_string(request.GET)
+            raw_key = f"{key_prefix}:{request.path}:{query_string}"
+            url_hash = md5(raw_key.encode()).hexdigest()  # noqa: S324
+            cache_key = f"views.decorators.cache.cache_page.{key_prefix}.GET.{url_hash}"
+
+            cache_backend = caches[cache]
+
+            # Try to get from cache
+            cached_data = cache_backend.get(cache_key)
+            if cached_data is not None:
+                return Response(cached_data)
+
+            # Execute view
+            response = func(request, *args, **kwargs)
+
+            # Only cache successful responses
+            if response.status_code == 200:  # noqa: PLR2004
+                cache_backend.set(cache_key, response.data, timeout)
+
+            return response
 
         return inner_function
 
     return inner_decorator
 
 
-def cache_page_for_all_users(*cache_args, **cache_kwargs):
+def call_fastly_purge_api(relative_url):
+    """
+    Call the Fastly purge API.
+
+    We aren't using the official Fastly SDK here because it doesn't work for
+    this - the version of it that works with the current API only allows you
+    to purge *everything*, not individual pages.
+
+    Args:
+        - relative_url  The relative URL to purge.
+    Returns:
+        - Dict of the response (resp.json), or False if there was an error.
+    """
+    # Skip Fastly purge if API key is not configured properly
+    if not settings.FASTLY_API_KEY:
+        log.info(f"Skipping Fastly purge for {relative_url} (dev environment)")  # noqa: G004
+        return {"status": "ok", "skipped": True}
+
+    netloc = urlparse(settings.APP_BASE_URL)[1]
+
+    headers = {"host": netloc}
+
+    if relative_url != "*":
+        headers["fastly-soft-purge"] = "1"
+
+    if settings.FASTLY_API_KEY:
+        headers["fastly-key"] = settings.FASTLY_API_KEY
+
+    api_url = urljoin(settings.FASTLY_URL, relative_url)
+
+    resp = requests.request("PURGE", api_url, headers=headers, timeout=30)
+
+    if resp.status_code >= 400:  # noqa: PLR2004
+        log.error(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
+        log.error(f"Fastly returned: {resp.text}")  # noqa: G004
+        return False
+    else:
+        log.info(f"Fastly returned: {resp.text}")  # noqa: G004
+        return resp.json()
+
+
+def cache_page_for_anonymous_users(timeout, cache="default", key_prefix=""):
+    """
+    Cache decorator for anonymous users only, ignoring Vary headers.
+
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+    """
+    return _cache_page_ignoring_cookies(
+        timeout, cache=cache, key_prefix=key_prefix, only_anonymous=True
+    )
+
+
+def cache_page_per_user(*cache_args, **cache_kwargs):
+    """
+    Create a cache per page and user/session
+    """
+
     def inner_decorator(func):
         @wraps(func)
         def inner_function(request, *args, **kwargs):
@@ -50,6 +162,26 @@ def cache_page_for_all_users(*cache_args, **cache_kwargs):
         return inner_function
 
     return inner_decorator
+
+
+def cache_page_for_all_users(timeout, cache="default", key_prefix=""):
+    """
+    Cache decorator that ignores authentication and Vary headers.
+
+    Builds cache key from URL path + query params only, so all users
+    (anonymous or authenticated) share the same cached response.
+
+    Unlike Django's cache_page which respects Vary headers (including Cookie),
+    this decorator creates a consistent cache key regardless of session/auth state.
+
+    Args:
+        timeout: Cache timeout in seconds. If <= 0, caching is skipped entirely.
+        cache: Name of the cache backend to use.
+        key_prefix: Prefix for the cache key.
+    """
+    return _cache_page_ignoring_cookies(
+        timeout, cache=cache, key_prefix=key_prefix, only_anonymous=False
+    )
 
 
 class FeatureFlag(Flag):
@@ -347,12 +479,12 @@ def frontend_absolute_url(relative_path: str) -> str:
     return urljoin(settings.APP_BASE_URL, relative_path)
 
 
-def clean_data(data: str) -> str:
+def clean_data(data: str, tags=None) -> str:
     """Remove unwanted html tags from text"""
+    if tags is None:
+        tags = ALLOWED_HTML_TAGS
     if data:
-        return nh3.clean(
-            data, tags=ALLOWED_HTML_TAGS, attributes=ALLOWED_HTML_ATTRIBUTES
-        )
+        return nh3.clean(data, tags=tags, attributes=ALLOWED_HTML_ATTRIBUTES)
     return ""
 
 

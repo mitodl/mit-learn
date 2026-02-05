@@ -8,6 +8,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
+import { has } from "lodash"
 
 const uniqueCourseId = new UniqueEnforcer()
 const uniqueCourseRunId = new UniqueEnforcer()
@@ -122,7 +123,11 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     Array.from({ length: faker.number.int({ min: 1, max: 3 }) }).map(() =>
       courseRun(),
     )
-  const nextRunId = overrides.next_run_id ?? faker.helpers.arrayElement(runs).id
+  const nextRunId = has(overrides, "next_run_id")
+    ? (overrides.next_run_id ?? null)
+    : runs.length > 0
+      ? faker.helpers.arrayElement(runs).id
+      : null
   const defaults: CourseWithCourseRunsSerializerV2 = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
@@ -140,7 +145,8 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
       live: faker.datatype.boolean(),
       length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
       effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
-      financial_assistance_form_url: faker.internet.url(),
+      // financial aid is somewhat unusual; default to no financial aid unless overridden
+      financial_assistance_form_url: "",
       current_price: faker.number.int({ min: 0, max: 1000 }),
       instructors: Array.from({
         length: faker.number.int({ min: 1, max: 3 }),

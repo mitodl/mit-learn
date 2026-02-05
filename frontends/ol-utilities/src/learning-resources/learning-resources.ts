@@ -1,4 +1,3 @@
-import moment from "moment"
 import type { LearningResource, LearningResourceRun } from "api"
 import { DeliveryEnum, ResourceTypeEnum } from "api"
 import { capitalize } from "lodash"
@@ -13,6 +12,7 @@ const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.PodcastEpisode]: "Podcast Episode",
   [ResourceTypeEnum.Video]: "Video",
   [ResourceTypeEnum.VideoPlaylist]: "Video Playlist",
+  [ResourceTypeEnum.LearningMaterial]: "Learning Material",
 }
 const getReadableResourceType = (resourceType: ResourceTypeEnum): string =>
   readableResourceTypes[resourceType]
@@ -42,62 +42,11 @@ const resourceThumbnailSrc = (
   config: EmbedlyConfig,
 ) => embedlyCroppedImage(image?.url ?? DEFAULT_RESOURCE_IMG, config)
 
-const DATE_FORMAT = "YYYY-MM-DD[T]HH:mm:ss[Z]"
-/**
- * Parse date string into a moment object.
- *
- * If date is null or undefined, a Moment<Invalid date> object is returned.
- * Invalid dates return false for all comparisons.
- */
-const asMoment = (date?: string | null) => moment(date, DATE_FORMAT)
-const isCurrent = (run: LearningResourceRun) =>
-  asMoment(run.start_date).isSameOrBefore() && asMoment(run.end_date).isAfter()
-
-/**
- * Sort dates descending, with invalid dates last.
- */
-const datesDescendingSort = (
-  aString: string | null | undefined,
-  bString: string | null | undefined,
-) => {
-  const a = asMoment(aString)
-  const b = asMoment(bString)
-  // if both invalid, tie
-  if (!a.isValid() && !b.isValid()) return 0
-  // if only one invalid, the other is better
-  if (!a.isValid()) return 1
-  if (!b.isValid()) return -1
-  // if both valid, sort descending
-  return -a.diff(b)
-}
-
-/**
- * Find "best" running: prefer current, then nearest future, then nearest past.
- */
-const findBestRun = (
-  runs: LearningResourceRun[],
-): LearningResourceRun | undefined => {
-  const sorted = runs.sort((a, b) =>
-    datesDescendingSort(a.start_date, b.start_date),
-  )
-
-  const current = sorted.find(isCurrent)
-  if (current) return current
-
-  // Closest to now will be last in the sorted array
-  const future = sorted.filter((run) =>
-    asMoment(run.start_date).isSameOrAfter(),
-  )
-  if (future.length > 0) return future[future.length - 1]
-
-  // Closest to now will be first in the sorted array
-  const past = sorted.filter((run) => asMoment(run.start_date).isBefore())
-  return past[0] ?? sorted[0]
-}
-
 const formatRunDate = (
   run: LearningResourceRun,
   asTaughtIn: boolean,
+  availability?: string | null,
+  bestRunId?: number | null,
 ): string | null => {
   if (asTaughtIn) {
     const semester = capitalize(run.semester ?? "")
@@ -111,6 +60,32 @@ const formatRunDate = (
       return formatDate(run.start_date, "MMMM, YYYY")
     }
   }
+
+  // For the best run in dated resources, use special logic
+  if (run.id === bestRunId && availability === "dated" && !asTaughtIn) {
+    if (!run.start_date && !run.enrollment_start) return null
+
+    // Get the max of start_date and enrollment_start
+    let bestStart: string
+    if (run.start_date && run.enrollment_start) {
+      bestStart =
+        Date.parse(run.start_date) > Date.parse(run.enrollment_start)
+          ? run.start_date
+          : run.enrollment_start
+    } else {
+      bestStart = (run.start_date || run.enrollment_start)!
+    }
+
+    // If the best start date is in the future, show it; otherwise show today
+    const now = new Date()
+    const bestStartDate = new Date(bestStart)
+    if (bestStartDate > now) {
+      return formatDate(bestStart, "MMMM DD, YYYY")
+    } else {
+      return formatDate(new Date().toISOString(), "MMMM DD, YYYY")
+    }
+  }
+
   if (run.start_date) {
     return formatDate(run.start_date, "MMMM DD, YYYY")
   }
@@ -168,7 +143,6 @@ export {
   embedlyCroppedImage,
   resourceThumbnailSrc,
   getReadableResourceType,
-  findBestRun,
   formatRunDate,
   allRunsAreIdentical,
   getResourceLanguage,

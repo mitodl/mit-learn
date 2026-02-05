@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from learning_resources.constants import (
+    OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -18,6 +19,7 @@ from learning_resources.etl.constants import (
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
+    ETLSource,
     ProgramLoaderConfig,
     ResourceNextRunConfig,
 )
@@ -27,6 +29,7 @@ from learning_resources.models import (
     Article,
     ContentFile,
     Course,
+    LearningMaterial,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -46,7 +49,6 @@ from learning_resources.models import (
     Video,
     VideoChannel,
     VideoPlaylist,
-    now_in_utc,
 )
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
@@ -81,7 +83,9 @@ def update_index(learning_resource, newly_created):
     ):
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
-        resource_upserted_actions(learning_resource, percolate=False)
+        resource_upserted_actions(
+            learning_resource, percolate=False, generate_embeddings=True
+        )
 
 
 def load_topics(resource, topics_data):
@@ -139,12 +143,8 @@ def load_run_dependent_values(
     Returns:
         tuple[datetime.time | None, list[Decimal], str]: date, prices, and availability
     """
-    now = now_in_utc()
     best_run = resource.best_run
     if resource.published and best_run:
-        resource.next_start_date = max(
-            best_run.start_date or best_run.enrollment_start or now, now
-        )
         resource.availability = best_run.availability
         resource.prices = (
             best_run.prices
@@ -163,6 +163,13 @@ def load_run_dependent_values(
         resource.time_commitment = best_run.time_commitment
         resource.min_weekly_hours = best_run.min_weekly_hours
         resource.max_weekly_hours = best_run.max_weekly_hours
+    next_run = resource.next_run
+    if resource.published and next_run:
+        resource.next_start_date = (
+            max(filter(None, [next_run.start_date, next_run.enrollment_start]))
+            if next_run.start_date or next_run.enrollment_start
+            else None
+        )
     else:
         resource.next_start_date = None
     resource.save()
@@ -318,7 +325,7 @@ def load_run(
     with transaction.atomic():
         (
             learning_resource_run,
-            _,
+            created,
         ) = LearningResourceRun.objects.select_for_update().update_or_create(
             learning_resource=learning_resource,
             run_id=run_id,
@@ -327,6 +334,24 @@ def load_run(
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
+        if (
+            created
+            and learning_resource_run == learning_resource.best_run
+            and learning_resource.etl_source
+            in (
+                ETLSource.mit_edx.value,
+                ETLSource.mitxonline.value,
+                ETLSource.xpro.value,
+            )
+        ):
+            # webhook may have been sent before run was created
+            # so trigger a contentfile ingestion for the course.
+            from learning_resources.tasks import get_content_tasks
+
+            get_content_tasks(
+                etl_source=learning_resource.etl_source,
+                learning_resource_ids=[learning_resource.id],
+            ).delay()
     return learning_resource_run
 
 
@@ -811,12 +836,88 @@ def load_content_files(
             file.published = False
             file.save()
 
+            learning_material = LearningMaterial.objects.filter(
+                content_file=file
+            ).last()
+
+            if learning_material:
+                resource = learning_material.learning_resource
+                resource.published = False
+                resource.save()
+
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
         content_files_loaded_actions(run=course_run)
 
         return content_files_ids
     return None
+
+
+def load_learning_materials(
+    course_run: LearningResourceRun,
+    content_file_ids: list[int],
+):
+    """
+    Create learning material objects from ocw content files
+    """
+    material_ids = []
+
+    for content_file_id in content_file_ids:
+        content_file = ContentFile.objects.get(id=content_file_id)
+        learning_material_tags = set(
+            content_file.content_tags.values_list("name", flat=True)
+        ) & set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+        if learning_material_tags:
+            material_ids.append(
+                load_learning_material(course_run, content_file, learning_material_tags)
+            )
+
+    course_run.learning_resource.resources.set(
+        LearningResource.objects.filter(id__in=material_ids).only("id"),
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS
+        },
+    )
+
+
+def load_learning_material(
+    course_run: LearningResourceRun,
+    content_file: ContentFile,
+    learning_material_tags: set[str],
+):
+    """
+    Create learning material object from ocw content file
+    """
+
+    content_categories = {
+        OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
+    }
+    content_categories = sorted(content_categories)
+    content_category = content_categories[0]
+
+    with transaction.atomic():
+        learning_resource, _ = LearningResource.objects.update_or_create(
+            readable_id=f"{course_run.run_id}-{content_file.key}",
+            platform=course_run.learning_resource.platform,
+            defaults={
+                "resource_type": LearningResourceType.learning_material.name,
+                "title": content_file.title,
+                "url": content_file.url,
+                "etl_source": course_run.learning_resource.etl_source,
+                "offered_by": course_run.learning_resource.offered_by,
+                "published": True,
+            },
+        )
+
+        LearningMaterial.objects.update_or_create(
+            learning_resource=learning_resource,
+            content_file=content_file,
+            defaults={
+                "content_tags": list(learning_material_tags),
+                "content_category": content_category,
+            },
+        )
+        return learning_resource.id
 
 
 def load_problem_file(

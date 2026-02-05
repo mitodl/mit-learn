@@ -148,14 +148,18 @@ def ocw_courses_etl(
             if data:
                 ocw_course_data = ocw.transform_course(data)
                 course_resource = loaders.load_course(ocw_course_data, [], [])
+                course_run = course_resource.runs.filter(published=True).first()
+
                 if course_resource and not skip_content_files:
-                    loaders.load_content_files(
-                        course_resource.runs.filter(published=True).first(),
+                    content_file_ids = loaders.load_content_files(
+                        course_run,
                         ocw.transform_content_files(
                             s3_resource, url_path, force_overwrite
                         ),
                         calc_completeness=True,
                     )
+
+                    loaders.load_learning_materials(course_run, content_file_ids)
             else:
                 log.info("No course data found for %s", url_path)
         except:  # noqa: E722

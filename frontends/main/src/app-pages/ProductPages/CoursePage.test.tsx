@@ -4,7 +4,11 @@ import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { setMockResponse } from "api/test-utils"
+import {
+  setMockResponse,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { HeadingIds } from "./util"
@@ -44,6 +48,11 @@ const setupApis = ({
   setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
+
+  setMockResponse.get(
+    learnUrls.userMe.get(),
+    learnFactories.user.user({ is_authenticated: false }),
+  )
 }
 
 describe("CoursePage", () => {
@@ -110,17 +119,16 @@ describe("CoursePage", () => {
 
     expect(links[0]).toHaveTextContent("About")
     expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
+    expect(document.getElementById(HeadingIds.About)).toBeVisible()
     expect(links[1]).toHaveTextContent("What you'll learn")
     expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
+    expect(document.getElementById(HeadingIds.What)).toBeVisible()
     expect(links[2]).toHaveTextContent("Prerequisites")
     expect(links[2]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
+    expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
     expect(links[3]).toHaveTextContent("Instructors")
     expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
-
-    const headings = screen.getAllByRole("heading")
-    Object.values(HeadingIds).forEach((id) => {
-      expect(headings.find((h) => h.id === id)).toBeVisible()
-    })
+    expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
   // Collasping sections tested in AboutSection.test.tsx

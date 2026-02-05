@@ -90,12 +90,6 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_youtube_data",
             "schedule": crontab(minute=30, hour=8),  # 4:30am EST
         },
-        "update-youtube-transcripts": {
-            "task": "learning_resources.tasks.get_youtube_transcripts",
-            "schedule": get_int(
-                "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS", 60 * 60 * 12
-            ),  # default is 12 hours
-        },
         "update_medium_mit_news": {
             "task": "news_events.tasks.get_medium_mit_news",
             "schedule": get_int(
@@ -123,6 +117,12 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": get_int(
                 "NEWS_EVENTS_OL_EVENTS_SCHEDULE_SECONDS", 60 * 60 * 3
             ),  # default is every 3 hours
+        },
+        "update_articles_news": {
+            "task": "news_events.tasks.get_articles_news",
+            "schedule": get_int(
+                "NEWS_EVENTS_ARTICLES_NEWS_SCHEDULE_SECONDS", 60 * 60 * 1
+            ),  # default is every 1 hour
         },
         "sync_canvas_courses-every-1-weeks": {
             "task": "learning_resources.tasks.sync_canvas_courses",
@@ -199,3 +199,8 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
+CELERY_RATE_LIMIT = get_string("CELERY_DEFAULT_RATE_LIMIT", "600/m")
+CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT)
+CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(
+    "CELERY_VECTOR_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT
+)
