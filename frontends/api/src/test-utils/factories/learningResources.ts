@@ -295,8 +295,6 @@ const _learningResourceShared = (): Partial<
     published: faker.datatype.boolean(),
     title: startCase(faker.lorem.words()),
     topics: repeat(learningResourceTopic),
-    learning_path_parents: [],
-    user_list_parents: [],
     url: faker.internet.url(),
   }
 }
@@ -489,7 +487,6 @@ const learningPathRelationship: Factory<LearningPathRelationship> = (
   const micro = microLearningPathRelationship()
   const resource = learningResource({
     id: micro.child,
-    learning_path_parents: [micro],
   })
   return {
     ...micro,
