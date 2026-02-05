@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.4
+Version 0.53.4 (Released February 05, 2026)
 --------------
 
 - fix: disable DashboardCard CTA if course passed in has no enrollable runs (#2924)
