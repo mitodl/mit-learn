@@ -107,9 +107,10 @@ const runStartsAnytime = (run: CourseRunV2) => {
 
 type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
-  nextRun: CourseRunV2
+  nextRun?: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
-const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
+type NeedsNextRun = { nextRun: CourseRunV2 }
+const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   course,
   nextRun,
   ...others
@@ -256,7 +257,7 @@ const PACE_DATA = {
 const getCourseRunPacing = (run: CourseRunV2) => {
   return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
 }
-const CoursePaceRow: React.FC<CourseInfoRowProps> = ({
+const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   nextRun,
   ...others
 }) => {
@@ -331,8 +332,8 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
   nextRun,
   course,
 }) => {
-  const canUpgrade = canUpgradeRun(nextRun)
-  const product = nextRun.products[0]
+  const canUpgrade = nextRun ? canUpgradeRun(nextRun) : false
+  const product = nextRun?.products[0]
   const hasFinancialAid = !!(
     course?.page.financial_assistance_form_url && product
   )
@@ -340,11 +341,14 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
     enabled: canUpgrade && hasFinancialAid,
   })
-  const price = canUpgrade
-    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
-    : null
+  const price =
+    canUpgrade && product
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      : null
 
-  const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
+  const upgradeDeadline = nextRun?.is_archived
+    ? null
+    : nextRun?.upgrade_deadline
   return (
     <CertificateBoxRoot>
       {price ? (
@@ -504,42 +508,43 @@ const CourseSummary: React.FC<{
         <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        {nextRun ? (
-          <>
-            {enrollButton}
-            {nextRun.is_archived ? <ArchivedAlert /> : null}
-            <CourseDatesRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.DatesRow}
-            />
-            <CoursePaceRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.PaceRow}
-            />
-            <CourseDurationRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.DurationRow}
-            />
-            <CoursePriceRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.PriceRow}
-            />
-            <CourseInProgramsRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.CourseInProgramsRow}
-            />
-          </>
-        ) : (
+        {enrollButton}
+        {!nextRun ? (
           <Alert severity="warning">
             No sessions of this course are currently open for enrollment. More
             sessions may be added in the future.
           </Alert>
-        )}
+        ) : null}
+        {nextRun?.is_archived ? <ArchivedAlert /> : null}
+        {nextRun ? (
+          <CourseDatesRow
+            course={course}
+            nextRun={nextRun}
+            data-testid={TestIds.DatesRow}
+          />
+        ) : null}
+        {nextRun ? (
+          <CoursePaceRow
+            course={course}
+            nextRun={nextRun}
+            data-testid={TestIds.PaceRow}
+          />
+        ) : null}
+        <CourseDurationRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.DurationRow}
+        />
+        <CoursePriceRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.PriceRow}
+        />
+        <CourseInProgramsRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.CourseInProgramsRow}
+        />
       </Stack>
     </SidebarSummaryRoot>
   )

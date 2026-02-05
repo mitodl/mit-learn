@@ -776,6 +776,24 @@ describe("Course Duration Row", () => {
       }
     },
   )
+
+  test("Duration row displays even when there is no next run", () => {
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+      page: {
+        length: "5 weeks",
+        effort: "10 hours/week",
+      },
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const durationRow = within(summary).getByTestId(TestIds.DurationRow)
+
+    expect(durationRow).toBeInTheDocument()
+    expect(durationRow).toHaveTextContent("Estimated: 5 weeks, 10 hours/week")
+  })
 })
 
 describe("Course Price Row", () => {
@@ -827,6 +845,22 @@ describe("Course Price Row", () => {
       `Payment deadline: ${formatDate(run.upgrade_deadline)}`,
     )
     expect(priceRow).not.toHaveTextContent("Certificate deadline passed")
+  })
+
+  test("Price row displays with 'Certificate deadline passed' when no next run is found", () => {
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    expect(priceRow).toBeInTheDocument()
+    expect(priceRow).toHaveTextContent("Free to Learn")
+    expect(priceRow).toHaveTextContent("Certificate deadline passed")
+    expect(priceRow).not.toHaveTextContent("Payment deadline")
   })
 })
 
@@ -1113,6 +1147,30 @@ describe("Course In Programs Row", () => {
       name: "Test Program 3",
     })
     expect(link3).toHaveAttribute("href", "/programs/program-3")
+  })
+
+  test("Displays programs row even when no next run is found", () => {
+    const program = {
+      id: 1,
+      readable_id: "program-1",
+      title: "Test Program 1",
+    }
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+      programs: [program],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toBeInTheDocument()
+    expect(programsRow).toHaveTextContent("Part of the following program")
+    const link = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link).toHaveAttribute("href", "/programs/program-1")
   })
 })
 
