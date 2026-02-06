@@ -17,7 +17,7 @@ const Page: React.FC<PageProps<"/articles/[slugOrId]">> = async (props) => {
 
   const queryClient = getQueryClient()
 
-  await queryClient.prefetchQuery(
+  await queryClient.fetchQueryOr404(
     articleQueries.articlesDetailRetrieve(slugOrId),
   )
 
