@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.53.5
+--------------
+
+- Product Page Improvements (course in programs, display multiple dates) (#2930)
+- fix(deps): update dependency django to v4.2.28 [security] (#2917)
+- fix: show placeholder for media and course control click (#2914)
+- fix(deps): update dependency react-slick to ^0.31.0 (#2743)
+- chore(deps): update node.js to v24 (#2755)
+- chore(deps): update yarn to v4.12.0 (#2740)
+- fix an easily broken test (#2927)
+
 Version 0.53.4 (Released February 05, 2026)
 --------------
 
