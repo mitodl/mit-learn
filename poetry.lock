@@ -5967,14 +5967,14 @@ tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "pytest-mypy (>=0.8.0)", "p
 
 [[package]]
 name = "posthog"
-version = "5.4.0"
+version = "7.8.3"
 description = "Integrate PostHog into any python application."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "posthog-5.4.0-py3-none-any.whl", hash = "sha256:284dfa302f64353484420b52d4ad81ff5c2c2d1d607c4e2db602ac72761831bd"},
-    {file = "posthog-5.4.0.tar.gz", hash = "sha256:701669261b8d07cdde0276e5bc096b87f9e200e3b9589c5ebff14df658c5893c"},
+    {file = "posthog-7.8.3-py3-none-any.whl", hash = "sha256:1840796e4f7e14dd91ec5fdeb939712c3383fe9e758cfcdeb0317d8f30f7b901"},
+    {file = "posthog-7.8.3.tar.gz", hash = "sha256:2b85e818bf818ac2768a890b772b7c12d4f909797226acd9327d66a319dbcf83"},
 ]
 
 [package.dependencies]
@@ -5983,11 +5983,12 @@ distro = ">=1.5.0"
 python-dateutil = ">=2.2"
 requests = ">=2.7,<3.0"
 six = ">=1.5"
+typing-extensions = ">=4.2.0"
 
 [package.extras]
 dev = ["django-stubs", "lxml", "mypy", "mypy-baseline", "packaging", "pre-commit", "pydantic", "ruff", "setuptools", "tomli", "tomli_w", "twine", "types-mock", "types-python-dateutil", "types-requests", "types-setuptools", "types-six", "wheel"]
 langchain = ["langchain (>=0.2.0)"]
-test = ["anthropic", "coverage", "django", "freezegun (==1.5.1)", "google-genai", "langchain-anthropic (>=0.3.15)", "langchain-community (>=0.3.25)", "langchain-core (>=0.3.65)", "langchain-openai (>=0.3.22)", "langgraph (>=0.4.8)", "mock (>=2.0.0)", "openai", "parameterized (>=0.8.1)", "pydantic", "pytest", "pytest-asyncio", "pytest-timeout"]
+test = ["anthropic (>=0.72)", "coverage", "django", "freezegun (==1.5.1)", "google-genai", "langchain-anthropic (>=1.0)", "langchain-community (>=0.4)", "langchain-core (>=1.0)", "langchain-openai (>=1.0)", "langgraph (>=1.0)", "mock (>=2.0.0)", "openai (>=2.0)", "parameterized (>=0.8.1)", "pydantic", "pytest", "pytest-asyncio", "pytest-timeout"]
 
 [[package]]
 name = "prompt-toolkit"
@@ -9488,4 +9489,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "aa40d98372564b86b8f2a559a5244da8e2c4bc24108d755335d5297ea74045b9"
+content-hash = "2758b3f4e7bdcd3d63324bd2fbf9a87d086124461bfbe3149587080776947bf4"
