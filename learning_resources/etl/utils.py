@@ -692,6 +692,9 @@ def get_title_from_module_id(
 
 
 def _title_from_xml(xml_content):
+    """
+    Extract title from XML content
+    """
     try:
         root = ElementTree.fromstring(xml_content)
         return root.get("display_name")
@@ -773,7 +776,7 @@ def _build_result(  # noqa: PLR0913
         edx_module_id,
         video_srt_metadata,
     )
-
+    # resolve the title priority: metadata title > extracted title > derived title
     data["title"] = content_dict.get("content_title") or title
     return data
 
