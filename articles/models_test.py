@@ -26,7 +26,7 @@ class TestArticleModel:
             user=user,
         )
 
-        assert article.get_url() == f"/api/v1/articles/{article.slug}/"
+        assert article.get_url() == f"/articles/{article.slug}"
 
     def test_get_url_without_slug(self, _mock_queue_purge, _mock_queue_list):  # noqa: PT019
         """Test that get_url returns None for an article without a slug"""
@@ -56,8 +56,8 @@ class TestArticleModel:
             user=user,
         )
 
-        assert article1.get_url() == f"/api/v1/articles/{article1.slug}/"
-        assert article2.get_url() == f"/api/v1/articles/{article2.slug}/"
+        assert article1.get_url() == f"/articles/{article1.slug}"
+        assert article2.get_url() == f"/articles/{article2.slug}"
         assert article1.get_url() != article2.get_url()
 
     def test_slug_generation_on_publish(self, _mock_queue_purge, _mock_queue_list):  # noqa: PT019
@@ -80,4 +80,4 @@ class TestArticleModel:
         # Now should have a slug
         assert article.slug is not None
         assert article.slug == "test-article-title"
-        assert article.get_url() == "/api/v1/articles/test-article-title/"
+        assert article.get_url() == "/articles/test-article-title"
