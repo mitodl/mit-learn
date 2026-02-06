@@ -68,9 +68,7 @@ const DraftBadge = styled.span`
 export const DraftArticle: React.FC<{ article: RichTextArticle }> = ({
   article,
 }) => {
-  const articleUrl = article.slug
-    ? `/articles/${article.slug}`
-    : `/articles/${article.id}`
+  const articleUrl = `/articles/${article.slug || article.id}`
 
   const imageUrl = extractFirstImageFromArticle(article.content)
 
