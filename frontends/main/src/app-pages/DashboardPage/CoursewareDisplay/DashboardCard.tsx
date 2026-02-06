@@ -560,7 +560,6 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   resource: DashboardResource
-  titleAction?: "marketing" | "courseware"
   showNotComplete?: boolean
   offerUpgrade?: boolean
   noun?: string
@@ -577,7 +576,6 @@ type DashboardCardProps = {
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
   resource,
-  titleAction = "courseware",
   showNotComplete = true,
   offerUpgrade = true,
   noun,
@@ -670,11 +668,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : EnrollmentStatus.Enrolled
 
   // URLs
-  const marketingUrl = resourceIsCourse
-    ? resource.data.page?.page_url
-    : resourceIsCourseRunEnrollment
-      ? resource.data.run.course.page?.page_url
-      : undefined
+  // TODO: marketingUrl should get the product page if the flag is enabled,
+  // otherwise get the marketing page from MITx Online Wagtail
+  // const marketingUrl = resourceIsCourse
+  //   ? resource.data.page?.page_url
+  //   : resourceIsCourseRunEnrollment
+  //     ? resource.data.run.course.page?.page_url
+  //     : undefined
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
@@ -689,15 +689,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
 
   // Title link logic
-  const titleHref = isAnyCourse
-    ? hasEnrolled
-      ? titleAction === "marketing"
-        ? marketingUrl
-        : (coursewareUrl ?? marketingUrl)
-      : b2bContractId
-        ? (coursewareUrl ?? marketingUrl)
-        : undefined
-    : undefined
+  const titleHref =
+    isAnyCourse && (hasEnrolled || b2bContractId) ? coursewareUrl : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
     isAnyCourse && !hasEnrolled

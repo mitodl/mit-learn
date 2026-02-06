@@ -185,7 +185,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         {shownCourseRunEnrollments.map((enrollment) => {
           return (
             <DashboardCardStyled
-              titleAction="marketing"
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: enrollment.run.course.id,
@@ -204,7 +203,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         })}
         {programEnrollments?.map((program) => (
           <DashboardCardStyled
-            titleAction="marketing"
             key={getKey({
               resourceType: ResourceType.Program,
               id: program.program.id,
@@ -226,7 +224,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             <HiddenEnrollmentsList itemSpacing={"16px"}>
               {hiddenCourseRunEnrollments.map((enrollment) => (
                 <DashboardCardStyled
-                  titleAction="marketing"
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: enrollment.run.course.id,
@@ -449,7 +446,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             <StackedCardContainer>
               {section.courses.map((course) => (
                 <DashboardCardStyled
-                  titleAction="marketing"
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: course.id,

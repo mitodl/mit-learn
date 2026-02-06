@@ -335,7 +335,6 @@ const OrgProgramCollectionDisplay: React.FC<{
               }
               noun="Module"
               offerUpgrade={false}
-              titleAction="courseware"
               buttonHref={bestEnrollment?.run.courseware_url}
               contractId={contract.id}
             />
@@ -437,7 +436,6 @@ const OrgProgramDisplay: React.FC<{
                   }
                   noun="Module"
                   offerUpgrade={false}
-                  titleAction="courseware"
                   buttonHref={bestEnrollment?.run.courseware_url}
                   contractId={contract?.id}
                 />
