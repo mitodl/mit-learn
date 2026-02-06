@@ -9,41 +9,37 @@ const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
-interface AugmentedQueryClient extends QueryClient {
-  fetchQueryOr404: QueryClient["fetchQuery"]
-}
-
 /**
- * Augment a QueryClient instance with custom prefetch methods.
+ * Extended QueryClient with custom fetchQueryOr404 method.
+ * Automatically calls notFound() on 404 errors when running on the server.
  */
-function augmentQueryClient<T extends QueryClient>(
-  client: T,
-): T & AugmentedQueryClient {
-  const augmented = client as T & AugmentedQueryClient
-
+class AugmentedQueryClient extends QueryClient {
   /**
    * Fetch and automatically call notFound() on 404 errors.
    * Uses fetchQuery internally, which throws on error and populates the cache.
    *
    * This should be used wherever we are fetching critical data that must exist for the page to render.
+   *
+   * Note: notFound() is only called on the server. In the browser, 404 errors are thrown normally.
    */
-  augmented.fetchQueryOr404 = async (options) => {
+  fetchQueryOr404: QueryClient["fetchQuery"] = async (...args) => {
     try {
-      return await client.fetchQuery(options)
+      return await super.fetchQuery(...args)
     } catch (error: unknown) {
       /* If the response is a 404, call notFound() to return proper 404 status
        * This ensures the base page response is a 404, not a 200 with a not found message.
+       *
+       * Only call notFound() on the server - it's designed for server-side rendering.
+       * In the browser, we throw the error normally so it can be handled by error boundaries.
        */
       const axiosError = error as AxiosError
-      if (axiosError?.response?.status === 404) {
+      if (isServer && axiosError?.response?.status === 404) {
         notFound()
       }
 
       throw error
     }
   }
-
-  return augmented
 }
 
 /**
@@ -66,7 +62,7 @@ function augmentQueryClient<T extends QueryClient>(
  * readiness for the dehydrated state to be sent to the client.
  */
 export const getServerQueryClient = cache(() => {
-  const queryClient = new QueryClient({
+  return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
         /**
@@ -121,8 +117,6 @@ export const getServerQueryClient = cache(() => {
       },
     },
   })
-
-  return augmentQueryClient(queryClient)
 })
 
 type BrowserClientConfig = {
@@ -133,9 +127,9 @@ const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
 }
 const makeBrowserQueryClient = (
   config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,
-): QueryClient => {
+): AugmentedQueryClient => {
   const { maxRetries } = config
-  return new QueryClient({
+  return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
         /**
@@ -185,9 +179,9 @@ const makeBrowserQueryClient = (
   })
 }
 
-let browserQueryClient: QueryClient | undefined = undefined
+let browserQueryClient: AugmentedQueryClient | undefined = undefined
 
-function getQueryClient(): QueryClient & AugmentedQueryClient {
+function getQueryClient(): AugmentedQueryClient {
   if (isServer) {
     return getServerQueryClient()
   } else {
@@ -200,8 +194,7 @@ function getQueryClient(): QueryClient & AugmentedQueryClient {
       initBrowserDevTools(browserQueryClient)
     }
 
-    // Browser client doesn't have custom prefetch methods
-    return browserQueryClient as QueryClient & AugmentedQueryClient
+    return browserQueryClient
   }
 }
 
