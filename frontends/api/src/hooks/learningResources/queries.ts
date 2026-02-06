@@ -9,7 +9,6 @@ import {
 } from "../../clients"
 
 import type {
-  LearningResource,
   LearningResourcesApiLearningResourcesListRequest as LearningResourcesListRequest,
   TopicsApiTopicsListRequest as TopicsListRequest,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LearningResourcesSearchRetrieveRequest,
@@ -22,22 +21,6 @@ import type {
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
 import { hasPosition, randomizeGroups } from "./util"
-
-/* List memberships were previously determined in the learningResourcesApi
- * from user_list_parents and learning_path_parents on each resource.
- * Resource endpoints are now treated as public so that they can be
- * server rendered and cached on public CDN. The membership endpoints on
- * learningPathsApi and userListsApi are now used to determine membership.
- * Removing here to ensure they are not depended on anywhere, though they can
- * be removed from the GET APIs TODO.
- */
-export const clearListMemberships = (
-  resource: LearningResource,
-): LearningResource => ({
-  ...resource,
-  user_list_parents: [],
-  learning_path_parents: [],
-})
 
 const learningResourceKeys = {
   root: ["learning_resources"],
@@ -118,7 +101,7 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesApi
           .learningResourcesRetrieve({ id })
-          .then((res) => clearListMemberships(res.data)),
+          .then((res) => res.data),
     }),
   items: (id: number, params: ItemsListRequest) =>
     queryOptions({
@@ -126,9 +109,7 @@ const learningResourceQueries = {
       queryFn: () => {
         return learningResourcesApi
           .learningResourcesItemsList(params)
-          .then((res) =>
-            res.data.results.map((rel) => clearListMemberships(rel.resource)),
-          )
+          .then((res) => res.data.results.map((rel) => rel.resource))
       },
     }),
   similar: (id: number) =>
@@ -137,7 +118,7 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesApi
           .learningResourcesSimilarList({ id })
-          .then((res) => res.data.map(clearListMemberships)),
+          .then((res) => res.data),
     }),
   vectorSimilar: (id: number) =>
     queryOptions({
@@ -145,7 +126,7 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesApi
           .learningResourcesVectorSimilarList({ id })
-          .then((res) => res.data.map(clearListMemberships)),
+          .then((res) => res.data),
     }),
   list: (params: LearningResourcesListRequest) =>
     queryOptions({
@@ -153,7 +134,7 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesApi.learningResourcesList(params).then((res) => ({
           ...res.data,
-          results: res.data.results.map(clearListMemberships),
+          results: res.data.results,
         })),
     }),
   summaryList: (params: LearningResourcesSummaryListRequest) =>
@@ -191,7 +172,7 @@ const learningResourceQueries = {
           (res) =>
             ({
               ...res.data,
-              results: res.data.results.map(clearListMemberships),
+              results: res.data.results,
             }) as LearningResourcesSearchResponse,
         ),
     }),

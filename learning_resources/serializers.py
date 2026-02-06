@@ -904,8 +904,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         source="published_runs", read_only=True, many=True, allow_null=True
     )
     image = serializers.SerializerMethodField()
-    learning_path_parents = serializers.SerializerMethodField()
-    user_list_parents = serializers.SerializerMethodField()
     views = serializers.IntegerField(source="views_count", read_only=True)
 
     delivery = serializers.ListField(
@@ -930,16 +928,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         if best_run:
             return best_run.id
         return None
-
-    @extend_schema_field(MicroLearningPathRelationshipSerializer(many=True))
-    def get_learning_path_parents(self, instance) -> list:  # noqa: ARG002
-        """Return empty list - field kept for API compatibility"""
-        return []
-
-    @extend_schema_field(MicroUserListRelationshipSerializer(many=True))
-    def get_user_list_parents(self, instance) -> list:  # noqa: ARG002
-        """Return empty list - field kept for API compatibility"""
-        return []
 
     def get_resource_category(self, instance) -> str:
         """Return the resource category of the resource"""
@@ -995,8 +983,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "certification_type",
             "professional",
             "views",
-            "learning_path_parents",
-            "user_list_parents",
             "require_summaries",
         ]
         exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]

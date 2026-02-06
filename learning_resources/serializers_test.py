@@ -350,8 +350,6 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "min_weeks": resource.min_weeks,
         "max_weeks": resource.max_weeks,
         "best_run_id": resource.best_run.id if resource.best_run else None,
-        "learning_path_parents": [],
-        "user_list_parents": [],
     }
 
 

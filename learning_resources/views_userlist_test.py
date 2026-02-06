@@ -280,37 +280,6 @@ def test_user_list_endpoint_delete(client, user, is_author):
     assert UserList.objects.filter(id=userlist.id).exists() is not is_author
 
 
-@pytest.mark.parametrize("is_author", [True, False])
-@pytest.mark.parametrize("is_unlisted", [True, False])
-def test_get_resource_user_lists(client, user, is_author, is_unlisted):
-    """Test course detail endpoint"""
-    course = factories.CourseFactory.create()
-    userlist = factories.UserListFactory.create(
-        author=user if is_author else UserFactory.create(),
-        privacy_level=(
-            PrivacyLevel.unlisted.value if is_unlisted else PrivacyLevel.private.value
-        ),
-    )
-    path_items = sorted(
-        factories.UserListRelationshipFactory.create_batch(
-            3, child=course.learning_resource, parent=userlist
-        ),
-        key=lambda item: item.position,
-    )
-    resp = client.get(
-        reverse("lr:v1:courses_api-detail", args=[course.learning_resource.id])
-    )
-
-    items_json = resp.data.get("user_list_parents")
-    if is_author:
-        for idx, item in items_json:
-            assert item.get("id") == path_items[idx].id
-            assert item.get("position") == path_items[idx].position
-            assert item.get("child") == course.learning_resource.id
-    else:
-        assert items_json == []
-
-
 @pytest.mark.skip_nplusone_check
 def test_set_userlist_relationships(client, user):
     """Test the userlists endpoint for setting multiple userlist relationships"""
