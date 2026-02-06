@@ -50,17 +50,17 @@ const setupAPIs = () => {
   setMockResponse.get(urls.userLists.membershipList(), [])
   setMockResponse.get(urls.learningPaths.membershipList(), [])
 
-  const resources = learningResources.resources({ count: 4 })
+  const featured = learningResources.resources({ count: 2 })
+  const media = learningResources.resources({ count: 2 })
   const attestations = testimonials.testimonials({ count: 3 })
 
   setMockResponse.get(
-    expect.stringContaining(urls.learningResources.list()),
-    resources,
-  )
-
-  setMockResponse.get(
     expect.stringContaining(urls.learningResources.featured()),
-    resources,
+    featured,
+  )
+  setMockResponse.get(
+    expect.stringContaining(urls.learningResources.list()),
+    media,
   )
 
   setMockResponse.get(
@@ -90,6 +90,7 @@ const setupAPIs = () => {
   )
 
   mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  return { featured, media }
 }
 
 describe("Home Page Hero", () => {
@@ -341,24 +342,18 @@ describe("Home Page Carousel", () => {
 })
 
 test("Headings", async () => {
-  setupAPIs()
-
-  setMockResponse.get(
-    expect.stringContaining(urls.learningResources.list()),
-    [],
-  )
-  setMockResponse.get(
-    expect.stringContaining(urls.learningResources.featured()),
-    [],
-  )
+  const { featured, media } = setupAPIs()
 
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([
       { level: 1, name: "Learn with MIT" },
       { level: 2, name: "Featured Courses" },
+      // Featured course order is randomized on frontend, so just check for presence
+      ...featured.results.map(() => ({ level: 3, name: expect.any(String) })),
       { level: 2, name: "Continue Your Journey" },
       { level: 2, name: "Media" },
+      ...media.results.map((result) => ({ level: 3, name: result.title })),
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
       { level: 2, name: "MIT Stories & Events" },

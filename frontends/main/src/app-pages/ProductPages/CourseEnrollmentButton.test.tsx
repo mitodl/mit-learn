@@ -61,7 +61,7 @@ describe("CourseEnrollmentButton", () => {
     screen.getByTestId("signup-popover")
   })
 
-  test("Returns null if no next run available", async () => {
+  test("Displays disabled button with 'Access Course Materials' text if no next run available", async () => {
     const course = makeCourse({
       next_run_id: null,
       courseruns: [],
@@ -72,10 +72,12 @@ describe("CourseEnrollmentButton", () => {
       makeUser({ is_authenticated: false }),
     )
 
-    const { view } = renderWithProviders(
-      <CourseEnrollmentButton course={course} />,
-    )
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
 
-    expect(view.container).toBeEmptyDOMElement()
+    const button = await screen.findByRole("button", {
+      name: ACCESS_MATERIALS,
+    })
+    expect(button).toBeInTheDocument()
+    expect(button).toBeDisabled()
   })
 })

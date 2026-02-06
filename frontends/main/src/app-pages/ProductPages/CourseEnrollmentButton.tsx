@@ -1,7 +1,10 @@
 import React from "react"
 import { styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { Button } from "@mitodl/smoot-design"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
@@ -11,6 +14,13 @@ import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 const WideButton = styled(Button)({
   width: "100%",
 })
+
+const getButtonText = (nextRun?: CourseRunV2) => {
+  if (!nextRun || nextRun.is_archived) {
+    return "Access Course Materials"
+  }
+  return "Enroll for Free"
+}
 
 type CourseEnrollmentButtonProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -22,10 +32,6 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const me = useQuery(userQueries.me())
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
-
-  if (!nextRun) {
-    return null
-  }
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (me.isLoading) {
@@ -39,8 +45,13 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   return (
     <>
-      <WideButton onClick={handleClick} variant="primary" size="large">
-        {nextRun.is_archived ? "Access Course Materials" : "Enroll for Free"}
+      <WideButton
+        disabled={!nextRun}
+        onClick={handleClick}
+        variant="primary"
+        size="large"
+      >
+        {getButtonText(nextRun)}
       </WideButton>
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>

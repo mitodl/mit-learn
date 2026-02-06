@@ -7,6 +7,7 @@ import ImageAltTextInput from "./ImageAltTextInput"
 import { DefaultWidth, WideWidth, FullWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+import { EditableCaption } from "../shared/EditableCaption"
 
 const ARTICLE_MAX_WIDTH = 890
 const CONTAINER_PADDING = 24
@@ -443,19 +444,11 @@ export function ImageWithCaption({
             onError={() => setIsLoading(false)}
           />
         </ImageWrapper>
-        {isEditable ? (
-          <Caption>
-            <input
-              type="text"
-              className="caption-input"
-              placeholder="Add caption…"
-              value={caption || ""}
-              onChange={(e) => updateAttributes({ caption: e.target.value })}
-            />
-          </Caption>
-        ) : (
-          caption && <Caption>{caption}</Caption>
-        )}
+        <EditableCaption
+          caption={caption}
+          isEditable={isEditable}
+          onCaptionChange={(caption) => updateAttributes({ caption })}
+        />
       </Container>
     </NodeViewWrapper>
   )

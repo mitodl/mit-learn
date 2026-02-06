@@ -1,5 +1,6 @@
 import { Extension } from "@tiptap/core"
 import { Plugin } from "@tiptap/pm/state"
+import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
 function extractResourceId(url: string): number | null {
   const match = url.match(/resource=(\d+)/)
@@ -14,34 +15,15 @@ export const LearningResourceURLHandler = Extension.create({
     return [
       new Plugin({
         props: {
-          handleKeyDown(view, event) {
-            if (event.key !== "Enter") return false
-
-            const { state } = view
-            const { $from } = state.selection
-            const parent = $from.parent
-
-            if (parent.type.name !== "paragraph") return false
-
-            const text = parent.textContent.trim()
-            const resourceId = extractResourceId(text)
-            if (!resourceId) return false
-
-            event.preventDefault()
-
-            const startPos = $from.before()
-            const endPos = startPos + parent.nodeSize
-
-            const node = state.schema.nodes.learningResource.create({
+          handleKeyDown: createURLToNodeHandler({
+            inputNodeName: "learningResourceInput",
+            outputNodeName: "learningResource",
+            extractValue: extractResourceId,
+            createNodeAttrs: (resourceId, text) => ({
               resourceId,
               href: text,
-            })
-
-            const tr = state.tr.replaceWith(startPos, endPos, node)
-            view.dispatch(tr)
-
-            return true
-          },
+            }),
+          }),
         },
 
         /**
