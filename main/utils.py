@@ -7,7 +7,7 @@ from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
 from itertools import islice
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import markdown2
 import requests
