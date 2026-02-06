@@ -17,6 +17,8 @@ import {
   RiAwardLine,
 } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import {
@@ -169,61 +171,71 @@ const getContextMenuItems = (
   title: string,
   resource: DashboardResource,
   router: ReturnType<typeof useRouter>,
+  useProductPages: boolean,
   additionalItems: SimpleMenuItem[] = [],
 ) => {
   const menuItems = []
   if (resource.type === DashboardType.ProgramEnrollment) {
-    menuItems.push(
-      ...[
-        {
-          className: "dashboard-card-menu-item",
-          key: "view-program-details",
-          label: "View Program Details",
-          onClick: () => {
-            const programPageUrl = programPageView(
-              resource.data.program.readable_id,
-            )
-            router.push(programPageUrl)
+    const detailsUrl = useProductPages
+      ? programPageView(resource.data.program.readable_id)
+      : resource.data.program.page?.page_url
+
+    if (detailsUrl) {
+      menuItems.push(
+        ...[
+          {
+            className: "dashboard-card-menu-item",
+            key: "view-program-details",
+            label: "View Program Details",
+            onClick: () => {
+              router.push(detailsUrl)
+            },
           },
-        },
-      ],
-    )
+        ],
+      )
+    }
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
-    menuItems.push(
-      ...[
-        {
-          className: "dashboard-card-menu-item",
-          key: "view-course-details",
-          label: "View Course Details",
-          onClick: () => {
-            const coursePageUrl = coursePageView(
-              resource.data.run.course.readable_id,
-            )
-            router.push(coursePageUrl)
-          },
+    const detailsUrl = useProductPages
+      ? coursePageView(resource.data.run.course.readable_id)
+      : resource.data.run.course.page?.page_url
+
+    const courseMenuItems = []
+
+    if (detailsUrl) {
+      courseMenuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "view-course-details",
+        label: "View Course Details",
+        onClick: () => {
+          router.push(detailsUrl)
         },
-        {
-          className: "dashboard-card-menu-item",
-          key: "email-settings",
-          label: "Email Settings",
-          onClick: () => {
-            NiceModal.show(EmailSettingsDialog, {
-              title,
-              enrollment: resource.data,
-            })
-          },
+      })
+    }
+
+    courseMenuItems.push(
+      {
+        className: "dashboard-card-menu-item",
+        key: "email-settings",
+        label: "Email Settings",
+        onClick: () => {
+          NiceModal.show(EmailSettingsDialog, {
+            title,
+            enrollment: resource.data,
+          })
         },
-        {
-          className: "dashboard-card-menu-item",
-          key: "unenroll",
-          label: "Unenroll",
-          onClick: () => {
-            NiceModal.show(UnenrollDialog, { title, enrollment: resource.data })
-          },
+      },
+      {
+        className: "dashboard-card-menu-item",
+        key: "unenroll",
+        label: "Unenroll",
+        onClick: () => {
+          NiceModal.show(UnenrollDialog, { title, enrollment: resource.data })
         },
-      ],
+      },
     )
+
+    menuItems.push(...courseMenuItems)
   }
   return [...menuItems, ...additionalItems]
 }
@@ -592,6 +604,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const router = useRouter()
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
+  const useProductPages = useFeatureFlagEnabled(
+    FeatureFlags.MitxOnlineProductPages,
+  )
 
   // Determine resource type from discriminated union
   const resourceIsCourse = resource.type === DashboardType.Course
@@ -668,13 +683,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : EnrollmentStatus.Enrolled
 
   // URLs
-  // TODO: marketingUrl should get the product page if the flag is enabled,
-  // otherwise get the marketing page from MITx Online Wagtail
-  // const marketingUrl = resourceIsCourse
-  //   ? resource.data.page?.page_url
-  //   : resourceIsCourseRunEnrollment
-  //     ? resource.data.run.course.page?.page_url
-  //     : undefined
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
@@ -825,6 +833,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     title,
     resource,
     router,
+    useProductPages ?? false,
     contextMenuItems,
   )
 
