@@ -119,13 +119,11 @@ const HomeContent: React.FC = () => {
           closable={true}
           label="Enrollment Error - "
         >
-          <Typography variant="body2" component="span">
-            The Enrollment Code is incorrect or no longer available.{" "}
-            <Link color="red" href={`mailto:${supportEmail}`}>
-              Contact Support
-            </Link>{" "}
-            for assistance.
-          </Typography>
+          The Enrollment Code is incorrect or no longer available.{" "}
+          <Link color="red" href={`mailto:${supportEmail}`}>
+            Contact Support
+          </Link>{" "}
+          for assistance.
         </AlertBanner>
       )}
       <OrganizationCards />
