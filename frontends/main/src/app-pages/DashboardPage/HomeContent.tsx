@@ -114,12 +114,12 @@ const HomeContent: React.FC = () => {
         </HomeHeaderRight>
       </HomeHeader>
       {showEnrollmentError && (
-        <AlertBanner severity="error" closable={true}>
-          <Typography variant="subtitle2" component="span">
-            Enrollment Error
-          </Typography>
+        <AlertBanner
+          severity="error"
+          closable={true}
+          label="Enrollment Error - "
+        >
           <Typography variant="body2" component="span">
-            {" - "}
             The Enrollment Code is incorrect or no longer available.{" "}
             <Link color="red" href={`mailto:${supportEmail}`}>
               Contact Support
