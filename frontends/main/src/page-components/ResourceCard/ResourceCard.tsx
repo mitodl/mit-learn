@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useState, useMemo } from "react"
 import {
   LearningResourceCard,
   LearningResourceListCard,
@@ -29,15 +29,20 @@ export const useResourceCard = (resource?: LearningResource | null) => {
   const handleClosePopover = useCallback(() => {
     setAnchorEl(null)
   }, [])
+  const handleAddToLearningPathClickCallback = useCallback(
+    (event: React.MouseEvent, resourceId: number) => {
+      NiceModal.show(AddToLearningPathDialog, { resourceId })
+    },
+    [],
+  )
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
-    useCallback(
-      (event: React.MouseEvent, resourceId: number) => {
-        if (user?.is_authenticated && user?.is_learning_path_editor) {
-          NiceModal.show(AddToLearningPathDialog, { resourceId })
-        }
-      },
-      [user],
-    ) as LearningResourceCardProps["onAddToLearningPathClick"]
+    useMemo(
+      () =>
+        user?.is_authenticated && user?.is_learning_path_editor
+          ? handleAddToLearningPathClickCallback
+          : null,
+      [user, handleAddToLearningPathClickCallback],
+    )
 
   const handleAddToUserListClick: LearningResourceCardProps["onAddToUserListClick"] =
     useCallback(
