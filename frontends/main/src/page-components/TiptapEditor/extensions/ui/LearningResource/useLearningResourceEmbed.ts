@@ -1,8 +1,6 @@
 import { useCallback } from "react"
 import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "../../../vendor/hooks/use-tiptap-editor"
-import NiceModal from "@ebay/nice-modal-react"
-import CourseUrlInputDialog from "./ResourceUrlInputDialog"
 import { Icon } from "./Icon"
 
 export const LEARNING_RESOURCE_SHORTCUT_KEY = "Mod+Shift+R"
@@ -14,20 +12,25 @@ export function useLearningResourceEmbed(editor?: Editor | null) {
   const canInsert = resolved?.isEditable ?? false
   const label = "Insert Learning Resource"
 
-  const handleEmbed = useCallback(async () => {
-    const url: string = await NiceModal.show(CourseUrlInputDialog)
-    if (!url) return
+  const handleEmbed = useCallback(() => {
+    if (!resolved) return
 
-    // Extract `resource=123`
-    const match = url.match(/resource=(\d+)/)
-    if (!match) {
-      alert("Invalid URL. Must contain ?resource=ID")
-      return
-    }
-
-    const resourceId = Number(match[1])
-
-    resolved?.commands.insertLearningResource(resourceId, url)
+    // Insert learningResourceInput node with empty paragraph that will show "Paste course url here" placeholder
+    // The LearningResourceURLHandler extension will automatically
+    // convert this to a learning resource when user pastes a valid URL and presses Enter
+    resolved
+      .chain()
+      .focus()
+      .insertContent({
+        type: "learningResourceInput",
+        content: [
+          {
+            type: "paragraph",
+            content: [],
+          },
+        ],
+      })
+      .run()
   }, [resolved])
 
   return {
