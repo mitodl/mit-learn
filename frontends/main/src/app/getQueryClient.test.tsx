@@ -6,6 +6,14 @@ import { makeBrowserQueryClient, getServerQueryClient } from "./getQueryClient"
 import { nextNavigationMocks } from "ol-test-utilities/mocks/nextNavigation"
 import type { AxiosError, AxiosResponse } from "axios"
 
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query")
+  return {
+    ...actual,
+    isServer: true,
+  }
+})
+
 const getWrapper = () => {
   const queryClient = makeBrowserQueryClient()
   const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
