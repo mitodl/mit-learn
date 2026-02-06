@@ -695,7 +695,7 @@ describe("ContractContent", () => {
         url: "/certificate/program/cert-123",
       },
     }
-    const programEnrollment = factories.enrollment.programEnrollmentV2({
+    const programEnrollment = factories.enrollment.programEnrollmentV3({
       program: programWithCertificate,
       certificate: {
         uuid: programWithCertificate.certificate.uuid,

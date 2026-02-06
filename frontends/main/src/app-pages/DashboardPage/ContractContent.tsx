@@ -22,11 +22,11 @@ import {
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollmentRequestV2,
-  V2UserProgramEnrollmentDetail,
   ContractPage,
   OrganizationPage,
   V2ProgramCollection,
   V2Program,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -350,7 +350,7 @@ const OrgProgramDisplay: React.FC<{
   program: V2Program
   contract?: ContractPage
   courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V2UserProgramEnrollmentDetail[]
+  programEnrollments?: V3UserProgramEnrollment[]
   programLoading: boolean
   orgId: number
 }> = ({
