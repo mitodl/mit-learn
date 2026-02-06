@@ -67,7 +67,7 @@
     "typescript": "^5.5.4"
   },
   "peerDependencies": {
-    "@mitodl/smoot-design": "^6.23.0",
+    "@mitodl/smoot-design": "0.0.0-30ad8e6",
     "next": "^16.1.6"
   }
 }
