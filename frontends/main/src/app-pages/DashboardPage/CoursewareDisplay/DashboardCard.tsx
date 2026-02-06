@@ -28,7 +28,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { programView } from "@/common/urls"
+import { coursePageView, programPageView, programView } from "@/common/urls"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
@@ -36,6 +36,7 @@ import {
   CourseRunEnrollmentRequestV2,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { useRouter } from "next-nprogress-bar"
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -164,28 +165,67 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getDefaultContextMenuItems = (
+const getContextMenuItems = (
   title: string,
-  enrollment: CourseRunEnrollmentRequestV2,
+  resource: DashboardResource,
+  router: ReturnType<typeof useRouter>,
+  additionalItems: SimpleMenuItem[] = [],
 ) => {
-  return [
-    {
-      className: "dashboard-card-menu-item",
-      key: "email-settings",
-      label: "Email Settings",
-      onClick: () => {
-        NiceModal.show(EmailSettingsDialog, { title, enrollment })
-      },
-    },
-    {
-      className: "dashboard-card-menu-item",
-      key: "unenroll",
-      label: "Unenroll",
-      onClick: () => {
-        NiceModal.show(UnenrollDialog, { title, enrollment })
-      },
-    },
-  ]
+  const menuItems = []
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    menuItems.push(
+      ...[
+        {
+          className: "dashboard-card-menu-item",
+          key: "view-program-details",
+          label: "View Program Details",
+          onClick: () => {
+            const programPageUrl = programPageView(
+              resource.data.program.readable_id,
+            )
+            router.push(programPageUrl)
+          },
+        },
+      ],
+    )
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    menuItems.push(
+      ...[
+        {
+          className: "dashboard-card-menu-item",
+          key: "view-course-details",
+          label: "View Course Details",
+          onClick: () => {
+            const coursePageUrl = coursePageView(
+              resource.data.run.course.readable_id,
+            )
+            router.push(coursePageUrl)
+          },
+        },
+        {
+          className: "dashboard-card-menu-item",
+          key: "email-settings",
+          label: "Email Settings",
+          onClick: () => {
+            NiceModal.show(EmailSettingsDialog, {
+              title,
+              enrollment: resource.data,
+            })
+          },
+        },
+        {
+          className: "dashboard-card-menu-item",
+          key: "unenroll",
+          label: "Unenroll",
+          onClick: () => {
+            NiceModal.show(UnenrollDialog, { title, enrollment: resource.data })
+          },
+        },
+      ],
+    )
+  }
+  return [...menuItems, ...additionalItems]
 }
 
 const useOneClickEnroll = () => {
@@ -551,6 +591,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   contractId,
   onUpgradeError,
 }) => {
+  const router = useRouter()
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
 
@@ -787,10 +828,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     <CourseStartCountdown startDate={run.start_date} />
   ) : null
 
-  const menuItems = contextMenuItems.concat(
-    resource.type === DashboardType.CourseRunEnrollment
-      ? getDefaultContextMenuItems(title, resource.data)
-      : [],
+  const menuItems = getContextMenuItems(
+    title,
+    resource,
+    router,
+    contextMenuItems,
   )
 
   const contextMenu = isLoading ? (
@@ -872,5 +914,5 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 export {
   DashboardCard,
   CardRoot as DashboardCardRoot,
-  getDefaultContextMenuItems,
+  getContextMenuItems as getDefaultContextMenuItems,
 }
