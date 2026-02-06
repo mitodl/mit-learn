@@ -449,6 +449,7 @@ const UpgradeBanner: React.FC<
       // Reset mutation state to allow retry after error
       addToBasket.reset()
       clearBasket.reset()
+      throw new Error("Woof")
 
       await clearBasket.mutateAsync()
       await addToBasket.mutateAsync(productId)

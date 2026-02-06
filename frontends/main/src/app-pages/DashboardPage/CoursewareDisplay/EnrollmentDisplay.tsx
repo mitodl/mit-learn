@@ -504,13 +504,11 @@ const AllEnrollmentsDisplay: React.FC = () => {
           closable={true}
           onClose={() => setUpgradeError(null)}
         >
-          <span>
-            {upgradeError}{" "}
-            <Link color="red" href={`mailto:${supportEmail}`}>
-              Contact Support
-            </Link>{" "}
-            for assistance.
-          </span>
+          {upgradeError}{" "}
+          <Link color="red" href={`mailto:${supportEmail}`}>
+            Contact Support
+          </Link>{" "}
+          for assistance.
         </AlertBanner>
       )}
       <EnrollmentExpandCollapse
