@@ -19,6 +19,13 @@ import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useRouter } from "next-nprogress-bar"
+
+jest.mock("posthog-js/react")
+jest.mock("next-nprogress-bar")
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseRouter = jest.mocked(useRouter)
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -80,6 +87,11 @@ describe.each([
   const getCard = () => screen.getByTestId(testId)
 
   setupLocationMock()
+
+  beforeEach(() => {
+    // Default to feature flag disabled unless explicitly set in a test
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  })
 
   test("It shows course title and links to courseware when enrolled", async () => {
     setupUserApis()
@@ -883,9 +895,29 @@ describe.each([
         name: "More options",
       })
       await user.click(contextMenuButton)
+
+      // Create a mock router
+      const mockRouter = {
+        push: jest.fn(),
+        replace: jest.fn(),
+        back: jest.fn(),
+        forward: jest.fn(),
+        refresh: jest.fn(),
+        prefetch: jest.fn(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any
+
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems("Test Course", enrollment),
+        ...getDefaultContextMenuItems(
+          "Test Course",
+          {
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          },
+          mockRouter,
+          false, // useProductPages
+        ),
       ]
       const menuItems = screen.getAllByRole("menuitem")
       for (let i = 0; i < expectedMenuItems.length; i++) {
@@ -1254,6 +1286,226 @@ describe.each([
         within(card).queryByTestId("courseware-button"),
       ).not.toBeInTheDocument()
       expect(within(card).queryByTestId("upgrade-root")).not.toBeInTheDocument()
+    })
+
+    test.each([
+      {
+        useProductPages: false,
+        description: "uses marketing URLs when feature flag is disabled",
+      },
+      {
+        useProductPages: true,
+        description: "uses product page URLs when feature flag is enabled",
+      },
+    ])(
+      "Context menu for course enrollment $description",
+      async ({ useProductPages }) => {
+        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
+        setupUserApis()
+
+        const marketingUrl = faker.internet.url()
+        const course = dashboardCourse({
+          page: { page_url: marketingUrl },
+        })
+        const run = course.courseruns[0]
+        const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+          grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+          enrollment_mode: EnrollmentMode.Verified,
+          run: {
+            ...run,
+            course: { ...course, page: { page_url: marketingUrl } },
+          },
+        })
+
+        const pushMock = jest.fn()
+        const mockRouter = {
+          push: pushMock,
+          replace: jest.fn(),
+          back: jest.fn(),
+          forward: jest.fn(),
+          refresh: jest.fn(),
+          prefetch: jest.fn(),
+        }
+
+        // Mock next-nprogress-bar's useRouter
+        mockedUseRouter.mockReturnValue(mockRouter)
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{
+              type: DashboardType.CourseRunEnrollment,
+              data: enrollment,
+            }}
+          />,
+        )
+
+        const card = getCard()
+        const contextMenuButton = within(card).getByRole("button", {
+          name: "More options",
+        })
+        await user.click(contextMenuButton)
+
+        const viewDetailsItem = screen.getByRole("menuitem", {
+          name: "View Course Details",
+        })
+        await user.click(viewDetailsItem)
+
+        if (useProductPages) {
+          // Should navigate to product page URL
+          expect(pushMock).toHaveBeenCalledWith(
+            expect.stringContaining(`/courses/${course.readable_id}`),
+          )
+        } else {
+          // Should navigate to marketing URL
+          expect(pushMock).toHaveBeenCalledWith(marketingUrl)
+        }
+      },
+    )
+
+    test.each([
+      {
+        useProductPages: false,
+        description: "uses marketing URLs when feature flag is disabled",
+      },
+      {
+        useProductPages: true,
+        description: "uses product page URLs when feature flag is enabled",
+      },
+    ])(
+      "Context menu for program enrollment $description",
+      async ({ useProductPages }) => {
+        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
+        setupUserApis()
+
+        const marketingUrl = faker.internet.url()
+        const program = mitxonline.factories.programs.program({
+          page: { page_url: marketingUrl },
+        })
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV2({
+            program: { ...program, page: { page_url: marketingUrl } },
+          })
+
+        const pushMock = jest.fn()
+        const mockRouter = {
+          push: pushMock,
+          replace: jest.fn(),
+          back: jest.fn(),
+          forward: jest.fn(),
+          refresh: jest.fn(),
+          prefetch: jest.fn(),
+        }
+
+        // Mock next-nprogress-bar's useRouter
+        mockedUseRouter.mockReturnValue(mockRouter)
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{
+              type: DashboardType.ProgramEnrollment,
+              data: programEnrollment,
+            }}
+          />,
+        )
+
+        const card = getCard()
+        const contextMenuButton = within(card).getByRole("button", {
+          name: "More options",
+        })
+        await user.click(contextMenuButton)
+
+        const viewDetailsItem = screen.getByRole("menuitem", {
+          name: "View Program Details",
+        })
+        await user.click(viewDetailsItem)
+
+        if (useProductPages) {
+          // Should navigate to product page URL
+          expect(pushMock).toHaveBeenCalledWith(
+            expect.stringContaining(`/programs/${program.readable_id}`),
+          )
+        } else {
+          // Should navigate to marketing URL
+          expect(pushMock).toHaveBeenCalledWith(marketingUrl)
+        }
+      },
+    )
+
+    test("Context menu for course enrollment without marketing URL shows View Details only when flag is enabled", async () => {
+      setupUserApis()
+
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+      })
+      // Remove the page property to simulate a course without a marketing URL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (enrollment.run.course as any).page
+
+      // Test with flag disabled (no marketing URL, no View Details menu item)
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should not have View Course Details when flag is off and no marketing URL
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+
+      // Should still have Email Settings and Unenroll
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    })
+
+    // Separate test for the flag enabled case
+    test("Context menu for course enrollment without marketing URL shows View Details when flag is enabled", async () => {
+      setupUserApis()
+
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+      })
+      // Remove the page property to simulate a course without a marketing URL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (enrollment.run.course as any).page
+
+      // Test with flag enabled
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should have View Course Details when flag is on (product pages always exist)
+      expect(
+        screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
     })
   })
 })
