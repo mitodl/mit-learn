@@ -51,6 +51,7 @@ const userlistQueries = {
           ...data,
           results: data.results.map((relation) => ({
             ...relation,
+            resource: relation.resource,
           })),
         }
       },

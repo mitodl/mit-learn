@@ -50,6 +50,7 @@ const learningPathQueries = {
           ...data,
           results: data.results.map((relation) => ({
             ...relation,
+            resource: relation.resource,
           })),
         }
       },

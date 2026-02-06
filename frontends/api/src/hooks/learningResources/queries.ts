@@ -109,7 +109,7 @@ const learningResourceQueries = {
       queryFn: () => {
         return learningResourcesApi
           .learningResourcesItemsList(params)
-          .then((res) => res.data)
+          .then((res) => res.data.results.map((rel) => rel.resource))
       },
     }),
   similar: (id: number) =>
@@ -134,6 +134,7 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesApi.learningResourcesList(params).then((res) => ({
           ...res.data,
+          results: res.data.results,
         })),
     }),
   summaryList: (params: LearningResourcesSummaryListRequest) =>
