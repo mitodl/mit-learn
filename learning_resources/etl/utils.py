@@ -733,11 +733,12 @@ def get_title_for_content(
         try:
             file_root = Path(source_path).stem
             xml_path = Path(olx_path, "html", f"{file_root}.xml")
-            with Path.open(xml_path, "rb") as f:
-                xml_content = f.read().decode("utf-8")
-                title = _title_from_xml(xml_content)
-                if title:
-                    return title
+            if xml_path.exists():
+                with Path.open(xml_path, "rb") as f:
+                    xml_content = f.read().decode("utf-8")
+                    title = _title_from_xml(xml_content)
+                    if title:
+                        return title
             html_content = content
             title_match = re.search(
                 r"<title>(.*?)</title>", html_content, re.IGNORECASE
