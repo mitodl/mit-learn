@@ -942,3 +942,86 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
 
     assert len(results) == 0
     mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
+
+
+@pytest.mark.parametrize(
+    (
+        "content",
+        "source_path",
+        "edx_module_id",
+        "video_srt_metadata",
+        "mock_xml_content",
+        "expected_title",
+    ),
+    [
+        (
+            "some content",
+            "path/to/vid.srt",
+            "asset-v1:mit+course+video+block@vid",
+            {"asset-v1:mit+course+video+block@vid": {"title": "Video Title"}},
+            None,
+            "Video Title",
+        ),
+        (
+            '<html display_name="XML Title"/>',
+            "path/to/doc.xml",
+            "block-v1:mit+course+type@xml+block@doc",
+            None,
+            None,
+            "XML Title",
+        ),
+        (
+            "<html><body>Content</body></html>",
+            "html/doc.html",
+            "block-v1:mit+course+type@html+block@doc",
+            None,
+            '<html display_name="HTML via XML Title"/>',
+            "HTML via XML Title",
+        ),
+        (
+            "<html><head><title>HTML Tag Title</title></head><body>Content</body></html>",
+            "html/doc.html",
+            "block-v1:mit+course+type@html+block@doc",
+            None,
+            None,
+            "HTML Tag Title",
+        ),
+        (
+            "<html><body>Content</body></html>",
+            "html/my-file-name.html",
+            "block-v1:mit+course+type@html+block@my-file-name",
+            None,
+            None,
+            "My File Name",
+        ),
+    ],
+)
+def test_get_title_for_content(  # noqa: PLR0913
+    tmp_path,
+    content,
+    source_path,
+    edx_module_id,
+    video_srt_metadata,
+    mock_xml_content,
+    expected_title,
+):
+    """Test get_title_for_content for various scenarios"""
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    if mock_xml_content:
+        # Create corresponding XML file
+        xml_dir = olx_path / "html"
+        xml_dir.mkdir(parents=True, exist_ok=True)
+        xml_file = xml_dir / f"{pathlib.Path(source_path).stem}.xml"
+        xml_file.write_text(mock_xml_content)
+
+    title = utils.get_title_for_content(
+        content,
+        str(olx_path),
+        source_path,
+        edx_module_id,
+        video_srt_metadata,
+    )
+
+    assert title == expected_title
