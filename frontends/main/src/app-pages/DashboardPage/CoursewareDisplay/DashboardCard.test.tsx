@@ -1262,6 +1262,32 @@ describe.each([
       expect(within(card).getByText("Test Program Title")).toBeInTheDocument()
     })
 
+    test("program card title links to program dashboard", () => {
+      setupUserApis()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV2({
+          program: mitxonline.factories.programs.program({
+            title: "Test Program Title",
+            id: 123,
+          }),
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const titleLink = within(card).getByRole("link", {
+        name: "Test Program Title",
+      })
+      expect(titleLink).toHaveAttribute("href", "/dashboard/program/123")
+    })
+
     test("program card does not show course-specific elements", () => {
       setupUserApis()
       const programEnrollment =

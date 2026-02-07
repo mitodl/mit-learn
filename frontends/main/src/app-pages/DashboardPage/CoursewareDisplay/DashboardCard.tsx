@@ -697,8 +697,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
 
   // Title link logic
-  const titleHref =
-    isAnyCourse && (hasEnrolled || b2bContractId) ? coursewareUrl : undefined
+  const titleHref = isAnyCourse
+    ? hasEnrolled || b2bContractId
+      ? coursewareUrl
+      : undefined
+    : resourceIsProgramEnrollment
+      ? programView(resource.data.program.id)
+      : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
     isAnyCourse && !hasEnrolled
