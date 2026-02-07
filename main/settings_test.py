@@ -24,8 +24,25 @@ REQUIRED_SETTINGS = {
 }
 
 
+S3_MEDIA_SETTINGS = {
+    "MITOL_USE_S3": "True",
+    "AWS_ACCESS_KEY_ID": "test123",
+    "AWS_SECRET_ACCESS_KEY": "test456",
+    "AWS_STORAGE_BUCKET_NAME": "test_bucket",
+    "MEDIA_URL": "/media/",
+}
+
+
 class TestSettings(TestCase):
     """Validate that settings work as expected."""
+
+    def tearDown(self):
+        """Clean up after each test by reloading settings with base environment."""
+        if hasattr(sys.modules["main.settings"], "STORAGES"):
+            delattr(sys.modules["main.settings"], "STORAGES")
+        clean_env = {**REQUIRED_SETTINGS, "MITOL_USE_S3": "False"}
+        with mock.patch.dict("os.environ", clean_env, clear=True):
+            importlib.reload(sys.modules["main.settings"])
 
     def reload_settings(self, module: str = "main.settings"):
         """
@@ -48,8 +65,9 @@ class TestSettings(TestCase):
             clear=True,
         ):
             settings_vars = self.reload_settings()
+            storages = settings_vars.get("STORAGES", {})
             assert (
-                settings_vars.get("DEFAULT_FILE_STORAGE")
+                storages.get("default", {}).get("BACKEND")
                 != "storages.backends.s3boto3.S3Boto3Storage"
             )
 
@@ -71,7 +89,7 @@ class TestSettings(TestCase):
         ):
             settings_vars = self.reload_settings()
             assert (
-                settings_vars.get("DEFAULT_FILE_STORAGE")
+                settings_vars["STORAGES"]["default"]["BACKEND"]
                 == "storages.backends.s3boto3.S3Boto3Storage"
             )
 
@@ -212,3 +230,109 @@ class TestSettings(TestCase):
                 "update_next-start-date-every-1-days"
                 in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
+
+    def _assert_s3_storage_config(
+        self,
+        storages_dict,
+        use_s3,
+        custom_domain=None,
+        s3_prefix=None,
+    ):
+        """
+        Validate STORAGES configuration.
+
+        Args:
+            storages_dict: The STORAGES dict from settings (None if MITOL_USE_S3 is False)
+            use_s3: Whether S3 is enabled
+            custom_domain: Expected custom domain value
+            s3_prefix: Expected S3 prefix value
+        """
+        if not use_s3:
+            # When S3 is disabled, STORAGES may not be defined or should not use S3 backend
+            if storages_dict:
+                assert storages_dict.get("default", {}).get("BACKEND") != (
+                    "storages.backends.s3boto3.S3Boto3Storage"
+                )
+        else:
+            # When S3 is enabled, verify the backend
+            assert storages_dict["default"]["BACKEND"] == (
+                "storages.backends.s3boto3.S3Boto3Storage"
+            )
+            assert storages_dict["staticfiles"]["BACKEND"] == (
+                "django.contrib.staticfiles.storage.StaticFilesStorage"
+            )
+
+            # Verify OPTIONS are set correctly based on custom_domain and s3_prefix
+            options = storages_dict["default"].get("OPTIONS", {})
+
+            if custom_domain:
+                assert options.get("custom_domain") == custom_domain
+            else:
+                assert "custom_domain" not in options
+
+            if s3_prefix:
+                assert options.get("location") == s3_prefix
+            else:
+                assert "location" not in options
+
+            # If neither custom_domain nor s3_prefix, OPTIONS should be empty or absent
+            if not custom_domain and not s3_prefix:
+                assert not options
+
+    def test_storages_configuration_with_s3_disabled(self):
+        """Verify STORAGES is not configured for S3 when MITOL_USE_S3 is False"""
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "MITOL_USE_S3": "False"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings()
+            self._assert_s3_storage_config(
+                storages_dict=settings_vars.get("STORAGES", {}),
+                use_s3=False,
+            )
+
+    def test_storages_configuration_combinations(self):
+        """Test STORAGES configuration with all combinations of AWS_S3_CUSTOM_DOMAIN and AWS_S3_PREFIX"""
+        test_cases = [
+            {
+                "name": "S3 enabled, no custom domain, no prefix",
+                "custom_domain": None,
+                "s3_prefix": None,
+            },
+            {
+                "name": "S3 enabled, custom domain set, no prefix",
+                "custom_domain": "cdn.example.com",
+                "s3_prefix": None,
+            },
+            {
+                "name": "S3 enabled, no custom domain, prefix set",
+                "custom_domain": None,
+                "s3_prefix": "media/uploads",
+            },
+            {
+                "name": "S3 enabled, custom domain and prefix both set",
+                "custom_domain": "cdn.example.com",
+                "s3_prefix": "media/uploads",
+            },
+        ]
+
+        for test_case in test_cases:
+            with self.subTest(test_case["name"]):
+                env_vars = {**REQUIRED_SETTINGS, **S3_MEDIA_SETTINGS}
+
+                # Only add env vars if they have values (simulating None/unset)
+                if test_case["custom_domain"]:
+                    env_vars["AWS_S3_CUSTOM_DOMAIN"] = test_case["custom_domain"]
+
+                if test_case["s3_prefix"]:
+                    env_vars["AWS_S3_PREFIX"] = test_case["s3_prefix"]
+
+                with mock.patch.dict("os.environ", env_vars, clear=True):
+                    settings_vars = self.reload_settings()
+                    self._assert_s3_storage_config(
+                        storages_dict=settings_vars["STORAGES"],
+                        use_s3=True,
+                        custom_domain=test_case["custom_domain"],
+                        s3_prefix=test_case["s3_prefix"],
+                    )
