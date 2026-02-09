@@ -266,7 +266,7 @@ def sync_edx_course_files(
             continue
         course = run.learning_resource
         if ids and course.id not in ids:
-            log.info("Course id %d not in specified ids, skipping", course.id)
+            log.debug("Course id %d not in specified ids, skipping", course.id)
             continue
         if course.published and not course.test_mode and course.best_run != run:
             # This is not the best run for the published course, so skip it

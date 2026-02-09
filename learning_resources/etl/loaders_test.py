@@ -789,6 +789,7 @@ def test_load_course_fetch_only(mocker, course_exists):
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.parametrize("status", [RunStatus.archived.value, RunStatus.current.value])
 @pytest.mark.parametrize("certification", [True, False])
+@pytest.mark.django_db(transaction=True)
 def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
     today = now_in_utc()
@@ -863,6 +864,7 @@ def test_load_run(mocker, run_exists, status, certification):
     "etl_source",
     [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
+@pytest.mark.django_db(transaction=True)
 def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
     """Test that load_run calls get_content_tasks for best runs even if not newly created"""
     from datetime import UTC, datetime
@@ -909,6 +911,7 @@ def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
     [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 @pytest.mark.parametrize("run_exists", [True, False])
+@pytest.mark.django_db(transaction=True)
 def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_exists):
     """Test that load_run calls get_content_tasks for test_mode courses regardless of best_run"""
     from datetime import UTC, datetime

@@ -167,7 +167,8 @@ def process_create_content_file_request(data):
         ingest_canvas_course.apply_async([content_path, False])
     else:
         ingest_edx_course.apply_async(
-            [etl_source, content_path], readable_id=readable_id, overwrite=False
+            [etl_source, content_path],
+            kwargs={"course_id": readable_id, "overwrite": False},
         )
 
 
