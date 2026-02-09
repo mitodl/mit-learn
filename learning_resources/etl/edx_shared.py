@@ -68,7 +68,7 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
     Retrieve a list of S3 keys for the most recent edx course archives.
 
     Results are cached for ARCHIVE_KEYS_CACHE_TIMEOUT seconds so that
-    multiple tasks for the same etl_source don't each perform a full \
+    multiple tasks for the same etl_source don't each perform a full
     S3 bucket listing.
 
     Args:
@@ -157,7 +157,6 @@ def sync_edx_archive(
         s3_key(str): S3 path of the content archive
         overwrite(bool): Whether to overwrite existing content files
     """
-    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
     if not run:
         trigger_resource_etl(etl_source)
@@ -169,6 +168,7 @@ def sync_edx_archive(
             "%s not the best run for %s, skipping", run.run_id, course.readable_id
         )
         return
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     process_course_archive(bucket, s3_key, run, overwrite=overwrite)
 
 

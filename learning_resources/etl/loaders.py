@@ -360,17 +360,16 @@ def load_run(
             # ingested & checksums match, no new content files will be created
             from learning_resources.tasks import import_content_files
 
-            cache_key = (
-                "content_tasks_triggered_"
-                f"{learning_resource.etl_source}_{learning_resource.id}"
-            )
+            etl_source = learning_resource.etl_source
+            resource_id = learning_resource.id
+            cache_key = f"content_tasks_triggered_{etl_source}_{resource_id}"
 
             def enqueue_content_tasks():
                 if not cache.add(cache_key, True, timeout=CONTENT_TASKS_CACHE_TIMEOUT):  # noqa: FBT003
                     return
                 import_content_files.delay(
-                    learning_resource.etl_source,
-                    learning_resource_ids=[learning_resource.id],
+                    etl_source,
+                    learning_resource_ids=[resource_id],
                 )
 
             transaction.on_commit(enqueue_content_tasks)

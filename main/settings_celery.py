@@ -58,7 +58,7 @@ CELERY_BEAT_SCHEDULE = (
         },
         "update-mitxonline-courses-every-6-hours": {
             "task": "learning_resources.tasks.get_mitxonline_data",
-            "schedule": 60 * 60 * 6,
+            "schedule": crontab(minute=0, hour="*/6"),
         },
         "update-mitxonline-files-every-1-day": {
             "task": "learning_resources.tasks.import_all_mitxonline_files",
