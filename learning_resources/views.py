@@ -310,7 +310,7 @@ class LearningResourceViewSet(
             )
             return Response(LearningResourceSerializer(list(similar), many=True).data)
         except _InactiveRpcError as ircp:
-            msg = f"No vector point matches resource {pk}"
+            msg = f"Similar resources RPC error for resource {pk}: {ircp.details()}"
             log.warning(msg)
             raise Http404(msg) from ircp
 
