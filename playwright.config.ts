@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [["html", { port: 9229, host: "0.0.0.0" }], ["list"]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://nginx:8063",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },

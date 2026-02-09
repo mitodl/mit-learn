@@ -4,6 +4,27 @@ const LOCAL_DEFAULT = "http://nginx:8063"
 const RC_DEFAULT = "https://rc.learn.mit.edu"
 const KNOWN_BASE_URLS = [LOCAL_DEFAULT, RC_DEFAULT]
 
+export const login = async (page: Page, email: string, password: string) => {
+  await page.goto("/")
+  await page.getByText("Log In").click()
+  await page.getByLabel("Email").fill(email)
+  await page.getByRole("Button", { name: "Next" }).click()
+  await page.getByLabel("Password", { exact: true }).fill(password)
+  await page.getByRole("Button", { name: "Next" }).click()
+}
+
+export const localLogin = async (
+  page: Page,
+  email: string,
+  password: string,
+) => {
+  await page.goto("/")
+  await page.getByText("Log In").click()
+  await page.getByLabel("Email").fill(email)
+  await page.getByLabel("Password", { exact: true }).fill(password)
+  await page.getByRole("Button", { name: "Sign In" }).click()
+}
+
 test.describe("Smoke Test - Homepage", () => {
   test("should load the homepage successfully", async ({ page }) => {
     await page.goto("/")
@@ -24,13 +45,19 @@ const programPageB2CTestInfo = {
     description:
       "Gain expertise in the growing field of Supply Chain Management through an innovative online program consisting of five courses and a final capstone exam.",
     courseCount: 6,
+    email: "dansubak+test@mit.edu",
+    password: "test",
+    loginFunc: login,
   },
   [LOCAL_DEFAULT]: {
     url: "/programs/program-v1:PLACEHOLDER+PROGRAM",
     title: "PLACEHOLDER - Data, Economics and Development Policy",
     description:
       "PLACEHOLDER - In this engineering program, we will explore the processing and structure of cellular solids as they are created from polymers, metals, ceramics, glasses and composites.",
-    courseCount: 2,
+    courseCount: 1,
+    email: "admin@odl.local",
+    password: "admin",
+    loginFunc: localLogin,
   },
 }
 
@@ -65,10 +92,13 @@ async function getCoursePageB2CTestInfo(baseUrl) {
   return coursePageB2CTestInfo[urlToLookup]
 }
 
-test.describe("Smoke Test - Program Page B2C", () => {
+test.describe("Smoke Test - Program Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
-    const { url, title, description, courseCount } =
+    // Log in, visit a program page, add a certificate to a cart and assert that we're redirected to a checkout page.
+
+    const { url, title, description, courseCount, email, password, loginFunc } =
       await getProgramPageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
+    await loginFunc(page, email, password)
     await page.goto(url)
 
     // This will only pass on RC as written.
@@ -95,11 +125,23 @@ test.describe("Smoke Test - Program Page B2C", () => {
     // Certificate Track label only exists if there's a price afaict
     // Should we have a stronger assertion? The value comes from the CMS, so it can change underneath us.
     await expect(page.getByText("Certificate Track")).toBeVisible()
+
+    // Open the enrollment modal, select a certificate track, assert it redirects us to a checkout page
+    await page.getByText("Enroll for Free").click()
+    await page.getByText("Please Select").click()
+    await page
+      .getByText(
+        "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE+PLACEHOLDER_Demo_Course_in_Program_Elective",
+      )
+      .click()
+    await page.getByRole("button", { name: "Add to Cart" }).click()
+    await page.waitForURL("**/cart/")
   })
 })
 
-test.describe("Smoke Test - Course Page B2C", () => {
+test.describe("Smoke Test - Course Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
+    // Log in, visit a course page attempt to enroll in a course run
     const { url, title, description } = await getCoursePageB2CTestInfo(
       testInfo.config.projects[0].use.baseURL,
     )
@@ -120,5 +162,13 @@ test.describe("Smoke Test - Course Page B2C", () => {
     await expect(
       page.getByRole("button", { name: "Enroll for Free" }),
     ).toBeVisible({ timeout: 30_000 })
+
+    await expect(page.getByText("Certificate Track: $999.00")).toBeVisible()
+
+    // TODO: Assert it's part of a program. We still need to assert the actual program title is displayed too
+    await expect(page.getByText("Part of the following program")).toBeVisible()
+
+    // Open the enrollment modal
+    await page.getByText("Enroll for Free").click()
   })
 })
