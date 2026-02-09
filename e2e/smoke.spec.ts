@@ -45,9 +45,10 @@ const programPageB2CTestInfo = {
     description:
       "Gain expertise in the growing field of Supply Chain Management through an innovative online program consisting of five courses and a final capstone exam.",
     courseCount: 6,
-    email: "dansubak+test@mit.edu",
-    password: "test",
+    email: "daniel.subak+test@gmail.com",
+    password: "testpassword",
     loginFunc: login,
+    certificateSelectionText: "",
   },
   [LOCAL_DEFAULT]: {
     url: "/programs/program-v1:PLACEHOLDER+PROGRAM",
@@ -58,6 +59,8 @@ const programPageB2CTestInfo = {
     email: "admin@odl.local",
     password: "admin",
     loginFunc: localLogin,
+    certificateSelectionText:
+      "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE+PLACEHOLDER_Demo_Course_in_Program_Elective",
   },
 }
 
@@ -67,12 +70,14 @@ const coursePageB2CTestInfo = {
     title: "Foundations of Development Policy",
     description:
       "This course is part of the MITx MicroMasters program in Data, Economics, and Development Policy (DEDP).",
+    certPrice: "Certificate Track: $1,000.00",
   },
   [LOCAL_DEFAULT]: {
     url: "/courses/course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE",
     title: "PLACEHOLDER - Demonstration Course in Program (Elective)",
     description:
       "PLACEHOLDER - In this engineering course, we will explore the processing and structure of cellular solids as they are created from polymers, metals, ceramics, glasses and composites.",
+    certPrice: "Certificate Track: $999.00",
   },
 }
 
@@ -96,8 +101,16 @@ test.describe("Smoke Test - Program Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
     // Log in, visit a program page, add a certificate to a cart and assert that we're redirected to a checkout page.
 
-    const { url, title, description, courseCount, email, password, loginFunc } =
-      await getProgramPageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
+    const {
+      url,
+      title,
+      description,
+      courseCount,
+      email,
+      password,
+      loginFunc,
+      certificateSelectionText,
+    } = await getProgramPageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
     await loginFunc(page, email, password)
     await page.goto(url)
 
@@ -129,22 +142,19 @@ test.describe("Smoke Test - Program Page B2C Logged In", () => {
     // Open the enrollment modal, select a certificate track, assert it redirects us to a checkout page
     await page.getByText("Enroll for Free").click()
     await page.getByText("Please Select").click()
-    await page
-      .getByText(
-        "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE+PLACEHOLDER_Demo_Course_in_Program_Elective",
-      )
-      .click()
-    await page.getByRole("button", { name: "Add to Cart" }).click()
-    await page.waitForURL("**/cart/")
+    if (certificateSelectionText) {
+      await page.getByText(certificateSelectionText).click()
+      await page.getByRole("button", { name: "Add to Cart" }).click()
+      await page.waitForURL("**/cart/")
+    }
   })
 })
 
 test.describe("Smoke Test - Course Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
     // Log in, visit a course page attempt to enroll in a course run
-    const { url, title, description } = await getCoursePageB2CTestInfo(
-      testInfo.config.projects[0].use.baseURL,
-    )
+    const { url, title, description, certPrice } =
+      await getCoursePageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
     await page.goto(url)
 
     await expect(page.locator("main")).toBeVisible()
@@ -163,7 +173,7 @@ test.describe("Smoke Test - Course Page B2C Logged In", () => {
       page.getByRole("button", { name: "Enroll for Free" }),
     ).toBeVisible({ timeout: 30_000 })
 
-    await expect(page.getByText("Certificate Track: $999.00")).toBeVisible()
+    await expect(page.getByText(certPrice)).toBeVisible()
 
     // TODO: Assert it's part of a program. We still need to assert the actual program title is displayed too
     await expect(page.getByText("Part of the following program")).toBeVisible()
