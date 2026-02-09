@@ -302,6 +302,26 @@ def import_all_xpro_files(
     )
 
 
+@app.task(bind=True)
+def import_content_files(
+    self, etl_source, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+):
+    """Import content files for any edX-based ETL source.
+
+    This task wraps get_content_tasks so that the S3 archive listing and
+    task-group construction happen asynchronously in a Celery worker, rather
+    than blocking the calling task.
+    """
+    return self.replace(
+        get_content_tasks(
+            etl_source,
+            chunk_size=chunk_size,
+            overwrite=overwrite,
+            learning_resource_ids=learning_resource_ids,
+        )
+    )
+
+
 @app.task
 def get_podcast_data():
     """

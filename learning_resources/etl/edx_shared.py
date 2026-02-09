@@ -22,6 +22,7 @@ from learning_resources.models import LearningResourceRun
 log = logging.getLogger(__name__)
 
 ETL_CACHE_TIMEOUT = 300
+ARCHIVE_KEYS_CACHE_TIMEOUT = 300
 
 
 def process_course_archive(
@@ -64,7 +65,11 @@ def process_course_archive(
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
     """
-    Retrieve a list of S3 keys for the most recent edx course archives
+    Retrieve a list of S3 keys for the most recent edx course archives.
+
+    Results are cached for ARCHIVE_KEYS_CACHE_TIMEOUT seconds so that
+    multiple tasks for the same etl_source don't each perform a full \
+    S3 bucket listing.
 
     Args:
         etl_source(str): The edx ETL source
@@ -72,6 +77,12 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
     Returns:
         list of str: edx archive S3 keys
     """
+    cache_key = f"archive_keys_{etl_source}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        log.info("Using cached archive keys for %s", etl_source)
+        return cached
+
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     if not bucket:
         log.warning("No S3 bucket for platform %s", etl_source)
@@ -95,7 +106,9 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
                     "key": archive.key,
                     "last_modified": archive.last_modified,
                 }
-        return [entry["key"] for entry in latest_archives.values()]
+        result = [entry["key"] for entry in latest_archives.values()]
+        cache.set(cache_key, result, timeout=ARCHIVE_KEYS_CACHE_TIMEOUT)
+        return result  # noqa: TRY300
     except (StopIteration, IndexError):
         log.warning(
             "No %s exported courses found in S3 bucket %s", etl_source, bucket.name
@@ -112,21 +125,25 @@ def trigger_resource_etl(etl_source):
     # Celery doesn't guarantee dedup by task_id out of the box,
     # depends on config, so use a cache too to prevent dupes
     cache_key = f"etl_triggered_{etl_source}"
-    if cache.get(cache_key):
+    if not cache.add(cache_key, True, timeout=ETL_CACHE_TIMEOUT):  # noqa: FBT003
         log.info("ETL already triggered recently for %s, skipping", etl_source)
         return
-    cache.set(cache_key, True, timeout=ETL_CACHE_TIMEOUT)  # noqa: FBT003
-    if etl_source == ETLSource.mit_edx.name:
-        tasks.get_mit_edx_data.apply_async(task_id="mit_edx_full_etl")
-    elif etl_source == ETLSource.mitxonline.name:
-        tasks.get_mitxonline_data.apply_async(task_id="mitxonline_full_etl")
-    elif etl_source == ETLSource.xpro.name:
-        tasks.get_xpro_data.apply_async(task_id="xpro_full_etl")
-    else:
-        log.warning(
-            "No ETL pipeline for %s, cannot sync archive",
-            etl_source,
-        )
+    try:
+        if etl_source == ETLSource.mit_edx.name:
+            tasks.get_mit_edx_data.apply_async(task_id="mit_edx_full_etl")
+        elif etl_source == ETLSource.mitxonline.name:
+            tasks.get_mitxonline_data.apply_async(task_id="mitxonline_full_etl")
+        elif etl_source == ETLSource.xpro.name:
+            tasks.get_xpro_data.apply_async(task_id="xpro_full_etl")
+        else:
+            log.warning(
+                "No ETL pipeline for %s, cannot sync archive",
+                etl_source,
+            )
+            cache.delete(cache_key)
+    except Exception:
+        cache.delete(cache_key)
+        log.exception("Failed to trigger ETL for %s", etl_source)
 
 
 def sync_edx_archive(
@@ -143,6 +160,19 @@ def sync_edx_archive(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
     if not run:
+        any_run = run_for_edx_archive(
+            etl_source,
+            s3_key,
+            course_id=course_id,
+            include_unpublished=True,
+        )
+        if any_run:
+            log.warning(
+                "Archive %s matched unpublished run %s, skipping ETL",
+                s3_key,
+                any_run.run_id,
+            )
+            return
         log.warning(
             "No %s run found for archive %s, triggering ETL", etl_source, s3_key
         )
@@ -159,7 +189,11 @@ def sync_edx_archive(
 
 
 def run_for_edx_archive(
-    etl_source: str, archive_filename: str, course_id: str | None = None
+    etl_source: str,
+    archive_filename: str,
+    course_id: str | None = None,
+    *,
+    include_unpublished: bool = False,
 ):
     """
     Generate and return a LearningResourceRun for an edx course archive
@@ -173,15 +207,15 @@ def run_for_edx_archive(
         LearningResourceRun or None: The matching run, or None if not found
     """
     potential_run_id = Path(archive_filename).parent.name.split("/")[-1]
-    runs = (
-        LearningResourceRun.objects.filter(
-            learning_resource__etl_source=etl_source,
-        )
-        .filter(Q(published=True) | Q(learning_resource__test_mode=True))
-        .filter(
+    runs = LearningResourceRun.objects.filter(
+        learning_resource__etl_source=etl_source,
+    )
+    if not include_unpublished:
+        runs = runs.filter(
+            Q(published=True) | Q(learning_resource__test_mode=True)
+        ).filter(
             Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
         )
-    )
     if course_id:
         runs = runs.filter(learning_resource__readable_id=course_id)
     if etl_source == ETLSource.mit_edx.name:

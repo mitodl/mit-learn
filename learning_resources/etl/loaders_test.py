@@ -792,9 +792,8 @@ def test_load_course_fetch_only(mocker, course_exists):
 def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
     today = now_in_utc()
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
     course = LearningResourceFactory.create(
         is_course=True,
@@ -853,12 +852,11 @@ def test_load_run(mocker, run_exists, status, certification):
     # when the course is from an edx source (xpro in this case)
     course.refresh_from_db()
     if result == course.best_run:
-        mock_content_task.assert_called_once_with(
-            etl_source=course.etl_source, learning_resource_ids=[course.id]
+        mock_import_task.delay.assert_called_once_with(
+            course.etl_source, learning_resource_ids=[course.id]
         )
-        mock_content_task.return_value.delay.assert_called_once()
     else:
-        mock_content_task.assert_not_called()
+        mock_import_task.delay.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -869,9 +867,8 @@ def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
     """Test that load_run calls get_content_tasks for best runs even if not newly created"""
     from datetime import UTC, datetime
 
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
 
     # Create course with an existing older run
@@ -902,10 +899,9 @@ def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
     course.refresh_from_db()
     assert result == course.best_run
 
-    mock_content_task.assert_called_once_with(
-        etl_source=course.etl_source, learning_resource_ids=[course.id]
+    mock_import_task.delay.assert_called_once_with(
+        course.etl_source, learning_resource_ids=[course.id]
     )
-    mock_content_task.return_value.delay.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -917,9 +913,8 @@ def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_
     """Test that load_run calls get_content_tasks for test_mode courses regardless of best_run"""
     from datetime import UTC, datetime
 
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
 
     # Create test_mode course
@@ -964,10 +959,9 @@ def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_
     result = load_run(course, run_props)
 
     # For test_mode courses, get_content_tasks should always be called
-    mock_content_task.assert_called_once_with(
-        etl_source=course.etl_source, learning_resource_ids=[course.id]
+    mock_import_task.delay.assert_called_once_with(
+        course.etl_source, learning_resource_ids=[course.id]
     )
-    mock_content_task.return_value.delay.assert_called_once()
     assert result.learning_resource.test_mode is True
 
 
@@ -981,9 +975,8 @@ def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
     """Test that load_run doesn't call get_content_tasks for non-best runs of published courses"""
     from datetime import UTC, datetime
 
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
 
     # Create published (non-test-mode) course with existing best run
@@ -1022,7 +1015,7 @@ def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
     assert result != course.best_run
 
     # get_content_tasks should not be called for non-best runs
-    mock_content_task.assert_not_called()
+    mock_import_task.delay.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1031,9 +1024,8 @@ def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
 )
 def test_load_run_skips_get_content_tasks_for_unsupported_sources(mocker, etl_source):
     """Test that load_run doesn't call get_content_tasks for non-edx sources"""
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
 
     course = LearningResourceFactory.create(
@@ -1052,7 +1044,7 @@ def test_load_run_skips_get_content_tasks_for_unsupported_sources(mocker, etl_so
     load_run(course, run_props)
 
     # get_content_tasks should not be called for non-edx sources
-    mock_content_task.assert_not_called()
+    mock_import_task.delay.assert_not_called()
 
 
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])

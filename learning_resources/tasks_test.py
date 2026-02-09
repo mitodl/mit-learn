@@ -210,6 +210,28 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
 
 
 @mock_aws
+def test_import_content_files(settings, mocker, mocked_celery, mock_blocklist):
+    """import_content_files should be replaced with get_content_tasks for any source"""
+    setup_s3(settings)
+    get_content_tasks_mock = mocker.patch(
+        "learning_resources.tasks.get_content_tasks", autospec=True
+    )
+    with pytest.raises(mocked_celery.replace_exception_class):
+        tasks.import_content_files.delay(
+            ETLSource.mitxonline.name,
+            chunk_size=5,
+            overwrite=True,
+            learning_resource_ids=[42],
+        )
+    get_content_tasks_mock.assert_called_once_with(
+        ETLSource.mitxonline.name,
+        chunk_size=5,
+        overwrite=True,
+        learning_resource_ids=[42],
+    )
+
+
+@mock_aws
 @pytest.mark.parametrize("with_learning_resource_ids", [True, False])
 def test_get_content_tasks(
     settings,

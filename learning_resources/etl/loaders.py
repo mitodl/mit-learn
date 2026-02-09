@@ -3,6 +3,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Q
 
@@ -66,6 +67,8 @@ from learning_resources.utils import (
 log = logging.getLogger()
 
 User = get_user_model()
+
+CONTENT_TASKS_CACHE_TIMEOUT = 300
 
 
 def update_index(learning_resource, newly_created):
@@ -353,14 +356,24 @@ def load_run(
             and learning_resource_run.content_files.count() == 0
         ):
             # webhook may have been sent before run was created or was best run,
-            # so trigger a contentfile ingestion for the course.  If already
+            # so trigger a contentfile ingestion for the course. If already
             # ingested & checksums match, no new content files will be created
-            from learning_resources.tasks import get_content_tasks
+            from learning_resources.tasks import import_content_files
 
-            get_content_tasks(
-                etl_source=learning_resource.etl_source,
-                learning_resource_ids=[learning_resource.id],
-            ).delay()
+            cache_key = (
+                "content_tasks_triggered_"
+                f"{learning_resource.etl_source}_{learning_resource.id}"
+            )
+
+            def enqueue_content_tasks():
+                if not cache.add(cache_key, True, timeout=CONTENT_TASKS_CACHE_TIMEOUT):  # noqa: FBT003
+                    return
+                import_content_files.delay(
+                    learning_resource.etl_source,
+                    learning_resource_ids=[learning_resource.id],
+                )
+
+            transaction.on_commit(enqueue_content_tasks)
     return learning_resource_run
 
 
