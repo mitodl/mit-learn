@@ -704,7 +704,7 @@ def test_sync_edx_archive_success(
 
 @pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
 def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_source):
-    """Test sync_edx_archive logs warning and triggers ETL when no matching run is found"""
+    """Test sync_edx_archive triggers ETL when no matching run is found"""
     from learning_resources.etl.edx_shared import sync_edx_archive
 
     bucket = mock_course_archive_bucket.bucket
@@ -714,7 +714,6 @@ def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_s
         "learning_resources.etl.edx_shared.get_bucket_by_name",
         return_value=bucket,
     )
-    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.warning")
     mock_process = mocker.patch(
         "learning_resources.etl.edx_shared.process_course_archive"
     )
@@ -724,9 +723,6 @@ def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_s
 
     sync_edx_archive(etl_source, s3_key, overwrite=False)
 
-    mock_log.assert_called_once_with(
-        "No %s run found for archive %s, triggering ETL", etl_source, s3_key
-    )
     mock_trigger.assert_called_once_with(etl_source)
     mock_process.assert_not_called()
 

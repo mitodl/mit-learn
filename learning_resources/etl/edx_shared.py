@@ -160,22 +160,6 @@ def sync_edx_archive(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
     if not run:
-        any_run = run_for_edx_archive(
-            etl_source,
-            s3_key,
-            course_id=course_id,
-            include_unpublished=True,
-        )
-        if any_run:
-            log.warning(
-                "Archive %s matched unpublished run %s, skipping ETL",
-                s3_key,
-                any_run.run_id,
-            )
-            return
-        log.warning(
-            "No %s run found for archive %s, triggering ETL", etl_source, s3_key
-        )
         trigger_resource_etl(etl_source)
         return
     course = run.learning_resource
@@ -189,11 +173,7 @@ def sync_edx_archive(
 
 
 def run_for_edx_archive(
-    etl_source: str,
-    archive_filename: str,
-    course_id: str | None = None,
-    *,
-    include_unpublished: bool = False,
+    etl_source: str, archive_filename: str, course_id: str | None = None
 ):
     """
     Generate and return a LearningResourceRun for an edx course archive
@@ -207,15 +187,15 @@ def run_for_edx_archive(
         LearningResourceRun or None: The matching run, or None if not found
     """
     potential_run_id = Path(archive_filename).parent.name.split("/")[-1]
-    runs = LearningResourceRun.objects.filter(
-        learning_resource__etl_source=etl_source,
-    )
-    if not include_unpublished:
-        runs = runs.filter(
-            Q(published=True) | Q(learning_resource__test_mode=True)
-        ).filter(
+    runs = (
+        LearningResourceRun.objects.filter(
+            learning_resource__etl_source=etl_source,
+        )
+        .filter(Q(published=True) | Q(learning_resource__test_mode=True))
+        .filter(
             Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
         )
+    )
     if course_id:
         runs = runs.filter(learning_resource__readable_id=course_id)
     if etl_source == ETLSource.mit_edx.name:
