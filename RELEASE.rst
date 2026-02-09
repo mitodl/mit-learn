@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.53.7
+--------------
+
+- Add option to serve S3 media from a custom domain (#2928)
+- Article Share Button and Social Media Preview (#2926)
+- Catch inactive rpc error (#2929)
+- Add playwright for tests (#2904)
+- Return 404 status for missing resources (#2921)
+- Product Page Improvements (course in programs, display multiple dates) (#2930)
+- fix(deps): update dependency django to v4.2.28 [security] (#2917)
+- fix: show placeholder for media and course control click (#2914)
+- fix(deps): update dependency react-slick to ^0.31.0 (#2743)
+- chore(deps): update node.js to v24 (#2755)
+- chore(deps): update yarn to v4.12.0 (#2740)
+- fix an easily broken test (#2927)
+
 Version 0.53.4 (Released February 05, 2026)
 --------------
 
