@@ -70,13 +70,13 @@ const Page: React.FC<
   const queryClient = getQueryClient()
 
   if (certificateType === CertificateType.Course) {
-    await queryClient.prefetchQuery(
+    await queryClient.fetchQueryOr404(
       certificateQueries.courseCertificatesRetrieve({
         cert_uuid: uuid,
       }),
     )
   } else {
-    await queryClient.prefetchQuery(
+    await queryClient.fetchQueryOr404(
       certificateQueries.programCertificatesRetrieve({
         cert_uuid: uuid,
       }),
