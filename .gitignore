@@ -138,3 +138,8 @@ certs/
 
 # ignore db backups
 backups/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

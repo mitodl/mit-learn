@@ -30,8 +30,10 @@ services:
   watch:
     profiles:
       - frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.watch
     working_dir: /src
-    image: node:24.13
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -46,6 +48,7 @@ services:
     ports:
       - "8062:8062"
       - "6006:6006"
+      - "9229:9229"
     environment:
       - NEXT_SERVER_MITOL_API_BASE_URL=http://nginx:8063/
     volumes:
