@@ -6,6 +6,7 @@ from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 
 from learning_resources.etl.constants import ETLSource
@@ -19,6 +20,8 @@ from learning_resources.etl.utils import (
 from learning_resources.models import LearningResourceRun
 
 log = logging.getLogger(__name__)
+
+ETL_CACHE_TIMEOUT = 300
 
 
 def process_course_archive(
@@ -100,6 +103,32 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
         return []
 
 
+def trigger_resource_etl(etl_source):
+    """
+    Trigger an ETL process for all resources of a given source
+    """
+    from learning_resources import tasks
+
+    # Celery doesn't guarantee dedup by task_id out of the box,
+    # depends on config, so use a cache too to prevent dupes
+    cache_key = f"etl_triggered_{etl_source}"
+    if cache.get(cache_key):
+        log.info("ETL already triggered recently for %s, skipping", etl_source)
+        return
+    cache.set(cache_key, True, timeout=ETL_CACHE_TIMEOUT)  # noqa: FBT003
+    if etl_source == ETLSource.mit_edx.name:
+        tasks.get_mit_edx_data.apply_async(task_id="mit_edx_full_etl")
+    elif etl_source == ETLSource.mitxonline.name:
+        tasks.get_mitxonline_data.apply_async(task_id="mitxonline_full_etl")
+    elif etl_source == ETLSource.xpro.name:
+        tasks.get_xpro_data.apply_async(task_id="xpro_full_etl")
+    else:
+        log.warning(
+            "No ETL pipeline for %s, cannot sync archive",
+            etl_source,
+        )
+
+
 def sync_edx_archive(
     etl_source, s3_key: str, *, course_id: str | None = None, overwrite: bool = False
 ):
@@ -112,24 +141,21 @@ def sync_edx_archive(
         overwrite(bool): Whether to overwrite existing content files
     """
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
-    with TemporaryDirectory() as export_tempdir:
-        archive_filename = s3_key.split("/")[-1]
-        archive_path = Path(export_tempdir, archive_filename)
-        bucket.download_file(s3_key, archive_path)
-        run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
-        if not run:
-            log.warning(
-                "No published/test_mode %s run found for archive %s", etl_source, s3_key
-            )
-            return
-        course = run.learning_resource
-        if course.published and not course.test_mode and course.best_run != run:
-            # This is not the best run for the published course, so skip it
-            log.warning(
-                "%s not the best run for %s, skipping", run.run_id, course.readable_id
-            )
-            return
-        process_course_archive(bucket, s3_key, run, overwrite=overwrite)
+    run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
+    if not run:
+        log.warning(
+            "No %s run found for archive %s, triggering ETL", etl_source, s3_key
+        )
+        trigger_resource_etl(etl_source)
+        return
+    course = run.learning_resource
+    if course.published and not course.test_mode and course.best_run != run:
+        # This is not the best run for the published course, so skip it
+        log.warning(
+            "%s not the best run for %s, skipping", run.run_id, course.readable_id
+        )
+        return
+    process_course_archive(bucket, s3_key, run, overwrite=overwrite)
 
 
 def run_for_edx_archive(

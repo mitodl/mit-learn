@@ -325,7 +325,7 @@ def load_run(
     with transaction.atomic():
         (
             learning_resource_run,
-            created,
+            _,
         ) = LearningResourceRun.objects.select_for_update().update_or_create(
             learning_resource=learning_resource,
             run_id=run_id,
@@ -334,18 +334,27 @@ def load_run(
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
+
+        # Remove cached best run if present
+        if hasattr(learning_resource, "best_run"):
+            del learning_resource.best_run
+
         if (
-            created
-            and learning_resource_run == learning_resource.best_run
+            (
+                learning_resource_run == learning_resource.best_run
+                or learning_resource.test_mode
+            )
             and learning_resource.etl_source
             in (
                 ETLSource.mit_edx.value,
                 ETLSource.mitxonline.value,
                 ETLSource.xpro.value,
             )
+            and learning_resource_run.content_files.count() == 0
         ):
-            # webhook may have been sent before run was created
-            # so trigger a contentfile ingestion for the course.
+            # webhook may have been sent before run was created or was best run,
+            # so trigger a contentfile ingestion for the course.  If already
+            # ingested & checksums match, no new content files will be created
             from learning_resources.tasks import get_content_tasks
 
             get_content_tasks(

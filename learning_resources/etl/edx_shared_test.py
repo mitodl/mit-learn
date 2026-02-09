@@ -643,16 +643,11 @@ def test_sync_edx_archive_success(
 
 @pytest.mark.parametrize("etl_source", [ETLSource.mitxonline.name, ETLSource.xpro.name])
 def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_source):
-    """Test sync_edx_archive logs warning and returns when no matching run is found"""
+    """Test sync_edx_archive logs warning and triggers ETL when no matching run is found"""
     from learning_resources.etl.edx_shared import sync_edx_archive
 
     bucket = mock_course_archive_bucket.bucket
     s3_key = f"{etl_source}/courses/non-existent-course/abcdefghijklmnop.tar.gz"
-
-    with Path.open(
-        Path("test_json/course-v1:MITxT+8.01.3x+3T2022.tar.gz"), "rb"
-    ) as infile:
-        bucket.put_object(Key=s3_key, Body=infile.read(), ACL="public-read")
 
     mocker.patch(
         "learning_resources.etl.edx_shared.get_bucket_by_name",
@@ -662,12 +657,16 @@ def test_sync_edx_archive_no_run_found(mocker, mock_course_archive_bucket, etl_s
     mock_process = mocker.patch(
         "learning_resources.etl.edx_shared.process_course_archive"
     )
+    mock_trigger = mocker.patch(
+        "learning_resources.etl.edx_shared.trigger_resource_etl"
+    )
 
     sync_edx_archive(etl_source, s3_key, overwrite=False)
 
     mock_log.assert_called_once_with(
-        "No published/test_mode %s run found for archive %s", etl_source, s3_key
+        "No %s run found for archive %s, triggering ETL", etl_source, s3_key
     )
+    mock_trigger.assert_called_once_with(etl_source)
     mock_process.assert_not_called()
 
 
@@ -850,3 +849,77 @@ def test_sync_edx_archive_with_overwrite(
     mock_load.assert_called_once()
     run.refresh_from_db()
     assert run.checksum != "old_checksum"
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "task_attr"),
+    [
+        (ETLSource.mit_edx.name, "get_mit_edx_data"),
+        (ETLSource.mitxonline.name, "get_mitxonline_data"),
+        (ETLSource.xpro.name, "get_xpro_data"),
+    ],
+)
+def test_trigger_resource_etl_dispatches_correct_task(mocker, etl_source, task_attr):
+    """Test trigger_resource_etl dispatches the correct Celery task per source"""
+    from learning_resources.etl.edx_shared import trigger_resource_etl
+
+    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_cache.get.return_value = None
+    mock_task = mocker.patch(f"learning_resources.tasks.{task_attr}")
+
+    trigger_resource_etl(etl_source)
+
+    mock_task.apply_async.assert_called_once()
+
+
+def test_trigger_resource_etl_cache_dedup(mocker):
+    """Test trigger_resource_etl skips dispatch when cache indicates recent trigger"""
+    from learning_resources.etl.edx_shared import trigger_resource_etl
+
+    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_cache.get.return_value = True
+    mock_task = mocker.patch("learning_resources.tasks.get_mit_edx_data")
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
+
+    trigger_resource_etl(ETLSource.mit_edx.name)
+
+    mock_task.apply_async.assert_not_called()
+    mock_log.assert_called_once_with(
+        "ETL already triggered recently for %s, skipping", ETLSource.mit_edx.name
+    )
+
+
+def test_trigger_resource_etl_sets_cache(mocker):
+    """Test trigger_resource_etl sets cache key with correct timeout after dispatching"""
+    from learning_resources.etl.edx_shared import (
+        ETL_CACHE_TIMEOUT,
+        trigger_resource_etl,
+    )
+
+    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_cache.get.return_value = None
+    mocker.patch("learning_resources.tasks.get_mit_edx_data")
+
+    trigger_resource_etl(ETLSource.mit_edx.name)
+
+    mock_cache.set.assert_called_once_with(
+        f"etl_triggered_{ETLSource.mit_edx.name}",
+        True,  # noqa: FBT003
+        timeout=ETL_CACHE_TIMEOUT,
+    )
+
+
+def test_trigger_resource_etl_unsupported_source(mocker):
+    """Test trigger_resource_etl warns for unsupported ETL sources"""
+    from learning_resources.etl.edx_shared import trigger_resource_etl
+
+    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_cache.get.return_value = None
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.warning")
+
+    trigger_resource_etl(ETLSource.ocw.name)
+
+    mock_log.assert_called_once_with(
+        "No ETL pipeline for %s, cannot sync archive",
+        ETLSource.ocw.name,
+    )
