@@ -4,6 +4,9 @@ const LOCAL_DEFAULT = "http://nginx:8063"
 const RC_DEFAULT = "https://rc.learn.mit.edu"
 const KNOWN_BASE_URLS = [LOCAL_DEFAULT, RC_DEFAULT]
 
+// The behavior of non-dev and dev keycloak login appears to differ significantly
+// Locally, you get a single screen login with a username and password
+// On RC/Prod, you get a multi-screen login where you enter your email first, then your password
 export const login = async (page: Page, email: string, password: string) => {
   await page.goto("/")
   await page.getByText("Log In").click()
@@ -35,7 +38,7 @@ test.describe("Smoke Test - Homepage", () => {
 
 /*
 For now, we're going to parameterize the test values we're going to assert
-Longer term, we probably want to use the same test data generation process in RC, meaning we won't need this layer of indirection
+Longer term, we probably want to use the same test data generation process in RC, meaning we won't as much different data
 If we keep this, we probably want to load this from a file or come up w/ a less annoying fixture setup
 */
 const programPageB2CTestInfo = {
