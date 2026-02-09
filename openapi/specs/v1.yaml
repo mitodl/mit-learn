@@ -13821,6 +13821,9 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        author_name:
+          type: string
+          default: ''
         content:
           default: {}
         is_published:
@@ -15723,6 +15726,9 @@ components:
         title:
           type: string
           maxLength: 255
+        author_name:
+          type: string
+          default: ''
         content:
           default: {}
         user:
@@ -15762,6 +15768,9 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        author_name:
+          type: string
+          default: ''
         content:
           default: {}
         is_published:

@@ -5575,6 +5575,12 @@ export interface PatchedRichTextArticleRequest {
   title?: string
   /**
    *
+   * @type {string}
+   * @memberof PatchedRichTextArticleRequest
+   */
+  author_name?: string
+  /**
+   *
    * @type {any}
    * @memberof PatchedRichTextArticleRequest
    */
@@ -8011,6 +8017,12 @@ export interface RichTextArticle {
   title: string
   /**
    *
+   * @type {string}
+   * @memberof RichTextArticle
+   */
+  author_name?: string
+  /**
+   *
    * @type {any}
    * @memberof RichTextArticle
    */
@@ -8064,6 +8076,12 @@ export interface RichTextArticleRequest {
    * @memberof RichTextArticleRequest
    */
   title: string
+  /**
+   *
+   * @type {string}
+   * @memberof RichTextArticleRequest
+   */
+  author_name?: string
   /**
    *
    * @type {any}

@@ -8,6 +8,7 @@ const ArticleByLineInfoBarViewer = () => {
   const author = article?.user ?? null
   const publishedDate = article?.is_published ? article?.created_on : null
   const content = article?.content
+  const authorName = article?.author_name ?? null
 
   return (
     <ArticleByLineInfoBarContent
@@ -15,6 +16,7 @@ const ArticleByLineInfoBarViewer = () => {
       publishedDate={publishedDate}
       content={content}
       isEditable={false}
+      authorName={authorName}
     />
   )
 }
