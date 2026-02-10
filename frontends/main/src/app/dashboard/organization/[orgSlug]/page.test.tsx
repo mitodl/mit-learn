@@ -21,7 +21,6 @@ useRouter.mockReturnValue({
 describe("Organization Page", () => {
   beforeEach(() => {
     mockReplace.mockClear()
-    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 

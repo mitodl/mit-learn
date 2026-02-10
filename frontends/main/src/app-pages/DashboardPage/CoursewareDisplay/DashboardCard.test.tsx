@@ -1303,8 +1303,8 @@ describe.each([
     test("renders program card with title", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV2({
-          program: mitxonline.factories.programs.program({
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
           }),
         })
@@ -1326,8 +1326,8 @@ describe.each([
     test("program card does not show course-specific elements", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV2({
-          program: mitxonline.factories.programs.program({
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program",
           }),
         })

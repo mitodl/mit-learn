@@ -292,9 +292,8 @@ function setupOrgDashboardMocks(
   )
 
   // Empty defaults
-  setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
   setMockResponse.get(
-    mitxonline.urls.programEnrollments.enrollmentsListV2(),
+    mitxonline.urls.programEnrollments.enrollmentsListV3(),
     [],
   )
   setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)

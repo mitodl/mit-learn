@@ -20,7 +20,7 @@ describe("OrganizationRedirect", () => {
   beforeEach(() => {
     mockReplace.mockClear()
     localStorage.clear()
-    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 

@@ -41,7 +41,7 @@ describe("DashboardDialogs", () => {
       enrollments,
     )
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])

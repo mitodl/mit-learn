@@ -25,8 +25,7 @@ const makeGrade = factories.enrollment.grade
 describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
-    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [])
-    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
@@ -695,7 +694,7 @@ describe("ContractContent", () => {
         url: "/certificate/program/cert-123",
       },
     }
-    const programEnrollment = factories.enrollment.programEnrollmentV2({
+    const programEnrollment = factories.enrollment.programEnrollmentV3({
       program: programWithCertificate,
       certificate: {
         uuid: programWithCertificate.certificate.uuid,
@@ -726,10 +725,7 @@ describe("ContractContent", () => {
         results: coursesA,
       },
     )
-    setMockResponse.get(urls.programEnrollments.enrollmentsList(), [
-      programEnrollment,
-    ])
-    setMockResponse.get(urls.programEnrollments.enrollmentsListV2(), [
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [
       programEnrollment,
     ])
 
