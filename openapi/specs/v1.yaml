@@ -10348,6 +10348,8 @@ components:
         resource_readable_id:
           type: string
           readOnly: true
+        source_path:
+          type: string
         course_number:
           type: array
           items:
@@ -10454,6 +10456,9 @@ components:
           format: uri
           nullable: true
           maxLength: 200
+        source_path:
+          type: string
+          minLength: 1
         file_type:
           type: string
           nullable: true

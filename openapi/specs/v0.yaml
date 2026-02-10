@@ -2206,6 +2206,8 @@ components:
         resource_readable_id:
           type: string
           readOnly: true
+        source_path:
+          type: string
         course_number:
           type: array
           items:

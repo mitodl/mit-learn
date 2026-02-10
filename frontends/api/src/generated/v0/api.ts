@@ -1025,6 +1025,12 @@ export interface ContentFile {
    */
   resource_readable_id: string
   /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  source_path?: string
+  /**
    * Extract the course number(s) from the associated course
    * @type {Array<string>}
    * @memberof ContentFile
