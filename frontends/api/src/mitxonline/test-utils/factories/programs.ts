@@ -122,22 +122,4 @@ const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
   return mergeOverrides<V3SimpleProgram>(defaults, overrides)
 }
 
-const simpleProgramFromV2: PartialFactory<V3SimpleProgram> = (
-  v2Program: V2Program,
-) => {
-  return {
-    id: v2Program.id,
-    title: v2Program.title,
-    live: v2Program.live,
-    readable_id: v2Program.readable_id,
-    program_type: v2Program.program_type,
-  }
-}
-
-export {
-  program,
-  programs,
-  programCollection,
-  simpleProgram,
-  simpleProgramFromV2,
-}
+export { program, programs, programCollection, simpleProgram }

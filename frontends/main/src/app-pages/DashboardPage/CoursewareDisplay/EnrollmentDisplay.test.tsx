@@ -287,7 +287,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgramFromV2(program),
+            program: mitxonline.factories.programs.simpleProgram(),
           }),
         ],
       )
@@ -343,7 +343,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgramFromV2(program),
+            program: mitxonline.factories.programs.simpleProgram(),
           }),
         ],
       )
@@ -412,7 +412,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgramFromV2(program),
+            program: mitxonline.factories.programs.simpleProgram(),
           }),
         ],
       )
@@ -498,7 +498,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgramFromV2(program),
+            program: mitxonline.factories.programs.simpleProgram(),
           }),
         ],
       )
