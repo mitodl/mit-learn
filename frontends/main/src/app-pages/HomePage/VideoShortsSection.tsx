@@ -4,6 +4,9 @@ import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { useVideoShortsList } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
+import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -37,6 +40,7 @@ const CardContent = styled.div<{ width: number; height: number }>(
     flexDirection: "column",
     height,
     width,
+    position: "relative",
   }),
 )
 
@@ -50,6 +54,26 @@ const CarouselSlide = styled.div<{ width: number; height: number }>(
     height,
   }),
 )
+
+const ImagePlaceholder = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  backgroundColor: theme.custom.colors.black,
+  borderRadius: "12px",
+
+  img: {
+    position: "absolute",
+    top: "18px",
+    left: "14px",
+  },
+
+  p: {
+    position: "absolute",
+    top: "197px",
+    left: "14px",
+    color: theme.custom.colors.white,
+  },
+}))
 
 const VideoShortsSection = () => {
   const { data, isLoading } = useVideoShortsList()
@@ -89,15 +113,26 @@ const VideoShortsSection = () => {
               >
                 <Card.Content>
                   <CardContent width={235} height={235 / ASPECT_RATIO}>
-                    <Image
-                      width={
-                        (235 / ASPECT_RATIO) *
-                        (video.thumbnail_width / video.thumbnail_height)
-                      }
-                      height={235 / ASPECT_RATIO}
-                      src={video.thumbnail_url}
-                      alt={video.title}
-                    />
+                    {video.thumbnail_small_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        width={(235 / ASPECT_RATIO) * (270 / 480)}
+                        height={235 / ASPECT_RATIO}
+                        src={`${NEXT_PUBLIC_ORIGIN}${video.thumbnail_small_url}`}
+                        alt={video.title}
+                      />
+                    ) : (
+                      <ImagePlaceholder>
+                        <Image
+                          src={MITOpenLearningLogo.src}
+                          alt="MIT Open Learning Logo"
+                          width={63}
+                          height={16}
+                          style={{ filter: "brightness(0) invert(1)" }}
+                        />
+                        <Typography variant="body1">{video.title}</Typography>
+                      </ImagePlaceholder>
+                    )}
                   </CardContent>
                 </Card.Content>
               </Card>
