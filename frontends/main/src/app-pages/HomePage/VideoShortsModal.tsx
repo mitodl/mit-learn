@@ -1,10 +1,17 @@
 import React, { useEffect, useRef, useState } from "react"
-import { styled } from "ol-components"
+import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
 import type { VideoShort } from "api/v0"
+import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+
+// Some URLs are missing the /media prefix. Expecting this to be fixed in later pipeline runs
+const normalizeVideoUrl = (url: string): string =>
+  url.startsWith("/shorts/") ? `/media${url}` : url
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -89,6 +96,30 @@ const Video = styled.video(({ height, width, theme }) => ({
   },
 }))
 
+const ErrorPlaceholder = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  backgroundColor: theme.custom.colors.black,
+  borderRadius: "12px",
+  position: "relative",
+  paddingTop: "30vh",
+
+  img: {
+    position: "absolute",
+    top: "43px",
+    left: "50px",
+  },
+
+  span: {
+    marginLeft: "50px",
+    marginRight: "50px",
+    color: theme.custom.colors.white,
+    fontWeight: theme.typography.fontWeightRegular,
+    display: "block",
+    marginBottom: "10vh",
+  },
+}))
+
 const isPlaying = (videoElement: HTMLVideoElement | null): boolean => {
   if (!videoElement) return false
 
@@ -120,6 +151,7 @@ const VideoShortsModal = ({
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [muted, setMuted] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
+  const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
 
@@ -202,6 +234,11 @@ const VideoShortsModal = ({
     }
   }
 
+  console.log(
+    "URLS",
+    videoData.map((video) => video.video_url),
+  )
+
   return (
     <Overlay>
       <CloseButton size="large" edge="rounded" variant="text" onClick={onClose}>
@@ -226,28 +263,44 @@ const VideoShortsModal = ({
             data-index={index}
           >
             {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-              <Video
-                ref={(el) => {
-                  if (videosRef.current && el) {
-                    videosRef.current[index] = el
-                    el.addEventListener("error", (e: Event) => {
-                      console.error("Video error:", e)
-                    })
-                  }
-                }}
-                onClick={handleVideoClick}
-                src={video.video_url}
-                autoPlay
-                muted
-                playsInline
-                webkit-playsinline="true"
-                controlsList="nofullscreen"
-                disablePictureInPicture
-                width={(height - 60) * (9 / 16)}
-                height={height - 60}
-                preload="metadata"
-                loop
-              />
+              videoErrors[index] ? (
+                <ErrorPlaceholder>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={MITOpenLearningLogo.src}
+                    alt="MIT Open Learning Logo"
+                    width={178}
+                    height={47}
+                    style={{ filter: "brightness(0) invert(1)" }}
+                  />
+                  <Typography variant="h4">Playback errored!</Typography>
+                  <Typography variant="h2">{video.title}</Typography>
+                </ErrorPlaceholder>
+              ) : (
+                <Video
+                  ref={(el) => {
+                    if (videosRef.current && el) {
+                      videosRef.current[index] = el
+                      el.addEventListener("error", (e: Event) => {
+                        console.error("Video error:", e)
+                        setVideoErrors((prev) => ({ ...prev, [index]: e }))
+                      })
+                    }
+                  }}
+                  onClick={handleVideoClick}
+                  src={`${NEXT_PUBLIC_ORIGIN}${normalizeVideoUrl(video.video_url ?? "")}`}
+                  autoPlay
+                  muted
+                  playsInline
+                  webkit-playsinline="true"
+                  controlsList="nofullscreen"
+                  disablePictureInPicture
+                  width={(height - 60) * (9 / 16)}
+                  height={height - 60}
+                  preload="metadata"
+                  loop
+                />
+              )
             ) : (
               <Placeholder />
             )}
