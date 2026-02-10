@@ -22,7 +22,7 @@ const SANITIZE_CONFIG: Config = {
     "referrerpolicy",
   ],
   ADD_URI_SAFE_ATTR: ["src"],
-  ALLOWED_URI_REGEXP: /^(?:(?:https?):)|^(?:data:image\/)/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:https):)|^(?:data:image\/)/i,
 }
 
 const UnstyledRawHTML: React.FC<UnstyledRawHTMLProps> = memo(
