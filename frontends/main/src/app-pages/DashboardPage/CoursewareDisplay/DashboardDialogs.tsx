@@ -100,10 +100,8 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
           Update your email preferences for <BoldText>{title}.</BoldText>
         </Typography>
         <Alert severity="warning">
-          <Typography variant="body2" color="textPrimary">
-            Unchecking the box will prevent you from receiving important course
-            updates and emails.
-          </Typography>
+          Unchecking the box will prevent you from receiving important course
+          updates and emails.
         </Alert>
         <Checkbox
           name="receive_emails"
