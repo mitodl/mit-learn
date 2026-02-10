@@ -182,18 +182,14 @@ const getDefaultContextMenuItems = (
       : resource.data.program.page?.page_url
 
     if (detailsUrl && includeInLearnCatalog) {
-      menuItems.push(
-        ...[
-          {
-            className: "dashboard-card-menu-item",
-            key: "view-program-details",
-            label: "View Program Details",
-            onClick: () => {
-              router.push(detailsUrl)
-            },
-          },
-        ],
-      )
+      menuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "view-program-details",
+        label: "View Program Details",
+        onClick: () => {
+          router.push(detailsUrl)
+        },
+      })
     }
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
