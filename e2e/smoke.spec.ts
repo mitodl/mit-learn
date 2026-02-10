@@ -63,7 +63,7 @@ const programPageB2CTestInfo = {
     password: "admin",
     loginFunc: localLogin,
     certificateSelectionText:
-      "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE+PLACEHOLDER_Demo_Course_in_Program_Elective",
+      "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE_IN_PROGRAM_ELECTIVE_PLACEHOLDER_Demo_Course_in_Program_Elective",
   },
 }
 
