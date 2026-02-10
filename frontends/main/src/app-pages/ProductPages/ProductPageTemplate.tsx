@@ -7,6 +7,7 @@ import {
   Breadcrumbs,
   BannerBackground,
   Typography,
+  HEADER_HEIGHT,
 } from "ol-components"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
@@ -14,6 +15,7 @@ import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { ButtonLink, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import { HeadingIds } from "./util"
+import { useFragmentScrollSpy } from "@/common/useFragmentScrollSpy"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
   paddingBottom: "24px",
@@ -66,6 +68,7 @@ const MainCol = styled.div({
   flex: 1,
   display: "flex",
   flexDirection: "column",
+  minWidth: 0,
 })
 
 const SidebarCol = styled.div(({ theme }) => ({
@@ -82,37 +85,87 @@ const SidebarSpacer = styled.div(({ theme }) => ({
   },
 }))
 
-const StyledLink = styled(ButtonLink)(({ theme }) => ({
+// Outer wrapper: sticky, clipped, and owns the fade overlays
+const LinksWrapper = styled.div(({ theme }) => ({
+  borderRadius: "100vh",
+  padding: "12px 16px",
+  boxShadow:
+    "0 2px 4px 0 rgba(37, 38, 43, 0.10), 0 6px 24px 0 rgba(37, 38, 43, 0.24)",
   backgroundColor: theme.custom.colors.white,
-  borderColor: theme.custom.colors.white,
+  borderBottom: `3px solid ${theme.custom.colors.red}`,
+  marginTop: "-20px", // this is (height/2 + line_height/2) = align top of text with bottom of banner
+  maxWidth: "100%",
+  marginBottom: "40px",
+  position: "sticky",
+  top: `calc(${HEADER_HEIGHT}px + 24px)`,
+  zIndex: 100,
+  overflow: "hidden",
+  // Subtle fade indicators on edges using pseudo-elements
+  "&::before, &::after": {
+    content: '""',
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "48px",
+    pointerEvents: "none",
+    zIndex: 1,
+    opacity: 0,
+    transition: "opacity 0.2s",
+  },
+  "&::before": {
+    left: 0,
+    background: `linear-gradient(to right, color-mix(in srgb, ${theme.custom.colors.red} 50%, transparent) 0%, transparent 70%)`,
+  },
+  "&::after": {
+    right: 0,
+    background: `linear-gradient(to left, color-mix(in srgb, ${theme.custom.colors.red} 50%, transparent) 0%, transparent 70%)`,
+  },
+  "&[data-show-left-fade='true']::before": {
+    opacity: 1,
+  },
+  "&[data-show-right-fade='true']::after": {
+    opacity: 1,
+  },
   [theme.breakpoints.down("md")]: {
-    backgroundColor: theme.custom.colors.lightGray1,
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    display: "none",
   },
 }))
 
-const LinksContainer = styled.nav(({ theme }) => ({
+// Inner container: horizontally scrollable nav
+const LinksContainer = styled.nav({
   display: "flex",
-  flexWrap: "wrap",
-  [theme.breakpoints.up("md")]: {
-    gap: "24px",
-    padding: "12px 16px",
-    backgroundColor: theme.custom.colors.white,
-    borderRadius: "4px",
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-    marginTop: "-24px",
-    width: "calc(100%)",
-    marginBottom: "40px",
+  flexWrap: "nowrap",
+  // take full wrapper width; inner content overflows inside this scroller
+  width: "100%",
+  overflowX: "auto",
+  scrollBehavior: "smooth",
+  scrollbarWidth: "none", // Firefox
+  "&::-webkit-scrollbar": {
+    display: "none", // Chrome, Safari, Edge
   },
-  [theme.breakpoints.down("md")]: {
-    alignSelf: "center",
-    gap: "8px",
-    rowGap: "16px",
-    padding: 0,
-    margin: "24px 0",
+})
+const NavLink = styled(ButtonLink, {
+  shouldForwardProp: (prop) => prop !== "active",
+})<{ active: boolean }>(({ theme, active }) => [
+  {
+    minWidth: "unset",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
   },
-}))
+  active
+    ? {
+        color: theme.custom.colors.white,
+        backgroundColor: theme.custom.colors.red,
+        "&:hover:not(:disabled)": {
+          backgroundColor: theme.custom.colors.mitRed,
+        },
+      }
+    : {
+        backgroundColor: theme.custom.colors.white,
+        borderColor: theme.custom.colors.white,
+        color: theme.custom.colors.red,
+      },
+])
 
 const SidebarImageWrapper = styled.div(({ theme }) => ({
   [theme.breakpoints.up("md")]: {
@@ -153,7 +206,6 @@ const WhoCanTakeSection = styled.section(({ theme }) => ({
 type HeadingData = {
   id: HeadingIds
   label: string
-  variant: "primary" | "secondary"
 }
 
 type ProductPageTemplateProps = {
@@ -221,26 +273,96 @@ const ProductNavbar: React.FC<{
   navLinks: HeadingData[]
   productNoun: string
 }> = ({ navLinks, productNoun }) => {
+  const activeFragment =
+    useFragmentScrollSpy(
+      navLinks.map((link) => link.id),
+      {
+        // start intersection area below the sticky header to account for it covering the top of sections, and end it at 50% of viewport to ensure it overlaps during section transitions
+        rootMargin: `-${HEADER_HEIGHT + 24 + 56}px 0px -50% 0px`,
+      },
+    ) ?? navLinks[0]?.id // fallback to first section
+  const navLinkRefs = React.useRef<Map<string, HTMLAnchorElement>>(new Map())
+  const scrollRef = React.useRef<HTMLElement | null>(null)
+  const [showLeftFade, setShowLeftFade] = React.useState(false)
+  const [showRightFade, setShowRightFade] = React.useState(false)
+
+  const updateFades = React.useCallback(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const { scrollLeft, scrollWidth, clientWidth } = container
+    const isScrollable = scrollWidth > clientWidth
+
+    // Show left fade if scrolled away from left edge
+    setShowLeftFade(isScrollable && scrollLeft > 1)
+    // Show right fade if not scrolled to right edge
+    setShowRightFade(isScrollable && scrollLeft < scrollWidth - clientWidth - 1)
+  }, [])
+
+  React.useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    // Update on mount and when content changes
+    updateFades()
+
+    // Update on scroll
+    container.addEventListener("scroll", updateFades)
+    // Update on resize (in case content wrapping changes)
+    window.addEventListener("resize", updateFades)
+
+    return () => {
+      container.removeEventListener("scroll", updateFades)
+      window.removeEventListener("resize", updateFades)
+    }
+  }, [updateFades, navLinks])
+
+  React.useEffect(() => {
+    if (activeFragment) {
+      const activeLink = navLinkRefs.current.get(activeFragment)
+      if (activeLink) {
+        activeLink.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        })
+      }
+    }
+  }, [activeFragment])
+
   if (navLinks.length === 0) {
     return null
   }
+
   return (
-    <LinksContainer aria-label={`${productNoun} Details`}>
-      {navLinks.map((heading) => {
-        const LinkComponent =
-          heading.variant === "primary" ? ButtonLink : StyledLink
-        return (
-          <LinkComponent
-            key={heading.id}
-            href={`#${heading.id}`}
-            variant={heading.variant}
-            size="small"
-          >
-            {heading.label}
-          </LinkComponent>
-        )
-      })}
-    </LinksContainer>
+    <LinksWrapper
+      data-show-left-fade={showLeftFade}
+      data-show-right-fade={showRightFade}
+    >
+      <LinksContainer aria-label={`${productNoun} Details`} ref={scrollRef}>
+        {navLinks.map((heading) => {
+          return (
+            <NavLink
+              edge="circular"
+              key={heading.id}
+              href={`#${heading.id}`}
+              variant="secondary"
+              size="small"
+              active={activeFragment === heading.id}
+              ref={(el: HTMLAnchorElement | null) => {
+                if (el) {
+                  navLinkRefs.current.set(heading.id, el)
+                } else {
+                  navLinkRefs.current.delete(heading.id)
+                }
+              }}
+            >
+              {heading.label}
+            </NavLink>
+          )
+        })}
+      </LinksContainer>
+    </LinksWrapper>
   )
 }
 

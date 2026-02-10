@@ -45,6 +45,12 @@ const WhatSection = styled.section({
   gap: "16px",
 })
 
+const HowSection = styled.section({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+})
+
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -56,32 +62,32 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
     {
       id: HeadingIds.About,
       label: "About",
-      variant: "primary",
       content: page.about,
     },
     {
       id: HeadingIds.Requirements,
       label: "Courses",
-      variant: "secondary",
       content: true,
     },
     {
       id: HeadingIds.What,
       label: "What you'll learn",
-      variant: "secondary",
       content: page.what_you_learn,
+    },
+    {
+      id: HeadingIds.How,
+      label: "How you'll learn",
+      content: true,
     },
     {
       id: HeadingIds.Prereqs,
       label: "Prerequisites",
-      variant: "secondary",
       content: page.prerequisites,
     },
     {
       id: HeadingIds.Instructors,
       label: "Instructors",
-      variant: "secondary",
-      content: page.faculty.length ? "x" : undefined,
+      content: page.faculty.length,
     },
   ] as const
   return all.filter((item) => item.content)
@@ -322,6 +328,23 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
             <RawHTML html={page.what_you_learn} />
           </WhatSection>
         ) : null}
+        <HowSection aria-labelledby={HeadingIds.How}>
+          <Typography variant="h4" component="h2" id={HeadingIds.How}>
+            How you'll learn
+          </Typography>
+          <p>
+            A communi observantia non est recedendum. Vivamus sagittis lacus vel
+            augue laoreet rutrum faucibus. Nihilne te nocturnum praesidium
+            Palati, nihil urbis vigiliae. Ab illo tempore, ab est sed
+            immemorabili. Cum sociis natoque penatibus et magnis dis parturient.
+            Quam diu etiam furor iste tuus nos eludet? Ut enim ad minim veniam,
+            quis nostrud exercitation. Fictum, deserunt mollit anim laborum
+            astutumque! Quisque placerat facilisis egestas cillum dolore. Nec
+            dubitamus multa iter quae et nos invenerat. Contra legem facit qui
+            id facit quod lex prohibet. Quam diu etiam furor iste tuus nos
+            eludet?
+          </p>
+        </HowSection>
         {page.prerequisites ? (
           <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
             <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
