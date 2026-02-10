@@ -606,6 +606,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 for topic in content_file.run.learning_resource.topics.all()
             ],
             "key": content_file.key,
+            "source_path": content_file.source_path,
             "uid": content_file.uid,
             "title": content_file.title,
             "description": content_file.description,
