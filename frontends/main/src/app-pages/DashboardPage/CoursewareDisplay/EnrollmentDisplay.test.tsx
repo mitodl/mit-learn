@@ -114,7 +114,7 @@ describe("EnrollmentDisplay", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "My Test Program",
         },
       })
@@ -225,7 +225,7 @@ describe("EnrollmentDisplay", () => {
     const b2bProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "B2B Program",
         },
       })
@@ -233,7 +233,7 @@ describe("EnrollmentDisplay", () => {
     const nonB2BProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "Personal Program",
         },
       })
@@ -287,7 +287,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: program,
+            program: mitxonline.factories.programs.simpleProgramFromV2(program),
           }),
         ],
       )
@@ -343,7 +343,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: program,
+            program: mitxonline.factories.programs.simpleProgramFromV2(program),
           }),
         ],
       )
@@ -412,7 +412,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: program,
+            program: mitxonline.factories.programs.simpleProgramFromV2(program),
           }),
         ],
       )
@@ -498,7 +498,7 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: program,
+            program: mitxonline.factories.programs.simpleProgramFromV2(program),
           }),
         ],
       )

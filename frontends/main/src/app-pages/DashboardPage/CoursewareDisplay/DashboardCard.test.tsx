@@ -1304,7 +1304,7 @@ describe.each([
       setupUserApis()
       const programEnrollment =
         mitxonline.factories.enrollment.programEnrollmentV3({
-          program: mitxonline.factories.programs.program({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
           }),
         })
@@ -1327,7 +1327,7 @@ describe.each([
       setupUserApis()
       const programEnrollment =
         mitxonline.factories.enrollment.programEnrollmentV3({
-          program: mitxonline.factories.programs.program({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program",
           }),
         })
