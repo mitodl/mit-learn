@@ -4,7 +4,11 @@ import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { setMockResponse } from "api/test-utils"
+import {
+  setMockResponse,
+  urls as learnUrls,
+  factories as learnFactories,
+} from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { HeadingIds } from "./util"
@@ -12,10 +16,13 @@ import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlagsLoaded")
+const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeCourse = factories.courses.course
 const makePage = factories.pages.coursePageItem
@@ -41,17 +48,29 @@ const setupApis = ({
   setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
+
+  setMockResponse.get(
+    learnUrls.userMe.get(),
+    learnFactories.user.user({ is_authenticated: false }),
+  )
 }
 
 describe("CoursePage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 
-  test.each([true, false])(
+  test.each([
+    { flagsLoaded: true, isEnabled: true, shouldNotFound: false },
+    { flagsLoaded: true, isEnabled: false, shouldNotFound: true },
+    { flagsLoaded: false, isEnabled: true, shouldNotFound: false },
+    { flagsLoaded: false, isEnabled: false, shouldNotFound: false },
+  ])(
     "Calls noFound if and only the feature flag is disabled",
-    async (isEnabled) => {
+    async ({ flagsLoaded, isEnabled, shouldNotFound }) => {
       mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
+      mockedUseFeatureFlagsLoaded.mockReturnValue(flagsLoaded)
 
       const course = makeCourse()
       const page = makePage({ course_details: course })
@@ -60,10 +79,10 @@ describe("CoursePage", () => {
         url: `/courses/${course.readable_id}/`,
       })
 
-      if (isEnabled) {
-        expect(notFound).not.toHaveBeenCalled()
-      } else {
+      if (shouldNotFound) {
         expect(notFound).toHaveBeenCalled()
+      } else {
+        expect(notFound).not.toHaveBeenCalled()
       }
     },
   )
@@ -100,17 +119,16 @@ describe("CoursePage", () => {
 
     expect(links[0]).toHaveTextContent("About")
     expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
+    expect(document.getElementById(HeadingIds.About)).toBeVisible()
     expect(links[1]).toHaveTextContent("What you'll learn")
     expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
+    expect(document.getElementById(HeadingIds.What)).toBeVisible()
     expect(links[2]).toHaveTextContent("Prerequisites")
     expect(links[2]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
+    expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
     expect(links[3]).toHaveTextContent("Instructors")
     expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
-
-    const headings = screen.getAllByRole("heading")
-    Object.values(HeadingIds).forEach((id) => {
-      expect(headings.find((h) => h.id === id)).toBeVisible()
-    })
+    expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
   // Collasping sections tested in AboutSection.test.tsx

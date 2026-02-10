@@ -8,7 +8,6 @@ from math import ceil
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from opensearch_py_ml.ml_commons import MLCommonClient
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
@@ -18,17 +17,17 @@ from learning_resources_search.connection import (
     get_conn,
     get_default_alias_name,
     get_reindexing_alias_name,
-    get_vector_model_id,
-    get_vector_model_info,
     make_backing_index_name,
     refresh_index,
 )
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     ALL_INDEX_TYPES,
-    COMBINED_INDEX,
     COURSE_TYPE,
     EMBEDDING_FIELDS,
+    HYBRID_COMBINED_INDEX,
+    HYBRID_SEARCH_PIPELINE_BODY,
+    HYBRID_SEARCH_PIPELINE_NAME,
     LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
@@ -45,6 +44,7 @@ from learning_resources_search.serializers import (
     serialize_content_file_for_bulk_deletion,
 )
 from main.utils import chunks
+from vector_search.utils import dense_encoder, retrieve_points_matching_params
 
 log = logging.getLogger(__name__)
 User = get_user_model()
@@ -191,24 +191,27 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
         }
     }
 
-    if object_type == COMBINED_INDEX:
-        model_info = get_vector_model_info()
-        if not model_info:
-            return
-        index_create_data["settings"]["index.knn"] = True
-        index_create_data["settings"]["default_pipeline"] = "vector_ingest_pipeline"
-
-        embedding_dimension = model_info["model_config"]["embedding_dimension"]
-        embedding_mapping = EMBEDDING_FIELDS
-        for field in embedding_mapping.values():
-            field["dimension"] = embedding_dimension
+    if object_type == HYBRID_COMBINED_INDEX:
+        vector_map = EMBEDDING_FIELDS
+        vector_map["vector_embedding"]["dimension"] = dense_encoder().dim()
         index_create_data["mappings"] = {
-            "properties": (LEARNING_RESOURCE_MAP | embedding_mapping)
+            "properties": (LEARNING_RESOURCE_MAP | vector_map)
         }
+        index_create_data["settings"]["index.knn"] = True
+
+        try:
+            conn.transport.perform_request(
+                "GET", f"/_search/pipeline/{HYBRID_SEARCH_PIPELINE_NAME}"
+            )
+        except NotFoundError:
+            conn.transport.perform_request(
+                "PUT",
+                f"/_search/pipeline/{HYBRID_SEARCH_PIPELINE_NAME}",
+                body=HYBRID_SEARCH_PIPELINE_BODY,
+            )
     elif not skip_mapping:
         index_create_data["mappings"] = {"properties": MAPPING[object_type]}
 
-    # from https://www.elastic.co/guide/en/elasticsearch/guide/current/asciifolding-token-filter.html
     conn.indices.create(index_name, body=index_create_data)
 
 
@@ -334,12 +337,44 @@ def index_learning_resources(ids, base_index_name, index_types):
 
     Args:
         ids(list of int): List of learning resource id's
-        base_index_name: The resource type of the resources
+        base_index_name: The resource type of the resources or HYBRID_COMBINED_INDEX
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
 
     """
-    index_items(serialize_bulk_learning_resources(ids), base_index_name, index_types)
+    if base_index_name == HYBRID_COMBINED_INDEX:
+        index_items(
+            serialize_bulk_learning_resources_with_embeddings(ids),
+            HYBRID_COMBINED_INDEX,
+            index_types,
+        )
+    else:
+        index_items(
+            serialize_bulk_learning_resources(ids), base_index_name, index_types
+        )
+
+
+def serialize_bulk_learning_resources_with_embeddings(ids):
+    """
+    Serialize learning resources including vector embeddings for bulk indexing
+
+    Args:
+        ids(list of int): List of learning resource id's
+    """
+    serialized_resources = serialize_bulk_learning_resources(ids)
+    for resource in serialized_resources:
+        vector_result = list(
+            retrieve_points_matching_params(
+                {"readable_id": resource["readable_id"]}, with_vectors=True
+            )
+        )
+
+        if len(vector_result) > 0:
+            resource["vector_embedding"] = vector_result[0].vector.get(
+                dense_encoder().model_short_name()
+            )
+
+        yield resource
 
 
 def deindex_learning_resources(ids, base_index_name):
@@ -650,85 +685,3 @@ def get_existing_reindexing_indexes(obj_types):
                         break
 
     return reindexing_indexes
-
-
-def update_local_index_settings_for_hybrid_search():
-    """
-    Update local OpenSearch cluster settings for hybrid search.
-    On production only_run_on_ml_node should be set to false and
-    there should be dedicated ML nodes.
-    """
-    settings_body = {
-        "persistent": {
-            "archived.plugins.index_state_management.metadata_migration.status": None,
-            "archived.plugins.index_state_management.template_migration.control": None,
-        }
-    }
-    conn = get_conn()
-    conn.cluster.put_settings(body=settings_body)
-    settings_body = {
-        "persistent": {
-            "plugins": {
-                "ml_commons": {
-                    "only_run_on_ml_node": "false",
-                    "native_memory_threshold": "99",
-                }
-            }
-        }
-    }
-    conn = get_conn()
-    conn.cluster.put_settings(body=settings_body)
-
-
-def get_ml_client():
-    """
-    Get an MLCommonClient for the OpenSearch
-    """
-    conn = get_conn()
-    return MLCommonClient(conn)
-
-
-def register_model():
-    """
-    Register the vector OpenSearch model if it does not already exist .
-    """
-    model_id = get_vector_model_id()
-    if model_id:
-        log.error("Model already registered.")
-        return
-
-    ml_client = get_ml_client()
-    ml_client.register_pretrained_model(
-        model_name=settings.OPENSEARCH_VECTOR_MODEL_NAME,
-        model_version=settings.OPENSEARCH_VECTOR_MODEL_NAME_VERSION,
-        model_format=settings.OPENSEARCH_VECTOR_MODEL_FORMAT,
-        deploy_model=True,
-    )
-
-
-def create_ingest_pipeline():
-    """
-    Create an ingest pipeline for the combined_vector index for text embedding.
-    """
-    conn = get_conn()
-    model_id = get_vector_model_id()
-    if not model_id:
-        log.error("Model not found. Cannot create ingest pipeline.")
-        return
-
-    pipeline = {
-        "description": "An NLP ingest pipeline",
-        "processors": [
-            {
-                "text_embedding": {
-                    "model_id": model_id,
-                    "field_map": {
-                        "description": "description_embedding",
-                        "title": "title_embedding",
-                    },
-                }
-            }
-        ],
-    }
-
-    conn.ingest.put_pipeline("vector_ingest_pipeline", pipeline)

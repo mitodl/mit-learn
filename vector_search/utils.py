@@ -1,5 +1,7 @@
+import gc
 import logging
 import uuid
+from functools import cache
 
 from django.conf import settings
 from django.db.models import Q
@@ -43,12 +45,14 @@ from vector_search.encoders.utils import dense_encoder
 logger = logging.getLogger(__name__)
 
 
+@cache
 def qdrant_client():
     return QdrantClient(
         url=settings.QDRANT_HOST,
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
+        timeout=settings.QDRANT_CLIENT_TIMEOUT,
     )
 
 
@@ -231,6 +235,14 @@ def embed_topics():
         client.upload_points(TOPICS_COLLECTION_NAME, points=points, wait=False)
 
 
+@cache
+def _get_text_splitter(**kwargs):
+    if settings.LITELLM_TOKEN_ENCODING_NAME:
+        kwargs["encoding_name"] = settings.LITELLM_TOKEN_ENCODING_NAME
+        return RecursiveCharacterTextSplitter.from_tiktoken_encoder(**kwargs)
+    return RecursiveCharacterTextSplitter(**kwargs)
+
+
 def _chunk_documents(encoder, texts, metadatas):
     # chunk the documents. use semantic chunking if enabled
     chunk_params = {
@@ -239,17 +251,8 @@ def _chunk_documents(encoder, texts, metadatas):
 
     if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
         chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-    if settings.LITELLM_TOKEN_ENCODING_NAME:
-        """
-        If we have a specific model encoding
-        we can use that to stay within token limits
-        """
-        chunk_params["encoding_name"] = settings.LITELLM_TOKEN_ENCODING_NAME
-        recursive_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-            **chunk_params
-        )
-    else:
-        recursive_splitter = RecursiveCharacterTextSplitter(**chunk_params)
+
+    recursive_splitter = _get_text_splitter(**chunk_params)
 
     if settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED:
         """
@@ -327,6 +330,7 @@ def update_content_file_payload(serialized_document):
             collection_name=CONTENT_FILES_COLLECTION_NAME,
         )
     ]
+
     _set_payload(
         points,
         serialized_document,
@@ -351,11 +355,15 @@ def _set_payload(points, document, param_map, collection_name):
             payload[param_map[key]] = document[key]
     if not all([points, payload]):
         return
-    client.set_payload(
-        collection_name=collection_name,
-        payload=payload,
-        points=points,
-    )
+    for point_batch in [
+        points[i : i + settings.QDRANT_POINT_UPLOAD_BATCH_SIZE]
+        for i in range(0, len(points), settings.QDRANT_POINT_UPLOAD_BATCH_SIZE)
+    ]:
+        client.set_payload(
+            collection_name=collection_name,
+            payload=payload,
+            points=point_batch,
+        )
 
 
 def should_generate_resource_embeddings(serialized_document):
@@ -467,16 +475,23 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
-def _process_content_embeddings(serialized_content):
+def _generate_content_file_points(serialized_content):
     """
-    Chunk and embed content file documents
+    Chunk and embed content file documents, yielding PointStructs
     """
-    embeddings = []
-    metadata = []
-    ids = []
     encoder = dense_encoder()
     vector_name = encoder.model_short_name()
-    remove_docs = []
+
+    """
+    Break up requests according to chunk size to stay under openai limits
+    300,000 tokens per request
+    max array size: 2048
+    see: https://platform.openai.com/docs/guides/rate-limits
+    """
+    request_chunk_size = int(
+        300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    )
+
     for doc in serialized_content:
         embedding_context = _content_file_embedding_context(doc)
         if not embedding_context:
@@ -493,57 +508,67 @@ def _process_content_embeddings(serialized_content):
         the content and number of chunk have changed
         so we need to remove all old points
         """
-        remove_docs.append(doc["id"])
-        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
-        split_texts = [d.page_content for d in split_docs if d.page_content]
-        resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
-        split_metadatas = [
-            {
-                "resource_point_id": str(resource_vector_point_id),
-                "chunk_number": chunk_id,
-                "chunk_content": d.page_content,
-                **{
-                    key: d.metadata[key]
-                    for key in QDRANT_CONTENT_FILE_PARAM_MAP
-                    if key in d.metadata
-                },
-            }
-            for chunk_id, d in enumerate(split_docs)
-            if d.page_content
-        ]
+        # Remove old points directly to prevent re-fetching content
+        remove_params = {
+            "key": doc["key"],
+            "resource_readable_id": doc["resource_readable_id"],
+        }
+        if doc.get("run_readable_id"):
+            remove_params["run_readable_id"] = doc["run_readable_id"]
 
-        split_ids = [
-            vector_point_id(
-                f"{doc['resource_readable_id']}."
-                f"{doc.get('run_readable_id', '')}."
-                f"{doc['key']}.{md['chunk_number']}"
-            )
-            for md in split_metadatas
-        ]
-        split_embeddings = []
-        """
-        Break up requests according to chunk size to stay under openai limits
-        300,000 tokens per request
-        max array size: 2048
-        see: https://platform.openai.com/docs/guides/rate-limits
-        """
-        request_chunk_size = int(
-            300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+        remove_points_matching_params(
+            remove_params, collection_name=CONTENT_FILES_COLLECTION_NAME
         )
+
+        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
+
+        # Identify non-empty chunks and their original indices
+        valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
+
+        if not valid_chunks:
+            continue
+
+        split_texts = [d.page_content for _, d in valid_chunks]
+        resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
+
         for i in range(0, len(split_texts), request_chunk_size):
-            split_chunk = split_texts[i : i + request_chunk_size]
-            split_embeddings.extend(list(encoder.embed_documents(split_chunk)))
-        embeddings.extend(split_embeddings)
-        metadata.extend(split_metadatas)
-        ids.extend(split_ids)
-    if remove_docs:
-        remove_qdrant_records(remove_docs, CONTENT_FILE_TYPE)
-    if ids:
-        return points_generator(ids, metadata, embeddings, vector_name)
-    return None
+            chunk_texts = split_texts[i : i + request_chunk_size]
+            chunk_embeddings = encoder.embed_documents(chunk_texts)
+
+            for j, embedding in enumerate(chunk_embeddings):
+                # Map back to the original valid_chunk index
+                relative_index = i + j
+                if relative_index >= len(valid_chunks):
+                    break
+                chunk_id, split_doc = valid_chunks[relative_index]
+
+                metadata = {
+                    "resource_point_id": str(resource_vector_point_id),
+                    "chunk_number": chunk_id,
+                    "chunk_content": split_doc.page_content,
+                    **{
+                        key: split_doc.metadata[key]
+                        for key in QDRANT_CONTENT_FILE_PARAM_MAP
+                        if key in split_doc.metadata
+                    },
+                }
+
+                point_id = vector_point_id(
+                    f"{doc['resource_readable_id']}."
+                    f"{doc.get('run_readable_id', '')}."
+                    f"{doc['key']}.{chunk_id}"
+                )
+
+                yield models.PointStruct(
+                    id=point_id, payload=metadata, vector={vector_name: embedding}
+                )
+            # Explicitly free memory for large chunks
+            del chunk_texts
+            del chunk_embeddings
+            gc.collect()
 
 
-def embed_learning_resources(ids, resource_type, overwrite):
+def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
     """
     Embed learning resources
 
@@ -559,7 +584,6 @@ def embed_learning_resources(ids, resource_type, overwrite):
         return
 
     client = qdrant_client()
-
     create_qdrant_collections(force_recreate=False)
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = list(serialize_bulk_learning_resources(ids))
@@ -581,44 +605,112 @@ def embed_learning_resources(ids, resource_type, overwrite):
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
-        serialized_resources = list(serialize_bulk_content_files(ids))
-        # TODO: Pass actual Ids when we want scheduled content file summarization  # noqa: FIX002, TD002, TD003 E501
-        # Currently we only want to summarize content that either already has a summary
-        # OR is in a course where atleast one other content file has a summary
-        summary_content_ids = [
-            resource["id"]
-            for resource in serialized_resources
-            if resource.get("summary")
-            or resource.get("require_summaries")
-            or ContentFile.objects.exclude(summary="")
-            .filter(run__id=resource.get("run_id"))
-            .exists()
-        ]
-        ContentSummarizer().summarize_content_files_by_ids(
-            summary_content_ids, overwrite
-        )
+        serialized_resources = serialize_bulk_content_files(ids)
+
+        # populated/modified by reference in process_batch
+        summary_content_ids = []
+
+        # Batching parameters
+        current_batch_docs = []
+        current_batch_size = 0
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        points = [
-            (
-                vector_point_id(
-                    f"{doc['resource_readable_id']}."
-                    f"{doc.get('run_readable_id', '')}."
-                    f"{doc['key']}.0"
-                ),
-                doc,
-            )
-            for doc in serialized_resources
-        ]
-        if not overwrite:
-            filtered_point_ids = filter_existing_qdrant_points_by_ids(
-                [point[0] for point in points],
-                collection_name=CONTENT_FILES_COLLECTION_NAME,
-            )
-            serialized_resources = [
-                point[1] for point in points if point[0] in filtered_point_ids
+
+        def process_batch(docs_batch, summaries_list):
+            """Process a batch of documents"""
+            # Collect IDs for summarization
+            contentfile_points = [
+                (
+                    vector_point_id(
+                        f"{doc['resource_readable_id']}."
+                        f"{doc.get('run_readable_id', '')}."
+                        f"{doc['key']}.0"
+                    ),
+                    doc,
+                )
+                for doc in docs_batch
             ]
-        points = _process_content_embeddings(serialized_resources)
+            if not overwrite:
+                filtered_point_ids = filter_existing_qdrant_points_by_ids(
+                    [point[0] for point in contentfile_points],
+                    collection_name=collection_name,
+                )
+                docs_batch = [
+                    point[1]
+                    for point in contentfile_points
+                    if point[0] in filtered_point_ids
+                ]
+            for resource in docs_batch:
+                if (
+                    resource.get("summary")
+                    or resource.get("require_summaries")
+                    or ContentFile.objects.exclude(summary="")
+                    .filter(run__id=resource.get("run_id"))
+                    .exists()
+                ):
+                    summaries_list.append(resource["id"])
+
+            points_generator_iter = _generate_content_file_points(docs_batch)
+            points_upload_batch = []
+
+            for point in points_generator_iter:
+                points_upload_batch.append(point)
+                if len(points_upload_batch) >= settings.QDRANT_POINT_UPLOAD_BATCH_SIZE:
+                    client.batch_update_points(
+                        collection_name=collection_name,
+                        update_operations=[
+                            models.UpsertOperation(
+                                upsert=models.PointsList(
+                                    points=points_upload_batch,
+                                )
+                            ),
+                        ],
+                        wait=False,
+                    )
+                    points_upload_batch = []
+
+            if points_upload_batch:
+                client.batch_update_points(
+                    collection_name=collection_name,
+                    update_operations=[
+                        models.UpsertOperation(
+                            upsert=models.PointsList(
+                                points=points_upload_batch,
+                            )
+                        ),
+                    ],
+                    wait=False,
+                )
+
+            # Explicit deletions to help GC
+            del points_generator_iter
+            del points_upload_batch
+
+        # We don't delete docs_batch here because it's a reference passed in,
+        # but the caller clears the list.
+
+        for doc in serialized_resources:
+            current_batch_docs.append(doc)
+            current_batch_size += len(doc.get("content", "") or "")
+
+            if current_batch_size >= settings.QDRANT_BATCH_SIZE_BYTES:
+                process_batch(current_batch_docs, summary_content_ids)
+                current_batch_docs = []
+                current_batch_size = 0
+                gc.collect()
+
+        # Process remaining
+        if current_batch_docs:
+            process_batch(current_batch_docs, summary_content_ids)
+            current_batch_docs = []
+            gc.collect()
+
+        if summary_content_ids:
+            ContentSummarizer().summarize_content_files_by_ids(
+                summary_content_ids, overwrite
+            )
+
+        points = None  # Handled inside the loop
     if points:
         client.batch_update_points(
             collection_name=collection_name,
@@ -924,6 +1016,8 @@ def remove_points_matching_params(
 def retrieve_points_matching_params(
     params,
     collection_name=RESOURCES_COLLECTION_NAME,
+    *,
+    with_vectors=False,
 ):
     """
     Retrieve points from Qdrant matching params and yield them one by one.
@@ -942,6 +1036,7 @@ def retrieve_points_matching_params(
             collection_name=collection_name,
             scroll_filter=search_filter,
             offset=next_page_offset,
+            with_vectors=with_vectors,
         )
         points, next_page_offset = results
 

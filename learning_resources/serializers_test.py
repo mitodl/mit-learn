@@ -12,7 +12,7 @@ from channels.factories import (
     ChannelUnitDetailFactory,
 )
 from channels.models import Channel
-from learning_resources import factories, serializers, utils
+from learning_resources import factories, serializers
 from learning_resources.constants import (
     CURRENCY_USD,
     LEARNING_MATERIAL_RESOURCE_CATEGORY,
@@ -229,7 +229,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     for department in resource.departments.all():
         ChannelDepartmentDetailFactory.create(department=department)
 
-    resource = LearningResource.objects.for_serialization(user=user).get(pk=resource.pk)
+    resource = LearningResource.objects.for_serialization().get(pk=resource.pk)
 
     result = serializers.LearningResourceSerializer(
         instance=resource, context=context
@@ -251,7 +251,6 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "full_description": resource.full_description,
         "languages": resource.languages,
         "last_modified": drf_datetime(resource.last_modified),
-        "learning_path_parents": [],
         "require_summaries": resource.require_summaries,
         "children": serializers.LearningResourceRelationshipChildField(
             resource.children.all(), many=True
@@ -298,7 +297,6 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "course_feature": sorted([tag.name for tag in resource.content_tags.all()]),
         "resource_type": resource.resource_type,
         "url": resource.url,
-        "user_list_parents": [],
         "image": serializers.LearningResourceImageSerializer(
             instance=resource.image
         ).data,
@@ -324,7 +322,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "ocw_topics": sorted(resource.ocw_topics),
         "runs": [
             serializers.LearningResourceRunSerializer(instance=run).data
-            for run in resource.runs.all()
+            for run in resource.published_runs
         ],
         detail_key: detail_serializer_cls(instance=getattr(resource, detail_key)).data,
         "views": resource.views.count(),
@@ -351,83 +349,10 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "max_weekly_hours": resource.max_weekly_hours,
         "min_weeks": resource.min_weeks,
         "max_weeks": resource.max_weeks,
+        "best_run_id": resource.best_run.id if resource.best_run else None,
+        "learning_path_parents": [],
+        "user_list_parents": [],
     }
-
-
-@pytest.mark.parametrize("is_staff", [True, False])
-@pytest.mark.parametrize("is_superuser", [True, False])
-@pytest.mark.parametrize("is_editor_staff", [True, False])
-@pytest.mark.parametrize(
-    "params",
-    [
-        {"is_program": True},
-        {"is_course": True},
-        {"is_learning_path": True},
-        {"is_podcast": True},
-        {"is_podcast_episode": True},
-    ],
-)
-def test_learning_resource_serializer_learning_path_parents(  # noqa: PLR0913
-    rf, user, is_staff, is_superuser, is_editor_staff, params
-):
-    """Test that LearningResourceSerializer.learning_path_parents returns the expected values"""
-    user.is_staff = is_staff
-    user.is_superuser = is_superuser
-    user.save()
-
-    utils.update_editor_group(user, is_editor_staff)
-
-    resource = factories.LearningResourceFactory.create(**params)
-
-    factories.LearningResourceFactory.create_batch(
-        5, is_learning_path=True, learning_path__resources=[resource]
-    )
-
-    resource = LearningResource.objects.for_serialization(user=user).get(pk=resource.pk)
-
-    result = serializers.LearningResourceSerializer(instance=resource).data
-
-    can_see_parents = is_staff or is_superuser or is_editor_staff
-
-    assert result["learning_path_parents"] == (
-        serializers.MicroLearningPathRelationshipSerializer(
-            instance=resource.parents.all(), many=True
-        ).data
-        if can_see_parents
-        else []
-    )
-
-
-@pytest.mark.parametrize(
-    "params",
-    [
-        {"is_program": True},
-        {"is_course": True},
-        {"is_learning_path": True},
-        {"is_podcast": True},
-        {"is_podcast_episode": True},
-    ],
-)
-def test_learning_resource_serializer_user_list_parents(rf, user, params):
-    """Test that LearningResourceSerializer.user_list_parents returns the expected values"""
-
-    resource = factories.LearningResourceFactory.create(**params)
-
-    parent_rels = factories.UserListRelationshipFactory.create_batch(
-        5,
-        child=resource,
-        parent__author=user,
-    )
-
-    resource = LearningResource.objects.for_serialization(user=user).get(pk=resource.pk)
-
-    result = serializers.LearningResourceSerializer(instance=resource).data
-
-    assert result["user_list_parents"] == (
-        serializers.MicroUserListRelationshipSerializer(
-            instance=parent_rels, many=True
-        ).data
-    )
 
 
 def test_serialize_run_related_models():
@@ -857,6 +782,11 @@ def test_instructors_display():
     load_instructors(
         run, [{"full_name": instructor.full_name} for instructor in instructors]
     )
+    # Clear cached properties so they pick up the new run with instructors
+    if hasattr(resource, "_published_runs"):
+        delattr(resource, "_published_runs")
+    if hasattr(resource, "published_runs"):
+        del resource.__dict__["published_runs"]
     serialized_resource = serializers.LearningResourceSerializer(resource).data
     metadata_serializer = serializers.LearningResourceMetadataDisplaySerializer(
         serialized_resource

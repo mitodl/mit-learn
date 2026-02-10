@@ -2,7 +2,7 @@ name: CI
 on: [push]
 jobs:
   python-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     services:
       # Label used to access the service container
@@ -28,7 +28,7 @@ jobs:
           - 6379:6379
 
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
       - name: update apt
         run: sudo apt-get update -y
@@ -43,7 +43,7 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version-file: "pyproject.toml"
           cache: "poetry"
@@ -64,6 +64,7 @@ jobs:
       - name: Tests
         run: |
           poetry run ./manage.py collectstatic --noinput --clear
+          poetry run ./manage.py check --fail-level WARNING
           export MEDIA_ROOT="$(mktemp -d)"
           ./scripts/test/python_tests.sh
         env:
@@ -85,17 +86,17 @@ jobs:
           MITOL_COOKIE_NAME: cookie_monster
 
       - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           file: ./coverage.xml
 
   javascript-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
-          node-version: "^22.0.0"
+          node-version: "^24.0.0"
           cache: yarn
           cache-dependency-path: yarn.lock
 
@@ -106,7 +107,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Dependencies are consistent
-        run: yarn syncpack list-mismatches
+        run: yarn workspace frontends run syncpack lint
 
       - name: Format check
         run: yarn workspace frontends fmt-check
@@ -142,16 +143,16 @@ jobs:
           NODE_ENV: test
 
       - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           file: coverage/lcov.info
 
   build-nextjs-container:
     needs: javascript-tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
       - name: Build the Docker image
         env:
@@ -196,14 +197,14 @@ jobs:
             -t mitodl/mit-learn-frontend:$VERSION .
 
   build-storybook:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
-          node-version: "^22"
+          node-version: "^24.0.0"
           cache: yarn
           cache-dependency-path: yarn.lock
 
@@ -221,12 +222,12 @@ jobs:
       GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
       GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v0
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v0
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
-          node-version: "^22.0.0"
+          node-version: "^24.0.0"
           cache: yarn
           cache-dependency-path: yarn.lock
 
@@ -260,12 +261,12 @@ jobs:
       GENERATOR_IGNORE_FILE: ./frontends/api/.openapi-generator-ignore
       GENERATOR_OUTPUT_DIR_CI: ./frontends/api/tmp/generated/v1
       GENERATOR_OUTPUT_DIR_VC: ./frontends/api/src/generated/v1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
-          node-version: "^22.0.0"
+          node-version: "^24.0.0"
           cache: yarn
           cache-dependency-path: yarn.lock
 

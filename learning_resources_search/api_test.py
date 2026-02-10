@@ -287,19 +287,6 @@ def test_generate_learning_resources_text_clause(
                                             },
                                         }
                                     },
-                                    {
-                                        "has_child": {
-                                            "type": "content_file",
-                                            "query": {
-                                                "multi_match": {
-                                                    "query": "math",
-                                                    "fields": content_file_fields,
-                                                    **extra_params,
-                                                }
-                                            },
-                                            "score_mode": "avg",
-                                        }
-                                    },
                                 ]
                             }
                         }
@@ -396,22 +383,29 @@ def test_generate_learning_resources_text_clause(
                         },
                     }
                 },
-                {
-                    "has_child": {
-                        "type": "content_file",
-                        "query": {
-                            "multi_match": {
-                                "query": "math",
-                                "fields": content_file_fields,
-                                **extra_params,
-                            }
-                        },
-                        "score_mode": "avg",
-                    }
-                },
             ],
         }
     }
+
+    has_child_multi_match = {
+        "has_child": {
+            "type": "content_file",
+            "query": {
+                "multi_match": {
+                    "query": "math",
+                    "fields": content_file_fields,
+                    **extra_params,
+                }
+            },
+            "score_mode": "avg",
+        }
+    }
+    if content_file_score_weight != 0:
+        result1["bool"]["filter"]["bool"]["must"][0]["bool"]["should"].append(
+            has_child_multi_match
+        )
+        result1["bool"]["should"].append(has_child_multi_match)
+
     result2 = {
         "bool": {
             "filter": {
@@ -508,18 +502,6 @@ def test_generate_learning_resources_text_clause(
                                             },
                                         }
                                     },
-                                    {
-                                        "has_child": {
-                                            "type": "content_file",
-                                            "query": {
-                                                "query_string": {
-                                                    "query": '"math"',
-                                                    "fields": content_file_fields,
-                                                }
-                                            },
-                                            "score_mode": "avg",
-                                        }
-                                    },
                                 ]
                             }
                         }
@@ -611,21 +593,27 @@ def test_generate_learning_resources_text_clause(
                         },
                     }
                 },
-                {
-                    "has_child": {
-                        "type": "content_file",
-                        "query": {
-                            "query_string": {
-                                "query": '"math"',
-                                "fields": content_file_fields,
-                            }
-                        },
-                        "score_mode": "avg",
-                    }
-                },
             ],
         }
     }
+
+    has_child_query_string = {
+        "has_child": {
+            "type": "content_file",
+            "query": {
+                "query_string": {
+                    "query": '"math"',
+                    "fields": content_file_fields,
+                }
+            },
+            "score_mode": "avg",
+        }
+    }
+    if content_file_score_weight != 0:
+        result2["bool"]["filter"]["bool"]["must"][0]["bool"]["should"].append(
+            has_child_query_string
+        )
+        result2["bool"]["should"].append(has_child_query_string)
 
     assert (
         generate_learning_resources_text_clause(
@@ -1946,8 +1934,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -1957,7 +1944,6 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
     opensearch.conn.search.assert_called_once_with(
         body=query,
         index=["testindex_course_default"],
-        search_type="dfs_query_then_fetch",
     )
 
 
@@ -2395,8 +2381,7 @@ def test_execute_learn_search_with_script_score(
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -2406,7 +2391,6 @@ def test_execute_learn_search_with_script_score(
     opensearch.conn.search.assert_called_once_with(
         body=query,
         index=["testindex_course_default"],
-        search_type="dfs_query_then_fetch",
     )
 
 
@@ -2416,6 +2400,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
     }
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
+    settings.QDRANT_DENSE_MODEL = "text-embedding-3-small"
 
     mocker.patch(
         "learning_resources_search.api.get_vector_model_id",
@@ -2474,7 +2459,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
         "size": 1,
         "query": {
             "hybrid": {
-                "pagination_depth": 10,
+                "pagination_depth": 3,
                 "queries": [
                     {
                         "bool": {
@@ -2729,19 +2714,10 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                     },
                     {
                         "neural": {
-                            "description_embedding": {
+                            "vector_embedding": {
                                 "query_text": "math",
                                 "model_id": "vector_model_id",
-                                "min_score": 0.015,
-                            }
-                        }
-                    },
-                    {
-                        "neural": {
-                            "title_embedding": {
-                                "query_text": "math",
-                                "model_id": "vector_model_id",
-                                "min_score": 0.015,
+                                "k": 5,
                             }
                         }
                     },
@@ -2797,20 +2773,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 },
             }
         },
-        "search_pipeline": {
-            "description": "Post processor for hybrid search",
-            "phase_results_processors": [
-                {
-                    "normalization-processor": {
-                        "normalization": {"technique": "min_max"},
-                        "combination": {
-                            "technique": "arithmetic_mean",
-                            "parameters": {"weights": [0.6, 0.2, 0.2]},
-                        },
-                    }
-                }
-            ],
-        },
+        "search_pipeline": "hybrid_search_pipeline",
         "_source": {
             "excludes": [
                 "created_on",
@@ -2824,8 +2787,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -3217,8 +3179,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -3228,7 +3189,6 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
     opensearch.conn.search.assert_called_once_with(
         body=query,
         index=["testindex_course_default"],
-        search_type="dfs_query_then_fetch",
     )
 
 
@@ -3396,8 +3356,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "content",
                 "summary",
                 "flashcards",
-                "description_embedding",
-                "title_embedding",
+                "vector_embedding",
             ]
         },
     }
@@ -3573,6 +3532,32 @@ def test_dev_mode(dev_mode):
         assert construct_search(search_params).to_dict().get("explain")
     else:
         assert construct_search(search_params).to_dict().get("explain") is None
+
+
+@pytest.mark.parametrize(
+    ("q", "sortby", "expect_dfs"),
+    [
+        ("text", None, True),
+        ("text", "-readable_id", False),
+        (None, None, False),
+    ],
+)
+def test_dfs_search_type(q, sortby, expect_dfs):
+    """DFS query_then_fetch should only be used for keyword searches sorted by relevance"""
+    search_params = {
+        "aggregations": [],
+        "q": q,
+        "limit": 1,
+        "offset": 1,
+        "sortby": sortby,
+        "endpoint": LEARNING_RESOURCE,
+    }
+
+    search = construct_search(search_params)
+    if expect_dfs:
+        assert search._params.get("search_type") == "dfs_query_then_fetch"  # noqa: SLF001
+    else:
+        assert "search_type" not in search._params  # noqa: SLF001
 
 
 @pytest.mark.django_db

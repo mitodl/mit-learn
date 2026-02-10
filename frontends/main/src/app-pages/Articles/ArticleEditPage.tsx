@@ -4,32 +4,36 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
-import { useArticleDetail } from "api/hooks/articles"
+import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import {
-  styled,
-  LoadingSpinner,
-  ArticleEditor,
-  HEADER_HEIGHT,
-} from "ol-components"
+import { styled, LoadingSpinner } from "ol-components"
+import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   display: "flex",
-  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+  height: "100%",
 }))
+
+const Spinner = styled(LoadingSpinner)({
+  margin: "auto",
+  position: "absolute",
+  top: "40%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+})
 
 const ArticleEditPage = ({ articleId }: { articleId: string }) => {
   const {
     data: article,
     isLoading,
     isFetching,
-  } = useArticleDetail(Number(articleId))
+  } = useArticleDetailRetrieve(articleId)
   const router = useRouter()
 
   if (isLoading || isFetching) {
-    return <LoadingSpinner color="inherit" loading={isLoading} size={32} />
+    return <Spinner color="inherit" loading={isLoading} size={32} />
   }
   if (!article) {
     return notFound()
@@ -41,7 +45,9 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         <ArticleEditor
           article={article}
           onSave={(article) => {
-            router.push(articlesView(article.id))
+            if (article.is_published)
+              return router.push(articlesView(article.slug!))
+            router.push(articlesView(String(article.id)))
           }}
         />
       </PageContainer>

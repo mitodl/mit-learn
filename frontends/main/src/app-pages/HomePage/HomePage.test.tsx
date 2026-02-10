@@ -50,17 +50,17 @@ const setupAPIs = () => {
   setMockResponse.get(urls.userLists.membershipList(), [])
   setMockResponse.get(urls.learningPaths.membershipList(), [])
 
-  const resources = learningResources.resources({ count: 4 })
+  const featured = learningResources.resources({ count: 2 })
+  const media = learningResources.resources({ count: 2 })
   const attestations = testimonials.testimonials({ count: 3 })
 
   setMockResponse.get(
-    expect.stringContaining(urls.learningResources.list()),
-    resources,
-  )
-
-  setMockResponse.get(
     expect.stringContaining(urls.learningResources.featured()),
-    resources,
+    featured,
+  )
+  setMockResponse.get(
+    expect.stringContaining(urls.learningResources.list()),
+    media,
   )
 
   setMockResponse.get(
@@ -69,15 +69,15 @@ const setupAPIs = () => {
       limit: 6,
       sortby: "-news_date",
     }),
-    newsEvents.newsItems({ count: 0 }),
+    newsEvents.newsItems({ count: 6 }),
   )
   setMockResponse.get(
     urls.newsEvents.list({
       feed_type: ["events"],
-      limit: 5,
+      limit: 6,
       sortby: "event_date",
     }),
-    newsEvents.eventItems({ count: 0 }),
+    newsEvents.eventItems({ count: 6 }),
   )
 
   setMockResponse.get(urls.topics.list({ is_toplevel: true }), {
@@ -90,6 +90,7 @@ const setupAPIs = () => {
   )
 
   mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  return { featured, media }
 }
 
 describe("Home Page Hero", () => {
@@ -175,11 +176,11 @@ describe("Home Page News and Events", () => {
       news,
     )
 
-    const events = newsEvents.eventItems({ count: 5 })
+    const events = newsEvents.eventItems({ count: 6 })
     setMockResponse.get(
       urls.newsEvents.list({
         feed_type: ["events"],
-        limit: 5,
+        limit: 6,
         sortby: "event_date",
       }),
       events,
@@ -227,11 +228,11 @@ describe("Home Page News and Events", () => {
       news,
     )
 
-    const events = newsEvents.eventItems({ count: 5 })
+    const events = newsEvents.eventItems({ count: 6 })
     setMockResponse.get(
       urls.newsEvents.list({
         feed_type: ["events"],
-        limit: 5,
+        limit: 6,
         sortby: "event_date",
       }),
       events,
@@ -263,6 +264,9 @@ describe("Home Page News and Events", () => {
 
     expect(links[4]).toHaveAttribute("href", events.results[4].url)
     within(links[4]).getByText(events.results[4].title)
+
+    expect(links[5]).toHaveAttribute("href", events.results[5].url)
+    within(links[5]).getByText(events.results[5].title)
   })
 })
 
@@ -338,24 +342,18 @@ describe("Home Page Carousel", () => {
 })
 
 test("Headings", async () => {
-  setupAPIs()
-
-  setMockResponse.get(
-    expect.stringContaining(urls.learningResources.list()),
-    [],
-  )
-  setMockResponse.get(
-    expect.stringContaining(urls.learningResources.featured()),
-    [],
-  )
+  const { featured, media } = setupAPIs()
 
   renderWithProviders(<HomePage heroImageIndex={1} />)
   await waitFor(() => {
     assertHeadings([
       { level: 1, name: "Learn with MIT" },
       { level: 2, name: "Featured Courses" },
+      // Featured course order is randomized on frontend, so just check for presence
+      ...featured.results.map(() => ({ level: 3, name: expect.any(String) })),
       { level: 2, name: "Continue Your Journey" },
       { level: 2, name: "Media" },
+      ...media.results.map((result) => ({ level: 3, name: result.title })),
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
       { level: 2, name: "MIT Stories & Events" },

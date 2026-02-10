@@ -15,12 +15,15 @@ from learning_resources.constants import (
     LearningResourceDelivery,
     LearningResourceType,
     OfferedBy,
-    PlatformType,
     RunStatus,
 )
 from learning_resources.etl import utils
-from learning_resources.etl.constants import CommitmentConfig, DurationConfig
-from learning_resources.etl.utils import parse_certification, parse_string_to_int
+from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.utils import (
+    get_s3_prefix_for_source,
+    parse_certification,
+    parse_string_to_int,
+)
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -175,9 +178,16 @@ def test_parse_dates():
 @pytest.mark.parametrize("folder", ["folder", "static"])
 @pytest.mark.parametrize("tika_content", ["tika'ed text", ""])
 def test_transform_content_files(  # noqa: PLR0913
-    mocker, folder, has_metadata, matching_edx_module_id, overwrite, tika_content
+    mocker,
+    folder,
+    has_metadata,
+    matching_edx_module_id,
+    overwrite,
+    tika_content,
+    settings,
 ):
     """transform_content_files"""
+    settings.SKIP_TIKA = False
     run = LearningResourceRunFactory.create(published=True)
     document = "some text in the document"
     file_extension = ".pdf" if folder == "static" else ".html"
@@ -289,16 +299,42 @@ def test_documents_from_olx():
 
 
 @pytest.mark.parametrize(
-    "platform", [PlatformType.mitxonline.name, PlatformType.xpro.name]
+    ("etl_source", "expected_setting"),
+    [
+        (ETLSource.mit_edx.name, "EDX_COURSE_BUCKET_PREFIX"),
+        (ETLSource.xpro.name, "XPRO_COURSE_BUCKET_PREFIX"),
+        (ETLSource.mitxonline.name, "MITX_ONLINE_COURSE_BUCKET_PREFIX"),
+        (ETLSource.oll.name, "OLL_COURSE_BUCKET_PREFIX"),
+        (ETLSource.canvas.name, "CANVAS_COURSE_BUCKET_PREFIX"),
+    ],
 )
-def test_get_learning_course_bucket(
-    aws_settings, mock_mitx_learning_bucket, mock_xpro_learning_bucket, platform
-):  # pylint: disable=unused-argument
+def test_get_s3_prefix_for_source(settings, etl_source, expected_setting):
+    """Test that get_s3_prefix_for_source returns correct prefix for each ETL source"""
+    expected_prefix = getattr(settings, expected_setting)
+    assert get_s3_prefix_for_source(etl_source) == expected_prefix
+
+
+@pytest.mark.parametrize(
+    "invalid_source",
+    [
+        "invalid_source",
+        "ocw",  # OCW is not in the mapping
+        "",
+        "MITX_ONLINE",  # wrong case
+    ],
+)
+def test_get_s3_prefix_for_source_invalid(invalid_source):
+    """Test that get_s3_prefix_for_source raises ValueError for invalid sources"""
+    with pytest.raises(
+        ValueError, match=f"No S3 prefix found for ETL source: {invalid_source}"
+    ):
+        get_s3_prefix_for_source(invalid_source)
+
+
+def test_get_bucket_by_name(aws_settings, mock_course_archive_bucket):  # pylint: disable=unused-argument
     """The correct bucket should be returned by the function"""
-    assert utils.get_learning_course_bucket(platform).name == (
-        aws_settings.MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME
-        if platform == PlatformType.mitxonline.name
-        else aws_settings.XPRO_LEARNING_COURSE_BUCKET_NAME
+    assert utils.get_bucket_by_name(aws_settings.COURSE_ARCHIVE_BUCKET_NAME) == (
+        mock_course_archive_bucket.bucket
     )
 
 
@@ -784,3 +820,107 @@ def test_get_url_from_module_id(
         assert result == expected_url_pattern
     else:
         assert result is None
+
+
+def test_process_olx_path_malformed_sjson(mocker, settings):
+    """Test that process_olx_path handles malformed SJSON content gracefully"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx_path = mocker.Mock()
+    olx_path.__str__ = mocker.Mock(return_value="path/to/malformed_content.sjson")
+
+    malformed_sjson_content = """{ "start": [0,2], "end": [2,4], "text": ["Valid text", "Another valid text" }"""
+    metadata = {
+        "content_type": CONTENT_TYPE_FILE,
+        "archive_checksum": "checksum123",
+        "file_extension": ".sjson",
+        "source_path": "path/to/malformed_content.sjson",
+    }
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                malformed_sjson_content.encode("utf-8"),
+                metadata,
+            ),
+        ],
+    )
+    tika_output = {
+        "content": malformed_sjson_content.encode("utf-8"),
+        "metadata": metadata,
+    }
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
+    )
+
+    script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
+
+    content = list(
+        utils.transform_content_files(
+            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
+            run,
+            overwrite=True,
+        )
+    )
+    # Since the SJSON is malformed, no content should be returned
+    assert content == []
+
+
+def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
+    """
+    Test that process_olx_path logs an error and skips encrypted PDFs
+    """
+    settings.OCR_MODEL = "test_model"
+    settings.SKIP_TIKA = False
+
+    run = LearningResourceRunFactory.create()
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    # Create the file so stat() works
+    source_rel_path = "static/encrypted.pdf"
+    full_path = olx_path / source_rel_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    full_path.write_bytes(b"fake pdf content")
+
+    # Mock documents_from_olx to yield this file
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                b"fake pdf content",
+                {
+                    "content_type": CONTENT_TYPE_FILE,
+                    "mime_type": "application/pdf",
+                    "archive_checksum": "checksum",
+                    "file_extension": ".pdf",
+                    "source_path": source_rel_path,
+                },
+            )
+        ],
+    )
+
+    # Mock mocks
+    mocker.patch("learning_resources.etl.utils.get_video_metadata", return_value={})
+    mocker.patch(
+        "learning_resources.etl.utils.get_url_from_module_id",
+        return_value="http://example.com",
+    )
+    mock_log = mocker.patch("learning_resources.etl.utils.log")
+
+    # Mock PdfReader to raise FileNotDecryptedError
+    mocker.patch(
+        "learning_resources.etl.utils.PdfReader",
+        side_effect=utils.FileNotDecryptedError,
+    )
+
+    results = list(
+        utils.process_olx_path(
+            str(olx_path),
+            run,
+            overwrite=True,
+            use_ocr=True,
+        )
+    )
+
+    assert len(results) == 0
+    mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)

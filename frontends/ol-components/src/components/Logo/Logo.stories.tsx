@@ -1,5 +1,5 @@
 import React from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { PlatformLogo, PLATFORM_LOGOS } from "./Logo"
 import Grid from "@mui/material/Grid"
 import styled from "@emotion/styled"

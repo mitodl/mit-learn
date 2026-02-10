@@ -22,6 +22,7 @@ from learning_resources_search.connection import get_default_alias_name
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
     COURSE_TYPE,
+    HYBRID_COMBINED_INDEX,
     PROGRAM_TYPE,
     IndexestoUpdate,
 )
@@ -256,6 +257,88 @@ def test_index_learning_resources(
         for alias in mock_get_aliases.return_value:
             for chunk in chunks(
                 documents, chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE
+            ):
+                bulk_mock.assert_any_call(
+                    mocked_es.conn,
+                    chunk,
+                    index=alias,
+                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                )
+
+
+@pytest.mark.parametrize("errors", [(), "error"])
+@pytest.mark.parametrize(
+    "index_types",
+    [
+        IndexestoUpdate.current_index.value,
+        IndexestoUpdate.reindexing_index.value,
+        IndexestoUpdate.all_indexes.value,
+    ],
+)
+def test_index_learning_resources_for_hybrid_index(
+    mocked_es,
+    mocker,
+    settings,
+    errors,
+    index_types,
+):
+    """
+    Index functions should call bulk with correct arguments
+    """
+    settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 3
+    documents = [
+        {"readable_id": "doc1"},
+        {"readable_id": "doc2"},
+        {"readable_id": "doc3"},
+        {"readable_id": "doc4"},
+        {"readable_id": "doc5"},
+    ]
+
+    documents_with_vector = [{**doc, "vector_embedding": [2, 3]} for doc in documents]
+    mock_get_aliases = mocker.patch(
+        "learning_resources_search.indexing_api.get_active_aliases",
+        autospec=True,
+        return_value=["a", "b"],
+    )
+    mocker.patch(
+        "learning_resources_search.indexing_api.serialize_bulk_learning_resources",
+        autospec=True,
+        return_value=(doc for doc in documents),
+    )
+
+    mock_encoder = mocker.patch(
+        "learning_resources_search.indexing_api.dense_encoder"
+    )()
+    mock_encoder.model_short_name.return_value = "test-encoder-model"
+
+    qdrant_point = mocker.Mock()
+    qdrant_point.vector = {"test-encoder-model": [2, 3]}
+
+    mocker.patch(
+        "learning_resources_search.indexing_api.retrieve_points_matching_params",
+        return_value=[qdrant_point],
+    )
+    bulk_mock = mocker.patch(
+        "learning_resources_search.indexing_api.bulk",
+        autospec=True,
+        return_value=(0, errors),
+    )
+
+    if errors:
+        with pytest.raises(ReindexError):
+            index_learning_resources([1, 2, 3], HYBRID_COMBINED_INDEX, index_types)
+    else:
+        index_learning_resources([1, 2, 3], HYBRID_COMBINED_INDEX, index_types)
+        mock_get_aliases.assert_called_with(
+            mocked_es.conn,
+            object_types=[HYBRID_COMBINED_INDEX],
+            index_types=index_types,
+        )
+
+        for alias in mock_get_aliases.return_value:
+            for chunk in chunks(
+                documents_with_vector,
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
             ):
                 bulk_mock.assert_any_call(
                     mocked_es.conn,

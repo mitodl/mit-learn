@@ -2,7 +2,17 @@ import React from "react"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { QueryClientProvider, useQuery } from "@tanstack/react-query"
-import { makeBrowserQueryClient } from "./getQueryClient"
+import { makeBrowserQueryClient, getServerQueryClient } from "./getQueryClient"
+import { nextNavigationMocks } from "ol-test-utilities/mocks/nextNavigation"
+import type { AxiosError, AxiosResponse } from "axios"
+
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query")
+  return {
+    ...actual,
+    isServer: true,
+  }
+})
 
 const getWrapper = () => {
   const queryClient = makeBrowserQueryClient()
@@ -101,6 +111,7 @@ describe("refetching stale queries on visibilitychange and focus", () => {
     await fireWindow.focus()
     expect(queryFn).toHaveBeenCalledTimes(2)
   })
+
   test("should refetch stale queries on visibilitychange", async () => {
     const wrapper = getWrapper()
     const queryFn = jest.fn().mockResolvedValue({ message: "hi" })
@@ -119,5 +130,67 @@ describe("refetching stale queries on visibilitychange and focus", () => {
     expect(queryFn).toHaveBeenCalledTimes(2)
     await fireVisibilityChange("visible")
     expect(queryFn).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe("fetchQueryOr404", () => {
+  beforeEach(() => {
+    nextNavigationMocks.notFound.mockClear()
+  })
+
+  test("should return data on successful fetch", async () => {
+    const queryClient = getServerQueryClient()
+    const testData = { id: 1, name: "Test" }
+    const queryFn = jest.fn().mockResolvedValue(testData)
+
+    const result = await queryClient.fetchQueryOr404({
+      queryKey: ["test"],
+      queryFn,
+    })
+
+    expect(result).toEqual(testData)
+    expect(queryFn).toHaveBeenCalledTimes(1)
+    expect(nextNavigationMocks.notFound).not.toHaveBeenCalled()
+  })
+
+  test("should call notFound() on 404 error", async () => {
+    allowConsoleErrors()
+    const queryClient = getServerQueryClient()
+    const error: Partial<AxiosError> = {
+      response: { status: 404 } as AxiosResponse,
+      message: "Not Found",
+    }
+    const queryFn = jest.fn().mockRejectedValue(error)
+
+    await expect(
+      queryClient.fetchQueryOr404({
+        queryKey: ["test"],
+        queryFn,
+      }),
+    ).rejects.toEqual(error)
+
+    expect(queryFn).toHaveBeenCalledTimes(1)
+    expect(nextNavigationMocks.notFound).toHaveBeenCalled()
+  })
+
+  test("should throw on non-404 errors", async () => {
+    allowConsoleErrors()
+    const queryClient = getServerQueryClient()
+    const error: Partial<AxiosError> = {
+      response: { status: 500 } as AxiosResponse,
+      message: "Internal Server Error",
+    }
+    const queryFn = jest.fn().mockRejectedValue(error)
+
+    await expect(
+      queryClient.fetchQueryOr404({
+        queryKey: ["test"],
+        queryFn,
+        retry: false,
+      }),
+    ).rejects.toEqual(error)
+
+    expect(queryFn).toHaveBeenCalledTimes(1)
+    expect(nextNavigationMocks.notFound).not.toHaveBeenCalled()
   })
 })

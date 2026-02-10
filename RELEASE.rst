@@ -1,6 +1,238 @@
 Release Notes
 =============
 
+Version 0.53.4 (Released February 05, 2026)
+--------------
+
+- fix: disable DashboardCard CTA if course passed in has no enrollable runs (#2924)
+- remove learning_resource call fro program page (#2919)
+- Remove some dependencies, clean up others (#2920)
+- Some api/opensearch optimizations (#2899)
+- Upgrade to Next.js 16 (#2910)
+
+Version 0.53.3 (Released February 04, 2026)
+--------------
+
+- fix: make course run selection more stringent (#2913)
+- Remove youtube transcript scheduled task (#2916)
+- implement dashboard certificate upgrade (#2905)
+- Shanbady/flashcard prompt refinement (#2907)
+- add learning material resources (#2901)
+- Editor Schema Validation (#2900)
+- fix: purge CDN cache when article is published (#2896)
+- fix: improvements in editor exprience (#2892)
+
+Version 0.53.1 (Released February 02, 2026)
+--------------
+
+- Fix canvas ingestion exception (#2897)
+- use mitxonline requirements directly on program product page (#2902)
+- Editor cursor selection for custom elements (#2891)
+- feat: add dialog and button for learning resource input (#2870)
+
+Version 0.53.0 (Released January 28, 2026)
+--------------
+
+- Make summarizer/flashcard filters consistent (#2893)
+- update the domain (#2890)
+- Log warning instear of raise value for runless webhooks (#2894)
+- chore(deps): update dependency ruff to v0.14.14 (#2889)
+- chore(deps): update actions/setup-node digest to 6044e13 (#2886)
+- chore(deps): update actions/setup-python digest to a309ff8 (#2887)
+- chore(deps): update codecov/codecov-action action to v5.5.2 (#2888)
+- Fix large payload updates in qdrant (#2879)
+- Revert "No more contentfile scheduled tasks (#2872)" (#2885)
+- Add django system checks to CI (#2881)
+- fix: sanitize the articles text which comes from medium source (#2880)
+- Margin on opener bar (#2863)
+- Default QDRANT_DENSE_MODEL to None (#2884)
+- No more contentfile scheduled tasks (#2872)
+- chore(deps): update dependency ruff to v0.14.13 (#2723)
+- [pre-commit.ci] pre-commit autoupdate (#2727)
+- fix(deps): update dependency dj-database-url to v3 (#2761)
+- fix(deps): update dependency pypdfium2 to v5 (#2766)
+- MITx Online courses with enrollment_end/end_date in the past should not offer certifications (#2876)
+- Kick off contentfile ingestion for new best runs (#2883)
+- chore(deps): update dependency type-fest to v5 (#2754)
+- chore(deps): update peter-evans/create-or-update-comment action to v5 (#2756)
+- chore(deps): update peter-evans/find-comment action to v4 (#2757)
+- Increase cache stale time to match CDN TTL setting (#2874)
+
+Version 0.52.1 (Released January 27, 2026)
+--------------
+
+- remove intermediate dashboard classes and use mitxonline api classes directly (#2868)
+- fix(deps): update dependency tiktoken to ^0.12.0 (#2744)
+- feat: add frontend for listing page (#2846)
+- chore(deps): update dependency urllib3 to v2.6.3 [security] (#2788)
+- fix(deps): update dependency django to v4.2.27 [security] (#2787)
+- Show buttons only for certificate owner (#2877)
+- Product Page Financial Aid Display (#2861)
+- wrap the credential narrative in react-markdown (#2878)
+- add a constant to store the digital credentials faq link and add the link to the dialog (#2873)
+- Cursor visibility and selection feedback on custom elements (#2869)
+- Article editor tests (#2850)
+
+Version 0.52.0 (Released January 22, 2026)
+--------------
+
+- Resolve flashcard generation json decode error (#2867)
+- Refactor bulk contentfile ingestion (#2859)
+- Frontend Testing Instructions for LLMs (#2864)
+
+Version 0.51.2 (Released January 20, 2026)
+--------------
+
+- fix: incorporating the feedback on editor (#2851)
+- chore(deps): update dependency ubuntu to v24 (#2035)
+- adding timeout value (#2857)
+- fix program collection ordering (#2860)
+- chore(deps): update actions/checkout action to v6 (#2745)
+- chore(deps): update actions/setup-python digest to 83679a8 (#2739)
+- chore(deps): update actions/setup-node action to v6 (#2746)
+- Webhook for edx contentfile archives (#2849)
+- org dashboard contract refactor (#2837)
+- Remove duplicate download credential button (#2856)
+- Revert "pre-filter neural query (#2828)" (#2854)
+- fix server import issue (#2853)
+- Prevent query devtools from erroring on image upload (#2827)
+- update mitxonline-api-axios client (#2852)
+- Render article editor content on the server #9760 (#2847)
+- feat: add news/stories pipeline which create news from article (#2844)
+- fix: change media url input behaviour (#2835)
+- Refactor video_shorts (#2845)
+
+Version 0.51.1 (Released January 13, 2026)
+--------------
+
+- Product Page Updates (#2839)
+- feat: add course detail in resource card (#2834)
+- memory optimizations for embedding process (#2841)
+- fix: add delete button for image and media node (#2836)
+- fix: editor component migration into main app (#2833)
+
+Version 0.51.0 (Released January 08, 2026)
+--------------
+
+- Certificate page digital credential fixes (#2842)
+- Download digital credential dialog (#2830)
+
+Version 0.50.7 (Released January 06, 2026)
+--------------
+
+- pre-filter neural query (#2828)
+- update opensearch (#2829)
+- Canvas - Transcribe handwritten notes and pdf contentfiles  (#2812)
+- fix: improvements in learning resource (#2832)
+- Add the digital credential issuer image (#2831)
+- fix: use semantic figure and caption tags (#2826)
+- fix select label (#2822)
+- fix: tooltip issue on controls (#2824)
+
+Version 0.50.6 (Released December 18, 2025)
+--------------
+
+- fix: image issue related to it width (#2809)
+- fix(deps): update dependency next to v15.5.9 [security] (#2814)
+- remove default value for generate_embeddings in pluggy plugin  (#2821)
+- fix: modify the style of blockquote node as per design (#2820)
+- Update tiptap, configure TrailingNode (#2817)
+- Article editor improvements (#2806)
+- Article Editor: Fix tooltip zindex (#2813)
+- generate_embeddings option when upserting resources (#2815)
+- Move query embedding into opensearch (#2808)
+- fix(deps): update dependency next to v15.5.8 [security] (#2802)
+- course/program enrollment dialog (#2797)
+
+Version 0.50.3 (Released December 16, 2025)
+--------------
+
+- Only display top level skeleton on org pages if program or collection data is still loading (#2810)
+- feature: add slug for article feature (#2793)
+- Enable Tanstack Query Devtools (#2807)
+- More efficient key retrieval (#2804)
+- fix dashboard card enrollment association and display (#2792)
+- For published non-test_mode courses, only process contentfile archives of the best run (#2786)
+
+Version 0.50.0 (Released December 11, 2025)
+--------------
+
+- fix hybrid search (#2799)
+- hybrid search improvements (#2796)
+
+Version 0.49.0 (Released December 09, 2025)
+--------------
+
+- Shanbady/revert pdf ocr changes (#2794)
+- Article design layout and refactor (#2781)
+- pass in debug mode (#2790)
+- feature: add publish and save as draft functionality (#2780)
+- Fix task failure in get_medium_mit_news when url is None (#2785)
+- Canvas - Transcribe handwritten notes and pdf contentfiles  (#2777)
+
+Version 0.48.2 (Released December 04, 2025)
+--------------
+
+- select best enrollment based on grades (#2782)
+- Update NextJS/React to avoid React CVE (#2783)
+- feaure: add more controls in tiptap editor, like divider and byline (#2774)
+- order programs in the org dashboard based on the order in the contract (#2779)
+- display not found on dashboard program page if not enrolled (#2778)
+- feat: Add backend support for image upload in tiptap editor (#2729)
+
+Version 0.48.1 (Released December 04, 2025)
+--------------
+
+- individual program display (#2721)
+- Use best_run_id to determine start date on frontend; bring back next_run/date (#2702)
+- climate topic updates (#2771)
+- Isolate tiptap vendor code (#2773)
+- feat: add image plugin (#2724)
+- Display program requirements (#2728)
+- feat: course card embedding plugin  (#2717)
+- fix(deps): update dependency redis to v7 (#2767)
+- chore(deps): update dependency jest-extended to v7 (#2750)
+- Upgrade Smoot to ^6.19.0 (#2684)
+- chore(deps): update dependency faker to v38 (#2749)
+- fix(deps): update dependency drf-nested-routers to ^0.95.0 (#2733)
+- update mitxonline client (#2726)
+- chore(deps): update dependency pytest-cov to v7 (#2752)
+
+Version 0.47.14 (Released December 01, 2025)
+---------------
+
+- use qdrant vectors for hybrid search (#2718)
+- update posthog, add useFeatureFlagsLoaded (#2720)
+- setting create_runs=False in factory init (#2719)
+- feat: Add Custom Media Embed Plugin for Tiptap Editor (#2711)
+- chore(deps): update yarn to v4.11.0 (#2709)
+- chore(deps): update dependency ruff to v0.14.5 (#2705)
+- [pre-commit.ci] pre-commit autoupdate (#2641)
+- Add best_run_id to REST/search API results (#2696)
+- Require a non-yanked version of configargparse (#2714)
+- add task decorator back to command (#2712)
+- Scale certificate name to fit within available space (#2687)
+
+Version 0.47.13 (Released November 24, 2025)
+---------------
+
+- making sure ingestion succeeds even without xml (#2704)
+- Ab/hybrid search (#2663)
+- replacing underscore with dashes for bootstrap featureflags (#2703)
+- add error message for enrollment code issues (#2685)
+- Fix hydration error, remove prefetch helper (#2697)
+- rename views cache (#2700)
+- more dashboard CTA adjustments (#2701)
+- Ensure re-indexing and re-embedding operations include all non-course learning resource types (#2695)
+- Article editor refactor for reuse and layout updates (#2699)
+- feat: incorporating the tiptap in articles CRUD operations (#2693)
+- fix(deps): update dependency litellm to v1.79.3 (#2618)
+- limit offered by facet to specific offerors (#2692)
+- chore(deps): update dependency ruff to v0.14.4 (#2666)
+- Avoid n+1 queries on video.playlists serializer field (#2662)
+- chore(deps): update nginx docker tag to v1.29.3 (#2667)
+- fix(deps): update dependency django to v4.2.26 [security] (#2678)
+
 Version 0.47.12 (Released November 17, 2025)
 ---------------
 

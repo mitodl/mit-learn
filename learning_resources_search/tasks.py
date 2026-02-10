@@ -34,11 +34,10 @@ from learning_resources_search.api import (
     gen_content_file_id,
     percolate_matches_for_document,
 )
-from learning_resources_search.connection import get_vector_model_id
 from learning_resources_search.constants import (
-    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
+    HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
     SEARCH_CONN_EXCEPTIONS,
@@ -74,6 +73,7 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
     "autoretry_for": (NotFoundError,),
     "retry_kwargs": {"max_retries": 5},
     "default_retry_delay": 2,
+    "rate_limit": settings.CELERY_SEARCH_RATE_LIMIT,
 }
 
 
@@ -114,7 +114,7 @@ def upsert_content_file(file_id):
     )
 
 
-@app.task
+@app.task(rate_limit=settings.CELERY_SEARCH_RATE_LIMIT)
 def upsert_percolate_query(percolate_id):
     """Task that makes a request to add an ES document"""
     percolate_query = PercolateQuery.objects.get(id=percolate_id)
@@ -127,7 +127,7 @@ def upsert_percolate_query(percolate_id):
     )
 
 
-@app.task
+@app.task(rate_limit=settings.CELERY_SEARCH_RATE_LIMIT)
 def deindex_document(doc_id, object_type, **kwargs):
     """Task that makes a request to remove an ES document"""
     return api.deindex_document(doc_id, object_type, **kwargs)
@@ -264,7 +264,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
         delta = datetime.timedelta(days=7)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
-        published=True, created_on__gt=since
+        published=True, created_on__gt=since, learning_material__isnull=True
     )
     rows = _get_percolated_rows(new_learning_resources, subscription_type)
     template_data = _group_percolated_rows(rows)
@@ -285,7 +285,7 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def index_learning_resources(ids, index_name, index_types):
     """
@@ -293,9 +293,9 @@ def index_learning_resources(ids, index_name, index_types):
 
     Args:
         ids(list of int): List of course id's
+        index_name (string): resource_type value or HYBRID_COMBINED_INDEX
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
-        resource_type (string): resource_type value for the learning resource objects
 
     """
     try:
@@ -311,7 +311,11 @@ def index_learning_resources(ids, index_name, index_types):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def percolate_learning_resource(resource_id):
     """
     Task that percolates a document following an index operation
@@ -320,7 +324,11 @@ def percolate_learning_resource(resource_id):
     percolate_matches_for_document(resource_id)
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def bulk_deindex_learning_resources(ids, resource_type):
     """
     Deindex learning resourse by a list of ids
@@ -341,7 +349,11 @@ def bulk_deindex_learning_resources(ids, resource_type):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def bulk_deindex_percolators(ids):
     """
     Deindex percolators by a list of ids
@@ -366,7 +378,7 @@ def bulk_deindex_percolators(ids):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def bulk_index_percolate_queries(percolate_ids, index_types):
     """
@@ -395,7 +407,11 @@ def bulk_index_percolate_queries(percolate_ids, index_types):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def index_course_content_files(course_ids, index_types):
     """
     Index content files for a list of course ids
@@ -423,7 +439,7 @@ def index_course_content_files(course_ids, index_types):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def index_content_files(
     content_file_ids,
@@ -455,7 +471,11 @@ def index_content_files(
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def deindex_content_files(content_file_ids, learning_resource_id):
     """
     Deindex a list of content files
@@ -476,7 +496,11 @@ def deindex_content_files(content_file_ids, learning_resource_id):
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def index_run_content_files(run_id, index_types=IndexestoUpdate.all_indexes.value):
     """
     Index content files for a LearningResourceRun
@@ -499,7 +523,11 @@ def index_run_content_files(run_id, index_types=IndexestoUpdate.all_indexes.valu
         return error
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def deindex_run_content_files(run_id, unpublished_only):
     """
     Deindex content files for a LearningResourceRun
@@ -540,7 +568,7 @@ def wrap_retry_exception(*exception_classes):
 
 
 @app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noqa: C901
+def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     """
     Wipe and recreate index and mapping, and index all items.
     """
@@ -555,16 +583,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                 )
                 log.exception(error)
                 return error
-
-        if COMBINED_INDEX in indexes:
-            vector_model_id = get_vector_model_id()
-            if not vector_model_id:
-                log.warning(
-                    "No vector model is configured. Skipping hybrid index reindexing.",
-                )
-                indexes.remove(COMBINED_INDEX)
-                if len(indexes) == 0:
-                    return None
 
         api.delete_orphaned_indexes(
             indexes, delete_reindexing_tags=remove_existing_reindexing_tags
@@ -631,17 +649,19 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                     )
                 ]
 
-        if COMBINED_INDEX in indexes:
+        if HYBRID_COMBINED_INDEX in indexes:
             blocklisted_ids = load_course_blocklist()
 
             index_tasks = index_tasks + [
                 index_learning_resources.si(
                     ids,
-                    COMBINED_INDEX,
+                    HYBRID_COMBINED_INDEX,
                     index_types=IndexestoUpdate.reindexing_index.value,
                 )
                 for ids in chunks(
-                    LearningResource.objects.filter(published=True)
+                    LearningResource.objects.filter(
+                        published=True, learning_material__isnull=True
+                    )
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                     .values_list("id", flat=True),
@@ -659,7 +679,8 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
                     )
                     for ids in chunks(
                         LearningResource.objects.filter(
-                            published=True, resource_type=resource_type
+                            published=True,
+                            resource_type=resource_type,
                         )
                         .order_by("id")
                         .values_list("id", flat=True),
@@ -680,7 +701,11 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):  # noq
     )
 
 
-@app.task(autoretry_for=(RetryError,), retry_backoff=True, rate_limit="600/m")
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
 def finish_update_index(results):  # noqa: ARG001
     clear_views_cache()
 
@@ -863,7 +888,10 @@ def get_update_learning_resource_tasks(resource_type):
             ids, resource_type, index_types=IndexestoUpdate.current_index.value
         )
         for ids in chunks(
-            LearningResource.objects.filter(published=True, resource_type=resource_type)
+            LearningResource.objects.filter(
+                published=True,
+                resource_type=resource_type,
+            )
             .order_by("id")
             .values_list("id", flat=True),
             chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
@@ -874,7 +902,8 @@ def get_update_learning_resource_tasks(resource_type):
         bulk_deindex_learning_resources.si(ids, resource_type)
         for ids in chunks(
             LearningResource.objects.filter(
-                published=False, resource_type=resource_type
+                published=False,
+                resource_type=resource_type,
             )
             .order_by("id")
             .values_list("id", flat=True),
@@ -888,7 +917,7 @@ def get_update_learning_resource_tasks(resource_type):
     reject_on_worker_lost=True,
     autoretry_for=(RetryError, SystemExit),
     retry_backoff=True,
-    rate_limit="600/m",
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def finish_recreate_index(results, backing_indices):
     """

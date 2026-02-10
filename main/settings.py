@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.47.12"
+VERSION = "0.53.4"
 
 log = logging.getLogger()
 
@@ -106,6 +106,7 @@ INSTALLED_APPS = (
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django.contrib.sites",
+    "django_removals",
     "django_scim",
     "social_django",
     "server_status",
@@ -258,7 +259,6 @@ MITOL_NEW_USER_LOGIN_URL = get_string(
 LOGIN_REDIRECT_URL = "/app"
 LOGIN_URL = "/login"
 LOGIN_ERROR_URL = "/login"
-LOGOUT_URL = "/logout"
 LOGOUT_REDIRECT_URL = "/app"
 MITOL_API_BASE_URL = get_string("MITOL_API_BASE_URL", "")
 OIDC_LOGOUT_URL = get_string(
@@ -389,7 +389,6 @@ DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # noqa: PTH118
 
 # Important to define this so DEBUG works properly
 INTERNAL_IPS = (get_string("HOST_IP", "127.0.0.1"),)
@@ -510,9 +509,31 @@ REACT_GA_DEBUG = get_bool("REACT_GA_DEBUG", False)  # noqa: FBT003
 RECAPTCHA_SITE_KEY = get_string("RECAPTCHA_SITE_KEY", "")
 RECAPTCHA_SECRET_KEY = get_string("RECAPTCHA_SECRET_KEY", "")
 
+# Fastly CDN settings
+FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
+FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
+
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
+AWS_S3_CUSTOM_DOMAIN = get_string("AWS_S3_CUSTOM_DOMAIN", None)
+AWS_S3_PREFIX = get_string("AWS_S3_PREFIX", None)
+
+if MITOL_USE_S3:
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
+    OPTIONS = {}
+    if AWS_S3_CUSTOM_DOMAIN:
+        OPTIONS["custom_domain"] = AWS_S3_CUSTOM_DOMAIN
+    if AWS_S3_PREFIX:
+        OPTIONS["location"] = AWS_S3_PREFIX
+    if OPTIONS:
+        STORAGES["default"]["OPTIONS"] = OPTIONS
+
 AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", False)  # noqa: FBT003
 AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", False)  # noqa: FBT003
 AWS_STORAGE_BUCKET_NAME = get_string("AWS_STORAGE_BUCKET_NAME", False)  # noqa: FBT003
@@ -524,8 +545,7 @@ if MITOL_USE_S3 and (
     msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, \
     AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"
     raise ImproperlyConfigured(msg)
-if MITOL_USE_S3:
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
 
 IMAGEKIT_SPEC_CACHEFILE_NAMER = "imagekit.cachefiles.namers.source_name_dot_hash"
 IMAGEKIT_CACHEFILE_DIR = get_string("IMAGEKIT_CACHEFILE_DIR", "")
@@ -604,16 +624,6 @@ OPENSEARCH_MIN_QUERY_SIZE = get_int("OPENSEARCH_MIN_QUERY_SIZE", 2)
 OPENSEARCH_MAX_SUGGEST_HITS = get_int("OPENSEARCH_MAX_SUGGEST_HITS", 1)
 OPENSEARCH_MAX_SUGGEST_RESULTS = get_int("OPENSEARCH_MAX_SUGGEST_RESULTS", 1)
 OPENSEARCH_SHARD_COUNT = get_int("OPENSEARCH_SHARD_COUNT", 2)
-OPENSEARCH_VECTOR_MODEL_NAME = get_string(
-    "OPENSEARCH_VECTOR_MODEL_NAME",
-    "huggingface/sentence-transformers/msmarco-distilbert-base-tas-b",
-)
-OPENSEARCH_VECTOR_MODEL_NAME_VERSION = get_string(
-    "OPENSEARCH_VECTOR_MODEL_NAME_VERSION", "1.0.3"
-)
-OPENSEARCH_VECTOR_MODEL_FORMAT = get_string(
-    "OPENSEARCH_VECTOR_MODEL_FORMAT", "TORCH_SCRIPT"
-)
 OPENSEARCH_REPLICA_COUNT = get_int("OPENSEARCH_REPLICA_COUNT", 2)
 OPENSEARCH_MAX_REQUEST_SIZE = get_int("OPENSEARCH_MAX_REQUEST_SIZE", 10485760)
 INDEXING_ERROR_RETRIES = get_int("INDEXING_ERROR_RETRIES", 1)
@@ -681,6 +691,8 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
     "MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS", 60 * 60
 )
 REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
+
+
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
     MIDDLEWARE = (
         *MIDDLEWARE,
@@ -750,6 +762,10 @@ KEYCLOAK_REALM_NAME = get_string(
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
 
+OPENSEARCH_VECTOR_MODEL_BASE_NAME = get_string(
+    name="OPENSEARCH_VECTOR_MODEL_BASE_NAME",
+    default="hybrid_search_model",
+)
 POSTHOG_PROJECT_API_KEY = get_string(
     name="POSTHOG_PROJECT_API_KEY",
     default="",
@@ -794,6 +810,13 @@ the lookback window for getting items to embed
 will be a constant 60 minutes greater more than the schedule frequency
 """
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
+OPEN_AI_EMBEDDING_MODELS = get_list_of_str(
+    "OPEN_AI_EMBEDDING_MODELS",
+    [
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+    ],
+)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
@@ -818,6 +841,17 @@ QDRANT_CHUNK_SIZE = get_int(
 QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
 )
+
+QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
+    name="QDRANT_POINT_UPLOAD_BATCH_SIZE", default=1000
+)
+
+QDRANT_BATCH_SIZE_BYTES = get_int(
+    name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
+)  # default 10 MB limit for batch processing
+
+QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
@@ -868,7 +902,36 @@ SEMANTIC_CHUNKING_CONFIG = {
 }
 
 CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE", 20)
+# number of flashcards to generate
+CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
+    "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
+)
 
+
+CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
+    "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",
+    (
+        f"""
+        You are an expert instructor creating study flashcards.
+        Generate exactly {CONTENT_SUMMARIZER_FLASHCARD_QUANTITY}
+        high-quality flashcards from the transcript below.
+        """
+        """
+        Rules:
+        - Focus ONLY on core concepts, methods, definitions,
+          reasoning, and cause-effect relationships.
+        - Questions must test understanding or application,
+          not recall of names, timestamps, or anecdotes.
+        - Avoid trivia, meta information
+        - avoid details about the speaker or course logistics.
+        - Prefer "why", "how", "compare", "explain", or "apply" style questions.
+        - Each answer should be concise but complete (1-3 sentences).
+
+        Transcript:
+        {content}
+        """
+    ),
+)
 # OpenTelemetry configuration
 OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")

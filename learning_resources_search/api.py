@@ -16,12 +16,13 @@ from learning_resources_search.connection import (
     get_vector_model_id,
 )
 from learning_resources_search.constants import (
-    COMBINED_INDEX,
     CONTENT_FILE_TYPE,
     COURSE_QUERY_FIELDS,
     COURSE_TYPE,
     DEPARTMENT_QUERY_FIELDS,
+    HYBRID_COMBINED_INDEX,
     HYBRID_SEARCH_MODE,
+    HYBRID_SEARCH_PIPELINE_NAME,
     LEARNING_RESOURCE,
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
@@ -55,6 +56,8 @@ DEFAULT_SORT = [
     "-created_on",
 ]
 
+HYBRID_SEARCH_KNN_K_VALUE = 5
+
 
 def gen_content_file_id(content_file_id):
     """
@@ -86,7 +89,7 @@ def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
     if endpoint == CONTENT_FILE_TYPE:
         return [get_default_alias_name(COURSE_TYPE)]
     elif use_hybrid_search:
-        return [get_default_alias_name(COMBINED_INDEX)]
+        return [get_default_alias_name(HYBRID_COMBINED_INDEX)]
 
     if aggregations and "resource_type" in aggregations:
         return map(get_default_alias_name, LEARNING_RESOURCE_TYPES)
@@ -336,6 +339,12 @@ def generate_learning_resources_text_clause(
                         },
                     }
                 },
+            ]
+        }
+        # Only include has_child query if content_file_score_weight > 0
+        # (None means use default/unweighted, 0 means explicitly disabled)
+        if content_file_score_weight is None or content_file_score_weight:
+            text_query["should"].append(
                 {
                     "has_child": {
                         "type": "content_file",
@@ -348,9 +357,8 @@ def generate_learning_resources_text_clause(
                         },
                         "score_mode": "avg",
                     }
-                },
-            ]
-        }
+                }
+            )
     else:
         text_query = {}
 
@@ -652,41 +660,33 @@ def add_text_query_to_search(
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
     if use_hybrid_search:
-        vector_model_id = get_vector_model_id()
-        if not vector_model_id:
+        if settings.QDRANT_DENSE_MODEL not in settings.OPEN_AI_EMBEDDING_MODELS:
+            error_message = "hybrid search only supported with OpenAI models"
+            raise ValueError(error_message)
+
+        model_id = get_vector_model_id()
+
+        if not model_id:
             log.error("Vector model not found. Cannot perform hybrid search.")
             error_message = "Vector model not found."
             raise ValueError(error_message)
 
-        vector_query_description = {
+        vector_query = {
             "neural": {
-                "description_embedding": {
+                "vector_embedding": {
                     "query_text": text,
-                    "model_id": vector_model_id,
-                    "min_score": 0.015,
-                },
+                    "model_id": model_id,
+                    "k": HYBRID_SEARCH_KNN_K_VALUE,
+                }
             }
         }
 
-        vector_query_title = {
-            "neural": {
-                "title_embedding": {
-                    "query_text": text,
-                    "model_id": vector_model_id,
-                    "min_score": 0.015,
-                },
-            }
-        }
-
+        pagination_depth = search_params.get("limit", 10) * 3
         search = search.extra(
             query={
                 "hybrid": {
-                    "pagination_depth": 10,
-                    "queries": [
-                        text_query,
-                        vector_query_description,
-                        vector_query_title,
-                    ],
+                    "pagination_depth": pagination_depth,
+                    "queries": [text_query, vector_query],
                 }
             }
         )
@@ -727,7 +727,12 @@ def construct_search(search_params):  # noqa: C901
     search = Search(index=",".join(indexes))
 
     search = search.source(fields={"excludes": SOURCE_EXCLUDED_FIELDS})
-    if not use_hybrid_search:
+    if (
+        search_params.get("q")
+        and not search_params.get("sortby")
+        and not use_hybrid_search
+    ):
+        # Only use DFS for keyword search, sorting by relevance (no explicit sort)
         search = search.params(search_type="dfs_query_then_fetch")
     if search_params.get("offset"):
         search = search.extra(from_=search_params.get("offset"))
@@ -803,22 +808,7 @@ def execute_learn_search(search_params):
     search = construct_search(search_params)
 
     if search_params.get("search_mode") == HYBRID_SEARCH_MODE:
-        search = search.extra(
-            search_pipeline={
-                "description": "Post processor for hybrid search",
-                "phase_results_processors": [
-                    {
-                        "normalization-processor": {
-                            "normalization": {"technique": "min_max"},
-                            "combination": {
-                                "technique": "arithmetic_mean",
-                                "parameters": {"weights": [0.6, 0.2, 0.2]},
-                            },
-                        }
-                    }
-                ],
-            }
-        )
+        search = search.extra(search_pipeline=HYBRID_SEARCH_PIPELINE_NAME)
 
     results = search.execute().to_dict()
     if results.get("_shards", {}).get("failures"):

@@ -4,13 +4,14 @@ import React from "react"
 import { useRouter } from "next-nprogress-bar"
 import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { ArticleEditor, styled, HEADER_HEIGHT } from "ol-components"
+import { styled } from "ol-components"
+import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   display: "flex",
-  height: `calc(100vh - ${HEADER_HEIGHT}px - 132px)`,
+  height: "100%",
 }))
 
 const ArticleNewPage: React.FC = () => {
@@ -21,7 +22,9 @@ const ArticleNewPage: React.FC = () => {
       <PageContainer>
         <ArticleEditor
           onSave={(article) => {
-            router.push(articlesView(article.id))
+            if (article.is_published)
+              return router.push(articlesView(article.slug!))
+            router.push(articlesView(String(article.id)))
           }}
         />
       </PageContainer>

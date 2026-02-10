@@ -66,7 +66,7 @@ def transform_items(items_data: list[dict]) -> list[dict]:
             "guid": item.get("id"),
             "title": item.get("title", ""),
             "url": item.get("link", None),
-            "summary": clean_data(item.get("summary", "")),
+            "summary": clean_data(item.get("summary", ""), tags=set()),
             "content": clean_data(content),
             "image": image_data,
             "detail": {

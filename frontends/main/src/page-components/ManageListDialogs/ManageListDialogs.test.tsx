@@ -14,10 +14,10 @@ import {
   user,
   within,
   act,
+  waitFor,
 } from "@/test-utils"
 import type { TestAppOptions } from "@/test-utils"
 import invariant from "tiny-invariant"
-import { waitForElementToBeRemoved } from "@testing-library/react"
 
 const selectFromAutocomplete = async (input: HTMLElement, label: string) => {
   await user.click(input)
@@ -387,13 +387,15 @@ describe("manageListDialogs.destroyLearningPath", () => {
   test("Deleting a $label calls correct API", async () => {
     const { resource } = setup()
 
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     const url = urls.learningPaths.details({ id: resource.id })
     setMockResponse.delete(url, undefined)
     await user.click(inputs.delete())
 
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
-    await waitForElementToBeRemoved(dialog)
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Clicking cancel does not delete list", async () => {
@@ -427,13 +429,15 @@ describe("manageListDialogs.destroyUserList", () => {
   test("Deleting a $label calls correct API", async () => {
     const { userList } = setup()
 
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     const url = urls.userLists.details({ id: userList.id })
     setMockResponse.delete(url, undefined)
     await user.click(inputs.delete())
 
     expect(makeRequest).toHaveBeenCalledWith("delete", url, undefined)
-    await waitForElementToBeRemoved(dialog)
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Clicking cancel does not delete list", async () => {

@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "workspace:*",
+  "version": "0.0.0",
   "private": true,
   "sideEffects": false,
   "exports": {
@@ -8,6 +8,7 @@
     "./v0": "./src/generated/v0/api.ts",
     "./v1": "./src/generated/v1/api.ts",
     "./hooks/*": "./src/hooks/*/index.ts",
+    "./hooks/*/queries": "./src/hooks/*/queries.ts",
     "./constants": "./src/common/constants.ts",
     "./ssr/*": "./src/ssr/*.ts",
     "./test-utils/factories": "./src/test-utils/factories/index.ts",
@@ -16,7 +17,7 @@
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts"
   },
   "peerDependencies": {
-    "react": "^19"
+    "react": "^19.2.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
@@ -28,7 +29,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mitxonline-api-axios": "^2025.11.5",
+    "@mitodl/mitxonline-api-axios": "^2026.2.5",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"

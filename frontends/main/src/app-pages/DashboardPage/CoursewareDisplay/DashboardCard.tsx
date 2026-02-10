@@ -9,12 +9,6 @@ import {
   LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
-import { EnrollmentStatus, EnrollmentMode } from "./types"
-import type {
-  DashboardResource,
-  DashboardCourse,
-  DashboardCourseEnrollment,
-} from "./types"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
 import {
   RiArrowRightLine,
@@ -31,13 +25,59 @@ import {
   UnenrollDialog,
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
-import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
+import { programView } from "@/common/urls"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  CourseWithCourseRunsSerializerV2,
+  CourseRunEnrollmentRequestV2,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
+
+const EnrollmentMode = {
+  Audit: "audit",
+  Verified: "verified",
+} as const
+type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
+
+export const DashboardType = {
+  Course: "course",
+  CourseRunEnrollment: "courserun-enrollment",
+  ProgramEnrollment: "program-enrollment",
+} as const
+export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
+
+type DashboardResource =
+  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
+  | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
+  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
+
+/**
+ * Gets the certificate link for a dashboard resource based on its type.
+ */
+const getCertificateLink = (resource: DashboardResource): string | null => {
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/course/$1/")
+  }
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    const link = resource.data.certificate?.link
+    if (!link) return null
+    const pattern = /\/certificate\/([^/]+)\/?$/
+    return link.replace(pattern, "/certificate/program/$1/")
+  }
+  return null
+}
 
 const CardRoot = styled.div<{
   screenSize: "desktop" | "mobile"
-}>(({ theme, screenSize }) => [
+  variant?: "default" | "stacked"
+}>(({ theme, screenSize, variant = "default" }) => [
   {
     position: "relative",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -46,11 +86,34 @@ const CardRoot = styled.div<{
     display: "flex",
     gap: "8px",
     alignItems: "center",
+  },
+  // Mobile styles for default variant
+  variant === "default" && {
     [theme.breakpoints.down("md")]: {
       border: "none",
       borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
       borderRadius: "0px",
       boxShadow: "none",
+      flexDirection: "column",
+      gap: "16px",
+    },
+  },
+  // Stacked variant styles
+  variant === "stacked" && {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px !important",
+    boxShadow: "none",
+    "&:first-of-type": {
+      borderTopLeftRadius: "8px !important",
+      borderTopRightRadius: "8px !important",
+    },
+    "&:last-of-type": {
+      borderBottomLeftRadius: "8px !important",
+      borderBottomRightRadius: "8px !important",
+      borderBottom: "none",
+    },
+    [theme.breakpoints.down("md")]: {
       flexDirection: "column",
       gap: "16px",
     },
@@ -73,6 +136,17 @@ const TitleLink = styled(Link)(({ theme }) => ({
   },
 }))
 
+const TitleText = styled.div<{ clickable?: boolean }>(
+  ({ theme, clickable }) => ({
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.darkGray2,
+    cursor: clickable ? "pointer" : "default",
+    [theme.breakpoints.down("md")]: {
+      maxWidth: "calc(100% - 16px)",
+    },
+  }),
+)
+
 const MenuButton = styled(ActionButton)<{
   status?: EnrollmentStatus
 }>(({ theme, status }) => [
@@ -92,7 +166,7 @@ const MenuButton = styled(ActionButton)<{
 
 const getDefaultContextMenuItems = (
   title: string,
-  enrollment: DashboardCourseEnrollment,
+  enrollment: CourseRunEnrollmentRequestV2,
 ) => {
   return [
     {
@@ -116,7 +190,7 @@ const getDefaultContextMenuItems = (
 
 const useOneClickEnroll = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const createEnrollment = useCreateEnrollment()
+  const createEnrollment = useCreateB2bEnrollment()
   const userCountry = mitxOnlineUser.data?.legal_address?.country
   const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
   const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -139,7 +213,10 @@ const useOneClickEnroll = () => {
         { readable_id: coursewareId },
         {
           onSuccess: () => {
-            window.location.assign(href)
+            // Only redirect if href is provided
+            if (href) {
+              window.location.assign(href)
+            }
           },
         },
       )
@@ -150,32 +227,43 @@ const useOneClickEnroll = () => {
 
 type CoursewareButtonProps = {
   coursewareId?: string | null
+  readableId?: string | null
   startDate?: string | null
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
   href?: string | null
+  disabled?: boolean
   className?: string
-  courseNoun: string
+  noun: string
+  isProgram?: boolean
+  b2bContractId?: number | null
   "data-testid"?: string
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
 
 const getCoursewareTextAndIcon = ({
   endDate,
   enrollmentStatus,
-  courseNoun,
+  noun,
+  isProgram,
 }: {
   endDate?: string | null
   enrollmentStatus?: EnrollmentStatus | null
-  courseNoun: string
+  noun: string
+  isProgram?: boolean
 }) => {
   if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${courseNoun}`, endIcon: null }
+    return { text: `Start ${noun}`, endIcon: null }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${courseNoun}`, endIcon: null }
+    return { text: `View ${noun}`, endIcon: null }
+  }
+  // Programs show "View Program" when enrolled, courses show "Continue"
+  if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
+    return { text: `View ${noun}`, endIcon: null }
   }
   return { text: "Continue", endIcon: <RiArrowRightLine /> }
 }
@@ -183,18 +271,24 @@ const getCoursewareTextAndIcon = ({
 const CoursewareButton = styled(
   ({
     coursewareId,
+    readableId,
     startDate,
     endDate,
     enrollmentStatus,
     href,
+    disabled,
     className,
-    courseNoun,
+    noun,
+    isProgram,
+    b2bContractId,
+    onClick,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
       endDate,
-      courseNoun,
+      noun,
       enrollmentStatus,
+      isProgram,
     })
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled =
@@ -202,17 +296,55 @@ const CoursewareButton = styled(
 
     const oneClickEnroll = useOneClickEnroll()
 
+    if (isProgram) {
+      return (
+        <ButtonLink
+          size="small"
+          variant="primary"
+          className={className}
+          href={href ?? undefined}
+          {...others}
+        >
+          {coursewareText.text}
+        </ButtonLink>
+      )
+    }
+
+    if (onClick) {
+      return (
+        <Button
+          size="small"
+          variant="primary"
+          className={className}
+          onClick={onClick}
+          disabled={disabled}
+          {...others}
+        >
+          {coursewareText.text}
+        </Button>
+      )
+    }
+
     if (!hasEnrolled /* enrollment flow */) {
       return (
         <Button
           size="small"
           variant="primary"
           className={className}
-          disabled={oneClickEnroll.isPending || !coursewareId}
-          onClick={() => {
-            if (!href || !coursewareId) return
-            oneClickEnroll.mutate({ href, coursewareId })
-          }}
+          disabled={
+            oneClickEnroll.isPending || !coursewareId || !readableId || disabled
+          }
+          onClick={
+            onClick ??
+            (() => {
+              if (!coursewareId || !readableId || !href) return
+              if (b2bContractId) {
+                oneClickEnroll.mutate({ href, coursewareId: readableId })
+              } else {
+                alert("Non-B2B enrollment is not yet available.")
+              }
+            })
+          }
           endIcon={
             oneClickEnroll.isPending ? (
               <LoadingSpinner
@@ -227,7 +359,10 @@ const CoursewareButton = styled(
           {coursewareText.text}
         </Button>
       )
-    } else if (hasStarted && href /* Link to course */) {
+    } else if (
+      (hasStarted || !startDate) &&
+      href /* Link to course or program */
+    ) {
       return (
         <ButtonLink
           size="small"
@@ -241,7 +376,7 @@ const CoursewareButton = styled(
         </ButtonLink>
       )
     }
-    // Disabled
+    // Disabled (course not started yet)
     return (
       <Button
         size="small"
@@ -292,13 +427,36 @@ const UpgradeBanner: React.FC<
     canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
+    productId?: number | null
+    onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
+  productId,
+  onError,
   ...others
 }) => {
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
+
+  const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    if (!productId) return
+
+    try {
+      // Reset mutation state to allow retry after error
+      addToBasket.reset()
+      clearBasket.reset()
+
+      await clearBasket.mutateAsync()
+      await addToBasket.mutateAsync(productId)
+    } catch (error) {
+      onError?.(error as Error)
+    }
+  }
+
   if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
     return null
   }
@@ -308,7 +466,7 @@ const UpgradeBanner: React.FC<
   const formattedPrice = `$${certificateUpgradePrice}`
   return (
     <SubtitleLinkRoot {...others}>
-      <SubtitleLink href="#">
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
         Add a certificate for {formattedPrice}
       </SubtitleLink>
@@ -321,8 +479,8 @@ const UpgradeBanner: React.FC<
 }
 
 const CountdownRoot = styled.div(({ theme }) => ({
-  width: "142px",
-  marginRight: "32px",
+  width: "100%",
+  paddingRight: "32px",
   display: "flex",
   justifyContent: "center",
   alignSelf: "end",
@@ -361,51 +519,174 @@ const CourseStartCountdown: React.FC<{
 }
 
 type DashboardCardProps = {
-  Component?: React.ElementType
-  titleAction: "marketing" | "courseware"
-  dashboardResource: DashboardResource
+  resource: DashboardResource
+  titleAction?: "marketing" | "courseware"
   showNotComplete?: boolean
-  className?: string
-  courseNoun?: string
   offerUpgrade?: boolean
+  noun?: string
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
   buttonHref?: string | null
+  buttonClick?: React.MouseEventHandler<HTMLButtonElement>
+  Component?: React.ElementType
+  className?: string
+  variant?: "default" | "stacked"
+  contractId?: number
+  onUpgradeError?: (error: string) => void
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
-  dashboardResource,
+  resource,
+  titleAction = "courseware",
   showNotComplete = true,
-  Component,
-  className,
-  courseNoun = "Course",
   offerUpgrade = true,
+  noun,
   contextMenuItems = [],
   isLoading = false,
   buttonHref,
-  titleAction,
+  buttonClick,
+  Component,
+  className,
+  variant = "default",
+  contractId,
+  onUpgradeError,
 }) => {
-  const course = dashboardResource as DashboardCourse
-  const { title, marketingUrl, enrollment, run } = course
   const oneClickEnroll = useOneClickEnroll()
+  const { data: user } = useQuery(mitxUserQueries.me())
 
-  const coursewareUrl = run.coursewareUrl
-  const titleHref =
-    titleAction === "marketing" ? marketingUrl : (coursewareUrl ?? marketingUrl)
+  // Determine resource type from discriminated union
+  const resourceIsCourse = resource.type === DashboardType.Course
+  const resourceIsCourseRunEnrollment =
+    resource.type === DashboardType.CourseRunEnrollment
+  const resourceIsProgramEnrollment =
+    resource.type === DashboardType.ProgramEnrollment
+
+  const handleEnrollment = (
+    href: string,
+    readableId: string,
+    hasB2bContract: boolean,
+  ) => {
+    if (!hasB2bContract) {
+      alert("Non-B2B enrollment is not yet available.")
+      return
+    }
+
+    const userCountry = user?.legal_address?.country
+    const userYearOfBirth = user?.user_profile?.year_of_birth
+    const showJustInTimeDialog = !userCountry || !userYearOfBirth
+
+    if (showJustInTimeDialog) {
+      NiceModal.show(JustInTimeDialog, {
+        href,
+        readableId,
+      })
+    } else {
+      // Profile is complete, directly enroll
+      oneClickEnroll.mutate({
+        href,
+        coursewareId: readableId,
+      })
+    }
+  }
+
+  // Determine if this is any kind of course
+  const isAnyCourse = resourceIsCourse || resourceIsCourseRunEnrollment
+
+  // Compute default noun based on resource type
+  const defaultNoun = isAnyCourse
+    ? "Course"
+    : resourceIsProgramEnrollment
+      ? "Program"
+      : "Unknown"
+  const displayNoun = noun ?? defaultNoun
+
+  // Extract common data based on resource type
+  const title =
+    resource.type === DashboardType.Course
+      ? resource.data.title
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? resource.data.run.course.title
+        : resource.data.program.title
+
+  // Course-specific data
+  const run = resourceIsCourse
+    ? getBestRun(resource.data, contractId)
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run
+      : undefined
+
+  const hasValidCertificate =
+    resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
+
+  const enrollmentStatus: EnrollmentStatus = isAnyCourse
+    ? hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : resource.type === DashboardType.CourseRunEnrollment
+        ? getEnrollmentStatus(resource.data)
+        : EnrollmentStatus.NotEnrolled
+    : hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : EnrollmentStatus.Enrolled
+
+  // URLs
+  const marketingUrl = resourceIsCourse
+    ? resource.data.page?.page_url
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run.course.page?.page_url
+      : undefined
+  const coursewareUrl = run?.courseware_url
   const hasEnrolled =
-    enrollment?.status && enrollment.status !== EnrollmentStatus.NotEnrolled
+    isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
+  // Check enrollment's b2b_contract_id first, then run's b2b_contract, finally fall back to contractId prop
+  const b2bContractId =
+    resource.type === DashboardType.CourseRunEnrollment
+      ? (resource.data.b2b_contract_id ?? run?.b2b_contract ?? contractId)
+      : (run?.b2b_contract ?? contractId)
+  const hasEnrollableRuns = resourceIsCourse
+    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    : true
+  const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
+
+  // Title link logic
+  const titleHref = isAnyCourse
+    ? hasEnrolled
+      ? titleAction === "marketing"
+        ? marketingUrl
+        : (coursewareUrl ?? marketingUrl)
+      : b2bContractId
+        ? (coursewareUrl ?? marketingUrl)
+        : undefined
+    : undefined
+
   const titleClick: React.MouseEventHandler | undefined =
-    titleAction === "courseware" && coursewareUrl && !hasEnrolled
+    isAnyCourse && !hasEnrolled
       ? (e) => {
           e.preventDefault()
-          if (!course.coursewareId) return
-          oneClickEnroll.mutate({
-            href: coursewareUrl,
-            coursewareId: course.coursewareId,
-          })
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
         }
       : undefined
 
+  const coursewareButtonClick:
+    | React.MouseEventHandler<HTMLButtonElement>
+    | undefined =
+    isAnyCourse && !hasEnrolled
+      ? () => {
+          const readableId = resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+          if (!readableId || !coursewareUrl) return
+          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+        }
+      : buttonClick
+  // Build sections
   const titleSection = isLoading ? (
     <>
       <Skeleton variant="text" width="95%" height={16} />
@@ -414,58 +695,104 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     </>
   ) : (
     <>
-      <TitleLink
-        size="medium"
-        color="black"
-        href={titleHref}
-        onClick={titleClick}
-      >
-        {title}
-      </TitleLink>
-      {enrollment?.status === EnrollmentStatus.Completed &&
-      run.certificate?.link ? (
-        <SubtitleLink href={run.certificate.link}>
-          {<RiAwardLine size="16px" />}
+      {titleHref ? (
+        <TitleLink
+          size="medium"
+          color="black"
+          href={titleHref}
+          onClick={titleClick}
+        >
+          {title}
+        </TitleLink>
+      ) : titleClick ? (
+        <TitleText clickable onClick={titleClick}>
+          {title}
+        </TitleText>
+      ) : (
+        <TitleText>{title}</TitleText>
+      )}
+      {getCertificateLink(resource) ? (
+        <SubtitleLink href={getCertificateLink(resource)!}>
+          <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
       ) : null}
-      {enrollment?.mode !== EnrollmentMode.Verified && offerUpgrade ? (
+      {isAnyCourse &&
+      resource.type === DashboardType.CourseRunEnrollment &&
+      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+      offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={run.canUpgrade ?? false}
-          certificateUpgradeDeadline={run.certificateUpgradeDeadline}
-          certificateUpgradePrice={run.certificateUpgradePrice}
+          canUpgrade={run?.is_upgradable ?? false}
+          certificateUpgradeDeadline={run?.upgrade_deadline}
+          certificateUpgradePrice={run?.products?.[0]?.price}
+          productId={run?.products?.[0]?.id}
+          onError={() => {
+            onUpgradeError?.(
+              "There was a problem adding the certificate to your cart.",
+            )
+          }}
         />
       ) : null}
     </>
   )
+
   const buttonSection = isLoading ? (
     <Skeleton variant="rectangular" width={120} height={32} />
-  ) : (
+  ) : isAnyCourse ? (
     <>
       <EnrollmentStatusIndicator
-        status={enrollment?.status}
+        status={enrollmentStatus}
         showNotComplete={showNotComplete}
       />
       <CoursewareButton
         data-testid="courseware-button"
-        coursewareId={course.coursewareId}
-        startDate={run.startDate}
-        enrollmentStatus={enrollment?.status}
-        href={buttonHref ? buttonHref : run.coursewareUrl}
-        endDate={run.endDate}
-        courseNoun={courseNoun}
+        coursewareId={
+          resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+        }
+        readableId={
+          resourceIsCourse
+            ? run?.courseware_id
+            : resourceIsCourseRunEnrollment
+              ? resource.data.run.courseware_id
+              : undefined
+        }
+        startDate={run?.start_date}
+        enrollmentStatus={enrollmentStatus}
+        href={buttonHref ?? coursewareUrl}
+        endDate={run?.end_date}
+        noun={displayNoun}
+        isProgram={false}
+        b2bContractId={b2bContractId}
+        disabled={disableEnrollment}
+        onClick={coursewareButtonClick}
       />
     </>
-  )
+  ) : resourceIsProgramEnrollment ? (
+    <CoursewareButton
+      noun={displayNoun}
+      isProgram={true}
+      enrollmentStatus={enrollmentStatus}
+      href={buttonHref ?? programView(resource.data.program.id)}
+    />
+  ) : null
+
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : run.startDate ? (
-    <CourseStartCountdown startDate={run.startDate} />
+  ) : isAnyCourse && run?.start_date ? (
+    <CourseStartCountdown startDate={run.start_date} />
   ) : null
+
   const menuItems = contextMenuItems.concat(
-    enrollment?.id ? getDefaultContextMenuItems(title, enrollment) : [],
+    resource.type === DashboardType.CourseRunEnrollment
+      ? getDefaultContextMenuItems(title, resource.data)
+      : [],
   )
+
   const contextMenu = isLoading ? (
     <Skeleton variant="rectangular" width={12} height={24} />
   ) : (
@@ -476,7 +803,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           size="small"
           variant="text"
           aria-label="More options"
-          status={enrollment?.status}
+          status={enrollmentStatus ?? undefined}
           hidden={menuItems.length === 0}
         >
           <RiMore2Line />
@@ -484,62 +811,60 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       }
     />
   )
-  const desktopLayout = (
-    <CardRoot
-      screenSize="desktop"
-      data-testid="enrollment-card-desktop"
-      as={Component}
-      className={className}
-    >
-      <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
-        {titleSection}
-      </Stack>
-      <Stack gap="8px">
-        <Stack direction="row" gap="8px" alignItems="center">
-          {buttonSection}
-          {contextMenu}
-        </Stack>
-        {startDateSection}
-      </Stack>
-    </CardRoot>
-  )
 
-  const mobileLayout = (
-    <CardRoot
-      screenSize="mobile"
-      data-testid="enrollment-card-mobile"
-      as={Component}
-      className={className}
-    >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="stretch"
-        flex={1}
-        width="100%"
-      >
-        <Stack direction="column" gap="8px" flex={1}>
-          {titleSection}
-        </Stack>
-        {contextMenu}
-      </Stack>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="end"
-        width="100%"
-      >
-        {startDateSection}
-        <Stack direction="row" gap="8px" alignItems="center">
-          {buttonSection}
-        </Stack>
-      </Stack>
-    </CardRoot>
-  )
+  // Single return block with unified layout
   return (
     <>
-      {desktopLayout}
-      {mobileLayout}
+      <CardRoot
+        screenSize="desktop"
+        data-testid="enrollment-card-desktop"
+        as={Component}
+        className={className}
+        variant={variant}
+      >
+        <Stack justifyContent="start" alignItems="stretch" gap="8px" flex={1}>
+          {titleSection}
+        </Stack>
+        <Stack gap="8px">
+          <Stack direction="row" gap="8px" alignItems="center">
+            {buttonSection}
+            {contextMenu}
+          </Stack>
+          {startDateSection}
+        </Stack>
+      </CardRoot>
+
+      <CardRoot
+        screenSize="mobile"
+        data-testid="enrollment-card-mobile"
+        as={Component}
+        className={className}
+        variant={variant}
+      >
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="stretch"
+          flex={1}
+          width="100%"
+        >
+          <Stack direction="column" gap="8px" flex={1}>
+            {titleSection}
+          </Stack>
+          {contextMenu}
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="end"
+          width="100%"
+        >
+          {startDateSection}
+          <Stack direction="row" gap="8px" alignItems="center">
+            {buttonSection}
+          </Stack>
+        </Stack>
+      </CardRoot>
     </>
   )
 }

@@ -22,10 +22,25 @@ PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
 BOTH_INDEXES = "all_indexes"
-COMBINED_INDEX = "combined_hybrid"
-
+HYBRID_COMBINED_INDEX = "combined_hybrid"
 LEARNING_RESOURCE = "learning_resource"
 HYBRID_SEARCH_MODE = "hybrid"
+HYBRID_SEARCH_PIPELINE_NAME = "hybrid_search_pipeline"
+
+HYBRID_SEARCH_PIPELINE_BODY = {
+    "description": "Post processor for hybrid search",
+    "phase_results_processors": [
+        {
+            "normalization-processor": {
+                "normalization": {"technique": "min_max"},
+                "combination": {
+                    "technique": "arithmetic_mean",
+                    "parameters": {"weights": [0.8, 0.2]},
+                },
+            }
+        }
+    ],
+}
 
 
 class IndexestoUpdate(Enum):
@@ -49,7 +64,7 @@ LEARNING_RESOURCE_TYPES = (
 )
 
 
-BASE_INDEXES = (PERCOLATE_INDEX_TYPE, COMBINED_INDEX)
+BASE_INDEXES = (PERCOLATE_INDEX_TYPE, HYBRID_COMBINED_INDEX)
 
 ALL_INDEX_TYPES = BASE_INDEXES + LEARNING_RESOURCE_TYPES
 
@@ -300,6 +315,7 @@ LEARNING_RESOURCE_MAP = {
             "location": {"type": "keyword"},
         },
     },
+    "best_run_id": {"type": "long"},
     "next_start_date": {"type": "date"},
     "resource_age_date": {"type": "date"},
     "featured_rank": {"type": "float"},
@@ -323,24 +339,11 @@ LEARNING_RESOURCE_MAP = {
 }
 
 EMBEDDING_FIELDS = {
-    "title_embedding": {
+    "vector_embedding": {
         "type": "knn_vector",
-        "method": {
-            "engine": "lucene",
-            "space_type": "l2",
-            "name": "hnsw",
-            "parameters": {},
-        },
-    },
-    "description_embedding": {
-        "type": "knn_vector",
-        "method": {
-            "engine": "lucene",
-            "space_type": "l2",
-            "name": "hnsw",
-            "parameters": {},
-        },
-    },
+        "space_type": "cosinesimil",
+        "method": {"name": "hnsw", "space_type": "cosinesimil", "engine": "faiss"},
+    }
 }
 
 
@@ -470,8 +473,7 @@ SOURCE_EXCLUDED_FIELDS = [
     "content",
     "summary",
     "flashcards",
-    "description_embedding",
-    "title_embedding",
+    "vector_embedding",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {

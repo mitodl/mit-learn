@@ -11,6 +11,7 @@ import {
   LearningResourcesUserSubscriptionApi,
   SchoolsApi,
   FeaturedApi,
+  MediaApi,
 } from "./generated/v1/api"
 
 import {
@@ -68,6 +69,7 @@ const platformsApi = new PlatformsApi(undefined, BASE_PATH, axiosInstance)
 const topicsApi = new TopicsApi(undefined, BASE_PATH, axiosInstance)
 
 const articlesApi = new ArticlesApi(undefined, BASE_PATH, axiosInstance)
+const mediaApi = new MediaApi(undefined, BASE_PATH, axiosInstance)
 
 const programLettersApi = new ProgramLettersApi(
   undefined,
@@ -102,6 +104,7 @@ export {
   userListsApi,
   topicsApi,
   articlesApi,
+  mediaApi,
   offerorsApi,
   programLettersApi,
   learningResourcesSearchApi,

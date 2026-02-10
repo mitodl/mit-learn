@@ -10,9 +10,8 @@ EDX_PROGRAMS_API_URL = get_string("EDX_PROGRAMS_API_URL", None)
 EDX_API_ACCESS_TOKEN_URL = get_string("EDX_API_ACCESS_TOKEN_URL", None)
 EDX_API_CLIENT_ID = get_string("EDX_API_CLIENT_ID", None)
 EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
-EDX_LEARNING_COURSE_BUCKET_NAME = get_string("EDX_LEARNING_COURSE_BUCKET_NAME", None)
-EDX_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "EDX_LEARNING_COURSE_BUCKET_PREFIX", "simeon-mitx-course-tarballs"
+EDX_COURSE_BUCKET_PREFIX = get_string(
+    "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
 
 # Authentication for the github api
@@ -44,13 +43,15 @@ MICROMASTERS_CATALOG_API_URL = get_string("MICROMASTERS_CATALOG_API_URL", None)
 LEARNING_COURSE_ITERATOR_CHUNK_SIZE = get_int("LEARNING_COURSE_ITERATOR_CHUNK_SIZE", 20)
 
 # xPRO settings for course/resource ingestion
-XPRO_LEARNING_COURSE_BUCKET_NAME = get_string("XPRO_LEARNING_COURSE_BUCKET_NAME", None)
+XPRO_COURSE_BUCKET_PREFIX = get_string(
+    "XPRO_COURSE_BUCKET_PREFIX", "xpro/openedx/raw_data/course_xml/"
+)
 XPRO_CATALOG_API_URL = get_string("XPRO_CATALOG_API_URL", None)
 XPRO_COURSES_API_URL = get_string("XPRO_COURSES_API_URL", None)
 
 # MITx Online settings for course/resource ingestion
-MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME = get_string(
-    "MITX_ONLINE_LEARNING_COURSE_BUCKET_NAME", None
+MITX_ONLINE_COURSE_BUCKET_PREFIX = get_string(
+    "MITX_ONLINE_COURSE_BUCKET_PREFIX", "mitxonline/openedx/raw_data/course_xml/"
 )
 MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
@@ -58,24 +59,38 @@ MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
 
 
 # Open Learning Library settings
-OLL_LEARNING_COURSE_BUCKET_NAME = get_string("OLL_LEARNING_COURSE_BUCKET_NAME", None)
-OLL_LEARNING_COURSE_BUCKET_PREFIX = get_string(
-    "OLL_LEARNING_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
+OLL_COURSE_BUCKET_PREFIX = get_string(
+    "OLL_COURSE_BUCKET_PREFIX", "open-learning-library/courses"
 )
 
 # Canvas course settings
-CANVAS_COURSE_BUCKET_NAME = get_string("CANVAS_COURSE_BUCKET_NAME", None)
+COURSE_ARCHIVE_BUCKET_NAME = get_string(
+    "COURSE_ARCHIVE_BUCKET_NAME", "ol-data-lake-landing-zone-production"
+)
 CANVAS_COURSE_BUCKET_PREFIX = get_string(
     "CANVAS_COURSE_BUCKET_PREFIX", "canvas/course_content"
 )
-CANVAS_PDF_TRANSCRIPTION_MODEL = get_string(
-    name="CANVAS_PDF_TRANSCRIPTION_MODEL", default=None
+
+OCR_MODEL = get_string(name="OCR_MODEL", default=None)
+
+OCR_PROMPT = get_string(
+    "OCR_PROMPT",
+    "Transcribe this image to markdown. Properly format text, formulas, "
+    "tables, and code into markdown format."
+    "Include a markdown comment for elements that cannot be transcribed such as "
+    "photos and other visual elements."
+    "Do not include any indications your output is the result of a transcription."
+    "Do not include extra commentary - "
+    "ONLY include the resulting transcribed markdown.",
 )
-CANVAS_TRANSCRIPTION_PROMPT = get_string(
-    "CANVAS_TRANSCRIPTION_PROMPT",
-    """Transcribe the contents of this file into markdown.
-    Do not include anything but the markdown content in your response""",
-)
+# Do not OCR if the PDF has exceeds this many pages
+OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
+
+# OCR the entire page if the density of math formulas exceeds this threshold
+OCR_MATH_DENSITY_THRESHOLD = get_int(name="OCR_MATH_DENSITY_THRESHOLD", default=5)
+OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
+
+
 # More MIT URLs
 SEE_API_URL = get_string("SEE_API_URL", None)
 SEE_API_ACCESS_TOKEN_URL = get_string("SEE_API_ACCESS_TOKEN_URL", None)

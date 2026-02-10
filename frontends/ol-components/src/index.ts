@@ -84,6 +84,8 @@ export type { TabPanelProps } from "@mui/lab/TabPanel"
 export { default as Toolbar } from "@mui/material/Toolbar"
 export type { ToolbarProps } from "@mui/material/Toolbar"
 
+export { default as Avatar } from "@mui/material/Avatar"
+
 // Mui Form Inputs
 export { default as Autocomplete } from "@mui/material/Autocomplete"
 export type { AutocompleteProps } from "@mui/material/Autocomplete"
@@ -109,6 +111,7 @@ export { default as FormGroup } from "@mui/material/FormGroup"
 export { default as Slider } from "@mui/material/Slider"
 
 export * from "./components/BannerPage/BannerPage"
+export * from "./components/BaseLearningResourceCard/BaseLearningResourceCard"
 export * from "./components/Breadcrumbs/Breadcrumbs"
 export * from "./components/Card/Card"
 export * from "./components/Card/ListCardCondensed"
@@ -168,10 +171,12 @@ export type { LinkProps } from "./components/Link/Link"
 
 export { pxToRem } from "./components/ThemeProvider/typography"
 export * from "./components/ThemeProvider/MITLearnGlobalStyles"
+export {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+} from "./components/ThemeProvider/MITLearnGlobalStyles"
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
-
-export * from "./components/TiptapEditor"
 
 // /**
 //  * @deprecated Please use component from @mitodl/smoot-design instead

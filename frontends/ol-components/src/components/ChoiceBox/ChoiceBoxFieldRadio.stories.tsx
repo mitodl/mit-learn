@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
+import type { Meta, StoryObj } from "@storybook/nextjs"
 import { faker } from "@faker-js/faker/locale/en"
 import { RadioChoiceBoxField } from "./ChoiceBoxField"
 import type { RadioChoiceBoxFieldProps } from "./ChoiceBoxField"

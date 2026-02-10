@@ -1,6 +1,5 @@
 """Tests for opensearch serializers"""
 
-from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -24,19 +23,13 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import CourseNumberType
 from learning_resources.factories import (
-    CourseFactory,
     LearningPathFactory,
-    LearningPathRelationshipFactory,
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
-    UserListFactory,
-    UserListRelationshipFactory,
 )
 from learning_resources.models import LearningResource
 from learning_resources.serializers import (
     LearningResourceSerializer,
-    MicroLearningPathRelationshipSerializer,
-    MicroUserListRelationshipSerializer,
 )
 from learning_resources_search import serializers
 from learning_resources_search.api import gen_content_file_id
@@ -51,7 +44,6 @@ from learning_resources_search.serializers import (
     get_resource_age_date,
     serialize_percolate_query,
 )
-from main.factories import UserFactory
 
 response_test_raw_data_1 = {
     "took": 8,
@@ -157,6 +149,8 @@ response_test_raw_data_1 = {
                     "resource_type": "course",
                     "platform": {"name": "globalalumni"},
                     "is_learning_material": False,
+                    "next_start_date": "2023-09-26T06:00:00Z",
+                    "best_run_id": 633,
                 },
             }
         ],
@@ -302,6 +296,8 @@ response_test_response_1 = {
             "resource_type": "course",
             "platform": {"name": "globalalumni"},
             "is_learning_material": False,
+            "next_start_date": "2023-09-26T06:00:00Z",
+            "best_run_id": 633,
         }
     ],
     "metadata": {
@@ -377,6 +373,8 @@ response_test_raw_data_2 = {
                     "course_feature": [],
                     "is_learning_material": True,
                     "user_list_parents": [],
+                    "next_start_date": None,
+                    "best_run_id": None,
                 },
             }
         ],
@@ -551,6 +549,8 @@ response_test_response_2 = {
             "course_feature": [],
             "is_learning_material": True,
             "user_list_parents": [],
+            "next_start_date": None,
+            "best_run_id": None,
         }
     ],
     "metadata": {
@@ -1044,63 +1044,6 @@ def test_learning_resources_search_response_serializer(
     settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
     request = get_request_object(learning_resources_search_view.url)
 
-    assert JSONRenderer().render(
-        LearningResourcesSearchResponseSerializer(
-            raw_data, context={"request": request}
-        ).data
-    ) == JSONRenderer().render(response)
-
-
-@pytest.mark.parametrize(
-    ("is_authenticated", "is_admin", "in_path", "in_list"),
-    [
-        (True, True, True, False),
-        (True, False, False, True),
-        (True, False, True, True),
-        (True, True, False, False),
-        (False, False, False, False),
-    ],
-)
-@pytest.mark.django_db
-def test_learning_resources_search_response_serializer_user_parents(  # noqa: PLR0913
-    settings,
-    learning_resources_search_view,
-    is_authenticated,
-    is_admin,
-    in_path,
-    in_list,
-):
-    """
-    Test that the search response serializer processes
-    inserts learningpath/userlist parents into results as expected
-    """
-
-    course = CourseFactory.create().learning_resource
-    user = UserFactory.create(is_superuser=is_admin)
-    lp_item = LearningPathRelationshipFactory.create(child=course) if in_path else None
-    ul = UserListFactory.create(author=user)
-    ul_item = (
-        UserListRelationshipFactory.create(parent=ul, child=course) if in_list else None
-    )
-
-    settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
-    raw_data = deepcopy(response_test_raw_data_2)
-    raw_data["hits"]["hits"][0]["_id"] = f"{course.id}"
-    raw_data["hits"]["hits"][0]["_source"]["id"] = course.id
-
-    response = deepcopy(response_test_response_2)
-    response["results"][0]["id"] = course.id
-    request = get_request_object(learning_resources_search_view.url)
-    if is_authenticated:
-        request.user = user
-        if in_path and is_admin:
-            response["results"][0]["learning_path_parents"] = [
-                MicroLearningPathRelationshipSerializer(instance=lp_item).data
-            ]
-        if in_list:
-            response["results"][0]["user_list_parents"] = [
-                MicroUserListRelationshipSerializer(instance=ul_item).data
-            ]
     assert JSONRenderer().render(
         LearningResourcesSearchResponseSerializer(
             raw_data, context={"request": request}

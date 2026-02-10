@@ -12,23 +12,25 @@ export const generateMetadata = async (
   props: PageProps<"/programs/[readable_id]">,
 ) => {
   const params = await props.params
+  const readableId = decodeURIComponent(params.readable_id)
 
   return safeGenerateMetadata(async () => {
     const queryClient = getQueryClient()
 
-    const data = await queryClient.fetchQuery(
-      pagesQueries.programPages(decodeURIComponent(params.readable_id)),
+    const programPages = await queryClient.fetchQuery(
+      pagesQueries.programPages(readableId),
     )
 
-    if (data.items.length === 0) {
+    if (programPages.items.length === 0) {
       notFound()
     }
-    const [program] = data.items
+    const [program] = programPages.items
 
     // Note: feature_image.src is relative to mitxonline root.
     const image = program.feature_image
       ? program.program_details.page.feature_image_src
       : DEFAULT_RESOURCE_IMG
+
     return standardizeMetadata({
       title: program.title,
       image,
@@ -40,19 +42,23 @@ export const generateMetadata = async (
 const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
-  /**
-   * TODO: Consider removing react-query from this page
-   * fetching via client, and calling notFound() if data missing.
-   * This approach blocked by wagtail api requiring auth.
-   */
+
   const queryClient = getQueryClient()
 
-  await Promise.all([
-    queryClient.prefetchQuery(pagesQueries.programPages(readableId)),
-    queryClient.prefetchQuery(
+  /**
+   * queryClient.fetchQueryOr404 cannot be used here as the Wagtail Pages and
+   * MITxOnline Programs API are list endpoints that also 200 with empty results.
+   */
+  const [programPages, programs] = await Promise.all([
+    queryClient.fetchQuery(pagesQueries.programPages(readableId)),
+    queryClient.fetchQuery(
       programsQueries.programsList({ readable_id: readableId }),
     ),
   ])
+
+  if (programPages.items.length === 0 || programs.results.length === 0) {
+    notFound()
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

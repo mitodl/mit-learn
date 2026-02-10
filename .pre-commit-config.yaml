@@ -7,6 +7,7 @@ ci:
     # Because these are local hooks it seems like they won't easily run in pre-commit CI
     - eslint
     - style-lint
+    - check-vendor-directory
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -40,12 +41,23 @@ repos:
             markdown,
             html,
           ]
+      - id: check-vendor-directory
+        name: check-vendor-directory
+        description: "Prevent commits to vendor directories"
+        entry: >
+          bash -c 'if git diff --cached --name-only | grep -q "/vendor/"; then
+          echo "ERROR: Direct commits to vendor directories are not allowed. These directories contain external dependencies.";
+          echo "If you need to update vendor code, use: SKIP=check-vendor-directory git commit -m \"your message\"";
+          exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
   - repo: https://github.com/scop/pre-commit-shfmt
     rev: v3.12.0-2
     hooks:
       - id: shfmt
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
         args: [--format, parsable, -d, relaxed]
@@ -78,7 +90,7 @@ repos:
           - "config/keycloak/realms/ol-local-realm.json"
         additional_dependencies: ["gibberish-detector"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.14.1"
+    rev: "v0.14.13"
     hooks:
       - id: ruff-format
       - id: ruff

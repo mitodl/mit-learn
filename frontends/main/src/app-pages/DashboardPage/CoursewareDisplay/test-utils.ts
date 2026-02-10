@@ -1,11 +1,5 @@
 import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides, type PartialFactory } from "ol-test-utilities"
-import {
-  DashboardResourceType,
-  EnrollmentMode,
-  EnrollmentStatus,
-} from "./types"
-import type { DashboardCourse } from "./types"
 import * as u from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -15,7 +9,6 @@ import {
   ContractPage,
   CourseRunEnrollmentRequestV2,
   CourseWithCourseRunsSerializerV2,
-  IntegrationTypeEnum,
   OrganizationPage,
   User,
   V2Program,
@@ -28,30 +21,18 @@ const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
-const dashboardCourse: PartialFactory<DashboardCourse> = (...overrides) => {
-  return mergeOverrides<DashboardCourse>(
-    {
-      key: faker.string.uuid(),
-      coursewareId: faker.string.uuid(),
-      type: DashboardResourceType.Course,
-      title: faker.commerce.productName(),
-      marketingUrl: faker.internet.url(),
-      run: {
-        startDate: faker.date.past().toISOString(),
-        endDate: faker.date.future().toISOString(),
-        certificateUpgradeDeadline: faker.date.future().toISOString(),
-        certificateUpgradePrice: faker.commerce.price(),
-        canUpgrade: true,
-        coursewareUrl: faker.internet.url(),
-      },
-      enrollment: {
-        id: faker.number.int(),
-        status: faker.helpers.arrayElement(Object.values(EnrollmentStatus)),
-        mode: faker.helpers.arrayElement(Object.values(EnrollmentMode)),
-      },
-    },
-    ...overrides,
-  )
+const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
+  ...overrides
+) => {
+  // Use the existing factory that creates proper CourseWithCourseRunsSerializerV2 objects
+  const course = factories.courses.course()
+  return mergeOverrides<CourseWithCourseRunsSerializerV2>(course, ...overrides)
+}
+
+const dashboardProgram: PartialFactory<V2Program> = (...overrides) => {
+  // Use the existing factory that creates proper V2Program objects
+  const program = makeProgram()
+  return mergeOverrides<V2Program>(program, ...overrides)
 }
 
 const setupEnrollments = (includeExpired: boolean) => {
@@ -128,10 +109,44 @@ const setupEnrollments = (includeExpired: boolean) => {
 const setupProgramsAndCourses = () => {
   const user = u.factories.user.user()
   const orgX = factories.organizations.organization({ name: "Org X" })
+
   const contract = makeContract({
     organization: orgX.id,
     name: "Org X Contract",
+    programs: [], // Will be set after creating programs
   })
+
+  const coursesA = makeCourses({ count: 4 })
+  const coursesB = makeCourses({ count: 3 })
+
+  // Add contract IDs to course runs
+  coursesA.results = coursesA.results.map((course) => ({
+    ...course,
+    courseruns: course.courseruns.map((run) => ({
+      ...run,
+      b2b_contract: contract.id,
+      is_enrollable: true,
+    })),
+  }))
+  coursesB.results = coursesB.results.map((course) => ({
+    ...course,
+    courseruns: course.courseruns.map((run) => ({
+      ...run,
+      b2b_contract: contract.id,
+      is_enrollable: true,
+    })),
+  }))
+
+  const programA = makeProgram({
+    courses: coursesA.results.map((c) => c.id),
+  })
+  const programB = makeProgram({
+    courses: coursesB.results.map((c) => c.id),
+  })
+
+  // Now set the programs on the contract
+  contract.programs = [programA.id, programB.id]
+
   orgX.contracts = [contract]
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
@@ -139,14 +154,6 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(urls.organization.organizationList(""), orgX)
   setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
-  const coursesA = makeCourses({ count: 4 })
-  const coursesB = makeCourses({ count: 3 })
-  const programA = makeProgram({
-    courses: coursesA.results.map((c) => c.id),
-  })
-  const programB = makeProgram({
-    courses: coursesB.results.map((c) => c.id),
-  })
   const programCollection = makeProgramCollection({
     title: "Program Collection",
     programs: [],
@@ -155,6 +162,15 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
     results: [programA, programB],
   })
+  setMockResponse.get(
+    urls.programs.programsList({
+      org_id: orgX.id,
+      contract_id: contract.id,
+    }),
+    {
+      results: [programA, programB],
+    },
+  )
   setMockResponse.get(urls.programCollections.programCollectionsList(), {
     results: [programCollection],
   })
@@ -168,8 +184,18 @@ const setupProgramsAndCourses = () => {
   )
   setMockResponse.get(
     urls.courses.coursesList({
-      id: programA.courses,
       org_id: orgX.id,
+      contract_id: contract.id,
+      page_size: 200,
+    }),
+    {
+      results: [...coursesA.results, ...coursesB.results],
+    },
+  )
+  setMockResponse.get(
+    urls.courses.coursesList({
+      id: programA.courses,
+      contract_id: contract.id,
       page_size: 30,
     }),
     {
@@ -179,7 +205,7 @@ const setupProgramsAndCourses = () => {
   setMockResponse.get(
     urls.courses.coursesList({
       id: programB.courses,
-      org_id: orgX.id,
+      contract_id: contract.id,
       page_size: 30,
     }),
     {
@@ -266,8 +292,10 @@ function setupOrgDashboardMocks(
   )
 
   // Empty defaults
-  setMockResponse.get(mitxonline.urls.enrollment.enrollmentsList(), [])
-  setMockResponse.get(mitxonline.urls.programEnrollments.enrollmentsList(), [])
+  setMockResponse.get(
+    mitxonline.urls.programEnrollments.enrollmentsListV3(),
+    [],
+  )
   setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
   setMockResponse.get(
     mitxonline.urls.programCollections.programCollectionsList(),
@@ -280,15 +308,38 @@ function setupOrgDashboardMocks(
     { results: programs },
   )
 
-  programs.forEach((program) => {
+  // Mock programs query with contract filter
+  if (contracts.length > 0) {
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        org_id: org.id,
+        contract_id: contracts[0].id,
+      }),
+      { results: programs },
+    )
+
+    // Mock courses query with contract filter for program validation
     setMockResponse.get(
       mitxonline.urls.courses.coursesList({
-        id: program.courses,
         org_id: org.id,
-        page_size: 30,
+        contract_id: contracts[0].id,
+        page_size: 200,
       }),
       { results: courses },
     )
+  }
+
+  programs.forEach((program) => {
+    if (contracts.length > 0) {
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          contract_id: contracts[0].id,
+          page_size: 30,
+        }),
+        { results: courses },
+      )
+    }
   })
 }
 
@@ -298,22 +349,11 @@ function setupOrgDashboardMocks(
 const createTestContracts = (
   orgId: number,
   count: number = 1,
-): ContractPage[] => {
-  return Array.from({ length: count }, () => ({
-    id: faker.number.int(),
-    active: true,
-    contract_end: faker.date.future().toISOString(),
-    contract_start: faker.date.past().toISOString(),
-    description: faker.lorem.sentence(),
-    integration_type: IntegrationTypeEnum.NonSso,
-    name: faker.company.name(),
-    organization: orgId,
-    slug: faker.lorem.slug(),
-    membership_type: faker.helpers.arrayElement(["managed", "unmanaged"]),
-    welcome_message: faker.lorem.sentence(),
-    welcome_message_extra: faker.lorem.sentence(),
-  }))
-}
+  programs: number[] = [],
+): ContractPage[] =>
+  Array.from({ length: count }, () =>
+    makeContract({ organization: orgId, programs }),
+  )
 
 /**
  * Test utility to create courses with contract-scoped course runs
@@ -329,6 +369,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: contractIds[0], // Associated with org contract
+        is_enrollable: true,
         start_date: faker.date.future().toISOString(),
         end_date: faker.date.future().toISOString(),
         title: `${course.title} - Org Contract Run`,
@@ -338,6 +379,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: faker.number.int(), // Different contract ID
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
         end_date: faker.date.past().toISOString(),
         title: `${course.title} - Other Org Run`,
@@ -347,6 +389,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         ...course.courseruns[0],
         id: faker.number.int(),
         b2b_contract: null,
+        is_enrollable: true,
         start_date: faker.date.future().toISOString(),
         end_date: faker.date.future().toISOString(),
         title: `${course.title} - General Run`,
@@ -357,6 +400,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
 
 export {
   dashboardCourse,
+  dashboardProgram,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

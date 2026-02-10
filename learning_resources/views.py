@@ -18,6 +18,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from grpc._channel import _InactiveRpcError
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
@@ -177,8 +178,7 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
             QuerySet of LearningResource objects matching the query parameters
         """
         # Valid fields to filter by, just resource_type for now
-        user = self.request.user if hasattr(self, "request") else None
-        lr_query = LearningResource.objects.for_serialization(user=user)
+        lr_query = LearningResource.objects.for_serialization()
         if resource_type:
             lr_query = lr_query.filter(resource_type=resource_type)
         return lr_query.distinct()
@@ -304,8 +304,15 @@ class LearningResourceViewSet(
             msg = f"No LearningResource matches the given id {pk}."
             raise Http404(msg) from dne
         resource_data = serialize_learning_resource_for_update(learning_resource)
-        similar = get_similar_resources(resource_data, limit, 2, 3, use_embeddings=True)
-        return Response(LearningResourceSerializer(list(similar), many=True).data)
+        try:
+            similar = get_similar_resources(
+                resource_data, limit, 2, 3, use_embeddings=True
+            )
+            return Response(LearningResourceSerializer(list(similar), many=True).data)
+        except _InactiveRpcError as ircp:
+            msg = f"Similar resources RPC error for resource {pk}: {ircp.details()}"
+            log.warning(msg)
+            raise Http404(msg) from ircp
 
     @extend_schema(
         summary="Get learning resources summary",
