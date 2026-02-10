@@ -146,7 +146,7 @@ describe.each([
     expect(titleText).toBeInTheDocument()
   })
 
-  test("It shows course title as link if not enrolled but has B2B contract", async () => {
+  test("It shows course title as clickable text if not enrolled but has B2B contract", async () => {
     setupUserApis()
     const b2bContractId = faker.number.int()
     const coursewareUrl = faker.internet.url()
@@ -160,18 +160,19 @@ describe.each([
       ],
       next_run_id: null, // Ensure getBestRun uses the single run
     })
-    // No enrollment passed, but B2B contract in run allows access
+    // No enrollment passed, B2B contract requires enrollment first
     renderWithProviders(
       <DashboardCard resource={{ type: DashboardType.Course, data: course }} />,
     )
 
     const card = getCard()
 
-    // Should be a link for B2B courses
-    const courseLink = within(card).getByRole("link", {
-      name: course.title,
-    })
-    expect(courseLink).toHaveAttribute("href", coursewareUrl)
+    // Should be clickable text, not a link (enrollment happens on click)
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
   })
 
   test("Accepts a classname", () => {
@@ -1110,7 +1111,7 @@ describe.each([
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : within(card).getByRole("link", { name: course.title })
+          : within(card).getByText(course.title)
 
       await user.click(triggerElement)
 
@@ -1149,7 +1150,7 @@ describe.each([
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : within(card).getByRole("link", { name: course.title })
+          : within(card).getByText(course.title)
 
       await user.click(triggerElement)
 

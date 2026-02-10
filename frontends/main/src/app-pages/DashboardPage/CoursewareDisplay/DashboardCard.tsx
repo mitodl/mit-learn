@@ -686,10 +686,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     : true
   const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
 
-  // Title link logic
   const titleHref = isAnyCourse
-    ? hasEnrolled || b2bContractId
-      ? coursewareUrl
+    ? hasEnrolled
+      ? (buttonHref ?? coursewareUrl)
       : undefined
     : resourceIsProgramEnrollment
       ? programView(resource.data.program.id)
@@ -704,8 +703,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             : resourceIsCourseRunEnrollment
               ? resource.data.run.courseware_id
               : undefined
-          if (!readableId || !coursewareUrl) return
-          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+          const targetUrl = buttonHref ?? coursewareUrl
+          if (!readableId || !targetUrl) return
+          handleEnrollment(targetUrl, readableId, !!b2bContractId)
         }
       : undefined
 
@@ -719,8 +719,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             : resourceIsCourseRunEnrollment
               ? resource.data.run.courseware_id
               : undefined
-          if (!readableId || !coursewareUrl) return
-          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+          const targetUrl = buttonHref ?? coursewareUrl
+          if (!readableId || !targetUrl) return
+          handleEnrollment(targetUrl, readableId, !!b2bContractId)
         }
       : buttonClick
   // Build sections
