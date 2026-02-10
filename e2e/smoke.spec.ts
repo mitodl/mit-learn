@@ -63,7 +63,7 @@ const programPageB2CTestInfo = {
     password: "admin",
     loginFunc: localLogin,
     certificateSelectionText:
-      "PLACEHOLDER - Demonstration Course in Program (Elective) - course-v1:PLACEHOLDER+COURSE_IN_PROGRAM_ELECTIVE_PLACEHOLDER_Demo_Course_in_Program_Elective",
+      "PLACEHOLDER - Demonstration Course in Program (Elective) - COURSE_IN_PROGRAM_ELECTIVE",
   },
 }
 
@@ -76,7 +76,7 @@ const coursePageB2CTestInfo = {
     certPrice: "Certificate Track: $1,000.00",
   },
   [LOCAL_DEFAULT]: {
-    url: "/courses/course-v1:PLACEHOLDER+COURSE+IN+PROGRAM+ELECTIVE",
+    url: "/courses/course-v1:PLACEHOLDER+COURSE_IN_PROGRAM_ELECTIVE",
     title: "PLACEHOLDER - Demonstration Course in Program (Elective)",
     description:
       "PLACEHOLDER - In this engineering course, we will explore the processing and structure of cellular solids as they are created from polymers, metals, ceramics, glasses and composites.",
@@ -113,7 +113,7 @@ test.describe("Smoke Test - Program Page B2C Logged In", () => {
       password,
       loginFunc,
       certificateSelectionText,
-    } = await getProgramPageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
+    } = await getProgramPageB2CTestInfo(testInfo.project.use.baseURL)
     await loginFunc(page, email, password)
     await page.goto(url)
 
@@ -157,7 +157,7 @@ test.describe("Smoke Test - Course Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
     // Log in, visit a course page attempt to enroll in a course run
     const { url, title, description, certPrice } =
-      await getCoursePageB2CTestInfo(testInfo.config.projects[0].use.baseURL)
+      await getCoursePageB2CTestInfo(testInfo.project.use.baseURL)
     await page.goto(url)
 
     await expect(page.locator("main")).toBeVisible()
