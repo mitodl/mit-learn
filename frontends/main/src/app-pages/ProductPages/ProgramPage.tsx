@@ -12,7 +12,8 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
 import InstructorsSection from "./InstructorsSection"
-import RawHTML, { UnstyledRawHTML } from "./RawHTML"
+import RawHTML from "./RawHTML"
+import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate, {
   HeadingData,
