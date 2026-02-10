@@ -5,14 +5,12 @@ import { ArticleByLineInfoBarContent } from "./ArticleByLineInfoBar"
 const ArticleByLineInfoBarViewer = () => {
   const article = useArticle()
 
-  const author = article?.user ?? null
   const publishedDate = article?.is_published ? article?.created_on : null
   const content = article?.content
   const authorName = article?.author_name ?? null
 
   return (
     <ArticleByLineInfoBarContent
-      author={author}
       publishedDate={publishedDate}
       content={content}
       isEditable={false}

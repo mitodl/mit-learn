@@ -1,4 +1,4 @@
-import React, { HTMLAttributes } from "react"
+import React, { HTMLAttributes, useState } from "react"
 import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
@@ -9,21 +9,22 @@ import {
   RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
+  RiMenuAddLine,
 } from "@remixicon/react"
-import { formatDate, NoSSR, pluralize } from "ol-utilities"
+import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
   V2Program,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
-import { LearningResource } from "api"
 import {
   canUpgradeRun,
   mitxonlineUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
+import { programPageView } from "@/common/urls"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -66,82 +67,123 @@ const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
   />
 )
 
-const InfoLabel = styled.span<{ underline?: boolean }>(
-  ({ theme, underline }) => [
-    {
-      fontWeight: theme.typography.fontWeightBold,
-    },
-    underline && { textDecoration: "underline" },
-  ],
-)
-const InfoLabelValue: React.FC<{ label: string; value: React.ReactNode }> = ({
-  label,
-  value,
-}) =>
+const InfoLabel = styled.span<{
+  underline?: boolean
+  variant?: "light" | "normal"
+}>(({ theme, underline, variant = "normal" }) => [
+  variant === "normal" && {
+    fontWeight: theme.typography.fontWeightBold,
+  },
+  variant === "light" && {
+    color: theme.custom.colors.silverGrayDark,
+  },
+  underline && { textDecoration: "underline" },
+])
+const InfoLabelValue: React.FC<{
+  label: string
+  value: React.ReactNode
+  labelVariant?: "light" | "normal"
+}> = ({ label, value, labelVariant }) =>
   value ? (
     <span>
-      <InfoLabel>{label}</InfoLabel>
+      <InfoLabel variant={labelVariant}>{label}</InfoLabel>
       {": "}
       {value}
     </span>
   ) : null
 
-const getStartDate = (
-  course: CourseWithCourseRunsSerializerV2,
-  run: CourseRunV2,
-) => {
-  if (course.availability === "anytime") return "Anytime"
-  if (!run?.start_date) return null
+const dateLoading = (
+  <Skeleton variant="text" sx={{ display: "inline-block" }} width="80px" />
+)
+
+const runStartsAnytime = (run: CourseRunV2) => {
   return (
-    <NoSSR
-      onSSR={
-        <Skeleton
-          variant="text"
-          sx={{ display: "inline-block" }}
-          width="80px"
-        />
-      }
-    >
-      {formatDate(run.start_date)}
-    </NoSSR>
-  )
-}
-const getEndDate = (run: CourseRunV2) => {
-  if (!run.end_date) return null
-  return (
-    <NoSSR
-      onSSR={
-        <Skeleton
-          variant="text"
-          sx={{ display: "inline-block" }}
-          width="80px"
-        />
-      }
-    >
-      {formatDate(run.end_date)}
-    </NoSSR>
+    !run.is_archived &&
+    run.is_self_paced &&
+    run.start_date &&
+    isInPast(run.start_date)
   )
 }
 
 type CourseInfoRowProps = {
   course: CourseWithCourseRunsSerializerV2
-  nextRun: CourseRunV2
+  nextRun?: CourseRunV2
 } & HTMLAttributes<HTMLDivElement>
-const CourseDatesRow: React.FC<CourseInfoRowProps> = ({
+type NeedsNextRun = { nextRun: CourseRunV2 }
+const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   course,
   nextRun,
   ...others
 }) => {
-  const starts = getStartDate(course, nextRun)
-  const ends = getEndDate(nextRun)
-  if (!starts) return null
+  const [expanded, setExpanded] = useState(false)
+  const enrollable = course.courseruns
+    .filter((cr) => cr.is_enrollable)
+    .sort((a, b) => {
+      if (!a.start_date || !b.start_date) return 0
+      // Otherwise sort by start date
+      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+    })
+
+  const manyDates = enrollable.length > 1
+
   return (
     <InfoRow {...others}>
       <RiCalendarLine aria-hidden="true" />
-      <InfoRowInner>
-        <InfoLabelValue label="Start" value={starts} />
-        <InfoLabelValue label="End" value={ends} />
-      </InfoRowInner>
+      <Stack gap="16px" width="100%">
+        {manyDates ? (
+          <InfoRowInner>
+            <InfoLabel>Dates Available</InfoLabel>
+            <UnderlinedLink
+              target="_blank"
+              rel="noopener noreferrer"
+              color="black"
+              href=""
+              role="button"
+              onClick={(event) => {
+                event.preventDefault()
+                setExpanded((current) => !current)
+              }}
+            >
+              {expanded ? "Show Less" : "More Dates"}
+            </UnderlinedLink>
+          </InfoRowInner>
+        ) : null}
+        {enrollable
+          .filter((cr) => expanded || cr.id === course.next_run_id)
+          .filter((cr) => cr.start_date)
+          .map((cr) => {
+            const anytime = runStartsAnytime(cr)
+            const labelVariant = manyDates ? "light" : "normal"
+            return (
+              <Stack
+                key={cr.id}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                data-testid="date-entry"
+              >
+                <InfoLabelValue
+                  label="Start"
+                  value={
+                    anytime ? (
+                      "Anytime"
+                    ) : (
+                      <LocalDate onSSR={dateLoading} date={cr.start_date} />
+                    )
+                  }
+                  labelVariant={labelVariant}
+                />
+                {cr.end_date ? (
+                  <InfoLabelValue
+                    label="End"
+                    value={<LocalDate onSSR={dateLoading} date={cr.end_date} />}
+                    labelVariant={labelVariant}
+                  />
+                ) : null}
+              </Stack>
+            )
+          })}
+      </Stack>
     </InfoRow>
   )
 }
@@ -194,26 +236,33 @@ const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   )
 }
 
+const SELF_PACED = "self_paced"
+const INSTRUCTOR_PACED = "instructor_paced"
+
 const PACE_DATA = {
-  instructor_paced: {
+  [INSTRUCTOR_PACED]: {
     label: "Instructor-Paced",
     description:
       "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
   },
-  self_paced: {
+  [SELF_PACED]: {
     label: "Self-Paced",
     description:
       "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
     href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
   },
 }
-const CoursePaceRow: React.FC<CourseInfoRowProps> = ({
+
+const getCourseRunPacing = (run: CourseRunV2) => {
+  return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
+}
+const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   nextRun,
   ...others
 }) => {
-  const isSelfPaced = nextRun.is_self_paced || nextRun.is_archived
-  const pace = PACE_DATA[isSelfPaced ? "self_paced" : "instructor_paced"]
+  const paceCode = getCourseRunPacing(nextRun)
+  const pace = PACE_DATA[paceCode]
 
   return (
     <InfoRow {...others}>
@@ -283,8 +332,8 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
   nextRun,
   course,
 }) => {
-  const canUpgrade = canUpgradeRun(nextRun)
-  const product = nextRun.products[0]
+  const canUpgrade = nextRun ? canUpgradeRun(nextRun) : false
+  const product = nextRun?.products[0]
   const hasFinancialAid = !!(
     course?.page.financial_assistance_form_url && product
   )
@@ -292,11 +341,14 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
     enabled: canUpgrade && hasFinancialAid,
   })
-  const price = canUpgrade
-    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
-    : null
+  const price =
+    canUpgrade && product
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      : null
 
-  const upgradeDeadline = nextRun.is_archived ? null : nextRun.upgrade_deadline
+  const upgradeDeadline = nextRun?.is_archived
+    ? null
+    : nextRun?.upgrade_deadline
   return (
     <CertificateBoxRoot>
       {price ? (
@@ -378,6 +430,33 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
+const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
+  course,
+  ...others
+}) => {
+  if (!course.programs || course.programs.length === 0) return null
+  const label = `Part of the following ${pluralize("program", course.programs.length)}`
+  return (
+    <InfoRow {...others}>
+      <RiMenuAddLine aria-hidden="true" />
+      <InfoRowInner>
+        <Stack gap="4px">
+          <InfoLabel>{label}</InfoLabel>
+          {course.programs.map((p) => (
+            <UnderlinedLink
+              color="black"
+              key={p.readable_id}
+              href={programPageView(p.readable_id)}
+            >
+              {p.title}
+            </UnderlinedLink>
+          ))}
+        </Stack>
+      </InfoRowInner>
+    </InfoRow>
+  )
+}
+
 const SidebarSummaryRoot = styled.section(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
@@ -399,6 +478,7 @@ enum TestIds {
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
   CertificateTrackRow = "certificate-track-row",
+  CourseInProgramsRow = "course-in-programs-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -428,37 +508,45 @@ const CourseSummary: React.FC<{
         <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
+        <Stack gap="8px">
+          {enrollButton}
+          {!nextRun ? (
+            <Alert severity="warning">
+              No sessions of this course are currently open for enrollment. More
+              sessions may be added in the future.
+            </Alert>
+          ) : null}
+          {nextRun?.is_archived ? <ArchivedAlert /> : null}
+        </Stack>
         {nextRun ? (
-          <>
-            {enrollButton}
-            {nextRun.is_archived ? <ArchivedAlert /> : null}
-            <CourseDatesRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.DatesRow}
-            />
-            <CoursePaceRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.PaceRow}
-            />
-            <CourseDurationRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.DurationRow}
-            />
-            <CoursePriceRow
-              course={course}
-              nextRun={nextRun}
-              data-testid={TestIds.PriceRow}
-            />
-          </>
-        ) : (
-          <Alert severity="warning">
-            No sessions of this course are currently open for enrollment. More
-            sessions may be added in the future.
-          </Alert>
-        )}
+          <CourseDatesRow
+            course={course}
+            nextRun={nextRun}
+            data-testid={TestIds.DatesRow}
+          />
+        ) : null}
+        {nextRun ? (
+          <CoursePaceRow
+            course={course}
+            nextRun={nextRun}
+            data-testid={TestIds.PaceRow}
+          />
+        ) : null}
+        <CourseDurationRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.DurationRow}
+        />
+        <CoursePriceRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.PriceRow}
+        />
+        <CourseInProgramsRow
+          course={course}
+          nextRun={nextRun}
+          data-testid={TestIds.CourseInProgramsRow}
+        />
       </Stack>
     </SidebarSummaryRoot>
   )
@@ -514,26 +602,39 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
   )
 }
 
+const getProgramPacing = (
+  programCourses: CourseWithCourseRunsSerializerV2[],
+) => {
+  const programCourseRuns = programCourses
+    .map((c) => c.courseruns.find((cr) => cr.id === c.next_run_id))
+    .filter((cr) => cr !== undefined)
+
+  if (programCourseRuns.length === 0) return null
+  return programCourseRuns.every((cr) => getCourseRunPacing(cr) === SELF_PACED)
+    ? SELF_PACED
+    : INSTRUCTOR_PACED
+}
+
 const ProgramPaceRow: React.FC<
-  { programResource: LearningResource | null } & HTMLAttributes<HTMLDivElement>
-> = ({ programResource, ...others }) => {
-  const paces = (programResource?.pace ?? []).sort((a, _b) =>
-    // Put instructor-paced first if both exist
-    a.code === "instructor_paced" ? -1 : 1,
-  )
-  if (!paces?.length) return null
-  const pace = PACE_DATA[paces[0].code]
+  {
+    courses?: CourseWithCourseRunsSerializerV2[]
+  } & HTMLAttributes<HTMLDivElement>
+> = ({ courses, ...others }) => {
+  const paceCode = courses?.length ? getProgramPacing(courses) : null
+  const pace = paceCode ? PACE_DATA[paceCode] : null
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
-        <LearnMoreDialog
-          buttonText="What's this?"
-          href={pace.href}
-          description={pace.description}
-          title={`What are ${pace.label} courses?`}
-        />
+        <InfoLabelValue label="Course Format" value={pace?.label} />{" "}
+        {pace ? (
+          <LearnMoreDialog
+            buttonText="What's this?"
+            href={pace.href}
+            description={pace.description}
+            title={`What are ${pace.label} courses?`}
+          />
+        ) : null}
       </InfoRowInner>
     </InfoRow>
   )
@@ -610,9 +711,12 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
 
 const ProgramSummary: React.FC<{
   program: V2Program
-  programResource: LearningResource | null
+  /**
+   * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
+   */
+  courses?: CourseWithCourseRunsSerializerV2[]
   enrollButton?: React.ReactNode
-}> = ({ program, programResource, enrollButton }) => {
+}> = ({ program, courses, enrollButton }) => {
   return (
     <SidebarSummaryRoot aria-labelledby="program-summary">
       <VisuallyHidden>
@@ -628,10 +732,7 @@ const ProgramSummary: React.FC<{
           program={program}
           data-testid={TestIds.DurationRow}
         />
-        <ProgramPaceRow
-          programResource={programResource ?? null}
-          data-testid={TestIds.PaceRow}
-        />
+        <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
         <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
       </Stack>
     </SidebarSummaryRoot>

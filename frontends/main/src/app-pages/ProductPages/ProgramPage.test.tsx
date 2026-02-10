@@ -30,12 +30,6 @@ const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
-const makeProgramResource = learnFactories.learningResources.program
-const programResourcesUrl = (readable: string) =>
-  learnUrls.learningResources.list({
-    readable_id: [readable],
-    resource_type: ["program"],
-  })
 
 const makeReqs = ({
   required = { count: 0, title: "Required Courses" },
@@ -107,14 +101,6 @@ const setupApis = ({
 
   setMockResponse.get(urls.pages.programPages(program.readable_id), {
     items: [page],
-  })
-
-  const resource = makeProgramResource({
-    id: program.id,
-    readable_id: program.readable_id,
-  })
-  setMockResponse.get(programResourcesUrl(program.readable_id), {
-    results: [resource],
   })
 
   const courses: CourseWithCourseRunsSerializerV2[] = [
@@ -397,37 +383,23 @@ describe("ProgramPage", () => {
   })
 
   test.each([
-    { courses: [], pages: [makePage()], resources: [makeProgramResource()] },
+    { courses: [], pages: [makePage()] },
     {
       courses: [makeProgram({ ...makeReqs() })],
       pages: [],
-      resources: [makeProgramResource()],
     },
-    {
-      courses: [makeProgram({ ...makeReqs() })],
-      pages: [makePage()],
-      resources: [],
-    },
-  ])(
-    "Returns 404 if no program found",
-    async ({ courses, pages, resources }) => {
-      setMockResponse.get(
-        urls.programs.programsList({ readable_id: "readable_id" }),
-        { results: courses },
-      )
-      setMockResponse.get(urls.pages.programPages("readable_id"), {
-        items: pages,
-      })
+  ])("Returns 404 if no program found", async ({ courses, pages }) => {
+    setMockResponse.get(
+      urls.programs.programsList({ readable_id: "readable_id" }),
+      { results: courses },
+    )
+    setMockResponse.get(urls.pages.programPages("readable_id"), {
+      items: pages,
+    })
 
-      //
-      setMockResponse.get(programResourcesUrl("readable_id"), {
-        results: resources,
-      })
-
-      renderWithProviders(<ProgramPage readableId="readable_id" />)
-      await waitFor(() => {
-        expect(notFound).toHaveBeenCalled()
-      })
-    },
-  )
+    renderWithProviders(<ProgramPage readableId="readable_id" />)
+    await waitFor(() => {
+      expect(notFound).toHaveBeenCalled()
+    })
+  })
 })

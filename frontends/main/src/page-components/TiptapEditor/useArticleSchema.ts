@@ -22,9 +22,11 @@ import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNo
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
+import { LearningResourceInputNode } from "./extensions/node/LearningResource/LearningResourceInputNode"
 import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
 import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
+import { MediaEmbedInputNode } from "./extensions/node/MediaEmbed/MediaEmbedInputNode"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
@@ -141,6 +143,7 @@ export const useArticleSchema = ({
       HorizontalRule,
       LearningResourceURLHandler,
       LearningResourceNode,
+      LearningResourceInputNode,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -151,6 +154,7 @@ export const useArticleSchema = ({
       Selection,
       Image,
       MediaEmbedNode,
+      MediaEmbedInputNode,
       DividerNode,
       ArticleByLineInfoBarNode,
       ImageWithCaptionNode,

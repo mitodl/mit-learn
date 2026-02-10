@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.53.4 (Released February 05, 2026)
+--------------
+
+- fix: disable DashboardCard CTA if course passed in has no enrollable runs (#2924)
+- remove learning_resource call fro program page (#2919)
+- Remove some dependencies, clean up others (#2920)
+- Some api/opensearch optimizations (#2899)
+- Upgrade to Next.js 16 (#2910)
+
 Version 0.53.3 (Released February 04, 2026)
 --------------
 

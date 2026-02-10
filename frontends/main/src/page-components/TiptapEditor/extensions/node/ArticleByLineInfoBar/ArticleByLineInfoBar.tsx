@@ -6,7 +6,6 @@ import { Container } from "ol-components"
 import { RiShareFill } from "@remixicon/react"
 import { ActionButton, TextField } from "@mitodl/smoot-design"
 import type { JSONContent } from "@tiptap/core"
-import { useUserMe } from "api/hooks/user"
 import { useArticle } from "../../../ArticleContext"
 import { calculateReadTime } from "../../utils"
 import SharePopover from "@/components/SharePopover/SharePopover"
@@ -61,10 +60,11 @@ const AuthorInput = styled(TextField)(({ theme }) => ({
   "& .MuiInputBase-root": {
     ...theme.typography.body2,
     color: theme.custom.colors.black,
-    padding: "4px 8px",
+    padding: "2px 8px",
     width: "100%",
     border: "none",
     outline: "none",
+    alignItems: "start",
 
     "&.Mui-focused": {
       outline: "none",
@@ -85,13 +85,7 @@ const AuthorInput = styled(TextField)(({ theme }) => ({
   width: "300px",
 }))
 
-interface Author {
-  first_name?: string | null
-  last_name?: string | null
-}
-
 interface ArticleByLineInfoBarContentProps {
-  author: Author | null
   publishedDate: string | null
   content: JSONContent | null | undefined
   isEditable?: boolean
@@ -100,7 +94,6 @@ interface ArticleByLineInfoBarContentProps {
 }
 
 export const ArticleByLineInfoBarContent = ({
-  author,
   publishedDate,
   content,
   isEditable = false,
@@ -115,8 +108,7 @@ export const ArticleByLineInfoBarContent = ({
   const readTime = calculateReadTime(content)
 
   // Determine display name: use authorName if provided, otherwise fall back to author's full name
-  const displayAuthorName =
-    authorName || (author ? `${author.first_name} ${author.last_name}` : "")
+  const displayAuthorName = authorName || ""
 
   return (
     <StyledWrapper>
@@ -127,7 +119,7 @@ export const ArticleByLineInfoBarContent = ({
         onClose={() => setShareOpen(false)}
         pageUrl={`${NEXT_PUBLIC_ORIGIN}/articles/${article?.slug}`}
       />
-      <InnerContainer noAuthor={!author && !isEditable}>
+      <InnerContainer noAuthor={!displayAuthorName && !isEditable}>
         {(displayAuthorName || isEditable) && (
           <InfoContainer>
             {isEditable ? (
@@ -179,10 +171,6 @@ const ArticleByLineInfoBar = ({
   updateAttributes,
 }: ReactNodeViewProps) => {
   const article = useArticle()
-  const { data: user } = useUserMe()
-
-  const author =
-    (editor?.isEditable && !article?.user ? user : article?.user) ?? null
 
   const publishedDate = article?.is_published ? article?.created_on : null
 
@@ -213,7 +201,6 @@ const ArticleByLineInfoBar = ({
   return (
     <NodeViewWrapper>
       <ArticleByLineInfoBarContent
-        author={author}
         publishedDate={publishedDate}
         content={content}
         isEditable={editor?.isEditable}
