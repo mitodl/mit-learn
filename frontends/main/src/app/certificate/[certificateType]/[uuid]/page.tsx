@@ -8,7 +8,7 @@ import { notFound } from "next/navigation"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
 
-const { NEXT_PUBLIC_ORIGIN } = process.env
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 enum CertificateType {
   Course = "course",

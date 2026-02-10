@@ -8,7 +8,7 @@ import Script from "next/script"
 
 import "./GlobalStyles"
 
-const { NEXT_PUBLIC_ORIGIN } = process.env
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 /**
  * As part of the root layout, this metadata object is site-wide defaults
