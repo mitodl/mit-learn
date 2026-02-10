@@ -77,17 +77,6 @@ const setupUserApis = () => {
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
 }
 
-const setupProgramDetailApi = (programId: number, marketingUrl?: string) => {
-  const program = mitxonline.factories.programs.program({
-    id: programId,
-    page: marketingUrl ? { page_url: marketingUrl } : undefined,
-  })
-  setMockResponse.get(
-    mitxonline.urls.programs.programDetail(programId),
-    program,
-  )
-}
-
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
   { display: "mobile", testId: "enrollment-card-mobile" },
@@ -1246,7 +1235,6 @@ describe.each([
             title: "Test Program Title",
           }),
         })
-      setupProgramDetailApi(programEnrollment.program.id)
 
       renderWithProviders(
         <DashboardCard
@@ -1270,7 +1258,6 @@ describe.each([
             id: 123,
           }),
         })
-      setupProgramDetailApi(123)
 
       renderWithProviders(
         <DashboardCard
@@ -1296,7 +1283,6 @@ describe.each([
             title: "Test Program",
           }),
         })
-      setupProgramDetailApi(programEnrollment.program.id)
 
       renderWithProviders(
         <DashboardCard
@@ -1413,16 +1399,17 @@ describe.each([
       )
     })
 
-    test("Context menu for program enrollment without marketing URL does not show View Details when feature flag is disabled", async () => {
+    test("Context menu for program enrollment uses constructed marketing URL when feature flag is disabled", async () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(false)
       setupUserApis()
 
-      const program = mitxonline.factories.programs.simpleProgram()
+      const program = mitxonline.factories.programs.simpleProgram({
+        readable_id: "test-program-123",
+      })
       const programEnrollment =
         mitxonline.factories.enrollment.programEnrollmentV3({
           program,
         })
-      setupProgramDetailApi(program.id)
 
       renderWithProviders(
         <DashboardCard
@@ -1434,12 +1421,20 @@ describe.each([
       )
 
       const card = getCard()
-      // V3SimpleProgram doesn't have marketing URLs, so there are no menu items
-      // and the context menu button should be hidden
-      const contextMenuButton = within(card).queryByRole("button", {
+      const contextMenuButton = within(card).getByRole("button", {
         name: "More options",
       })
-      expect(contextMenuButton).not.toBeInTheDocument()
+      await user.click(contextMenuButton)
+
+      const viewDetailsItem = screen.getByRole("menuitem", {
+        name: "View Program Details",
+      })
+
+      // Should have constructed marketing URL
+      expect(viewDetailsItem).toHaveAttribute(
+        "href",
+        "http://mitxonline.odl.local:8065/programs/test-program-123",
+      )
     })
 
     test("Context menu for course enrollment without marketing URL shows View Details only when flag is enabled", async () => {
