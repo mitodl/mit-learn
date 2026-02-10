@@ -77,6 +77,17 @@ const setupUserApis = () => {
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
 }
 
+const setupProgramDetailApi = (programId: number, marketingUrl?: string) => {
+  const program = mitxonline.factories.programs.program({
+    id: programId,
+    page: marketingUrl ? { page_url: marketingUrl } : undefined,
+  })
+  setMockResponse.get(
+    mitxonline.urls.programs.programDetail(programId),
+    program,
+  )
+}
+
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
   { display: "mobile", testId: "enrollment-card-mobile" },
@@ -1235,6 +1246,7 @@ describe.each([
             title: "Test Program Title",
           }),
         })
+      setupProgramDetailApi(programEnrollment.program.id)
 
       renderWithProviders(
         <DashboardCard
@@ -1258,6 +1270,7 @@ describe.each([
             id: 123,
           }),
         })
+      setupProgramDetailApi(123)
 
       renderWithProviders(
         <DashboardCard
@@ -1283,6 +1296,7 @@ describe.each([
             title: "Test Program",
           }),
         })
+      setupProgramDetailApi(programEnrollment.program.id)
 
       renderWithProviders(
         <DashboardCard
@@ -1408,6 +1422,7 @@ describe.each([
         mitxonline.factories.enrollment.programEnrollmentV3({
           program,
         })
+      setupProgramDetailApi(program.id)
 
       renderWithProviders(
         <DashboardCard

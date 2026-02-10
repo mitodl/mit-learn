@@ -29,6 +29,7 @@ import {
 import NiceModal from "@ebay/nice-modal-react"
 import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
@@ -172,12 +173,13 @@ const getContextMenuItems = (
   useProductPages: boolean,
   includeInLearnCatalog: boolean,
   additionalItems: SimpleMenuItem[] = [],
+  programMarketingUrl?: string,
 ) => {
   const menuItems = []
   if (resource.type === DashboardType.ProgramEnrollment) {
     const detailsUrl = useProductPages
       ? programPageView(resource.data.program.readable_id)
-      : resource.data.program.page?.page_url
+      : programMarketingUrl
 
     if (detailsUrl && includeInLearnCatalog) {
       menuItems.push({
@@ -598,6 +600,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     FeatureFlags.MitxOnlineProductPages,
   )
 
+  // Get the program details if needed for legacy product page URL
+  const programId =
+    resource.type === DashboardType.ProgramEnrollment
+      ? resource.data.program.id
+      : undefined
+  const { data: programDetails } = useQuery({
+    ...programsQueries.programDetail({ id: programId! }),
+    enabled: !!programId && !useProductPages,
+  })
+
   // Determine resource type from discriminated union
   const resourceIsCourse = resource.type === DashboardType.Course
   const resourceIsCourseRunEnrollment =
@@ -838,6 +850,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     useProductPages ?? false,
     includeInLearnCatalog ?? false,
     contextMenuItems,
+    programDetails?.page?.page_url,
   )
 
   const contextMenu = isLoading ? (
