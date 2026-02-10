@@ -13,19 +13,16 @@ import { mockAxiosInstance } from "api/test-utils"
 import {
   DashboardCard,
   DashboardType,
-  getDefaultContextMenuItems,
+  getContextMenuItems,
 } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { useRouter } from "next-nprogress-bar"
 
 jest.mock("posthog-js/react")
-jest.mock("next-nprogress-bar")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockedUseRouter = jest.mocked(useRouter)
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -896,26 +893,14 @@ describe.each([
       })
       await user.click(contextMenuButton)
 
-      // Create a mock router
-      const mockRouter = {
-        push: jest.fn(),
-        replace: jest.fn(),
-        back: jest.fn(),
-        forward: jest.fn(),
-        refresh: jest.fn(),
-        prefetch: jest.fn(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any
-
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems(
+        ...getContextMenuItems(
           "Test Course",
           {
             type: DashboardType.CourseRunEnrollment,
             data: enrollment,
           },
-          mockRouter,
           false, // useProductPages
           true, // includeInLearnCatalog
         ),
@@ -1345,19 +1330,6 @@ describe.each([
           },
         })
 
-        const pushMock = jest.fn()
-        const mockRouter = {
-          push: pushMock,
-          replace: jest.fn(),
-          back: jest.fn(),
-          forward: jest.fn(),
-          refresh: jest.fn(),
-          prefetch: jest.fn(),
-        }
-
-        // Mock next-nprogress-bar's useRouter
-        mockedUseRouter.mockReturnValue(mockRouter)
-
         renderWithProviders(
           <DashboardCard
             resource={{
@@ -1376,16 +1348,16 @@ describe.each([
         const viewDetailsItem = screen.getByRole("menuitem", {
           name: "View Course Details",
         })
-        await user.click(viewDetailsItem)
 
         if (useProductPages) {
-          // Should navigate to product page URL
-          expect(pushMock).toHaveBeenCalledWith(
-            expect.stringContaining(`/courses/${course.readable_id}`),
+          // Should have product page URL as href
+          expect(viewDetailsItem).toHaveAttribute(
+            "href",
+            `/courses/${course.readable_id}`,
           )
         } else {
-          // Should navigate to marketing URL
-          expect(pushMock).toHaveBeenCalledWith(marketingUrl)
+          // Should have marketing URL as href
+          expect(viewDetailsItem).toHaveAttribute("href", marketingUrl)
         }
       },
     )
@@ -1414,19 +1386,6 @@ describe.each([
             program: { ...program, page: { page_url: marketingUrl } },
           })
 
-        const pushMock = jest.fn()
-        const mockRouter = {
-          push: pushMock,
-          replace: jest.fn(),
-          back: jest.fn(),
-          forward: jest.fn(),
-          refresh: jest.fn(),
-          prefetch: jest.fn(),
-        }
-
-        // Mock next-nprogress-bar's useRouter
-        mockedUseRouter.mockReturnValue(mockRouter)
-
         renderWithProviders(
           <DashboardCard
             resource={{
@@ -1445,16 +1404,16 @@ describe.each([
         const viewDetailsItem = screen.getByRole("menuitem", {
           name: "View Program Details",
         })
-        await user.click(viewDetailsItem)
 
         if (useProductPages) {
-          // Should navigate to product page URL
-          expect(pushMock).toHaveBeenCalledWith(
-            expect.stringContaining(`/programs/${program.readable_id}`),
+          // Should have product page URL as href
+          expect(viewDetailsItem).toHaveAttribute(
+            "href",
+            `/programs/${program.readable_id}`,
           )
         } else {
-          // Should navigate to marketing URL
-          expect(pushMock).toHaveBeenCalledWith(marketingUrl)
+          // Should have marketing URL as href
+          expect(viewDetailsItem).toHaveAttribute("href", marketingUrl)
         }
       },
     )

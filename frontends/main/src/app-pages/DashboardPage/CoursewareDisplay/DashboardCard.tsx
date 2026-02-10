@@ -38,7 +38,6 @@ import {
   CourseRunEnrollmentRequestV2,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useRouter } from "next-nprogress-bar"
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -167,10 +166,9 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getDefaultContextMenuItems = (
+const getContextMenuItems = (
   title: string,
   resource: DashboardResource,
-  router: ReturnType<typeof useRouter>,
   useProductPages: boolean,
   includeInLearnCatalog: boolean,
   additionalItems: SimpleMenuItem[] = [],
@@ -186,9 +184,7 @@ const getDefaultContextMenuItems = (
         className: "dashboard-card-menu-item",
         key: "view-program-details",
         label: "View Program Details",
-        onClick: () => {
-          router.push(detailsUrl)
-        },
+        href: detailsUrl,
       })
     }
   }
@@ -204,9 +200,7 @@ const getDefaultContextMenuItems = (
         className: "dashboard-card-menu-item",
         key: "view-course-details",
         label: "View Course Details",
-        onClick: () => {
-          router.push(detailsUrl)
-        },
+        href: detailsUrl,
       })
     }
 
@@ -598,7 +592,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   contractId,
   onUpgradeError,
 }) => {
-  const router = useRouter()
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
   const useProductPages = useFeatureFlagEnabled(
@@ -838,10 +831,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : resourceIsProgramEnrollment
         ? true
         : false
-  const menuItems = getDefaultContextMenuItems(
+  const menuItems = getContextMenuItems(
     title,
     resource,
-    router,
     useProductPages ?? false,
     includeInLearnCatalog ?? false,
     contextMenuItems,
@@ -923,8 +915,4 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export {
-  DashboardCard,
-  CardRoot as DashboardCardRoot,
-  getDefaultContextMenuItems,
-}
+export { DashboardCard, CardRoot as DashboardCardRoot, getContextMenuItems }
