@@ -1252,8 +1252,8 @@ describe.each([
     test("program card title links to program dashboard", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV2({
-          program: mitxonline.factories.programs.program({
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
             id: 123,
           }),
@@ -1363,61 +1363,69 @@ describe.each([
       },
     )
 
-    test.each([
-      {
-        useProductPages: false,
-        description: "uses marketing URLs when feature flag is disabled",
-      },
-      {
-        useProductPages: true,
-        description: "uses product page URLs when feature flag is enabled",
-      },
-    ])(
-      "Context menu for program enrollment $description",
-      async ({ useProductPages }) => {
-        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
-        setupUserApis()
+    test("Context menu for program enrollment uses product page URLs when feature flag is enabled", async () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setupUserApis()
 
-        const marketingUrl = faker.internet.url()
-        const program = mitxonline.factories.programs.program({
-          page: { page_url: marketingUrl },
-        })
-        const programEnrollment =
-          mitxonline.factories.enrollment.programEnrollmentV2({
-            program: { ...program, page: { page_url: marketingUrl } },
-          })
-
-        renderWithProviders(
-          <DashboardCard
-            resource={{
-              type: DashboardType.ProgramEnrollment,
-              data: programEnrollment,
-            }}
-          />,
-        )
-
-        const card = getCard()
-        const contextMenuButton = within(card).getByRole("button", {
-          name: "More options",
-        })
-        await user.click(contextMenuButton)
-
-        const viewDetailsItem = screen.getByRole("menuitem", {
-          name: "View Program Details",
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
         })
 
-        if (useProductPages) {
-          // Should have product page URL as href
-          expect(viewDetailsItem).toHaveAttribute(
-            "href",
-            `/programs/${program.readable_id}`,
-          )
-        } else {
-          // Should have marketing URL as href
-          expect(viewDetailsItem).toHaveAttribute("href", marketingUrl)
-        }
-      },
-    )
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const viewDetailsItem = screen.getByRole("menuitem", {
+        name: "View Program Details",
+      })
+
+      // Should have product page URL as href
+      expect(viewDetailsItem).toHaveAttribute(
+        "href",
+        `/programs/${program.readable_id}`,
+      )
+    })
+
+    test("Context menu for program enrollment without marketing URL does not show View Details when feature flag is disabled", async () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      setupUserApis()
+
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      // V3SimpleProgram doesn't have marketing URLs, so there are no menu items
+      // and the context menu button should be hidden
+      const contextMenuButton = within(card).queryByRole("button", {
+        name: "More options",
+      })
+      expect(contextMenuButton).not.toBeInTheDocument()
+    })
 
     test("Context menu for course enrollment without marketing URL shows View Details only when flag is enabled", async () => {
       setupUserApis()
