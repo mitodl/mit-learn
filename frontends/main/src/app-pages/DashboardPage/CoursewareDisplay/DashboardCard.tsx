@@ -167,11 +167,12 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getContextMenuItems = (
+const getDefaultContextMenuItems = (
   title: string,
   resource: DashboardResource,
   router: ReturnType<typeof useRouter>,
   useProductPages: boolean,
+  includeInLearnCatalog: boolean,
   additionalItems: SimpleMenuItem[] = [],
 ) => {
   const menuItems = []
@@ -180,7 +181,7 @@ const getContextMenuItems = (
       ? programPageView(resource.data.program.readable_id)
       : resource.data.program.page?.page_url
 
-    if (detailsUrl) {
+    if (detailsUrl && includeInLearnCatalog) {
       menuItems.push(
         ...[
           {
@@ -202,7 +203,7 @@ const getContextMenuItems = (
 
     const courseMenuItems = []
 
-    if (detailsUrl) {
+    if (detailsUrl && includeInLearnCatalog) {
       courseMenuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-course-details",
@@ -834,11 +835,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     <CourseStartCountdown startDate={run.start_date} />
   ) : null
 
-  const menuItems = getContextMenuItems(
+  const includeInLearnCatalog = resourceIsCourse
+    ? resource.data.include_in_learn_catalog
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run.course.include_in_learn_catalog
+      : resourceIsProgramEnrollment
+        ? true
+        : false
+  const menuItems = getDefaultContextMenuItems(
     title,
     resource,
     router,
     useProductPages ?? false,
+    includeInLearnCatalog ?? false,
     contextMenuItems,
   )
 
@@ -921,5 +930,5 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 export {
   DashboardCard,
   CardRoot as DashboardCardRoot,
-  getContextMenuItems as getDefaultContextMenuItems,
+  getDefaultContextMenuItems,
 }

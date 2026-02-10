@@ -874,7 +874,7 @@ describe.each([
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
       setupUserApis()
-      const course = dashboardCourse()
+      const course = dashboardCourse({ include_in_learn_catalog: true })
       const run = course.courseruns[0]
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
@@ -917,6 +917,7 @@ describe.each([
           },
           mockRouter,
           false, // useProductPages
+          true, // includeInLearnCatalog
         ),
       ]
       const menuItems = screen.getAllByRole("menuitem")
@@ -1332,6 +1333,7 @@ describe.each([
         const marketingUrl = faker.internet.url()
         const course = dashboardCourse({
           page: { page_url: marketingUrl },
+          include_in_learn_catalog: true,
         })
         const run = course.courseruns[0]
         const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -1463,6 +1465,13 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
         enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...mitxonline.factories.courses.courseRun(),
+          course: {
+            ...mitxonline.factories.courses.course(),
+            include_in_learn_catalog: true,
+          },
+        },
       })
       // Remove the page property to simulate a course without a marketing URL
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1506,6 +1515,13 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
         enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...mitxonline.factories.courses.courseRun(),
+          course: {
+            ...mitxonline.factories.courses.course(),
+            include_in_learn_catalog: true,
+          },
+        },
       })
       // Remove the page property to simulate a course without a marketing URL
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1531,6 +1547,53 @@ describe.each([
       // Should have View Course Details when flag is on (product pages always exist)
       expect(
         screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Context menu does not show View Details for courses not in learn catalog", async () => {
+      setupUserApis()
+      mockedUseFeatureFlagEnabled.mockReturnValue(true) // Even with flag enabled
+
+      const course = dashboardCourse({
+        include_in_learn_catalog: false, // Key: not in catalog
+        page: { page_url: faker.internet.url() },
+      })
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...run,
+          course: course,
+        },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should NOT have View Course Details when not in learn catalog
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+
+      // Should still have Email Settings and Unenroll
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
       ).toBeInTheDocument()
     })
   })
