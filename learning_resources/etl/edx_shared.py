@@ -6,7 +6,7 @@ from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
 from django.conf import settings
-from django.core.cache import cache
+from django.core.cache import caches
 from django.db.models import Q
 
 from learning_resources.etl.constants import ETLSource
@@ -77,8 +77,9 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
     Returns:
         list of str: edx archive S3 keys
     """
+    redis_cache = caches["redis"]
     cache_key = f"archive_keys_{etl_source}"
-    cached = cache.get(cache_key)
+    cached = redis_cache.get(cache_key)
     if cached is not None:
         log.info("Using cached archive keys for %s", etl_source)
         return cached
@@ -107,7 +108,7 @@ def get_most_recent_course_archives(etl_source: str) -> list[str]:
                     "last_modified": archive.last_modified,
                 }
         result = [entry["key"] for entry in latest_archives.values()]
-        cache.set(cache_key, result, timeout=ARCHIVE_KEYS_CACHE_TIMEOUT)
+        redis_cache.set(cache_key, result, timeout=ARCHIVE_KEYS_CACHE_TIMEOUT)
         return result  # noqa: TRY300
     except (StopIteration, IndexError):
         log.warning(
@@ -122,27 +123,26 @@ def trigger_resource_etl(etl_source):
     """
     from learning_resources import tasks
 
-    # Celery doesn't guarantee dedup by task_id out of the box,
-    # depends on config, so use a cache too to prevent dupes
+    redis_cache = caches["redis"]
     cache_key = f"etl_triggered_{etl_source}"
-    if not cache.add(cache_key, True, timeout=ETL_CACHE_TIMEOUT):  # noqa: FBT003
+    if not redis_cache.add(cache_key, True, timeout=ETL_CACHE_TIMEOUT):  # noqa: FBT003
         log.info("ETL already triggered recently for %s, skipping", etl_source)
         return
     try:
         if etl_source == ETLSource.mit_edx.name:
-            tasks.get_mit_edx_data.apply_async(task_id="mit_edx_full_etl")
+            tasks.get_mit_edx_data.apply_async()
         elif etl_source == ETLSource.mitxonline.name:
-            tasks.get_mitxonline_data.apply_async(task_id="mitxonline_full_etl")
+            tasks.get_mitxonline_data.apply_async()
         elif etl_source == ETLSource.xpro.name:
-            tasks.get_xpro_data.apply_async(task_id="xpro_full_etl")
+            tasks.get_xpro_data.apply_async()
         else:
             log.warning(
                 "No ETL pipeline for %s, cannot sync archive",
                 etl_source,
             )
-            cache.delete(cache_key)
+            redis_cache.delete(cache_key)
     except Exception:
-        cache.delete(cache_key)
+        redis_cache.delete(cache_key)
         log.exception("Failed to trigger ETL for %s", etl_source)
 
 

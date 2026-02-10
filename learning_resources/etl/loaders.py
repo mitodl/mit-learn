@@ -3,7 +3,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
+from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Q
 
@@ -365,7 +365,12 @@ def load_run(
             cache_key = f"content_tasks_triggered_{etl_source}_{resource_id}"
 
             def enqueue_content_tasks():
-                if not cache.add(cache_key, True, timeout=CONTENT_TASKS_CACHE_TIMEOUT):  # noqa: FBT003
+                redis_cache = caches["redis"]
+                if not redis_cache.add(
+                    cache_key,
+                    True,  # noqa: FBT003
+                    timeout=CONTENT_TASKS_CACHE_TIMEOUT,
+                ):
                     return
                 import_content_files.delay(
                     etl_source,

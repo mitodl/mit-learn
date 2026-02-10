@@ -346,6 +346,11 @@ def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, sou
     from types import SimpleNamespace
     from unittest.mock import MagicMock
 
+    # Mock cache so stale cached data from other tests is not returned
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
+    mock_cache.get.return_value = None
+
     base_key = f"{get_s3_prefix_for_source(source)}/my-course/"
 
     # Create mock S3 objects with last_modified attributes
@@ -373,7 +378,8 @@ def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, sou
 def test_get_most_recent_course_archives_cache_hit(mocker, source):
     """Cached results should be returned without querying S3"""
     cached_keys = [f"some-prefix/{source}/cached-course/2023.tar.gz"]
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.get.return_value = cached_keys
     mock_get_bucket = mocker.patch(
         "learning_resources.etl.edx_shared.get_bucket_by_name",
@@ -396,7 +402,8 @@ def test_get_most_recent_course_archives_sets_cache(mocker, source):
 
     from learning_resources.etl.edx_shared import ARCHIVE_KEYS_CACHE_TIMEOUT
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.get.return_value = None
 
     base_key = f"{get_s3_prefix_for_source(source)}/my-course/"
@@ -430,7 +437,8 @@ def test_get_most_recent_course_archives_empty(
     from unittest.mock import MagicMock
 
     # Mock cache so stale cached data from other tests is not returned
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.get.return_value = None
 
     # Create a mock bucket with no objects
@@ -450,7 +458,8 @@ def test_get_most_recent_course_archives_empty(
 def test_get_most_recent_course_archives_no_bucket(settings, mocker, source):
     """Empty list should be returned and a warning logged if no bucket is found"""
     # Mock cache so stale cached data from other tests is not returned
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.get.return_value = None
 
     mocker.patch(
@@ -920,7 +929,8 @@ def test_trigger_resource_etl_dispatches_correct_task(mocker, etl_source, task_a
     """Test trigger_resource_etl dispatches the correct Celery task per source"""
     from learning_resources.etl.edx_shared import trigger_resource_etl
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True  # Key was set (didn't exist before)
     mock_task = mocker.patch(f"learning_resources.tasks.{task_attr}")
 
@@ -933,7 +943,8 @@ def test_trigger_resource_etl_cache_dedup(mocker):
     """Test trigger_resource_etl skips dispatch when cache indicates recent trigger"""
     from learning_resources.etl.edx_shared import trigger_resource_etl
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = False  # Key already exists, add returns False
     mock_task = mocker.patch("learning_resources.tasks.get_mit_edx_data")
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
@@ -953,7 +964,8 @@ def test_trigger_resource_etl_sets_cache(mocker):
         trigger_resource_etl,
     )
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True  # Key was set (didn't exist before)
     mocker.patch("learning_resources.tasks.get_mit_edx_data")
 
@@ -970,7 +982,8 @@ def test_trigger_resource_etl_unsupported_source(mocker):
     """Test trigger_resource_etl warns and deletes cache key for unsupported ETL sources"""
     from learning_resources.etl.edx_shared import trigger_resource_etl
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True  # Key was set (didn't exist before)
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.warning")
 
@@ -987,7 +1000,8 @@ def test_trigger_resource_etl_deletes_cache_on_exception(mocker):
     """Test trigger_resource_etl deletes cache key and logs when task dispatch fails"""
     from learning_resources.etl.edx_shared import trigger_resource_etl
 
-    mock_cache = mocker.patch("learning_resources.etl.edx_shared.cache")
+    mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
+    mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True
     mock_task = mocker.patch("learning_resources.tasks.get_mit_edx_data")
     mock_task.apply_async.side_effect = Exception("connection error")

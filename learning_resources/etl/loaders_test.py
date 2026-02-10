@@ -849,7 +849,7 @@ def test_load_run(mocker, run_exists, status, certification):
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
-    # get_content_tasks is now called for best runs (regardless of whether they're new)
+    # import_content_files is called for best runs (regardless of whether they're new)
     # when the course is from an edx source (xpro in this case)
     course.refresh_from_db()
     if result == course.best_run:
@@ -865,8 +865,8 @@ def test_load_run(mocker, run_exists, status, certification):
     [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 @pytest.mark.django_db(transaction=True)
-def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
-    """Test that load_run calls get_content_tasks for best runs even if not newly created"""
+def test_load_run_calls_import_content_files_for_best_run(mocker, etl_source):
+    """Test that load_run calls import_content_files for best runs even if not newly created"""
     from datetime import UTC, datetime
 
     mock_import_task = mocker.patch(
@@ -912,8 +912,10 @@ def test_load_run_calls_get_content_tasks_for_best_run(mocker, etl_source):
 )
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.django_db(transaction=True)
-def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_exists):
-    """Test that load_run calls get_content_tasks for test_mode courses regardless of best_run"""
+def test_load_run_calls_import_content_files_for_test_mode(
+    mocker, etl_source, run_exists
+):
+    """Test that load_run calls import_content_files for test_mode courses regardless of best_run"""
     from datetime import UTC, datetime
 
     mock_import_task = mocker.patch(
@@ -961,7 +963,7 @@ def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_
 
     result = load_run(course, run_props)
 
-    # For test_mode courses, get_content_tasks should always be called
+    # For test_mode courses, import_content_files should always be called
     mock_import_task.delay.assert_called_once_with(
         course.etl_source, learning_resource_ids=[course.id]
     )
@@ -972,10 +974,10 @@ def test_load_run_calls_get_content_tasks_for_test_mode(mocker, etl_source, run_
     "etl_source",
     [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
-def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
+def test_load_run_skips_import_content_files_for_non_best_run_published_course(
     mocker, etl_source
 ):
-    """Test that load_run doesn't call get_content_tasks for non-best runs of published courses"""
+    """Test that load_run doesn't call import_content_files for non-best runs of published courses"""
     from datetime import UTC, datetime
 
     mock_import_task = mocker.patch(
@@ -1017,7 +1019,7 @@ def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
     # Verify the result is not the best run
     assert result != course.best_run
 
-    # get_content_tasks should not be called for non-best runs
+    # import_content_files should not be called for non-best runs
     mock_import_task.delay.assert_not_called()
 
 
@@ -1025,8 +1027,10 @@ def test_load_run_skips_get_content_tasks_for_non_best_run_published_course(
     "etl_source",
     [ETLSource.ocw.value, ETLSource.oll.value, ETLSource.youtube.value],
 )
-def test_load_run_skips_get_content_tasks_for_unsupported_sources(mocker, etl_source):
-    """Test that load_run doesn't call get_content_tasks for non-edx sources"""
+def test_load_run_skips_import_content_files_for_unsupported_sources(
+    mocker, etl_source
+):
+    """Test that load_run doesn't call import_content_files for non-edx sources"""
     mock_import_task = mocker.patch(
         "learning_resources.tasks.import_content_files",
     )
@@ -1046,7 +1050,54 @@ def test_load_run_skips_get_content_tasks_for_unsupported_sources(mocker, etl_so
 
     load_run(course, run_props)
 
-    # get_content_tasks should not be called for non-edx sources
+    # import_content_files should not be called for non-edx sources
+    mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+)
+@pytest.mark.django_db(transaction=True)
+def test_load_run_skips_import_content_files_when_content_files_exist(
+    mocker, etl_source
+):
+    """Test that load_run doesn't call import_content_files when content files already exist"""
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=True,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+    )
+    # Add existing content files to the run
+    ContentFileFactory.create_batch(3, run=run)
+    course.refresh_from_db()
+    assert course.best_run == run
+    assert run.content_files.count() == 3
+
+    # Update the existing run (not creating a new one)
+    run_props = model_to_dict(run)
+    run_props["title"] = "Updated Title"
+    run_props["prices"] = []
+    run_props["instructors"] = []
+    run_props["image"] = None
+    del run_props["id"]
+    del run_props["learning_resource"]
+    del run_props["resource_prices"]
+
+    result = load_run(course, run_props)
+
+    course.refresh_from_db()
+    assert result == course.best_run
+
+    # import_content_files should NOT be called because content files already exist
     mock_import_task.delay.assert_not_called()
 
 
