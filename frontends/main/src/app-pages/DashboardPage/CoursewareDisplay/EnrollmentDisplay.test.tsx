@@ -287,7 +287,13 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgram(),
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -343,7 +349,13 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgram(),
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -412,7 +424,13 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgram(),
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -498,7 +516,13 @@ describe("EnrollmentDisplay", () => {
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
           mitxonline.factories.enrollment.programEnrollmentV3({
-            program: mitxonline.factories.programs.simpleProgram(),
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
