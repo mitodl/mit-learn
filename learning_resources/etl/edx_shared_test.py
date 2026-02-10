@@ -9,7 +9,10 @@ import pytest
 from learning_resources.constants import PlatformType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.edx_shared import (
+    build_run_lookup,
+    extract_run_id_from_key,
     get_most_recent_course_archives,
+    normalize_run_id,
     sync_edx_course_files,
 )
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -268,12 +271,10 @@ def test_sync_edx_course_files_no_matching_run(
         autospec=True,
         return_value=[],
     )
-    mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
 
     sync_edx_course_files(source, [run.learning_resource.id], [key])
 
     mock_load_content_files.assert_not_called()
-    mock_log.assert_any_call("No runs found for %s, skipping", key)
 
 
 @pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
@@ -1013,3 +1014,276 @@ def test_trigger_resource_etl_deletes_cache_on_exception(mocker):
     mock_log.assert_called_once_with(
         "Failed to trigger ETL for %s", ETLSource.mit_edx.name
     )
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "run_id", "expected"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            "course-v1:MITxT+8.01.3x+3T2022",
+            "course-v1:MITxT+8.01.3x+3T2022",
+        ),
+        (
+            ETLSource.xpro.name,
+            "course-v1:xPRO+SysEngxB1+R12",
+            "course-v1:xPRO+SysEngxB1+R12",
+        ),
+        (
+            ETLSource.mit_edx.name,
+            "MITx-12.345x-3T2022",
+            "mitx.12.345x.3t2022",
+        ),
+        (
+            ETLSource.mit_edx.name,
+            "course-v1:MITx+12.345x+3T2022",
+            "mitx.12.345x.3t2022",
+        ),
+        (
+            ETLSource.oll.name,
+            "course-v1:OLL+ABC123+R1",
+            "oll.abc123.r1",
+        ),
+    ],
+)
+def test_normalize_run_id(etl_source, run_id, expected):
+    """Test normalize_run_id returns expected normalized form per platform"""
+    assert normalize_run_id(etl_source, run_id) == expected
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "key", "expected"),
+    [
+        (
+            ETLSource.mitxonline.name,
+            "/mitxonline/courses/course-v1:MITxT+8.01.3x+3T2022/abc.tar.gz",
+            "course-v1:MITxT+8.01.3x+3T2022",
+        ),
+        (
+            ETLSource.xpro.name,
+            "/xpro/courses/course-v1:xPRO+SysEngxB1+R12/abc.tar.gz",
+            "course-v1:xPRO+SysEngxB1+R12",
+        ),
+        (
+            ETLSource.mit_edx.name,
+            "/edx/courses/MITx-12.345x-3T2022/abc.tar.gz",
+            "mitx.12.345x.3t2022",
+        ),
+        (
+            ETLSource.oll.name,
+            "/oll/courses/course-v1:OLL+ABC123+R1_OLL.tar.gz",
+            "oll.abc123.r1",
+        ),
+    ],
+)
+def test_extract_run_id_from_key(etl_source, key, expected):
+    """Test extract_run_id_from_key extracts and normalizes correctly per platform"""
+    assert extract_run_id_from_key(etl_source, key) == expected
+
+
+@pytest.mark.parametrize(
+    ("source", "platform"),
+    [
+        (ETLSource.mitxonline.name, PlatformType.mitxonline.name),
+        (ETLSource.xpro.name, PlatformType.xpro.name),
+        (ETLSource.mit_edx.name, PlatformType.edx.name),
+        (ETLSource.oll.name, PlatformType.edx.name),
+    ],
+)
+def test_build_run_lookup(source, platform):
+    """build_run_lookup returns a dict mapping normalized run_id to runs"""
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=source,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+    )
+    lookup = build_run_lookup(source, [course.id])
+    normalized = normalize_run_id(source, run.run_id)
+    assert normalized in lookup
+    assert lookup[normalized][0].id == run.id
+
+
+def test_build_run_lookup_filters_by_ids():
+    """build_run_lookup only includes runs for the specified course ids"""
+    source = ETLSource.mitxonline.name
+    course1 = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run1 = LearningResourceRunFactory.create(learning_resource=course1, published=True)
+    course2 = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run2 = LearningResourceRunFactory.create(learning_resource=course2, published=True)
+
+    lookup = build_run_lookup(source, [course1.id])
+    norm1 = normalize_run_id(source, run1.run_id)
+    norm2 = normalize_run_id(source, run2.run_id)
+    assert norm1 in lookup
+    assert norm2 not in lookup
+
+
+def test_build_run_lookup_empty_ids_returns_all():
+    """build_run_lookup with empty ids returns all published/test_mode runs"""
+    source = ETLSource.mitxonline.name
+    course1 = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run1 = LearningResourceRunFactory.create(learning_resource=course1, published=True)
+    course2 = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    run2 = LearningResourceRunFactory.create(learning_resource=course2, published=True)
+
+    lookup = build_run_lookup(source, [])
+    norm1 = normalize_run_id(source, run1.run_id)
+    norm2 = normalize_run_id(source, run2.run_id)
+    assert norm1 in lookup
+    assert norm2 in lookup
+
+
+def test_build_run_lookup_excludes_unpublished():
+    """build_run_lookup excludes runs for unpublished, non-test-mode courses"""
+    source = ETLSource.mitxonline.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=False, test_mode=False, create_runs=False
+    )
+    LearningResourceRunFactory.create(learning_resource=course, published=True)
+    lookup = build_run_lookup(source, [course.id])
+    assert len(lookup) == 0
+
+
+def test_build_run_lookup_includes_test_mode():
+    """build_run_lookup includes runs for test_mode courses"""
+    source = ETLSource.mitxonline.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=False, test_mode=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=False)
+    lookup = build_run_lookup(source, [course.id])
+    normalized = normalize_run_id(source, run.run_id)
+    assert normalized in lookup
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "run_id_in_db", "run_id_in_key", "should_match"),
+    [
+        # mit_edx: same structure, different separators (- vs +) → match
+        (
+            ETLSource.mit_edx.name,
+            "MITx-12.345x-3T2022",
+            "MITx+12.345x+3T2022",
+            True,
+        ),
+        # mit_edx: same structure, different case → match
+        (
+            ETLSource.mit_edx.name,
+            "MITx-12.345x-3T2022",
+            "mitx-12.345x-3t2022",
+            True,
+        ),
+        # mit_edx: course-v1: prefix in DB but not in key → match (prefix stripped)
+        (
+            ETLSource.mit_edx.name,
+            "course-v1:MITx+12.345x+3T2022",
+            "MITx-12.345x-3T2022",
+            True,
+        ),
+        # oll: same structure, different separators (- vs +) → match
+        (
+            ETLSource.oll.name,
+            "course-v1:OLL+ABC123+R1",
+            "course-v1:OLL-ABC123-R1",
+            True,
+        ),
+        # oll: same structure, underscore vs dash → match
+        (
+            ETLSource.oll.name,
+            "course-v1:OLL_ABC123_R1",
+            "course-v1:OLL-ABC123-R1",
+            True,
+        ),
+    ],
+)
+def test_normalize_run_id_cross_format_parity(
+    etl_source, run_id_in_db, run_id_in_key, should_match
+):
+    """Verify that run_id variations normalize to the same value"""
+    norm_db = normalize_run_id(etl_source, run_id_in_db)
+    norm_key = normalize_run_id(etl_source, run_id_in_key)
+    if should_match:
+        assert norm_db == norm_key, (
+            f"Expected match: DB '{run_id_in_db}' → '{norm_db}', "
+            f"key '{run_id_in_key}' → '{norm_key}'"
+        )
+    else:
+        assert norm_db != norm_key, (
+            f"Expected no match but both normalized to '{norm_db}'"
+        )
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "platform", "db_run_id", "key_run_id"),
+    [
+        # mit_edx: DB uses dashes, S3 key uses plusses → separators differ but match
+        (
+            ETLSource.mit_edx.name,
+            PlatformType.edx.name,
+            "MITx-12.345x-3T2022",
+            "MITx+12.345x+3T2022",
+        ),
+        # oll: DB uses plusses, S3 key uses dashes → separators differ but match
+        (
+            ETLSource.oll.name,
+            PlatformType.edx.name,
+            "course-v1:OLL+ABC123+R1",
+            "course-v1:OLL-ABC123-R1",
+        ),
+    ],
+)
+def test_build_run_lookup_cross_format_match(
+    etl_source, platform, db_run_id, key_run_id
+):
+    """build_run_lookup matches runs when DB and S3 key use different separators"""
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=platform),
+        etl_source=etl_source,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id=db_run_id,
+    )
+    lookup = build_run_lookup(etl_source, [course.id])
+    # Look up using the S3 key's run_id format (different separators)
+    normalized_key = normalize_run_id(etl_source, key_run_id)
+    assert normalized_key in lookup
+    assert lookup[normalized_key][0].id == run.id
+
+
+def test_build_run_lookup_cross_format_prefix_match():
+    """build_run_lookup matches when DB run_id has a course-v1: prefix
+    but the S3 key directory does not (or vice versa).
+    """
+    course = LearningResourceFactory.create(
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+        etl_source=ETLSource.mit_edx.name,
+        published=True,
+        create_runs=False,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        run_id="course-v1:MITx+12.345x+3T2022",
+    )
+    lookup = build_run_lookup(ETLSource.mit_edx.name, [course.id])
+    # S3 key dir uses short format without course-v1: prefix
+    normalized_key = normalize_run_id(ETLSource.mit_edx.name, "MITx-12.345x-3T2022")
+    assert normalized_key in lookup
+    assert lookup[normalized_key][0].id == run.id
