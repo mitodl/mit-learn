@@ -11,7 +11,7 @@ import { useArticle } from "../../../ArticleContext"
 import { calculateReadTime } from "../../utils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 
-const { NEXT_PUBLIC_ORIGIN } = process.env
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 const StyledWrapper = styled.div(({ theme }) => ({
   width: "100vw",
