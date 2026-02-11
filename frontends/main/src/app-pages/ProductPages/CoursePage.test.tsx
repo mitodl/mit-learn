@@ -99,6 +99,7 @@ describe("CoursePage", () => {
         { level: 2, name: "Course summary" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
+        { level: 2, name: "How you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 2, name: "Who can take this Course?" },

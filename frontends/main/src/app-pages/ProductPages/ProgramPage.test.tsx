@@ -198,6 +198,7 @@ describe("ProgramPage", () => {
             { level: 3, name: "Core Dog Courses" },
             { level: 3, name: "Elective Cat Courses: Complete 2 out of 4" },
             { level: 2, name: "What you'll learn" },
+            { level: 2, name: "How you'll learn" },
             { level: 2, name: "Prerequisites" },
             { level: 2, name: "Meet your instructors" },
             { level: 2, name: "Who can take this Program?" },
@@ -229,11 +230,14 @@ describe("ProgramPage", () => {
     expect(links[2]).toHaveTextContent("What you'll learn")
     expect(links[2]).toHaveAttribute("href", `#${HeadingIds.What}`)
     expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[3]).toHaveTextContent("Prerequisites")
-    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
+    expect(links[3]).toHaveTextContent("How you'll learn")
+    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.How}`)
+    expect(document.getElementById(HeadingIds.How)).toBeVisible()
+    expect(links[4]).toHaveTextContent("Prerequisites")
+    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
     expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
-    expect(links[4]).toHaveTextContent("Instructors")
-    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
+    expect(links[5]).toHaveTextContent("Instructors")
+    expect(links[5]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
     expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 

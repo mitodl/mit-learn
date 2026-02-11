@@ -17,7 +17,9 @@ import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate, {
   HeadingData,
+  HowYoullLearnSection,
   ProductNavbar,
+  WhatSection,
   WhoCanTake,
 } from "./ProductPageTemplate"
 import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
@@ -38,18 +40,6 @@ const LearningResourceDrawer = dynamic(
 type ProgramPageProps = {
   readableId: string
 }
-
-const WhatSection = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
-
-const HowSection = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
 
 const PrerequisitesSection = styled.section({
   display: "flex",
@@ -321,30 +311,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         ) : null}
         <RequirementsSection program={program} />
         {page.what_you_learn ? (
-          <WhatSection aria-labelledby={HeadingIds.What}>
-            <Typography variant="h4" component="h2" id={HeadingIds.What}>
-              What you'll learn
-            </Typography>
-            <RawHTML html={page.what_you_learn} />
-          </WhatSection>
+          <WhatSection html={page.what_you_learn} />
         ) : null}
-        <HowSection aria-labelledby={HeadingIds.How}>
-          <Typography variant="h4" component="h2" id={HeadingIds.How}>
-            How you'll learn
-          </Typography>
-          <p>
-            A communi observantia non est recedendum. Vivamus sagittis lacus vel
-            augue laoreet rutrum faucibus. Nihilne te nocturnum praesidium
-            Palati, nihil urbis vigiliae. Ab illo tempore, ab est sed
-            immemorabili. Cum sociis natoque penatibus et magnis dis parturient.
-            Quam diu etiam furor iste tuus nos eludet? Ut enim ad minim veniam,
-            quis nostrud exercitation. Fictum, deserunt mollit anim laborum
-            astutumque! Quisque placerat facilisis egestas cillum dolore. Nec
-            dubitamus multa iter quae et nos invenerat. Contra legem facit qui
-            id facit quod lex prohibet. Quam diu etiam furor iste tuus nos
-            eludet?
-          </p>
-        </HowSection>
+        <HowYoullLearnSection />
         {page.prerequisites ? (
           <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
             <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
