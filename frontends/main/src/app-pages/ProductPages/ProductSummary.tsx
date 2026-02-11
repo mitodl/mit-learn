@@ -1,5 +1,10 @@
 import React, { HTMLAttributes, useState } from "react"
-import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import {
+  ActionButton,
+  Alert,
+  styled,
+  VisuallyHidden,
+} from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
@@ -10,6 +15,7 @@ import {
   RiTimeLine,
   RiFileCopy2Line,
   RiMenuAddLine,
+  RiInformation2Line,
 } from "@remixicon/react"
 import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
@@ -47,16 +53,16 @@ const InfoRow = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
   },
-  svg: {
+  "> svg:first-of-type": {
     width: "20px",
     height: "20px",
     transform: "translateY(25%)",
   },
 }))
 
-const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
-  props,
-) => (
+const InfoRowInner: React.FC<
+  Pick<StackProps, "children" | "flexWrap" | "justifyContent">
+> = (props) => (
   <Stack
     width="100%"
     direction="row"
@@ -189,33 +195,58 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 }
 
 type LearnMoreDialogProps = {
-  buttonText: string
+  buttonText?: string
   href: string
   description: string
   title: string
+  iconOnly?: boolean
 }
+
+const ButtonContainer = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  height: "20px",
+  "> button": {
+    color: theme.custom.colors.silverGrayDark,
+  },
+}))
+
 const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   buttonText,
   href,
   description,
   title,
+  iconOnly = false,
 }) => {
   const [open, setOpen] = React.useState(false)
   return (
     <>
-      <UnderlinedLink
-        target="_blank"
-        rel="noopener noreferrer"
-        color="black"
-        href=""
-        role="button"
-        onClick={(event) => {
-          event.preventDefault()
-          setOpen(true)
-        }}
-      >
-        {buttonText}
-      </UnderlinedLink>
+      {iconOnly ? (
+        <ButtonContainer>
+          <ActionButton
+            size="small"
+            onClick={() => setOpen(true)}
+            aria-label={title}
+            variant="text"
+          >
+            <RiInformation2Line aria-hidden="true" />
+          </ActionButton>
+        </ButtonContainer>
+      ) : (
+        <UnderlinedLink
+          target="_blank"
+          rel="noopener noreferrer"
+          color="black"
+          href=""
+          role="button"
+          onClick={(event) => {
+            event.preventDefault()
+            setOpen(true)
+          }}
+        >
+          {buttonText}
+        </UnderlinedLink>
+      )}
       <Dialog
         onClose={() => setOpen(false)}
         open={open}
@@ -267,13 +298,13 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
-      <InfoRowInner>
+      <InfoRowInner justifyContent="flex-start">
         <InfoLabelValue label="Course Format" value={pace.label} />{" "}
         <LearnMoreDialog
-          buttonText="What's this?"
           href={pace.href}
           description={pace.description}
           title={`What are ${pace.label} courses?`}
+          iconOnly
         />
       </InfoRowInner>
     </InfoRow>
@@ -625,11 +656,11 @@ const ProgramPaceRow: React.FC<
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
-      <InfoRowInner>
+      <InfoRowInner justifyContent="flex-start">
         <InfoLabelValue label="Course Format" value={pace?.label} />{" "}
         {pace ? (
           <LearnMoreDialog
-            buttonText="What's this?"
+            iconOnly
             href={pace.href}
             description={pace.description}
             title={`What are ${pace.label} courses?`}
