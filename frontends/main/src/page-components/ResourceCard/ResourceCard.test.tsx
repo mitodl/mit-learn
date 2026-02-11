@@ -20,7 +20,7 @@ import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import invariant from "tiny-invariant"
-import { LearningResourceCard, LearningResourceListCard } from "ol-components"
+import { LearningResourceCard } from "ol-components"
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -48,14 +48,16 @@ jest.mock("@ebay/nice-modal-react", () => {
 
 describe.each([
   {
-    BaseComponent: LearningResourceCard,
     isList: false,
   },
   {
-    BaseComponent: LearningResourceListCard,
     isList: true,
   },
-])("$CardComponent", ({ BaseComponent, isList }) => {
+])("$CardComponent", ({ isList }) => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   const makeResource = factories.learningResources.resource
   type SetupOptions = {
     user?: Partial<User>
@@ -165,7 +167,7 @@ describe.each([
       })
 
       await waitFor(() => {
-        expectProps(BaseComponent, {
+        expectProps(LearningResourceCard, {
           inLearningPath: learningPath.inList,
           inUserList: userList.inList,
         })

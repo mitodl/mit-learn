@@ -15,6 +15,7 @@ type MitxOnlineCourseCardProps = {
   isLoading?: boolean
   headingLevel?: number
   className?: string
+  list?: boolean
 }
 
 const formatCurrency = (amount: number): string => {
@@ -86,6 +87,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   isLoading,
   headingLevel = 6,
   className,
+  list,
 }) => {
   if (isLoading) {
     return (
@@ -94,6 +96,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
         size={size}
         className={className}
         headingLevel={headingLevel}
+        list={list}
       />
     )
   }
@@ -125,6 +128,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
       startLabel={startLabel}
       startDate={startDisplay}
       ariaLabel={`Course: ${course.title}`}
+      list={list}
     />
   )
 }
