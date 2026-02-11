@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.7
+Version 0.53.7 (Released February 11, 2026)
 --------------
 
 - Add option to serve S3 media from a custom domain (#2928)
