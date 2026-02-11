@@ -523,7 +523,7 @@ def parse_video_transcripts_xml(
                     "title": video_title,
                 }
     except ElementTree.ParseError:
-        log.exception("Error parsing video XML for %s:  %s", run, path)
+        return transcript_mapping
     return transcript_mapping
 
 
@@ -666,12 +666,12 @@ def _get_cached_content(existing_record, is_tutor_problem) -> dict:
     }
 
 
-def get_title_from_module_id(
+def get_title_for_video(
     module_id: str,
     video_srt_metadata: dict | None = None,
 ) -> str:
     """
-    Get the title for a module based on its ID
+    Get the title for a video
 
     Args:
         module_id (str): The module ID
@@ -679,9 +679,7 @@ def get_title_from_module_id(
     Returns:
         str: The title for the module
     """
-    if not module_id:
-        return None
-    if module_id.startswith("asset"):
+    if module_id and module_id.startswith("asset"):
         return (
             video_srt_metadata.get(module_id, {}).get("title", "")
             if video_srt_metadata
@@ -695,11 +693,8 @@ def _title_from_xml(xml_content):
     """
     Extract title from XML content
     """
-    try:
-        root = ElementTree.fromstring(xml_content)
-        return root.get("display_name")
-    except ElementTree.ParseError:
-        log.exception("Error parsing XML for title extraction")
+    root = ElementTree.fromstring(xml_content)
+    return root.get("display_name")
 
 
 def get_title_for_content(
@@ -719,15 +714,15 @@ def get_title_for_content(
     Returns:
         str: The title for the source path
     """
-    title = get_title_from_module_id(edx_module_id, video_srt_metadata)
-    if title:
-        return title
+    title = get_title_for_video(edx_module_id, video_srt_metadata)
 
     if source_path.endswith(".xml"):
         # Try to extract title from XML
-        title = _title_from_xml(content)
-        if title:
-            return title
+        try:
+            title = _title_from_xml(content)
+        except ElementTree.ParseError:
+            msg = f"Error parsing XML for title extraction for xml {olx_path}"
+            log.debug(msg)
     elif source_path.endswith(".html"):
         # Try to extract title from HTML
         try:
@@ -741,8 +736,6 @@ def get_title_for_content(
                 with Path.open(xml_path, "rb") as f:
                     xml_content = f.read().decode("utf-8")
                     title = _title_from_xml(xml_content)
-                    if title:
-                        return title
             html_content = content
             title_match = re.search(
                 r"<title>(.*?)</title>", html_content, re.IGNORECASE
@@ -752,6 +745,8 @@ def get_title_for_content(
 
         except Exception:
             log.exception("Error parsing HTML for title extraction: %s", source_path)
+    if title:
+        return title
     # Fallback: derive title from source path
     return Path(source_path).stem.replace("_", " ").replace("-", " ").title()
 
@@ -774,15 +769,14 @@ def _build_result(  # noqa: PLR0913
         **content_dict,
     }
 
-    title = get_title_for_content(
+    # resolve the title priority: metadata title > extracted title > derived title
+    data["title"] = content_dict.get("content_title") or get_title_for_content(
         content_dict.get("content"),
         olx_path,
         source_path,
         edx_module_id,
         video_srt_metadata,
     )
-    # resolve the title priority: metadata title > extracted title > derived title
-    data["title"] = content_dict.get("content_title") or title
     return data
 
 
