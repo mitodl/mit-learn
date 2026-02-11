@@ -538,15 +538,15 @@ def ingest_canvas_course(archive_path, overwrite):
 
 
 @app.task(acks_late=True)
-def ingest_edx_course(
+def ingest_edx_run_archive(
     etl_source: str,
     archive_path: str,
     *,
-    course_id: str | None = None,
+    run_id: str | None = None,
     overwrite: bool = False,
 ):
     return sync_edx_archive(
-        etl_source, archive_path, course_id=course_id, overwrite=overwrite
+        etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )
 
 
