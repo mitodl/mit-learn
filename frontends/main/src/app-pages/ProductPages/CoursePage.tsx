@@ -42,25 +42,26 @@ const getNavLinks = (page: CoursePageItem): HeadingData[] => {
     {
       id: HeadingIds.About,
       label: "About",
-      variant: "primary",
       content: page.about,
     },
     {
       id: HeadingIds.What,
       label: "What you'll learn",
-      variant: "secondary",
       content: page.what_you_learn,
+    },
+    {
+      id: HeadingIds.How,
+      label: "How you'll learn",
+      content: true,
     },
     {
       id: HeadingIds.Prereqs,
       label: "Prerequisites",
-      variant: "secondary",
       content: page.prerequisites,
     },
     {
       id: HeadingIds.Instructors,
       label: "Instructors",
-      variant: "secondary",
       content: page.faculty.length ? "x" : undefined,
     },
   ] as const
