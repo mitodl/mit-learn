@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.53.8
+--------------
+
+- fix: change byline author name behaviour  (#2936)
+- If a run for a contentfile webhook doesn't exist, run relevant ETL pipeline to create it (#2938)
+- chore: Created an AGENTS.md file to help give context to agentic tools (#2944)
+- adjust dashboard card links (#2935)
+- Allow iframes in ContractPage welcome message (and elsewhere) (#2943)
+- fix: Replace destructuring for build time substitution (#2945)
+- Switch to v3 for program enrollments (#2931)
+- update smoot-design for new alerts (#2933)
+
 Version 0.53.7 (Released February 11, 2026)
 --------------
 
