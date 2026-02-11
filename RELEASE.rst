@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.53.9
+Version 0.53.9 (Released February 11, 2026)
 --------------
 
 - add route for editing article drafts (#2948)
