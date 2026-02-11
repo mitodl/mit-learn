@@ -19,6 +19,8 @@ import ProductPageTemplate, {
   HeadingData,
   ProductNavbar,
   WhoCanTake,
+  WhatSection,
+  HowYoullLearnSection,
 } from "./ProductPageTemplate"
 import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
@@ -29,11 +31,6 @@ type CoursePageProps = {
   readableId: string
 }
 
-const WhatSection = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -121,13 +118,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
           <AboutSection productNoun="Course" aboutHtml={page.about} />
         ) : null}
         {page.what_you_learn ? (
-          <WhatSection aria-labelledby={HeadingIds.What}>
-            <Typography variant="h4" component="h2" id={HeadingIds.What}>
-              What you'll learn
-            </Typography>
-            <RawHTML html={page.what_you_learn} />
-          </WhatSection>
+          <WhatSection html={page.what_you_learn} />
         ) : null}
+        <HowYoullLearnSection />
         {page.prerequisites ? (
           <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
             <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
