@@ -25,6 +25,13 @@ OCW_TEST_PREFIX = "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-sprin
 OCW_TEST_JSON_PATH = f"./test_json/{OCW_TEST_PREFIX[:-1]}"
 
 
+@pytest.fixture(autouse=True)
+def content_file_settings(settings):
+    """Set COURSE_ARCHIVE_BUCKET_NAME for tests"""
+    settings.COURSE_ARCHIVE_BUCKET_NAME = "testbucket2"
+    return settings
+
+
 @pytest.fixture
 def podcast_platform():
     """Return a  podcast platform"""

@@ -42,13 +42,11 @@ CELERY_BEAT_SCHEDULE = (
         },
         "update_edx-courses-every-1-days": {
             "task": "learning_resources.tasks.get_mit_edx_data",
-            "schedule": crontab(minute=0, hour=5),  # 1:00am EST
+            "schedule": crontab(minute=0, hour=5),
         },
-        "update-edx-files-every-1-weeks": {
+        "update-edx-files-every-1-day": {
             "task": "learning_resources.tasks.import_all_mit_edx_files",
-            "schedule": crontab(
-                minute=0, hour=5, day_of_week=1
-            ),  # 12:00 PM EST on Mondays
+            "schedule": crontab(minute=0, hour=6),
         },
         "update-micromasters-programs-every-1-days": {
             "task": "learning_resources.tasks.get_micromasters_data",
@@ -58,15 +56,13 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_mit_climate_data",
             "schedule": crontab(minute=30, hour=5),  # 1:30am EST
         },
-        "update-mitxonline-courses-every-1-days": {
+        "update-mitxonline-courses-every-6-hours": {
             "task": "learning_resources.tasks.get_mitxonline_data",
-            "schedule": crontab(minute=0, hour=5),  # 1:00am EST
+            "schedule": crontab(minute=0, hour="*/6"),
         },
-        "update-mitxonline-files-every-1-weeks": {
+        "update-mitxonline-files-every-1-day": {
             "task": "learning_resources.tasks.import_all_mitxonline_files",
-            "schedule": crontab(
-                minute=0, hour=5, day_of_week=3
-            ),  # 12:00 PM EST on Wednesdays
+            "schedule": crontab(minute=0, hour=7),
         },
         "update-podcasts": {
             "task": "learning_resources.tasks.get_podcast_data",
@@ -80,11 +76,9 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_xpro_data",
             "schedule": crontab(minute=0, hour=5),  # 1:00am EST
         },
-        "update-xpro-files-every-1-weeks": {
+        "update-xpro-files-every-1-day": {
             "task": "learning_resources.tasks.import_all_xpro_files",
-            "schedule": crontab(
-                minute=0, hour=5, day_of_week=2
-            ),  # 12:00 PM EST on Tuesdays
+            "schedule": crontab(minute=0, hour=8),
         },
         "update-youtube-videos": {
             "task": "learning_resources.tasks.get_youtube_data",
