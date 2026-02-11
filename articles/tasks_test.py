@@ -54,7 +54,6 @@ class TestCallFastlyPurgeApi:
         # Verify headers were set correctly
         call_kwargs = mock_request.call_args.kwargs
         assert call_kwargs["headers"]["fastly-key"] == "test-token"
-        assert call_kwargs["headers"]["fastly-soft-purge"] == "1"
         assert call_kwargs["timeout"] == 30
 
     @patch("main.utils.requests.request")

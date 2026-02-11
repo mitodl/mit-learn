@@ -65,6 +65,7 @@ export const newArticleDocument = {
     },
     {
       type: "byline",
+      attrs: { authorName: null },
     },
     { type: "paragraph", content: [] },
   ],

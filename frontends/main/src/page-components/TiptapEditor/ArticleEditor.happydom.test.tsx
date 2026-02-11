@@ -108,6 +108,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "byline",
+              attrs: { authorName: null },
             },
             {
               type: "paragraph",
@@ -141,6 +142,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
+          author_name: "",
         }),
       )
 
@@ -218,6 +220,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "byline",
+              attrs: { authorName: null },
             },
             {
               type: "paragraph",
@@ -245,6 +248,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
+          author_name: "",
         }),
       )
     })
@@ -424,6 +428,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
         urls.articles.details(article.id),
         expect.objectContaining({
           is_published: false,
+          author_name: "",
         }),
       )
     })
@@ -541,6 +546,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             urls.articles.list(),
             expect.objectContaining({
               title: "My Article",
+              author_name: "",
               content: {
                 type: "doc",
                 content: [
@@ -560,7 +566,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
                       },
                     ],
                   },
-                  { type: "byline" },
+                  { type: "byline", attrs: { authorName: null } },
                   {
                     type: "paragraph",
                     attrs: {

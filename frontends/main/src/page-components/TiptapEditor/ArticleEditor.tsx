@@ -109,8 +109,15 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
   )
   const [touched, setTouched] = useState(false)
 
+  // Extract author_name from the byline node
+  const extractAuthorName = (content: JSONContent): string | "" => {
+    const bylineNode = content.content?.find((node) => node.type === "byline")
+    return bylineNode?.attrs?.authorName || ""
+  }
+
   const handleSave = (publish: boolean) => {
     if (!title) return
+    const authorName = extractAuthorName(content)
     if (article) {
       updateArticle(
         {
@@ -118,6 +125,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           title: title.trim(),
           content,
           is_published: publish,
+          author_name: authorName,
         },
         {
           onSuccess: onSave,
@@ -129,6 +137,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
           title: title.trim(),
           content,
           is_published: publish,
+          author_name: authorName,
         },
         {
           onSuccess: onSave,

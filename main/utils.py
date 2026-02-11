@@ -118,9 +118,6 @@ def call_fastly_purge_api(relative_url):
 
     headers = {}
 
-    if relative_url != "*":
-        headers["fastly-soft-purge"] = "1"
-
     if settings.FASTLY_API_KEY:
         headers["fastly-key"] = settings.FASTLY_API_KEY
 
