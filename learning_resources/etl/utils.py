@@ -523,6 +523,8 @@ def parse_video_transcripts_xml(
                     "title": video_title,
                 }
     except ElementTree.ParseError:
+        msg = f"xml parsing error for {path!s}"
+        log.debug(msg)
         return transcript_mapping
     return transcript_mapping
 

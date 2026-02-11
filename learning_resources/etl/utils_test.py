@@ -692,7 +692,7 @@ def test_parse_video_transcripts_xml(mocker, xml_content, file_name, expected_ma
 
     # Check if warning/exception was logged for invalid XML
     if "invalid xml" in xml_content.lower():
-        mock_log.exception.assert_called_once()
+        mock_log.debug.assert_called_once()
 
 
 @pytest.mark.parametrize("video_dir_exists", [True, False])
