@@ -6,7 +6,7 @@ import { Permission } from "api/hooks/user"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
-import { articlesView } from "@/common/urls"
+import { articlesDraftView, articlesView } from "@/common/urls"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -22,9 +22,11 @@ const ArticleNewPage: React.FC = () => {
       <PageContainer>
         <ArticleEditor
           onSave={(article) => {
-            if (article.is_published)
+            if (article.is_published) {
               return router.push(articlesView(article.slug!))
-            router.push(articlesView(String(article.id)))
+            } else {
+              router.push(articlesDraftView(String(article.id)))
+            }
           }}
         />
       </PageContainer>
