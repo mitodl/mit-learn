@@ -706,12 +706,13 @@ describe("Course Format Row", () => {
       const formatRow = within(summary).getByTestId(TestIds.PaceRow)
       expect(formatRow).toHaveTextContent("Course Format: Self-Paced")
 
+      const dialogTitle = "What are Self-Paced courses?"
       const button = within(formatRow).getByRole("button", {
-        name: "What's this?",
+        name: dialogTitle,
       })
       await user.click(button)
       const dialog = await screen.findByRole("dialog", {
-        name: "What are Self-Paced courses?",
+        name: dialogTitle,
       })
 
       await user.click(within(dialog).getByRole("button", { name: "Close" }))
@@ -733,13 +734,14 @@ describe("Course Format Row", () => {
     const formatRow = within(summary).getByTestId(TestIds.PaceRow)
     expect(formatRow).toHaveTextContent("Course Format: Instructor-Paced")
 
+    const dialogTitle = "What are Instructor-Paced courses?"
     const button = within(formatRow).getByRole("button", {
-      name: "What's this?",
+      name: dialogTitle,
     })
 
     await user.click(button)
     const dialog = await screen.findByRole("dialog", {
-      name: "What are Instructor-Paced courses?",
+      name: dialogTitle,
     })
 
     await user.click(within(dialog).getByRole("button", { name: "Close" }))
@@ -1353,7 +1355,7 @@ describe("Program Pacing Row", () => {
     renderWithProviders(<ProgramSummary program={program} courses={courses} />)
     const summary = screen.getByRole("region", { name: "Program summary" })
     const paceRow = within(summary).getByTestId(TestIds.PaceRow)
-    const button = within(paceRow).getByRole("button", { name: "What's this?" })
+    const button = within(paceRow).getByRole("button", { name: dialogName })
     await user.click(button)
     const dialog = await screen.findByRole("dialog", {
       name: dialogName,
