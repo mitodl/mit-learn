@@ -731,8 +731,12 @@ def get_title_for_content(
     elif source_path.endswith(".html"):
         # Try to extract title from HTML
         try:
-            file_root = Path(source_path).stem
-            xml_path = Path(olx_path, "html", f"{file_root}.xml")
+            xml_path = Path(olx_path) / Path(source_path).with_suffix(".xml")
+            if not xml_path.exists():
+                xml_path = (
+                    Path(olx_path) / "html" / Path(source_path).with_suffix(".xml").name
+                )
+
             if xml_path.exists():
                 with Path.open(xml_path, "rb") as f:
                     xml_content = f.read().decode("utf-8")
