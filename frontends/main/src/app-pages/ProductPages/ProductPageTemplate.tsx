@@ -16,6 +16,13 @@ import { ButtonLink, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import { HeadingIds } from "./util"
 import { useFragmentScrollSpy } from "@/common/useFragmentScrollSpy"
+import RawHTML from "./RawHTML"
+
+import IconBookPlay from "@/public/images/product/icon_book_play.png"
+import IconBrains from "@/public/images/product/icon_brains.png"
+import IconCertificate from "@/public/images/product/icon_certificate.png"
+import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
+import IconConnectedPeople from "@/public/images/product/icon_connected_people.png"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
   paddingBottom: "24px",
@@ -187,9 +194,181 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   },
 }))
 
+const WhatSectionRoot = styled.section(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "8px",
+  padding: "32px",
+  [theme.breakpoints.down("md")]: {
+    padding: "0",
+    border: "none",
+  },
+}))
+const WhatHTML = styled(RawHTML)(({ theme }) => {
+  const checkmarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 20C4.47715 20 0 15.5228 0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20ZM10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18ZM9.0026 14L4.75999 9.7574L6.17421 8.3431L9.0026 11.1716L14.6595 5.51472L16.0737 6.92893L9.0026 14Z" fill="${theme.custom.colors.green}"/></svg>`
+  const encodedSvg = encodeURIComponent(checkmarkSvg)
+
+  return {
+    "> ul": {
+      display: "grid",
+      gap: "32px",
+      gridTemplateColumns: "1fr 1fr",
+      [theme.breakpoints.down("sm")]: {
+        gridTemplateColumns: "1fr",
+      },
+      listStyle: "none",
+      padding: 0,
+      "> li": {
+        paddingLeft: "32px",
+        position: "relative" as const,
+        "&::before": {
+          content: '""',
+          position: "absolute" as const,
+          left: 0,
+          top: "2px",
+          width: "20px",
+          height: "20px",
+          backgroundImage: `url('data:image/svg+xml,${encodedSvg}')`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "contain",
+        },
+      },
+    },
+  }
+})
+
+const WhatSection: React.FC<{ html: string }> = ({ html }) => {
+  return (
+    <WhatSectionRoot aria-labelledby={HeadingIds.What}>
+      <Typography variant="h4" component="h2" id={HeadingIds.What}>
+        What you'll learn
+      </Typography>
+      <WhatHTML html={html} />
+    </WhatSectionRoot>
+  )
+}
+
+const HowYoullLearnRoot = styled.section(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
+  [theme.breakpoints.down("md")]: {
+    gap: "24px",
+  },
+}))
+
+const HowYoullLearnGrid = styled.ul(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "32px 56px",
+  listStyle: "none",
+  padding: 0,
+  margin: 0,
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "1fr",
+    gap: "24px",
+  },
+}))
+
+const HowYoullLearnItem = styled.li(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderRadius: "4px",
+  padding: "24px",
+}))
+
+const HowYoullLearnHeader = styled.div({
+  display: "flex",
+  gap: "16px",
+  alignItems: "center",
+})
+
+const HowYoullLearnIcon = styled(Image)({
+  width: "80px",
+  height: "50px",
+  flexShrink: 0,
+})
+
+const HowYoullLearnTitle = styled.strong(({ theme }) => ({
+  ...theme.typography.subtitle1,
+}))
+
+const HowYoullLearnDescription = styled.p(({ theme }) => ({
+  ...theme.typography.body1,
+  lineHeight: "1.5",
+  margin: 0,
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.body2,
+  },
+}))
+
+const HOW_DATA = [
+  {
+    icon: IconComputerBulb,
+    title: "Learn by doing",
+    text: "Practice processes and methods through simulations, assessments, case studies, and tools.",
+  },
+  {
+    icon: IconConnectedPeople,
+    title: "Learn from others",
+    text: "Connect with an international community of professionals while working on projects based on real-world examples.",
+  },
+  {
+    icon: IconBookPlay,
+    title: "Learn on demand",
+    text: "Enroll anytime. Access all of the content online and watch videos at your own pace. No weekly assignment deadlines.",
+  },
+  {
+    icon: IconBrains,
+    title: "Reflect and apply",
+    text: "Bring your new skills to your organization, through examples from technical work environments and ample prompts for reflection.",
+  },
+  {
+    icon: IconCertificate,
+    title: "Demonstrate your success",
+    text: "Earn a Professional Certificate and 3 Continuing Education Units (CEUs) from MIT.",
+  },
+  {
+    icon: IconConnectedPeople,
+    title: "Learn from the best",
+    text: "Gain insights from MIT faculty and industry experts.",
+  },
+]
+
+const HowYoullLearnSection: React.FC = () => {
+  return (
+    <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
+      <Typography variant="h4" component="h2" id={HeadingIds.How}>
+        How you'll learn
+      </Typography>
+      <HowYoullLearnGrid>
+        {HOW_DATA.map((item, index) => (
+          <HowYoullLearnItem key={index}>
+            <HowYoullLearnHeader>
+              <HowYoullLearnIcon
+                src={item.icon}
+                width={80}
+                height={50}
+                alt=""
+              />
+              <HowYoullLearnTitle>{item.title}</HowYoullLearnTitle>
+            </HowYoullLearnHeader>
+            <HowYoullLearnDescription>{item.text}</HowYoullLearnDescription>
+          </HowYoullLearnItem>
+        ))}
+      </HowYoullLearnGrid>
+    </HowYoullLearnRoot>
+  )
+}
+
 const WhoCanTakeSection = styled.section(({ theme }) => ({
   padding: "32px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
+  backgroundColor: theme.custom.colors.lightGray1,
   borderRadius: "8px",
   display: "flex",
   flexDirection: "column",
@@ -375,12 +554,12 @@ const WhoCanTake: React.FC<{ productNoun: string }> = ({ productNoun }) => {
       Because of U.S. Office of Foreign Assets Control (OFAC) restrictions and
       other U.S. federal regulations, learners residing in one or more of the
       following countries or regions will not be able to register for this
-      course: Iran, Cuba, Syria, North Korea and the Crimea, Donetsk People's
-      Republic and Luhansk People's Republic regions of Ukraine.
+      course: Iran, Cuba, North Korea and the Crimea, Donetsk People's Republic
+      and Luhansk People's Republic regions of Ukraine.
     </WhoCanTakeSection>
   )
 }
 
 export default ProductPageTemplate
-export { WhoCanTake, ProductNavbar }
+export { WhoCanTake, ProductNavbar, WhatSection, HowYoullLearnSection }
 export type { HeadingData, ProductPageTemplateProps }
