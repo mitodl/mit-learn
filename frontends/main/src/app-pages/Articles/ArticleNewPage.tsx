@@ -7,6 +7,7 @@ import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
 import { articlesDraftView, articlesView } from "@/common/urls"
+import invariant from "tiny-invariant"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -23,7 +24,8 @@ const ArticleNewPage: React.FC = () => {
         <ArticleEditor
           onSave={(article) => {
             if (article.is_published) {
-              return router.push(articlesView(article.slug!))
+              invariant(article.slug, "Published article must have a slug")
+              return router.push(articlesView(article.slug))
             } else {
               router.push(articlesDraftView(String(article.id)))
             }

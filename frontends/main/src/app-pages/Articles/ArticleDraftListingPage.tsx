@@ -20,6 +20,7 @@ import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { ArticleBanner, DEFAULT_BACKGROUND_IMAGE_URL } from "./ArticleBanner"
 import { extractFirstImageFromArticle } from "@/common/articleUtils"
 import { notFound } from "next/navigation"
+import { articlesDraftView, articlesView } from "@/common/urls"
 
 const PAGE_SIZE = 20
 
@@ -69,8 +70,8 @@ export const DraftArticle: React.FC<{ article: RichTextArticle }> = ({
   article,
 }) => {
   const articleUrl = article.is_published
-    ? `/articles/${article.slug || article.id}`
-    : `/articles/${article.id}/draft`
+    ? articlesView(article.slug || String(article.id))
+    : articlesDraftView(String(article.id))
 
   const imageUrl = extractFirstImageFromArticle(article.content)
 
