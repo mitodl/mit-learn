@@ -231,6 +231,7 @@ def test_mitxonline_transform_programs(
                             ]
                         )
                         > 0
+                        and course_data.get("include_in_learn_catalog", False)
                     ),
                     "certification": parse_certification(
                         OFFERED_BY["code"],
@@ -365,6 +366,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
                     [run for run in course_data["courseruns"] if run["is_enrollable"]]
                 )
                 > 0
+                and course_data.get("include_in_learn_catalog", False)
             ),
             "professional": False,
             "certification": parse_certification(
@@ -417,6 +419,26 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
         if "PROCTORED EXAM" not in course_data["title"]
     ]
     assert expected == result
+
+
+@pytest.mark.parametrize("include_in_learn_catalog", [True, False, None])
+def test_mitxonline_transform_courses_not_in_catalog(
+    mock_mitxonline_courses_data, mocker, include_in_learn_catalog
+):
+    """Test that a course with include_in_learn_catalog=False/None is not published"""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    # Use only the first course and set include_in_learn_catalog to False/None
+    course = mock_mitxonline_courses_data["results"][0]
+    course["include_in_learn_catalog"] = include_in_learn_catalog
+    # Ensure all other publish conditions are met
+    assert course["page"]["page_url"]
+    assert course["page"]["live"]
+    assert any(run["is_enrollable"] for run in course["courseruns"])
+
+    result = transform_courses([course])
+    assert result[0]["published"] is bool(include_in_learn_catalog)
 
 
 @pytest.mark.django_db
