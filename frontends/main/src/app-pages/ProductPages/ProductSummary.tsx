@@ -60,9 +60,9 @@ const InfoRow = styled.div(({ theme }) => ({
   },
 }))
 
-const InfoRowInner: React.FC<
-  Pick<StackProps, "children" | "flexWrap" | "justifyContent">
-> = (props) => (
+const InfoRowInner: React.FC<Pick<StackProps, "children" | "flexWrap">> = (
+  props,
+) => (
   <Stack
     width="100%"
     direction="row"
@@ -203,9 +203,11 @@ type LearnMoreDialogProps = {
 }
 
 const ButtonContainer = styled.span(({ theme }) => ({
-  display: "flex",
+  marginLeft: "8px",
+  display: "inline-flex",
   alignItems: "center",
   height: "20px",
+  transform: "translateY(25%)",
   "> button": {
     color: theme.custom.colors.silverGrayDark,
   },
@@ -298,13 +300,20 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
-      <InfoRowInner justifyContent="flex-start">
-        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
-        <LearnMoreDialog
-          href={pace.href}
-          description={pace.description}
-          title={`What are ${pace.label} courses?`}
-          iconOnly
+      <InfoRowInner>
+        <InfoLabelValue
+          label="Course Format"
+          value={
+            <>
+              {pace.label}
+              <LearnMoreDialog
+                href={pace.href}
+                description={pace.description}
+                title={`What are ${pace.label} courses?`}
+                iconOnly
+              />
+            </>
+          }
         />
       </InfoRowInner>
     </InfoRow>
@@ -386,7 +395,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
         <>
           <InfoRowInner flexWrap={"nowrap"}>
             <InfoLabelValue
-              label="Certificate Track"
+              label="Earn a certificate"
               value={
                 price.isDiscounted ? (
                   <>
@@ -653,19 +662,25 @@ const ProgramPaceRow: React.FC<
 > = ({ courses, ...others }) => {
   const paceCode = courses?.length ? getProgramPacing(courses) : null
   const pace = paceCode ? PACE_DATA[paceCode] : null
+  if (!pace) return null
   return (
     <InfoRow {...others}>
       <RiComputerLine aria-hidden="true" />
-      <InfoRowInner justifyContent="flex-start">
-        <InfoLabelValue label="Course Format" value={pace?.label} />{" "}
-        {pace ? (
-          <LearnMoreDialog
-            iconOnly
-            href={pace.href}
-            description={pace.description}
-            title={`What are ${pace.label} courses?`}
-          />
-        ) : null}
+      <InfoRowInner>
+        <InfoLabelValue
+          label="Course Format"
+          value={
+            <>
+              {pace.label}
+              <LearnMoreDialog
+                href={pace.href}
+                description={pace.description}
+                title={`What are ${pace.label} courses?`}
+                iconOnly
+              />
+            </>
+          }
+        />
       </InfoRowInner>
     </InfoRow>
   )
@@ -692,7 +707,7 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
     <CertificateBoxRoot>
       <InfoRowInner flexWrap="nowrap">
         <InfoLabelValue
-          label="Certificate Track"
+          label="Earn a certificate"
           value={
             <>
               {/* Heuristic: If the price contains more than one word, insert a line
