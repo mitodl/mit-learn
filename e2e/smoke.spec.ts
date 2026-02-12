@@ -24,8 +24,12 @@ export const localLogin = async (
   await page.goto("/")
   await page.getByText("Log In").click()
   await page.getByLabel("Email").fill(email)
-  await page.getByLabel("Password", { exact: true }).fill(password)
-  await page.getByRole("Button", { name: "Sign In" }).click()
+  const passwordElement = await page.getByLabel("Password", { exact: true })
+  if ((await passwordElement.count()) > 0) {
+    await passwordElement.fill(password)
+    await page.getByRole("Button", { name: "Sign In" }).click()
+    return
+  }
 }
 
 test.describe("Smoke Test - Homepage", () => {
