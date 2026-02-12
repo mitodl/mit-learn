@@ -86,7 +86,7 @@ interface BaseLearningResourceCardProps {
   size?: Size
   isMedia?: boolean
   href?: string
-  onClick?: React.MouseEventHandler
+  onClick?: React.MouseEventHandler<HTMLElement>
   headingLevel?: number
   // Display data
   imageSrc?: string
@@ -397,7 +397,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         aria-label={ariaLabel}
         forwardClicksToLink
         className={className}
-        onClick={() => onClick}
+        onClick={onClick}
         draggable={draggable}
       >
         <ListCardCondensed.Info>
