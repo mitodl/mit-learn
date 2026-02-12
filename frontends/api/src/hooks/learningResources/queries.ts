@@ -16,7 +16,6 @@ import type {
   PlatformsApiPlatformsListRequest,
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
-  LearningResourcesSearchResponse,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
@@ -132,10 +131,9 @@ const learningResourceQueries = {
     queryOptions({
       queryKey: learningResourceKeys.list(params),
       queryFn: () =>
-        learningResourcesApi.learningResourcesList(params).then((res) => ({
-          ...res.data,
-          results: res.data.results,
-        })),
+        learningResourcesApi
+          .learningResourcesList(params)
+          .then((res) => res.data),
     }),
   summaryList: (params: LearningResourcesSummaryListRequest) =>
     queryOptions({
@@ -168,13 +166,9 @@ const learningResourceQueries = {
     queryOptions({
       queryKey: learningResourceKeys.search(params),
       queryFn: () =>
-        learningResourcesSearchApi.learningResourcesSearchRetrieve(params).then(
-          (res) =>
-            ({
-              ...res.data,
-              results: res.data.results,
-            }) as LearningResourcesSearchResponse,
-        ),
+        learningResourcesSearchApi
+          .learningResourcesSearchRetrieve(params)
+          .then((res) => res.data),
     }),
 }
 

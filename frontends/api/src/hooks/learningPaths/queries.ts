@@ -46,13 +46,7 @@ const learningPathQueries = {
             })
           : learningPathsApi.learningpathsItemsList(listingParams)
         const { data } = await request
-        return {
-          ...data,
-          results: data.results.map((relation) => ({
-            ...relation,
-            resource: relation.resource,
-          })),
-        }
+        return data
       },
       // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
       initialPageParam: null as string | null,
