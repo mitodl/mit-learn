@@ -133,7 +133,7 @@ const LinksWrapper = styled.div(({ theme }) => ({
   "&[data-show-right-fade='true']::after": {
     opacity: 1,
   },
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     display: "none",
   },
 }))
@@ -142,14 +142,11 @@ const LinksWrapper = styled.div(({ theme }) => ({
 const LinksContainer = styled.nav({
   display: "flex",
   flexWrap: "nowrap",
+  justifyContent: "space-between",
   // take full wrapper width; inner content overflows inside this scroller
   width: "100%",
   overflowX: "auto",
   scrollBehavior: "smooth",
-  scrollbarWidth: "none", // Firefox
-  "&::-webkit-scrollbar": {
-    display: "none", // Chrome, Safari, Edge
-  },
 })
 const NavLink = styled(ButtonLink, {
   shouldForwardProp: (prop) => prop !== "active",
