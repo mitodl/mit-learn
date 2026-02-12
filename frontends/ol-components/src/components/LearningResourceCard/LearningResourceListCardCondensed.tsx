@@ -31,6 +31,7 @@ const LearningResourceListCardCondensed: React.FC<
   inLearningPath,
   inUserList,
   draggable,
+  onClick,
   headingLevel = 6,
 }) => {
   if (isLoading) {
@@ -94,6 +95,7 @@ const LearningResourceListCardCondensed: React.FC<
       list
       condensed
       href={href}
+      onClick={onClick}
       headingLevel={headingLevel}
       title={resource.title}
       resourceType={readableType}
