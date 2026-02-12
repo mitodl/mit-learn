@@ -37,7 +37,10 @@ You should also ensure that mitxonline is running locally for any pages which ne
 docker exec -it mit-learn-watch-1 yarn playwright
 
 # Run all tests against a specific Base URL
-docker exec -it mit-learn-watch-1 yarn PLAYWRIGHT_BASE_URL=http://learn.odl.local:9080 playwright
+docker exec -it -e PLAYWRIGHT_BASE_URL=http://learn.odl.local:9080 mit-learn-watch-1 yarn playwright
+
+# Run all tests with specific test and assertion timeouts
+docker exec -it -e PLAYWRIGHT_TIMEOUT=60000 -e PLAYWRIGHT_EXPECT_TIMEOUT=10000 mit-learn-watch-1 yarn playwright
 
 # Run against RC environment
 docker exec -it mit-learn-watch-1 yarn playwright:rc
