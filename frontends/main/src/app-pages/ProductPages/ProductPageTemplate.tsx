@@ -91,6 +91,38 @@ const SidebarSpacer = styled.div(({ theme }) => ({
     display: "none",
   },
 }))
+const SidebarImageWrapper = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    height: "0px",
+  },
+}))
+const SidebarImage = styled(Image)(({ theme }) => ({
+  borderRadius: "4px",
+  width: "100%",
+  maxWidth: "410px",
+  height: "230px",
+  display: "block",
+  [theme.breakpoints.up("md")]: {
+    transform: "translateY(-100%)",
+  },
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "4px 4px 0 0",
+  },
+}))
+const SidebarSummaryRoot = styled.section(({ theme }) => ({
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "0 0 4px 4px",
+  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
+  padding: "24px 32px",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    marginTop: "-24px",
+    top: "calc(40px + 32px + 24px)",
+    borderRadius: "4px",
+  },
+}))
 
 // Outer wrapper: sticky, clipped, and owns the fade overlays
 const LinksWrapper = styled.div(({ theme }) => ({
@@ -170,26 +202,6 @@ const NavLink = styled(ButtonLink, {
         color: theme.custom.colors.red,
       },
 ])
-
-const SidebarImageWrapper = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    height: "0px",
-  },
-}))
-const SidebarImage = styled(Image)(({ theme }) => ({
-  borderRadius: "4px",
-  width: "100%",
-  maxWidth: "410px",
-  height: "230px",
-  display: "block",
-  [theme.breakpoints.up("md")]: {
-    transform: "translateY(-100%)",
-  },
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px 4px 0 0",
-  },
-}))
 
 const WhatSectionRoot = styled.section(({ theme }) => ({
   display: "flex",
@@ -393,6 +405,7 @@ type ProductPageTemplateProps = {
   sidebarSummary: React.ReactNode
   children: React.ReactNode
   navLinks: HeadingData[]
+  enrollButton?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -402,6 +415,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   imageSrc,
   sidebarSummary,
   children,
+  enrollButton,
 }) => {
   return (
     <Page>
@@ -437,7 +451,10 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
           <SidebarImageWrapper>
             <SidebarImage width={410} height={230} src={imageSrc} alt="" />
           </SidebarImageWrapper>
-          {sidebarSummary}
+          <SidebarSummaryRoot>
+            {enrollButton}
+            {sidebarSummary}
+          </SidebarSummaryRoot>
         </SidebarCol>
         <MainCol>{children}</MainCol>
       </BottomContainer>

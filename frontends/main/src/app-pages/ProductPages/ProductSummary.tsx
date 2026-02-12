@@ -497,20 +497,6 @@ const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const SidebarSummaryRoot = styled.section(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "0 0 4px 4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px 32px",
-  [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-24px",
-    top: "calc(40px + 32px + 24px)",
-    borderRadius: "4px",
-  },
-}))
-
 enum TestIds {
   DatesRow = "dates-row",
   PaceRow = "pace-row",
@@ -538,26 +524,22 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-  enrollButton?: React.ReactNode
-}> = ({ course, enrollButton }) => {
+}> = ({ course }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <SidebarSummaryRoot aria-labelledby="course-summary">
+    <section aria-labelledby="course-summary">
       <VisuallyHidden>
         <h2 id="course-summary">Course summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        <Stack gap="8px">
-          {enrollButton}
-          {!nextRun ? (
-            <Alert severity="warning">
-              No sessions of this course are currently open for enrollment. More
-              sessions may be added in the future.
-            </Alert>
-          ) : null}
-          {nextRun?.is_archived ? <ArchivedAlert /> : null}
-        </Stack>
+        {!nextRun ? (
+          <Alert severity="warning">
+            No sessions of this course are currently open for enrollment. More
+            sessions may be added in the future.
+          </Alert>
+        ) : null}
+        {nextRun?.is_archived ? <ArchivedAlert /> : null}
         {nextRun ? (
           <CourseDatesRow
             course={course}
@@ -588,7 +570,7 @@ const CourseSummary: React.FC<{
           data-testid={TestIds.CourseInProgramsRow}
         />
       </Stack>
-    </SidebarSummaryRoot>
+    </section>
   )
 }
 
@@ -761,15 +743,13 @@ const ProgramSummary: React.FC<{
    * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
    */
   courses?: CourseWithCourseRunsSerializerV2[]
-  enrollButton?: React.ReactNode
-}> = ({ program, courses, enrollButton }) => {
+}> = ({ program, courses }) => {
   return (
-    <SidebarSummaryRoot aria-labelledby="program-summary">
+    <section aria-labelledby="program-summary">
       <VisuallyHidden>
         <h2 id="program-summary">Program summary</h2>
       </VisuallyHidden>
       <Stack gap={{ xs: "24px", md: "32px" }}>
-        {enrollButton}
         <RequirementsRow
           program={program}
           data-testid={TestIds.RequirementsRow}
@@ -781,7 +761,7 @@ const ProgramSummary: React.FC<{
         <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
         <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
       </Stack>
-    </SidebarSummaryRoot>
+    </section>
   )
 }
 
