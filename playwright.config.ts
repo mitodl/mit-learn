@@ -4,15 +4,18 @@ import { defineConfig, devices } from "@playwright/test"
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  timeout: Number(process.env.PLAYWRIGHT_TIMEOUT) || 30_000,
+  expect: { timeout: Number(process.env.PLAYWRIGHT_EXPECT_TIMEOUT) || 5_000 },
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: [["html", { port: 9229, host: "0.0.0.0" }], ["list"]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://nginx:8063",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    ignoreHTTPSErrors: true,
   },
 
   projects: [

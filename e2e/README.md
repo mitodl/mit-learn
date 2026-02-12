@@ -36,6 +36,12 @@ You should also ensure that mitxonline is running locally for any pages which ne
 # Run all tests (defaults to http://nginx:8063 in Docker)
 docker exec -it mit-learn-watch-1 yarn playwright
 
+# Run all tests against a specific Base URL
+docker exec -it -e PLAYWRIGHT_BASE_URL=http://learn.odl.local:9080 mit-learn-watch-1 yarn playwright
+
+# Run all tests with specific test and assertion timeouts
+docker exec -it -e PLAYWRIGHT_TIMEOUT=60000 -e PLAYWRIGHT_EXPECT_TIMEOUT=10000 mit-learn-watch-1 yarn playwright
+
 # Run against RC environment
 docker exec -it mit-learn-watch-1 yarn playwright:rc
 
@@ -58,7 +64,7 @@ docker exec -it mit-learn-watch-1 yarn playwright:report
 - **Tests**: Located in `e2e/` directory
 - **Videos**: Recorded on failure, saved to `test-results/`
 - **Screenshots**: Captured on failure
-- **Traces**: Captured on first retry for debugging
+- **Traces**: Captured on failure, saved to `test-results/`. This contains DOM state and network calls, useful for non-obvious issues.
 
 ## Writing Tests
 
@@ -81,7 +87,13 @@ Playwright uses built-in locators like `getByRole`, `getByText`, etc. for access
 ## Debugging
 
 - **UI Mode**: Run `yarn playwright:ui` for interactive debugging
-- **Traces**: View traces in the HTML report after test failures
+- **Traces**: Check `test-results/` for trace files, these can be uploaded to https://trace.playwright.dev/
 - **Videos**: Check `test-results/` directory for failure videos
 
 By default, on failure it'll serve up an HTML report with traces and screenshots for debugging, accessible at localhost:9229
+
+## Common Test failure modes
+
+- **Timeouts**:
+  - Increase timeout in `playwright.config.ts` if tests are slow. Locals appear to be significantly slower than production in some cases. Full test timeout can be changed by setting the `PLAYWRIGHT_TIMEOUT` environment variable and the per assertion timeout can be set via `PLAYWRIGHT_EXPECT_TIMEOUT`. More information can be found here, and if they are not set we use the [playwright defaults](https://playwright.dev/docs/test-timeouts)
+  - If the page appears blank, ensure that the URL can be resolved from within the Docker container. You may need to add host entries in `docker-compose.yml` for local domains. You can always attempt to `curl` the URL in question to determine if it is reachable
