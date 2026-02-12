@@ -272,12 +272,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       sidebarSummary={
-        <ProgramSummary
-          enrollButton={<ProgramEnrollmentButton program={program} />}
-          program={program}
-          courses={courses.data?.results}
-        />
+        <ProgramSummary program={program} courses={courses.data?.results} />
       }
+      enrollButton={<ProgramEnrollmentButton program={program} />}
       navLinks={navLinks}
     >
       <ProductNavbar navLinks={navLinks} productNoun="Program" />
