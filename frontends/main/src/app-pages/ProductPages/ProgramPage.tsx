@@ -90,12 +90,12 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
 
-const RequirementsListing = styled(PlainList)(() => ({
+const RequirementsListing = styled(PlainList)({
   display: "flex",
   flexDirection: "column",
   gap: "8px",
   marginTop: "24px",
-}))
+})
 
 const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
   return Object.fromEntries(array.map((item) => [String(item[key]), item]))

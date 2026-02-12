@@ -231,6 +231,12 @@ const CertificateGenericLabel = styled.span(({ theme }) => ({
   },
 }))
 
+const CertificatePriceText = styled.span(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
 const ListPrice = styled.div`
   ${{ ...theme.typography.subtitle2 }}
   color: ${theme.custom.colors.darkGray2};
@@ -489,7 +495,9 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
                 <CertificateTypeName>
                   {certificateTypeName || "Certificate"}
                 </CertificateTypeName>
-                {certificatePrice ? ":" : ""} {certificatePrice}
+                <CertificatePriceText>
+                  {certificatePrice ? ":" : ""} {certificatePrice}
+                </CertificatePriceText>
               </ListCertificate>
             )}
             {coursePrice && <ListPrice>{coursePrice}</ListPrice>}
