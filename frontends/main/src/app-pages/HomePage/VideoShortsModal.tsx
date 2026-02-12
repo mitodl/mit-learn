@@ -90,6 +90,7 @@ const Placeholder = styled.div(({ theme }) => ({
 const Video = styled.video(({ height, width, theme }) => ({
   width,
   height,
+  backgroundColor: theme.custom.colors.black,
   [theme.breakpoints.down("md")]: {
     width: "100%",
     height: "100%",
@@ -148,7 +149,7 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
@@ -159,9 +160,9 @@ const VideoShortsModal = ({
     videosRef.current = videosRef.current.slice(0, videoData.length)
   }, [videoData])
 
-  useEffect(() => {
-    setSelectedIndex(startIndex)
-  }, [startIndex])
+  // useEffect(() => {
+  //   setSelectedIndex(startIndex)
+  // }, [startIndex])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

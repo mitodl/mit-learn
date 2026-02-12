@@ -92,6 +92,7 @@ const VideoShortsSection = () => {
       <Container>
         {showModal ? (
           <VideoShortsModal
+            key={videoIndex}
             startIndex={videoIndex}
             videoData={data}
             onClose={() => setShowModal(false)}
