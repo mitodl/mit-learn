@@ -9,10 +9,6 @@ import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
-// Some URLs are missing the /media prefix. Expecting this to be fixed in later pipeline runs
-const normalizeVideoUrl = (url: string): string =>
-  url.startsWith("/shorts/") ? `/media${url}` : url
-
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
   top: 0,
@@ -235,11 +231,6 @@ const VideoShortsModal = ({
     }
   }
 
-  console.log(
-    "URLS",
-    videoData.map((video) => video.video_url),
-  )
-
   return (
     <Overlay>
       <CloseButton size="large" edge="rounded" variant="text" onClick={onClose}>
@@ -289,7 +280,7 @@ const VideoShortsModal = ({
                     }
                   }}
                   onClick={handleVideoClick}
-                  src={`${NEXT_PUBLIC_ORIGIN}${normalizeVideoUrl(video.video_url ?? "")}`}
+                  src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
                   autoPlay
                   muted
                   playsInline
