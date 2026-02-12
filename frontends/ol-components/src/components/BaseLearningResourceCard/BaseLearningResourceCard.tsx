@@ -397,7 +397,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         aria-label={ariaLabel}
         forwardClicksToLink
         className={className}
-        onClick={onClick}
+        onClick={() => onClick}
         draggable={draggable}
       >
         <ListCardCondensed.Info>
