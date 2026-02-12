@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
@@ -73,16 +74,6 @@ const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
   },
 }))
 
-const Placeholder = styled.div(({ theme }) => ({
-  width: "100%",
-  height: "100%",
-  backgroundColor: "black",
-  borderRadius: "12px",
-  [theme.breakpoints.down("md")]: {
-    borderRadius: 0,
-  },
-}))
-
 const Video = styled.video(({ height, width, theme }) => ({
   width,
   height,
@@ -93,7 +84,7 @@ const Video = styled.video(({ height, width, theme }) => ({
   },
 }))
 
-const ErrorPlaceholder = styled.div(({ theme }) => ({
+const Placeholder = styled.div(({ theme }) => ({
   width: "100%",
   height: "100%",
   backgroundColor: theme.custom.colors.black,
@@ -155,10 +146,6 @@ const VideoShortsModal = ({
   useEffect(() => {
     videosRef.current = videosRef.current.slice(0, videoData.length)
   }, [videoData])
-
-  // useEffect(() => {
-  //   setSelectedIndex(startIndex)
-  // }, [startIndex])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -256,9 +243,9 @@ const VideoShortsModal = ({
           >
             {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
               videoErrors[index] ? (
-                <ErrorPlaceholder>
+                <Placeholder>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={MITOpenLearningLogo.src}
                     alt="MIT Open Learning Logo"
                     width={178}
@@ -267,7 +254,7 @@ const VideoShortsModal = ({
                   />
                   <Typography variant="h4">Playback errored!</Typography>
                   <Typography variant="h2">{video.title}</Typography>
-                </ErrorPlaceholder>
+                </Placeholder>
               ) : (
                 <Video
                   ref={(el) => {
