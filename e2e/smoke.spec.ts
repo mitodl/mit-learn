@@ -74,6 +74,9 @@ const coursePageB2CTestInfo = {
     description:
       "This course is part of the MITx MicroMasters program in Data, Economics, and Development Policy (DEDP).",
     certPrice: "Certificate Track: $1,000.00",
+    loginFunc: login,
+    email: "daniel.subak+test@gmail.com",
+    password: "testpassword",
   },
   [LOCAL_DEFAULT]: {
     url: "/courses/course-v1:PLACEHOLDER+COURSE_IN_PROGRAM_ELECTIVE",
@@ -81,6 +84,9 @@ const coursePageB2CTestInfo = {
     description:
       "PLACEHOLDER - In this engineering course, we will explore the processing and structure of cellular solids as they are created from polymers, metals, ceramics, glasses and composites.",
     certPrice: "Certificate Track: $999.00",
+    email: "admin@odl.local",
+    password: "admin",
+    loginFunc: localLogin,
   },
 }
 
@@ -155,9 +161,10 @@ test.describe("Smoke Test - Program Page B2C Logged In", () => {
 
 test.describe("Smoke Test - Course Page B2C Logged In", () => {
   test("should load the page successfully", async ({ page }, testInfo) => {
-    // Log in, visit a course page attempt to enroll in a course run
-    const { url, title, description, certPrice } =
+    // Log in, visit a course page, assert it's correctly set up.
+    const { url, title, description, certPrice, loginFunc, email, password } =
       await getCoursePageB2CTestInfo(testInfo.project.use.baseURL)
+    await loginFunc(page, email, password)
     await page.goto(url)
 
     await expect(page.locator("main")).toBeVisible()
@@ -178,7 +185,6 @@ test.describe("Smoke Test - Course Page B2C Logged In", () => {
 
     await expect(page.getByText(certPrice)).toBeVisible()
 
-    // TODO: Assert it's part of a program. We still need to assert the actual program title is displayed too
     await expect(page.getByText("Part of the following program")).toBeVisible()
 
     // Open the enrollment modal
