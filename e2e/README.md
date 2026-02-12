@@ -92,5 +92,5 @@ By default, on failure it'll serve up an HTML report with traces and screenshots
 ## Common Test failure modes
 
 - **Timeouts**:
-  - Increase timeout in `playwright.config.ts` if tests are slow. Locals appear to be significantly slower than production in some cases.
+  - Increase timeout in `playwright.config.ts` if tests are slow. Locals appear to be significantly slower than production in some cases. Full test timeout can be changed by setting the `PLAYWRIGHT_TIMEOUT` environment variable and the per assertion timeout can be set via `PLAYWRIGHT_EXPECT_TIMEOUT`. More information can be found here, and if they are not set we use the [playwright defaults](https://playwright.dev/docs/test-timeouts)
   - If the page appears blank, ensure that the URL can be resolved from within the Docker container. You may need to add host entries in `docker-compose.yml` for local domains. You can always attempt to `curl` the URL in question to determine if it is reachable
