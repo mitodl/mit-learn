@@ -840,7 +840,7 @@ describe("Course Price Row", () => {
     const priceRow = within(summary).getByTestId(TestIds.PriceRow)
 
     expect(priceRow).toHaveTextContent(
-      `Certificate Track: $${run.products[0].price}`,
+      `Earn a certificate: $${run.products[0].price}`,
     )
     invariant(run.upgrade_deadline)
     expect(priceRow).toHaveTextContent(
@@ -1386,7 +1386,7 @@ describe("Price & Certificate Row", () => {
     const summary = screen.getByRole("region", { name: "Program summary" })
     const certRow = within(summary).getByTestId(TestIds.PriceRow)
 
-    expect(certRow).toHaveTextContent("Certificate Track")
+    expect(certRow).toHaveTextContent("Earn a certificate")
     expect(certRow).toHaveTextContent(program.page.price)
   })
 
