@@ -261,6 +261,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 "content": "existing content"
                 if (matching_edx_module_id and not overwrite)
                 else tika_output["content"],
+                "title": metadata["title"] if has_metadata else "Uuid",
                 "key": edx_module_id,
                 "published": True,
                 "content_title": metadata["title"] if has_metadata else "",
@@ -635,8 +636,14 @@ def test_is_valid_uuid(uuid_string, expected):
             </video>""",
             "test_video.xml",
             {
-                "asset-v1:test_run+type@asset+block@test_transcript.srt": "block-v1:test_run+type@video+block@test_video",
-                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": "block-v1:test_run+type@video+block@test_video",
+                "asset-v1:test_run+type@asset+block@test_transcript.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@test_video",
+                    "title": None,
+                },
+                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@test_video",
+                    "title": None,
+                },
             },
         ),
         (
@@ -645,7 +652,10 @@ def test_is_valid_uuid(uuid_string, expected):
             </video>""",
             "another_video.xml",
             {
-                "asset-v1:test_run+type@asset+block@another_transcript.srt": "block-v1:test_run+type@video+block@another_video"
+                "asset-v1:test_run+type@asset+block@another_transcript.srt": {
+                    "module_id": "block-v1:test_run+type@video+block@another_video",
+                    "title": None,
+                }
             },
         ),
         (
@@ -682,7 +692,7 @@ def test_parse_video_transcripts_xml(mocker, xml_content, file_name, expected_ma
 
     # Check if warning/exception was logged for invalid XML
     if "invalid xml" in xml_content.lower():
-        mock_log.exception.assert_called_once()
+        mock_log.debug.assert_called_once()
 
 
 @pytest.mark.parametrize("video_dir_exists", [True, False])
@@ -707,8 +717,14 @@ def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
 
         # Mock parse_video_transcripts_xml to return expected mapping
         expected_mapping = {
-            "asset-v1:test_run+type@asset+block@test_transcript1.srt": "block-v1:test_run+type@video+block@test_video",
-            "asset-v1:test_run+type@asset+block@test_transcript2.srt": "block-v1:test_run+type@video+block@test_video",
+            "asset-v1:test_run+type@asset+block@test_transcript1.srt": {
+                "module_id": "block-v1:test_run+type@video+block@test_video",
+                "title": None,
+            },
+            "asset-v1:test_run+type@asset+block@test_transcript2.srt": {
+                "module_id": "block-v1:test_run+type@video+block@test_video",
+                "title": None,
+            },
         }
         mock_parse = mocker.patch(
             "learning_resources.etl.utils.parse_video_transcripts_xml",
@@ -808,7 +824,9 @@ def test_get_url_from_module_id(
     # Setup metadata
     video_srt_metadata = (
         {
-            "asset-v1:test+type@asset+block@transcript.srt": "block-v1:test+type@video+block@test_video"
+            "asset-v1:test+type@asset+block@transcript.srt": {
+                "module_id": "block-v1:test+type@video+block@test_video"
+            }
         }
         if has_video_meta
         else None
@@ -924,3 +942,86 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
 
     assert len(results) == 0
     mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
+
+
+@pytest.mark.parametrize(
+    (
+        "content",
+        "source_path",
+        "edx_module_id",
+        "video_srt_metadata",
+        "mock_xml_content",
+        "expected_title",
+    ),
+    [
+        (
+            "some content",
+            "path/to/vid.srt",
+            "asset-v1:mit+course+video+block@vid",
+            {"asset-v1:mit+course+video+block@vid": {"title": "Video Title"}},
+            None,
+            "Video Title",
+        ),
+        (
+            '<html display_name="XML Title"/>',
+            "path/to/doc.xml",
+            "block-v1:mit+course+type@xml+block@doc",
+            None,
+            None,
+            "XML Title",
+        ),
+        (
+            "<html><body>Content</body></html>",
+            "html/doc.html",
+            "block-v1:mit+course+type@html+block@doc",
+            None,
+            '<html display_name="HTML via XML Title"/>',
+            "HTML via XML Title",
+        ),
+        (
+            "<html><head><title>HTML Tag Title</title></head><body>Content</body></html>",
+            "html/doc.html",
+            "block-v1:mit+course+type@html+block@doc",
+            None,
+            None,
+            "HTML Tag Title",
+        ),
+        (
+            "<html><body>Content</body></html>",
+            "html/my-file-name.html",
+            "block-v1:mit+course+type@html+block@my-file-name",
+            None,
+            None,
+            "My File Name",
+        ),
+    ],
+)
+def test_get_title_for_content(  # noqa: PLR0913
+    tmp_path,
+    content,
+    source_path,
+    edx_module_id,
+    video_srt_metadata,
+    mock_xml_content,
+    expected_title,
+):
+    """Test get_title_for_content for various scenarios"""
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    if mock_xml_content:
+        # Create corresponding XML file
+        xml_dir = olx_path / "html"
+        xml_dir.mkdir(parents=True, exist_ok=True)
+        xml_file = xml_dir / f"{pathlib.Path(source_path).stem}.xml"
+        xml_file.write_text(mock_xml_content)
+
+    title = utils.get_title_for_content(
+        content,
+        str(olx_path),
+        source_path,
+        edx_module_id,
+        video_srt_metadata,
+    )
+
+    assert title == expected_title
