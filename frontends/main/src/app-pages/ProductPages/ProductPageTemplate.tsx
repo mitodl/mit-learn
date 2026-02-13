@@ -72,20 +72,24 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const Show = styled.div<{
-  above?: Breakpoint
-  below?: Breakpoint
-  between?: [Breakpoint, Breakpoint]
-}>(({ theme, above, below, between }) => ({
-  ...(above && {
-    [theme.breakpoints.down(above)]: { display: "none" },
+const SHOW_PROPS = new Set(["showAbove", "showBelow", "showBetween"])
+/** Responsive visibility helper. Only one of showAbove/showBelow/showBetween should be used. */
+const Show = styled("div", {
+  shouldForwardProp: (prop) => !SHOW_PROPS.has(prop),
+})<{
+  showAbove?: Breakpoint
+  showBelow?: Breakpoint
+  showBetween?: [Breakpoint, Breakpoint]
+}>(({ theme, showAbove, showBelow, showBetween }) => ({
+  ...(showAbove && {
+    [theme.breakpoints.down(showAbove)]: { display: "none" },
   }),
-  ...(below && {
-    [theme.breakpoints.up(below)]: { display: "none" },
+  ...(showBelow && {
+    [theme.breakpoints.up(showBelow)]: { display: "none" },
   }),
-  ...(between && {
-    [theme.breakpoints.down(between[0])]: { display: "none" },
-    [theme.breakpoints.up(between[1])]: { display: "none" },
+  ...(showBetween && {
+    [theme.breakpoints.down(showBetween[0])]: { display: "none" },
+    [theme.breakpoints.up(showBetween[1])]: { display: "none" },
   }),
 }))
 
@@ -110,7 +114,9 @@ const SectionsWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-const SidebarCol = styled(Show)<{
+const SidebarCol = styled(Show, {
+  shouldForwardProp: (prop) => prop !== "alignSelf",
+})<{
   alignSelf?: React.CSSProperties["alignSelf"]
 }>(({ alignSelf }) => ({
   width: "100%",
@@ -242,38 +248,38 @@ const WhatSectionRoot = styled.section(({ theme }) => ({
     border: "none",
   },
 }))
-const WhatHTML = styled(RawHTML)(({ theme }) => {
-  const checkmarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 20C4.47715 20 0 15.5228 0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20ZM10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18ZM9.0026 14L4.75999 9.7574L6.17421 8.3431L9.0026 11.1716L14.6595 5.51472L16.0737 6.92893L9.0026 14Z" fill="${theme.custom.colors.green}"/></svg>`
-  const encodedSvg = encodeURIComponent(checkmarkSvg)
+const checkmarkSvgEncoded = (color: string) =>
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 20C4.47715 20 0 15.5228 0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20ZM10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18ZM9.0026 14L4.75999 9.7574L6.17421 8.3431L9.0026 11.1716L14.6595 5.51472L16.0737 6.92893L9.0026 14Z" fill="${color}"/></svg>`,
+  )
 
-  return {
-    "> ul": {
-      display: "grid",
-      gap: "32px",
-      gridTemplateColumns: "1fr 1fr",
-      [theme.breakpoints.down("sm")]: {
-        gridTemplateColumns: "1fr",
-      },
-      listStyle: "none",
-      padding: 0,
-      "> li": {
-        paddingLeft: "32px",
-        position: "relative" as const,
-        "&::before": {
-          content: '""',
-          position: "absolute" as const,
-          left: 0,
-          top: "2px",
-          width: "20px",
-          height: "20px",
-          backgroundImage: `url('data:image/svg+xml,${encodedSvg}')`,
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "contain",
-        },
+const WhatHTML = styled(RawHTML)(({ theme }) => ({
+  "> ul": {
+    display: "grid",
+    gap: "32px",
+    gridTemplateColumns: "1fr 1fr",
+    [theme.breakpoints.down("sm")]: {
+      gridTemplateColumns: "1fr",
+    },
+    listStyle: "none",
+    padding: 0,
+    "> li": {
+      paddingLeft: "32px",
+      position: "relative" as const,
+      "&::before": {
+        content: '""',
+        position: "absolute" as const,
+        left: 0,
+        top: "2px",
+        width: "20px",
+        height: "20px",
+        backgroundImage: `url('data:image/svg+xml,${checkmarkSvgEncoded(theme.custom.colors.green)}')`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "contain",
       },
     },
-  }
-})
+  },
+}))
 
 const WhatSection: React.FC<{ html: string }> = ({ html }) => {
   return (
@@ -342,7 +348,14 @@ const HowYoullLearnDescription = styled.p(({ theme }) => ({
   },
 }))
 
-const HOW_DATA = [
+type HowYoullLearnItem = {
+  icon: typeof IconComputerBulb
+  title: string
+  text: string
+}
+
+// Placeholder data — will be replaced by API-driven content.
+const DEFAULT_HOW_DATA: HowYoullLearnItem[] = [
   {
     icon: IconComputerBulb,
     title: "Learn by doing",
@@ -356,17 +369,17 @@ const HOW_DATA = [
   {
     icon: IconBookPlay,
     title: "Learn on demand",
-    text: "Enroll anytime. Access all of the content online and watch videos at your own pace. No weekly assignment deadlines.",
+    text: "Access course content online and watch videos at your own pace.",
   },
   {
     icon: IconBrains,
     title: "Reflect and apply",
-    text: "Bring your new skills to your organization, through examples from technical work environments and ample prompts for reflection.",
+    text: "Bring new skills to your organization through real-world examples and prompts for reflection.",
   },
   {
     icon: IconCertificate,
     title: "Demonstrate your success",
-    text: "Earn a Professional Certificate and 3 Continuing Education Units (CEUs) from MIT.",
+    text: "Earn a credential from MIT to showcase your achievement.",
   },
   {
     icon: IconConnectedPeople,
@@ -375,14 +388,16 @@ const HOW_DATA = [
   },
 ]
 
-const HowYoullLearnSection: React.FC = () => {
+const HowYoullLearnSection: React.FC<{
+  data?: HowYoullLearnItem[]
+}> = ({ data = DEFAULT_HOW_DATA }) => {
   return (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
         How you'll learn
       </Typography>
       <HowYoullLearnGrid>
-        {HOW_DATA.map((item, index) => (
+        {data.map((item, index) => (
           <HowYoullLearnItem key={index}>
             <HowYoullLearnHeader>
               <HowYoullLearnIcon
@@ -473,16 +488,21 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               </Stack>
             </TitleBox>
           </MainCol>
-          <SidebarCol above="md" alignSelf="flex-end">
+          <SidebarCol showAbove="md" alignSelf="flex-end">
             <SidebarImage width={410} height={230} src={imageSrc} alt="" />
           </SidebarCol>
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
+        {/*
+         * The summary section is rendered 3 times (desktop, tablet, mobile)
+         * with different layouts, but only one is visible at a time via CSS.
+         * A single visually-hidden heading serves all three.
+         */}
         <VisuallyHidden>
           <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
         </VisuallyHidden>
-        <SidebarCol above="md">
+        <SidebarCol showAbove="md">
           <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
             {enrollButton}
             {sidebarSummary}
@@ -490,7 +510,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </SidebarCol>
         <MainCol>
           {navbar}
-          <Show between={["sm", "md"]}>
+          <Show showBetween={["sm", "md"]}>
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               {sidebarSummary}
               <Stack gap="16px">
@@ -499,7 +519,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               </Stack>
             </SummaryRoot>
           </Show>
-          <SidebarCol below="sm" alignSelf="center">
+          <SidebarCol showBelow="sm" alignSelf="center">
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               <SidebarImage width={410} height={230} src={imageSrc} alt="" />
               {enrollButton}
@@ -551,15 +571,28 @@ const ProductNavbar: React.FC<{
     updateFades()
 
     // Update on scroll
-    container.addEventListener("scroll", updateFades)
+    container.addEventListener("scroll", updateFades, { passive: true })
     // Update on resize (in case content wrapping changes)
-    window.addEventListener("resize", updateFades)
+    window.addEventListener("resize", updateFades, { passive: true })
 
     return () => {
       container.removeEventListener("scroll", updateFades)
       window.removeEventListener("resize", updateFades)
     }
   }, [updateFades, navLinks])
+
+  // Clear stale refs when navLinks change
+  const navLinkIds = React.useMemo(
+    () => new Set(navLinks.map((l) => l.id)),
+    [navLinks],
+  )
+  React.useEffect(() => {
+    for (const key of navLinkRefs.current.keys()) {
+      if (!navLinkIds.has(key as HeadingIds)) {
+        navLinkRefs.current.delete(key)
+      }
+    }
+  }, [navLinkIds])
 
   React.useEffect(() => {
     if (activeFragment) {
