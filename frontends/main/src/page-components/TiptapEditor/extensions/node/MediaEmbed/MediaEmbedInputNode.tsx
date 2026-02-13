@@ -14,7 +14,7 @@ const mediaEmbedInputConfig: ExtendedNodeConfig = {
   },
 
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    return ["media-embed-input", mergeAttributes(HTMLAttributes), 0]
+    return ["p", mergeAttributes(HTMLAttributes), 0]
   },
 
   getPlaceholders: (childNode: ProseMirrorNode) => {

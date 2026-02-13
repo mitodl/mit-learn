@@ -14,7 +14,7 @@ const learningResourceInputConfig: ExtendedNodeConfig = {
   },
 
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    return ["learning-resource-input", mergeAttributes(HTMLAttributes), 0]
+    return ["p", mergeAttributes(HTMLAttributes), 0]
   },
 
   getPlaceholders: (childNode: ProseMirrorNode) => {
