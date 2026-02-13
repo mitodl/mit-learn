@@ -54,11 +54,6 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
       content: page.about,
     },
     {
-      id: HeadingIds.Requirements,
-      label: "Courses",
-      content: true,
-    },
-    {
       id: HeadingIds.What,
       label: "What you'll learn",
       content: page.what_you_learn,
@@ -275,9 +270,8 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <ProgramSummary program={program} courses={courses.data?.results} />
       }
       enrollButton={<ProgramEnrollmentButton program={program} />}
-      navLinks={navLinks}
+      navbar={<ProductNavbar navLinks={navLinks} productNoun="Program" />}
     >
-      <ProductNavbar navLinks={navLinks} productNoun="Program" />
       <Stack gap={{ xs: "40px", sm: "56px" }}>
         {page.about ? (
           <AboutSection productNoun="Program" aboutHtml={page.about} />
