@@ -12,7 +12,7 @@ import {
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { ButtonLink, styled } from "@mitodl/smoot-design"
+import { ButtonLink, styled, VisuallyHidden } from "@mitodl/smoot-design"
 import Image from "next/image"
 import { HeadingIds } from "./util"
 import { useFragmentScrollSpy } from "@/common/useFragmentScrollSpy"
@@ -201,7 +201,7 @@ const LinksWrapper = styled.div(({ theme }) => ({
 const LinksNav = styled.nav({
   display: "flex",
   flexWrap: "nowrap",
-  justifyContent: "space-between",
+  justifyContent: "space-around",
   // take full wrapper width; inner content overflows inside this scroller
   width: "100%",
   overflowX: "auto",
@@ -430,6 +430,7 @@ type ProductPageTemplateProps = {
   shortDescription: React.ReactNode
   imageSrc: string
   sidebarSummary: React.ReactNode
+  summaryTitle: string
   children: React.ReactNode
   navbar: React.ReactNode
   enrollButton?: React.ReactNode
@@ -441,6 +442,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   shortDescription,
   imageSrc,
   sidebarSummary,
+  summaryTitle,
   children,
   enrollButton,
   navbar,
@@ -477,8 +479,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
+        <VisuallyHidden>
+          <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
+        </VisuallyHidden>
         <SidebarCol above="md">
-          <SummaryRoot>
+          <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
             {enrollButton}
             {sidebarSummary}
           </SummaryRoot>
@@ -486,17 +491,16 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         <MainCol>
           {navbar}
           <Show between={["sm", "md"]}>
-            <SummaryRoot>
+            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               {sidebarSummary}
               <Stack gap="16px">
                 <SidebarImage width={410} height={230} src={imageSrc} alt="" />
                 {enrollButton}
-                {/* Tim */}
               </Stack>
             </SummaryRoot>
           </Show>
           <SidebarCol below="sm" alignSelf="center">
-            <SummaryRoot>
+            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               <SidebarImage width={410} height={230} src={imageSrc} alt="" />
               {enrollButton}
               {sidebarSummary}
@@ -614,9 +618,10 @@ const WhoCanTake: React.FC<{ productNoun: string }> = ({ productNoun }) => {
       </Typography>
       Because of U.S. Office of Foreign Assets Control (OFAC) restrictions and
       other U.S. federal regulations, learners residing in one or more of the
-      following countries or regions will not be able to register for this
-      course: Iran, Cuba, North Korea and the Crimea, Donetsk People's Republic
-      and Luhansk People's Republic regions of Ukraine.
+      following countries or regions will not be able to register for this{" "}
+      {productNoun.toLowerCase()}: Iran, Cuba, North Korea and the Crimea,
+      Donetsk People's Republic and Luhansk People's Republic regions of
+      Ukraine.
     </WhoCanTakeSection>
   )
 }

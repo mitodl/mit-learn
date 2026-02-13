@@ -188,6 +188,16 @@ describe("CoursePage", () => {
     expectRawContent(section, page.prerequisites)
   })
 
+  test("Renders an enrollment button", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const buttons = await screen.findAllByTestId("course-enrollment-button")
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
+  })
+
   test.each([
     { courses: [], pages: [makePage()] },
     { courses: [makeCourse()], pages: [] },

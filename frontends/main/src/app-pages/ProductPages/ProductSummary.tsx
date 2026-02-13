@@ -1,10 +1,5 @@
 import React, { HTMLAttributes, useState } from "react"
-import {
-  ActionButton,
-  Alert,
-  styled,
-  VisuallyHidden,
-} from "@mitodl/smoot-design"
+import { ActionButton, Alert, styled } from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
@@ -398,7 +393,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
           <InfoRowInner flexWrap={"nowrap"}>
             <span>
               <UnderlinedLink
-                href={PROGRAM_CERT_INFO_HREF}
+                href={COURSE_CERT_INFO_HREF}
                 target="_blank"
                 rel="noopener noreferrer"
                 color="black"
@@ -534,49 +529,44 @@ const CourseSummary: React.FC<{
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <section aria-labelledby="course-summary">
-      <VisuallyHidden>
-        <h2 id="course-summary">Course summary</h2>
-      </VisuallyHidden>
-      <Stack gap={{ xs: "24px", md: "32px" }}>
-        {!nextRun ? (
-          <Alert severity="warning">
-            No sessions of this course are currently open for enrollment. More
-            sessions may be added in the future.
-          </Alert>
-        ) : null}
-        {nextRun?.is_archived ? <ArchivedAlert /> : null}
-        {nextRun ? (
-          <CourseDatesRow
-            course={course}
-            nextRun={nextRun}
-            data-testid={TestIds.DatesRow}
-          />
-        ) : null}
-        {nextRun ? (
-          <CoursePaceRow
-            course={course}
-            nextRun={nextRun}
-            data-testid={TestIds.PaceRow}
-          />
-        ) : null}
-        <CourseDurationRow
+    <Stack gap={{ xs: "24px", md: "32px" }}>
+      {!nextRun ? (
+        <Alert severity="warning">
+          No sessions of this course are currently open for enrollment. More
+          sessions may be added in the future.
+        </Alert>
+      ) : null}
+      {nextRun?.is_archived ? <ArchivedAlert /> : null}
+      {nextRun ? (
+        <CourseDatesRow
           course={course}
           nextRun={nextRun}
-          data-testid={TestIds.DurationRow}
+          data-testid={TestIds.DatesRow}
         />
-        <CoursePriceRow
+      ) : null}
+      {nextRun ? (
+        <CoursePaceRow
           course={course}
           nextRun={nextRun}
-          data-testid={TestIds.PriceRow}
+          data-testid={TestIds.PaceRow}
         />
-        <CourseInProgramsRow
-          course={course}
-          nextRun={nextRun}
-          data-testid={TestIds.CourseInProgramsRow}
-        />
-      </Stack>
-    </section>
+      ) : null}
+      <CourseDurationRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.DurationRow}
+      />
+      <CoursePriceRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.PriceRow}
+      />
+      <CourseInProgramsRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.CourseInProgramsRow}
+      />
+    </Stack>
   )
 }
 
@@ -738,23 +728,15 @@ const ProgramSummary: React.FC<{
   courses?: CourseWithCourseRunsSerializerV2[]
 }> = ({ program, courses }) => {
   return (
-    <section aria-labelledby="program-summary">
-      <VisuallyHidden>
-        <h2 id="program-summary">Program summary</h2>
-      </VisuallyHidden>
-      <Stack gap={{ xs: "24px", md: "32px" }}>
-        <RequirementsRow
-          program={program}
-          data-testid={TestIds.RequirementsRow}
-        />
-        <ProgramDurationRow
-          program={program}
-          data-testid={TestIds.DurationRow}
-        />
-        <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
-        <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
-      </Stack>
-    </section>
+    <Stack gap={{ xs: "24px", md: "32px" }}>
+      <RequirementsRow
+        program={program}
+        data-testid={TestIds.RequirementsRow}
+      />
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+    </Stack>
   )
 }
 
