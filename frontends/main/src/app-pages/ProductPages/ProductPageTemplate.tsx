@@ -99,6 +99,17 @@ const MainCol = styled.div(({ theme }) => ({
   },
 }))
 
+const SectionsWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "56px",
+  marginTop: "40px",
+  [theme.breakpoints.down("md")]: {
+    gap: "40px",
+    marginTop: "36px",
+  },
+}))
+
 const SidebarCol = styled(Show)<{
   alignSelf?: React.CSSProperties["alignSelf"]
 }>(({ alignSelf }) => ({
@@ -112,6 +123,7 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   width: "100%",
   maxWidth: "410px",
   aspectRatio: "410 / 230",
+  height: "auto",
   display: "block",
   [theme.breakpoints.down("md")]: {
     border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -150,7 +162,6 @@ const LinksWrapper = styled.div(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.red}`,
   marginTop: "-20px", // this is (height/2 + line_height/2) = align top of text with bottom of banner
   maxWidth: "100%",
-  marginBottom: "40px",
   position: "sticky",
   top: `calc(${HEADER_HEIGHT}px + 24px)`,
   zIndex: 100,
@@ -477,7 +488,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
           <Show between={["sm", "md"]}>
             <SummaryRoot>
               {sidebarSummary}
-              <Stack>
+              <Stack gap="16px">
                 <SidebarImage width={410} height={230} src={imageSrc} alt="" />
                 {enrollButton}
                 {/* Tim */}
@@ -491,7 +502,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               {sidebarSummary}
             </SummaryRoot>
           </SidebarCol>
-          {children}
+          <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>
     </Page>
