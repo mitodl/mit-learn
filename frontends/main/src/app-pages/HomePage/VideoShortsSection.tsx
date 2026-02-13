@@ -8,10 +8,6 @@ import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
-// Some URLs are missing the /media prefix. Expecting this to be fixed in later pipeline runs
-const normalizeMediaUrl = (url: string): string =>
-  url.startsWith("/shorts/") ? `/media${url}` : url
-
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
   [theme.breakpoints.down("md")]: {
@@ -123,7 +119,7 @@ const VideoShortsSection = () => {
                       <img
                         width={(235 / ASPECT_RATIO) * (270 / 480)}
                         height={235 / ASPECT_RATIO}
-                        src={`${NEXT_PUBLIC_ORIGIN}${normalizeMediaUrl(video.thumbnail_small_url ?? "")}`}
+                        src={`${NEXT_PUBLIC_ORIGIN}${video.thumbnail_small_url}`}
                         alt={video.title}
                       />
                     ) : (
