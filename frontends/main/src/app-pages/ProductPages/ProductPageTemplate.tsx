@@ -93,15 +93,12 @@ const Show = styled("div", {
   }),
 }))
 
-const MainCol = styled.div(({ theme }) => ({
+const MainCol = styled.div({
   flex: 1,
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: "24px",
-  },
-}))
+})
 
 const SectionsWrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -155,6 +152,12 @@ const SummaryRoot = styled.div(({ theme }) => ({
   [theme.breakpoints.between("sm", "md")]: {
     flexDirection: "row",
     gap: "48px",
+  },
+  [theme.breakpoints.down("md")]: {
+    marginTop: "36px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "24px",
   },
 }))
 
@@ -309,6 +312,9 @@ const HowYoullLearnGrid = styled.ul(({ theme }) => ({
   padding: 0,
   margin: 0,
   [theme.breakpoints.down("md")]: {
+    gap: "16px",
+  },
+  [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "1fr",
     gap: "24px",
   },
