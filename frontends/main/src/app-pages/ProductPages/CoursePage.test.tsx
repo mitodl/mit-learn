@@ -126,7 +126,7 @@ describe("CoursePage", () => {
     expect(document.getElementById(HeadingIds.What)).toBeVisible()
     expect(links[2]).toHaveTextContent("How you'll learn")
     expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
-    expect(document.getElementById(HeadingIds.What)).toBeVisible()
+    expect(document.getElementById(HeadingIds.How)).toBeVisible()
     expect(links[3]).toHaveTextContent("Prerequisites")
     expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
     expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
