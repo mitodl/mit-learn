@@ -317,7 +317,8 @@ def _transform_course(course):
             parse_page_attribute(course, "page_url")
             and parse_page_attribute(course, "live")
             and len([run for run in runs if run["published"]]) > 0
-        ),  # a course is only published if it has a live url and published runs
+            and course.get("include_in_learn_catalog", False)
+        ),
         "professional": False,
         "certification": has_certification,
         "certification_type": parse_certificate_type(
