@@ -2,8 +2,11 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { Container, Typography, Card, styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
-import { useVideoShortsList, type VideoShort } from "api/hooks/videoShorts"
+import { useVideoShortsList } from "api/hooks/videoShorts"
 import VideoShortsModal from "./VideoShortsModal"
+import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -37,6 +40,7 @@ const CardContent = styled.div<{ width: number; height: number }>(
     flexDirection: "column",
     height,
     width,
+    position: "relative",
   }),
 )
 
@@ -51,11 +55,33 @@ const CarouselSlide = styled.div<{ width: number; height: number }>(
   }),
 )
 
+const ImagePlaceholder = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  backgroundColor: theme.custom.colors.black,
+  borderRadius: "12px",
+
+  img: {
+    position: "absolute",
+    top: "18px",
+    left: "14px",
+  },
+
+  p: {
+    position: "absolute",
+    top: "197px",
+    left: "14px",
+    color: theme.custom.colors.white,
+  },
+}))
+
 const VideoShortsSection = () => {
-  const { data } = useVideoShortsList()
+  const { data, isLoading } = useVideoShortsList()
 
   const [showModal, setShowModal] = useState(false)
   const [videoIndex, setVideoIndex] = useState(0)
+
+  if (isLoading || !data?.length) return null
 
   return (
     <Section>
@@ -63,7 +89,7 @@ const VideoShortsSection = () => {
         {showModal ? (
           <VideoShortsModal
             startIndex={videoIndex}
-            videoData={data as VideoShort[]}
+            videoData={data}
             onClose={() => setShowModal(false)}
           />
         ) : null}
@@ -76,7 +102,7 @@ const VideoShortsSection = () => {
           </Typography>
         </Header>
         <StyledCarouselV2>
-          {data?.map((item: VideoShort, index: number) => (
+          {data?.map((video, index: number) => (
             <CarouselSlide width={235} height={235 / ASPECT_RATIO} key={index}>
               {/* 235 is our fixed width to ensure slides align with the container edge */}
               <Card
@@ -87,16 +113,26 @@ const VideoShortsSection = () => {
               >
                 <Card.Content>
                   <CardContent width={235} height={235 / ASPECT_RATIO}>
-                    <Image
-                      width={
-                        (235 / ASPECT_RATIO) *
-                        (item.snippet.thumbnails.high.width /
-                          item.snippet.thumbnails.high.height)
-                      }
-                      height={235 / ASPECT_RATIO}
-                      src={item.snippet.thumbnails.high.url}
-                      alt={item.snippet.title}
-                    />
+                    {video.thumbnail_small_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        width={(235 / ASPECT_RATIO) * (270 / 480)}
+                        height={235 / ASPECT_RATIO}
+                        src={`${NEXT_PUBLIC_ORIGIN}${video.thumbnail_small_url}`}
+                        alt={video.title}
+                      />
+                    ) : (
+                      <ImagePlaceholder>
+                        <Image
+                          src={MITOpenLearningLogo.src}
+                          alt="MIT Open Learning Logo"
+                          width={63}
+                          height={16}
+                          style={{ filter: "brightness(0) invert(1)" }}
+                        />
+                        <Typography variant="body1">{video.title}</Typography>
+                      </ImagePlaceholder>
+                    )}
                   </CardContent>
                 </Card.Content>
               </Card>

@@ -1,10 +1,14 @@
-import React, { useEffect, useRef, useState } from "react"
-import { styled } from "ol-components"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import Image from "next/image"
+import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
 import { RiCloseLine, RiVolumeMuteLine, RiVolumeUpLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useWindowDimensions } from "ol-utilities"
-import type { VideoShort } from "api/hooks/videoShorts"
+import type { VideoShort } from "api/v0"
+import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 const Overlay = styled.div(({ theme }) => ({
   position: "fixed",
@@ -70,22 +74,37 @@ const CarouselSlide = styled.div<{ width: number }>(({ width, theme }) => ({
   },
 }))
 
-const Placeholder = styled.div(({ theme }) => ({
-  width: "100%",
-  height: "100%",
-  backgroundColor: "black",
-  borderRadius: "12px",
-  [theme.breakpoints.down("md")]: {
-    borderRadius: 0,
-  },
-}))
-
 const Video = styled.video(({ height, width, theme }) => ({
   width,
   height,
+  backgroundColor: theme.custom.colors.black,
   [theme.breakpoints.down("md")]: {
     width: "100%",
     height: "100%",
+  },
+}))
+
+const Placeholder = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  backgroundColor: theme.custom.colors.black,
+  borderRadius: "12px",
+  position: "relative",
+  paddingTop: "30vh",
+
+  img: {
+    position: "absolute",
+    top: "43px",
+    left: "50px",
+  },
+
+  span: {
+    marginLeft: "50px",
+    marginRight: "50px",
+    color: theme.custom.colors.white,
+    fontWeight: theme.typography.fontWeightRegular,
+    display: "block",
+    marginBottom: "10vh",
   },
 }))
 
@@ -106,6 +125,68 @@ const isIOS = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
 }
 
+type VideoWithErrorHandlerProps = {
+  index: number
+  video: VideoShort
+  videosRef: React.MutableRefObject<(HTMLVideoElement | null)[]>
+  onError: (index: number, e: Event) => void
+  onVideoClick: () => void
+  videoWidth: number
+  videoHeight: number
+}
+
+const VideoWithErrorHandler = ({
+  index,
+  video,
+  videosRef,
+  onError,
+  onVideoClick,
+  videoWidth,
+  videoHeight,
+}: VideoWithErrorHandlerProps) => {
+  const handlerRef = useRef<((e: Event) => void) | null>(null)
+
+  const refCallback = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (!el) {
+        const currentEl = videosRef.current[index]
+        if (currentEl && handlerRef.current) {
+          currentEl.removeEventListener("error", handlerRef.current)
+        }
+        videosRef.current[index] = null
+        return
+      }
+      videosRef.current[index] = el
+
+      const handler = (e: Event) => {
+        console.error("Video errored", index, e)
+        onError(index, e)
+      }
+      handlerRef.current = handler
+      el.addEventListener("error", handler)
+    },
+    [index, onError, videosRef],
+  )
+
+  return (
+    <Video
+      ref={refCallback}
+      onClick={onVideoClick}
+      src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
+      autoPlay
+      muted
+      playsInline
+      webkit-playsinline="true"
+      controlsList="nofullscreen"
+      disablePictureInPicture
+      width={videoWidth}
+      height={videoHeight}
+      preload="metadata"
+      loop
+    />
+  )
+}
+
 type VideoShortsModalProps = {
   startIndex: number
   videoData: VideoShort[]
@@ -117,19 +198,20 @@ const VideoShortsModal = ({
   onClose,
 }: VideoShortsModalProps) => {
   const { height } = useWindowDimensions()
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(startIndex)
   const [muted, setMuted] = useState(true)
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
+  const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
+
+  const onVideoError = useCallback((index: number, e: Event) => {
+    setVideoErrors((prev) => ({ ...prev, [index]: e }))
+  }, [])
 
   useEffect(() => {
     videosRef.current = videosRef.current.slice(0, videoData.length)
   }, [videoData])
-
-  useEffect(() => {
-    setSelectedIndex(startIndex)
-  }, [startIndex])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -219,36 +301,37 @@ const VideoShortsModal = ({
         initialSlide={startIndex}
         onSlidesInView={onSlidesInView}
       >
-        {videoData?.map((item: VideoShort, index: number) => (
+        {videoData?.map((video: VideoShort, index: number) => (
           <CarouselSlide
             key={index}
             width={(height - 60) * (9 / 16)}
             data-index={index}
           >
             {selectedIndex !== null && Math.abs(selectedIndex - index) < 2 ? (
-              <Video
-                ref={(el) => {
-                  if (videosRef.current && el) {
-                    videosRef.current[index] = el
-                    el.addEventListener("error", (e: Event) => {
-                      console.error("Video error:", e)
-                    })
-                  }
-                }}
-                onClick={handleVideoClick}
-                // TODO: Using a temporary bucket on GCP owned by jk
-                src={`https://storage.googleapis.com/mit-open-learning/${item.id.videoId}.mp4`}
-                autoPlay
-                muted
-                playsInline
-                webkit-playsinline="true"
-                controlsList="nofullscreen"
-                disablePictureInPicture
-                width={(height - 60) * (9 / 16)}
-                height={height - 60}
-                preload="metadata"
-                loop
-              />
+              videoErrors[index] ? (
+                <Placeholder>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <Image
+                    src={MITOpenLearningLogo.src}
+                    alt="MIT Open Learning Logo"
+                    width={178}
+                    height={47}
+                    style={{ filter: "brightness(0) invert(1)" }}
+                  />
+                  <Typography variant="h4">Playback errored!</Typography>
+                  <Typography variant="h2">{video.title}</Typography>
+                </Placeholder>
+              ) : (
+                <VideoWithErrorHandler
+                  index={index}
+                  video={video}
+                  videosRef={videosRef}
+                  onError={onVideoError}
+                  onVideoClick={handleVideoClick}
+                  videoWidth={(height - 60) * (9 / 16)}
+                  videoHeight={height - 60}
+                />
+              )
             ) : (
               <Placeholder />
             )}

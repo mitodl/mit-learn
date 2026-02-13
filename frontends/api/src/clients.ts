@@ -22,6 +22,7 @@ import {
   ProfilesApi,
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
+  VideoShortsApi,
 } from "./generated/v0/api"
 
 import axiosInstance from "./axios"
@@ -95,6 +96,8 @@ const schoolsApi = new SchoolsApi(undefined, BASE_PATH, axiosInstance)
 const newsEventsApi = new NewsEventsApi(undefined, BASE_PATH, axiosInstance)
 const testimonialsApi = new TestimonialsApi(undefined, BASE_PATH, axiosInstance)
 
+const videoShortsApi = new VideoShortsApi(undefined, BASE_PATH, axiosInstance)
+
 export {
   learningResourcesApi,
   learningPathsApi,
@@ -116,4 +119,5 @@ export {
   featuredApi,
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
+  videoShortsApi,
 }
