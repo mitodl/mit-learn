@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { styled, Typography } from "ol-components"
 import { CarouselV2Vertical } from "ol-components/CarouselV2Vertical"
@@ -125,6 +125,68 @@ const isIOS = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
 }
 
+type VideoWithErrorHandlerProps = {
+  index: number
+  video: VideoShort
+  videosRef: React.MutableRefObject<(HTMLVideoElement | null)[]>
+  onError: (index: number, e: Event) => void
+  onVideoClick: () => void
+  videoWidth: number
+  videoHeight: number
+}
+
+const VideoWithErrorHandler = ({
+  index,
+  video,
+  videosRef,
+  onError,
+  onVideoClick,
+  videoWidth,
+  videoHeight,
+}: VideoWithErrorHandlerProps) => {
+  const handlerRef = useRef<((e: Event) => void) | null>(null)
+
+  const refCallback = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (!el) {
+        const currentEl = videosRef.current[index]
+        if (currentEl && handlerRef.current) {
+          currentEl.removeEventListener("error", handlerRef.current)
+        }
+        videosRef.current[index] = null
+        return
+      }
+      videosRef.current[index] = el
+
+      const handler = (e: Event) => {
+        console.error("Video errored", index, e)
+        onError(index, e)
+      }
+      handlerRef.current = handler
+      el.addEventListener("error", handler)
+    },
+    [index, onError, videosRef],
+  )
+
+  return (
+    <Video
+      ref={refCallback}
+      onClick={onVideoClick}
+      src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
+      autoPlay
+      muted
+      playsInline
+      webkit-playsinline="true"
+      controlsList="nofullscreen"
+      disablePictureInPicture
+      width={videoWidth}
+      height={videoHeight}
+      preload="metadata"
+      loop
+    />
+  )
+}
+
 type VideoShortsModalProps = {
   startIndex: number
   videoData: VideoShort[]
@@ -142,6 +204,10 @@ const VideoShortsModal = ({
   const [videoErrors, setVideoErrors] = useState<Record<number, unknown>>({})
 
   const videosRef = useRef<(HTMLVideoElement | null)[]>([])
+
+  const onVideoError = useCallback((index: number, e: Event) => {
+    setVideoErrors((prev) => ({ ...prev, [index]: e }))
+  }, [])
 
   useEffect(() => {
     videosRef.current = videosRef.current.slice(0, videoData.length)
@@ -256,28 +322,14 @@ const VideoShortsModal = ({
                   <Typography variant="h2">{video.title}</Typography>
                 </Placeholder>
               ) : (
-                <Video
-                  ref={(el) => {
-                    if (videosRef.current && el) {
-                      videosRef.current[index] = el
-                      el.addEventListener("error", (e: Event) => {
-                        console.error("Video error:", e)
-                        setVideoErrors((prev) => ({ ...prev, [index]: e }))
-                      })
-                    }
-                  }}
-                  onClick={handleVideoClick}
-                  src={`${NEXT_PUBLIC_ORIGIN}${video.video_url}`}
-                  autoPlay
-                  muted
-                  playsInline
-                  webkit-playsinline="true"
-                  controlsList="nofullscreen"
-                  disablePictureInPicture
-                  width={(height - 60) * (9 / 16)}
-                  height={height - 60}
-                  preload="metadata"
-                  loop
+                <VideoWithErrorHandler
+                  index={index}
+                  video={video}
+                  videosRef={videosRef}
+                  onError={onVideoError}
+                  onVideoClick={handleVideoClick}
+                  videoWidth={(height - 60) * (9 / 16)}
+                  videoHeight={height - 60}
                 />
               )
             ) : (
