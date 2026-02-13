@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Stack, Typography } from "ol-components"
+import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
@@ -17,7 +17,6 @@ import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate, {
   HeadingData,
-  ProductNavbar,
   WhoCanTake,
   WhatSection,
   HowYoullLearnSection,
@@ -109,28 +108,23 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       enrollButton={<CourseEnrollmentButton course={course} />}
       navLinks={navLinks}
     >
-      <ProductNavbar navLinks={navLinks} productNoun="Course" />
-      <Stack gap={{ xs: "40px", sm: "56px" }}>
-        {page.about ? (
-          <AboutSection productNoun="Course" aboutHtml={page.about} />
-        ) : null}
-        {page.what_you_learn ? (
-          <WhatSection html={page.what_you_learn} />
-        ) : null}
-        <HowYoullLearnSection />
-        {page.prerequisites ? (
-          <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
-            <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
-              Prerequisites
-            </Typography>
-            <RawHTML html={page.prerequisites} />
-          </PrerequisitesSection>
-        ) : null}
-        {page.faculty.length ? (
-          <InstructorsSection instructors={page.faculty} />
-        ) : null}
-        <WhoCanTake productNoun="Course" />
-      </Stack>
+      {page.about ? (
+        <AboutSection productNoun="Course" aboutHtml={page.about} />
+      ) : null}
+      {page.what_you_learn ? <WhatSection html={page.what_you_learn} /> : null}
+      <HowYoullLearnSection />
+      {page.prerequisites ? (
+        <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
+          <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
+            Prerequisites
+          </Typography>
+          <RawHTML html={page.prerequisites} />
+        </PrerequisitesSection>
+      ) : null}
+      {page.faculty.length ? (
+        <InstructorsSection instructors={page.faculty} />
+      ) : null}
+      <WhoCanTake productNoun="Course" />
     </ProductPageTemplate>
   )
 }

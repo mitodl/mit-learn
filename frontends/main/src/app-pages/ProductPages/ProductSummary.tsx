@@ -86,7 +86,7 @@ const InfoLabel = styled.span<{
   underline && { textDecoration: "underline" },
 ])
 const InfoLabelValue: React.FC<{
-  label: string
+  label: React.ReactNode
   value: React.ReactNode
   labelVariant?: "light" | "normal"
 }> = ({ label, value, labelVariant }) =>
@@ -338,10 +338,12 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
+const COURSE_CERT_INFO_HREF =
+  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 const COURSE_CERT_INFO_LINK = (
   <UnderlinedLink
     color="black"
-    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
+    href={COURSE_CERT_INFO_HREF}
     target="_blank"
     rel="noopener noreferrer"
   >
@@ -394,21 +396,25 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
       {price ? (
         <>
           <InfoRowInner flexWrap={"nowrap"}>
-            <InfoLabelValue
-              label="Earn a certificate"
-              value={
-                price.isDiscounted ? (
-                  <>
-                    <br />
-                    {price.finalPrice}{" "}
-                    <StrickenText>{price.originalPrice}</StrickenText>
-                  </>
-                ) : (
-                  price.finalPrice
-                )
-              }
-            />
-            {COURSE_CERT_INFO_LINK}
+            <span>
+              <UnderlinedLink
+                href={PROGRAM_CERT_INFO_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="black"
+              >
+                <InfoLabel>Earn a certificate</InfoLabel>
+              </UnderlinedLink>
+              :{" "}
+              {price.isDiscounted ? (
+                <>
+                  {price.finalPrice}{" "}
+                  <StrickenText>{price.originalPrice}</StrickenText>
+                </>
+              ) : (
+                price.finalPrice
+              )}
+            </span>
           </InfoRowInner>
           {hasFinancialAid ? (
             <UnderlinedLink
@@ -668,17 +674,8 @@ const ProgramPaceRow: React.FC<
   )
 }
 
-const PROGRAM_CERT_INFO_LINK = (
-  <UnderlinedLink
-    color="black"
-    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{ minWidth: "fit-content" }}
-  >
-    Learn More
-  </UnderlinedLink>
-)
+const PROGRAM_CERT_INFO_HREF =
+  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 
 const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
   program,
@@ -688,21 +685,17 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
   return (
     <CertificateBoxRoot>
       <InfoRowInner flexWrap="nowrap">
-        <InfoLabelValue
-          label="Earn a certificate"
-          value={
-            <>
-              {/* Heuristic: If the price contains more than one word, insert a line
-            to avoid wrapping "$100-$200 per course" after $100, orphaning one word.
-            CSS alone either creates orphans or will overflow the container for long
-            text if text-wrap:nowrap is used.
-            */}
-              {price.trim().split(" ").length > 1 ? <br /> : null}
-              {price}
-            </>
-          }
-        />
-        {PROGRAM_CERT_INFO_LINK}
+        <span>
+          <UnderlinedLink
+            href={PROGRAM_CERT_INFO_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="black"
+          >
+            <InfoLabel>Earn a certificate</InfoLabel>
+          </UnderlinedLink>
+          : {price}
+        </span>
       </InfoRowInner>
       {program.page.financial_assistance_form_url ? (
         <UnderlinedLink
