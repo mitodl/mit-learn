@@ -224,20 +224,17 @@ describe("ProgramPage", () => {
     expect(links[0]).toHaveTextContent("About")
     expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
     expect(document.getElementById(HeadingIds.About)).toBeVisible()
-    expect(links[1]).toHaveTextContent("Courses")
-    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.Requirements}`)
+    expect(links[1]).toHaveTextContent("What you'll learn")
+    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
     expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[2]).toHaveTextContent("What you'll learn")
-    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.What}`)
-    expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[3]).toHaveTextContent("How you'll learn")
-    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.How}`)
+    expect(links[2]).toHaveTextContent("How you'll learn")
+    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
     expect(document.getElementById(HeadingIds.How)).toBeVisible()
-    expect(links[4]).toHaveTextContent("Prerequisites")
-    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
+    expect(links[3]).toHaveTextContent("Prerequisites")
+    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
     expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
-    expect(links[5]).toHaveTextContent("Instructors")
-    expect(links[5]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
+    expect(links[4]).toHaveTextContent("Instructors")
+    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
     expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
@@ -384,6 +381,18 @@ describe("ProgramPage", () => {
     })
     const items = within(section).getAllByRole("listitem")
     expect(items.length).toBe(page.faculty.length)
+  })
+
+  test("Renders an enrollment button", async () => {
+    const program = makeProgram({ ...makeReqs() })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const buttons = await screen.findAllByRole("button", {
+      name: /enroll/i,
+    })
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
   test.each([

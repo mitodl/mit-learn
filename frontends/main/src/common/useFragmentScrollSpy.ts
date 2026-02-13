@@ -67,7 +67,6 @@ export const useFragmentScrollSpy = (
 
       // Find the topmost intersecting fragment
       if (intersectingEntries.size > 0) {
-        console.log([...intersectingEntries.values()].map((e) => e.target.id))
         const sorted = Array.from(intersectingEntries.values()).sort((a, b) => {
           return a.boundingClientRect.top - b.boundingClientRect.top
         })
@@ -88,7 +87,7 @@ export const useFragmentScrollSpy = (
     return () => {
       elements.forEach((element) => observer.unobserve(element))
     }
-  }, [stableIds, opts.threshold])
+  }, [stableIds, opts.threshold, opts.rootMargin])
 
   return activeFragment
 }

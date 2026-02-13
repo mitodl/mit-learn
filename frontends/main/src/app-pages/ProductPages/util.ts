@@ -11,6 +11,7 @@ enum HeadingIds {
   Requirements = "requirements",
   RequirementsRequired = "required-courses",
   RequirementsElectives = "elective-courses",
+  Summary = "summary",
 }
 
 type RequirementData = {

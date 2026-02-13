@@ -17,6 +17,7 @@ import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate, {
   HeadingData,
+  ProductNavbar,
   WhoCanTake,
   WhatSection,
   HowYoullLearnSection,
@@ -104,9 +105,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
+      summaryTitle="Course summary"
       sidebarSummary={<CourseSummary course={course} />}
       enrollButton={<CourseEnrollmentButton course={course} />}
-      navLinks={navLinks}
+      navbar={<ProductNavbar navLinks={navLinks} productNoun="Course" />}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
