@@ -1266,28 +1266,6 @@ class ContentFileSerializer(serializers.ModelSerializer):
         ]
 
 
-class LearningMaterialSerializer(serializers.ModelSerializer):
-    """Serializer for the LearningMaterial model"""
-
-    content_file = ContentFileSerializer(read_only=True, allow_null=True)
-
-    class Meta:
-        model = models.LearningMaterial
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
-
-
-class LearningMaterialResourceSerializer(LearningResourceBaseSerializer):
-    """
-    Serializer for LearningMaterial resources with resource_type=Lecture Notes
-    """
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.learning_material.name
-    )
-
-    learning_material = LearningMaterialSerializer(read_only=True)
-
-
 class LearningResourceSerializer(serializers.Serializer):
     """Serializer for LearningResource"""
 
@@ -1302,7 +1280,6 @@ class LearningResourceSerializer(serializers.Serializer):
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
             ArticleResourceSerializer,
-            LearningMaterialResourceSerializer,
         )
     }
 
