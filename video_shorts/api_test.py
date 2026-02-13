@@ -58,17 +58,28 @@ def test_process_video_short_invalid_metadata_raises(settings):
         upsert_video_short(invalid_data)
 
 
-@pytest.mark.parametrize("prefix", ["shorts/", "shorts", "video_shorts/"])
+@pytest.mark.parametrize(
+    ("s3_prefix", "shorts_prefix"),
+    [
+        ("media", "shorts/"),
+        ("media/", "shorts"),
+        ("media", "video_shorts/"),
+        (None, "shorts"),
+    ],
+)
 def test_walk_video_shorts_from_s3(
-    mock_s3_bucket, settings, sample_video_metadata, prefix
+    mock_s3_bucket, settings, sample_video_metadata, s3_prefix, shorts_prefix
 ):
     """Test walk_video_shorts_from_s3 processes S3 objects"""
-    settings.VIDEO_SHORTS_S3_PREFIX = prefix
+    settings.AWS_S3_PREFIX = s3_prefix
+    settings.VIDEO_SHORTS_S3_PREFIX = shorts_prefix
     settings.VIDEO_SHORTS_COUNT = 3
 
     # Upload test files with different timestamps
     metadata_json = json.dumps(sample_video_metadata)
-    base_prefix = prefix.rstrip("/")
+    base_prefix = ((s3_prefix or "").strip("/") + "/" + shorts_prefix.strip("/")).strip(
+        "/"
+    )
 
     for i in range(2):
         mock_s3_bucket.put_object(
@@ -98,7 +109,7 @@ def test_walk_video_shorts_from_s3_respects_count_limit(
     metadata_json = json.dumps(sample_video_metadata)
     for i in range(5):
         mock_s3_bucket.put_object(
-            Key=f"shorts/video{i}/video{i}.json",
+            Key=f"media/shorts/video{i}/video{i}.json",
             Body=metadata_json.encode("utf-8"),
         )
 
@@ -120,7 +131,7 @@ def test_walk_video_shorts_from_s3_orders_by_last_modified(
     older_metadata = copy.deepcopy(sample_video_metadata)
     older_metadata["video_id"] = "old_video"
     mock_s3_bucket.put_object(
-        Key="shorts/old/old.json",
+        Key="media/shorts/old/old.json",
         Body=json.dumps(older_metadata).encode("utf-8"),
     )
 
@@ -131,7 +142,7 @@ def test_walk_video_shorts_from_s3_orders_by_last_modified(
     newer_metadata = copy.deepcopy(sample_video_metadata)
     newer_metadata["video_id"] = "new_video"
     mock_s3_bucket.put_object(
-        Key="shorts/new/new.json",
+        Key="media/shorts/new/new.json",
         Body=json.dumps(newer_metadata).encode("utf-8"),
     )
 
@@ -149,13 +160,13 @@ def test_walk_video_shorts_from_s3_handles_errors_gracefully(
     """Test walk_video_shorts_from_s3 continues on error"""
     # Upload good file with valid metadata
     mock_s3_bucket.put_object(
-        Key="shorts/good/good.json",
+        Key="media/shorts/good/good.json",
         Body=json.dumps(sample_video_metadata).encode("utf-8"),
     )
 
     # Upload bad file with invalid JSON that will cause an error
     mock_s3_bucket.put_object(
-        Key="shorts/bad/bad.json",
+        Key="media/shorts/bad/bad.json",
         Body=b"invalid json{",
     )
 
@@ -166,17 +177,39 @@ def test_walk_video_shorts_from_s3_handles_errors_gracefully(
     assert len(shorts) == 1
 
 
+def test_walk_video_shorts_from_s3_extracts_video_metadata(
+    mock_s3_bucket, sample_video_metadata
+):
+    """Test walk_video_shorts_from_s3 extracts video_metadata from webhook envelope"""
+    # Upload a file using the webhook envelope format
+    envelope_data = {
+        "video_id": sample_video_metadata["video_id"],
+        "video_metadata": sample_video_metadata,
+        "source": "video_shorts",
+    }
+    mock_s3_bucket.put_object(
+        Key="media/shorts/video/video.json",
+        Body=json.dumps(envelope_data).encode("utf-8"),
+    )
+
+    shorts = list(walk_video_shorts_from_s3())
+
+    assert len(shorts) == 1
+    assert shorts[0].video_id == "k_AA4_fQIHc"
+    assert shorts[0].title == "How far away is space?"
+
+
 def test_walk_video_shorts_from_s3_filters_non_json_files(
     mock_s3_bucket, sample_video_metadata
 ):
     """Test walk_video_shorts_from_s3 only processes .json files"""
     # Upload files of different types
     mock_s3_bucket.put_object(
-        Key="shorts/video/video.json",
+        Key="media/shorts/video/video.json",
         Body=json.dumps(sample_video_metadata).encode("utf-8"),
     )
     mock_s3_bucket.put_object(
-        Key="youtube_shorts/video/video.mp4",
+        Key="media/youtube_shorts/video/video.mp4",
         Body=b"fake video data",
     )
     # Execute

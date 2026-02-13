@@ -21,6 +21,8 @@ def mock_s3_bucket(settings):
     """
     # Configure settings
     settings.AWS_STORAGE_BUCKET_NAME = "test-bucket"
+    settings.AWS_S3_PREFIX = "media"
+    settings.VIDEO_SHORTS_S3_PREFIX = "shorts/"
     settings.VIDEO_SHORTS_COUNT = 10  # Default limit
 
     # Create mock S3 bucket
