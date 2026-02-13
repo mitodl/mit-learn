@@ -23,6 +23,7 @@ import IconBrains from "@/public/images/product/icon_brains.png"
 import IconCertificate from "@/public/images/product/icon_certificate.png"
 import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
 import IconConnectedPeople from "@/public/images/product/icon_connected_people.png"
+import type { Breakpoint } from "@mui/system"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
   paddingBottom: "24px",
@@ -71,56 +72,71 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   },
 }))
 
-const MainCol = styled.div({
+const Show = styled.div<{
+  above?: Breakpoint
+  below?: Breakpoint
+  between?: [Breakpoint, Breakpoint]
+}>(({ theme, above, below, between }) => ({
+  ...(above && {
+    [theme.breakpoints.down(above)]: { display: "none" },
+  }),
+  ...(below && {
+    [theme.breakpoints.up(below)]: { display: "none" },
+  }),
+  ...(between && {
+    [theme.breakpoints.down(between[0])]: { display: "none" },
+    [theme.breakpoints.up(between[1])]: { display: "none" },
+  }),
+}))
+
+const MainCol = styled.div(({ theme }) => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    paddingTop: "24px",
+  },
+}))
 
-const SidebarCol = styled.div(({ theme }) => ({
+const SidebarCol = styled(Show)<{
+  alignSelf?: React.CSSProperties["alignSelf"]
+}>(({ alignSelf }) => ({
   width: "100%",
   maxWidth: "410px",
-  [theme.breakpoints.down("md")]: {
-    marginTop: "24px",
-  },
+  alignSelf,
 }))
-const SidebarSpacer = styled.div(({ theme }) => ({
-  width: "410px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-const SidebarImageWrapper = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    height: "0px",
-  },
-}))
+
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "100%",
   maxWidth: "410px",
-  height: "230px",
+  aspectRatio: "410 / 230",
   display: "block",
-  [theme.breakpoints.up("md")]: {
-    transform: "translateY(-100%)",
-  },
   [theme.breakpoints.down("md")]: {
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "4px 4px 0 0",
   },
 }))
-const SidebarSummaryRoot = styled.section(({ theme }) => ({
+
+const SummaryRoot = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
-  borderRadius: "0 0 4px 4px",
+  borderRadius: "4px",
   boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px 32px",
+  padding: "24px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
   [theme.breakpoints.up("md")]: {
     position: "sticky",
-    marginTop: "-24px",
+    marginTop: "-54px",
     top: "calc(40px + 32px + 24px)",
     borderRadius: "4px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    flexDirection: "row",
+    gap: "48px",
   },
 }))
 
@@ -153,11 +169,11 @@ const LinksWrapper = styled.div(({ theme }) => ({
   },
   "&::before": {
     left: 0,
-    background: `linear-gradient(to right, color-mix(in srgb, ${theme.custom.colors.red} 50%, transparent) 0%, transparent 70%)`,
+    background: `linear-gradient(to right, color-mix(in srgb, ${theme.custom.colors.red} 25%, transparent) 0%, transparent 70%)`,
   },
   "&::after": {
     right: 0,
-    background: `linear-gradient(to left, color-mix(in srgb, ${theme.custom.colors.red} 50%, transparent) 0%, transparent 70%)`,
+    background: `linear-gradient(to left, color-mix(in srgb, ${theme.custom.colors.red} 25%, transparent) 0%, transparent 70%)`,
   },
   "&[data-show-left-fade='true']::before": {
     opacity: 1,
@@ -171,7 +187,7 @@ const LinksWrapper = styled.div(({ theme }) => ({
 }))
 
 // Inner container: horizontally scrollable nav
-const LinksContainer = styled.nav({
+const LinksNav = styled.nav({
   display: "flex",
   flexWrap: "nowrap",
   justifyContent: "space-between",
@@ -404,7 +420,7 @@ type ProductPageTemplateProps = {
   imageSrc: string
   sidebarSummary: React.ReactNode
   children: React.ReactNode
-  navLinks: HeadingData[]
+  navbar: React.ReactNode
   enrollButton?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
@@ -416,6 +432,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   sidebarSummary,
   children,
   enrollButton,
+  navbar,
 }) => {
   return (
     <Page>
@@ -443,20 +460,39 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               </Stack>
             </TitleBox>
           </MainCol>
-          <SidebarSpacer></SidebarSpacer>
+          <SidebarCol above="md" alignSelf="flex-end">
+            <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+          </SidebarCol>
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
-        <SidebarCol>
-          <SidebarImageWrapper>
-            <SidebarImage width={410} height={230} src={imageSrc} alt="" />
-          </SidebarImageWrapper>
-          <SidebarSummaryRoot>
+        <SidebarCol above="md">
+          <SummaryRoot>
             {enrollButton}
             {sidebarSummary}
-          </SidebarSummaryRoot>
+          </SummaryRoot>
         </SidebarCol>
-        <MainCol>{children}</MainCol>
+        <MainCol>
+          {navbar}
+          <Show between={["sm", "md"]}>
+            <SummaryRoot>
+              {sidebarSummary}
+              <Stack>
+                <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+                {enrollButton}
+                {/* Tim */}
+              </Stack>
+            </SummaryRoot>
+          </Show>
+          <SidebarCol below="sm" alignSelf="center">
+            <SummaryRoot>
+              <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+              {enrollButton}
+              {sidebarSummary}
+            </SummaryRoot>
+          </SidebarCol>
+          {children}
+        </MainCol>
       </BottomContainer>
     </Page>
   )
@@ -532,7 +568,7 @@ const ProductNavbar: React.FC<{
       data-show-left-fade={showLeftFade}
       data-show-right-fade={showRightFade}
     >
-      <LinksContainer aria-label={`${productNoun} Details`} ref={scrollRef}>
+      <LinksNav aria-label={`${productNoun} Details`} ref={scrollRef}>
         {navLinks.map((heading) => {
           return (
             <NavLink
@@ -554,7 +590,7 @@ const ProductNavbar: React.FC<{
             </NavLink>
           )
         })}
-      </LinksContainer>
+      </LinksNav>
     </LinksWrapper>
   )
 }
