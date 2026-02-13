@@ -361,7 +361,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     "school"
                 ),
             ),
-            "content_tags",
+            "resource_tags",
             Prefetch(
                 "runs",
                 queryset=LearningResourceRun.objects.filter(published=True)
@@ -446,12 +446,13 @@ class LearningResource(TimestampedModel):
         db_index=True,
         choices=((member.name, member.value) for member in LearningResourceType),
     )
+    resource_category = models.CharField(max_length=256)
     topics = models.ManyToManyField(LearningResourceTopic)
     ocw_topics = ArrayField(models.CharField(max_length=128), default=list, blank=True)
     offered_by = models.ForeignKey(
         LearningResourceOfferor, null=True, on_delete=models.SET_NULL
     )
-    content_tags = models.ManyToManyField(LearningResourceContentTag)
+    resource_tags = models.ManyToManyField(LearningResourceContentTag)
     resources = models.ManyToManyField(
         "self", through="LearningResourceRelationship", symmetrical=False, blank=True
     )
