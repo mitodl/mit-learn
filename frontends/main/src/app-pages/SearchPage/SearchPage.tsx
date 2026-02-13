@@ -64,21 +64,23 @@ const StyledSearchField = styled(SearchField)(({ theme }) => ({
 
 const constantSearchParams = {}
 
-const useFacetManifest = (resourceCategory: string | null) => {
+const useFacetManifest = (resourceTypeGroup: string | null) => {
   const offerorsQuery = useOfferorsList()
   const offerors = useMemo(() => {
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
   const facetManifest = useMemo(
-    () => getFacetManifest(offerors, resourceCategory),
-    [offerors, resourceCategory],
+    () => getFacetManifest(offerors, resourceTypeGroup),
+    [offerors, resourceTypeGroup],
   )
   return facetManifest
 }
 
 const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const facetManifest = useFacetManifest(searchParams.get("resource_category"))
+  const facetManifest = useFacetManifest(
+    searchParams.get("resource_type_group"),
+  )
 
   const setPage = useCallback(
     (newPage: number) => {

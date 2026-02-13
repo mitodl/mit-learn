@@ -1,7 +1,7 @@
 import React from "react"
 import { TabContext, TabPanel, styled } from "ol-components"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
-import { ResourceCategoryEnum, LearningResourcesSearchResponse } from "api"
+import { ResourceTypeGroupEnum, LearningResourcesSearchResponse } from "api"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({
   ".MuiTabScrollButton-root.Mui-disabled": {
@@ -22,20 +22,20 @@ type TabConfig = {
   label: string
   name: string
   defaultTab?: boolean
-  resource_category: ResourceCategoryEnum | null
+  resource_type_group: ResourceTypeGroupEnum | null
   minWidth: number
 }
 
 type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
-const resourceCategoryCounts = (aggregations?: Aggregations) => {
+const resourceTypeGroupCounts = (aggregations?: Aggregations) => {
   if (!aggregations) return null
-  const buckets = aggregations?.resource_category ?? []
+  const buckets = aggregations?.resource_type_group ?? []
   const counts = buckets.reduce(
     (acc, bucket) => {
-      acc[bucket.key as ResourceCategoryEnum] = bucket.doc_count
+      acc[bucket.key as ResourceTypeGroupEnum] = bucket.doc_count
       return acc
     },
-    {} as Record<ResourceCategoryEnum, number>,
+    {} as Record<ResourceTypeGroupEnum, number>,
   )
   return counts
 }
@@ -53,30 +53,30 @@ const appendCount = (label: string, count?: number | null) => {
 /**
  *
  */
-const ResourceCategoryTabContext: React.FC<{
+const ResourceTypeGroupTabContext: React.FC<{
   activeTabName: string
   children: React.ReactNode
 }> = ({ activeTabName, children }) => {
   return <TabContext value={activeTabName}>{children}</TabContext>
 }
 
-type ResourceCategoryTabsProps = {
+type ResourceTypeGroupTabsProps = {
   aggregations?: Aggregations
   tabs: TabConfig[]
   setSearchParams: (fn: (prev: URLSearchParams) => URLSearchParams) => void
   onTabChange?: () => void
   className?: string
 }
-const ResourceCategoryTabList: React.FC<ResourceCategoryTabsProps> = ({
+const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
   tabs,
   aggregations,
   setSearchParams,
   onTabChange,
   className,
 }) => {
-  const counts = resourceCategoryCounts(aggregations)
-  const allCount = aggregations?.resource_category
-    ? (aggregations.resource_category || []).reduce((count, bucket) => {
+  const counts = resourceTypeGroupCounts(aggregations)
+  const allCount = aggregations?.resource_type_group
+    ? (aggregations.resource_type_group || []).reduce((count, bucket) => {
         count = count + bucket.doc_count
         return count
       }, 0)
@@ -89,13 +89,13 @@ const ResourceCategoryTabList: React.FC<ResourceCategoryTabsProps> = ({
         const tab = tabs.find((t) => t.name === value)
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev)
-          if (prev.get("resource_category") === "learning_material") {
+          if (prev.get("resource_type_group") === "learning_material") {
             next.delete("resource_type")
           }
-          if (tab?.resource_category) {
-            next.set("resource_category", tab.resource_category)
+          if (tab?.resource_type_group) {
+            next.set("resource_type_group", tab.resource_type_group)
           } else {
-            next.delete("resource_category")
+            next.delete("resource_type_group")
           }
           return next
         })
@@ -108,8 +108,8 @@ const ResourceCategoryTabList: React.FC<ResourceCategoryTabsProps> = ({
           count = allCount
         } else {
           count =
-            counts && t.resource_category
-              ? (counts[t.resource_category] ?? 0)
+            counts && t.resource_type_group
+              ? (counts[t.resource_type_group] ?? 0)
               : undefined
         }
         return (
@@ -125,7 +125,7 @@ const ResourceCategoryTabList: React.FC<ResourceCategoryTabsProps> = ({
   )
 }
 
-const ResourceCategoryTabPanels: React.FC<{
+const ResourceTypeGroupTabPanels: React.FC<{
   tabs: TabConfig[]
   children?: React.ReactNode
 }> = ({ tabs, children }) => {
@@ -141,26 +141,26 @@ const ResourceCategoryTabPanels: React.FC<{
 }
 
 /**
- * Components for a tabbed search UI with tabs controlling resource_category facet.
+ * Components for a tabbed search UI with tabs controlling resource_type_group facet.
  *
  * Intended usage is:
  * ```jsx
- * <ResourceCategoryTabs.Context>
- *    <ResourceCategoryTabs.TabList />
- *    <ResourceCategoryTabPanels>
+ * <ResourceTypeGroupTabs.Context>
+ *    <ResourceTypeGroupTabs.TabList />
+ *    <ResourceTypeGroupTabPanels>
  *      Panel Content
- *    </ResourceCategoryTabPanels>
- * <ResourceCategoryTabs.Context>
+ *    </ResourceTypeGroupTabPanels>
+ * <ResourceTypeGroupTabs.Context>
  * ```
  *
  * These are exported as three separate components (Context, TabList, TabPanels)
  * to facilitate placement within a grid layout.
  */
-const ResourceCategoryTabs = {
-  Context: ResourceCategoryTabContext,
-  TabList: ResourceCategoryTabList,
-  TabPanels: ResourceCategoryTabPanels,
+const ResourceTypeGroupTabs = {
+  Context: ResourceTypeGroupTabContext,
+  TabList: ResourceTypeGroupTabList,
+  TabPanels: ResourceTypeGroupTabPanels,
 }
 
-export { ResourceCategoryTabs }
+export { ResourceTypeGroupTabs }
 export type { TabConfig }

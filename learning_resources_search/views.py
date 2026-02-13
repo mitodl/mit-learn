@@ -74,7 +74,6 @@ class LearningResourcesSearchView(ESView):
     @extend_schema(summary="Search")
     def get(self, request):
         request_data = LearningResourcesSearchRequestSerializer(data=request.GET)
-
         if request_data.is_valid():
             response = execute_learn_search(
                 request_data.data | {"endpoint": LEARNING_RESOURCE}
