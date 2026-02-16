@@ -164,8 +164,9 @@ class LearningResourceOfferorFactory(DjangoModelFactory):
     code = FuzzyChoice([offeror.name for offeror in constants.OfferedBy])
     name = factory.LazyAttribute(lambda o: constants.OfferedBy[o.code].value)
     professional = factory.LazyAttribute(
-        lambda o: o.code
-        not in (constants.OfferedBy.mitx.name, constants.OfferedBy.ocw.name)
+        lambda o: (
+            o.code not in (constants.OfferedBy.mitx.name, constants.OfferedBy.ocw.name)
+        )
     )
 
     class Meta:
@@ -218,26 +219,32 @@ class LearningResourceFactory(DjangoModelFactory):
     published = True
     delivery = factory.List(random.choices(LearningResourceDelivery.names()))  # noqa: S311
     professional = factory.LazyAttribute(
-        lambda o: o.resource_type
-        in (
-            constants.LearningResourceType.course.name,
-            constants.LearningResourceType.program.name,
+        lambda o: (
+            o.resource_type
+            in (
+                constants.LearningResourceType.course.name,
+                constants.LearningResourceType.program.name,
+            )
+            and o.offered_by.professional
         )
-        and o.offered_by.professional
     )
     certification = factory.LazyAttribute(
         lambda o: (
-            o.professional
-            or (o.offered_by and o.offered_by.code == constants.OfferedBy.mitx.name)
+            (
+                o.professional
+                or (o.offered_by and o.offered_by.code == constants.OfferedBy.mitx.name)
+            )
+            is True
         )
-        is True
     )
     certification_type = factory.LazyAttribute(
-        lambda o: constants.CertificationType.professional.name
-        if o.professional
-        else constants.CertificationType.completion.name
-        if o.certification
-        else constants.CertificationType.none.name
+        lambda o: (
+            constants.CertificationType.professional.name
+            if o.professional
+            else constants.CertificationType.completion.name
+            if o.certification
+            else constants.CertificationType.none.name
+        )
     )
 
     course = factory.Maybe(
@@ -352,28 +359,33 @@ class LearningResourceFactory(DjangoModelFactory):
             lambda lr: lr.resource_type == constants.LearningResourceType.program.name
         )
         create_learning_path = factory.LazyAttribute(
-            lambda lr: lr.resource_type
-            == constants.LearningResourceType.learning_path.name
+            lambda lr: (
+                lr.resource_type == constants.LearningResourceType.learning_path.name
+            )
         )
         create_podcast = factory.LazyAttribute(
             lambda lr: lr.resource_type == constants.LearningResourceType.podcast.name
         )
         create_podcast_episode = factory.LazyAttribute(
-            lambda lr: lr.resource_type
-            == constants.LearningResourceType.podcast_episode.name
+            lambda lr: (
+                lr.resource_type == constants.LearningResourceType.podcast_episode.name
+            )
         )
         create_video = factory.LazyAttribute(
             lambda lr: lr.resource_type == constants.LearningResourceType.video.name
         )
         create_video_playlist = factory.LazyAttribute(
-            lambda lr: lr.resource_type
-            == constants.LearningResourceType.video_playlist.name
+            lambda lr: (
+                lr.resource_type == constants.LearningResourceType.video_playlist.name
+            )
         )
         create_runs = factory.LazyAttribute(
-            lambda lr: lr.resource_type
-            in (
-                constants.LearningResourceType.program.name,
-                constants.LearningResourceType.course.name,
+            lambda lr: (
+                lr.resource_type
+                in (
+                    constants.LearningResourceType.program.name,
+                    constants.LearningResourceType.course.name,
+                )
             )
         )
 
@@ -515,9 +527,11 @@ class LearningResourceRunFactory(DjangoModelFactory):
         lambda obj: obj.enrollment_start + timedelta(days=random.randint(15, 20))  # noqa: S311
     )
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=random.randint(90, 100))  # noqa: S311
-        if obj.start_date
-        else None
+        lambda obj: (
+            obj.start_date + timedelta(days=random.randint(90, 100))  # noqa: S311
+            if obj.start_date
+            else None
+        )
     )
     prices = sorted(
         [

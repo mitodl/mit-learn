@@ -493,7 +493,7 @@ def canvas_url_config(bucket, export_tempdir: str, url_config_file: str) -> dict
     """
     Get URL (citation) config from the metadata JSON file
     """
-    url_config_path = Path(export_tempdir, url_config_file.split("/")[-1])
+    url_config_path = Path(export_tempdir, url_config_file.rsplit("/", maxsplit=1)[-1])
     # download the url config file
     bucket.download_file(url_config_file, url_config_path)
     url_config = {}

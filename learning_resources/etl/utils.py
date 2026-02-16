@@ -488,8 +488,8 @@ def get_url_from_module_id(
             # Link to the parent video
             return f"{base_jump_url}{video_meta.split('@')[-1]}"
         return f"{root_url}/{module_id}"
-    elif is_valid_uuid(module_id.split("@")[-1]):
-        return f"{base_jump_url}{module_id.split('@')[-1]}"
+    elif is_valid_uuid(module_id.rsplit("@", maxsplit=1)[-1]):
+        return f"{base_jump_url}{module_id.rsplit('@', maxsplit=1)[-1]}"
     else:
         return None
 
