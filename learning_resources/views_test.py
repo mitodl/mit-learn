@@ -59,6 +59,7 @@ from learning_resources.serializers import (
 from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
+from main.test_utils import assert_json_equal
 
 pytestmark = [pytest.mark.django_db]
 
@@ -1370,7 +1371,7 @@ def test_run_with_null_prices_does_not_throw_error(mocker, client):
             args=[run.learning_resource.id],
         )
     )
-    assert resp.json() == serialized_resource
+    assert_json_equal(resp.json(), serialized_resource, sort=True)
 
 
 def test_learning_resources_display_info_detail_view(mocker, client):
