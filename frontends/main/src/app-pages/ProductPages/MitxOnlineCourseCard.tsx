@@ -30,15 +30,6 @@ const formatCoursePrice = (
 ): string | null => {
   const { min_price: minPrice, max_price: maxPrice } = course
 
-  // Try page.current_price first (single course price)
-  if (
-    course.page?.current_price !== undefined &&
-    course.page?.current_price !== null
-  ) {
-    return formatCurrency(course.page.current_price)
-  }
-
-  // Fall back to min/max price (for course listings)
   if (
     minPrice !== null &&
     minPrice !== undefined &&
@@ -47,6 +38,13 @@ const formatCoursePrice = (
     minPrice !== maxPrice
   ) {
     return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+  }
+
+  if (
+    course.page?.current_price !== undefined &&
+    course.page?.current_price !== null
+  ) {
+    return formatCurrency(course.page.current_price)
   }
 
   const single = minPrice ?? maxPrice
