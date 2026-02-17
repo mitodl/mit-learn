@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.54.0
+Version 0.54.0 (Released February 17, 2026)
 --------------
 
 - Updates the backpopulate_video_shorts command to be compatible with the latest serializer changes (#2955)
