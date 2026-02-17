@@ -122,6 +122,9 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   const startLabel =
     course.availability === "anytime" || !startDisplay ? "Starts: " : undefined
 
+  const coursePrice = hasCertificate ? null : priceText
+  const certificatePrice = hasCertificate ? priceText : null
+
   return (
     <BaseLearningResourceCard
       className={className}
@@ -132,8 +135,8 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
       imageAlt=""
       title={course.title}
       resourceType="Course"
-      coursePrice={priceText}
-      certificatePrice={priceText}
+      coursePrice={coursePrice}
+      certificatePrice={certificatePrice}
       hasCertificate={hasCertificate}
       startLabel={startLabel}
       startDate={startDisplay}

@@ -388,7 +388,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
       return { certificatePrice: certPrice, label }
     }
     const certPrice = certificatePrice
-    const label = certPrice ? "Certificate:" : "Certificate"
+    const label = certPrice ? "Certificate" : "Certificate"
     return { certificatePrice: certPrice, label }
   }
 
@@ -412,11 +412,15 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
             {hasCertificate && (
               <ListCertificate>
                 <RiAwardFill />
-                <CertificateGenericLabel>Certificate</CertificateGenericLabel>
+                <CertificateGenericLabel>
+                  Certificate{certificatePrice ? ":" : ""}
+                </CertificateGenericLabel>
                 <CertificateTypeName>
                   {certificateTypeName || "Certificate"}
+                  {certificatePrice ? ":" : ""}
                 </CertificateTypeName>
-                {certificatePrice ? ":" : ""} {certificatePrice}
+                {certificatePrice ? " " : ""}
+                {certificatePrice}
               </ListCertificate>
             )}
             {coursePrice && <ListPrice>{coursePrice}</ListPrice>}
@@ -491,12 +495,16 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
             {hasCertificate && (
               <ListCertificate>
                 <RiAwardFill />
-                <CertificateGenericLabel>Certificate</CertificateGenericLabel>
+                <CertificateGenericLabel>
+                  Certificate{certificatePrice ? ":" : ""}
+                </CertificateGenericLabel>
                 <CertificateTypeName>
                   {certificateTypeName || "Certificate"}
+                  {certificatePrice ? ":" : ""}
                 </CertificateTypeName>
                 <CertificatePriceText>
-                  {certificatePrice ? ":" : ""} {certificatePrice}
+                  {certificatePrice ? " " : ""}
+                  {certificatePrice}
                 </CertificatePriceText>
               </ListCertificate>
             )}
@@ -581,7 +589,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
                     <RiAwardFill />
                     {certLabel}
                     {certPriceDisplay ? (
-                      <CertificatePrice>{certPriceDisplay}</CertificatePrice>
+                      <CertificatePrice>: {certPriceDisplay}</CertificatePrice>
                     ) : null}
                   </>
                 )}

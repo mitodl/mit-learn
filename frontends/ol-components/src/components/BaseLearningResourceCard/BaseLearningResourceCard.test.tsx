@@ -106,7 +106,7 @@ describe("BaseLearningResourceCard", () => {
         certificateTypeName: "MicroMasters Credential",
       })
 
-      expect(screen.getByText("MicroMasters Credential")).toBeInTheDocument()
+      expect(screen.getByText("MicroMasters Credential:")).toBeInTheDocument()
     })
 
     it("displays certificate price in list mode", () => {
@@ -131,7 +131,7 @@ describe("BaseLearningResourceCard", () => {
       })
 
       // Appears twice due to responsive display (mobile + desktop variants)
-      const certificates = screen.getAllByText("Certificate")
+      const certificates = screen.getAllByText("Certificate:")
       expect(certificates.length).toBeGreaterThan(0)
     })
 
