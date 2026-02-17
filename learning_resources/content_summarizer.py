@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from langchain_community.chat_models import ChatLiteLLM
+from litellm import get_max_tokens
 from typing_extensions import TypedDict
 
 from learning_resources.exceptions import (
@@ -15,6 +16,7 @@ from learning_resources.models import (
     ContentFile,
     ContentSummarizerConfiguration,
 )
+from learning_resources.utils import truncate_to_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -232,10 +234,14 @@ class ContentSummarizer:
             - str: Generated summary
         """
         try:
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
-            response = llm.invoke(
-                f"Summarize the key points from this video. Transcript:{content}"
+            max_input_tokens = get_max_tokens(llm_model)
+            summarizer_message = truncate_to_tokens(
+                f"Summarize the key points from this video. Transcript:{content}",
+                max_input_tokens,
+                llm_model,
             )
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
+            response = llm.invoke(summarizer_message)
             logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
             logger.debug("Generated summary: %s", generated_summary)
@@ -263,13 +269,20 @@ class ContentSummarizer:
             - list[dict[str, str]]: List of flashcards
         """
         try:
+            max_input_tokens = get_max_tokens(llm_model)
+
             llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=2048)
             logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
-
-            response = structured_llm.invoke(
-                settings.CONTENT_SUMMARIZER_FLASHCARD_PROMPT.format(content=content)
+            flashcard_prompt = settings.CONTENT_SUMMARIZER_FLASHCARD_PROMPT.format(
+                content=content
             )
+            flashcard_prompt = truncate_to_tokens(
+                flashcard_prompt,
+                max_input_tokens,
+                llm_model,
+            )
+            response = structured_llm.invoke(flashcard_prompt)
             if response:
                 generated_flashcards = response.get("flashcards", [])
                 logger.debug("Generated flashcards: %s", generated_flashcards)
