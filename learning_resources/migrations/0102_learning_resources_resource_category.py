@@ -3,6 +3,17 @@
 from django.db import migrations, models
 
 
+def populate_resource_category(apps, schema_editor):
+    for resource in apps.get_model(
+        "learning_resources", "LearningResource"
+    ).objects.all():
+        resource_type = resource.resource_type
+        resource_category = resource_type.replace("_", " ")
+        resource_category = resource_category.title()
+        resource.resource_category = resource_category
+        resource.save()
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("learning_resources", "0101_add_learning_material"),
@@ -17,7 +28,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="learningresource",
             name="resource_category",
-            field=models.CharField(default=None, max_length=256),
+            field=models.CharField(default="", max_length=256),
             preserve_default=False,
         ),
+        migrations.RunPython(populate_resource_category, migrations.RunPython.noop),
     ]

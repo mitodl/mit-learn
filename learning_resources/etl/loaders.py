@@ -30,7 +30,6 @@ from learning_resources.models import (
     Article,
     ContentFile,
     Course,
-    LearningMaterial,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
