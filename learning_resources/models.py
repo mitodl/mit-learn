@@ -1009,7 +1009,7 @@ class ContentFile(TimestampedModel):
     learning_material_resource = models.ForeignKey(
         LearningResource,
         related_name="learning_material_content_files",
-       on_delete=models.SET_NULL,
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
@@ -1051,14 +1051,16 @@ class ContentFile(TimestampedModel):
     edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
-    duration = models.CharField(max_length=11, null=True, blank=True)   # noqa: DJ001
+    duration = models.CharField(max_length=11, null=True, blank=True)  # noqa: DJ001
 
     def save(self, **kwargs):
         self.checksum = checksum_for_content(self.content)
         super().save(**kwargs)
 
     class Meta:
-        unique_together = (("key", "run", "learning_resource", "learning_material_resource"),)
+        unique_together = (
+            ("key", "run", "learning_resource", "learning_material_resource"),
+        )
         verbose_name = "contentfile"
         # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
@@ -1066,12 +1068,18 @@ class ContentFile(TimestampedModel):
                 check=(
                     models.Q(learning_resource__isnull=False, run__isnull=True)
                     | models.Q(run__isnull=False, learning_resource__isnull=True)
-                    | models.Q(learning_material_resource__isnull=False, learning_resource__isnull=True, run__isnull=True)
+                    | models.Q(
+                        learning_material_resource__isnull=False,
+                        learning_resource__isnull=True,
+                        run__isnull=True,
+                    )
                 ),
                 name="learning_material_resource_run_or_resource_defined",
                 violation_error_message=(
-                    "One of learning_resource, learning_material_resource, or run must be defined. " \
-                    "Both learning_resource and run cannot be defined at the same time."
+                    "One of learning_resource, learning_material_resource,"
+                    " or run must be defined. "
+                    "Both learning_resource and run cannot be defined at the"
+                    " same time."
                 ),
             ),
         ]
