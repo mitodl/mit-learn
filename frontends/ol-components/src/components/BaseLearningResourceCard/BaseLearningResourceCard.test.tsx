@@ -16,7 +16,6 @@ const renderCard = (
 describe("BaseLearningResourceCard", () => {
   it("renders loading skeleton when isLoading is true", () => {
     renderCard({ isLoading: true })
-    // Just verify it renders without throwing
     expect(document.querySelector(".MitCard-root")).toBeInTheDocument()
   })
 
@@ -67,5 +66,120 @@ describe("BaseLearningResourceCard", () => {
 
     const button = screen.getByRole("button", { name: "Add to list" })
     expect(button).toBeInTheDocument()
+  })
+
+  describe("List mode", () => {
+    it("renders in list mode", () => {
+      renderCard({
+        list: true,
+        title: "List Course",
+        resourceType: "Course",
+        coursePrice: "$100",
+        hasCertificate: true,
+        certificatePrice: "$50",
+        certificateTypeName: "Professional Certificate",
+      })
+
+      expect(screen.getByText("List Course")).toBeInTheDocument()
+      expect(screen.getByText("Course")).toBeInTheDocument()
+    })
+
+    it("renders in condensed list mode", () => {
+      renderCard({
+        list: true,
+        condensed: true,
+        title: "Condensed Course",
+        resourceType: "Course",
+        coursePrice: "$100",
+      })
+
+      expect(screen.getByText("Condensed Course")).toBeInTheDocument()
+      expect(screen.getByText("Course")).toBeInTheDocument()
+    })
+
+    it("displays certificate with type name in list mode", () => {
+      renderCard({
+        list: true,
+        title: "Certified Course",
+        hasCertificate: true,
+        certificatePrice: "$50",
+        certificateTypeName: "MicroMasters Credential",
+      })
+
+      expect(screen.getByText("MicroMasters Credential:")).toBeInTheDocument()
+    })
+
+    it("displays certificate price in list mode", () => {
+      renderCard({
+        list: true,
+        title: "Priced Course",
+        hasCertificate: true,
+        certificatePrice: "$99",
+        coursePrice: "$99",
+      })
+
+      const prices = screen.getAllByText("$99")
+      expect(prices.length).toBeGreaterThan(0)
+    })
+
+    it("displays generic certificate label when no type name provided", () => {
+      renderCard({
+        list: true,
+        title: "Generic Cert Course",
+        hasCertificate: true,
+        certificatePrice: "$50",
+      })
+
+      // Appears twice due to responsive display (mobile + desktop variants)
+      const certificates = screen.getAllByText("Certificate:")
+      expect(certificates.length).toBeGreaterThan(0)
+    })
+
+    it("renders footerContent when provided in list mode", () => {
+      renderCard({
+        list: true,
+        title: "Course with Footer",
+        footerContent: <div data-testid="custom-footer">Custom Footer</div>,
+      })
+
+      expect(screen.getByTestId("custom-footer")).toBeInTheDocument()
+      expect(screen.getByText("Custom Footer")).toBeInTheDocument()
+    })
+
+    it("renders loading state in list mode", () => {
+      renderCard({
+        list: true,
+        isLoading: true,
+      })
+
+      const skeletons = screen.getAllByRole("generic").filter((el) => {
+        return el.tagName === "SPAN" && el.className.includes("MuiSkeleton")
+      })
+      expect(skeletons.length).toBeGreaterThan(0)
+    })
+
+    it("renders loading state in condensed list mode", () => {
+      renderCard({
+        list: true,
+        condensed: true,
+        isLoading: true,
+      })
+
+      const skeletons = screen.getAllByRole("generic").filter((el) => {
+        return el.tagName === "SPAN" && el.className.includes("MuiSkeleton")
+      })
+      expect(skeletons.length).toBeGreaterThan(0)
+    })
+
+    it("does not display certificate when hasCertificate is false", () => {
+      renderCard({
+        list: true,
+        title: "No Certificate Course",
+        hasCertificate: false,
+        coursePrice: "$100",
+      })
+
+      expect(screen.queryByText("Certificate")).not.toBeInTheDocument()
+    })
   })
 })

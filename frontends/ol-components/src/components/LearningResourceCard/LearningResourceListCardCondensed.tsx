@@ -1,94 +1,22 @@
 import React from "react"
-import styled from "@emotion/styled"
-import Skeleton from "@mui/material/Skeleton"
-import {
-  RiMenuAddLine,
-  RiBookmarkLine,
-  RiAwardFill,
-  RiBookmarkFill,
-} from "@remixicon/react"
-import { LearningResource } from "api"
+import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import {
   getReadableResourceType,
   getLearningResourcePrices,
   getResourceLanguage,
+  getBestResourceStartDate,
+  showStartAnytime,
+  LocalDate,
 } from "ol-utilities"
-import { ListCardCondensed } from "../Card/ListCardCondensed"
 import {
-  Certificate,
-  Price,
   BorderSeparator,
   Count,
   StartDate,
   Format,
 } from "./LearningResourceListCard"
 import type { LearningResourceListCardProps } from "./LearningResourceListCard"
-import { ActionButton } from "@mitodl/smoot-design"
-import type { ActionButtonProps } from "@mitodl/smoot-design"
-
-const ResourceType = styled.span`
-  align-self: flex-start;
-`
-
-/* The only variation on the LearningResourceListCard
- * Info is the ResourceType flex alignment
- */
-const Info = ({ resource }: { resource: LearningResource }) => {
-  const prices = getLearningResourcePrices(resource)
-  return (
-    <>
-      <ResourceType>
-        {getReadableResourceType(resource.resource_type)}
-      </ResourceType>
-      {resource.certification && (
-        <Certificate>
-          <RiAwardFill />
-          Certificate{prices.certificate.display ? ":" : ""}{" "}
-          {prices.certificate.display}
-        </Certificate>
-      )}
-      <Price>{prices.course.display}</Price>
-    </>
-  )
-}
-
-const Loading = styled.div`
-  padding: 16px;
-`
-
-const LoadingView = () => {
-  return (
-    <Loading>
-      <Skeleton variant="text" width="6%" />
-      <Skeleton variant="text" width="60%" style={{ marginBottom: 8 }} />
-      <Skeleton variant="text" width="20%" />
-    </Loading>
-  )
-}
-
-type CardActionButtonProps = Pick<
-  ActionButtonProps,
-  "aria-label" | "onClick" | "children"
-> & {
-  filled?: boolean
-}
-
-export const CardActionButton: React.FC<CardActionButtonProps> = ({
-  filled,
-  ...props
-}) => {
-  const FILLED_PROPS = { variant: "primary" } as const
-  const UNFILLED_PROPS = { color: "secondary", variant: "secondary" } as const
-
-  return (
-    <ActionButton
-      edge="circular"
-      size="small"
-      {...(filled ? FILLED_PROPS : UNFILLED_PROPS)}
-      {...props}
-    />
-  )
-}
+import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
+import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 
 const LearningResourceListCardCondensed: React.FC<
   LearningResourceListCardProps
@@ -103,74 +31,87 @@ const LearningResourceListCardCondensed: React.FC<
   inLearningPath,
   inUserList,
   draggable,
+  onClick,
   headingLevel = 6,
 }) => {
   if (isLoading) {
     return (
-      <ListCardCondensed className={className}>
-        <ListCardCondensed.Content>
-          <LoadingView />
-        </ListCardCondensed.Content>
-      </ListCardCondensed>
+      <BaseLearningResourceCard
+        isLoading
+        className={className}
+        list
+        condensed
+      />
     )
   }
 
   if (!resource) {
     return null
   }
+
   const readableType = getReadableResourceType(resource.resource_type)
+  const prices = getLearningResourcePrices(resource)
+  const anytime = showStartAnytime(resource)
+  const startDate = getBestResourceStartDate(resource)
+  const formattedDate = anytime
+    ? "Anytime"
+    : startDate && <LocalDate date={startDate} format="MMMM DD, YYYY" />
+
+  const actions: ActionButtonInfo[] = []
+
+  if (onAddToLearningPathClick) {
+    actions.push({
+      onClick: (event) => onAddToLearningPathClick(event, resource.id),
+      "aria-label": "Add to Learning Path",
+      filled: inLearningPath,
+      icon: <RiMenuAddLine aria-hidden />,
+    })
+  }
+
+  if (onAddToUserListClick) {
+    actions.push({
+      onClick: (event) => onAddToUserListClick(event, resource.id),
+      "aria-label": `Bookmark ${readableType}`,
+      filled: inUserList,
+      icon: inUserList ? (
+        <RiBookmarkFill aria-hidden />
+      ) : (
+        <RiBookmarkLine aria-hidden />
+      ),
+    })
+  }
+
+  const footerContent = (
+    <BorderSeparator>
+      <Count resource={resource} />
+      <StartDate resource={resource} />
+      <Format resource={resource} />
+    </BorderSeparator>
+  )
+
   return (
-    <ListCardCondensed
-      as="article"
-      aria-label={`${readableType}: ${resource.title}`}
-      forwardClicksToLink
+    <BaseLearningResourceCard
       className={className}
+      list
+      condensed
+      href={href}
+      onClick={onClick}
+      headingLevel={headingLevel}
+      title={resource.title}
+      resourceType={readableType}
+      coursePrice={prices.course.display}
+      certificatePrice={prices.certificate.display}
+      hasCertificate={resource.certification}
+      certificateTypeName={resource.certification_type?.name}
+      startLabel="Starts:"
+      startDate={formattedDate}
+      actions={actions}
+      lang={getResourceLanguage(resource)}
+      ariaLabel={`${readableType}: ${resource.title}`}
+      footerContent={footerContent}
       draggable={draggable}
-    >
-      <ListCardCondensed.Info>
-        <Info resource={resource} />
-      </ListCardCondensed.Info>
-      <ListCardCondensed.Title
-        href={href}
-        lang={getResourceLanguage(resource)}
-        role="heading"
-        aria-level={headingLevel}
-      >
-        {resource.title}
-      </ListCardCondensed.Title>
-      <ListCardCondensed.Actions>
-        {onAddToLearningPathClick && (
-          <CardActionButton
-            filled={inLearningPath}
-            aria-label="Add to Learning Path"
-            onClick={(event) => onAddToLearningPathClick(event, resource.id)}
-          >
-            <RiMenuAddLine aria-hidden />
-          </CardActionButton>
-        )}
-        {onAddToUserListClick && (
-          <CardActionButton
-            filled={inUserList}
-            aria-label={`Bookmark ${readableType}`}
-            onClick={(event) => onAddToUserListClick(event, resource.id)}
-          >
-            {inUserList ? (
-              <RiBookmarkFill aria-hidden />
-            ) : (
-              <RiBookmarkLine aria-hidden />
-            )}
-          </CardActionButton>
-        )}
-        {editMenu}
-      </ListCardCondensed.Actions>
-      <ListCardCondensed.Footer>
-        <BorderSeparator>
-          <Count resource={resource} />
-          <StartDate resource={resource} />
-          <Format resource={resource} />
-        </BorderSeparator>
-      </ListCardCondensed.Footer>
-    </ListCardCondensed>
+      editMenu={editMenu}
+    />
   )
 }
 
