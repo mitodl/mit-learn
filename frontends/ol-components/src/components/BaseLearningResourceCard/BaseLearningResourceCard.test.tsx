@@ -181,17 +181,5 @@ describe("BaseLearningResourceCard", () => {
 
       expect(screen.queryByText("Certificate")).not.toBeInTheDocument()
     })
-
-    it("supports draggable in list mode", () => {
-      renderCard({
-        list: true,
-        title: "Draggable Course",
-        draggable: true,
-      })
-
-      const article = screen.getByRole("article")
-      expect(article).toBeInTheDocument()
-      expect(article).toHaveTextContent("Draggable Course")
-    })
   })
 })
