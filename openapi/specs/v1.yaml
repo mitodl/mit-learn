@@ -909,7 +909,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -927,7 +927,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -1558,7 +1558,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -1576,7 +1576,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -1983,7 +1983,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -2001,7 +2001,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -2408,7 +2408,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -2426,7 +2426,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -2837,7 +2837,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -2855,7 +2855,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -3247,7 +3247,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -3265,7 +3265,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -3977,7 +3977,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -3995,7 +3995,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -4460,7 +4460,7 @@ paths:
             - video
             - video_playlist
             - article
-            - learning_material
+            - document
             type: string
             description: |-
               * `course` - course
@@ -4471,12 +4471,11 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `article` - article
-              * `learning_material` - learning material
+              * `document` - document
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `learning_material` - learning\
-          \ material"
+          \ - video playlist\n* `article` - article\n* `document` - document"
       - in: query
         name: search_mode
         schema:
@@ -4970,7 +4969,7 @@ paths:
             - video
             - video_playlist
             - article
-            - learning_material
+            - document
             type: string
             description: |-
               * `course` - course
@@ -4981,12 +4980,11 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `article` - article
-              * `learning_material` - learning material
+              * `document` - document
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `learning_material` - learning\
-          \ material"
+          \ - video playlist\n* `article` - article\n* `document` - document"
       - in: query
         name: search_mode
         schema:
@@ -5505,7 +5503,7 @@ paths:
             - video
             - video_playlist
             - article
-            - learning_material
+            - document
             type: string
             description: |-
               * `course` - course
@@ -5516,12 +5514,11 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `article` - article
-              * `learning_material` - learning material
+              * `document` - document
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `learning_material` - learning\
-          \ material"
+          \ - video playlist\n* `article` - article\n* `document` - document"
       - in: query
         name: search_mode
         schema:
@@ -6031,7 +6028,7 @@ paths:
             - video
             - video_playlist
             - article
-            - learning_material
+            - document
             type: string
             description: |-
               * `course` - course
@@ -6042,12 +6039,11 @@ paths:
               * `video` - video
               * `video_playlist` - video playlist
               * `article` - article
-              * `learning_material` - learning material
+              * `document` - document
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `learning_material` - learning\
-          \ material"
+          \ - video playlist\n* `article` - article\n* `document` - document"
       - in: query
         name: search_mode
         schema:
@@ -6487,7 +6483,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -6505,7 +6501,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -7252,7 +7248,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -7270,7 +7266,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -7677,7 +7673,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -7695,7 +7691,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -8189,7 +8185,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -8207,7 +8203,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -9046,7 +9042,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -9064,7 +9060,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -9537,7 +9533,7 @@ paths:
             enum:
             - article
             - course
-            - learning_material
+            - document
             - learning_path
             - podcast
             - podcast_episode
@@ -9555,7 +9551,7 @@ paths:
           * `video` - Video
           * `video_playlist` - Video Playlist
           * `article` - Article
-          * `learning_material` - Learning Material
+          * `document` - Document
         explode: true
         style: form
       - in: query
@@ -9929,7 +9925,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -10009,6 +10005,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -10091,6 +10090,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -10211,9 +10211,6 @@ components:
       x-enum-descriptions:
       - Dated
       - Anytime
-    BlankEnum:
-      enum:
-      - ''
     CertificationTypeEnum:
       enum:
       - micromasters
@@ -10231,29 +10228,6 @@ components:
       - Professional Certificate
       - Certificate of Completion
       - No Certificate
-    ContentCategoryEnum:
-      enum:
-      - Lecture Notes
-      - Readings
-      - Practice
-      - Open Textbooks
-      - Lecture Audio
-      - Video
-      type: string
-      description: |-
-        * `Lecture Notes` - Lecture Notes
-        * `Readings` - Readings
-        * `Practice` - Practice
-        * `Open Textbooks` - Open Textbooks
-        * `Lecture Audio` - Lecture Audio
-        * `Video` - Video
-      x-enum-descriptions:
-      - Lecture Notes
-      - Readings
-      - Practice
-      - Open Textbooks
-      - Lecture Audio
-      - Video
     ContentFile:
       type: object
       description: Serializer class for course run ContentFiles
@@ -10720,7 +10694,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -10804,6 +10778,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -10887,6 +10864,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -11129,54 +11107,9 @@ components:
       - Special Programs
       - Science, Technology, and Society
       - Women's and Gender Studies
-    LearningMaterial:
+    DocumentResource:
       type: object
-      description: Serializer for the LearningMaterial model
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        content_file:
-          allOf:
-          - $ref: '#/components/schemas/ContentFile'
-          readOnly: true
-          nullable: true
-        content_tags:
-          type: array
-          items:
-            type: string
-            maxLength: 256
-          nullable: true
-        content_category:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/ContentCategoryEnum'
-          - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
-      required:
-      - content_file
-      - id
-    LearningMaterialRequest:
-      type: object
-      description: Serializer for the LearningMaterial model
-      properties:
-        content_tags:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 256
-          nullable: true
-        content_category:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/ContentCategoryEnum'
-          - $ref: '#/components/schemas/BlankEnum'
-          - $ref: '#/components/schemas/NullEnum'
-    LearningMaterialResource:
-      type: object
-      description: Serializer for LearningMaterial resources with resource_type=Lecture
-        Notes
+      description: Serializer for document resources
       properties:
         id:
           type: integer
@@ -11278,7 +11211,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -11326,13 +11259,15 @@ components:
           readOnly: true
         resource_type:
           allOf:
-          - $ref: '#/components/schemas/LearningMaterialResourceResourceTypeEnum'
-          default: learning_material
+          - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
+          default: document
           readOnly: true
-        learning_material:
-          allOf:
-          - $ref: '#/components/schemas/LearningMaterial'
+        learning_material_content_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentFile'
           readOnly: true
+          nullable: true
         readable_id:
           type: string
           maxLength: 512
@@ -11362,6 +11297,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -11435,7 +11373,7 @@ components:
       - free
       - id
       - image
-      - learning_material
+      - learning_material_content_files
       - offered_by
       - pace
       - platform
@@ -11445,15 +11383,15 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
       - title
       - views
-    LearningMaterialResourceRequest:
+    DocumentResourceRequest:
       type: object
-      description: Serializer for LearningMaterial resources with resource_type=Lecture
-        Notes
+      description: Serializer for document resources
       properties:
         topics:
           type: array
@@ -11551,10 +11489,10 @@ components:
       required:
       - readable_id
       - title
-    LearningMaterialResourceResourceTypeEnum:
+    DocumentResourceResourceTypeEnum:
       type: string
       enum:
-      - learning_material
+      - document
     LearningPath:
       type: object
       description: Serializer for the LearningPath model
@@ -11712,7 +11650,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -11796,6 +11734,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          maxLength: 256
         ocw_topics:
           type: array
           items:
@@ -11875,6 +11816,7 @@ components:
       - prices
       - readable_id
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -11917,6 +11859,10 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        resource_category:
+          type: string
+          minLength: 1
+          maxLength: 256
         ocw_topics:
           type: array
           items:
@@ -11978,6 +11924,7 @@ components:
         require_summaries:
           type: boolean
       required:
+      - resource_category
       - title
     LearningPathResourceResourceTypeEnum:
       type: string
@@ -11991,9 +11938,9 @@ components:
       - $ref: '#/components/schemas/LearningPathResource'
       - $ref: '#/components/schemas/PodcastResource'
       - $ref: '#/components/schemas/PodcastEpisodeResource'
-      - $ref: '#/components/schemas/VideoResource'
       - $ref: '#/components/schemas/VideoPlaylistResource'
-      - $ref: '#/components/schemas/LearningMaterialResource'
+      - $ref: '#/components/schemas/VideoResource'
+      - $ref: '#/components/schemas/DocumentResource'
       discriminator:
         propertyName: resource_type
         mapping:
@@ -12003,9 +11950,9 @@ components:
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
           podcast_episode: '#/components/schemas/PodcastEpisodeResource'
-          video: '#/components/schemas/VideoResource'
           video_playlist: '#/components/schemas/VideoPlaylistResource'
-          learning_material: '#/components/schemas/LearningMaterialResource'
+          video: '#/components/schemas/VideoResource'
+          document: '#/components/schemas/DocumentResource'
     LearningResourceBaseDepartment:
       type: object
       description: |-
@@ -12576,9 +12523,9 @@ components:
       - $ref: '#/components/schemas/LearningPathResourceRequest'
       - $ref: '#/components/schemas/PodcastResourceRequest'
       - $ref: '#/components/schemas/PodcastEpisodeResourceRequest'
-      - $ref: '#/components/schemas/VideoResourceRequest'
       - $ref: '#/components/schemas/VideoPlaylistResourceRequest'
-      - $ref: '#/components/schemas/LearningMaterialResourceRequest'
+      - $ref: '#/components/schemas/VideoResourceRequest'
+      - $ref: '#/components/schemas/DocumentResourceRequest'
       discriminator:
         propertyName: resource_type
         mapping:
@@ -12588,9 +12535,9 @@ components:
           learning_path: '#/components/schemas/LearningPathResourceRequest'
           podcast: '#/components/schemas/PodcastResourceRequest'
           podcast_episode: '#/components/schemas/PodcastEpisodeResourceRequest'
-          video: '#/components/schemas/VideoResourceRequest'
           video_playlist: '#/components/schemas/VideoPlaylistResourceRequest'
-          learning_material: '#/components/schemas/LearningMaterialResourceRequest'
+          video: '#/components/schemas/VideoResourceRequest'
+          document: '#/components/schemas/DocumentResourceRequest'
     LearningResourceRun:
       type: object
       description: Serializer for the LearningResourceRun model
@@ -13696,6 +13643,10 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
+        resource_category:
+          type: string
+          minLength: 1
+          maxLength: 256
         ocw_topics:
           type: array
           items:
@@ -13934,7 +13885,7 @@ components:
             \ course\n* `program` - program\n* `learning_path` - learning path\n*\
             \ `podcast` - podcast\n* `podcast_episode` - podcast episode\n* `video`\
             \ - video\n* `video_playlist` - video playlist\n* `article` - article\n\
-            * `learning_material` - learning material"
+            * `document` - document"
         free:
           type: boolean
           nullable: true
@@ -14066,7 +14017,7 @@ components:
       - video
       - video_playlist
       - article
-      - learning_material
+      - document
       type: string
       description: |-
         * `course` - course
@@ -14077,7 +14028,7 @@ components:
         * `video` - video
         * `video_playlist` - video playlist
         * `article` - article
-        * `learning_material` - learning material
+        * `document` - document
       x-enum-descriptions:
       - course
       - program
@@ -14087,7 +14038,7 @@ components:
       - video
       - video playlist
       - article
-      - learning material
+      - document
     PlatformEnum:
       enum:
       - edx
@@ -14345,7 +14296,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -14429,6 +14380,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -14512,6 +14466,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -14751,7 +14706,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -14835,6 +14790,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -14918,6 +14876,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -15295,7 +15254,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -15379,6 +15338,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -15462,6 +15424,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -15615,7 +15578,7 @@ components:
       - video
       - video_playlist
       - article
-      - learning_material
+      - document
       type: string
       description: |-
         * `course` - course
@@ -15626,7 +15589,7 @@ components:
         * `video` - video
         * `video_playlist` - video_playlist
         * `article` - article
-        * `learning_material` - learning_material
+        * `document` - document
       x-enum-descriptions:
       - course
       - program
@@ -15636,7 +15599,7 @@ components:
       - video
       - video_playlist
       - article
-      - learning_material
+      - document
     RichTextArticle:
       type: object
       description: Serializer for LearningResourceInstructor model
@@ -16110,7 +16073,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -16194,6 +16157,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -16276,6 +16242,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
@@ -16502,7 +16469,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category:
+        resource_category_tab:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -16563,6 +16530,12 @@ components:
             type: string
           description: Get the playlist id(s) the video belongs to
           readOnly: true
+        learning_material_content_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentFile'
+          readOnly: true
+          nullable: true
         readable_id:
           type: string
           maxLength: 512
@@ -16592,6 +16565,9 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
+        resource_category:
+          type: string
+          readOnly: true
         ocw_topics:
           type: array
           items:
@@ -16665,6 +16641,7 @@ components:
       - free
       - id
       - image
+      - learning_material_content_files
       - offered_by
       - pace
       - platform
@@ -16675,6 +16652,7 @@ components:
       - readable_id
       - require_summaries
       - resource_category
+      - resource_category_tab
       - resource_prices
       - resource_type
       - runs
