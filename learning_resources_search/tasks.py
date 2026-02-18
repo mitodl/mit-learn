@@ -264,7 +264,9 @@ def send_subscription_emails(self, subscription_type, period="daily"):
         delta = datetime.timedelta(days=7)
     since = now_in_utc() - delta
     new_learning_resources = LearningResource.objects.filter(
-        published=True, created_on__gt=since, learning_material__isnull=True
+        published=True,
+        created_on__gt=since,
+        learning_material_content_files__isnull=True,
     )
     rows = _get_percolated_rows(new_learning_resources, subscription_type)
     template_data = _group_percolated_rows(rows)
@@ -660,7 +662,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                 )
                 for ids in chunks(
                     LearningResource.objects.filter(
-                        published=True, learning_material__isnull=True
+                        published=True, learning_material_content_files__isnull=True
                     )
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
@@ -681,6 +683,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         LearningResource.objects.filter(
                             published=True,
                             resource_type=resource_type,
+                            learning_material_content_files__isnull=True,
                         )
                         .order_by("id")
                         .values_list("id", flat=True),
@@ -891,6 +894,7 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=True,
                 resource_type=resource_type,
+                learning_material_content_files__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),
@@ -904,6 +908,7 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=False,
                 resource_type=resource_type,
+                learning_material_content_files__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),

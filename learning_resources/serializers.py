@@ -910,7 +910,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=LearningResourceDeliverySerializer(), read_only=True
     )
     free = serializers.SerializerMethodField()
-    resource_category = serializers.SerializerMethodField()
+    resource_category_tab = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
@@ -929,7 +929,8 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             return best_run.id
         return None
 
-    def get_resource_category(self, instance) -> str:
+
+    def get_resource_category_tab(self, instance) -> str:
         """Return the resource category of the resource"""
         if instance.resource_type in [
             LearningResourceType.course.name,
@@ -1087,22 +1088,6 @@ class PodcastEpisodeResourceSerializer(LearningResourceBaseSerializer):
     )
 
     podcast_episode = PodcastEpisodeSerializer(read_only=True)
-
-
-class VideoResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for video resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video.name
-    )
-
-    video = VideoSerializer(read_only=True)
-
-    playlists = serializers.SerializerMethodField()
-
-    def get_playlists(self, instance) -> list[str]:
-        """Get the playlist id(s) the video belongs to"""
-        return [playlist.parent_id for playlist in instance.playlists]
 
 
 class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
@@ -1266,6 +1251,38 @@ class ContentFileSerializer(serializers.ModelSerializer):
         ]
 
 
+class VideoResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for video resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.video.name
+    )
+
+    video = VideoSerializer(read_only=True)
+
+    playlists = serializers.SerializerMethodField()
+
+    learning_material_content_files = ContentFileSerializer(
+        read_only=True, many=True, allow_null=True
+    )
+
+    def get_playlists(self, instance) -> list[str]:
+        """Get the playlist id(s) the video belongs to"""
+        return [playlist.parent_id for playlist in instance.playlists]
+
+
+class DocumentResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for document resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.document.name
+    )
+
+    learning_material_content_files = ContentFileSerializer(
+        read_only=True, many=True, allow_null=True
+    )
+
+
 class LearningResourceSerializer(serializers.Serializer):
     """Serializer for LearningResource"""
 
@@ -1280,6 +1297,7 @@ class LearningResourceSerializer(serializers.Serializer):
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
             ArticleResourceSerializer,
+            DocumentResourceSerializer,
         )
     }
 
