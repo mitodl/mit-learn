@@ -15,13 +15,11 @@ import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
-import ProductPageTemplate, {
-  HeadingData,
-  HowYoullLearnSection,
-  ProductNavbar,
-  WhatSection,
-  WhoCanTake,
-} from "./ProductPageTemplate"
+import ProductPageTemplate from "./ProductPageTemplate"
+import ProductNavbar, { HeadingData } from "./ProductNavbar"
+import WhoCanTakeSection from "./WhoCanTakeSection"
+import WhatYoullLearnSection from "./WhatYoullLearnSection"
+import HowYoullLearnSection from "./HowYoullLearnSection"
 import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
@@ -45,26 +43,31 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
     {
       id: HeadingIds.About,
       label: "About",
+      variant: "primary",
       content: page.about,
     },
     {
       id: HeadingIds.What,
       label: "What you'll learn",
+      variant: "secondary",
       content: page.what_you_learn,
     },
     {
       id: HeadingIds.How,
       label: "How you'll learn",
+      variant: "secondary",
       content: true,
     },
     {
       id: HeadingIds.Prereqs,
       label: "Prerequisites",
+      variant: "secondary",
       content: page.prerequisites,
     },
     {
       id: HeadingIds.Instructors,
       label: "Instructors",
+      variant: "secondary",
       content: page.faculty.length,
     },
   ] as const
@@ -271,7 +274,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <AboutSection productNoun="Program" aboutHtml={page.about} />
       ) : null}
       <RequirementsSection program={program} />
-      {page.what_you_learn ? <WhatSection html={page.what_you_learn} /> : null}
+      {page.what_you_learn ? (
+        <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
       <HowYoullLearnSection />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
@@ -284,7 +289,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
       ) : null}
-      <WhoCanTake productNoun="Program" />
+      <WhoCanTakeSection productNoun="Program" />
     </ProductPageTemplate>
   )
 }
