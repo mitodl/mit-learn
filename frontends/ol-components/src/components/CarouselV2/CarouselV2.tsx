@@ -133,9 +133,21 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
     [WheelGesturesPlugin()],
   )
 
+  const updateCanScroll = React.useCallback(() => {
+    if (!emblaApi) {
+      return
+    }
+    setCanScrollPrev(emblaApi.canScrollPrev())
+    setCanScrollNext(emblaApi.canScrollNext())
+  }, [emblaApi])
+
   useEffect(() => {
-    emblaApi?.scrollTo(initialSlide)
-  }, [emblaApi, initialSlide])
+    if (!emblaApi) {
+      return
+    }
+    emblaApi.scrollTo(initialSlide)
+    updateCanScroll()
+  }, [emblaApi, initialSlide, updateCanScroll])
 
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(true)
@@ -149,11 +161,21 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
   }
 
   useEffect(() => {
-    emblaApi?.on("scroll", () => {
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
-    })
-  }, [emblaApi])
+    if (!emblaApi) {
+      return
+    }
+
+    updateCanScroll()
+    emblaApi.on("select", updateCanScroll)
+    emblaApi.on("reInit", updateCanScroll)
+    emblaApi.on("scroll", updateCanScroll)
+
+    return () => {
+      emblaApi.off("select", updateCanScroll)
+      emblaApi.off("reInit", updateCanScroll)
+      emblaApi.off("scroll", updateCanScroll)
+    }
+  }, [emblaApi, updateCanScroll])
 
   const arrows = (
     <>
