@@ -292,7 +292,11 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
         >
           {({ resources, childrenLoading, tabConfig }) => {
             return (
-              <CarouselV2 arrowsContainer={ref}>
+              <CarouselV2
+                arrowsContainer={ref}
+                mobileBleed="symmetric"
+                mobileGutter={16}
+              >
                 {isLoading || childrenLoading
                   ? Array.from({ length: 6 }).map((_, index) => (
                       <ResourceCard

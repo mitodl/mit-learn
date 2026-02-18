@@ -26,7 +26,14 @@ const ArrowButtonsContainer = styled.div({
   gap: "16px",
 })
 const InstructorsCarousel = styled(CarouselV2)(({ theme }) => ({
-  backgroundColor: "peachpuff",
+  width: "100%",
+  marginTop: "12px",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  paddingBottom: "16px",
+  boxSizing: "border-box",
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "16px",
+  },
 }))
 const CarouselSlide = styled.div(({ theme }) => ({
   flex: "0 0 clamp(104px, 16vw, 136px)",
@@ -148,6 +155,8 @@ const InstructorsSection: React.FC<{ instructors: Faculty[] }> = ({
       </InstructorsHeader>
       <InstructorsCarousel
         data-testid="carousel-div"
+        mobileBleed="symmetric"
+        mobileGutter={16}
         arrowsContainer={arrowsContainer}
         arrowGroupLabel="Instructor navigation"
         prevLabel="Show previous instructors"
