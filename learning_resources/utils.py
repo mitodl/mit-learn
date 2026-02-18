@@ -675,6 +675,9 @@ def json_to_markdown(obj, indent=0):
 
 
 def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str:
+    """
+    Truncate text to a maximum number of tokens for a given model.
+    """
     encoding = tiktoken.encoding_for_model(model)
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:
