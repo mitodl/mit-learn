@@ -20,19 +20,26 @@ const InstructorsHeader = styled.div(({ theme }) => ({
     justifyContent: "flex-start",
   },
 }))
-const ArrowButtonsContainer = styled.div({
+const ArrowButtonsContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
 const InstructorsCarousel = styled(CarouselV2)(({ theme }) => ({
-  width: "100%",
   marginTop: "12px",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   paddingBottom: "16px",
   boxSizing: "border-box",
   [theme.breakpoints.down("sm")]: {
     marginTop: "16px",
+  },
+  ".MitCarousel-track": {
+    [theme.breakpoints.down("sm")]: {
+      gap: "8px",
+    },
   },
 }))
 const CarouselSlide = styled.div(({ theme }) => ({

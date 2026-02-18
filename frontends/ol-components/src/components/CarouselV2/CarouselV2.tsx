@@ -52,7 +52,7 @@ const CarouselContainer = styled.div<{
   },
 }))
 
-const CarouselScroll = styled.div({
+const CarouselTrack = styled.div({
   display: "flex",
   gap: "24px",
   /* Space for the card box shadow on hover to prevent clipping */
@@ -216,7 +216,7 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
         mobileGutter={mobileGutter}
         data-testid={testId}
       >
-        <CarouselScroll>{children}</CarouselScroll>
+        <CarouselTrack className="MitCarousel-track">{children}</CarouselTrack>
       </CarouselContainer>
     </>
   )
