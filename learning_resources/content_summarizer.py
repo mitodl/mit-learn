@@ -4,7 +4,7 @@ from typing import Annotated
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from langchain_community.chat_models import ChatLiteLLM
+from langchain_litellm import ChatLiteLLM
 from litellm import get_max_tokens
 from typing_extensions import TypedDict
 
@@ -240,8 +240,8 @@ class ContentSummarizer:
                 max_input_tokens,
                 llm_model,
             )
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
-            response = llm.invoke(summarizer_message)
+            llm = self._get_llm(model=llm_model, temperature=1, max_tokens=1000)
+            response = llm.invoke(summarizer_message, drop_params=True)
             logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
             logger.debug("Generated summary: %s", generated_summary)
@@ -271,9 +271,10 @@ class ContentSummarizer:
         try:
             max_input_tokens = get_max_tokens(llm_model)
 
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=2048)
+            llm = self._get_llm(model=llm_model, temperature=1, max_tokens=2048)
             logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
+
             flashcard_prompt = settings.CONTENT_SUMMARIZER_FLASHCARD_PROMPT.format(
                 content=content
             )
@@ -282,7 +283,7 @@ class ContentSummarizer:
                 max_input_tokens,
                 llm_model,
             )
-            response = structured_llm.invoke(flashcard_prompt)
+            response = structured_llm.invoke(flashcard_prompt, drop_params=True)
             if response:
                 generated_flashcards = response.get("flashcards", [])
                 logger.debug("Generated flashcards: %s", generated_flashcards)
