@@ -3,12 +3,15 @@ Test learning_resources utils
 """
 
 import json
+import random
 from pathlib import Path
 
-import markdown
 import pytest
+import tiktoken
 import yaml
+from faker import Faker
 
+import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
@@ -37,6 +40,7 @@ from learning_resources.models import (
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     transfer_list_resources,
+    truncate_to_tokens,
 )
 
 pytestmark = pytest.mark.django_db
@@ -619,3 +623,12 @@ def test_json_to_markdown(courses_data):
     # strip double newlines for compact fixture
     content = rendered_markdown.replace("\n\n", "\n")
     assert markdown.markdown(expected_markdown_response) == markdown.markdown(content)
+
+
+def test_truncate_to_tokens_util(mocker):
+    model = "gpt-4o"
+    content = Faker().text() * 100
+    max_tokens = random.randint(1, 50)  # noqa: S311
+    truncated = truncate_to_tokens(content, max_tokens, model)
+    encoding = tiktoken.encoding_for_model(model)
+    assert len(encoding.encode(truncated)) <= max_tokens
