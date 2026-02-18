@@ -282,6 +282,8 @@ def load_offered_by(
 def load_content_tags(
     learning_resources_obj: LearningResource or ContentFile,
     content_tags_data: list[str],
+    *,
+    is_content_file: bool,
 ) -> list[LearningResourceContentTag]:
     """Load the content tags for a resource into the database"""
     if content_tags_data is not None:
@@ -289,9 +291,16 @@ def load_content_tags(
         for content_tag in content_tags_data:
             tag, _ = LearningResourceContentTag.objects.get_or_create(name=content_tag)
             tags.append(tag)
-        learning_resources_obj.content_tags.set(tags)
+        if is_content_file:
+            learning_resources_obj.content_tags.set(tags)
+        else:
+            learning_resources_obj.resource_tags.set(tags)
         learning_resources_obj.save()
-    return learning_resources_obj.content_tags.all()
+    return (
+        learning_resources_obj.content_tags.all()
+        if is_content_file
+        else learning_resources_obj.resource_tags.all()
+    )
 
 
 def load_run(
@@ -578,7 +587,7 @@ def load_course(
         load_offered_by(learning_resource, offered_bys_data)
         load_image(learning_resource, image_data)
         load_departments(learning_resource, department_data)
-        load_content_tags(learning_resource, content_tags_data)
+        load_content_tags(learning_resource, content_tags_data, is_content_file=False)
 
     update_index(learning_resource, created)
     return learning_resource
@@ -760,7 +769,7 @@ def load_content_file(
         content_file, _ = ContentFile.objects.update_or_create(
             run=course_run, key=content_file_data.get("key"), defaults=content_file_data
         )
-        load_content_tags(content_file, content_file_tags)
+        load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
         log.exception(
@@ -861,12 +870,8 @@ def load_content_files(
             file.published = False
             file.save()
 
-            learning_material = LearningMaterial.objects.filter(
-                content_file=file
-            ).last()
-
-            if learning_material:
-                resource = learning_material.learning_resource
+            if file.learning_material_resource:
+                resource = file.learning_material_resource
                 resource.published = False
                 resource.save()
 
@@ -914,34 +919,33 @@ def load_learning_material(
     Create learning material object from ocw content file
     """
 
-    content_categories = {
+    resource_categories = {
         OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
     }
-    content_categories = sorted(content_categories)
-    content_category = content_categories[0]
+    resource_categories = sorted(resource_categories)
+    resource_category = resource_categories[0]
 
     with transaction.atomic():
+        if resource_category == "Video":
+            resource_type = LearningResourceType.video.name
+        else:
+            resource_type = LearningResourceType.document.name
         learning_resource, _ = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             platform=course_run.learning_resource.platform,
             defaults={
-                "resource_type": LearningResourceType.learning_material.name,
+                "resource_type": resource_type,
                 "title": content_file.title,
                 "url": content_file.url,
                 "etl_source": course_run.learning_resource.etl_source,
                 "offered_by": course_run.learning_resource.offered_by,
                 "published": True,
+                "resource_category": resource_category,
             },
         )
 
-        LearningMaterial.objects.update_or_create(
-            learning_resource=learning_resource,
-            content_file=content_file,
-            defaults={
-                "content_tags": list(learning_material_tags),
-                "content_category": content_category,
-            },
-        )
+        content_file.learning_material_resource = learning_resource
+        content_file.save()
         return learning_resource.id
 
 
