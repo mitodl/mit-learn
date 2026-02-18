@@ -158,8 +158,12 @@ def setup_s3_ocw(settings):
 
 
 @pytest.fixture
-def summarizer_configuration():
+def summarizer_configuration(mocker):
     """Create a summarizer configuration"""
+    mocker.patch(
+        "learning_resources.content_summarizer.truncate_to_tokens", autospec=True
+    )
+    mocker.patch("learning_resources.content_summarizer.get_max_tokens", autospec=True)
     return ContentSummarizerConfigurationFactory.create()
 
 

@@ -403,10 +403,6 @@ def test_summarize_single_content_file_with_exception(
     mock_instance.with_structured_output.return_value.invoke.side_effect = Exception(
         "INVALID_FORMAT"
     )
-    mocker.patch(
-        "learning_resources.content_summarizer.truncate_to_tokens", autospec=True
-    )
-    mocker.patch("learning_resources.content_summarizer.get_max_tokens", autospec=True)
 
     error = summarizer.summarize_single_content_file(content_file.id, overwrite=False)
     assert (
