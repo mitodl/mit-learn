@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
                 violation_error_message=(
                     "One of learning_resource, learning_material_resource, or run "
                     "must be defined. Both learning_resource and run cannot be "
-                    "defined atthe same time.",
+                    "defined at the same time.",
                 ),
             ),
         ),

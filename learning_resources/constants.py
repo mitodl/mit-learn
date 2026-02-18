@@ -37,7 +37,7 @@ class LearningResourceType(ExtendedEnum):
     video = "Video"
     video_playlist = "Video Playlist"
     article = "Article"
-    learning_material = "Learning Material"
+    document = "Document"
 
 
 LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
