@@ -155,18 +155,6 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
   )
 }
 
-const MobileOverflow = styled.div(({ theme }) => ({
-  /**
-   * On mobile screens, the carousel is supposed to overflow the main content
-   * so its right edge is flush with screen.
-   *
-   * The mobile content margin is 16px, so we add that to its width.
-   */
-  [theme.breakpoints.down("sm")]: {
-    width: "calc(100% + 16px)",
-  },
-}))
-
 type ResourceCarouselProps = {
   config: TabConfig[]
   title: string
@@ -259,7 +247,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   )
 
   return (
-    <MobileOverflow className={className} data-testid="resource-carousel">
+    <div className={className} data-testid="resource-carousel">
       <TabContext value={tab}>
         <HeaderRow>
           <HeaderText component={titleComponent} variant={titleVariant}>
@@ -330,7 +318,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
           }}
         </PanelChildren>
       </TabContext>
-    </MobileOverflow>
+    </div>
   )
 }
 

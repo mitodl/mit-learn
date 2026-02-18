@@ -65,6 +65,7 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
   arrowGroupLabel = "Slide navigation",
   prevLabel = "Show previous slides",
   nextLabel = "Show next slides",
+  ...others
 }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -126,12 +127,12 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
   return (
     <>
       {arrowsContainer === undefined ? (
-        <ButtonsContainer role="group" aria-label={arrowGroupLabel}>
+        <ButtonsContainer role="group" aria-label={arrowGroupLabel} {...others}>
           {arrows}
         </ButtonsContainer>
       ) : null}
       {arrowsContainer ? createPortal(arrows, arrowsContainer) : null}
-      <CarouselContainer ref={emblaRef} className={className}>
+      <CarouselContainer ref={emblaRef} className={className} {...others}>
         <CarouselScroll>{children}</CarouselScroll>
       </CarouselContainer>
     </>

@@ -63,7 +63,9 @@ const BottomContainer = styled(Container)(({ theme }) => ({
 }))
 
 const MainCol = styled.div({
+  width: "100%",
   flex: 1,
+  minWidth: 0,
   display: "flex",
   flexDirection: "column",
 })
