@@ -15,41 +15,13 @@ export function useLearningResourceEmbed(editor?: Editor | null) {
   const handleEmbed = useCallback(() => {
     if (!resolved) return
 
-    const { selection, doc } = resolved.state
-    const { $from } = selection
-
-    // Check if we're inside a banner node
-    const isInBanner =
-      $from.node($from.depth - 1)?.type.name === "banner" ||
-      $from.node($from.depth)?.type.name === "banner"
-
-    let insertPos = selection.from
-
-    if (isInBanner) {
-      // Find the position after banner and byline nodes
-      let bannerEnd = -1
-      let bylineEnd = -1
-
-      doc.descendants((node, pos) => {
-        if (node.type.name === "banner") {
-          bannerEnd = pos + node.nodeSize
-        } else if (node.type.name === "byline" && bannerEnd !== -1) {
-          bylineEnd = pos + node.nodeSize
-          return false // Stop searching
-        }
-        return undefined
-      })
-
-      // Insert after byline if found, otherwise after banner
-      insertPos = bylineEnd !== -1 ? bylineEnd : bannerEnd
-    }
-
     // Insert learningResourceInput node with empty paragraph that will show "Paste course url here" placeholder
     // The LearningResourceURLHandler extension will automatically
     // convert this to a learning resource when user pastes a valid URL and presses Enter
     resolved
       .chain()
-      .insertContentAt(insertPos, {
+      .focus()
+      .insertContent({
         type: "learningResourceInput",
         content: [
           {
@@ -58,7 +30,6 @@ export function useLearningResourceEmbed(editor?: Editor | null) {
           },
         ],
       })
-      .focus(insertPos + 1)
       .run()
   }, [resolved])
 
