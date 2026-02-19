@@ -3478,9 +3478,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.5.0":
+"@mitodl/course-search-utils@https://github.com/mitodl/course-search-utils.git#ab/resource_type_group":
   version: 3.5.0
-  resolution: "@mitodl/course-search-utils@npm:3.5.0"
+  resolution: "@mitodl/course-search-utils@https://github.com/mitodl/course-search-utils.git#commit=bea2c67af3dfdc27c99f9bfcac93b2753908db74"
   dependencies:
     "@mitodl/mit-learn-api-axios": "npm:2025.10.28"
     "@remixicon/react": "npm:^4.2.0"
@@ -3500,7 +3500,7 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/f7b31dc385bc9220b54ec580f21c9a7c90c5a4e69ee86617642f8934bdd79bfd1f2bac4dfdbeadd7edf71c768e67fd5b3af0cd526fdaaacbcfb13eec9a4f7afb
+  checksum: 10/2b8112159c55f5e81d319b08a2a2a6582e26e525db35c5563dd14ec8d13034a5f763d4a2e7dbdb96758d8f6b59c9cbb6f9a139eb55e9dce21319ab3fa62f52db
   languageName: node
   linkType: hard
 
@@ -16013,7 +16013,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/course-search-utils": "npm:^3.5.0"
+    "@mitodl/course-search-utils": "https://github.com/mitodl/course-search-utils.git#ab/resource_type_group"
     "@mitodl/mitxonline-api-axios": "npm:^2026.2.19"
     "@mitodl/smoot-design": "npm:^6.24.0"
     "@mui/material": "npm:^6.4.5"
