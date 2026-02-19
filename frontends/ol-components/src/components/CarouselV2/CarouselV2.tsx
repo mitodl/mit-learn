@@ -132,6 +132,9 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
     [WheelGesturesPlugin()],
   )
 
+  const [canScrollPrev, setCanScrollPrev] = useState(false)
+  const [canScrollNext, setCanScrollNext] = useState(true)
+
   const updateCanScroll = React.useCallback(() => {
     if (!emblaApi) {
       return
@@ -147,9 +150,6 @@ const CarouselV2: React.FC<CarouselV2Props> = ({
     emblaApi.scrollTo(initialSlide)
     updateCanScroll()
   }, [emblaApi, initialSlide, updateCanScroll])
-
-  const [canScrollPrev, setCanScrollPrev] = useState(false)
-  const [canScrollNext, setCanScrollNext] = useState(true)
 
   const scrollPrev = () => {
     emblaApi?.scrollPrev()

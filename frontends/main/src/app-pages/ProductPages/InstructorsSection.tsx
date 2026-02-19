@@ -106,16 +106,6 @@ const ActiveInstructorContent = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.red}`,
   paddingTop: "24px",
   color: theme.custom.colors.darkGray2,
-  ".raw-include": {
-    ...theme.typography.body2,
-    "*:first-child": {
-      marginTop: 0,
-    },
-    p: {
-      marginTop: "8px",
-      marginBottom: "0",
-    },
-  },
 }))
 const ActiveInstructorName = styled.h3(({ theme }) => ({
   ...theme.typography.h4,
@@ -174,7 +164,6 @@ const InstructorsSection: React.FC<{ instructors: Faculty[] }> = ({
         <ArrowButtonsContainer ref={setArrowsContainer} />
       </InstructorsHeader>
       <InstructorsCarousel
-        data-testid="carousel-div"
         mobileBleed="symmetric"
         mobileGutter={16}
         arrowsContainer={arrowsContainer}
