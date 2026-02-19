@@ -201,7 +201,13 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             </TitleBox>
           </MainCol>
           <SidebarCol showAbove="md" alignSelf="flex-end">
-            <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+            <SidebarImage
+              priority
+              width={410}
+              height={230}
+              src={imageSrc}
+              alt=""
+            />
           </SidebarCol>
         </TopContainer>
       </BannerBackground>
