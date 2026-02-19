@@ -225,7 +225,6 @@ const ButtonContainer = styled.span(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     height: theme.typography.body3.lineHeight,
   },
-  backgroundColor: "red",
   // center icon in container
   alignItems: "center",
   "> button": {
