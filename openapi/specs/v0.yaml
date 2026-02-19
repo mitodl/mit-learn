@@ -1266,22 +1266,6 @@ paths:
           minLength: 1
         description: The readable id of the resource
       - in: query
-        name: resource_category
-        schema:
-          type: array
-          items:
-            enum:
-            - course
-            - program
-            - learning_material
-            type: string
-            description: |-
-              * `course` - Course
-              * `program` - Program
-              * `learning_material` - Learning Material
-        description: "The category of learning resource             \n\n* `course`\
-          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
-      - in: query
         name: resource_type
         schema:
           type: array
@@ -1311,6 +1295,22 @@ paths:
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
           \ - video playlist\n* `article` - article\n* `document` - document"
+      - in: query
+        name: resource_type_group
+        schema:
+          type: array
+          items:
+            enum:
+            - course
+            - program
+            - learning_material
+            type: string
+            description: |-
+              * `course` - Course
+              * `program` - Program
+              * `learning_material` - Learning Material
+        description: "The category of learning resource             \n\n* `course`\
+          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
         name: topic
         schema:
@@ -1601,7 +1601,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -1766,9 +1766,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -2426,7 +2426,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -2596,9 +2596,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -2866,7 +2866,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -3038,9 +3038,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -3365,7 +3365,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -3531,9 +3531,9 @@ components:
       - prices
       - readable_id
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -4690,7 +4690,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -4860,9 +4860,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -4974,7 +4974,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -5144,9 +5144,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -5536,7 +5536,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -5706,9 +5706,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - views
@@ -6261,7 +6261,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -6430,9 +6430,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - video_playlist
@@ -6545,7 +6545,7 @@ components:
           type: boolean
           description: Return true if the resource is free/has a free option
           readOnly: true
-        resource_category_tab:
+        resource_type_group:
           type: string
           description: Return the resource category of the resource
           readOnly: true
@@ -6728,9 +6728,9 @@ components:
       - readable_id
       - require_summaries
       - resource_category
-      - resource_category_tab
       - resource_prices
       - resource_type
+      - resource_type_group
       - runs
       - title
       - video
