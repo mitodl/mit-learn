@@ -1198,8 +1198,104 @@ describe.each([
         ).not.toBeInTheDocument()
       },
     )
+  })
 
-    test("CourseEnrollmentDialog receives correct course data", async () => {
+  describe("Verified Program Enrollment", () => {
+    test.each(ENROLLMENT_TRIGGERS)(
+      "Clicking $trigger on course in verified program does one-click enrollment",
+      async ({ trigger }) => {
+        const userData = mitxUser()
+        setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          courseware_url: faker.internet.url(),
+        })
+        const course = dashboardCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            enrollment_mode: "verified",
+          })
+
+        // Mock the enrollment endpoint
+        setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{ type: DashboardType.Course, data: course }}
+            programEnrollment={programEnrollment}
+          />,
+        )
+
+        const card = getCard()
+        const triggerElement =
+          trigger === "button"
+            ? within(card).getByTestId("courseware-button")
+            : within(card).getByText(course.title)
+
+        await user.click(triggerElement)
+
+        // Should call enrollment endpoint
+        await waitFor(() => {
+          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "POST",
+              url: mitxonline.urls.enrollment.enrollmentsListV1(),
+            }),
+          )
+        })
+
+        expect(
+          screen.queryByRole("dialog", { name: course.title }),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByRole("dialog", { name: "Just a Few More Details" }),
+        ).not.toBeInTheDocument()
+      },
+    )
+
+    test("Audit program enrollment opens CourseEnrollmentDialog", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+      })
+      const course = dashboardCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "audit", // Audit, not verified
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          programEnrollment={programEnrollment}
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      // Should open the CourseEnrollmentDialog for audit enrollments
+      await screen.findByRole("dialog", { name: course.title })
+    })
+  })
+
+  describe("CourseEnrollmentDialog", () => {
+    test("shows course runs as options in dialog", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
 

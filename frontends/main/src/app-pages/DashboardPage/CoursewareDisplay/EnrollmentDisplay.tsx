@@ -301,6 +301,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     return enrollment.program.id === program?.id
   })
 
+  const programEnrollment = programEnrollments?.find(
+    (enrollment) => enrollment.program.id === program?.id,
+  )
+
   // Only fetch courses if we have a program with course IDs
   const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
     ...coursesQueries.coursesList({ id: program?.courses || [] }),
@@ -467,6 +471,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       runId: bestEnrollment?.run.id,
                     })}
                     resource={resource}
+                    programEnrollment={programEnrollment}
                     showNotComplete={false}
                     variant="stacked"
                   />

@@ -27,7 +27,10 @@ import {
   UnenrollDialog,
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
-import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
+import {
+  useCreateB2bEnrollment,
+  useCreateEnrollment,
+} from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
@@ -361,6 +364,7 @@ const useEnrollmentHandler = () => {
   const router = useRouter()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
+  const createEnrollment = useCreateEnrollment()
 
   const enroll = React.useCallback(
     ({
@@ -368,16 +372,28 @@ const useEnrollmentHandler = () => {
       readableId,
       href,
       isB2B,
+      isVerifiedProgram,
+      programRunId,
     }: {
       course?: CourseWithCourseRunsSerializerV2
       readableId?: string
       href?: string
       isB2B?: boolean
+      isVerifiedProgram?: boolean
+      programRunId?: number
     }) => {
       if (!readableId || !href) return
 
-      if (isB2B) {
-        // B2B enrollment flow with just-in-time dialog
+      if (isVerifiedProgram && programRunId) {
+        createEnrollment.mutate(
+          { run_id: programRunId },
+          {
+            onSuccess: () => {
+              router.push(href)
+            },
+          },
+        )
+      } else if (isB2B) {
         const userCountry = mitxOnlineUser.data?.legal_address?.country
         const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
         const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -392,13 +408,12 @@ const useEnrollmentHandler = () => {
             { readable_id: readableId },
             {
               onSuccess: () => {
-                window.location.assign(href)
+                router.push(href)
               },
             },
           )
         }
       } else {
-        // B2C enrollment flow with course enrollment dialog
         const onCourseEnroll = (run: CourseRunV2) => {
           router.push(run.courseware_url!)
         }
@@ -410,12 +425,13 @@ const useEnrollmentHandler = () => {
       mitxOnlineUser.data?.legal_address?.country,
       mitxOnlineUser.data?.user_profile?.year_of_birth,
       createB2bEnrollment,
+      createEnrollment,
     ],
   )
 
   return {
     enroll,
-    isPending: createB2bEnrollment.isPending,
+    isPending: createB2bEnrollment.isPending || createEnrollment.isPending,
   }
 }
 
@@ -668,6 +684,7 @@ type DashboardCardProps = {
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
+  programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
 }
 
@@ -684,6 +701,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   className,
   variant = "default",
   contractId,
+  programEnrollment,
   onUpgradeError,
 }) => {
   const data = useNormalizedDashboardData(resource, contractId)
@@ -710,11 +728,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
     if (!data.hasEnrolled && data.isAnyCourse) {
+      const isVerifiedProgramEnrollment =
+        programEnrollment?.enrollment_mode === EnrollmentMode.Verified
+      const programRunId = data.run?.id
+
       enrollment.enroll({
         course: courseData,
         readableId: data.readableId,
         href: buttonHref ?? data.coursewareUrl ?? undefined,
         isB2B: !!data.b2bContractId,
+        isVerifiedProgram: isVerifiedProgramEnrollment,
+        programRunId: isVerifiedProgramEnrollment ? programRunId : undefined,
       })
     }
   }, [
@@ -723,9 +747,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     data.readableId,
     data.coursewareUrl,
     data.b2bContractId,
+    data.run?.id,
     courseData,
     buttonHref,
     enrollment,
+    programEnrollment?.enrollment_mode,
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)
