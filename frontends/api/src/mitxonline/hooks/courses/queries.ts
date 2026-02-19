@@ -16,6 +16,17 @@ const coursesKeys = {
 }
 
 const coursesQueries = {
+  courseDetailByReadableId: (readableId?: string) =>
+    queryOptions({
+      queryKey: coursesKeys.coursesList({ readable_id: readableId }),
+      queryFn: async () => {
+        const res = await coursesApi.apiV2CoursesList({
+          readable_id: readableId,
+          page_size: 1,
+        })
+        return res.data.results[0]
+      },
+    }),
   coursesList: (opts?: CoursesApiApiV2CoursesListRequest) =>
     queryOptions({
       queryKey: coursesKeys.coursesList(opts),
