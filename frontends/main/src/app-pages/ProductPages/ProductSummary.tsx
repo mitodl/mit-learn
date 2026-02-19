@@ -42,16 +42,29 @@ const InfoRow = styled.div(({ theme }) => ({
   width: "100%",
   display: "flex",
   gap: "8px",
-  alignItems: "baseline",
+  alignItems: "flex-start",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
   },
-  "> svg:first-of-type": {
+}))
+
+/**
+ * Centers an icon within a flex row. Uses height matching the text line-height
+ * so that flex-start alignment on the parent keeps it pinned to the first line.
+ */
+const InfoRowIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  height: theme.typography.body2.lineHeight,
+  [theme.breakpoints.down("sm")]: {
+    height: theme.typography.body3.lineHeight,
+  },
+  flexShrink: 0,
+  "> svg": {
     width: "20px",
     height: "20px",
-    transform: "translateY(25%)",
   },
 }))
 
@@ -129,7 +142,9 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   return (
     <InfoRow {...others}>
-      <RiCalendarLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiCalendarLine aria-hidden="true" />
+      </InfoRowIcon>
       <Stack gap="16px" width="100%">
         {manyDates ? (
           <InfoRowInner>
@@ -197,12 +212,22 @@ type LearnMoreDialogProps = {
   iconOnly?: boolean
 }
 
+/**
+ * Centers an icon button inline within flowing text. Uses verticalAlign to
+ * align itself on the line box (works because inline-flex is inline-level).
+ */
 const ButtonContainer = styled.span(({ theme }) => ({
   marginLeft: "8px",
+  // center container within text
   display: "inline-flex",
+  verticalAlign: "middle",
+  height: theme.typography.body2.lineHeight,
+  [theme.breakpoints.down("sm")]: {
+    height: theme.typography.body3.lineHeight,
+  },
+  backgroundColor: "red",
+  // center icon in container
   alignItems: "center",
-  height: "20px",
-  transform: "translateY(25%)",
   "> button": {
     color: theme.custom.colors.silverGrayDark,
   },
@@ -294,7 +319,9 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   return (
     <InfoRow {...others}>
-      <RiComputerLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiComputerLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue
           label="Course Format"
@@ -325,7 +352,9 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   const display = [duration, effort].filter(Boolean).join(", ")
   return (
     <InfoRow {...others}>
-      <RiTimeLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiTimeLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Estimated" value={display} />
       </InfoRowInner>
@@ -462,7 +491,9 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
 }) => {
   return (
     <InfoRow {...others}>
-      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiPriceTag3Line aria-hidden="true" />
+      </InfoRowIcon>
       <Stack gap="8px" width="100%">
         <InfoLabelValue label="Price" value="Free to Learn" />
         <CourseCertificateBox course={course} nextRun={nextRun} />
@@ -479,7 +510,9 @@ const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
   const label = `Part of the following ${pluralize("program", course.programs.length)}`
   return (
     <InfoRow {...others}>
-      <RiMenuAddLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiMenuAddLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <Stack gap="4px">
           <InfoLabel>{label}</InfoLabel>
@@ -587,7 +620,9 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 
   return (
     <InfoRow {...others}>
-      <RiFileCopy2Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiFileCopy2Line aria-hidden="true" />
+      </InfoRowIcon>
 
       <InfoRowInner>
         <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
@@ -612,7 +647,9 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
 
   return (
     <InfoRow {...others}>
-      <RiTimeLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiTimeLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Estimated" value={display} />
       </InfoRowInner>
@@ -643,7 +680,9 @@ const ProgramPaceRow: React.FC<
   if (!pace) return null
   return (
     <InfoRow {...others}>
-      <RiComputerLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiComputerLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue
           label="Course Format"
@@ -711,7 +750,9 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
 }) => {
   return (
     <InfoRow {...others}>
-      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiPriceTag3Line aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Price" value="Free to Learn" />
         <ProgramCertificateBox program={program} />
