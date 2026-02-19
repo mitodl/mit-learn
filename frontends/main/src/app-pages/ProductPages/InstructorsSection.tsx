@@ -117,7 +117,7 @@ const ActiveInstructorContent = styled.div(({ theme }) => ({
     },
   },
 }))
-const ActiveInstructorName = styled(Typography)(({ theme }) => ({
+const ActiveInstructorName = styled.h3(({ theme }) => ({
   ...theme.typography.h4,
   color: theme.custom.colors.red,
   marginBottom: "8px",
