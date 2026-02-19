@@ -4,11 +4,11 @@ import { standardizeMetadata } from "@/common/metadata"
 import { ArticleListingPage } from "@/app-pages/Articles/ArticleListingPage"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "Articles Listing",
+  title: "News Listing",
   robots: "noindex, nofollow",
 })
 
-const Page: React.FC<PageProps<"/articles">> = () => {
+const Page: React.FC<PageProps<"/news">> = () => {
   return <ArticleListingPage />
 }
 

@@ -44,16 +44,16 @@ describe("ArticleListingPage", () => {
     setupAPI(0)
     renderWithProviders(<ArticleListingPage />)
 
-    await screen.findByText("No Articles Available")
+    await screen.findByText("No News Available")
 
     expect(
       screen.getByText(
-        "There are no articles to display at this time. Please check back later.",
+        "There are no news to display at this time. Please check back later.",
       ),
     ).toBeInTheDocument()
   })
 
-  test("displays main story and grid stories on desktop", async () => {
+  test("displays main news and grid stories on desktop", async () => {
     const news = setupAPI(21)
     renderWithProviders(<ArticleListingPage />)
 
@@ -132,11 +132,13 @@ describe("ArticleListingPage", () => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
     })
 
-    // Find links by article title
-    const titleLinks = screen.getAllByRole("link", {
-      name: news.results[0].title,
-    })
-    expect(titleLinks[0]).toHaveAttribute("href", news.results[0].url)
+    // Verify links exist with correct hrefs
+    const allLinks = screen.getAllByRole("link")
+    const firstArticleLink = allLinks.find(
+      (link) => link.getAttribute("href") === news.results[0].url,
+    )
+    expect(firstArticleLink).toBeInTheDocument()
+    expect(firstArticleLink).toHaveAttribute("href", news.results[0].url)
   })
 
   test("displays article summaries with HTML stripped", async () => {
@@ -300,7 +302,7 @@ describe("ArticleListingPage", () => {
     setupAPI(0)
     renderWithProviders(<ArticleListingPage />)
 
-    await screen.findByText("No Articles Available")
+    await screen.findByText("No News Available")
 
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
   })

@@ -23,7 +23,7 @@ export const learningPathsView = (id: number) =>
 export const PROGRAMLETTER_VIEW = "/program_letter/[id]/view/"
 export const programLetterView = (id: string) =>
   generatePath(PROGRAMLETTER_VIEW, { id: String(id) })
-export const ARTICLES_LISTING = "/articles/"
+export const ARTICLES_LISTING = "/news/"
 export const ARTICLES_VIEW = "/articles/[id]"
 export const ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
 export const ARTICLES_EDIT = "/articles/[id]/edit"
