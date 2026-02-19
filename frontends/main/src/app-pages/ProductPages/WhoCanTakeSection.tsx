@@ -2,6 +2,7 @@ import React from "react"
 import { Typography } from "ol-components"
 import { styled } from "@mitodl/smoot-design"
 import { HeadingIds } from "./util"
+import type { ProductNoun } from "./util"
 
 const WhoCanTakeSectionRoot = styled.section(({ theme }) => ({
   padding: "32px",
@@ -20,7 +21,7 @@ const WhoCanTakeSectionRoot = styled.section(({ theme }) => ({
   },
 }))
 
-const WhoCanTakeSection: React.FC<{ productNoun: string }> = ({
+const WhoCanTakeSection: React.FC<{ productNoun: ProductNoun }> = ({
   productNoun,
 }) => {
   return (

@@ -1,6 +1,7 @@
 import React from "react"
 import { ButtonLink, styled } from "@mitodl/smoot-design"
 import { HeadingIds } from "./util"
+import type { ProductNoun } from "./util"
 
 const StyledLink = styled(ButtonLink)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -40,7 +41,7 @@ export type HeadingData = {
 
 const ProductNavbar: React.FC<{
   navLinks: HeadingData[]
-  productNoun: string
+  productNoun: ProductNoun
 }> = ({ navLinks, productNoun }) => {
   if (navLinks.length === 0) {
     return null

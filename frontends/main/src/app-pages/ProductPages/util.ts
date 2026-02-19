@@ -59,4 +59,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
     })
 }
 
+type ProductNoun = "Course" | "Program"
+
 export { HeadingIds, parseReqTree }
+export type { ProductNoun }
