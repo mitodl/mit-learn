@@ -30,7 +30,6 @@ import type {
   VideoResource,
   LearningResourceRelationship,
   LearningResourceSummary,
-  LearningMaterialResource,
 } from "api"
 import {
   AvailabilityEnum,
@@ -550,17 +549,6 @@ const article: LearningResourceFactory<ArticleResource> = (overrides = {}) => {
 }
 
 const articles = makePaginatedFactory(article)
-
-const learningMaterial: LearningResourceFactory<LearningMaterialResource> = (
-  overrides = {},
-) => {
-  return mergeOverrides<LearningMaterialResource>(
-    _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.LearningMaterial },
-    {},
-    overrides,
-  )
-}
 
 const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
   overrides = {},
