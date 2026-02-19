@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.54.1
+Version 0.54.1 (Released February 19, 2026)
 --------------
 
 - horizontal list cards for program page (#2950)
