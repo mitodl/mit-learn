@@ -123,7 +123,7 @@ class LearningResourceFilter(FilterSet):
 
     resource_type_group = MultipleChoiceFilter(
         label="The resource type group of the learning resources",
-        method="filter_type_group",
+        method="filter_resource_type_group",
         choices=(
             [
                 (value, value.replace("_", " ").title())

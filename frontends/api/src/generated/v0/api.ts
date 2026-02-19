@@ -146,7 +146,7 @@ export interface ArticleResource {
    * @type {string}
    * @memberof ArticleResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -1313,7 +1313,7 @@ export interface CourseResource {
    * @type {string}
    * @memberof CourseResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -2018,7 +2018,7 @@ export interface DocumentResource {
    * @type {string}
    * @memberof DocumentResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -2671,7 +2671,7 @@ export interface LearningPathResource {
    * @type {string}
    * @memberof LearningPathResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4428,7 +4428,7 @@ export interface PodcastEpisodeResource {
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4741,7 +4741,7 @@ export interface PodcastResource {
    * @type {string}
    * @memberof PodcastResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -5456,7 +5456,7 @@ export interface ProgramResource {
    * @type {string}
    * @memberof ProgramResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -6466,7 +6466,7 @@ export interface VideoPlaylistResource {
    * @type {string}
    * @memberof VideoPlaylistResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -6779,7 +6779,7 @@ export interface VideoResource {
    * @type {string}
    * @memberof VideoResource
    */
-  resource_category_tab: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -12230,8 +12230,8 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -12252,8 +12252,8 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       professional?: boolean | null,
       q?: string,
       readable_id?: string,
-      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       topic?: Array<string>,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -12333,12 +12333,12 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["readable_id"] = readable_id
       }
 
-      if (resource_category) {
-        localVarQueryParameter["resource_category"] = resource_category
-      }
-
       if (resource_type) {
         localVarQueryParameter["resource_type"] = resource_type
+      }
+
+      if (resource_type_group) {
+        localVarQueryParameter["resource_type_group"] = resource_type_group
       }
 
       if (topic) {
@@ -12390,8 +12390,8 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -12412,8 +12412,8 @@ export const VectorLearningResourcesSearchApiFp = function (
       professional?: boolean | null,
       q?: string,
       readable_id?: string,
-      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       topic?: Array<string>,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -12439,8 +12439,8 @@ export const VectorLearningResourcesSearchApiFp = function (
           professional,
           q,
           readable_id,
-          resource_category,
           resource_type,
+          resource_type_group,
           topic,
           options,
         )
@@ -12499,8 +12499,8 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.professional,
           requestParameters.q,
           requestParameters.readable_id,
-          requestParameters.resource_category,
           requestParameters.resource_type,
+          requestParameters.resource_type_group,
           requestParameters.topic,
           options,
         )
@@ -12621,18 +12621,18 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly readable_id?: string
 
   /**
-   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-   * @type {Array<'course' | 'program' | 'learning_material'>}
-   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
-   */
-  readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
-
-  /**
    * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
    * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'document'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
+
+  /**
+   * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+   * @type {Array<'course' | 'program' | 'learning_material'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>
 
   /**
    * The topic name. To see a list of options go to api/v1/topics/
@@ -12678,8 +12678,8 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.q,
         requestParameters.readable_id,
-        requestParameters.resource_category,
         requestParameters.resource_type,
+        requestParameters.resource_type_group,
         requestParameters.topic,
         options,
       )
@@ -12811,16 +12811,6 @@ export type VectorLearningResourcesSearchRetrievePlatformEnum =
 /**
  * @export
  */
-export const VectorLearningResourcesSearchRetrieveResourceCategoryEnum = {
-  Course: "course",
-  Program: "program",
-  LearningMaterial: "learning_material",
-} as const
-export type VectorLearningResourcesSearchRetrieveResourceCategoryEnum =
-  (typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum]
-/**
- * @export
- */
 export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   Course: "course",
   Program: "program",
@@ -12834,6 +12824,16 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum = {
+  Course: "course",
+  Program: "program",
+  LearningMaterial: "learning_material",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum]
 
 /**
  * VideoShortsApi - axios parameter creator
