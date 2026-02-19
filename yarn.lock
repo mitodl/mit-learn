@@ -17614,7 +17614,7 @@ __metadata:
     validator: "npm:^13.11.0"
     wheel-indicator: "npm:^1.3.0"
   peerDependencies:
-    "@mitodl/smoot-design": 0.0.0-100d780
+    "@mitodl/smoot-design": ^6.24.0
     next: ^16.1.6
   languageName: unknown
   linkType: soft
