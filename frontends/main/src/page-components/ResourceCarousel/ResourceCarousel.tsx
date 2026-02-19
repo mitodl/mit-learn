@@ -20,6 +20,10 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 
+const StyledCarouselV2 = styled(CarouselV2)({
+  margin: "24px 0",
+})
+
 /* Leaving for reference while we determine wether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
@@ -292,7 +296,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
         >
           {({ resources, childrenLoading, tabConfig }) => {
             return (
-              <CarouselV2
+              <StyledCarouselV2
                 arrowsContainer={ref}
                 mobileBleed="symmetric"
                 mobileGutter={16}
@@ -317,7 +321,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                           {...tabConfig.cardProps}
                         />
                       ))}
-              </CarouselV2>
+              </StyledCarouselV2>
             )
           }}
         </PanelChildren>

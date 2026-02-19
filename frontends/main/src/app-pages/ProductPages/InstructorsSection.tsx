@@ -38,7 +38,6 @@ const ArrowButtonsContainer = styled.div(({ theme }) => ({
   },
 }))
 const InstructorsCarousel = styled(CarouselV2)(({ theme }) => ({
-  margin: 0,
   ".MitCarousel-track": {
     gap: "48px",
     [theme.breakpoints.down("sm")]: {

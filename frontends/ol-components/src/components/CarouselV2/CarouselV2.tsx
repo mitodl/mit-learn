@@ -46,7 +46,6 @@ const CarouselContainer = styled.div<{
   mobileGutter: number
 }>(({ theme, mobileBleed, mobileGutter }) => ({
   overflow: "hidden",
-  margin: "24px 0",
   [theme.breakpoints.down("sm")]: {
     ...getMobileBleedStyles(mobileBleed, mobileGutter),
   },
