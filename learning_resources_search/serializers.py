@@ -16,8 +16,8 @@ from rest_framework.utils.urls import replace_query_param
 
 from learning_resources.constants import (
     DEPARTMENTS,
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
-    RESOURCE_CATEGORY_VALUES,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+    RESOURCE_TYPE_GROUP_VALUES,
     CertificationType,
     LearningResourceDelivery,
     LearningResourceType,
@@ -66,7 +66,7 @@ class SearchCourseNumberSerializer(CourseNumberSerializer):
     sort_coursenum = serializers.CharField()
 
 
-def get_resource_age_date(learning_resource_obj, resource_category):
+def get_resource_age_date(learning_resource_obj, resource_type_group):
     """
     Get the internal resource_age_date which measures how stale a resource is.
     Resources with upcoming runs have a resource_age_date of null. Otherwise the
@@ -76,7 +76,7 @@ def get_resource_age_date(learning_resource_obj, resource_category):
 
     resource_age_date = None
 
-    if resource_category == LEARNING_MATERIAL_RESOURCE_CATEGORY:
+    if resource_type_group == LEARNING_MATERIAL_RESOURCE_TYPE_GROUP:
         resource_age_date = learning_resource_obj.last_modified
     elif (
         learning_resource_obj.resource_type == LearningResourceType.course.name
@@ -153,7 +153,7 @@ def serialize_learning_resource_for_update(
         featured_rank = None
 
     resource_age_date = get_resource_age_date(
-        learning_resource_obj, serialized_data["resource_category"]
+        learning_resource_obj, serialized_data["resource_type_group"]
     )
 
     is_incomplete_or_stale = (
@@ -163,8 +163,8 @@ def serialize_learning_resource_for_update(
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,
-        "is_learning_material": serialized_data["resource_category"]
-        == LEARNING_MATERIAL_RESOURCE_CATEGORY,
+        "is_learning_material": serialized_data["resource_type_group"]
+        == LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
         "resource_age_date": resource_age_date,
         "featured_rank": featured_rank,
         "is_incomplete_or_stale": is_incomplete_or_stale,
@@ -405,17 +405,17 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             \n\n{build_choice_description_list(delivery_choices)}"
         ),
     )
-    resource_category_choices = [
-        (value, value.replace("_", " ").title()) for value in RESOURCE_CATEGORY_VALUES
+    resource_type_group_choices = [
+        (value, value.replace("_", " ").title()) for value in RESOURCE_TYPE_GROUP_VALUES
     ]
-    resource_category = serializers.ListField(
+    resource_type_group = serializers.ListField(
         required=False,
         child=serializers.ChoiceField(
-            choices=resource_category_choices,
+            choices=resource_type_group_choices,
         ),
         help_text=(
             f"The category of learning resource \
-            \n\n{build_choice_description_list(resource_category_choices)}"
+            \n\n{build_choice_description_list(resource_type_group_choices)}"
         ),
     )
     search_mode_choices = [

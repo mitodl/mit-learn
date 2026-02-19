@@ -19,7 +19,7 @@ from rest_framework.exceptions import ValidationError
 
 from learning_resources import constants, models
 from learning_resources.constants import (
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     Availability,
     CertificationType,
     Format,
@@ -626,7 +626,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             LearningResourceType.video.name,
             LearningResourceType.podcast_episode.name,
         ]:
-            duration = serialized_resource[resource_type].get("duration")
+            duration = (serialized_resource[resource_type] or {}).get("duration")
             if duration:
                 return str(parse_duration(duration))
         return None
@@ -910,7 +910,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=LearningResourceDeliverySerializer(), read_only=True
     )
     free = serializers.SerializerMethodField()
-    resource_category_tab = serializers.SerializerMethodField()
+    resource_type_group = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
@@ -930,7 +930,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         return None
 
 
-    def get_resource_category_tab(self, instance) -> str:
+    def get_resource_type_group(self, instance) -> str:
         """Return the resource category of the resource"""
         if instance.resource_type in [
             LearningResourceType.course.name,
@@ -938,7 +938,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         ]:
             return instance.resource_type
         else:
-            return LEARNING_MATERIAL_RESOURCE_CATEGORY
+            return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
     def get_free(self, instance) -> bool:
         """Return true if the resource is free/has a free option"""

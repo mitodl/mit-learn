@@ -52,7 +52,9 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   }, [offerorsQuery.data?.results])
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const resourceCategory = searchParams.get("resource_category")
+  const resourceCategory =
+    searchParams.get("resource_type_group") ??
+    searchParams.get("resource_category")
 
   const { facetNames, facetManifest } = useMemo(
     () =>

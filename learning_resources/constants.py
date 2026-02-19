@@ -40,11 +40,11 @@ class LearningResourceType(ExtendedEnum):
     document = "Document"
 
 
-LEARNING_MATERIAL_RESOURCE_CATEGORY = "learning_material"
-RESOURCE_CATEGORY_VALUES = [
+LEARNING_MATERIAL_RESOURCE_TYPE_GROUP = "learning_material"
+RESOURCE_TYPE_GROUP_VALUES = [
     LearningResourceType.course.name,
     LearningResourceType.program.name,
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
 ]
 
 

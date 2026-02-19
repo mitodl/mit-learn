@@ -132,14 +132,16 @@ export const SEARCH_CERTIFICATE = querifiedSearchUrl(
   CERTIFICATION_SEARCH_PARAMS,
 )
 
-export const SEARCH_COURSE = querifiedSearchUrl({ resource_category: "course" })
+export const SEARCH_COURSE = querifiedSearchUrl({
+  resource_type_group: "course",
+})
 
 export const SEARCH_PROGRAM = querifiedSearchUrl({
-  resource_category: "program",
+  resource_type_group: "program",
 })
 
 export const SEARCH_LEARNING_MATERIAL = querifiedSearchUrl({
-  resource_category: "learning_material",
+  resource_type_group: "learning_material",
 })
 
 export const LOGIN = `${MITOL_API_BASE_URL}/login`

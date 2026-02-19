@@ -14,7 +14,7 @@ from django_filters import (
 from learning_resources.constants import (
     DEPARTMENTS,
     LEARNING_RESOURCE_SORTBY_OPTIONS,
-    RESOURCE_CATEGORY_VALUES,
+    RESOURCE_TYPE_GROUP_VALUES,
     CertificationType,
     LearningResourceDelivery,
     LearningResourceType,
@@ -121,13 +121,13 @@ class LearningResourceFilter(FilterSet):
         lookup_expr="iexact",
     )
 
-    resource_category = MultipleChoiceFilter(
-        label="The resource category of the learning resources",
-        method="filter_resource_category",
+    resource_type_group = MultipleChoiceFilter(
+        label="The resource type group of the learning resources",
+        method="filter_type_group",
         choices=(
             [
                 (value, value.replace("_", " ").title())
-                for value in RESOURCE_CATEGORY_VALUES
+                for value in RESOURCE_TYPE_GROUP_VALUES
             ]
         ),
     )
@@ -146,8 +146,8 @@ class LearningResourceFilter(FilterSet):
             # Resources that are not offered for free
             return queryset.exclude(free_filter)
 
-    def filter_resource_category(self, queryset, _, value):
-        """Filter by resource category"""
+    def filter_resource_type_group(self, queryset, _, value):
+        """Filter by resource type group"""
         query_or_filters = Q()
         for val in value:
             if val in [

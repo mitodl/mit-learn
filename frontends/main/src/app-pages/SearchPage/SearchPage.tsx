@@ -78,7 +78,10 @@ const useFacetManifest = (resourceCategory: string | null) => {
 
 const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const facetManifest = useFacetManifest(searchParams.get("resource_category"))
+  const facetManifest = useFacetManifest(
+    searchParams.get("resource_type_group") ??
+      searchParams.get("resource_category"),
+  )
 
   const setPage = useCallback(
     (newPage: number) => {
