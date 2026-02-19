@@ -15,19 +15,25 @@ const getMobileBleedStyles = (
   switch (mobileBleed) {
     case "none":
       return {
-        margin: "0",
-        padding: "0",
+        marginLeft: 0,
+        marginRight: 0,
+        paddingLeft: 0,
+        paddingRight: 0,
       }
     case "right":
       return {
-        margin: `0 -${mobileGutter}px 0 0`,
-        padding: `0 ${mobileGutter}px 0 0`,
+        marginLeft: 0,
+        marginRight: `-${mobileGutter}px`,
+        paddingLeft: 0,
+        paddingRight: `${mobileGutter}px`,
       }
     case "symmetric":
     default:
       return {
-        margin: `0 -${mobileGutter}px`,
-        padding: `0 ${mobileGutter * 2}px 0 ${mobileGutter}px`,
+        marginLeft: `-${mobileGutter}px`,
+        marginRight: `-${mobileGutter}px`,
+        paddingLeft: `${mobileGutter}px`,
+        paddingRight: `${mobileGutter * 2}px`,
       }
   }
 }
@@ -54,8 +60,6 @@ const CarouselContainer = styled.div<{
 const CarouselTrack = styled.div({
   display: "flex",
   gap: "24px",
-  /* Space for the card box shadow on hover to prevent clipping */
-  paddingBottom: "4px",
 })
 
 type CarouselV2Props = {
@@ -107,6 +111,13 @@ type CarouselV2Props = {
  * - Give the containing column/container defined width behavior (for example
  *   `width: 100%` or explicit grid track sizing).
  * - Avoid ancestors sized from children (`fit-content`, unconstrained inline sizing).
+ *
+ * Card hover shadows:
+ * If carousel slides have box shadows on hover, add `paddingBottom` to the
+ * `.MitCarousel-track` class to prevent clipping, e.g.:
+ *   const StyledCarousel = styled(CarouselV2)({
+ *     ".MitCarousel-track": { paddingBottom: "4px" }
+ *   })
  */
 const CarouselV2: React.FC<CarouselV2Props> = ({
   children,

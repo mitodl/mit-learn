@@ -22,6 +22,9 @@ import {
 
 const StyledCarouselV2 = styled(CarouselV2)({
   margin: "24px 0",
+  ".MitCarousel-track": {
+    paddingBottom: "4px",
+  },
 })
 
 /* Leaving for reference while we determine wether to swap out for CarouselV2
