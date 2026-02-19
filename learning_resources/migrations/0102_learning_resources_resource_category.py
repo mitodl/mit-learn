@@ -32,4 +32,23 @@ class Migration(migrations.Migration):
             preserve_default=False,
         ),
         migrations.RunPython(populate_resource_category, migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name="learningresource",
+            name="resource_type",
+            field=models.CharField(
+                choices=[
+                    ("course", "Course"),
+                    ("program", "Program"),
+                    ("learning_path", "Learning Path"),
+                    ("podcast", "Podcast"),
+                    ("podcast_episode", "Podcast Episode"),
+                    ("video", "Video"),
+                    ("video_playlist", "Video Playlist"),
+                    ("article", "Article"),
+                    ("document", "Document"),
+                ],
+                db_index=True,
+                max_length=24,
+            ),
+        ),
     ]
