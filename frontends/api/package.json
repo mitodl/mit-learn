@@ -29,7 +29,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mitxonline-api-axios": "^2026.2.18",
+    "@mitodl/mitxonline-api-axios": "^2026.2.19",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"
