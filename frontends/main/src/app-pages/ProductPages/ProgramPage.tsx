@@ -19,7 +19,7 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import ProductNavbar, { HeadingData } from "./ProductNavbar"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
-import HowYoullLearnSection from "./HowYoullLearnSection"
+import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
@@ -277,7 +277,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}
-      <HowYoullLearnSection />
+      <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
           <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>

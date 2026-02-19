@@ -110,8 +110,8 @@ const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
 ]
 
 const HowYoullLearnSection: React.FC<{
-  data?: HowYoullLearnItemData[]
-}> = ({ data = DEFAULT_HOW_DATA }) => {
+  data: HowYoullLearnItemData[]
+}> = ({ data }) => {
   return (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
@@ -138,3 +138,5 @@ const HowYoullLearnSection: React.FC<{
 }
 
 export default HowYoullLearnSection
+export { DEFAULT_HOW_DATA }
+export type { HowYoullLearnItemData }
