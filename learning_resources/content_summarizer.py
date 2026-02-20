@@ -276,9 +276,11 @@ class ContentSummarizer:
             - list[dict[str, str]]: List of flashcards
         """
         try:
+            max_output_tokens = 2048
             max_input_tokens = get_max_tokens(llm_model)
-
-            llm = self._get_llm(model=llm_model, temperature=1, max_tokens=2048)
+            llm = self._get_llm(
+                model=llm_model, temperature=1, max_tokens=max_output_tokens
+            )
             logger.debug("Generating flashcards using model: %s", llm)
             structured_llm = llm.with_structured_output(FlashcardsResponse)
 
@@ -287,7 +289,7 @@ class ContentSummarizer:
             )
             flashcard_prompt = truncate_to_tokens(
                 flashcard_prompt,
-                max_input_tokens,
+                max_input_tokens - max_output_tokens,
                 llm_model,
             )
             response = structured_llm.invoke(flashcard_prompt)
