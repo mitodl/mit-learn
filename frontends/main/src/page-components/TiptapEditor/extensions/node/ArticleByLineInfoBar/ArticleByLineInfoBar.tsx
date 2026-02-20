@@ -100,6 +100,7 @@ export const ArticleByLineInfoBarContent = ({
   authorName,
   onAuthorNameChange,
 }: ArticleByLineInfoBarContentProps) => {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLDivElement>(null)
 
@@ -115,7 +116,7 @@ export const ArticleByLineInfoBarContent = ({
       <SharePopover
         open={shareOpen}
         title={article?.title ?? ""}
-        anchorEl={shareButtonRef.current}
+        anchorEl={anchorEl}
         onClose={() => setShareOpen(false)}
         pageUrl={`${NEXT_PUBLIC_ORIGIN}/articles/${article?.slug}`}
       />
@@ -155,7 +156,10 @@ export const ArticleByLineInfoBarContent = ({
             variant="bordered"
             edge="circular"
             aria-label="Share this article"
-            onClick={() => setShareOpen(true)}
+            onClick={(e) => {
+              setAnchorEl(e.currentTarget)
+              setShareOpen(true)
+            }}
           >
             <RiShareFill />
           </ActionButton>
