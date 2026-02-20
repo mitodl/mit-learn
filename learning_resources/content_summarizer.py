@@ -240,7 +240,7 @@ class ContentSummarizer:
                 max_input_tokens,
                 llm_model,
             )
-            llm = self._get_llm(model=llm_model, temperature=1, max_tokens=1000)
+            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
             response = llm.invoke(summarizer_message, drop_params=True)
             logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
