@@ -877,23 +877,6 @@ class ArticleFactory(DjangoModelFactory):
         is_unpublished = factory.Trait(learning_resource__published=False)
 
 
-class LearningMaterialFactory(DjangoModelFactory):
-    """Factory for Learning Material Resources"""
-
-    learning_resource = factory.SubFactory(
-        LearningResourceFactory,
-        platform=factory.SubFactory(
-            LearningResourcePlatformFactory, code=PlatformType.ocw.name
-        ),
-    )
-
-    content_file = factory.SubFactory(ContentFileFactory)
-
-    class Meta:
-        model = models.LearningMaterial
-        skip_postgeneration_save = True
-
-
 class VideoFactory(DjangoModelFactory):
     """Factory for Videos"""
 
