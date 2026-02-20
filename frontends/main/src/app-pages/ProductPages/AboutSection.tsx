@@ -4,6 +4,7 @@ import { HeadingIds } from "./util"
 import RawHTML from "./RawHTML"
 import { Typography } from "ol-components"
 import { styled } from "@mitodl/smoot-design"
+import type { ProductNoun } from "./util"
 
 const AboutSectionRoot = styled.section<{ expanded: boolean }>(
   ({ expanded }) => {
@@ -33,7 +34,7 @@ const AboutSectionRoot = styled.section<{ expanded: boolean }>(
 
 const AboutSection: React.FC<{
   aboutHtml: string
-  productNoun: string
+  productNoun: ProductNoun
 }> = ({ aboutHtml, productNoun }) => {
   const [aboutExpanded, setAboutExpanded] = React.useState(false)
   return (

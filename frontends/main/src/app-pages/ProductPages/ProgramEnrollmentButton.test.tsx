@@ -23,7 +23,7 @@ const makeProgram = mitxFactories.programs.program
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
 
-describe("ProgramEnrollmentButton", () => {
+describe.each(new Array(100).fill(null))("ProgramEnrollmentButton", () => {
   const ENROLLED = "Enrolled"
   const ENROLL = "Enroll for Free"
 

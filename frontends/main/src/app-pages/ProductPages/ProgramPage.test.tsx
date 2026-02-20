@@ -198,6 +198,7 @@ describe("ProgramPage", () => {
             { level: 3, name: "Core Dog Courses" },
             { level: 3, name: "Elective Cat Courses: Complete 2 out of 4" },
             { level: 2, name: "What you'll learn" },
+            { level: 2, name: "How you'll learn" },
             { level: 2, name: "Prerequisites" },
             { level: 2, name: "Meet your instructors" },
             { level: 2, name: "Who can take this Program?" },
@@ -223,12 +224,12 @@ describe("ProgramPage", () => {
     expect(links[0]).toHaveTextContent("About")
     expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
     expect(document.getElementById(HeadingIds.About)).toBeVisible()
-    expect(links[1]).toHaveTextContent("Courses")
-    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.Requirements}`)
+    expect(links[1]).toHaveTextContent("What you'll learn")
+    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
     expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[2]).toHaveTextContent("What you'll learn")
-    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.What}`)
-    expect(document.getElementById(HeadingIds.What)).toBeVisible()
+    expect(links[2]).toHaveTextContent("How you'll learn")
+    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
+    expect(document.getElementById(HeadingIds.How)).toBeVisible()
     expect(links[3]).toHaveTextContent("Prerequisites")
     expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
     expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
@@ -380,6 +381,18 @@ describe("ProgramPage", () => {
     })
     const items = within(section).getAllByRole("listitem")
     expect(items.length).toBe(page.faculty.length)
+  })
+
+  test("Renders an enrollment button", async () => {
+    const program = makeProgram({ ...makeReqs() })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const buttons = await screen.findAllByRole("button", {
+      name: /enroll/i,
+    })
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
   test.each([

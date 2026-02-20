@@ -15,7 +15,7 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
 
 test("About section has expected content", async () => {
   const about = `<p>${faker.lorem.paragraph()}</p>`
-  const noun = faker.word.noun()
+  const noun = faker.helpers.arrayElement(["Course", "Program"] as const)
   renderWithProviders(<AboutSection productNoun={noun} aboutHtml={about} />)
 
   const section = await screen.findByRole("region", {
@@ -31,7 +31,7 @@ test("About section expands and collapses", async () => {
   const aboutContent = [firstParagraph, secondParagraph, thirdParagraph]
     .map((p) => `<p>${p}</p>`)
     .join("\n")
-  const noun = faker.word.noun()
+  const noun = faker.helpers.arrayElement(["Course", "Program"] as const)
 
   const page = makePage({ about: aboutContent })
   invariant(page.about)
@@ -71,7 +71,7 @@ test.each([
       { length: aboutParagraphs },
       (_, i) => `<p>This is paragraph ${i + 1} in the about section.</p>`,
     ).join("\n")
-    const noun = faker.word.noun()
+    const noun = faker.helpers.arrayElement(["Course", "Program"] as const)
 
     renderWithProviders(
       <AboutSection productNoun={noun} aboutHtml={aboutContent} />,

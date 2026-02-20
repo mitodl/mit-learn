@@ -11,9 +11,10 @@ import {
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { ButtonLink, styled } from "@mitodl/smoot-design"
+import { styled, VisuallyHidden } from "@mitodl/smoot-design"
 import Image from "next/image"
 import { HeadingIds } from "./util"
+import type { Breakpoint } from "@mui/system"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
   paddingBottom: "24px",
@@ -59,102 +60,95 @@ const BottomContainer = styled(Container)(({ theme }) => ({
     flexDirection: "column",
     alignItems: "center",
     gap: "0px",
+    paddingTop: "24px",
   },
+}))
+
+const SHOW_PROPS = new Set(["showAbove", "showBelow", "showBetween"])
+/** Responsive visibility helper. Only one of showAbove/showBelow/showBetween should be used. */
+const Show = styled("div", {
+  shouldForwardProp: (prop) => !SHOW_PROPS.has(prop),
+})<{
+  showAbove?: Breakpoint
+  showBelow?: Breakpoint
+  showBetween?: [Breakpoint, Breakpoint]
+}>(({ theme, showAbove, showBelow, showBetween }) => ({
+  ...(showAbove && {
+    [theme.breakpoints.down(showAbove)]: { display: "none" },
+  }),
+  ...(showBelow && {
+    [theme.breakpoints.up(showBelow)]: { display: "none" },
+  }),
+  ...(showBetween && {
+    [theme.breakpoints.down(showBetween[0])]: { display: "none" },
+    [theme.breakpoints.up(showBetween[1])]: { display: "none" },
+  }),
 }))
 
 const MainCol = styled.div({
   flex: 1,
   display: "flex",
   flexDirection: "column",
+  minWidth: 0,
 })
 
-const SidebarCol = styled.div(({ theme }) => ({
+const SectionsWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "56px",
+  marginTop: "40px",
+  [theme.breakpoints.down("md")]: {
+    gap: "40px",
+    marginTop: "36px",
+  },
+}))
+
+const SidebarCol = styled(Show, {
+  shouldForwardProp: (prop) => prop !== "alignSelf",
+})<{
+  alignSelf?: React.CSSProperties["alignSelf"]
+}>(({ alignSelf }) => ({
   width: "100%",
   maxWidth: "410px",
-  [theme.breakpoints.down("md")]: {
-    marginTop: "24px",
-  },
-}))
-const SidebarSpacer = styled.div(({ theme }) => ({
-  width: "410px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
+  alignSelf,
 }))
 
-const StyledLink = styled(ButtonLink)(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-  borderColor: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
-    backgroundColor: theme.custom.colors.lightGray1,
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-  },
-}))
-
-const LinksContainer = styled.nav(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-  [theme.breakpoints.up("md")]: {
-    gap: "24px",
-    padding: "12px 16px",
-    backgroundColor: theme.custom.colors.white,
-    borderRadius: "4px",
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-    marginTop: "-24px",
-    width: "calc(100%)",
-    marginBottom: "40px",
-  },
-  [theme.breakpoints.down("md")]: {
-    alignSelf: "center",
-    gap: "8px",
-    rowGap: "16px",
-    padding: 0,
-    margin: "24px 0",
-  },
-}))
-
-const SidebarImageWrapper = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    height: "0px",
-  },
-}))
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "100%",
   maxWidth: "410px",
-  height: "230px",
+  aspectRatio: "410 / 230",
+  height: "auto",
   display: "block",
-  [theme.breakpoints.up("md")]: {
-    transform: "translateY(-100%)",
-  },
   [theme.breakpoints.down("md")]: {
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "4px 4px 0 0",
   },
 }))
 
-const WhoCanTakeSection = styled.section(({ theme }) => ({
-  padding: "32px",
+const SummaryRoot = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "4px",
+  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
+  padding: "24px",
   display: "flex",
   flexDirection: "column",
-  gap: "24px",
-  ...theme.typography.body1,
-  lineHeight: "1.5",
+  gap: "32px",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    marginTop: "-54px",
+    top: "calc(40px + 32px + 24px)",
+    borderRadius: "4px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    flexDirection: "row",
+    gap: "48px",
+  },
   [theme.breakpoints.down("md")]: {
-    padding: "16px",
-    gap: "16px",
-    ...theme.typography.body2,
+    marginTop: "24px",
   },
 }))
-
-type HeadingData = {
-  id: HeadingIds
-  label: string
-  variant: "primary" | "secondary"
-}
 
 type ProductPageTemplateProps = {
   tags: string[]
@@ -163,8 +157,10 @@ type ProductPageTemplateProps = {
   shortDescription: React.ReactNode
   imageSrc: string
   sidebarSummary: React.ReactNode
+  summaryTitle: string
   children: React.ReactNode
-  navLinks: HeadingData[]
+  navbar: React.ReactNode
+  enrollButton?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -173,7 +169,10 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   shortDescription,
   imageSrc,
   sidebarSummary,
+  summaryTitle,
   children,
+  enrollButton,
+  navbar,
 }) => {
   return (
     <Page>
@@ -201,64 +200,56 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               </Stack>
             </TitleBox>
           </MainCol>
-          <SidebarSpacer></SidebarSpacer>
+          <SidebarCol showAbove="md" alignSelf="flex-end">
+            <SidebarImage
+              priority
+              width={410}
+              height={230}
+              src={imageSrc}
+              alt=""
+            />
+          </SidebarCol>
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
-        <SidebarCol>
-          <SidebarImageWrapper>
-            <SidebarImage width={410} height={230} src={imageSrc} alt="" />
-          </SidebarImageWrapper>
-          {sidebarSummary}
+        {/*
+         * The summary section is rendered 3 times (desktop, tablet, mobile)
+         * with different layouts, but only one is visible at a time via CSS.
+         * A single visually-hidden heading serves all three.
+         */}
+        <VisuallyHidden>
+          <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
+        </VisuallyHidden>
+        <SidebarCol showAbove="md">
+          <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
+            {enrollButton}
+            {sidebarSummary}
+          </SummaryRoot>
         </SidebarCol>
-        <MainCol>{children}</MainCol>
+        <MainCol>
+          {navbar}
+          <Show showBetween={["sm", "md"]}>
+            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
+              {sidebarSummary}
+              <Stack gap="16px">
+                <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+                {enrollButton}
+              </Stack>
+            </SummaryRoot>
+          </Show>
+          <SidebarCol showBelow="sm" alignSelf="center">
+            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
+              <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+              {enrollButton}
+              {sidebarSummary}
+            </SummaryRoot>
+          </SidebarCol>
+          <SectionsWrapper>{children}</SectionsWrapper>
+        </MainCol>
       </BottomContainer>
     </Page>
   )
 }
 
-const ProductNavbar: React.FC<{
-  navLinks: HeadingData[]
-  productNoun: string
-}> = ({ navLinks, productNoun }) => {
-  if (navLinks.length === 0) {
-    return null
-  }
-  return (
-    <LinksContainer aria-label={`${productNoun} Details`}>
-      {navLinks.map((heading) => {
-        const LinkComponent =
-          heading.variant === "primary" ? ButtonLink : StyledLink
-        return (
-          <LinkComponent
-            key={heading.id}
-            href={`#${heading.id}`}
-            variant={heading.variant}
-            size="small"
-          >
-            {heading.label}
-          </LinkComponent>
-        )
-      })}
-    </LinksContainer>
-  )
-}
-
-const WhoCanTake: React.FC<{ productNoun: string }> = ({ productNoun }) => {
-  return (
-    <WhoCanTakeSection aria-labelledby={HeadingIds.WhoCanTake}>
-      <Typography variant="h4" component="h2" id={HeadingIds.WhoCanTake}>
-        Who can take this {productNoun}?
-      </Typography>
-      Because of U.S. Office of Foreign Assets Control (OFAC) restrictions and
-      other U.S. federal regulations, learners residing in one or more of the
-      following countries or regions will not be able to register for this
-      course: Iran, Cuba, Syria, North Korea and the Crimea, Donetsk People's
-      Republic and Luhansk People's Republic regions of Ukraine.
-    </WhoCanTakeSection>
-  )
-}
-
 export default ProductPageTemplate
-export { WhoCanTake, ProductNavbar }
-export type { HeadingData, ProductPageTemplateProps }
+export type { ProductPageTemplateProps }

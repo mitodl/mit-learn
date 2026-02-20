@@ -99,6 +99,7 @@ describe("CoursePage", () => {
         { level: 2, name: "Course summary" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
+        { level: 2, name: "How you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 2, name: "Who can take this Course?" },
@@ -123,11 +124,14 @@ describe("CoursePage", () => {
     expect(links[1]).toHaveTextContent("What you'll learn")
     expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
     expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[2]).toHaveTextContent("Prerequisites")
-    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
+    expect(links[2]).toHaveTextContent("How you'll learn")
+    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
+    expect(document.getElementById(HeadingIds.How)).toBeVisible()
+    expect(links[3]).toHaveTextContent("Prerequisites")
+    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
     expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
-    expect(links[3]).toHaveTextContent("Instructors")
-    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
+    expect(links[4]).toHaveTextContent("Instructors")
+    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
     expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
@@ -182,6 +186,16 @@ describe("CoursePage", () => {
 
     const section = await screen.findByRole("region", { name: "Prerequisites" })
     expectRawContent(section, page.prerequisites)
+  })
+
+  test("Renders an enrollment button", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const buttons = await screen.findAllByTestId("course-enrollment-button")
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
   test.each([

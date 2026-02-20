@@ -15,34 +15,22 @@ import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
-import ProductPageTemplate, {
-  HeadingData,
-  ProductNavbar,
-  WhoCanTake,
-} from "./ProductPageTemplate"
+import ProductPageTemplate from "./ProductPageTemplate"
+import ProductNavbar, { HeadingData } from "./ProductNavbar"
+import WhoCanTakeSection from "./WhoCanTakeSection"
+import WhatYoullLearnSection from "./WhatYoullLearnSection"
+import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import dynamic from "next/dynamic"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 
-const LearningResourceDrawer = dynamic(
-  () =>
-    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
-)
-
 type ProgramPageProps = {
   readableId: string
 }
-
-const WhatSection = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
 
 const PrerequisitesSection = styled.section({
   display: "flex",
@@ -59,16 +47,16 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
       content: page.about,
     },
     {
-      id: HeadingIds.Requirements,
-      label: "Courses",
-      variant: "secondary",
-      content: true,
-    },
-    {
       id: HeadingIds.What,
       label: "What you'll learn",
       variant: "secondary",
       content: page.what_you_learn,
+    },
+    {
+      id: HeadingIds.How,
+      label: "How you'll learn",
+      variant: "secondary",
+      content: true,
     },
     {
       id: HeadingIds.Prereqs,
@@ -80,7 +68,7 @@ const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
       id: HeadingIds.Instructors,
       label: "Instructors",
       variant: "secondary",
-      content: page.faculty.length ? "x" : undefined,
+      content: page.faculty.length,
     },
   ] as const
   return all.filter((item) => item.content)
@@ -275,43 +263,33 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         />
       }
       imageSrc={imageSrc}
+      summaryTitle="Program summary"
       sidebarSummary={
-        <ProgramSummary
-          enrollButton={<ProgramEnrollmentButton program={program} />}
-          program={program}
-          courses={courses.data?.results}
-        />
+        <ProgramSummary program={program} courses={courses.data?.results} />
       }
-      navLinks={navLinks}
+      enrollButton={<ProgramEnrollmentButton program={program} />}
+      navbar={<ProductNavbar navLinks={navLinks} productNoun="Program" />}
     >
-      <ProductNavbar navLinks={navLinks} productNoun="Program" />
-      <Stack gap={{ xs: "40px", sm: "56px" }}>
-        {page.about ? (
-          <AboutSection productNoun="Program" aboutHtml={page.about} />
-        ) : null}
-        <RequirementsSection program={program} />
-        {page.what_you_learn ? (
-          <WhatSection aria-labelledby={HeadingIds.What}>
-            <Typography variant="h4" component="h2" id={HeadingIds.What}>
-              What you'll learn
-            </Typography>
-            <RawHTML html={page.what_you_learn} />
-          </WhatSection>
-        ) : null}
-        {page.prerequisites ? (
-          <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
-            <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
-              Prerequisites
-            </Typography>
-            <RawHTML html={page.prerequisites} />
-          </PrerequisitesSection>
-        ) : null}
-        {page.faculty.length ? (
-          <InstructorsSection instructors={page.faculty} />
-        ) : null}
-        <WhoCanTake productNoun="Program" />
-      </Stack>
-      <LearningResourceDrawer />
+      {page.about ? (
+        <AboutSection productNoun="Program" aboutHtml={page.about} />
+      ) : null}
+      <RequirementsSection program={program} />
+      {page.what_you_learn ? (
+        <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
+      <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
+      {page.prerequisites ? (
+        <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
+          <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
+            Prerequisites
+          </Typography>
+          <RawHTML html={page.prerequisites} />
+        </PrerequisitesSection>
+      ) : null}
+      {page.faculty.length ? (
+        <InstructorsSection instructors={page.faculty} />
+      ) : null}
+      <WhoCanTakeSection productNoun="Program" />
     </ProductPageTemplate>
   )
 }
