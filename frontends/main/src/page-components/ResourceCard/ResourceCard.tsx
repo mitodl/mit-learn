@@ -1,9 +1,5 @@
-import React, { useCallback, useState, useMemo } from "react"
-import {
-  LearningResourceCard,
-  LearningResourceListCard,
-  LearningResourceListCardCondensed,
-} from "ol-components"
+import React, { useCallback, useMemo, useState } from "react"
+import { LearningResourceCard } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
 import type { LearningResourceCardProps } from "ol-components"
 import {
@@ -89,8 +85,6 @@ type ResourceCardProps = Omit<
   LearningResourceCardProps,
   "href" | "onAddToLearningPathClick" | "onAddToUserListClick"
 > & {
-  condensed?: boolean
-  list?: boolean
   headingLevel?: number
   parentHeadingEl?: HeadingElement
 }
@@ -104,8 +98,6 @@ type ResourceCardProps = Omit<
  */
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
-  condensed,
-  list,
   parentHeadingEl,
   ...others
 }) => {
@@ -119,17 +111,11 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
-  const CardComponent =
-    list && condensed
-      ? LearningResourceListCardCondensed
-      : list
-        ? LearningResourceListCard
-        : LearningResourceCard
 
   const headingLevel = parentHeadingEl ? subheadingMap[parentHeadingEl] : 6
   return (
     <>
-      <CardComponent
+      <LearningResourceCard
         onClick={onClick}
         resource={resource}
         href={resource ? getDrawerHref(resource.id) : undefined}

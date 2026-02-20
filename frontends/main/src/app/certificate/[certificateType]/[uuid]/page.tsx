@@ -8,7 +8,7 @@ import { notFound } from "next/navigation"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
 
-const { NEXT_PUBLIC_ORIGIN } = process.env
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
 enum CertificateType {
   Course = "course",
@@ -26,7 +26,7 @@ export async function generateMetadata({
     const queryClient = getQueryClient()
 
     if (certificateType === CertificateType.Course) {
-      const data = await queryClient.fetchQuery(
+      const data = await queryClient.fetchQueryOr404(
         certificateQueries.courseCertificatesRetrieve({
           cert_uuid: uuid,
         }),
@@ -38,7 +38,7 @@ export async function generateMetadata({
 
       userName = data?.user?.name
     } else {
-      const data = await queryClient.fetchQuery(
+      const data = await queryClient.fetchQueryOr404(
         certificateQueries.programCertificatesRetrieve({
           cert_uuid: uuid,
         }),
@@ -70,13 +70,13 @@ const Page: React.FC<
   const queryClient = getQueryClient()
 
   if (certificateType === CertificateType.Course) {
-    await queryClient.prefetchQuery(
+    await queryClient.fetchQueryOr404(
       certificateQueries.courseCertificatesRetrieve({
         cert_uuid: uuid,
       }),
     )
   } else {
-    await queryClient.prefetchQuery(
+    await queryClient.fetchQueryOr404(
       certificateQueries.programCertificatesRetrieve({
         cert_uuid: uuid,
       }),

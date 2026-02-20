@@ -12,7 +12,6 @@ import { Heading } from "@tiptap/extension-heading"
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography as TiptapTypography } from "@tiptap/extension-typography"
-import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 import type { JSONContent } from "@tiptap/react"
@@ -22,9 +21,11 @@ import { ImageWithCaptionNode } from "./extensions/node/Image/ImageWithCaptionNo
 import { DividerNode } from "./extensions/node/Divider/DividerNode"
 import { ArticleByLineInfoBarNode } from "./extensions/node/ArticleByLineInfoBar/ArticleByLineInfoBarNode"
 import { LearningResourceNode } from "./extensions/node/LearningResource/LearningResourceNode"
+import { LearningResourceInputNode } from "./extensions/node/LearningResource/LearningResourceInputNode"
 import { LearningResourceURLHandler } from "./extensions/node/LearningResource/LearningResourcePaste"
 import { MediaEmbedURLHandler } from "./extensions/node/MediaEmbed/MediaEmbedURLHandler"
 import { MediaEmbedNode } from "./extensions/node/MediaEmbed/MediaEmbedNode"
+import { MediaEmbedInputNode } from "./extensions/node/MediaEmbed/MediaEmbedInputNode"
 import { BannerNode } from "./extensions/node/Banner/BannerNode"
 import type { ExtendedNodeConfig } from "./extensions/node/types"
 import { MAX_FILE_SIZE } from "./vendor/lib/tiptap-utils"
@@ -63,6 +64,7 @@ export const newArticleDocument = {
     },
     {
       type: "byline",
+      attrs: { authorName: null },
     },
     { type: "paragraph", content: [] },
   ],
@@ -140,16 +142,17 @@ export const useArticleSchema = ({
       HorizontalRule,
       LearningResourceURLHandler,
       LearningResourceNode,
+      LearningResourceInputNode,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
       TiptapTypography,
       Superscript,
       Subscript,
       Selection,
       Image,
       MediaEmbedNode,
+      MediaEmbedInputNode,
       DividerNode,
       ArticleByLineInfoBarNode,
       ImageWithCaptionNode,

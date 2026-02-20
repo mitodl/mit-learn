@@ -1,6 +1,6 @@
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
-import { ChannelTypeEnum, UnitChannel } from "api/v0"
+import { ChannelTypeEnum } from "api/v0"
 import {
   FeaturedListOfferedByEnum,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
@@ -59,6 +59,10 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
 
   const queryClient = getQueryClient()
 
+  const channel = await queryClient.fetchQueryOr404(
+    channelQueries.detailByType(channelType, name),
+  )
+
   await Promise.all([
     queryClient.prefetchQuery(offerorQueries.list({})),
     channelType === ChannelTypeEnum.Unit &&
@@ -70,12 +74,8 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
       ),
     channelType === ChannelTypeEnum.Unit &&
       queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] })),
-    queryClient.prefetchQuery(channelQueries.detailByType(channelType, name)),
   ])
 
-  const channel = queryClient.getQueryData<UnitChannel>(
-    channelQueries.detailByType(channelType, name).queryKey,
-  )
   const offerors =
     queryClient
       .getQueryData<PaginatedLearningResourceOfferorDetailList>(
@@ -89,7 +89,7 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
         [],
       ) ?? {}
 
-  const constantSearchParams = getConstantSearchParams(channel?.search_filter)
+  const constantSearchParams = getConstantSearchParams(channel.search_filter)
 
   const { facetNames } = getFacets(
     channelType,

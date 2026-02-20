@@ -77,11 +77,15 @@ describe("ArticleViewer", () => {
       is_article_editor: true,
     })
     setMockResponse.get(urls.userMe.get(), user)
-    const article = factories.articles.article({ user })
+    const authorName = `${user.first_name} ${user.last_name}`
+    const article = factories.articles.article({
+      user,
+      author_name: authorName,
+    })
 
     renderWithProviders(<ArticleEditor article={article} readOnly />)
 
-    await screen.findByText(`By ${user.first_name} ${user.last_name}`)
+    await screen.findByText(`By ${authorName}`)
   })
 
   test("renders headings levels 1-6", async () => {

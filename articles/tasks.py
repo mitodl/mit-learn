@@ -72,7 +72,7 @@ def queue_fastly_purge_articles_list():
     log.info("Purging articles list page from the Fastly cache...")
 
     # Purge the articles API endpoint
-    articles_url = "/api/v1/articles/"
+    articles_url = "/articles"
 
     resp = call_fastly_purge_api(articles_url)
 

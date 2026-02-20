@@ -1,21 +1,5 @@
-import DOMPurify from "isomorphic-dompurify"
 import { styled } from "@mitodl/smoot-design"
-import React, { memo } from "react"
-import classnames from "classnames"
-
-const UnstyledRawHTML: React.FC<{
-  html: string
-  className?: string
-  Component?: React.ElementType
-}> = memo(({ html, className, Component = "div" }) => {
-  return (
-    <Component
-      className={classnames("raw-html", className)}
-      data-testid="raw"
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
-    />
-  )
-})
+import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const RawHTML = styled(UnstyledRawHTML)(({ theme }) => ({
   "*:first-child": {
@@ -54,4 +38,3 @@ const RawHTML = styled(UnstyledRawHTML)(({ theme }) => ({
 }))
 
 export default RawHTML
-export { UnstyledRawHTML }

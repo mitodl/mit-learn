@@ -17,6 +17,8 @@ import {
   RiAwardLine,
 } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import {
@@ -28,13 +30,14 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useCreateB2bEnrollment } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { programView } from "@/common/urls"
+import { coursePageView, programPageView, programView } from "@/common/urls"
+import { mitxonlineUrl } from "@/common/mitxonline"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentRequestV2,
-  V2UserProgramEnrollmentDetail,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const EnrollmentMode = {
@@ -53,7 +56,7 @@ export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
-  | { type: "program-enrollment"; data: V2UserProgramEnrollmentDetail }
+  | { type: "program-enrollment"; data: V3UserProgramEnrollment }
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.
@@ -164,28 +167,69 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const getDefaultContextMenuItems = (
+const getContextMenuItems = (
   title: string,
-  enrollment: CourseRunEnrollmentRequestV2,
+  resource: DashboardResource,
+  useProductPages: boolean,
+  includeInLearnCatalog: boolean,
+  additionalItems: SimpleMenuItem[] = [],
 ) => {
-  return [
-    {
-      className: "dashboard-card-menu-item",
-      key: "email-settings",
-      label: "Email Settings",
-      onClick: () => {
-        NiceModal.show(EmailSettingsDialog, { title, enrollment })
+  const menuItems = []
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    const detailsUrl = useProductPages
+      ? programPageView(resource.data.program.readable_id)
+      : mitxonlineUrl(`/programs/${resource.data.program.readable_id}`)
+
+    if (detailsUrl && includeInLearnCatalog) {
+      menuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "view-program-details",
+        label: "View Program Details",
+        href: detailsUrl,
+      })
+    }
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    const detailsUrl = useProductPages
+      ? coursePageView(resource.data.run.course.readable_id)
+      : resource.data.run.course.page?.page_url
+
+    const courseMenuItems = []
+
+    if (detailsUrl && includeInLearnCatalog) {
+      courseMenuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "view-course-details",
+        label: "View Course Details",
+        href: detailsUrl,
+      })
+    }
+
+    courseMenuItems.push(
+      {
+        className: "dashboard-card-menu-item",
+        key: "email-settings",
+        label: "Email Settings",
+        onClick: () => {
+          NiceModal.show(EmailSettingsDialog, {
+            title,
+            enrollment: resource.data,
+          })
+        },
       },
-    },
-    {
-      className: "dashboard-card-menu-item",
-      key: "unenroll",
-      label: "Unenroll",
-      onClick: () => {
-        NiceModal.show(UnenrollDialog, { title, enrollment })
+      {
+        className: "dashboard-card-menu-item",
+        key: "unenroll",
+        label: "Unenroll",
+        onClick: () => {
+          NiceModal.show(UnenrollDialog, { title, enrollment: resource.data })
+        },
       },
-    },
-  ]
+    )
+
+    menuItems.push(...courseMenuItems)
+  }
+  return [...menuItems, ...additionalItems]
 }
 
 const useOneClickEnroll = () => {
@@ -520,7 +564,6 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   resource: DashboardResource
-  titleAction?: "marketing" | "courseware"
   showNotComplete?: boolean
   offerUpgrade?: boolean
   noun?: string
@@ -537,7 +580,6 @@ type DashboardCardProps = {
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
   resource,
-  titleAction = "courseware",
   showNotComplete = true,
   offerUpgrade = true,
   noun,
@@ -553,6 +595,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 }) => {
   const oneClickEnroll = useOneClickEnroll()
   const { data: user } = useQuery(mitxUserQueries.me())
+  const useProductPages = useFeatureFlagEnabled(
+    FeatureFlags.MitxOnlineProductPages,
+  )
 
   // Determine resource type from discriminated union
   const resourceIsCourse = resource.type === DashboardType.Course
@@ -629,11 +674,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : EnrollmentStatus.Enrolled
 
   // URLs
-  const marketingUrl = resourceIsCourse
-    ? resource.data.page?.page_url
-    : resourceIsCourseRunEnrollment
-      ? resource.data.run.course.page?.page_url
-      : undefined
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
@@ -647,16 +687,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     : true
   const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
 
-  // Title link logic
   const titleHref = isAnyCourse
     ? hasEnrolled
-      ? titleAction === "marketing"
-        ? marketingUrl
-        : (coursewareUrl ?? marketingUrl)
-      : b2bContractId
-        ? (coursewareUrl ?? marketingUrl)
-        : undefined
-    : undefined
+      ? (buttonHref ?? coursewareUrl)
+      : undefined
+    : resourceIsProgramEnrollment
+      ? programView(resource.data.program.id)
+      : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
     isAnyCourse && !hasEnrolled
@@ -667,8 +704,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             : resourceIsCourseRunEnrollment
               ? resource.data.run.courseware_id
               : undefined
-          if (!readableId || !coursewareUrl) return
-          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+          const targetUrl = buttonHref ?? coursewareUrl
+          if (!readableId || !targetUrl) return
+          handleEnrollment(targetUrl, readableId, !!b2bContractId)
         }
       : undefined
 
@@ -682,8 +720,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             : resourceIsCourseRunEnrollment
               ? resource.data.run.courseware_id
               : undefined
-          if (!readableId || !coursewareUrl) return
-          handleEnrollment(coursewareUrl, readableId, !!b2bContractId)
+          const targetUrl = buttonHref ?? coursewareUrl
+          if (!readableId || !targetUrl) return
+          handleEnrollment(targetUrl, readableId, !!b2bContractId)
         }
       : buttonClick
   // Build sections
@@ -787,10 +826,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     <CourseStartCountdown startDate={run.start_date} />
   ) : null
 
-  const menuItems = contextMenuItems.concat(
-    resource.type === DashboardType.CourseRunEnrollment
-      ? getDefaultContextMenuItems(title, resource.data)
-      : [],
+  const includeInLearnCatalog = resourceIsCourse
+    ? resource.data.include_in_learn_catalog
+    : resourceIsCourseRunEnrollment
+      ? resource.data.run.course.include_in_learn_catalog
+      : resourceIsProgramEnrollment
+        ? true
+        : false
+  const menuItems = getContextMenuItems(
+    title,
+    resource,
+    useProductPages ?? false,
+    includeInLearnCatalog ?? false,
+    contextMenuItems,
   )
 
   const contextMenu = isLoading ? (
@@ -869,8 +917,4 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export {
-  DashboardCard,
-  CardRoot as DashboardCardRoot,
-  getDefaultContextMenuItems,
-}
+export { DashboardCard, CardRoot as DashboardCardRoot, getContextMenuItems }

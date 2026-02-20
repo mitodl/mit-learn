@@ -3,10 +3,44 @@
 import { QueryClient, isServer, focusManager } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { cache } from "react"
+import { notFound } from "next/navigation"
 
 const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
+
+/**
+ * Extended QueryClient with custom fetchQueryOr404 method.
+ * Automatically calls notFound() on 404 errors when running on the server.
+ */
+class AugmentedQueryClient extends QueryClient {
+  /**
+   * Fetch and automatically call notFound() on 404 errors.
+   * Uses fetchQuery internally, which throws on error and populates the cache.
+   *
+   * This should be used wherever we are fetching critical data that must exist for the page to render.
+   *
+   * Note: notFound() is only called on the server. In the browser, 404 errors are thrown normally.
+   */
+  fetchQueryOr404: QueryClient["fetchQuery"] = async (...args) => {
+    try {
+      return await super.fetchQuery(...args)
+    } catch (error: unknown) {
+      /* If the response is a 404, call notFound() to return proper 404 status
+       * This ensures the base page response is a 404, not a 200 with a not found message.
+       *
+       * Only call notFound() on the server - it's designed for server-side rendering.
+       * In the browser, we throw the error normally so it can be handled by error boundaries.
+       */
+      const axiosError = error as AxiosError
+      if (isServer && axiosError?.response?.status === 404) {
+        notFound()
+      }
+
+      throw error
+    }
+  }
+}
 
 /**
  * Get or create a server-side QueryClient for consistent retry behavior.
@@ -27,8 +61,8 @@ const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
  * make API calls and only sets up the hydration boundary and registers hooks in
  * readiness for the dehydrated state to be sent to the client.
  */
-const getServerQueryClient = cache(() => {
-  const queryClient = new QueryClient({
+export const getServerQueryClient = cache(() => {
+  return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
         /**
@@ -83,8 +117,6 @@ const getServerQueryClient = cache(() => {
       },
     },
   })
-
-  return queryClient
 })
 
 type BrowserClientConfig = {
@@ -95,9 +127,9 @@ const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
 }
 const makeBrowserQueryClient = (
   config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,
-): QueryClient => {
+): AugmentedQueryClient => {
   const { maxRetries } = config
-  return new QueryClient({
+  return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
         /**
@@ -147,9 +179,9 @@ const makeBrowserQueryClient = (
   })
 }
 
-let browserQueryClient: QueryClient | undefined = undefined
+let browserQueryClient: AugmentedQueryClient | undefined = undefined
 
-function getQueryClient() {
+function getQueryClient(): AugmentedQueryClient {
   if (isServer) {
     return getServerQueryClient()
   } else {

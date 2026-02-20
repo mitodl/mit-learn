@@ -133,8 +133,6 @@ response_test_raw_data_1 = {
                         "description": None,
                         "alt": None,
                     },
-                    "learning_path_parents": [],
-                    "user_list_parents": [],
                     "program": None,
                     "readable_id": "course-v1:xPRO+MCPO+R1",
                     "title": (
@@ -282,8 +280,6 @@ response_test_response_1 = {
                 "description": None,
                 "alt": None,
             },
-            "learning_path_parents": [],
-            "user_list_parents": [],
             "program": None,
             "readable_id": "course-v1:xPRO+MCPO+R1",
             "title": "Managing Complex Projects and Organizations for Success",
@@ -372,7 +368,6 @@ response_test_raw_data_2 = {
                     "runs": [],
                     "course_feature": [],
                     "is_learning_material": True,
-                    "user_list_parents": [],
                     "next_start_date": None,
                     "best_run_id": None,
                 },
@@ -548,7 +543,6 @@ response_test_response_2 = {
             "runs": [],
             "course_feature": [],
             "is_learning_material": True,
-            "user_list_parents": [],
             "next_start_date": None,
             "best_run_id": None,
         }

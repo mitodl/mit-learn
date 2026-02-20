@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect } from "react"
-import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -22,11 +21,11 @@ import {
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
   CourseRunEnrollmentRequestV2,
-  V2UserProgramEnrollmentDetail,
   ContractPage,
   OrganizationPage,
   V2ProgramCollection,
   V2Program,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -38,6 +37,7 @@ import {
   getKey,
   selectBestEnrollment,
 } from "./CoursewareDisplay/helpers"
+import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const HeaderRoot = styled.div({
   display: "flex",
@@ -89,12 +89,21 @@ const ContractHeader: React.FC<{
   )
 }
 
-const WelcomeMessageExtra = styled(Typography)({
+const WelcomeMessageExtra = styled(UnstyledRawHTML)(({ theme }) => ({
+  ...theme.typography.body1,
   margin: 0,
-  p: {
-    margin: 0,
+  "*:first-child": {
+    marginTop: 0,
   },
-})
+  "*:last-child": {
+    marginBottom: 0,
+  },
+  iframe: {
+    width: "100%",
+    aspectRatio: "16 / 9",
+    border: "none",
+  },
+}))
 
 const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
   contract,
@@ -105,7 +114,7 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
     return empty
   }
   const welcomeMessage = contract.welcome_message
-  const welcomeMessageExtra = DOMPurify.sanitize(contract.welcome_message_extra)
+  const welcomeMessageExtra = contract.welcome_message_extra
   if (!welcomeMessage || !welcomeMessageExtra) {
     return empty
   }
@@ -122,12 +131,7 @@ const WelcomeMessage: React.FC<{ contract?: ContractPage }> = ({
           {showingMore ? "Show less" : "Show more"}
         </Link>
       </Stack>
-      {showingMore && (
-        <WelcomeMessageExtra
-          variant="body1"
-          dangerouslySetInnerHTML={{ __html: welcomeMessageExtra }}
-        />
-      )}
+      {showingMore && <WelcomeMessageExtra html={welcomeMessageExtra} />}
     </Stack>
   )
 }
@@ -178,11 +182,12 @@ const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   gap: "10px",
 }))
 
-const ProgramDescription = styled(Typography)({
+const ProgramDescription = styled(UnstyledRawHTML)(({ theme }) => ({
+  ...theme.typography.body2,
   p: {
     margin: 0,
   },
-})
+}))
 
 const ProgramCollectionsList = styled(PlainList)({
   display: "flex",
@@ -231,7 +236,6 @@ const OrgProgramCollectionDisplay: React.FC<{
   contract: ContractPage
   enrollments?: CourseRunEnrollmentRequestV2[]
 }> = ({ collection, contract, enrollments }) => {
-  const sanitizedDescription = DOMPurify.sanitize(collection.description ?? "")
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection, contract.id)
   const firstCourseIds = programsWithCourses
@@ -266,10 +270,7 @@ const OrgProgramCollectionDisplay: React.FC<{
         <Typography variant="h5" component="h2">
           {collection.title}
         </Typography>
-        <ProgramDescription
-          variant="body2"
-          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-        />
+        <ProgramDescription html={collection.description ?? ""} />
       </ProgramHeaderText>
     </ProgramHeader>
   )
@@ -335,7 +336,6 @@ const OrgProgramCollectionDisplay: React.FC<{
               }
               noun="Module"
               offerUpgrade={false}
-              titleAction="courseware"
               buttonHref={bestEnrollment?.run.courseware_url}
               contractId={contract.id}
             />
@@ -350,7 +350,7 @@ const OrgProgramDisplay: React.FC<{
   program: V2Program
   contract?: ContractPage
   courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V2UserProgramEnrollmentDetail[]
+  programEnrollments?: V3UserProgramEnrollment[]
   programLoading: boolean
   orgId: number
 }> = ({
@@ -376,7 +376,6 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
 
-  const sanitizedHtml = DOMPurify.sanitize(program.page.description)
   const courses =
     coursesQuery.data?.results.sort((a, b) => {
       return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
@@ -389,10 +388,7 @@ const OrgProgramDisplay: React.FC<{
           <Typography variant="h5" component="h2">
             {program.title}
           </Typography>
-          <ProgramDescription
-            variant="body2"
-            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-          />
+          <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
         {hasValidCertificate && (
           <ProgramCertificateButton
@@ -437,7 +433,6 @@ const OrgProgramDisplay: React.FC<{
                   }
                   noun="Module"
                   offerUpgrade={false}
-                  titleAction="courseware"
                   buttonHref={bestEnrollment?.run.courseware_url}
                   contractId={contract?.id}
                 />

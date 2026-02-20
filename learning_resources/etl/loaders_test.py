@@ -789,12 +789,12 @@ def test_load_course_fetch_only(mocker, course_exists):
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.parametrize("status", [RunStatus.archived.value, RunStatus.current.value])
 @pytest.mark.parametrize("certification", [True, False])
+@pytest.mark.django_db(transaction=True)
 def test_load_run(mocker, run_exists, status, certification):
     """Test that load_run loads the course run"""
     today = now_in_utc()
-    mock_content_task = mocker.patch(
-        "learning_resources.tasks.get_content_tasks",
-        return_value=mocker.Mock(delay=mocker.Mock()),
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
     )
     course = LearningResourceFactory.create(
         is_course=True,
@@ -849,13 +849,256 @@ def test_load_run(mocker, run_exists, status, certification):
     for key, value in props.items():
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
-    if run_exists:
-        mock_content_task.assert_not_called()
-    else:
-        mock_content_task.assert_called_once_with(
-            etl_source=course.etl_source, learning_resource_ids=[course.id]
+    # import_content_files is called for best runs (regardless of whether they're new)
+    # when the course is from an edx source (xpro in this case)
+    course.refresh_from_db()
+    if result == course.best_run:
+        mock_import_task.delay.assert_called_once_with(
+            course.etl_source, learning_resource_ids=[course.id]
         )
-        mock_content_task.return_value.delay.assert_called_once()
+    else:
+        mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+)
+@pytest.mark.django_db(transaction=True)
+def test_load_run_calls_import_content_files_for_best_run(mocker, etl_source):
+    """Test that load_run calls import_content_files for best runs even if not newly created"""
+    from datetime import UTC, datetime
+
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    # Create course with an existing older run
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=True,
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        start_date=datetime(2023, 1, 1, tzinfo=UTC),
+    )
+
+    # Load a newer run that will become the best run
+    newer_run_props = model_to_dict(
+        LearningResourceRunFactory.build(
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+        )
+    )
+    newer_run_props["prices"] = []
+    del newer_run_props["id"]
+    del newer_run_props["learning_resource"]
+    del newer_run_props["resource_prices"]
+
+    result = load_run(course, newer_run_props)
+
+    course.refresh_from_db()
+    assert result == course.best_run
+
+    mock_import_task.delay.assert_called_once_with(
+        course.etl_source, learning_resource_ids=[course.id]
+    )
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+)
+@pytest.mark.parametrize("run_exists", [True, False])
+@pytest.mark.django_db(transaction=True)
+def test_load_run_calls_import_content_files_for_test_mode(
+    mocker, etl_source, run_exists
+):
+    """Test that load_run calls import_content_files for test_mode courses regardless of best_run"""
+    from datetime import UTC, datetime
+
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    # Create test_mode course
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=False,
+        test_mode=True,
+    )
+
+    if run_exists:
+        # Create an existing run that's already the best run
+        existing_run = LearningResourceRunFactory.create(
+            learning_resource=course,
+            start_date=datetime(2024, 1, 1, tzinfo=UTC),
+        )
+        course.refresh_from_db()
+
+        # Update the existing run with new data
+        run_props = model_to_dict(existing_run)
+        run_props["title"] = "Updated Title"
+        run_props["prices"] = []
+        run_props["instructors"] = []
+        run_props["image"] = None
+        del run_props["id"]
+        del run_props["learning_resource"]
+        del run_props["resource_prices"]
+    else:
+        # Create new run
+        run_props = model_to_dict(
+            LearningResourceRunFactory.build(
+                start_date=datetime(2024, 1, 1, tzinfo=UTC),
+            )
+        )
+        run_props["prices"] = []
+        run_props["image"] = None
+        del run_props["id"]
+        del run_props["learning_resource"]
+        del run_props["resource_prices"]
+
+    result = load_run(course, run_props)
+
+    # For test_mode courses, import_content_files should always be called
+    mock_import_task.delay.assert_called_once_with(
+        course.etl_source, learning_resource_ids=[course.id]
+    )
+    assert result.learning_resource.test_mode is True
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+)
+def test_load_run_skips_import_content_files_for_non_best_run_published_course(
+    mocker, etl_source
+):
+    """Test that load_run doesn't call import_content_files for non-best runs of published courses"""
+    from datetime import UTC, datetime
+
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    # Create published (non-test-mode) course with existing best run
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=True,
+        test_mode=False,
+    )
+
+    # Create the best run (newer date)
+    best_run = LearningResourceRunFactory.create(
+        learning_resource=course,
+        start_date=datetime(2024, 6, 1, tzinfo=UTC),
+    )
+    course.refresh_from_db()
+    assert course.best_run == best_run
+
+    # Now add an older run that won't be the best run
+    older_run_props = model_to_dict(
+        LearningResourceRunFactory.build(
+            start_date=datetime(2023, 1, 1, tzinfo=UTC),
+        )
+    )
+    older_run_props["prices"] = []
+    del older_run_props["id"]
+    del older_run_props["learning_resource"]
+    del older_run_props["resource_prices"]
+
+    result = load_run(course, older_run_props)
+
+    course.refresh_from_db()
+
+    # Verify the result is not the best run
+    assert result != course.best_run
+
+    # import_content_files should not be called for non-best runs
+    mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.ocw.value, ETLSource.oll.value, ETLSource.youtube.value],
+)
+def test_load_run_skips_import_content_files_for_unsupported_sources(
+    mocker, etl_source
+):
+    """Test that load_run doesn't call import_content_files for non-edx sources"""
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=True,
+    )
+
+    run_props = model_to_dict(LearningResourceRunFactory.build())
+    run_props["prices"] = []
+    del run_props["id"]
+    del run_props["learning_resource"]
+    del run_props["resource_prices"]
+
+    load_run(course, run_props)
+
+    # import_content_files should not be called for non-edx sources
+    mock_import_task.delay.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "etl_source",
+    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+)
+@pytest.mark.django_db(transaction=True)
+def test_load_run_skips_import_content_files_when_content_files_exist(
+    mocker, etl_source
+):
+    """Test that load_run doesn't call import_content_files when content files already exist"""
+    mock_import_task = mocker.patch(
+        "learning_resources.tasks.import_content_files",
+    )
+
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=etl_source,
+        published=True,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course,
+    )
+    # Add existing content files to the run
+    ContentFileFactory.create_batch(3, run=run)
+    course.refresh_from_db()
+    assert course.best_run == run
+    assert run.content_files.count() == 3
+
+    # Update the existing run (not creating a new one)
+    run_props = model_to_dict(run)
+    run_props["title"] = "Updated Title"
+    run_props["prices"] = []
+    run_props["instructors"] = []
+    run_props["image"] = None
+    del run_props["id"]
+    del run_props["learning_resource"]
+    del run_props["resource_prices"]
+
+    result = load_run(course, run_props)
+
+    course.refresh_from_db()
+    assert result == course.best_run
+
+    # import_content_files should NOT be called because content files already exist
+    mock_import_task.delay.assert_not_called()
 
 
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])

@@ -8,7 +8,8 @@ import { useArticleDetailRetrieve } from "api/hooks/articles"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 import { styled, LoadingSpinner } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
-import { articlesView } from "@/common/urls"
+import { articlesView, articlesDraftView } from "@/common/urls"
+import invariant from "tiny-invariant"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -45,9 +46,12 @@ const ArticleEditPage = ({ articleId }: { articleId: string }) => {
         <ArticleEditor
           article={article}
           onSave={(article) => {
-            if (article.is_published)
-              return router.push(articlesView(article.slug!))
-            router.push(articlesView(String(article.id)))
+            if (article.is_published) {
+              invariant(article.slug, "Published article must have a slug")
+              return router.push(articlesView(article.slug))
+            } else {
+              router.push(articlesDraftView(String(article.id)))
+            }
           }}
         />
       </PageContainer>

@@ -127,7 +127,7 @@ describe("HomeContent", () => {
     setMockResponse.get(urls.userLists.membershipList(), [])
     setMockResponse.get(urls.learningPaths.membershipList(), [])
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
     return { resources }
@@ -254,7 +254,7 @@ describe("HomeContent", () => {
       name: "Your MIT Learning Journey",
     })
 
-    expect(screen.queryByText("Enrollment Error")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Enrollment Error/)).not.toBeInTheDocument()
   })
 
   test("Displays enrollment error alert when query param is present and then clears it", async () => {
@@ -275,7 +275,7 @@ describe("HomeContent", () => {
     })
 
     // Verify the alert was shown
-    expect(screen.getByText("Enrollment Error")).toBeInTheDocument()
+    expect(screen.getByText(/Enrollment Error/)).toBeInTheDocument()
     expect(
       screen.getByText(
         /The Enrollment Code is incorrect or no longer available/,

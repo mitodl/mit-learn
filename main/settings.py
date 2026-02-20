@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.53.4"
+VERSION = "0.54.1"
 
 log = logging.getLogger()
 
@@ -516,6 +516,24 @@ FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
 MEDIA_ROOT = get_string("MEDIA_ROOT", "/var/media/")
 MEDIA_URL = "/media/"
 MITOL_USE_S3 = get_bool("MITOL_USE_S3", False)  # noqa: FBT003
+AWS_S3_CUSTOM_DOMAIN = get_string("AWS_S3_CUSTOM_DOMAIN", None)
+AWS_S3_PREFIX = get_string("AWS_S3_PREFIX", None)
+
+if MITOL_USE_S3:
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
+    OPTIONS = {}
+    if AWS_S3_CUSTOM_DOMAIN:
+        OPTIONS["custom_domain"] = AWS_S3_CUSTOM_DOMAIN
+    if AWS_S3_PREFIX:
+        OPTIONS["location"] = AWS_S3_PREFIX
+    if OPTIONS:
+        STORAGES["default"]["OPTIONS"] = OPTIONS
+
 AWS_ACCESS_KEY_ID = get_string("AWS_ACCESS_KEY_ID", False)  # noqa: FBT003
 AWS_SECRET_ACCESS_KEY = get_string("AWS_SECRET_ACCESS_KEY", False)  # noqa: FBT003
 AWS_STORAGE_BUCKET_NAME = get_string("AWS_STORAGE_BUCKET_NAME", False)  # noqa: FBT003
@@ -527,8 +545,7 @@ if MITOL_USE_S3 and (
     msg = "You have enabled S3 support, but are missing one of AWS_ACCESS_KEY_ID, \
     AWS_SECRET_ACCESS_KEY, or AWS_STORAGE_BUCKET_NAME"
     raise ImproperlyConfigured(msg)
-if MITOL_USE_S3:
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
 
 IMAGEKIT_SPEC_CACHEFILE_NAMER = "imagekit.cachefiles.namers.source_name_dot_hash"
 IMAGEKIT_CACHEFILE_DIR = get_string("IMAGEKIT_CACHEFILE_DIR", "")

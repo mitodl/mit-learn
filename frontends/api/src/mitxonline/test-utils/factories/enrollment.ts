@@ -6,7 +6,7 @@ import type {
   CourseRunEnrollmentRequestV2,
   CourseRunGrade,
   UserProgramEnrollmentDetail,
-  V2UserProgramEnrollmentDetail,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 import { factories } from ".."
@@ -194,12 +194,12 @@ const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
   return mergeOverrides<UserProgramEnrollmentDetail>(defaults, overrides)
 }
 
-const programEnrollmentV2: PartialFactory<V2UserProgramEnrollmentDetail> = (
+const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
   overrides = {},
-): V2UserProgramEnrollmentDetail => {
-  const program = factories.programs.program()
+): V3UserProgramEnrollment => {
+  const program = factories.programs.simpleProgram()
   const hasCertificate = faker.datatype.boolean()
-  const defaults: V2UserProgramEnrollmentDetail = {
+  const defaults: V3UserProgramEnrollment = {
     certificate: hasCertificate
       ? {
           uuid: faker.string.uuid(),
@@ -207,9 +207,8 @@ const programEnrollmentV2: PartialFactory<V2UserProgramEnrollmentDetail> = (
         }
       : null,
     program: program,
-    enrollments: [courseEnrollment()],
   }
-  return mergeOverrides<V2UserProgramEnrollmentDetail>(defaults, overrides)
+  return mergeOverrides<V3UserProgramEnrollment>(defaults, overrides)
 }
 
 // Not paginated
@@ -222,5 +221,5 @@ export {
   courseEnrollments,
   grade,
   programEnrollment,
-  programEnrollmentV2,
+  programEnrollmentV3,
 }

@@ -18,6 +18,7 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "edx_module_id": "edx_module_id",
     "content_type": "content_type",
     "description": "description",
+    "title": "title",
     "url": "url",
     "file_type": "file_type",
     "summary": "summary",

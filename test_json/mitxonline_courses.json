@@ -38,6 +38,7 @@
           }
         ]
       },
+      "include_in_learn_catalog": true,
       "programs": null,
       "topics": [
         {
@@ -149,6 +150,7 @@
           }
         ]
       },
+      "include_in_learn_catalog": true,
       "min_price": null,
       "max_price": 456,
       "programs": null,
@@ -222,6 +224,7 @@
           }
         ]
       },
+      "include_in_learn_catalog": true,
       "min_price": 123,
       "max_price": null,
       "programs": null,

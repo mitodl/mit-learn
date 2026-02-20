@@ -108,6 +108,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "byline",
+              attrs: { authorName: null },
             },
             {
               type: "paragraph",
@@ -141,6 +142,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
+          author_name: "",
         }),
       )
 
@@ -218,6 +220,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             },
             {
               type: "byline",
+              attrs: { authorName: null },
             },
             {
               type: "paragraph",
@@ -245,6 +248,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
           content: updatedArticle.content,
           is_published: true,
           title: updatedArticle.title,
+          author_name: "",
         }),
       )
     })
@@ -424,6 +428,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
         urls.articles.details(article.id),
         expect.objectContaining({
           is_published: false,
+          author_name: "",
         }),
       )
     })
@@ -541,6 +546,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
             urls.articles.list(),
             expect.objectContaining({
               title: "My Article",
+              author_name: "",
               content: {
                 type: "doc",
                 content: [
@@ -560,7 +566,7 @@ describe("ArticleEditor - Content Editing and Saving", () => {
                       },
                     ],
                   },
-                  { type: "byline" },
+                  { type: "byline", attrs: { authorName: null } },
                   {
                     type: "paragraph",
                     attrs: {
@@ -894,48 +900,6 @@ describe("ArticleEditor - Document Rendering", () => {
 
       const italicText = await screen.findByText("italic text")
       expect(italicText.closest("em") || italicText.closest("i")).toBeTruthy()
-    })
-
-    test("renders document with highlighted text", async () => {
-      const content: JSONContent = {
-        type: "doc",
-        content: [
-          {
-            type: "banner",
-            content: [
-              {
-                type: "heading",
-                attrs: { level: 1 },
-                content: [{ type: "text", text: "Title" }],
-              },
-              {
-                type: "paragraph",
-                content: [],
-              },
-            ],
-          },
-          {
-            type: "byline",
-          },
-          {
-            type: "paragraph",
-            content: [
-              { type: "text", text: "This is " },
-              {
-                type: "text",
-                marks: [{ type: "highlight" }],
-                text: "highlighted text",
-              },
-              { type: "text", text: " in a paragraph." },
-            ],
-          },
-        ],
-      }
-
-      await setupEditor(content)
-
-      const highlightedText = await screen.findByText("highlighted text")
-      expect(highlightedText.closest("mark")).toBeTruthy()
     })
 
     test("renders document with links", async () => {

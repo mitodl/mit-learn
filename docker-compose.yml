@@ -10,6 +10,8 @@ include:
 x-extra-hosts: &default-extra-hosts
   extra_hosts:
     - "mitxonline.odl.local:host-gateway"
+    - "kc.odl.local:host-gateway"
+    - "api.learn.odl.local:host-gateway"
 
 services:
   web:
@@ -36,6 +38,10 @@ services:
       # Both the browser and NextJS server (containerized) make requests to
       # api.open.odl.local, forward those to host
       - "api.open.odl.local:host-gateway"
+      - "mitxonline.odl.local:host-gateway"
+      - "learn.odl.local:host-gateway"
+      - "kc.odl.local:host-gateway"
+      - "api.learn.odl.local:host-gateway"
     env_file:
       - path: env/shared.env
       - path: env/shared.local.env

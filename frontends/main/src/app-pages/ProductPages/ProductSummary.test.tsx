@@ -92,11 +92,12 @@ describe("CourseSummary", () => {
 
 describe("Course Dates Row", () => {
   test("Renders expected start/end dates", async () => {
-    const run = makeRun()
+    const run = makeRun({ is_enrollable: true })
+    const nonEnrollableRun = makeRun({ is_enrollable: false })
     const course = makeCourse({
       availability: "dated",
       next_run_id: run.id,
-      courseruns: shuffle([run, makeRun()]),
+      courseruns: shuffle([run, nonEnrollableRun]),
     })
     renderWithProviders(<CourseSummary course={course} />)
 
@@ -111,7 +112,13 @@ describe("Course Dates Row", () => {
   })
 
   test("Renders 'Start: Anytime' plus and end date for start anytime courses", () => {
-    const run = makeRun({ start_date: null })
+    // For "Anytime" to show, run must be self-paced, not archived, and have a start date in the past
+    const run = makeRun({
+      start_date: "2025-01-01", // Past date
+      is_self_paced: true,
+      is_archived: false,
+      is_enrollable: true,
+    })
     const course = makeCourse({
       availability: "anytime",
       courseruns: [run],
@@ -128,22 +135,23 @@ describe("Course Dates Row", () => {
     expect(datesRow).toHaveTextContent(`End: ${formatDate(run.end_date)}`)
   })
 
-  test.each(["", null, undefined])(
-    "Renders nothing if start date missing",
-    () => {
-      const run = makeRun({ start_date: null })
-      const course = makeCourse({
-        availability: "dated",
-        courseruns: shuffle([run, makeRun()]),
-        next_run_id: run.id,
-      })
-      renderWithProviders(<CourseSummary course={course} />)
+  test("Renders nothing if next run has no start date and is only enrollable run", () => {
+    const run = makeRun({ start_date: null, is_enrollable: true })
+    const nonEnrollableRun = makeRun({ is_enrollable: false })
+    const course = makeCourse({
+      availability: "dated",
+      courseruns: shuffle([run, nonEnrollableRun]),
+      next_run_id: run.id,
+    })
+    renderWithProviders(<CourseSummary course={course} />)
 
-      const summary = screen.getByRole("region", { name: "Course summary" })
-      const datesRow = within(summary).queryByTestId(TestIds.DatesRow)
-      expect(datesRow).toBeNull()
-    },
-  )
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Dates row exists but shows no date information
+    expect(datesRow).not.toHaveTextContent("Start")
+    expect(datesRow).not.toHaveTextContent("End")
+  })
 
   test("Renders no end date if end date missing", () => {
     const run = makeRun({ end_date: null })
@@ -158,6 +166,518 @@ describe("Course Dates Row", () => {
     const datesRow = within(summary).getByTestId(TestIds.DatesRow)
 
     expect(datesRow).not.toHaveTextContent("End")
+  })
+
+  test("Displays a single date without 'More Dates' toggle when only one enrollable run", () => {
+    const run = makeRun({
+      is_enrollable: true,
+      start_date: "2026-03-01",
+      end_date: "2026-05-01",
+    })
+    const nonEnrollableRun = makeRun({
+      is_enrollable: false,
+      start_date: "2025-01-01",
+      end_date: "2025-03-01",
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run, nonEnrollableRun],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Should show the start and end dates
+    invariant(run.start_date)
+    expect(datesRow).toHaveTextContent(`Start: ${formatDate(run.start_date)}`)
+    invariant(run.end_date)
+    expect(datesRow).toHaveTextContent(`End: ${formatDate(run.end_date)}`)
+
+    // Should NOT have a "More Dates" toggle
+    expect(
+      within(datesRow).queryByRole("button", { name: /More Dates/i }),
+    ).toBeNull()
+    expect(datesRow).not.toHaveTextContent("Dates Available")
+  })
+
+  test("Displays 'More Dates' toggle when multiple enrollable runs exist", () => {
+    const run1 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-03-01",
+      end_date: "2026-05-01",
+    })
+    const run2 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const course = makeCourse({
+      next_run_id: run1.id,
+      courseruns: [run1, run2],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Should show "Dates Available" label
+    expect(datesRow).toHaveTextContent("Dates Available")
+
+    // Should show "More Dates" button
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    expect(moreDatesButton).toBeInTheDocument()
+  })
+
+  test("Clicking 'More Dates' expands to show all enrollable dates, clicking 'Show Less' collapses back", async () => {
+    const run1 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-03-01",
+      end_date: "2026-05-01",
+    })
+    const run2 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const run3 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-09-01",
+      end_date: "2026-11-01",
+    })
+    const course = makeCourse({
+      next_run_id: run1.id,
+      courseruns: [run1, run2, run3],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Initially, only the next_run date should be visible
+    invariant(run1.start_date)
+    expect(datesRow).toHaveTextContent(formatDate(run1.start_date))
+
+    // Other dates should NOT be visible
+    invariant(run2.start_date)
+    invariant(run3.start_date)
+    expect(datesRow).not.toHaveTextContent(formatDate(run2.start_date))
+    expect(datesRow).not.toHaveTextContent(formatDate(run3.start_date))
+
+    // Click "More Dates"
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Now all dates should be visible
+    expect(datesRow).toHaveTextContent(formatDate(run1.start_date))
+    expect(datesRow).toHaveTextContent(formatDate(run2.start_date))
+    expect(datesRow).toHaveTextContent(formatDate(run3.start_date))
+
+    // Button text should change to "Show Less"
+    const fewerDatesButton = within(datesRow).getByRole("button", {
+      name: "Show Less",
+    })
+    expect(fewerDatesButton).toBeInTheDocument()
+
+    // Click "Show Less" to collapse
+    await user.click(fewerDatesButton)
+
+    // Should be back to showing only the next_run date
+    expect(datesRow).toHaveTextContent(formatDate(run1.start_date))
+    expect(datesRow).not.toHaveTextContent(formatDate(run2.start_date))
+    expect(datesRow).not.toHaveTextContent(formatDate(run3.start_date))
+
+    // Button should be back to "More Dates"
+    expect(
+      within(datesRow).getByRole("button", { name: "More Dates" }),
+    ).toBeInTheDocument()
+  })
+
+  test("Multiple enrollable dates are displayed chronologically newest to oldest", async () => {
+    const oldestRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: true, // This will show "Start: Anytime" (past date)
+      is_archived: false,
+      start_date: "2025-01-01", // Past date
+      end_date: "2026-03-01",
+    })
+    const middleRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: false, // Ensure dates display normally (not "Anytime")
+      is_archived: false,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const newestRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: false, // Ensure dates display normally (not "Anytime")
+      is_archived: false,
+      start_date: "2026-09-01",
+      end_date: "2026-11-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: middleRun.id,
+      // Shuffle the runs to ensure sorting works regardless of input order
+      courseruns: shuffle([oldestRun, middleRun, newestRun]),
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Click "More Dates" to show all dates
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Get all the date strings that should appear
+    invariant(newestRun.start_date)
+    invariant(middleRun.start_date)
+    invariant(oldestRun.start_date)
+
+    const newestDateString = formatDate(newestRun.start_date)
+    const middleDateString = formatDate(middleRun.start_date)
+    const oldestDateString = formatDate(oldestRun.start_date)
+
+    // Get the date entry containers
+    const dateEntryContainers = within(datesRow).getAllByTestId("date-entry")
+
+    // Verify we have 3 date entries
+    expect(dateEntryContainers).toHaveLength(3)
+
+    // Verify the dates appear in chronological order (newest to oldest)
+    const firstDateContainer = dateEntryContainers[0]
+    const secondDateContainer = dateEntryContainers[1]
+    const thirdDateContainer = dateEntryContainers[2]
+
+    expect(firstDateContainer?.textContent).toContain(newestDateString)
+    expect(secondDateContainer?.textContent).toContain(middleDateString)
+    // The oldest run should show "Anytime" instead of the actual date
+    expect(thirdDateContainer?.textContent).toContain("Start: Anytime")
+    expect(thirdDateContainer?.textContent).not.toContain(oldestDateString)
+  })
+
+  test("Initially displays the date for the run with next_run_id when multiple enrollable runs exist", () => {
+    const run1 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-01-01",
+      end_date: "2026-03-01",
+    })
+    const run2 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const run3 = makeRun({
+      is_enrollable: true,
+      start_date: "2026-09-01",
+      end_date: "2026-11-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: run2.id, // Select the middle run as next
+      courseruns: shuffle([run1, run2, run3]),
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Should show run2's date (the next_run_id)
+    invariant(run2.start_date)
+    invariant(run2.end_date)
+    expect(datesRow).toHaveTextContent(formatDate(run2.start_date))
+    expect(datesRow).toHaveTextContent(formatDate(run2.end_date))
+
+    // Should NOT show other runs' dates initially
+    invariant(run1.start_date)
+    invariant(run3.start_date)
+    expect(datesRow).not.toHaveTextContent(formatDate(run1.start_date))
+    expect(datesRow).not.toHaveTextContent(formatDate(run3.start_date))
+  })
+
+  test("Never displays dates for non-enrollable runs", async () => {
+    const enrollableRun = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const nonEnrollableRun1 = makeRun({
+      is_enrollable: false,
+      start_date: "2026-01-01",
+      end_date: "2026-03-01",
+    })
+    const nonEnrollableRun2 = makeRun({
+      is_enrollable: false,
+      start_date: "2026-09-01",
+      end_date: "2026-11-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: enrollableRun.id,
+      courseruns: shuffle([
+        enrollableRun,
+        nonEnrollableRun1,
+        nonEnrollableRun2,
+      ]),
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Should show only the enrollable run's date
+    invariant(enrollableRun.start_date)
+    expect(datesRow).toHaveTextContent(formatDate(enrollableRun.start_date))
+
+    // Should NOT show non-enrollable runs' dates
+    invariant(nonEnrollableRun1.start_date)
+    invariant(nonEnrollableRun2.start_date)
+    expect(datesRow).not.toHaveTextContent(
+      formatDate(nonEnrollableRun1.start_date),
+    )
+    expect(datesRow).not.toHaveTextContent(
+      formatDate(nonEnrollableRun2.start_date),
+    )
+
+    // Should NOT have "More Dates" toggle since only one enrollable run
+    expect(
+      within(datesRow).queryByRole("button", { name: /More Dates/i }),
+    ).toBeNull()
+  })
+
+  test("Shows dates available header but no date entries when all enrollable runs have no start date", () => {
+    const run1 = makeRun({
+      is_enrollable: true,
+      start_date: null,
+    })
+    const run2 = makeRun({
+      is_enrollable: true,
+      start_date: null,
+    })
+    const course = makeCourse({
+      next_run_id: run1.id,
+      courseruns: [run1, run2],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Dates row renders because multiple enrollable runs exist
+    expect(datesRow).toHaveTextContent("Dates Available")
+
+    // But no actual date information is shown
+    expect(datesRow).not.toHaveTextContent("Start")
+    expect(datesRow).not.toHaveTextContent("End")
+  })
+
+  test("When multiple enrollable runs exist, only shows runs with start dates after expanding", async () => {
+    const runWithDate = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const runWithoutDate = makeRun({
+      is_enrollable: true,
+      start_date: null,
+      end_date: "2026-11-01",
+    })
+    const anotherRunWithDate = makeRun({
+      is_enrollable: true,
+      start_date: "2026-09-01",
+      end_date: "2026-11-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: runWithDate.id,
+      courseruns: shuffle([runWithDate, runWithoutDate, anotherRunWithDate]),
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Click "More Dates"
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Should show dates for runs with start dates
+    invariant(runWithDate.start_date)
+    invariant(anotherRunWithDate.start_date)
+    expect(datesRow).toHaveTextContent(formatDate(runWithDate.start_date))
+    expect(datesRow).toHaveTextContent(
+      formatDate(anotherRunWithDate.start_date),
+    )
+
+    // The run without a start date should not appear
+    // Count the number of date entry containers
+    const dateEntryContainers = within(datesRow).getAllByTestId("date-entry")
+    expect(dateEntryContainers).toHaveLength(2)
+  })
+
+  test("End date is not displayed for runs without end date when expanded", async () => {
+    const runWithEndDate = makeRun({
+      is_enrollable: true,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+    const runWithoutEndDate = makeRun({
+      is_enrollable: true,
+      start_date: "2026-09-01",
+      end_date: null,
+    })
+
+    const course = makeCourse({
+      next_run_id: runWithEndDate.id,
+      courseruns: [runWithEndDate, runWithoutEndDate],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Click "More Dates"
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Both start dates should be visible
+    invariant(runWithEndDate.start_date)
+    invariant(runWithoutEndDate.start_date)
+    expect(datesRow).toHaveTextContent(formatDate(runWithEndDate.start_date))
+    expect(datesRow).toHaveTextContent(formatDate(runWithoutEndDate.start_date))
+
+    // Should only show one "End" label (for the run with end date)
+    const dateEntries = within(datesRow).getAllByTestId("date-entry")
+    const dateEntriesWithEnd = dateEntries.filter((entry) =>
+      entry.textContent?.includes("End:"),
+    )
+    expect(dateEntriesWithEnd).toHaveLength(1)
+
+    // Should show the end date that exists
+    invariant(runWithEndDate.end_date)
+    expect(datesRow).toHaveTextContent(formatDate(runWithEndDate.end_date))
+  })
+
+  test("Shows 'Start: Anytime' for self-paced runs with past start dates when multiple dates exist", async () => {
+    // Run that should show "Anytime" (self-paced, not archived, past start date)
+    const anytimeRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: true,
+      is_archived: false,
+      start_date: "2025-01-01", // Past date
+      end_date: "2026-12-01",
+    })
+
+    // Run that should show actual date (not self-paced)
+    const instructorPacedRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: false,
+      is_archived: false,
+      start_date: "2026-06-01",
+      end_date: "2026-08-01",
+    })
+
+    // Run that should show actual date (self-paced but future start date)
+    const futureRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: true,
+      is_archived: false,
+      start_date: "2026-09-01", // Future date
+      end_date: "2026-11-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: anytimeRun.id,
+      courseruns: [anytimeRun, instructorPacedRun, futureRun],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Click "More Dates" to see all
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Should show "Anytime" for the self-paced run with past start date
+    expect(datesRow).toHaveTextContent("Start: Anytime")
+
+    // Should show actual dates for the other runs
+    invariant(instructorPacedRun.start_date)
+    invariant(futureRun.start_date)
+    expect(datesRow).toHaveTextContent(
+      formatDate(instructorPacedRun.start_date),
+    )
+    expect(datesRow).toHaveTextContent(formatDate(futureRun.start_date))
+
+    // All should show end dates
+    invariant(anytimeRun.end_date)
+    invariant(instructorPacedRun.end_date)
+    invariant(futureRun.end_date)
+    expect(datesRow).toHaveTextContent(formatDate(anytimeRun.end_date))
+    expect(datesRow).toHaveTextContent(formatDate(instructorPacedRun.end_date))
+    expect(datesRow).toHaveTextContent(formatDate(futureRun.end_date))
+  })
+
+  test("Archived runs show actual dates even if they meet anytime criteria", async () => {
+    // Archived run that would show "Anytime" if not archived
+    const archivedRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: true,
+      is_archived: true, // Archived!
+      start_date: "2025-01-01", // Past date
+      end_date: "2025-12-01",
+    })
+
+    // Active anytime run for comparison
+    const anytimeRun = makeRun({
+      is_enrollable: true,
+      is_self_paced: true,
+      is_archived: false,
+      start_date: "2025-06-01", // Past date
+      end_date: "2026-12-01",
+    })
+
+    const course = makeCourse({
+      next_run_id: archivedRun.id,
+      courseruns: [archivedRun, anytimeRun],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const datesRow = within(summary).getByTestId(TestIds.DatesRow)
+
+    // Click "More Dates" to see all
+    const moreDatesButton = within(datesRow).getByRole("button", {
+      name: "More Dates",
+    })
+    await user.click(moreDatesButton)
+
+    // Active run should show "Anytime"
+    expect(datesRow).toHaveTextContent("Start: Anytime")
+
+    // Archived run should show actual date, not "Anytime"
+    invariant(archivedRun.start_date)
+    expect(datesRow).toHaveTextContent(formatDate(archivedRun.start_date))
+
+    // Both should show end dates
+    invariant(archivedRun.end_date)
+    invariant(anytimeRun.end_date)
+    expect(datesRow).toHaveTextContent(formatDate(archivedRun.end_date))
+    expect(datesRow).toHaveTextContent(formatDate(anytimeRun.end_date))
   })
 })
 
@@ -256,6 +776,24 @@ describe("Course Duration Row", () => {
       }
     },
   )
+
+  test("Duration row displays even when there is no next run", () => {
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+      page: {
+        length: "5 weeks",
+        effort: "10 hours/week",
+      },
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const durationRow = within(summary).getByTestId(TestIds.DurationRow)
+
+    expect(durationRow).toBeInTheDocument()
+    expect(durationRow).toHaveTextContent("Estimated: 5 weeks, 10 hours/week")
+  })
 })
 
 describe("Course Price Row", () => {
@@ -307,6 +845,22 @@ describe("Course Price Row", () => {
       `Payment deadline: ${formatDate(run.upgrade_deadline)}`,
     )
     expect(priceRow).not.toHaveTextContent("Certificate deadline passed")
+  })
+
+  test("Price row displays with 'Certificate deadline passed' when no next run is found", () => {
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const priceRow = within(summary).getByTestId(TestIds.PriceRow)
+
+    expect(priceRow).toBeInTheDocument()
+    expect(priceRow).toHaveTextContent("Free to Learn")
+    expect(priceRow).toHaveTextContent("Certificate deadline passed")
+    expect(priceRow).not.toHaveTextContent("Payment deadline")
   })
 })
 
@@ -488,6 +1042,140 @@ describe("Course Financial Assistance", () => {
     expect(
       within(priceRow).queryByRole("link", { name: /financial assistance/i }),
     ).toBeNull()
+  })
+})
+
+describe("Course In Programs Row", () => {
+  test("Does not render when programs array is null", () => {
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: null,
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).queryByTestId(
+      TestIds.CourseInProgramsRow,
+    )
+    expect(programsRow).toBeNull()
+  })
+
+  test("Does not render when programs array is empty", () => {
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: [],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).queryByTestId(
+      TestIds.CourseInProgramsRow,
+    )
+    expect(programsRow).toBeNull()
+  })
+
+  test("Renders link to one program", () => {
+    const program = {
+      id: 1,
+      readable_id: "program-1",
+      title: "Test Program 1",
+      type: "program",
+    }
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: [program],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toHaveTextContent("Part of the following program")
+    const link = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link).toHaveAttribute("href", "/programs/program-1")
+  })
+
+  test("Renders links to multiple programs", () => {
+    const programs = [
+      {
+        id: 1,
+        readable_id: "program-1",
+        title: "Test Program 1",
+        type: "program",
+      },
+      {
+        id: 2,
+        readable_id: "program-2",
+        title: "Test Program 2",
+        type: "program",
+      },
+      {
+        id: 3,
+        readable_id: "program-3",
+        title: "Test Program 3",
+        type: "program",
+      },
+    ]
+    const run = makeRun()
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      programs: programs,
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toHaveTextContent("Part of the following programs")
+
+    const link1 = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link1).toHaveAttribute("href", "/programs/program-1")
+
+    const link2 = within(programsRow).getByRole("link", {
+      name: "Test Program 2",
+    })
+    expect(link2).toHaveAttribute("href", "/programs/program-2")
+
+    const link3 = within(programsRow).getByRole("link", {
+      name: "Test Program 3",
+    })
+    expect(link3).toHaveAttribute("href", "/programs/program-3")
+  })
+
+  test("Displays programs row even when no next run is found", () => {
+    const program = {
+      id: 1,
+      readable_id: "program-1",
+      title: "Test Program 1",
+      type: "program",
+    }
+    const course = makeCourse({
+      next_run_id: null,
+      courseruns: [],
+      programs: [program],
+    })
+    renderWithProviders(<CourseSummary course={course} />)
+
+    const summary = screen.getByRole("region", { name: "Course summary" })
+    const programsRow = within(summary).getByTestId(TestIds.CourseInProgramsRow)
+
+    expect(programsRow).toBeInTheDocument()
+    expect(programsRow).toHaveTextContent("Part of the following program")
+    const link = within(programsRow).getByRole("link", {
+      name: "Test Program 1",
+    })
+    expect(link).toHaveAttribute("href", "/programs/program-1")
   })
 })
 

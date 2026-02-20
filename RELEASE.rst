@@ -1,6 +1,52 @@
 Release Notes
 =============
 
+Version 0.54.1 (Released February 19, 2026)
+--------------
+
+- horizontal list cards for program page (#2950)
+- Fix a flaky test (#2958)
+
+Version 0.54.0 (Released February 17, 2026)
+--------------
+
+- Updates the backpopulate_video_shorts command to be compatible with the latest serializer changes (#2955)
+- Factor in "include_in_learn_catalog" value for determining published status of mitxonline courses (#2953)
+- Remove user_lists, learning_path_parents entirely from serializers (#2922)
+- Populate title and url for openedx contentfiles (#2941)
+- Updates the video shorts section to use latest API (#2715)
+- Beef up playwright tests a bit (#2939)
+- Certificate page 404s (#2940)
+
+Version 0.53.9 (Released February 11, 2026)
+--------------
+
+- add route for editing article drafts (#2948)
+- fix: change byline author name behaviour  (#2936)
+- If a run for a contentfile webhook doesn't exist, run relevant ETL pipeline to create it (#2938)
+- chore: Created an AGENTS.md file to help give context to agentic tools (#2944)
+- adjust dashboard card links (#2935)
+- Allow iframes in ContractPage welcome message (and elsewhere) (#2943)
+- fix: Replace destructuring for build time substitution (#2945)
+- Switch to v3 for program enrollments (#2931)
+- update smoot-design for new alerts (#2933)
+
+Version 0.53.7 (Released February 11, 2026)
+--------------
+
+- Add option to serve S3 media from a custom domain (#2928)
+- Article Share Button and Social Media Preview (#2926)
+- Catch inactive rpc error (#2929)
+- Add playwright for tests (#2904)
+- Return 404 status for missing resources (#2921)
+- Product Page Improvements (course in programs, display multiple dates) (#2930)
+- fix(deps): update dependency django to v4.2.28 [security] (#2917)
+- fix: show placeholder for media and course control click (#2914)
+- fix(deps): update dependency react-slick to ^0.31.0 (#2743)
+- chore(deps): update node.js to v24 (#2755)
+- chore(deps): update yarn to v4.12.0 (#2740)
+- fix an easily broken test (#2927)
+
 Version 0.53.4 (Released February 05, 2026)
 --------------
 

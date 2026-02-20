@@ -20,7 +20,12 @@
     "test-watch": "MITOL_API_BASE_URL=https://api.test.learn.mit.edu yarn workspace frontends test-watch",
     "storybook": "yarn workspace ol-components storybook",
     "lint-check": "yarn workspace frontends run lint-check",
-    "typecheck": "yarn workspace frontends run typecheck"
+    "typecheck": "yarn workspace frontends run typecheck",
+    "playwright": "npx playwright test",
+    "playwright:rc": "PLAYWRIGHT_BASE_URL=https://rc.learn.mit.edu npx playwright test",
+    "playwright:ci": "PLAYWRIGHT_BASE_URL=https://ci.learn.mit.edu npx playwright test",
+    "playwright:ui": "npx playwright test --ui",
+    "playwright:report": "npx playwright show-report"
   },
   "packageManager": "yarn@4.12.0",
   "resolutions": {
@@ -28,6 +33,7 @@
     "@types/react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "frontends": "workspace:^",
     "type-fest": "^5.4.3"
   }

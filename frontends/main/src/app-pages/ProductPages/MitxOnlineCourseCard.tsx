@@ -15,6 +15,7 @@ type MitxOnlineCourseCardProps = {
   isLoading?: boolean
   headingLevel?: number
   className?: string
+  list?: boolean
 }
 
 const formatCurrency = (amount: number): string => {
@@ -37,6 +38,13 @@ const formatCoursePrice = (
     minPrice !== maxPrice
   ) {
     return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+  }
+
+  if (
+    course.page?.current_price !== undefined &&
+    course.page?.current_price !== null
+  ) {
+    return formatCurrency(course.page.current_price)
   }
 
   const single = minPrice ?? maxPrice
@@ -86,6 +94,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   isLoading,
   headingLevel = 6,
   className,
+  list,
 }) => {
   if (isLoading) {
     return (
@@ -94,6 +103,7 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
         size={size}
         className={className}
         headingLevel={headingLevel}
+        list={list}
       />
     )
   }
@@ -110,6 +120,9 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   const startLabel =
     course.availability === "anytime" || !startDisplay ? "Starts: " : undefined
 
+  const coursePrice = hasCertificate ? null : priceText
+  const certificatePrice = hasCertificate ? priceText : null
+
   return (
     <BaseLearningResourceCard
       className={className}
@@ -120,11 +133,13 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
       imageAlt=""
       title={course.title}
       resourceType="Course"
-      coursePrice={priceText}
+      coursePrice={coursePrice}
+      certificatePrice={certificatePrice}
       hasCertificate={hasCertificate}
       startLabel={startLabel}
       startDate={startDisplay}
       ariaLabel={`Course: ${course.title}`}
+      list={list}
     />
   )
 }

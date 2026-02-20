@@ -25,8 +25,7 @@ const enrollment = {
 }
 
 const programEnrollments = {
-  enrollmentsList: () => `${API_BASE_URL}/api/v1/program_enrollments/`,
-  enrollmentsListV2: () => `${API_BASE_URL}/api/v2/program_enrollments/`,
+  enrollmentsListV3: () => `${API_BASE_URL}/api/v3/program_enrollments/`,
 }
 
 const b2b = {

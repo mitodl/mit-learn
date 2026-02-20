@@ -29,7 +29,6 @@ import { HeadingDropdownMenu } from "./vendor/components/tiptap-ui/heading-dropd
 import { ListDropdownMenu } from "./vendor/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "./vendor/components/tiptap-ui/blockquote-button"
 import { CodeBlockButton } from "./vendor/components/tiptap-ui/code-block-button"
-import { ColorHighlightPopover } from "./vendor/components/tiptap-ui/color-highlight-popover"
 import { LinkPopover } from "./vendor/components/tiptap-ui/link-popover"
 import { MarkButton } from "./vendor/components/tiptap-ui/mark-button"
 import { TextAlignButton } from "./vendor/components/tiptap-ui/text-align-button"
@@ -220,7 +219,7 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
       <ToolbarSeparator />
 
       <ToolbarGroup>
-        <HeadingDropdownMenu levels={[1, 2, 3, 4]} />
+        <HeadingDropdownMenu levels={[2, 3, 4]} />
         <ListDropdownMenu types={["bulletList", "orderedList", "taskList"]} />
         <BlockquoteButton />
         <CodeBlockButton />
@@ -234,7 +233,6 @@ export const MainToolbarContent = ({ editor }: TiptapEditorToolbarProps) => {
         <MarkButton type="strike" />
         <MarkButton type="code" />
         <MarkButton type="underline" />
-        <ColorHighlightPopover />
         <LinkPopover />
       </ToolbarGroup>
 

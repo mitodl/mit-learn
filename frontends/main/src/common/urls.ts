@@ -25,10 +25,13 @@ export const programLetterView = (id: string) =>
   generatePath(PROGRAMLETTER_VIEW, { id: String(id) })
 export const ARTICLES_LISTING = "/articles/"
 export const ARTICLES_VIEW = "/articles/[id]"
+export const ARTICLES_DRAFT_VIEW = "/articles/[id]/draft"
 export const ARTICLES_EDIT = "/articles/[id]/edit"
 export const ARTICLES_CREATE = "/articles/new"
 export const articlesView = (id: string) =>
   generatePath(ARTICLES_VIEW, { id: String(id) })
+export const articlesDraftView = (id: string) =>
+  generatePath(ARTICLES_DRAFT_VIEW, { id: String(id) })
 export const articlesEditView = (id: number) =>
   generatePath(ARTICLES_EDIT, { id: String(id) })
 

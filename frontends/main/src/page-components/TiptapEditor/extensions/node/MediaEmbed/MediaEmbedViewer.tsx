@@ -1,5 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
+import { EditableCaption } from "../shared/EditableCaption"
 
 const StyledWrapper = styled.div({
   position: "relative",
@@ -36,17 +37,6 @@ const MediaContainer = styled.div({
   },
 })
 
-const MediaCaption = styled.div({
-  maxWidth: "900px",
-  margin: "8px auto 0",
-
-  p: {
-    fontSize: "14px",
-    color: "#555",
-    textAlign: "center",
-    fontStyle: "italic",
-  },
-})
 interface MediaEmbedNode {
   attrs: {
     src?: string
@@ -66,11 +56,11 @@ export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
         <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
       </MediaContainer>
 
-      {caption && (
-        <MediaCaption>
-          <p>{caption}</p>
-        </MediaCaption>
-      )}
+      <EditableCaption
+        caption={caption}
+        isEditable={false}
+        onCaptionChange={() => {}}
+      />
     </StyledWrapper>
   )
 }

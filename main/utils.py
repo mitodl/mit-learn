@@ -7,7 +7,7 @@ from enum import Flag, auto
 from functools import wraps
 from hashlib import md5
 from itertools import islice
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import markdown2
 import requests
@@ -110,17 +110,16 @@ def call_fastly_purge_api(relative_url):
         log.info(f"Skipping Fastly purge for {relative_url} (dev environment)")  # noqa: G004
         return {"status": "ok", "skipped": True}
 
-    netloc = urlparse(settings.APP_BASE_URL)[1]
+    # Use APP_BASE_URL (https://rc.learn.mit.edu/) directly for purge requests
+    # Fastly intercepts PURGE requests to your domain with the fastly-key header
+    api_url = urljoin(settings.APP_BASE_URL, relative_url)
 
-    headers = {"host": netloc}
+    log.info(f"Purging URL: {api_url}")  # noqa: G004
 
-    if relative_url != "*":
-        headers["fastly-soft-purge"] = "1"
+    headers = {}
 
     if settings.FASTLY_API_KEY:
         headers["fastly-key"] = settings.FASTLY_API_KEY
-
-    api_url = urljoin(settings.FASTLY_URL, relative_url)
 
     resp = requests.request("PURGE", api_url, headers=headers, timeout=30)
 

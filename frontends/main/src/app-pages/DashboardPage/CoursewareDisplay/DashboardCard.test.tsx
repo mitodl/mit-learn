@@ -13,12 +13,16 @@ import { mockAxiosInstance } from "api/test-utils"
 import {
   DashboardCard,
   DashboardType,
-  getDefaultContextMenuItems,
+  getContextMenuItems,
 } from "./DashboardCard"
 import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -81,68 +85,12 @@ describe.each([
 
   setupLocationMock()
 
-  test("It shows course title and links to marketingUrl if titleAction is marketing and enrolled", async () => {
-    setupUserApis()
-    const marketingUrl = "?some-marketing-url"
-    const course = dashboardCourse({
-      page: {
-        page_url: marketingUrl,
-      },
-    })
-    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-      grades: [], // No passing grade = enrolled but not completed
-      run: {
-        ...mitxonline.factories.enrollment.courseEnrollment().run,
-        course: course,
-      },
-    })
-    renderWithProviders(
-      <DashboardCard
-        titleAction="marketing"
-        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
-      />,
-    )
-
-    const card = getCard()
-
-    const courseLink = within(card).getByRole("link", {
-      name: course.title,
-    })
-    expect(courseLink).toHaveAttribute("href", marketingUrl)
+  beforeEach(() => {
+    // Default to feature flag disabled unless explicitly set in a test
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
   })
 
-  test("It shows course title as clickable text (not link) if titleAction is marketing and not enrolled (non-B2B)", async () => {
-    setupUserApis()
-    const course = dashboardCourse({
-      page: {
-        page_url: "?some-marketing-url",
-      },
-      courseruns: [
-        mitxonline.factories.courses.courseRun({
-          b2b_contract: null,
-        }),
-      ],
-    })
-    // No enrollment = not enrolled
-    renderWithProviders(
-      <DashboardCard
-        titleAction="marketing"
-        resource={{ type: DashboardType.Course, data: course }}
-      />,
-    )
-
-    const card = getCard()
-
-    // Should not be a link
-    expect(
-      within(card).queryByRole("link", { name: course.title }),
-    ).not.toBeInTheDocument()
-    // Should be clickable text
-    const titleText = within(card).getByText(course.title)
-    expect(titleText).toBeInTheDocument()
-  })
-
-  test("It shows course title and links to courseware if titleAction is courseware and enrolled", async () => {
+  test("It shows course title and links to courseware when enrolled", async () => {
     setupUserApis()
     const coursewareUrl = faker.internet.url()
     const courseRun = mitxonline.factories.courses.courseRun({
@@ -161,7 +109,6 @@ describe.each([
     })
     renderWithProviders(
       <DashboardCard
-        titleAction="courseware"
         resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
       />,
     )
@@ -174,7 +121,7 @@ describe.each([
     expect(courseLink).toHaveAttribute("href", coursewareUrl)
   })
 
-  test("It shows course title as clickable text (not link) if titleAction is courseware and not enrolled (non-B2B)", async () => {
+  test("It shows course title as clickable text (not link) when not enrolled (non-B2B)", async () => {
     setupUserApis()
     const course = dashboardCourse({
       courseruns: [
@@ -185,10 +132,7 @@ describe.each([
     })
     // No enrollment = not enrolled
     renderWithProviders(
-      <DashboardCard
-        titleAction="courseware"
-        resource={{ type: DashboardType.Course, data: course }}
-      />,
+      <DashboardCard resource={{ type: DashboardType.Course, data: course }} />,
     )
 
     const card = getCard()
@@ -202,7 +146,7 @@ describe.each([
     expect(titleText).toBeInTheDocument()
   })
 
-  test("It shows course title as link if not enrolled but has B2B contract", async () => {
+  test("It shows course title as clickable text if not enrolled but has B2B contract", async () => {
     setupUserApis()
     const b2bContractId = faker.number.int()
     const coursewareUrl = faker.internet.url()
@@ -216,21 +160,19 @@ describe.each([
       ],
       next_run_id: null, // Ensure getBestRun uses the single run
     })
-    // No enrollment passed, but B2B contract in run allows access
+    // No enrollment passed, B2B contract requires enrollment first
     renderWithProviders(
-      <DashboardCard
-        titleAction="courseware"
-        resource={{ type: DashboardType.Course, data: course }}
-      />,
+      <DashboardCard resource={{ type: DashboardType.Course, data: course }} />,
     )
 
     const card = getCard()
 
-    // Should be a link for B2B courses
-    const courseLink = within(card).getByRole("link", {
-      name: course.title,
-    })
-    expect(courseLink).toHaveAttribute("href", coursewareUrl)
+    // Should be clickable text, not a link (enrollment happens on click)
+    expect(
+      within(card).queryByRole("link", { name: course.title }),
+    ).not.toBeInTheDocument()
+    const titleText = within(card).getByText(course.title)
+    expect(titleText).toBeInTheDocument()
   })
 
   test("Accepts a classname", () => {
@@ -244,7 +186,6 @@ describe.each([
     ])
     renderWithProviders(
       <DashboardCard
-        titleAction="marketing"
         Component={TheComponent}
         resource={{ type: DashboardType.Course, data: course }}
         className="some-custom classes"
@@ -286,7 +227,6 @@ describe.each([
       })
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: enrollment,
@@ -315,10 +255,7 @@ describe.each([
     })
 
     renderWithProviders(
-      <DashboardCard
-        titleAction="marketing"
-        resource={{ type: DashboardType.Course, data: course }}
-      />,
+      <DashboardCard resource={{ type: DashboardType.Course, data: course }} />,
     )
 
     const card = getCard()
@@ -359,7 +296,6 @@ describe.each([
       })
       const { view } = renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: enrollment,
@@ -378,7 +314,6 @@ describe.each([
       const courseNoun = faker.word.noun()
       view.rerender(
         <DashboardCard
-          titleAction="marketing"
           noun={courseNoun}
           resource={{
             type: DashboardType.CourseRunEnrollment,
@@ -474,7 +409,6 @@ describe.each([
       }
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: enrollmentWithCourse,
@@ -519,7 +453,6 @@ describe.each([
 
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: enrollment,
@@ -567,7 +500,6 @@ describe.each([
 
     renderWithProviders(
       <DashboardCard
-        titleAction="marketing"
         resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
       />,
     )
@@ -800,10 +732,7 @@ describe.each([
       next_run_id: run.id, // Ensure getBestRun uses this run
     })
     renderWithProviders(
-      <DashboardCard
-        titleAction="marketing"
-        resource={{ type: DashboardType.Course, data: course }}
-      />,
+      <DashboardCard resource={{ type: DashboardType.Course, data: course }} />,
     )
     const card = getCard()
 
@@ -830,7 +759,6 @@ describe.each([
       ])
       const { view } = renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={
             enrollmentOrNull
               ? {
@@ -855,7 +783,6 @@ describe.each([
         })
       view.rerender(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: completedEnrollment,
@@ -904,7 +831,6 @@ describe.each([
         : null
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={
             enrollment
               ? {
@@ -946,7 +872,7 @@ describe.each([
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
       setupUserApis()
-      const course = dashboardCourse()
+      const course = dashboardCourse({ include_in_learn_catalog: true })
       const run = course.courseruns[0]
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
@@ -955,7 +881,6 @@ describe.each([
       })
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.CourseRunEnrollment,
             data: enrollment,
@@ -968,9 +893,18 @@ describe.each([
         name: "More options",
       })
       await user.click(contextMenuButton)
+
       const expectedMenuItems = [
         ...contextMenuItems,
-        ...getDefaultContextMenuItems("Test Course", enrollment),
+        ...getContextMenuItems(
+          "Test Course",
+          {
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          },
+          false, // useProductPages
+          true, // includeInLearnCatalog
+        ),
       ]
       const menuItems = screen.getAllByRole("menuitem")
       for (let i = 0; i < expectedMenuItems.length; i++) {
@@ -1013,7 +947,6 @@ describe.each([
         : null
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={
             enrollmentWithCourse
               ? {
@@ -1071,7 +1004,6 @@ describe.each([
         : null
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={
             enrollment
               ? {
@@ -1106,7 +1038,6 @@ describe.each([
     })
     renderWithProviders(
       <DashboardCard
-        titleAction="marketing"
         resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
       />,
     )
@@ -1172,7 +1103,6 @@ describe.each([
       })
       renderWithProviders(
         <DashboardCard
-          titleAction="courseware"
           resource={{ type: DashboardType.Course, data: course }}
           contractId={b2bContractId}
         />,
@@ -1181,7 +1111,7 @@ describe.each([
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : within(card).getByRole("link", { name: course.title })
+          : within(card).getByText(course.title)
 
       await user.click(triggerElement)
 
@@ -1212,7 +1142,6 @@ describe.each([
       setupEnrollmentApis({ user: userData, course, run })
       renderWithProviders(
         <DashboardCard
-          titleAction="courseware"
           resource={{ type: DashboardType.Course, data: course }}
           contractId={b2bContractId}
         />,
@@ -1221,7 +1150,7 @@ describe.each([
       const triggerElement =
         trigger === "button"
           ? within(card).getByTestId("courseware-button")
-          : within(card).getByRole("link", { name: course.title })
+          : within(card).getByText(course.title)
 
       await user.click(triggerElement)
 
@@ -1239,7 +1168,6 @@ describe.each([
       renderWithProviders(
         <DashboardCard
           variant="stacked"
-          titleAction="marketing"
           resource={{ type: DashboardType.Course, data: course }}
         />,
       )
@@ -1278,7 +1206,6 @@ describe.each([
             <DashboardCard
               key={`course-${idx}`}
               variant="stacked"
-              titleAction="marketing"
               resource={{ type: DashboardType.Course, data: course }}
             />
           ))}
@@ -1303,15 +1230,14 @@ describe.each([
     test("renders program card with title", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV2({
-          program: mitxonline.factories.programs.program({
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
           }),
         })
 
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.ProgramEnrollment,
             data: programEnrollment,
@@ -1323,18 +1249,43 @@ describe.each([
       expect(within(card).getByText("Test Program Title")).toBeInTheDocument()
     })
 
+    test("program card title links to program dashboard", () => {
+      setupUserApis()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
+            title: "Test Program Title",
+            id: 123,
+          }),
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const titleLink = within(card).getByRole("link", {
+        name: "Test Program Title",
+      })
+      expect(titleLink).toHaveAttribute("href", "/dashboard/program/123")
+    })
+
     test("program card does not show course-specific elements", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV2({
-          program: mitxonline.factories.programs.program({
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program",
           }),
         })
 
       renderWithProviders(
         <DashboardCard
-          titleAction="marketing"
           resource={{
             type: DashboardType.ProgramEnrollment,
             data: programEnrollment,
@@ -1348,6 +1299,280 @@ describe.each([
         within(card).queryByTestId("courseware-button"),
       ).not.toBeInTheDocument()
       expect(within(card).queryByTestId("upgrade-root")).not.toBeInTheDocument()
+    })
+
+    test.each([
+      {
+        useProductPages: false,
+        description: "uses marketing URLs when feature flag is disabled",
+      },
+      {
+        useProductPages: true,
+        description: "uses product page URLs when feature flag is enabled",
+      },
+    ])(
+      "Context menu for course enrollment $description",
+      async ({ useProductPages }) => {
+        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
+        setupUserApis()
+
+        const marketingUrl = faker.internet.url()
+        const course = dashboardCourse({
+          page: { page_url: marketingUrl },
+          include_in_learn_catalog: true,
+        })
+        const run = course.courseruns[0]
+        const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+          grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+          enrollment_mode: EnrollmentMode.Verified,
+          run: {
+            ...run,
+            course: { ...course, page: { page_url: marketingUrl } },
+          },
+        })
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{
+              type: DashboardType.CourseRunEnrollment,
+              data: enrollment,
+            }}
+          />,
+        )
+
+        const card = getCard()
+        const contextMenuButton = within(card).getByRole("button", {
+          name: "More options",
+        })
+        await user.click(contextMenuButton)
+
+        const viewDetailsItem = screen.getByRole("menuitem", {
+          name: "View Course Details",
+        })
+
+        if (useProductPages) {
+          // Should have product page URL as href
+          expect(viewDetailsItem).toHaveAttribute(
+            "href",
+            `/courses/${course.readable_id}`,
+          )
+        } else {
+          // Should have marketing URL as href
+          expect(viewDetailsItem).toHaveAttribute("href", marketingUrl)
+        }
+      },
+    )
+
+    test("Context menu for program enrollment uses product page URLs when feature flag is enabled", async () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setupUserApis()
+
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const viewDetailsItem = screen.getByRole("menuitem", {
+        name: "View Program Details",
+      })
+
+      // Should have product page URL as href
+      expect(viewDetailsItem).toHaveAttribute(
+        "href",
+        `/programs/${program.readable_id}`,
+      )
+    })
+
+    test("Context menu for program enrollment uses constructed marketing URL when feature flag is disabled", async () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      setupUserApis()
+
+      const program = mitxonline.factories.programs.simpleProgram({
+        readable_id: "test-program-123",
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const viewDetailsItem = screen.getByRole("menuitem", {
+        name: "View Program Details",
+      })
+
+      // Should have constructed marketing URL
+      expect(viewDetailsItem).toHaveAttribute(
+        "href",
+        "http://mitxonline.odl.local:8065/programs/test-program-123",
+      )
+    })
+
+    test("Context menu for course enrollment without marketing URL shows View Details only when flag is enabled", async () => {
+      setupUserApis()
+
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...mitxonline.factories.courses.courseRun(),
+          course: {
+            ...mitxonline.factories.courses.course(),
+            include_in_learn_catalog: true,
+          },
+        },
+      })
+      // Remove the page property to simulate a course without a marketing URL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (enrollment.run.course as any).page
+
+      // Test with flag disabled (no marketing URL, no View Details menu item)
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should not have View Course Details when flag is off and no marketing URL
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+
+      // Should still have Email Settings and Unenroll
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    })
+
+    // Separate test for the flag enabled case
+    test("Context menu for course enrollment without marketing URL shows View Details when flag is enabled", async () => {
+      setupUserApis()
+
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...mitxonline.factories.courses.courseRun(),
+          course: {
+            ...mitxonline.factories.courses.course(),
+            include_in_learn_catalog: true,
+          },
+        },
+      })
+      // Remove the page property to simulate a course without a marketing URL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (enrollment.run.course as any).page
+
+      // Test with flag enabled
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should have View Course Details when flag is on (product pages always exist)
+      expect(
+        screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Context menu does not show View Details for courses not in learn catalog", async () => {
+      setupUserApis()
+      mockedUseFeatureFlagEnabled.mockReturnValue(true) // Even with flag enabled
+
+      const course = dashboardCourse({
+        include_in_learn_catalog: false, // Key: not in catalog
+        page: { page_url: faker.internet.url() },
+      })
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          ...run,
+          course: course,
+        },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      // Should NOT have View Course Details when not in learn catalog
+      expect(
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
+
+      // Should still have Email Settings and Unenroll
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
     })
   })
 })

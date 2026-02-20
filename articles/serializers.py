@@ -35,6 +35,7 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
     content = serializers.JSONField(default={})
     slug = serializers.SlugField(max_length=60, required=False, allow_blank=True)
     title = serializers.CharField(max_length=255)
+    author_name = serializers.CharField(required=False, allow_blank=True, default="")
     user = UserSerializer(read_only=True)
 
     class Meta:
@@ -42,6 +43,7 @@ class RichTextArticleSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "title",
+            "author_name",
             "content",
             "user",
             "created_on",

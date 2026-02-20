@@ -22,6 +22,7 @@ class Article(TimestampedModel):
     )
     content = models.JSONField(default=dict)
     title = models.CharField(max_length=255)
+    author_name = models.TextField(blank=True, default="")
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     is_published = models.BooleanField(default=False)
     publish_date = models.DateTimeField(null=True, blank=True)
@@ -58,7 +59,7 @@ class Article(TimestampedModel):
         Return the relative URL for this article.
         """
         if self.slug:
-            return f"/api/v1/articles/{self.slug}/"
+            return f"/articles/{self.slug}"
         return None
 
 

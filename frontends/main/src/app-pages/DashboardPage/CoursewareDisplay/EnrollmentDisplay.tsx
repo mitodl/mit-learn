@@ -27,7 +27,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
   CourseRunEnrollmentRequestV2,
   V2ProgramRequirement,
-  V2UserProgramEnrollmentDetail,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -160,7 +160,7 @@ const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
 interface EnrollmentExpandCollapseProps {
   shownCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
   hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V2UserProgramEnrollmentDetail[]
+  programEnrollments?: V3UserProgramEnrollment[]
   isLoading?: boolean
   onUpgradeError?: (error: string) => void
 }
@@ -185,7 +185,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         {shownCourseRunEnrollments.map((enrollment) => {
           return (
             <DashboardCardStyled
-              titleAction="marketing"
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: enrollment.run.course.id,
@@ -204,7 +203,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         })}
         {programEnrollments?.map((program) => (
           <DashboardCardStyled
-            titleAction="marketing"
             key={getKey({
               resourceType: ResourceType.Program,
               id: program.program.id,
@@ -226,7 +224,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             <HiddenEnrollmentsList itemSpacing={"16px"}>
               {hiddenCourseRunEnrollments.map((enrollment) => (
                 <DashboardCardStyled
-                  titleAction="marketing"
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: enrollment.run.course.id,
@@ -449,7 +446,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             <StackedCardContainer>
               {section.courses.map((course) => (
                 <DashboardCardStyled
-                  titleAction="marketing"
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: course.id,
@@ -504,13 +500,11 @@ const AllEnrollmentsDisplay: React.FC = () => {
           closable={true}
           onClose={() => setUpgradeError(null)}
         >
-          <span>
-            {upgradeError}{" "}
-            <Link color="red" href={`mailto:${supportEmail}`}>
-              Contact Support
-            </Link>{" "}
-            for assistance.
-          </span>
+          {upgradeError}{" "}
+          <Link color="red" href={`mailto:${supportEmail}`}>
+            Contact Support
+          </Link>{" "}
+          for assistance.
         </AlertBanner>
       )}
       <EnrollmentExpandCollapse

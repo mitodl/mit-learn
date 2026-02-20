@@ -1,0 +1,40 @@
+FROM node:24.13
+
+# Install Playwright system dependencies
+RUN apt-get update && apt-get install -y \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Copy all package.json files to enable yarn install
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn .yarn
+COPY frontends/package.json frontends/
+COPY frontends/api/package.json frontends/api/
+COPY frontends/main/package.json frontends/main/
+COPY frontends/ol-components/package.json frontends/ol-components/
+COPY frontends/ol-test-utilities/package.json frontends/ol-test-utilities/
+COPY frontends/ol-utilities/package.json frontends/ol-utilities/
+
+# Install all dependencies (including Playwright npm package)
+RUN yarn install --immutable
+
+# Install Playwright browsers
+RUN npx playwright install --with-deps chromium

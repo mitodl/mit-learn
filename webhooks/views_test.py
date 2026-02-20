@@ -222,7 +222,8 @@ def test_content_file_webhook_view_edx_success(  # noqa: PLR0913
     )
     assert response.status_code == 200
     mock_ingest.assert_called_once_with(
-        [etl_source, content_path], readable_id=readable_id, overwrite=False
+        [etl_source, content_path],
+        kwargs={"course_id": readable_id, "overwrite": False},
     )
 
 

@@ -30,7 +30,7 @@ describe("EnrollmentDisplay", () => {
       enrollments,
     )
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
@@ -112,18 +112,11 @@ describe("EnrollmentDisplay", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV2({
+      mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "My Test Program",
         },
-        enrollments: [
-          {
-            ...mitxonline.factories.enrollment.courseEnrollment(),
-            b2b_contract_id: null,
-            b2b_organization_id: null,
-          },
-        ],
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -138,7 +131,7 @@ describe("EnrollmentDisplay", () => {
       }),
     ])
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
@@ -167,18 +160,11 @@ describe("EnrollmentDisplay", () => {
       },
     })
     const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV2({
+      mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "My Test Program",
         },
-        enrollments: [
-          {
-            ...mitxonline.factories.enrollment.courseEnrollment(),
-            b2b_contract_id: null,
-            b2b_organization_id: null,
-          },
-        ],
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -186,7 +172,7 @@ describe("EnrollmentDisplay", () => {
       courseEnrollment,
     ])
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
@@ -212,7 +198,7 @@ describe("EnrollmentDisplay", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
@@ -237,33 +223,19 @@ describe("EnrollmentDisplay", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     const b2bProgramEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV2({
+      mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "B2B Program",
         },
-        enrollments: [
-          {
-            ...mitxonline.factories.enrollment.courseEnrollment(),
-            b2b_contract_id: 123,
-            b2b_organization_id: 456,
-          },
-        ],
       })
 
     const nonB2BProgramEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV2({
+      mitxonline.factories.enrollment.programEnrollmentV3({
         program: {
-          ...mitxonline.factories.programs.program(),
+          ...mitxonline.factories.programs.simpleProgram(),
           title: "Personal Program",
         },
-        enrollments: [
-          {
-            ...mitxonline.factories.enrollment.courseEnrollment(),
-            b2b_contract_id: null,
-            b2b_organization_id: null,
-          },
-        ],
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -278,7 +250,7 @@ describe("EnrollmentDisplay", () => {
       }),
     ])
     setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV2(),
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
     )
     // Mock contracts to filter out the B2B program
@@ -312,10 +284,16 @@ describe("EnrollmentDisplay", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
-        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV2({
-            program: program,
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -368,10 +346,16 @@ describe("EnrollmentDisplay", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
-        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV2({
-            program: program,
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -437,10 +421,16 @@ describe("EnrollmentDisplay", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
-        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV2({
-            program: program,
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -523,10 +513,16 @@ describe("EnrollmentDisplay", () => {
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       setMockResponse.get(
-        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV2({
-            program: program,
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
           }),
         ],
       )
@@ -567,7 +563,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
       // User is not enrolled in any programs
       setMockResponse.get(
-        mitxonline.urls.programEnrollments.enrollmentsListV2(),
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [],
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)

@@ -3,6 +3,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Q
 
@@ -66,6 +67,8 @@ from learning_resources.utils import (
 log = logging.getLogger()
 
 User = get_user_model()
+
+CONTENT_TASKS_CACHE_TIMEOUT = 300
 
 
 def update_index(learning_resource, newly_created):
@@ -325,7 +328,7 @@ def load_run(
     with transaction.atomic():
         (
             learning_resource_run,
-            created,
+            _,
         ) = LearningResourceRun.objects.select_for_update().update_or_create(
             learning_resource=learning_resource,
             run_id=run_id,
@@ -334,24 +337,47 @@ def load_run(
         load_instructors(learning_resource_run, instructors_data)
         load_prices(learning_resource_run, resource_prices)
         load_image(learning_resource_run, image_data)
+
+        # Remove cached best run if present
+        if hasattr(learning_resource, "best_run"):
+            del learning_resource.best_run
+
         if (
-            created
-            and learning_resource_run == learning_resource.best_run
+            (
+                learning_resource_run == learning_resource.best_run
+                or learning_resource.test_mode
+            )
             and learning_resource.etl_source
             in (
                 ETLSource.mit_edx.value,
                 ETLSource.mitxonline.value,
                 ETLSource.xpro.value,
             )
+            and learning_resource_run.content_files.count() == 0
         ):
-            # webhook may have been sent before run was created
-            # so trigger a contentfile ingestion for the course.
-            from learning_resources.tasks import get_content_tasks
+            # webhook may have been sent before run was created or was best run,
+            # so trigger a contentfile ingestion for the course. If already
+            # ingested & checksums match, no new content files will be created
+            from learning_resources.tasks import import_content_files
 
-            get_content_tasks(
-                etl_source=learning_resource.etl_source,
-                learning_resource_ids=[learning_resource.id],
-            ).delay()
+            etl_source = learning_resource.etl_source
+            resource_id = learning_resource.id
+            cache_key = f"content_tasks_triggered_{etl_source}_{resource_id}"
+
+            def enqueue_content_tasks():
+                redis_cache = caches["redis"]
+                if not redis_cache.add(
+                    cache_key,
+                    True,  # noqa: FBT003
+                    timeout=CONTENT_TASKS_CACHE_TIMEOUT,
+                ):
+                    return
+                import_content_files.delay(
+                    etl_source,
+                    learning_resource_ids=[resource_id],
+                )
+
+            transaction.on_commit(enqueue_content_tasks)
     return learning_resource_run
 
 

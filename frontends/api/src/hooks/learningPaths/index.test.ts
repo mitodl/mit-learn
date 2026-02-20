@@ -130,13 +130,7 @@ describe("LearningPath CRUD", () => {
       }),
     }
 
-    const resourceWithoutList: LearningResource = {
-      ...relationship.resource,
-      learning_path_parents:
-        relationship.resource.learning_path_parents?.filter(
-          (m) => m.id !== relationship.id,
-        ) ?? null,
-    }
+    const resourceWithoutList: LearningResource = relationship.resource
     return { path, relationship, pathUrls, keys, resourceWithoutList }
   }
 

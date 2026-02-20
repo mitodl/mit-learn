@@ -4,6 +4,7 @@ import { NodeViewProps, NodeViewWrapper } from "@tiptap/react"
 import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
+import { EditableCaption } from "../shared/EditableCaption"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -137,28 +138,6 @@ const MediaContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const MediaCaption = styled.div({
-  maxWidth: "900px",
-  margin: "8px auto 0",
-
-  input: {
-    width: "100%",
-    border: "none",
-    textAlign: "left",
-    outline: "none",
-    padding: "16px 0",
-    fontSize: "14px",
-    borderBottom: "1px solid #dde1e6",
-  },
-
-  p: {
-    fontSize: "14px",
-    color: "#555",
-    textAlign: "center",
-    fontStyle: "italic",
-  },
-})
-
 interface MediaEmbedNodeProps {
   node: NodeViewProps["node"]
   editor: NodeViewProps["editor"]
@@ -246,18 +225,11 @@ export const MediaEmbedNodeView = ({
         />
       </MediaContainer>
 
-      <MediaCaption>
-        {editable ? (
-          <input
-            type="text"
-            placeholder="Add caption…"
-            value={caption || ""}
-            onChange={(e) => updateAttributes({ caption: e.target.value })}
-          />
-        ) : (
-          caption && <p>{caption}</p>
-        )}
-      </MediaCaption>
+      <EditableCaption
+        caption={caption}
+        isEditable={editable}
+        onCaptionChange={(caption) => updateAttributes({ caption })}
+      />
     </StyledNodeViewWrapper>
   )
 }

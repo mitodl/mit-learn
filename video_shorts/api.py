@@ -3,6 +3,7 @@
 import json
 import logging
 from collections.abc import Generator
+from pathlib import PurePosixPath
 
 import boto3
 from django.conf import settings
@@ -27,7 +28,13 @@ def walk_video_shorts_from_s3(
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
     )
     bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-    prefix = settings.VIDEO_SHORTS_S3_PREFIX.rstrip("/") + "/"
+    prefix = (
+        str(
+            PurePosixPath(settings.AWS_S3_PREFIX or "")
+            / settings.VIDEO_SHORTS_S3_PREFIX
+        )
+        + "/"
+    )
 
     # Get all objects, sorted by last_modified (newest first)
     all_objects = sorted(
@@ -43,7 +50,8 @@ def walk_video_shorts_from_s3(
         try:
             s3_object = bucket.Object(short.key).get()
             webhook_data = json.loads(s3_object["Body"].read().decode("utf-8"))
-            video_short = upsert_video_short(webhook_data)
+            video_data = webhook_data.get("video_metadata", webhook_data)
+            video_short = upsert_video_short(video_data)
             yield video_short
         except Exception:
             log.exception("Error processing %s", short.key)

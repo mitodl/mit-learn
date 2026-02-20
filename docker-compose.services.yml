@@ -60,7 +60,7 @@ services:
       - web
     environment:
       PORT: 8063
-      NGINX_UWSGI_PASS: "web:8061"
+      NGINX_BACKEND: "web:8061"
     volumes:
       - ./config:/etc/nginx/templates
 

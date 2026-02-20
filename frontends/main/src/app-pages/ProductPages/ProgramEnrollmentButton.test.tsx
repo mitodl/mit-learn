@@ -20,7 +20,7 @@ const mockedUseFeatureFlagEnabled = jest
   .mockImplementation(() => false)
 
 const makeProgram = mitxFactories.programs.program
-const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV2
+const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
 
 describe("ProgramEnrollmentButton", () => {
@@ -37,7 +37,7 @@ describe("ProgramEnrollmentButton", () => {
     const userResponse = Promise.withResolvers()
 
     setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV2(),
+      mitxUrls.programEnrollments.enrollmentsListV3(),
       enrollmentResponse.promise,
     )
     setMockResponse.get(urls.userMe.get(), userResponse.promise)
@@ -68,7 +68,7 @@ describe("ProgramEnrollmentButton", () => {
     const user = makeUser({ is_authenticated: true })
 
     setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV2(),
+      mitxUrls.programEnrollments.enrollmentsListV3(),
       enrollments,
     )
     setMockResponse.get(urls.userMe.get(), user)
@@ -92,7 +92,7 @@ describe("ProgramEnrollmentButton", () => {
     const user = makeUser({ is_authenticated: true })
 
     setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV2(),
+      mitxUrls.programEnrollments.enrollmentsListV3(),
       enrollments,
     )
     setMockResponse.get(urls.userMe.get(), user)
@@ -112,7 +112,7 @@ describe("ProgramEnrollmentButton", () => {
     ]
 
     setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV2(),
+      mitxUrls.programEnrollments.enrollmentsListV3(),
       enrollments,
     )
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
@@ -132,7 +132,7 @@ describe("ProgramEnrollmentButton", () => {
   test("Shows signup popover for anonymous users", async () => {
     const program = makeProgram()
 
-    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV2(), [], {
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [], {
       code: 403,
     })
     setMockResponse.get(

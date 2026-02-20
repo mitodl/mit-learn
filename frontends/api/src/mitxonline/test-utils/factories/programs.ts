@@ -3,6 +3,7 @@ import type { PartialFactory } from "ol-test-utilities"
 import type {
   V2Program,
   V2ProgramCollection,
+  V3SimpleProgram,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -105,4 +106,20 @@ const programCollection: PartialFactory<V2ProgramCollection> = (
   return mergeOverrides<V2ProgramCollection>(defaults, overrides)
 }
 
-export { program, programs, programCollection }
+const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
+  const defaults: V3SimpleProgram = {
+    id: uniqueProgramId.enforce(() => faker.number.int()),
+    title: faker.lorem.words(3),
+    readable_id: faker.lorem.slug(),
+    program_type: faker.helpers.arrayElement([
+      "certificate",
+      "degree",
+      "diploma",
+    ]),
+    live: faker.datatype.boolean(),
+  }
+
+  return mergeOverrides<V3SimpleProgram>(defaults, overrides)
+}
+
+export { program, programs, programCollection, simpleProgram }

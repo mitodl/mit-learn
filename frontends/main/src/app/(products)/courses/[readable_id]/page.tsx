@@ -12,21 +12,24 @@ export const generateMetadata = async (
   props: PageProps<"/courses/[readable_id]">,
 ) => {
   const params = await props.params
+  const readableId = decodeURIComponent(params.readable_id)
 
   return safeGenerateMetadata(async () => {
     const queryClient = getQueryClient()
 
-    const data = await queryClient.fetchQuery(
-      pagesQueries.coursePages(decodeURIComponent(params.readable_id)),
+    const coursePages = await queryClient.fetchQuery(
+      pagesQueries.coursePages(readableId),
     )
 
-    if (data.items.length === 0) {
+    if (coursePages.items.length === 0) {
       notFound()
     }
-    const [course] = data.items
+    const [course] = coursePages.items
+
     const image = course.feature_image
       ? course.course_details.page.feature_image_src
       : DEFAULT_RESOURCE_IMG
+
     return standardizeMetadata({
       title: course.title,
       image,
@@ -38,19 +41,23 @@ export const generateMetadata = async (
 const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
-  /**
-   * TODO: Consider removing react-query from this page
-   * fetching via client, and calling notFound() if data missing.
-   * This approach blocked by wagtail api requiring auth.
-   */
+
   const queryClient = getQueryClient()
 
-  await Promise.all([
-    queryClient.prefetchQuery(pagesQueries.coursePages(readableId)),
-    queryClient.prefetchQuery(
+  /**
+   * queryClient.fetchQueryOr404 cannot be used here as the Wagtail Pages and
+   * MITxOnline Courses API are list endpoints that also 200 with empty results.
+   */
+  const [coursePages, courses] = await Promise.all([
+    queryClient.fetchQuery(pagesQueries.coursePages(readableId)),
+    queryClient.fetchQuery(
       coursesQueries.coursesList({ readable_id: readableId }),
     ),
   ])
+
+  if (coursePages.items.length === 0 || courses.results.length === 0) {
+    notFound()
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
