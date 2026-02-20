@@ -5,7 +5,6 @@ import type {
   PaginatedUserListRelationshipList,
 } from "../../generated/v1"
 import { userListsApi } from "../../clients"
-import { clearListMemberships } from "../learningResources/queries"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 
 const userlistKeys = {
@@ -48,13 +47,7 @@ const userlistQueries = {
             })
           : userListsApi.userlistsItemsList(listingParams)
         const { data } = await request
-        return {
-          ...data,
-          results: data.results.map((relation) => ({
-            ...relation,
-            resource: clearListMemberships(relation.resource),
-          })),
-        }
+        return data
       },
       // Casting is so infiniteQueryOptions can infer the correct type for initialPageParam
       initialPageParam: null as string | null,

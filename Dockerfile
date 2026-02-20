@@ -92,4 +92,4 @@ USER mitodl
 
 EXPOSE 8061
 ENV PORT 8061
-CMD uwsgi uwsgi.ini
+CMD ["sh", "-c", "exec granian --interface wsgi --host 0.0.0.0 --port 8061 --workers ${GRANIAN_WORKERS:-3} --blocking-threads ${GRANIAN_BLOCKING_THREADS:-2} main.wsgi:application"]

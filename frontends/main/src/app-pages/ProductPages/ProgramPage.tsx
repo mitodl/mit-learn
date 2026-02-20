@@ -25,7 +25,6 @@ import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import dynamic from "next/dynamic"
-import type { Breakpoint } from "@mui/system"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
@@ -91,32 +90,16 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
 
-const RequirementsListing = styled(PlainList)(({ theme }) => ({
+const RequirementsListing = styled(PlainList)({
   display: "flex",
-  flexDirection: "row",
-  gap: "24px",
-  flexWrap: "wrap",
+  flexDirection: "column",
+  gap: "8px",
   marginTop: "24px",
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-  },
-}))
+})
 
 const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
   return Object.fromEntries(array.map((item) => [String(item[key]), item]))
 }
-
-const StyledResourceCard = styled(MitxOnlineCourseCard)<{
-  onlyAbove?: Breakpoint
-  onlyBelow?: Breakpoint
-}>(({ theme, onlyAbove, onlyBelow }) => ({
-  ...(onlyAbove
-    ? { [theme.breakpoints.down(onlyAbove)]: { display: "none" } }
-    : null),
-  ...(onlyBelow
-    ? { [theme.breakpoints.up(onlyBelow)]: { display: "none" } }
-    : null),
-}))
 
 type RequirementSubsectionInfo = {
   title: string
@@ -227,19 +210,12 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                 }
                 return (
                   <li key={courseId}>
-                    <StyledResourceCard
-                      onlyAbove="sm"
+                    <MitxOnlineCourseCard
                       course={course}
                       href={`/courses/${encodeURIComponent(course?.readable_id)}`}
                       size="small"
                       isLoading={isCourseLoading}
-                    />
-                    <StyledResourceCard
-                      onlyBelow="sm"
-                      course={course}
-                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
-                      size="small"
-                      isLoading={isCourseLoading}
+                      list
                     />
                   </li>
                 )

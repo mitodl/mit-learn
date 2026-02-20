@@ -350,8 +350,6 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         "min_weeks": resource.min_weeks,
         "max_weeks": resource.max_weeks,
         "best_run_id": resource.best_run.id if resource.best_run else None,
-        "learning_path_parents": [],
-        "user_list_parents": [],
     }
 
 
@@ -530,6 +528,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 for topic in content_file.run.learning_resource.topics.all()
             ],
             "key": content_file.key,
+            "source_path": content_file.source_path,
             "uid": content_file.uid,
             "title": content_file.title,
             "description": content_file.description,

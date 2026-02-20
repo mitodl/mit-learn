@@ -205,18 +205,6 @@ export interface ArticleResource {
   image: LearningResourceImage | null
   /**
    *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof ArticleResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof ArticleResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
-  /**
-   *
    * @type {number}
    * @memberof ArticleResource
    */
@@ -850,6 +838,12 @@ export interface ContentFile {
    */
   resource_readable_id: string
   /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  source_path?: string
+  /**
    * Extract the course number(s) from the associated course
    * @type {Array<string>}
    * @memberof ContentFile
@@ -1019,6 +1013,12 @@ export interface ContentFileRequest {
    * @memberof ContentFileRequest
    */
   image_src?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFileRequest
+   */
+  source_path?: string
   /**
    *
    * @type {string}
@@ -1395,18 +1395,6 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof CourseResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof CourseResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
   /**
    *
    * @type {number}
@@ -2268,18 +2256,6 @@ export interface LearningMaterialResource {
   image: LearningResourceImage | null
   /**
    *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof LearningMaterialResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof LearningMaterialResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
-  /**
-   *
    * @type {number}
    * @memberof LearningMaterialResource
    */
@@ -2812,18 +2788,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof LearningPathResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof LearningPathResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
   /**
    *
    * @type {number}
@@ -6264,18 +6228,6 @@ export interface PodcastEpisodeResource {
   image: LearningResourceImage | null
   /**
    *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof PodcastEpisodeResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof PodcastEpisodeResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
-  /**
-   *
    * @type {number}
    * @memberof PodcastEpisodeResource
    */
@@ -6758,18 +6710,6 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof PodcastResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof PodcastResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
   /**
    *
    * @type {number}
@@ -7486,18 +7426,6 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof ProgramResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof ProgramResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
   /**
    *
    * @type {number}
@@ -8699,18 +8627,6 @@ export interface VideoPlaylistResource {
   image: LearningResourceImage | null
   /**
    *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof VideoPlaylistResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof VideoPlaylistResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
-  /**
-   *
    * @type {number}
    * @memberof VideoPlaylistResource
    */
@@ -9181,18 +9097,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   image: LearningResourceImage | null
-  /**
-   *
-   * @type {Array<MicroLearningPathRelationship>}
-   * @memberof VideoResource
-   */
-  learning_path_parents: Array<MicroLearningPathRelationship>
-  /**
-   *
-   * @type {Array<MicroUserListRelationship>}
-   * @memberof VideoResource
-   */
-  user_list_parents: Array<MicroUserListRelationship>
   /**
    *
    * @type {number}

@@ -1,12 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
-import Skeleton from "@mui/material/Skeleton"
-import {
-  RiMenuAddLine,
-  RiBookmarkLine,
-  RiAwardFill,
-  RiBookmarkFill,
-} from "@remixicon/react"
+import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
 import {
   LocalDate,
@@ -18,14 +12,9 @@ import {
   showStartAnytime,
   getResourceLanguage,
 } from "ol-utilities"
-import { ListCard } from "../Card/ListCard"
-import type { ActionButtonProps } from "@mitodl/smoot-design"
 import { theme } from "../ThemeProvider/ThemeProvider"
-
-const IMAGE_SIZES = {
-  mobile: { width: 116, height: 106 },
-  desktop: { width: 236, height: 122 },
-}
+import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
+import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 
 export const CardLabel = styled.span`
   color: ${theme.custom.colors.silverGrayDark};
@@ -71,29 +60,6 @@ export const Certificate = styled.div`
   align-items: center;
 `
 
-const CertificateText = styled.div`
-  display: flex;
-`
-
-const MobileOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.up("sm")]: {
-    display: "none",
-  },
-}))
-
-const DesktopOnly = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
-  },
-}))
-
-const CertificatePrice = styled.div`
-  ${{ ...theme.typography.body3 }}
-  ${theme.breakpoints.down("md")} {
-    ${{ ...theme.typography.body4 }}
-  }
-`
-
 export const Price = styled.div`
   ${{ ...theme.typography.subtitle2 }}
   color: ${theme.custom.colors.darkGray2};
@@ -118,36 +84,6 @@ type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,
   resourceId: number,
 ) => void
-
-/* This displays a single price for courses with no free option
- * (price includes the certificate). For free courses with the
- * option of a paid certificate, the certificate price displayed
- * in the certificate badge alongside the course "Free" price.
- */
-const Info = ({ resource }: { resource: LearningResource }) => {
-  const prices = getLearningResourcePrices(resource)
-  return (
-    <>
-      <span>{getReadableResourceType(resource.resource_type)}</span>
-      {resource.certification && (
-        <Certificate>
-          <RiAwardFill />
-          <CertificateText>
-            <MobileOnly>Certificate</MobileOnly>
-            <DesktopOnly>
-              {resource.certification_type?.name || "Certificate"}
-            </DesktopOnly>
-            <CertificatePrice>
-              {prices.certificate.display ? ": " : ""}{" "}
-              {prices.certificate.display}
-            </CertificatePrice>
-          </CertificateText>
-        </Certificate>
-      )}
-      <Price>{prices.course.display}</Price>
-    </>
-  )
-}
 
 export const Count = ({ resource }: { resource: LearningResource }) => {
   if (resource.resource_type !== ResourceTypeEnum.LearningPath) {
@@ -188,70 +124,6 @@ export const Format = ({ resource }: { resource: LearningResource }) => {
   )
 }
 
-const Loading = styled.div`
-  display: flex;
-  padding: 24px;
-  justify-content: space-between;
-
-  > div {
-    width: calc(100% - 236px);
-  }
-
-  > span {
-    flex-grow: 0;
-    margin-left: auto;
-  }
-`
-
-const MobileLoading = styled(Loading)(({ theme }) => ({
-  [theme.breakpoints.up("md")]: {
-    display: "none",
-  },
-  padding: "0px",
-  "> div": {
-    padding: "12px",
-  },
-}))
-
-const DesktopLoading = styled(Loading)(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const LoadingView = () => {
-  return (
-    <>
-      <MobileLoading>
-        <div>
-          <Skeleton variant="text" width="15%" style={{ marginBottom: 4 }} />
-          <Skeleton variant="text" width="75%" style={{ marginBottom: 16 }} />
-          <Skeleton variant="text" width="20%" />
-        </div>
-        <Skeleton
-          variant="rectangular"
-          width={IMAGE_SIZES.mobile.width}
-          height={IMAGE_SIZES.mobile.height}
-          style={{ borderRadius: 0 }}
-        />
-      </MobileLoading>
-      <DesktopLoading>
-        <div>
-          <Skeleton variant="text" width="15%" style={{ marginBottom: 10 }} />
-          <Skeleton variant="text" width="75%" style={{ marginBottom: 51 }} />
-          <Skeleton variant="text" width="20%" />
-        </div>
-        <Skeleton
-          variant="rectangular"
-          width={IMAGE_SIZES.desktop.width}
-          height={IMAGE_SIZES.desktop.height}
-          style={{ borderRadius: 4 }}
-        />
-      </DesktopLoading>
-    </>
-  )
-}
-
 interface LearningResourceListCardProps {
   isLoading?: boolean
   resource?: LearningResource | null
@@ -265,32 +137,6 @@ interface LearningResourceListCardProps {
   draggable?: boolean
   onClick?: React.MouseEventHandler
   headingLevel?: number
-}
-
-type CardActionButtonProps = Pick<
-  ActionButtonProps,
-  "aria-label" | "onClick" | "children"
-> & {
-  filled?: boolean
-  isMobile?: boolean
-}
-
-export const CardActionButton: React.FC<CardActionButtonProps> = ({
-  filled,
-  isMobile,
-  ...props
-}) => {
-  const FILLED_PROPS = { variant: "primary" } as const
-  const UNFILLED_PROPS = { color: "secondary", variant: "secondary" } as const
-
-  return (
-    <ListCard.Action
-      edge="circular"
-      size="small"
-      {...(filled ? FILLED_PROPS : UNFILLED_PROPS)}
-      {...props}
-    />
-  )
 }
 
 const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
@@ -308,76 +154,76 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   headingLevel = 6,
 }) => {
   if (isLoading) {
-    return (
-      <ListCard className={className}>
-        <ListCard.Content>
-          <LoadingView />
-        </ListCard.Content>
-      </ListCard>
-    )
+    return <BaseLearningResourceCard isLoading className={className} list />
   }
   if (!resource) {
     return null
   }
+
   const readableType = getReadableResourceType(resource.resource_type)
+  const prices = getLearningResourcePrices(resource)
+  const anytime = showStartAnytime(resource)
+  const startDate = getBestResourceStartDate(resource)
+  const formattedDate = anytime
+    ? "Anytime"
+    : startDate && <LocalDate date={startDate} format="MMMM DD, YYYY" />
+
+  const actions: ActionButtonInfo[] = []
+
+  if (onAddToLearningPathClick) {
+    actions.push({
+      onClick: (event) => onAddToLearningPathClick(event, resource.id),
+      "aria-label": "Add to Learning Path",
+      filled: inLearningPath,
+      icon: <RiMenuAddLine aria-hidden />,
+    })
+  }
+
+  if (onAddToUserListClick) {
+    actions.push({
+      onClick: (event) => onAddToUserListClick(event, resource.id),
+      "aria-label": `Bookmark ${readableType}`,
+      filled: inUserList,
+      icon: inUserList ? (
+        <RiBookmarkFill aria-hidden />
+      ) : (
+        <RiBookmarkLine aria-hidden />
+      ),
+    })
+  }
+
+  const footerContent = (
+    <BorderSeparator>
+      <Count resource={resource} />
+      <StartDate resource={resource} />
+      <Format resource={resource} />
+    </BorderSeparator>
+  )
+
   return (
-    <ListCard
-      as="article"
-      aria-label={`${readableType}: ${resource.title}`}
-      forwardClicksToLink
+    <BaseLearningResourceCard
       className={className}
-      draggable={draggable}
+      list
+      href={href}
       onClick={onClick}
-    >
-      <ListCard.Image
-        src={resource.image?.url || DEFAULT_RESOURCE_IMG}
-        alt={resource.image?.alt ?? ""}
-        {...IMAGE_SIZES["desktop"]}
-      />
-      <ListCard.Info>
-        <Info resource={resource} />
-      </ListCard.Info>
-      <ListCard.Title
-        href={href}
-        lang={getResourceLanguage(resource)}
-        role="heading"
-        aria-level={headingLevel}
-      >
-        {resource.title}
-      </ListCard.Title>
-      <ListCard.Actions>
-        {onAddToLearningPathClick && (
-          <CardActionButton
-            filled={inLearningPath}
-            aria-label="Add to Learning Path"
-            onClick={(event) => onAddToLearningPathClick(event, resource.id)}
-          >
-            <RiMenuAddLine aria-hidden />
-          </CardActionButton>
-        )}
-        {onAddToUserListClick && (
-          <CardActionButton
-            filled={inUserList}
-            aria-label={`Bookmark ${readableType}`}
-            onClick={(event) => onAddToUserListClick(event, resource.id)}
-          >
-            {inUserList ? (
-              <RiBookmarkFill aria-hidden />
-            ) : (
-              <RiBookmarkLine aria-hidden />
-            )}
-          </CardActionButton>
-        )}
-        {editMenu}
-      </ListCard.Actions>
-      <ListCard.Footer>
-        <BorderSeparator>
-          <Count resource={resource} />
-          <StartDate resource={resource} />
-          <Format resource={resource} />
-        </BorderSeparator>
-      </ListCard.Footer>
-    </ListCard>
+      headingLevel={headingLevel}
+      imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
+      imageAlt={resource.image?.alt ?? ""}
+      title={resource.title}
+      resourceType={readableType}
+      coursePrice={prices.course.display}
+      certificatePrice={prices.certificate.display}
+      hasCertificate={resource.certification}
+      certificateTypeName={resource.certification_type?.name}
+      startLabel="Starts:"
+      startDate={formattedDate}
+      actions={actions}
+      lang={getResourceLanguage(resource)}
+      ariaLabel={`${readableType}: ${resource.title}`}
+      footerContent={footerContent}
+      draggable={draggable}
+      editMenu={editMenu}
+    />
   )
 }
 
