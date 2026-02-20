@@ -239,6 +239,20 @@ def test_generate_learning_resources_text_clause(
                                     },
                                     {
                                         "nested": {
+                                            "path": "certification_type",
+                                            "query": {
+                                                "multi_match": {
+                                                    "query": "math",
+                                                    "fields": [
+                                                        "certification_type.name.english^5",
+                                                    ],
+                                                    **extra_params,
+                                                }
+                                            },
+                                        }
+                                    },
+                                    {
+                                        "nested": {
                                             "path": "course.course_numbers",
                                             "query": {
                                                 "multi_match": {
@@ -260,7 +274,6 @@ def test_generate_learning_resources_text_clause(
                                                     "fields": [
                                                         "runs.year",
                                                         "runs.semester",
-                                                        "runs.level",
                                                     ],
                                                     **extra_params,
                                                 }
@@ -280,12 +293,31 @@ def test_generate_learning_resources_text_clause(
                                                                 "runs.instructors.last_name^5",
                                                                 "runs.instructors.full_name^5",
                                                             ],
-                                                            "type": "best_fields",
+                                                            **extra_params,
                                                         }
                                                     },
                                                 }
                                             },
                                         }
+                                    },
+                                    {
+                                        "nested": {
+                                            "path": "runs",
+                                            "query": {
+                                                "nested": {
+                                                    "path": "runs.level",
+                                                    "query": {
+                                                        "multi_match": {
+                                                            "fields": [
+                                                                "runs.level.name^5",
+                                                            ],
+                                                            "query": "math",
+                                                            **extra_params,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
                                     },
                                 ]
                             }
@@ -339,6 +371,20 @@ def test_generate_learning_resources_text_clause(
                 },
                 {
                     "nested": {
+                        "path": "certification_type",
+                        "query": {
+                            "multi_match": {
+                                "query": "math",
+                                "fields": [
+                                    "certification_type.name.english^5",
+                                ],
+                                **extra_params,
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
                         "path": "course.course_numbers",
                         "query": {
                             "multi_match": {
@@ -357,7 +403,7 @@ def test_generate_learning_resources_text_clause(
                         "query": {
                             "multi_match": {
                                 "query": "math",
-                                "fields": ["runs.year", "runs.semester", "runs.level"],
+                                "fields": ["runs.year", "runs.semester"],
                                 **extra_params,
                             }
                         },
@@ -376,10 +422,29 @@ def test_generate_learning_resources_text_clause(
                                             "runs.instructors.last_name^5",
                                             "runs.instructors.full_name^5",
                                         ],
-                                        "type": "best_fields",
+                                        **extra_params,
                                     }
                                 },
                             }
+                        },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "runs",
+                        "query": {
+                            "nested": {
+                                "path": "runs.level",
+                                "query": {
+                                    "multi_match": {
+                                        "fields": [
+                                            "runs.level.name^5",
+                                        ],
+                                        "query": "math",
+                                        **extra_params,
+                                    },
+                                },
+                            },
                         },
                     }
                 },
@@ -456,6 +521,19 @@ def test_generate_learning_resources_text_clause(
                                     },
                                     {
                                         "nested": {
+                                            "path": "certification_type",
+                                            "query": {
+                                                "query_string": {
+                                                    "fields": [
+                                                        "certification_type.name.english^5",
+                                                    ],
+                                                    "query": '"math"',
+                                                },
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "nested": {
                                             "path": "course.course_numbers",
                                             "query": {
                                                 "query_string": {
@@ -476,7 +554,6 @@ def test_generate_learning_resources_text_clause(
                                                     "fields": [
                                                         "runs.year",
                                                         "runs.semester",
-                                                        "runs.level",
                                                     ],
                                                 }
                                             },
@@ -495,10 +572,27 @@ def test_generate_learning_resources_text_clause(
                                                                 "runs.instructors.last_name^5",
                                                                 "runs.instructors.full_name^5",
                                                             ],
-                                                            "type": "best_fields",
                                                         }
                                                     },
                                                 }
+                                            },
+                                        }
+                                    },
+                                    {
+                                        "nested": {
+                                            "path": "runs",
+                                            "query": {
+                                                "nested": {
+                                                    "path": "runs.level",
+                                                    "query": {
+                                                        "query_string": {
+                                                            "fields": [
+                                                                "runs.level.name^5",
+                                                            ],
+                                                            "query": '"math"',
+                                                        },
+                                                    },
+                                                },
                                             },
                                         }
                                     },
@@ -551,6 +645,19 @@ def test_generate_learning_resources_text_clause(
                 },
                 {
                     "nested": {
+                        "path": "certification_type",
+                        "query": {
+                            "query_string": {
+                                "fields": [
+                                    "certification_type.name.english^5",
+                                ],
+                                "query": '"math"',
+                            },
+                        },
+                    },
+                },
+                {
+                    "nested": {
                         "path": "course.course_numbers",
                         "query": {
                             "query_string": {
@@ -568,7 +675,7 @@ def test_generate_learning_resources_text_clause(
                         "query": {
                             "query_string": {
                                 "query": '"math"',
-                                "fields": ["runs.year", "runs.semester", "runs.level"],
+                                "fields": ["runs.year", "runs.semester"],
                             }
                         },
                     }
@@ -586,12 +693,29 @@ def test_generate_learning_resources_text_clause(
                                             "runs.instructors.last_name^5",
                                             "runs.instructors.full_name^5",
                                         ],
-                                        "type": "best_fields",
                                     }
                                 },
                             }
                         },
                     }
+                },
+                {
+                    "nested": {
+                        "path": "runs",
+                        "query": {
+                            "nested": {
+                                "path": "runs.level",
+                                "query": {
+                                    "query_string": {
+                                        "fields": [
+                                            "runs.level.name^5",
+                                        ],
+                                        "query": '"math"',
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             ],
         }
@@ -693,6 +817,21 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                             },
                                             {
                                                 "nested": {
+                                                    "path": "certification_type",
+                                                    "query": {
+                                                        "multi_match": {
+                                                            "query": "math",
+                                                            "fields": [
+                                                                "certification_type.name.english^5"
+                                                            ],
+                                                            "type": "phrase",
+                                                            "slop": 2,
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
                                                     "path": "course.course_numbers",
                                                     "query": {
                                                         "multi_match": {
@@ -715,7 +854,6 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                             "fields": [
                                                                 "runs.year",
                                                                 "runs.semester",
-                                                                "runs.level",
                                                             ],
                                                             "type": "phrase",
                                                             "slop": 2,
@@ -736,7 +874,28 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                                         "runs.instructors.last_name^5",
                                                                         "runs.instructors.full_name^5",
                                                                     ],
-                                                                    "type": "best_fields",
+                                                                    "type": "phrase",
+                                                                    "slop": 2,
+                                                                }
+                                                            },
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
+                                                    "path": "runs",
+                                                    "query": {
+                                                        "nested": {
+                                                            "path": "runs.level",
+                                                            "query": {
+                                                                "multi_match": {
+                                                                    "query": "math",
+                                                                    "fields": [
+                                                                        "runs.level.name^5"
+                                                                    ],
+                                                                    "type": "phrase",
+                                                                    "slop": 2,
                                                                 }
                                                             },
                                                         }
@@ -821,6 +980,19 @@ def test_generate_learning_resources_text_clause_with_min_score():
                 },
                 {
                     "nested": {
+                        "path": "certification_type",
+                        "query": {
+                            "multi_match": {
+                                "query": "math",
+                                "fields": ["certification_type.name.english^5"],
+                                "type": "phrase",
+                                "slop": 2,
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
                         "path": "course.course_numbers",
                         "query": {
                             "multi_match": {
@@ -838,7 +1010,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                         "query": {
                             "multi_match": {
                                 "query": "math",
-                                "fields": ["runs.year", "runs.semester", "runs.level"],
+                                "fields": ["runs.year", "runs.semester"],
                                 "type": "phrase",
                                 "slop": 2,
                             }
@@ -858,7 +1030,26 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                             "runs.instructors.last_name^5",
                                             "runs.instructors.full_name^5",
                                         ],
-                                        "type": "best_fields",
+                                        "type": "phrase",
+                                        "slop": 2,
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "runs",
+                        "query": {
+                            "nested": {
+                                "path": "runs.level",
+                                "query": {
+                                    "multi_match": {
+                                        "query": "math",
+                                        "fields": ["runs.level.name^5"],
+                                        "type": "phrase",
+                                        "slop": 2,
                                     }
                                 },
                             }
@@ -940,6 +1131,19 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                             },
                                             {
                                                 "nested": {
+                                                    "path": "certification_type",
+                                                    "query": {
+                                                        "query_string": {
+                                                            "query": '"math"',
+                                                            "fields": [
+                                                                "certification_type.name.english^5"
+                                                            ],
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
                                                     "path": "course.course_numbers",
                                                     "query": {
                                                         "query_string": {
@@ -960,7 +1164,6 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                             "fields": [
                                                                 "runs.year",
                                                                 "runs.semester",
-                                                                "runs.level",
                                                             ],
                                                         }
                                                     },
@@ -979,7 +1182,24 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                                         "runs.instructors.last_name^5",
                                                                         "runs.instructors.full_name^5",
                                                                     ],
-                                                                    "type": "best_fields",
+                                                                }
+                                                            },
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
+                                                    "path": "runs",
+                                                    "query": {
+                                                        "nested": {
+                                                            "path": "runs.level",
+                                                            "query": {
+                                                                "query_string": {
+                                                                    "query": '"math"',
+                                                                    "fields": [
+                                                                        "runs.level.name^5"
+                                                                    ],
                                                                 }
                                                             },
                                                         }
@@ -1056,6 +1276,17 @@ def test_generate_learning_resources_text_clause_with_min_score():
                 },
                 {
                     "nested": {
+                        "path": "certification_type",
+                        "query": {
+                            "query_string": {
+                                "query": '"math"',
+                                "fields": ["certification_type.name.english^5"],
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
                         "path": "course.course_numbers",
                         "query": {
                             "query_string": {
@@ -1071,7 +1302,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                         "query": {
                             "query_string": {
                                 "query": '"math"',
-                                "fields": ["runs.year", "runs.semester", "runs.level"],
+                                "fields": ["runs.year", "runs.semester"],
                             }
                         },
                     }
@@ -1089,7 +1320,22 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                             "runs.instructors.last_name^5",
                                             "runs.instructors.full_name^5",
                                         ],
-                                        "type": "best_fields",
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "runs",
+                        "query": {
+                            "nested": {
+                                "path": "runs.level",
+                                "query": {
+                                    "query_string": {
+                                        "query": '"math"',
+                                        "fields": ["runs.level.name^5"],
                                     }
                                 },
                             }
@@ -1641,6 +1887,20 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                         },
                                                         {
                                                             "nested": {
+                                                                "path": "certification_type",
+                                                                "query": {
+                                                                    "multi_match": {
+                                                                        "query": "math",
+                                                                        "fields": [
+                                                                            "certification_type.name.english^5"
+                                                                        ],
+                                                                        "type": "best_fields",
+                                                                    }
+                                                                },
+                                                            }
+                                                        },
+                                                        {
+                                                            "nested": {
                                                                 "path": "course.course_numbers",
                                                                 "query": {
                                                                     "multi_match": {
@@ -1662,7 +1922,6 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                                         "fields": [
                                                                             "runs.year",
                                                                             "runs.semester",
-                                                                            "runs.level",
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -1681,6 +1940,25 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                                                 "fields": [
                                                                                     "runs.instructors.last_name^5",
                                                                                     "runs.instructors.full_name^5",
+                                                                                ],
+                                                                                "type": "best_fields",
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                            }
+                                                        },
+                                                        {
+                                                            "nested": {
+                                                                "path": "runs",
+                                                                "query": {
+                                                                    "nested": {
+                                                                        "path": "runs.level",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "runs.level.name^5"
                                                                                 ],
                                                                                 "type": "best_fields",
                                                                             }
@@ -1761,6 +2039,20 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                 },
                                 {
                                     "nested": {
+                                        "path": "certification_type",
+                                        "query": {
+                                            "multi_match": {
+                                                "query": "math",
+                                                "fields": [
+                                                    "certification_type.name.english^5"
+                                                ],
+                                                "type": "best_fields",
+                                            }
+                                        },
+                                    }
+                                },
+                                {
+                                    "nested": {
                                         "path": "course.course_numbers",
                                         "query": {
                                             "multi_match": {
@@ -1782,7 +2074,6 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                 "fields": [
                                                     "runs.year",
                                                     "runs.semester",
-                                                    "runs.level",
                                                 ],
                                                 "type": "best_fields",
                                             }
@@ -1802,6 +2093,23 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                             "runs.instructors.last_name^5",
                                                             "runs.instructors.full_name^5",
                                                         ],
+                                                        "type": "best_fields",
+                                                    }
+                                                },
+                                            }
+                                        },
+                                    }
+                                },
+                                {
+                                    "nested": {
+                                        "path": "runs",
+                                        "query": {
+                                            "nested": {
+                                                "path": "runs.level",
+                                                "query": {
+                                                    "multi_match": {
+                                                        "query": "math",
+                                                        "fields": ["runs.level.name^5"],
                                                         "type": "best_fields",
                                                     }
                                                 },
@@ -1938,7 +2246,6 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
             ]
         },
     }
-
     assert execute_learn_search(search_params) == opensearch.conn.search.return_value
 
     opensearch.conn.search.assert_called_once_with(
@@ -2017,16 +2324,6 @@ def test_execute_learn_search_with_script_score(
     query = {
         "query": {
             "function_score": {
-                "functions": [
-                    {
-                        "script_score": {
-                            "script": {
-                                "params": params,
-                                "source": source,
-                            },
-                        },
-                    },
-                ],
                 "query": {
                     "bool": {
                         "must": [
@@ -2086,6 +2383,20 @@ def test_execute_learn_search_with_script_score(
                                                                 },
                                                                 {
                                                                     "nested": {
+                                                                        "path": "certification_type",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "certification_type.name.english^5"
+                                                                                ],
+                                                                                "type": "phrase",
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
                                                                         "path": "course.course_numbers",
                                                                         "query": {
                                                                             "multi_match": {
@@ -2107,7 +2418,6 @@ def test_execute_learn_search_with_script_score(
                                                                                 "fields": [
                                                                                     "runs.year",
                                                                                     "runs.semester",
-                                                                                    "runs.level",
                                                                                 ],
                                                                                 "type": "phrase",
                                                                             }
@@ -2127,7 +2437,26 @@ def test_execute_learn_search_with_script_score(
                                                                                             "runs.instructors.last_name^5",
                                                                                             "runs.instructors.full_name^5",
                                                                                         ],
-                                                                                        "type": "best_fields",
+                                                                                        "type": "phrase",
+                                                                                    }
+                                                                                },
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
+                                                                        "path": "runs",
+                                                                        "query": {
+                                                                            "nested": {
+                                                                                "path": "runs.level",
+                                                                                "query": {
+                                                                                    "multi_match": {
+                                                                                        "query": "math",
+                                                                                        "fields": [
+                                                                                            "runs.level.name^5"
+                                                                                        ],
+                                                                                        "type": "phrase",
                                                                                     }
                                                                                 },
                                                                             }
@@ -2206,6 +2535,20 @@ def test_execute_learn_search_with_script_score(
                                         },
                                         {
                                             "nested": {
+                                                "path": "certification_type",
+                                                "query": {
+                                                    "multi_match": {
+                                                        "query": "math",
+                                                        "fields": [
+                                                            "certification_type.name.english^5"
+                                                        ],
+                                                        "type": "phrase",
+                                                    }
+                                                },
+                                            }
+                                        },
+                                        {
+                                            "nested": {
                                                 "path": "course.course_numbers",
                                                 "query": {
                                                     "multi_match": {
@@ -2227,7 +2570,6 @@ def test_execute_learn_search_with_script_score(
                                                         "fields": [
                                                             "runs.year",
                                                             "runs.semester",
-                                                            "runs.level",
                                                         ],
                                                         "type": "phrase",
                                                     }
@@ -2247,7 +2589,26 @@ def test_execute_learn_search_with_script_score(
                                                                     "runs.instructors.last_name^5",
                                                                     "runs.instructors.full_name^5",
                                                                 ],
-                                                                "type": "best_fields",
+                                                                "type": "phrase",
+                                                            }
+                                                        },
+                                                    }
+                                                },
+                                            }
+                                        },
+                                        {
+                                            "nested": {
+                                                "path": "runs",
+                                                "query": {
+                                                    "nested": {
+                                                        "path": "runs.level",
+                                                        "query": {
+                                                            "multi_match": {
+                                                                "query": "math",
+                                                                "fields": [
+                                                                    "runs.level.name^5"
+                                                                ],
+                                                                "type": "phrase",
                                                             }
                                                         },
                                                     }
@@ -2280,6 +2641,16 @@ def test_execute_learn_search_with_script_score(
                         "filter": [{"exists": {"field": "resource_type"}}],
                     }
                 },
+                "functions": [
+                    {
+                        "script_score": {
+                            "script": {
+                                "source": source,
+                                "params": params,
+                            }
+                        }
+                    }
+                ],
             }
         },
         "post_filter": {
@@ -2519,6 +2890,20 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                 },
                                                                 {
                                                                     "nested": {
+                                                                        "path": "certification_type",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "certification_type.name.english^5"
+                                                                                ],
+                                                                                "type": "best_fields",
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
                                                                         "path": "course.course_numbers",
                                                                         "query": {
                                                                             "multi_match": {
@@ -2540,7 +2925,6 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                                 "fields": [
                                                                                     "runs.year",
                                                                                     "runs.semester",
-                                                                                    "runs.level",
                                                                                 ],
                                                                                 "type": "best_fields",
                                                                             }
@@ -2559,6 +2943,25 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                                         "fields": [
                                                                                             "runs.instructors.last_name^5",
                                                                                             "runs.instructors.full_name^5",
+                                                                                        ],
+                                                                                        "type": "best_fields",
+                                                                                    }
+                                                                                },
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
+                                                                        "path": "runs",
+                                                                        "query": {
+                                                                            "nested": {
+                                                                                "path": "runs.level",
+                                                                                "query": {
+                                                                                    "multi_match": {
+                                                                                        "query": "math",
+                                                                                        "fields": [
+                                                                                            "runs.level.name^5"
                                                                                         ],
                                                                                         "type": "best_fields",
                                                                                     }
@@ -2638,6 +3041,20 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                             },
                                             {
                                                 "nested": {
+                                                    "path": "certification_type",
+                                                    "query": {
+                                                        "multi_match": {
+                                                            "query": "math",
+                                                            "fields": [
+                                                                "certification_type.name.english^5"
+                                                            ],
+                                                            "type": "best_fields",
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
                                                     "path": "course.course_numbers",
                                                     "query": {
                                                         "multi_match": {
@@ -2659,7 +3076,6 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                             "fields": [
                                                                 "runs.year",
                                                                 "runs.semester",
-                                                                "runs.level",
                                                             ],
                                                             "type": "best_fields",
                                                         }
@@ -2678,6 +3094,25 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                     "fields": [
                                                                         "runs.instructors.last_name^5",
                                                                         "runs.instructors.full_name^5",
+                                                                    ],
+                                                                    "type": "best_fields",
+                                                                }
+                                                            },
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
+                                                    "path": "runs",
+                                                    "query": {
+                                                        "nested": {
+                                                            "path": "runs.level",
+                                                            "query": {
+                                                                "multi_match": {
+                                                                    "query": "math",
+                                                                    "fields": [
+                                                                        "runs.level.name^5"
                                                                     ],
                                                                     "type": "best_fields",
                                                                 }
@@ -2883,6 +3318,20 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                 },
                                                                 {
                                                                     "nested": {
+                                                                        "path": "certification_type",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "certification_type.name.english^5"
+                                                                                ],
+                                                                                "type": "best_fields",
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
                                                                         "path": "course.course_numbers",
                                                                         "query": {
                                                                             "multi_match": {
@@ -2904,7 +3353,6 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                                 "fields": [
                                                                                     "runs.year",
                                                                                     "runs.semester",
-                                                                                    "runs.level",
                                                                                 ],
                                                                                 "type": "best_fields",
                                                                             }
@@ -2923,6 +3371,25 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                                         "fields": [
                                                                                             "runs.instructors.last_name^5",
                                                                                             "runs.instructors.full_name^5",
+                                                                                        ],
+                                                                                        "type": "best_fields",
+                                                                                    }
+                                                                                },
+                                                                            }
+                                                                        },
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "nested": {
+                                                                        "path": "runs",
+                                                                        "query": {
+                                                                            "nested": {
+                                                                                "path": "runs.level",
+                                                                                "query": {
+                                                                                    "multi_match": {
+                                                                                        "query": "math",
+                                                                                        "fields": [
+                                                                                            "runs.level.name^5"
                                                                                         ],
                                                                                         "type": "best_fields",
                                                                                     }
@@ -3006,6 +3473,20 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                 },
                                 {
                                     "nested": {
+                                        "path": "certification_type",
+                                        "query": {
+                                            "multi_match": {
+                                                "query": "math",
+                                                "fields": [
+                                                    "certification_type.name.english^5"
+                                                ],
+                                                "type": "best_fields",
+                                            }
+                                        },
+                                    }
+                                },
+                                {
+                                    "nested": {
                                         "path": "course.course_numbers",
                                         "query": {
                                             "multi_match": {
@@ -3027,7 +3508,6 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                 "fields": [
                                                     "runs.year",
                                                     "runs.semester",
-                                                    "runs.level",
                                                 ],
                                                 "type": "best_fields",
                                             }
@@ -3047,6 +3527,23 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                             "runs.instructors.last_name^5",
                                                             "runs.instructors.full_name^5",
                                                         ],
+                                                        "type": "best_fields",
+                                                    }
+                                                },
+                                            }
+                                        },
+                                    }
+                                },
+                                {
+                                    "nested": {
+                                        "path": "runs",
+                                        "query": {
+                                            "nested": {
+                                                "path": "runs.level",
+                                                "query": {
+                                                    "multi_match": {
+                                                        "query": "math",
+                                                        "fields": ["runs.level.name^5"],
                                                         "type": "best_fields",
                                                     }
                                                 },
