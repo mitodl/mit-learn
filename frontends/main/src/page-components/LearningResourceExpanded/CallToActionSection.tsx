@@ -259,7 +259,7 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.VideoPlaylist]: watchOnYouTube,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
-    [ResourceTypeEnum.LearningMaterial]: learnMore,
+    [ResourceTypeEnum.Document]: learnMore,
   }
   if (
     resource?.resource_type === ResourceTypeEnum.Video ||
