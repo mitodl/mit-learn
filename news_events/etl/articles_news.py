@@ -52,7 +52,7 @@ def sync_single_article_to_news(article: Article):
     source, _ = FeedSource.objects.get_or_create(
         title="MIT Learn Articles",
         defaults={
-            "url": "/articles",
+            "url": "/news",
             "feed_type": FeedType.news.name,
             "description": "Articles created by MIT Learn staff",
         },
@@ -127,7 +127,7 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
 
         # Build the article URL using slug
         slug = article.get("slug")
-        article_url = f"/articles/{slug}" if slug else f"/articles/{article.get('id')}"
+        article_url = f"/news/{slug}" if slug else f"/news/{article.get('id')}"
 
         # Use publish_date if available, otherwise fall back to created_on
         publish_date = article.get("publish_date") or article.get("created_on")
@@ -450,7 +450,7 @@ def transform(articles_data: list[dict]) -> list[dict]:
     return [
         {
             "title": "MIT Learn Articles",
-            "url": "/articles",
+            "url": "/news",
             "feed_type": FeedType.news.name,
             "description": "Articles created by MIT Learn staff",
             "items": items,

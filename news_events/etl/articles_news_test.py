@@ -83,7 +83,7 @@ def test_transform_items():
     assert len(result) == 1
     assert result[0]["guid"] == "article-1"
     assert result[0]["title"] == "Test Article"
-    assert result[0]["url"] == "/articles/test-article"
+    assert result[0]["url"] == "/news/test-article"
     assert result[0]["detail"]["authors"] == ["John Doe"]
     assert result[0]["detail"]["publish_date"] == "2024-01-01T00:00:00+00:00"
 
@@ -532,7 +532,7 @@ def test_transform(mock_articles):
     assert len(result) == 1
     assert result[0]["title"] == "MIT Learn Articles"
     assert result[0]["feed_type"] == "news"
-    assert result[0]["url"] == "/articles"
+    assert result[0]["url"] == "/news"
     assert "items" in result[0]
     assert len(result[0]["items"]) == 1
 
@@ -600,7 +600,7 @@ def test_transform_single_article():
     assert result is not None
     assert result["guid"] == "article-1"
     assert result["title"] == "Test Article"
-    assert result["url"] == "/articles/test-article"
+    assert result["url"] == "/news/test-article"
 
 
 def test_sync_single_article_to_news(mocker):

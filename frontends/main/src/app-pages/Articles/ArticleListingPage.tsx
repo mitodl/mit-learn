@@ -488,13 +488,10 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   const [imageError, setImageError] = React.useState(false)
 
   return (
-    <Link
-      href={item.url}
-      style={{ textDecoration: "none", color: "inherit", display: "block" }}
-    >
-      <MainStoryCard>
-        <MainStoryImage>
-          {item.image?.url && !imageError && (
+    <MainStoryCard>
+      <MainStoryImage>
+        {item.image?.url && !imageError && (
+          <Link href={item.url}>
             <Image
               src={item.image.url}
               alt={item.image.alt || item.title}
@@ -502,23 +499,26 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
               style={{ objectFit: "cover" }}
               onError={() => setImageError(true)}
             />
+          </Link>
+        )}
+      </MainStoryImage>
+
+      <MainStoryContent>
+        <MainStoryContentContainer>
+          <MainStoryTitle>
+            <Link href={item.url}>{item.title}</Link>
+          </MainStoryTitle>
+          {item.summary && (
+            <MainStorySummary
+              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+            />
           )}
-        </MainStoryImage>
-        <MainStoryContent>
-          <MainStoryContentContainer>
-            <MainStoryTitle>{item.title}</MainStoryTitle>
-            {item.summary && (
-              <MainStorySummary
-                dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
-              />
-            )}
-          </MainStoryContentContainer>
-          <MainStoryDate variant="body3">
-            <LocalDate date={item.news_details?.publish_date} />
-          </MainStoryDate>
-        </MainStoryContent>
-      </MainStoryCard>
-    </Link>
+        </MainStoryContentContainer>
+        <MainStoryDate variant="body3">
+          <LocalDate date={item.news_details?.publish_date} />
+        </MainStoryDate>
+      </MainStoryContent>
+    </MainStoryCard>
   )
 }
 
@@ -526,21 +526,23 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   const [imageError, setImageError] = React.useState(false)
 
   return (
-    <Link href={item.url} style={{ textDecoration: "none", display: "block" }}>
-      <StoryCard>
-        <StoryContent>
-          <RegularStoryTitleWrapper>
-            <StoryTitle>{item.title}</StoryTitle>
-            {item.summary && (
-              <StorySummary
-                dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
-              />
-            )}
-          </RegularStoryTitleWrapper>
-          <StoryDate variant="body3">
-            <LocalDate date={item.news_details?.publish_date} />
-          </StoryDate>
-        </StoryContent>
+    <StoryCard>
+      <StoryContent>
+        <RegularStoryTitleWrapper>
+          <StoryTitle>
+            <Link href={item.url}>{item.title}</Link>
+          </StoryTitle>
+          {item.summary && (
+            <StorySummary
+              dangerouslySetInnerHTML={{ __html: linkifyText(item.summary) }}
+            />
+          )}
+        </RegularStoryTitleWrapper>
+        <StoryDate variant="body3">
+          <LocalDate date={item.news_details?.publish_date} />
+        </StoryDate>
+      </StoryContent>
+      <Link href={item.url} style={{ textDecoration: "none", order: 2 }}>
         <StoryImage>
           {item.image?.url && !imageError && (
             <Image
@@ -552,8 +554,8 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
             />
           )}
         </StoryImage>
-      </StoryCard>
-    </Link>
+      </Link>
+    </StoryCard>
   )
 }
 
