@@ -23,8 +23,9 @@ class BaseScraper:
             if self.driver:
                 self.driver.get(url)
                 WebDriverWait(self.driver, 10).until(
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
+                    lambda d: (
+                        d.execute_script("return document.readyState") == "complete"
+                    )
                 )
                 return self.driver.execute_script("return document.body.innerHTML")
             else:

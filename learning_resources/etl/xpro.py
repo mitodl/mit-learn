@@ -147,7 +147,7 @@ def _transform_learning_resource_course(course):
     """  # noqa: D401
     return {
         "readable_id": course["readable_id"],
-        "platform": XPRO_PLATFORM_TRANSFORM.get(course["platform"], None),
+        "platform": XPRO_PLATFORM_TRANSFORM.get(course["platform"]),
         "etl_source": ETLSource.xpro.name,
         "title": course["title"],
         "image": {"url": course["thumbnail_url"]},
@@ -209,7 +209,7 @@ def transform_programs(programs):
             ),  # a program is only considered published if it has a product/price
             "url": program["url"],
             "topics": parse_topics(program),
-            "platform": XPRO_PLATFORM_TRANSFORM.get(program["platform"], None),
+            "platform": XPRO_PLATFORM_TRANSFORM.get(program["platform"]),
             "resource_type": LearningResourceType.program.name,
             "delivery": transform_delivery(program.get("format")),
             "runs": [

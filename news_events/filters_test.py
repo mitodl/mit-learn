@@ -81,7 +81,7 @@ def test_learning_resource_sortby(client, sortby, feed_type, descending):
             item.id
             for item in sorted(
                 items,
-                key=lambda x: get_sort_field(x),
+                key=lambda x: get_sort_field(x),  # noqa: PLW0108
                 reverse=descending,
             )
         ]

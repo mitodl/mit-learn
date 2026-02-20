@@ -59,7 +59,7 @@ def extract_run_id_from_key(etl_source: str, key: str) -> str:
         str: The extracted and normalized run_id
     """
     if etl_source == ETLSource.oll.name:
-        filename_only = key.split("/")[-1]
+        filename_only = key.rsplit("/", maxsplit=1)[-1]
         raw = filename_only.split(".tar.gz")[0]
         raw = raw.replace("_OLL", "")
     else:
@@ -126,7 +126,7 @@ def process_course_archive(
         bool: True if successfully processed, False if skipped due to matching checksum
     """
     with TemporaryDirectory() as export_tempdir:
-        course_tarpath = Path(export_tempdir, key.split("/")[-1])
+        course_tarpath = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
         bucket.download_file(key, course_tarpath)
         try:

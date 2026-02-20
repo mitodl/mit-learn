@@ -47,9 +47,9 @@ def sync_canvas_archive(bucket, key: str, overwrite):
     from learning_resources.etl.loaders import load_content_files, load_problem_files
 
     course_folder = key.lstrip(settings.CANVAS_COURSE_BUCKET_PREFIX).split("/")[0]
-    url_config_file = f"{key.split('.imscc')[0]}.metadata.json"
+    url_config_file = f"{key.split('.imscc', maxsplit=1)[0]}.metadata.json"
     with TemporaryDirectory() as export_tempdir:
-        course_archive_path = Path(export_tempdir, key.split("/")[-1])
+        course_archive_path = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         bucket.download_file(key, course_archive_path)
         url_config = canvas_url_config(bucket, export_tempdir, url_config_file)
         resource_readable_id, run = run_for_canvas_archive(
