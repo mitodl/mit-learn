@@ -1,6 +1,7 @@
 import logging
 from typing import Annotated
 
+import litellm
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
@@ -19,6 +20,9 @@ from learning_resources.models import (
 from learning_resources.utils import truncate_to_tokens
 
 logger = logging.getLogger(__name__)
+
+# drop unsupported model params
+litellm.drop_params = True
 
 
 class Flashcard(TypedDict):
@@ -241,7 +245,7 @@ class ContentSummarizer:
                 llm_model,
             )
             llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
-            response = llm.invoke(summarizer_message, drop_params=True)
+            response = llm.invoke(summarizer_message)
             logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
             logger.debug("Generated summary: %s", generated_summary)
@@ -283,7 +287,7 @@ class ContentSummarizer:
                 max_input_tokens,
                 llm_model,
             )
-            response = structured_llm.invoke(flashcard_prompt, drop_params=True)
+            response = structured_llm.invoke(flashcard_prompt)
             if response:
                 generated_flashcards = response.get("flashcards", [])
                 logger.debug("Generated flashcards: %s", generated_flashcards)
