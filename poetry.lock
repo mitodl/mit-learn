@@ -1637,14 +1637,14 @@ resolved_reference = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4"
 
 [[package]]
 name = "django-imagekit"
-version = "5.0.0"
+version = "6.0.0"
 description = "Automated image processing for Django models."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "django-imagekit-5.0.0.tar.gz", hash = "sha256:aae9f74a8e9b6ceb5d15f7d8e266302901e76d9f532c78bd5135cb0fa206a6b0"},
-    {file = "django_imagekit-5.0.0-py3-none-any.whl", hash = "sha256:a8e77ed6549751026a51f961bb2cd5fda739be691496da8eecbe68ffb966c261"},
+    {file = "django_imagekit-6.0.0-py3-none-any.whl", hash = "sha256:dd75c7eec22684a085652033d4f5b869d80c8e7295aa737edbaa04a680e564b6"},
+    {file = "django_imagekit-6.0.0.tar.gz", hash = "sha256:66a28fa87b52d2bec382cf3405aa94535dae25b2cadaceab9e8ec3f253b7410c"},
 ]
 
 [package.dependencies]
@@ -9607,4 +9607,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "b858620408a928094d2d1ac60d41001a430867f9367a5d472368062352ff2fdd"
+content-hash = "a97362d9df3c9f3e497a19a368ad14df6754182a39e34e44f25be819b69ded23"
