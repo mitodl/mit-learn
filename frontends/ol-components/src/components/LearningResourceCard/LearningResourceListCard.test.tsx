@@ -244,11 +244,13 @@ describe("Learning Resource List Card", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
       certification: true,
+      certification_type: {
+        name: "MicroMasters Credential",
+      },
     })
 
     setup({ resource })
 
-    screen.getByText("Certificate")
     screen.getByText(resource.certification_type.name)
   })
 
@@ -328,11 +330,13 @@ describe("Learning Resource List Card", () => {
           { amount: "0", currency: "USD" },
           { amount: "49", currency: "USD" },
         ],
+        certification_type: {
+          name: "Certificate of Completion",
+        },
       })
       setup({ resource })
-      screen.getByText("Certificate")
-      screen.getByText(resource.certification_type.name)
-      screen.getByText(": $49")
+      screen.getByText("Certificate of Completion", { exact: false })
+      screen.getByText(/\$49/)
       screen.getByText("Free")
     })
 
@@ -346,13 +350,14 @@ describe("Learning Resource List Card", () => {
           { amount: "99", currency: "USD" },
           { amount: "49", currency: "USD" },
         ],
+        certification_type: {
+          name: "Certificate of Completion",
+        },
       })
       setup({ resource })
 
-      screen.getByText("Certificate")
-      screen.getByText(resource.certification_type.name)
-
-      screen.getByText(": $49 – $99")
+      screen.getByText("Certificate of Completion", { exact: false })
+      screen.getByText(/\$49 – \$99/)
       screen.getByText("Free")
     })
 

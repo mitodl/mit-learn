@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.54.1 (Released February 19, 2026)
+--------------
+
+- horizontal list cards for program page (#2950)
+- Fix a flaky test (#2958)
+
+Version 0.54.0 (Released February 17, 2026)
+--------------
+
+- Updates the backpopulate_video_shorts command to be compatible with the latest serializer changes (#2955)
+- Factor in "include_in_learn_catalog" value for determining published status of mitxonline courses (#2953)
+- Remove user_lists, learning_path_parents entirely from serializers (#2922)
+- Populate title and url for openedx contentfiles (#2941)
+- Updates the video shorts section to use latest API (#2715)
+- Beef up playwright tests a bit (#2939)
+- Certificate page 404s (#2940)
+
 Version 0.53.9 (Released February 11, 2026)
 --------------
 
