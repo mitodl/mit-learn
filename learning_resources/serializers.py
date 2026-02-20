@@ -929,7 +929,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             return best_run.id
         return None
 
-
     def get_resource_type_group(self, instance) -> str:
         """Return the resource category of the resource"""
         if instance.resource_type in [
