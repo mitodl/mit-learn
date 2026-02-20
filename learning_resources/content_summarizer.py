@@ -238,13 +238,16 @@ class ContentSummarizer:
             - str: Generated summary
         """
         try:
+            max_output_tokens = 1000
             max_input_tokens = get_max_tokens(llm_model)
             summarizer_message = truncate_to_tokens(
                 f"Summarize the key points from this video. Transcript:{content}",
-                max_input_tokens,
+                max_input_tokens - max_output_tokens,
                 llm_model,
             )
-            llm = self._get_llm(model=llm_model, temperature=0.3, max_tokens=1000)
+            llm = self._get_llm(
+                model=llm_model, temperature=0.3, max_tokens=max_output_tokens
+            )
             response = llm.invoke(summarizer_message)
             logger.debug("Generating Summary using model: %s", llm)
             generated_summary = response.content
