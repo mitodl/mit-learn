@@ -1,181 +1,203 @@
 "use client"
 
-import React, { useId } from "react"
-import { Typography, MuiDialog } from "ol-components"
+import React from "react"
+import { Typography } from "ol-components"
 import Image from "next/image"
-import { ActionButton, styled } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
+import { CarouselV2 } from "ol-components/CarouselV2"
 
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
-import { RiCloseLine } from "@remixicon/react"
 import RawHTML from "./RawHTML"
 
-const InstructorsSectionRoot = styled.section({})
-const InstructorsList = styled.ul(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-  padding: 0,
-  margin: 0,
-  marginTop: "24px",
-  gap: "24px",
-  [theme.breakpoints.down("sm")]: {
-    gap: "16px",
-    justifyContent: "center",
-  },
-}))
-const InstructorCardRoot = styled.li(({ theme }) => ({
+const InstructorsSectionRoot = styled.section(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  padding: "16px",
-  width: "252px",
-  minHeight: "272px",
-  [theme.breakpoints.down("sm")]: {
-    width: "calc(50% - 8px)",
-    minWidth: "162px",
+  gap: "24px",
+  [theme.breakpoints.up("sm")]: {
+    padding: "32px",
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "8px",
   },
-  ":hover": {
-    boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-    cursor: "pointer",
+}))
+const InstructorsHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "flex-start",
+  },
+}))
+const ArrowButtonsContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+const InstructorsCarousel = styled(CarouselV2)(({ theme }) => ({
+  ".MitCarousel-track": {
+    gap: "48px",
+    [theme.breakpoints.down("sm")]: {
+      gap: "8px",
+    },
+  },
+}))
+const CarouselSlide = styled.div(({ theme }) => ({
+  flex: "0 0 112px",
+  [theme.breakpoints.down("sm")]: {
+    flexBasis: "104px",
   },
 }))
 const InstructorButton = styled.button(({ theme }) => ({
-  backgroundColor: "unset",
-  border: "none",
-  textAlign: "left",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  alignItems: "center",
+  width: "100%",
+  border: 0,
   padding: 0,
-  ...theme.typography.h5,
-  marginTop: "8px",
-  cursor: "inherit",
+  margin: 0,
+  backgroundColor: "transparent",
+  textAlign: "center",
+  color: theme.custom.colors.darkGray2,
+  font: "inherit",
+  lineHeight: "inherit",
+  cursor: "pointer",
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.lightBlue}`,
+    outlineOffset: "4px",
+    borderRadius: "8px",
+  },
 }))
-const InstructorImage = styled(Image)(({ theme }) => ({
-  height: "140px",
-  width: "100%",
-  objectFit: "cover",
-  borderRadius: "8px",
+const InstructorAvatar = styled.div(({ theme }) => ({
+  borderRadius: "50%",
+  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  padding: "12px",
+  overflow: "hidden",
+  display: "flex",
+  alignItems: "center",
   [theme.breakpoints.down("sm")]: {
-    height: "155px",
+    padding: "8px",
+  },
+  '[aria-pressed="true"] &': {
+    borderColor: "transparent",
+    boxShadow: `inset 0 0 0 2px ${theme.custom.colors.red}`,
   },
 }))
-const InstructorCard: React.FC<{
-  instructor: Faculty
-}> = ({ instructor }) => {
-  const [open, setOpen] = React.useState(false)
-  return (
-    <>
-      <InstructorCardRoot onClick={() => setOpen(true)}>
-        <InstructorImage
-          width={220}
-          height={140}
-          src={instructor.feature_image_src}
-          alt=""
-        />
-        <InstructorButton>{instructor.instructor_name}</InstructorButton>
-        <Typography variant="body3">{instructor.instructor_title}</Typography>
-      </InstructorCardRoot>
-      <InstructorDialog
-        instructor={instructor}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
-    </>
-  )
-}
-
-const CloseButton = styled(ActionButton)(({ theme }) => ({
-  position: "absolute",
-  top: "24px",
-  right: "28px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  "&&:hover": {
-    backgroundColor: theme.custom.colors.red,
-    color: theme.custom.colors.white,
-  },
-  [theme.breakpoints.down("md")]: {
-    right: "16px",
-  },
-}))
-const DialogImage = styled(Image)({
-  width: "100%",
-  aspectRatio: "1.92",
+const InstructorImage = styled(Image)({
+  height: "84px",
+  width: "84px",
   objectFit: "cover",
+  borderRadius: "50%",
 })
-const DialogContent = styled.div(({ theme }) => ({
-  padding: "32px",
-  ".raw-include": {
-    ...theme.typography.body2,
-    "*:first-child": {
-      marginTop: 0,
-    },
-    p: {
-      marginTop: "8px",
-      marginBottom: "0",
-    },
+const InstructorName = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  lineHeight: "22px",
+  marginTop: "6px",
+  '[aria-pressed="true"] &': {
+    color: theme.custom.colors.red,
+    fontWeight: theme.typography.fontWeightBold,
   },
 }))
-const InstructorDialog: React.FC<{
+const ActiveInstructorContent = styled.div(({ theme }) => ({
+  borderTop: `1px solid ${theme.custom.colors.red}`,
+  paddingTop: "24px",
+  color: theme.custom.colors.darkGray2,
+}))
+const ActiveInstructorName = styled.h3(({ theme }) => ({
+  ...theme.typography.h4,
+  color: theme.custom.colors.red,
+  marginBottom: "8px",
+  marginTop: "0px",
+}))
+
+const ActiveInstructor: React.FC<{
   instructor: Faculty
-  open: boolean
-  onClose: () => void
-}> = ({ instructor, open, onClose }) => {
-  const titleId = useId()
+  contentId: string
+}> = ({ instructor, contentId }) => {
   return (
-    <MuiDialog
-      open={open}
-      maxWidth="md"
-      onClose={onClose}
-      aria-labelledby={titleId}
-      slotProps={{
-        paper: { sx: { borderRadius: "8px", maxWidth: "770px" } },
-      }}
-    >
-      <CloseButton
-        onClick={onClose}
-        variant="text"
-        size="medium"
-        aria-label="Close"
-      >
-        <RiCloseLine />
-      </CloseButton>
-      <DialogImage
-        width={770}
-        height={400}
-        src={instructor.feature_image_src}
-        alt=""
-      />
-      <DialogContent>
-        <Typography
-          component="h2"
-          variant="h4"
-          sx={{ marginBottom: "8px" }}
-          id={titleId}
-        >
-          {instructor.instructor_name}
-        </Typography>
-        <Typography variant="subtitle1" sx={{ marginBottom: "16px" }}>
-          {instructor.instructor_title}
-        </Typography>
-        <RawHTML html={instructor.instructor_bio_long} />
-      </DialogContent>
-    </MuiDialog>
+    <ActiveInstructorContent id={contentId}>
+      <ActiveInstructorName>{instructor.instructor_name}</ActiveInstructorName>
+      <Typography variant="subtitle1" sx={{ marginBottom: "16px" }}>
+        {instructor.instructor_title}
+      </Typography>
+      <RawHTML html={instructor.instructor_bio_long} />
+    </ActiveInstructorContent>
   )
 }
 
 const InstructorsSection: React.FC<{ instructors: Faculty[] }> = ({
   instructors,
 }) => {
+  const panelId = React.useId()
+  const [arrowsContainer, setArrowsContainer] =
+    React.useState<HTMLDivElement | null>(null)
+  const [activeInstructorId, setActiveInstructorId] = React.useState<
+    Faculty["id"] | null
+  >(instructors[0]?.id ?? null)
+
+  React.useEffect(() => {
+    if (!instructors.length) {
+      setActiveInstructorId(null)
+      return
+    }
+    if (
+      !instructors.some((instructor) => instructor.id === activeInstructorId)
+    ) {
+      setActiveInstructorId(instructors[0].id)
+    }
+  }, [activeInstructorId, instructors])
+
+  const activeInstructor =
+    instructors.find((instructor) => instructor.id === activeInstructorId) ??
+    instructors[0]
+
   return (
     <InstructorsSectionRoot aria-labelledby={HeadingIds.Instructors}>
-      <Typography variant="h4" component="h2" id={HeadingIds.Instructors}>
-        Meet your instructors
-      </Typography>
-      <InstructorsList>
+      <InstructorsHeader>
+        <Typography variant="h4" component="h2" id={HeadingIds.Instructors}>
+          Meet your instructors
+        </Typography>
+        <ArrowButtonsContainer ref={setArrowsContainer} />
+      </InstructorsHeader>
+      <InstructorsCarousel
+        mobileBleed="symmetric"
+        mobileGutter={16}
+        arrowsContainer={arrowsContainer}
+        arrowGroupLabel="Instructor navigation"
+        prevLabel="Show previous instructors"
+        nextLabel="Show next instructors"
+      >
         {instructors.map((instructor) => {
-          return <InstructorCard key={instructor.id} instructor={instructor} />
+          const isActive = instructor.id === activeInstructor?.id
+          return (
+            <CarouselSlide key={instructor.id}>
+              <InstructorButton
+                type="button"
+                aria-pressed={isActive}
+                aria-controls={panelId}
+                onClick={() => setActiveInstructorId(instructor.id)}
+              >
+                <InstructorAvatar>
+                  <InstructorImage
+                    width={84}
+                    height={84}
+                    src={instructor.feature_image_src}
+                    alt=""
+                  />
+                </InstructorAvatar>
+                <InstructorName>{instructor.instructor_name}</InstructorName>
+              </InstructorButton>
+            </CarouselSlide>
+          )
         })}
-      </InstructorsList>
+      </InstructorsCarousel>
+      {activeInstructor ? (
+        <ActiveInstructor instructor={activeInstructor} contentId={panelId} />
+      ) : null}
     </InstructorsSectionRoot>
   )
 }

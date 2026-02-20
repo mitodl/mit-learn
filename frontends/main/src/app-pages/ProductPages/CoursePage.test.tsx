@@ -90,6 +90,7 @@ describe("CoursePage", () => {
   test("Page has expected headings", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
+    invariant(page.faculty.length > 0)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
@@ -102,6 +103,7 @@ describe("CoursePage", () => {
         { level: 2, name: "How you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
+        { level: 3, name: page.faculty[0].instructor_name },
         { level: 2, name: "Who can take this Course?" },
       ])
     })
@@ -162,7 +164,7 @@ describe("CoursePage", () => {
     expectRawContent(section, page.what_you_learn)
   })
 
-  // Dialog tested in InstructorsSection.test.tsx
+  // Interaction and active content are tested in InstructorsSection.test.tsx
   test("Instructors section has expected content", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
@@ -173,8 +175,10 @@ describe("CoursePage", () => {
     const section = await screen.findByRole("region", {
       name: "Meet your instructors",
     })
-    const items = within(section).getAllByRole("listitem")
-    expect(items.length).toBe(page.faculty.length)
+    const buttons = page.faculty.map((faculty) =>
+      within(section).getByRole("button", { name: faculty.instructor_name }),
+    )
+    expect(buttons.length).toBe(page.faculty.length)
   })
 
   test("Prerequisites section has expected content", async () => {

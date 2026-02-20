@@ -86,7 +86,9 @@ const Show = styled("div", {
 }))
 
 const MainCol = styled.div({
+  width: "100%",
   flex: 1,
+  minWidth: 0,
   display: "flex",
   flexDirection: "column",
   minWidth: 0,

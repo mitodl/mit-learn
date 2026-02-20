@@ -184,6 +184,7 @@ describe("ProgramPage", () => {
       }),
     })
     const page = makePage({ program_details: program })
+    invariant(page.faculty.length > 0)
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
@@ -201,6 +202,7 @@ describe("ProgramPage", () => {
             { level: 2, name: "How you'll learn" },
             { level: 2, name: "Prerequisites" },
             { level: 2, name: "Meet your instructors" },
+            { level: 3, name: page.faculty[0].instructor_name },
             { level: 2, name: "Who can take this Program?" },
           ],
           { maxLevel: 3 },
@@ -368,7 +370,7 @@ describe("ProgramPage", () => {
       })
   })
 
-  // Dialog tested in InstructorsSection.test.tsx
+  // Interaction and active content are tested in InstructorsSection.test.tsx
   test("Instructors section has expected content", async () => {
     const program = makeProgram({ ...makeReqs() })
     const page = makePage({ program_details: program })
@@ -379,8 +381,10 @@ describe("ProgramPage", () => {
     const section = await screen.findByRole("region", {
       name: "Meet your instructors",
     })
-    const items = within(section).getAllByRole("listitem")
-    expect(items.length).toBe(page.faculty.length)
+    const buttons = page.faculty.map((faculty) =>
+      within(section).getByRole("button", { name: faculty.instructor_name }),
+    )
+    expect(buttons.length).toBe(page.faculty.length)
   })
 
   test("Renders an enrollment button", async () => {
