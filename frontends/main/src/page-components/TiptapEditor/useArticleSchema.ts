@@ -12,7 +12,6 @@ import { Heading } from "@tiptap/extension-heading"
 import { Image } from "@tiptap/extension-image"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography as TiptapTypography } from "@tiptap/extension-typography"
-import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 import type { JSONContent } from "@tiptap/react"
@@ -147,7 +146,6 @@ export const useArticleSchema = ({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
       TiptapTypography,
       Superscript,
       Subscript,

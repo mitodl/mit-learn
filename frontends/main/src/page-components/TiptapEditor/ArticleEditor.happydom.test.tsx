@@ -902,48 +902,6 @@ describe("ArticleEditor - Document Rendering", () => {
       expect(italicText.closest("em") || italicText.closest("i")).toBeTruthy()
     })
 
-    test("renders document with highlighted text", async () => {
-      const content: JSONContent = {
-        type: "doc",
-        content: [
-          {
-            type: "banner",
-            content: [
-              {
-                type: "heading",
-                attrs: { level: 1 },
-                content: [{ type: "text", text: "Title" }],
-              },
-              {
-                type: "paragraph",
-                content: [],
-              },
-            ],
-          },
-          {
-            type: "byline",
-          },
-          {
-            type: "paragraph",
-            content: [
-              { type: "text", text: "This is " },
-              {
-                type: "text",
-                marks: [{ type: "highlight" }],
-                text: "highlighted text",
-              },
-              { type: "text", text: " in a paragraph." },
-            ],
-          },
-        ],
-      }
-
-      await setupEditor(content)
-
-      const highlightedText = await screen.findByText("highlighted text")
-      expect(highlightedText.closest("mark")).toBeTruthy()
-    })
-
     test("renders document with links", async () => {
       const content: JSONContent = {
         type: "doc",
