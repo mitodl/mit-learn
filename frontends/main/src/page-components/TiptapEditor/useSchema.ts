@@ -25,7 +25,9 @@ export const useSchema = ({
 
     const docType = schema.nodes.doc
     if (!docType) {
-      setSchemaError("Document node type not found in schema")
+      queueMicrotask(() => {
+        setSchemaError("Document node type not found in schema")
+      })
       return
     }
 
@@ -41,32 +43,40 @@ export const useSchema = ({
       if (typeof nodeTypeName !== "string") {
         const errorMessage =
           "Invalid content for node doc: node type must be a string"
-        setSchemaError(`Document schema check failed: ${errorMessage}`)
+        queueMicrotask(() => {
+          setSchemaError(`Document schema check failed: ${errorMessage}`)
+        })
         return
       }
 
       const nodeType = schema.nodes[nodeTypeName]
       if (!nodeType) {
         const errorMessage = `Invalid content for node doc: node type "${nodeTypeName}" not found in schema`
-        setSchemaError(`Document schema check failed: ${errorMessage}`)
+        queueMicrotask(() => {
+          setSchemaError(`Document schema check failed: ${errorMessage}`)
+        })
         return
       }
 
       const nextMatch = match.matchType(nodeType)
 
       if (!nextMatch) {
-        setSchemaError(
-          `Document schema check failed: Invalid content for node doc: ${jsonNode.type} is not allowed in this position`,
-        )
+        queueMicrotask(() => {
+          setSchemaError(
+            `Document schema check failed: Invalid content for node doc: ${jsonNode.type} is not allowed in this position`,
+          )
+        })
         return
       }
       match = nextMatch
     }
 
     if (!match.validEnd) {
-      setSchemaError(
-        "Document schema check failed: Invalid content for node doc: content specification not satisfied",
-      )
+      queueMicrotask(() => {
+        setSchemaError(
+          "Document schema check failed: Invalid content for node doc: content specification not satisfied",
+        )
+      })
       return
     }
 
@@ -74,18 +84,24 @@ export const useSchema = ({
     try {
       contentNode = Node.fromJSON(schema, content)
     } catch (parseError) {
-      setSchemaError(
-        `Failed to parse content: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-      )
+      queueMicrotask(() => {
+        setSchemaError(
+          `Failed to parse content: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        )
+      })
       return
     }
 
     try {
       contentNode.check()
-      setSchemaError(null)
+      queueMicrotask(() => {
+        setSchemaError(null)
+      })
     } catch (error) {
       const errorMessage = `Document schema check failed: ${error instanceof Error ? error.message : String(error)}`
-      setSchemaError(errorMessage)
+      queueMicrotask(() => {
+        setSchemaError(errorMessage)
+      })
     }
   }, [schema, content, enabled])
 

@@ -25,31 +25,36 @@ export const useResourceCard = (resource?: LearningResource | null) => {
   const handleClosePopover = useCallback(() => {
     setAnchorEl(null)
   }, [])
+  const handleAddToLearningPathClickCallback = useCallback(
+    (event: React.MouseEvent, resourceId: number) => {
+      NiceModal.show(AddToLearningPathDialog, { resourceId })
+    },
+    [],
+  )
   const handleAddToLearningPathClick: LearningResourceCardProps["onAddToLearningPathClick"] =
-    useMemo(() => {
-      if (user?.is_authenticated && user?.is_learning_path_editor) {
-        return (event, resourceId: number) => {
-          NiceModal.show(AddToLearningPathDialog, { resourceId })
-        }
-      }
-      return null
-    }, [user])
+    useMemo(
+      () =>
+        user?.is_authenticated && user?.is_learning_path_editor
+          ? handleAddToLearningPathClickCallback
+          : null,
+      [user, handleAddToLearningPathClickCallback],
+    )
 
   const handleAddToUserListClick: LearningResourceCardProps["onAddToUserListClick"] =
-    useMemo(() => {
-      if (!user) {
-        // user info is still loading
-        return null
-      }
-      if (user.is_authenticated) {
-        return (event, resourceId: number) => {
-          NiceModal.show(AddToUserListDialog, { resourceId })
+    useCallback(
+      (event: React.MouseEvent, resourceId?: number) => {
+        if (!user) {
+          // user info is still loading
+          return
         }
-      }
-      return (event) => {
-        setAnchorEl(event.currentTarget)
-      }
-    }, [user])
+        if (user.is_authenticated) {
+          NiceModal.show(AddToUserListDialog, { resourceId: resourceId! })
+        } else {
+          setAnchorEl(event.currentTarget as HTMLElement)
+        }
+      },
+      [user],
+    )
 
   const onClick = useLearningResourceDetailSetCache(resource)
 

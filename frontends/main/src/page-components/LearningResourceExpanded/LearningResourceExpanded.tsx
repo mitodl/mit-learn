@@ -166,6 +166,7 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
   const titleSectionRef = useRef<HTMLDivElement>(null)
   const [titleSectionHeight, setTitleSectionHeight] = useState(0)
   const [scrollPosition, setScrollPosition] = useState(0)
+  const scrollElementRef = useRef<HTMLElement | null>(null)
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
   const [chatExpanded, setChatExpanded] = useToggle(initialChatExpanded)
 
@@ -173,12 +174,12 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
     if (outerContainerRef?.current?.scrollTo) {
       outerContainerRef.current.scrollTo(0, 0)
     }
-    if (scrollElement) {
+    if (scrollElementRef.current) {
       requestAnimationFrame(() => {
-        scrollElement.scrollTop = 0
+        scrollElementRef.current!.scrollTop = 0
       })
     }
-  }, [resourceId, scrollElement])
+  }, [resourceId])
 
   useEffect(() => {
     const updateHeight = () => {
@@ -202,20 +203,26 @@ const LearningResourceExpanded: React.FC<LearningResourceExpandedProps> = ({
       const drawerPaper = outerContainerRef.current?.closest(
         ".MuiDrawer-paper",
       ) as HTMLElement
-      setScrollElement(drawerPaper)
+      scrollElementRef.current = drawerPaper
+      queueMicrotask(() => {
+        setScrollElement(drawerPaper)
+      })
     }
-  }, [outerContainerRef])
+  }, [])
 
   useEffect(() => {
-    if (scrollElement && chatTransitionState === ChatTransitionState.Closing) {
-      scrollElement.scrollTop = scrollPosition
+    if (
+      scrollElementRef.current &&
+      chatTransitionState === ChatTransitionState.Closing
+    ) {
+      scrollElementRef.current.scrollTop = scrollPosition
     }
-  }, [chatTransitionState, scrollElement, scrollPosition])
+  }, [chatTransitionState, scrollPosition])
 
   const onChatOpenerToggle = (open: boolean) => {
     if (open) {
       setChatTransitionState(ChatTransitionState.Opening)
-      setScrollPosition(scrollElement?.scrollTop ?? 0)
+      setScrollPosition(scrollElementRef.current?.scrollTop ?? 0)
       openChat()
     } else {
       setChatTransitionState(ChatTransitionState.Closing)

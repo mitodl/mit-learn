@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useMemo } from "react"
 import { shuffle } from "lodash"
 import {
   Container,
@@ -11,7 +11,6 @@ import {
 } from "ol-components"
 import { ActionButton } from "@mitodl/smoot-design"
 import { useTestimonialList } from "api/hooks/testimonials"
-import type { Attestation } from "api/v0"
 import { RiArrowRightLine, RiArrowLeftLine } from "@remixicon/react"
 import Slider from "react-slick"
 import AttestantBlock from "@/page-components/TestimonialDisplay/AttestantBlock"
@@ -231,14 +230,12 @@ const TestimonialTruncateText = styled(TruncateText)({
 const SlickCarousel = () => {
   const { data } = useTestimonialList({ position: 1 })
   const [slick, setSlick] = React.useState<Slider | null>(null)
-  const [shuffled, setShuffled] = useState<Attestation[]>()
-  const [imageSequence, setImageSequence] = useState<number[]>()
-
-  useEffect(() => {
-    if (!data) return
-    setShuffled(shuffle(data?.results))
-    setImageSequence(shuffle([1, 2, 3, 4, 5, 6]))
-  }, [data])
+  const results = data?.results
+  const shuffled = useMemo(
+    () => (results ? shuffle(results) : undefined),
+    [results],
+  )
+  const imageSequence = useMemo(() => shuffle([1, 2, 3, 4, 5, 6]), [])
 
   if (!data?.results?.length || !shuffled?.length) {
     return null
@@ -277,7 +274,7 @@ const SlickCarousel = () => {
             >
               <TestimonialCardImage>
                 <Image
-                  src={`/images/testimonial_images/testimonial-image-${imageSequence![idx % 6]}.png`}
+                  src={`/images/testimonial_images/testimonial-image-${imageSequence[idx % 6]}.png`}
                   alt=""
                   width={300}
                   height={326}

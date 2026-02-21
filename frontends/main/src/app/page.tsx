@@ -14,6 +14,8 @@ import {
 } from "api/hooks/newsEvents"
 import { getQueryClient } from "@/app/getQueryClient"
 
+const getRandomHeroImageIndex = () => Math.floor(Math.random() * 5) + 1
+
 export async function generateMetadata({
   searchParams,
 }: PageProps<"/">): Promise<Metadata> {
@@ -101,9 +103,11 @@ const Page: React.FC<PageProps<"/">> = async () => {
     ),
   ])
 
+  const heroImageIndex = getRandomHeroImageIndex()
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <HomePage heroImageIndex={Math.floor(Math.random() * 5) + 1} />
+      <HomePage heroImageIndex={heroImageIndex} />
     </HydrationBoundary>
   )
 }

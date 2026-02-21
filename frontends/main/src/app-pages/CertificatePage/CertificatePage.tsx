@@ -726,7 +726,12 @@ const CertificatePage: React.FC<{
   }, [print])
 
   const [shareOpen, setShareOpen] = useState(false)
-  const shareButtonRef = useRef<HTMLDivElement>(null)
+  const [shareAnchorEl, setShareAnchorEl] = useState<HTMLDivElement | null>(
+    null,
+  )
+  const shareButtonRef = (node: HTMLDivElement | null) => {
+    setShareAnchorEl(node)
+  }
 
   if (isCourseLoading || isProgramLoading) {
     return <Page />
@@ -776,7 +781,7 @@ const CertificatePage: React.FC<{
       <SharePopover
         open={shareOpen}
         title={`${title} Certificate issued by MIT Open Learning`}
-        anchorEl={shareButtonRef.current}
+        anchorEl={shareAnchorEl}
         onClose={() => setShareOpen(false)}
         pageUrl={pageUrl}
       />

@@ -7,7 +7,9 @@ const StateWrapper = (props: DialogProps) => {
   const [open, setOpen] = useState(props.open)
 
   useEffect(() => {
-    setOpen(props.open)
+    queueMicrotask(() => {
+      setOpen(props.open)
+    })
   }, [props.open])
 
   const close = () => {
