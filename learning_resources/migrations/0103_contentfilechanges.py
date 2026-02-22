@@ -58,7 +58,11 @@ class Migration(migrations.Migration):
                     _connector="OR",
                 ),
                 name="learning_material_resource_run_or_resource_defined",
-                violation_error_message="One of learning_resource, learning_material_resource, or run must be defined. Both learning_resource and run cannot be defined at the same time.",
+                violation_error_message=(
+                    "One of learning_resource, learning_material_resource, "
+                    "or run must be defined. "
+                    "Both learning_resource and run cannot be defined at the same time."
+                ),
             ),
         ),
     ]
