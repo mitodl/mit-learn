@@ -59,7 +59,7 @@ class Article(TimestampedModel):
         Return the relative URL for this article.
         """
         if self.slug:
-            return f"/articles/{self.slug}"
+            return f"/news/{self.slug}"
         return None
 
 

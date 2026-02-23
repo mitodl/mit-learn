@@ -191,7 +191,7 @@ describe("Home Page News and Events", () => {
     let section
     await waitFor(() => {
       section = screen
-        .getAllByRole("heading", { name: "Stories" })!
+        .getAllByRole("heading", { name: "News" })!
         .at(0)!
         .closest("section")!
     })
@@ -356,10 +356,10 @@ test("Headings", async () => {
       ...media.results.map((result) => ({ level: 3, name: result.title })),
       { level: 2, name: "Browse by Topic" },
       { level: 2, name: "From Our Community" },
-      { level: 2, name: "MIT Stories & Events" },
-      { level: 3, name: "Stories" },
+      { level: 2, name: "MIT News & Events" },
+      { level: 3, name: "News" },
       { level: 3, name: "Events" },
-      { level: 3, name: "Stories" },
+      { level: 3, name: "News" },
       { level: 3, name: "Events" },
     ])
   })

@@ -84,7 +84,7 @@ const BannerWrapper = (props?: { node?: ProseMirrorNode }) => {
               variant="dark"
               ancestors={[
                 { href: "/", label: "Home" },
-                { href: "/articles", label: "MIT Stories" },
+                { href: "/news", label: "MIT News" },
               ]}
               current={getTitle(props?.node || ({} as ProseMirrorNode))}
             />

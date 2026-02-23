@@ -289,7 +289,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                   </ButtonLink>
                   <ButtonLink
                     variant="primary"
-                    href={`/articles/${article?.is_published ? article?.slug : article?.id}/edit`}
+                    href={`/news/${article?.is_published ? article?.slug : article?.id}/edit`}
                     size="small"
                   >
                     Edit
