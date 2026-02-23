@@ -58,7 +58,10 @@ def _post_gen_tags(obj, create, extracted, **kwargs):  # noqa: ARG001
             random.randint(1, 5)  # noqa: S311
         )
 
-    obj.content_tags.set(extracted)
+    if isinstance(obj, models.LearningResource):
+        obj.resource_tags.set(extracted)
+    else:
+        obj.content_tags.set(extracted)
 
 
 class LearningResourceContentTagFactory(DjangoModelFactory):
@@ -214,7 +217,7 @@ class LearningResourceFactory(DjangoModelFactory):
     offered_by = factory.SubFactory(LearningResourceOfferorFactory)
     departments = factory.PostGeneration(_post_gen_departments)
     topics = factory.PostGeneration(_post_gen_topics)
-    content_tags = factory.PostGeneration(_post_gen_tags)
+    resource_tags = factory.PostGeneration(_post_gen_tags)
     completeness = 1
     published = True
     delivery = factory.List(random.choices(LearningResourceDelivery.names()))  # noqa: S311
