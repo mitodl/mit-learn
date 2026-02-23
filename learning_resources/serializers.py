@@ -1024,6 +1024,10 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
         default=constants.LearningResourceType.learning_path.name
     )
 
+    resource_category = serializers.ReadOnlyField(
+        default=constants.LearningResourceType.learning_path.value
+    )
+
     learning_path = LearningPathSerializer(read_only=True)
 
     def validate_resource_type(self, value):

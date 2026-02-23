@@ -11705,6 +11705,10 @@ components:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
           default: learning_path
           readOnly: true
+        resource_category:
+          type: string
+          readOnly: true
+          default: Learning Path
         learning_path:
           allOf:
           - $ref: '#/components/schemas/LearningPath'
@@ -11738,9 +11742,6 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
-        resource_category:
-          type: string
-          maxLength: 256
         ocw_topics:
           type: array
           items:
@@ -11863,10 +11864,6 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
-        resource_category:
-          type: string
-          minLength: 1
-          maxLength: 256
         ocw_topics:
           type: array
           items:
@@ -11928,7 +11925,6 @@ components:
         require_summaries:
           type: boolean
       required:
-      - resource_category
       - title
     LearningPathResourceResourceTypeEnum:
       type: string
@@ -13647,10 +13643,6 @@ components:
           nullable: true
           minLength: 1
           maxLength: 2048
-        resource_category:
-          type: string
-          minLength: 1
-          maxLength: 256
         ocw_topics:
           type: array
           items:
