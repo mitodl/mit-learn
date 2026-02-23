@@ -9,8 +9,6 @@ enum HeadingIds {
   Instructors = "instructors",
   WhoCanTake = "who-can-take",
   Requirements = "requirements",
-  RequirementsRequired = "required-courses",
-  RequirementsElectives = "elective-courses",
   Summary = "summary",
 }
 
@@ -47,7 +45,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
           ?.map((child) => child.data.course)
           .filter((id) => typeof id === "number") || []
       const requiredCourseCount =
-        elective && node.data.operator === "min_number_of"
+        node.data.operator === "min_number_of"
           ? Number(node.data.operator_value) || courseIds.length
           : courseIds.length
       return {

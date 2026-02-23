@@ -92,7 +92,6 @@ const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
 type RequirementSubsectionInfo = {
   title: string
   note?: string
-  titleId: string
   courseIds: number[]
 }
 
@@ -110,13 +109,18 @@ type RequirementsSectionProps = {
   program: V2Program
 }
 
-const getCompletionText = ({
-  requiredCount,
-  electiveCount,
-}: {
-  requiredCount?: number
-  electiveCount?: number
-}) => {
+const getCompletionText = (
+  parsedReqs: { requiredCourseCount: number; courseIds: number[] }[],
+) => {
+  let requiredCount = 0
+  let electiveCount = 0
+  for (const req of parsedReqs) {
+    if (req.requiredCourseCount < req.courseIds.length) {
+      electiveCount += req.requiredCourseCount
+    } else {
+      requiredCount += req.requiredCourseCount
+    }
+  }
   if (requiredCount && electiveCount) {
     return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
   }
@@ -126,7 +130,7 @@ const getCompletionText = ({
   if (electiveCount) {
     return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
   }
-  return "" // Program has no requirements at all. Something went wrong.
+  return ""
 }
 
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
@@ -134,30 +138,16 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 }) => {
   const courses = useQuery(coursesQueries.coursesForProgram(program))
   const coursesById = keyBy(courses.data?.results ?? [], "id")
-  /**
-   * req_tree allows for multiple elective sections, however
-   * the V2Program.requirements schema, from which we get course readable IDs,
-   * only supports at most one elective section and one required section.
-   */
   const parsedReqs = parseReqTree(program.req_tree)
-  const required = parsedReqs.find((req) => !req.elective)
-  const electives = parsedReqs.find((req) => req.elective)
 
-  const subsections: RequirementSubsectionInfo[] = [
-    required && {
-      title: required.title,
-      titleId: HeadingIds.RequirementsRequired,
-      courseIds: required.courseIds,
-    },
-    electives && {
-      title: electives.title,
-      note: electives
-        ? `Complete ${electives.requiredCourseCount} out of ${electives.courseIds.length}`
-        : "",
-      titleId: HeadingIds.RequirementsElectives,
-      courseIds: electives.courseIds,
-    },
-  ].filter((subsec) => subsec !== undefined)
+  const subsections: RequirementSubsectionInfo[] = parsedReqs.map((req) => ({
+    title: req.title,
+    note:
+      req.requiredCourseCount < req.courseIds.length
+        ? `Complete ${req.requiredCourseCount} out of ${req.courseIds.length}`
+        : undefined,
+    courseIds: req.courseIds,
+  }))
 
   return (
     <Stack
@@ -175,16 +165,13 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           Courses
         </Typography>
         <Typography variant="body1" component="p">
-          {getCompletionText({
-            requiredCount: required?.requiredCourseCount,
-            electiveCount: electives?.requiredCourseCount,
-          })}
+          {getCompletionText(parsedReqs)}
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>
-        {subsections.map(({ title, note, titleId, courseIds }) => (
-          <div key={titleId}>
-            <ReqSubsectionTitle component="h3" id={titleId}>
+        {subsections.map(({ title, note, courseIds }) => (
+          <div key={title}>
+            <ReqSubsectionTitle component="h3">
               {title}
               {note ? ": " : ""}
               {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}

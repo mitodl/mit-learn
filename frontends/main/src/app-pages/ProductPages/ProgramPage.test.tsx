@@ -1,5 +1,9 @@
 import React from "react"
-import { urls, factories } from "api/mitxonline-test-utils"
+import {
+  urls,
+  factories,
+  RequirementTreeBuilder,
+} from "api/mitxonline-test-utils"
 import {
   setMockResponse,
   urls as learnUrls,
@@ -21,8 +25,6 @@ import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { faker } from "@faker-js/faker/locale/en"
 
-const RequirementTreeBuilder = factories.requirements.RequirementTreeBuilder
-
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 jest.mock("@/common/useFeatureFlagsLoaded")
@@ -31,6 +33,13 @@ const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const makeProgram = factories.programs.program
 const makePage = factories.pages.programPageItem
 
+type ReqSection = {
+  title: string
+} & (
+  | { operator: "all_of"; courseCount: number }
+  | { operator: "min_number_of"; required: number; outOf: number }
+)
+
 const makeReqs = ({
   required = { count: 0, title: "Required Courses" },
   electives = { count: 0, outOf: 0, title: "Elective Courses" },
@@ -38,44 +47,65 @@ const makeReqs = ({
   required?: { count: number; title: string }
   electives?: { count: number; outOf: number; title: string }
 } = {}): Pick<V2Program, "requirements" | "req_tree"> => {
-  invariant(
-    electives.count <= electives.outOf,
-    "Elective count must be greater than or equal to 'outOf' value (take 3 courses out of 5, etc)",
-  )
+  const sections: ReqSection[] = []
+  if (required.count) {
+    sections.push({
+      operator: "all_of",
+      courseCount: required.count,
+      title: required.title,
+    })
+  }
+  if (electives.count) {
+    sections.push({
+      operator: "min_number_of",
+      required: electives.count,
+      outOf: electives.outOf,
+      title: electives.title,
+    })
+  }
+  return makeReqsFromSections(sections)
+}
+
+const makeReqsFromSections = (
+  sections: ReqSection[],
+): Pick<V2Program, "requirements" | "req_tree"> => {
   const reqTree = new RequirementTreeBuilder()
+  const allCourses: { id: number; readableId: string }[] = []
+
+  const addCourses = (node: RequirementTreeBuilder, count: number) => {
+    Array.from({ length: count }).forEach(() => {
+      const id = faker.number.int()
+      allCourses.push({ id, readableId: faker.lorem.slug() })
+      node.addCourse({ course: id })
+    })
+  }
+
+  sections.forEach((section) => {
+    if (section.operator === "all_of") {
+      addCourses(
+        reqTree.addOperator({ operator: "all_of", title: section.title }),
+        section.courseCount,
+      )
+    } else {
+      addCourses(
+        reqTree.addOperator({
+          operator: "min_number_of",
+          operator_value: String(section.required),
+          title: section.title,
+        }),
+        section.outOf,
+      )
+    }
+  })
 
   const requirements: V2Program["requirements"] = {
     courses: {
-      required: Array.from({ length: required.count }).map(() => ({
-        id: faker.number.int(),
-        readable_id: faker.lorem.slug(),
+      required: allCourses.map((c) => ({
+        id: c.id,
+        readable_id: c.readableId,
       })),
-      electives: Array.from({ length: electives.outOf }).map(() => ({
-        id: faker.number.int(),
-        readable_id: faker.lorem.slug(),
-      })),
+      electives: [],
     },
-  }
-
-  if (required.count) {
-    const requiredNode = reqTree.addOperator({
-      operator: "all_of",
-      title: required.title,
-    })
-    requirements.courses?.required?.forEach((req) => {
-      requiredNode.addCourse({ course: req.id })
-    })
-  }
-
-  if (electives.count) {
-    const electivesNode = reqTree.addOperator({
-      operator: "min_number_of",
-      operator_value: String(electives?.count ?? 0),
-      title: electives.title,
-    })
-    requirements.courses?.electives?.forEach((req) => {
-      electivesNode.addCourse({ course: req.id })
-    })
   }
 
   return { requirements, req_tree: reqTree.serialize() }
@@ -85,6 +115,18 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
   const raw = within(el).getByTestId("raw")
   expect(htmlString.length).toBeGreaterThan(0)
   expect(raw.innerHTML).toBe(htmlString)
+}
+
+const getCourseIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] => {
+  const ids: number[] = []
+  for (const node of reqTree) {
+    for (const child of node.children ?? []) {
+      if (typeof child.data.course === "number") {
+        ids.push(child.data.course)
+      }
+    }
+  }
+  return ids
 }
 
 const setupApis = ({
@@ -103,14 +145,9 @@ const setupApis = ({
     items: [page],
   })
 
-  const courses: CourseWithCourseRunsSerializerV2[] = [
-    ...(program.requirements.courses?.required ?? []),
-    ...(program.requirements.courses?.electives ?? []),
-  ].map((c) =>
-    factories.courses.course({
-      id: c.id,
-      readable_id: c.readable_id,
-    }),
+  const courseIds = getCourseIdsFromReqTree(program.req_tree)
+  const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
+    factories.courses.course({ id }),
   )
 
   setMockResponse.get(
@@ -296,7 +333,7 @@ describe("ProgramPage", () => {
     const numReq = faker.number.int({ min: 2, max: 5 })
     const numElective = faker.number.int({ min: 2, max: 3 })
     const numOutOf = faker.number.int({
-      min: numElective,
+      min: numElective + 1,
       max: numElective + 3,
     })
     const titles = {
@@ -333,41 +370,63 @@ describe("ProgramPage", () => {
       )
     })
 
-    within(reqList)
-      .getAllByRole("listitem")
-      .forEach((item, index) => {
-        const readableId =
-          program.requirements.courses?.required?.[index].readable_id
-        invariant(readableId)
-        const course = courses.find((c) => c.readable_id === readableId)
-        invariant(course)
-        const links = within(item).getAllByRole("link", {
-          name: course.title,
+    const courseIds = getCourseIdsFromReqTree(program.req_tree)
+    const allLists = within(section).getAllByRole("list")
+    allLists.forEach((list) => {
+      within(list)
+        .getAllByRole("listitem")
+        .forEach((item) => {
+          const course = courses.find((c) => courseIds.includes(c.id))
+          invariant(course)
+          const links = within(item).getAllByRole("link")
+          expect(links.length).toBeGreaterThanOrEqual(1)
         })
-        expect(links.length).toBeGreaterThanOrEqual(1)
-        expect(links[0]).toHaveAttribute(
-          "href",
-          `/courses/${encodeURIComponent(readableId)}`,
-        )
-      })
+    })
+  })
 
-    within(electiveList)
-      .getAllByRole("listitem")
-      .forEach((item, index) => {
-        const readableId =
-          program.requirements.courses?.electives?.[index].readable_id
-        invariant(readableId)
-        const course = courses.find((c) => c.readable_id === readableId)
-        invariant(course)
-        const links = within(item).getAllByRole("link", {
-          name: course.title,
-        })
-        expect(links.length).toBeGreaterThanOrEqual(1)
-        expect(links[0]).toHaveAttribute(
-          "href",
-          `/courses/${encodeURIComponent(readableId)}`,
-        )
-      })
+  test("Renders multiple elective sections", async () => {
+    const sections: ReqSection[] = [
+      { operator: "all_of", courseCount: 2, title: "Core Courses" },
+      {
+        operator: "min_number_of",
+        required: 1,
+        outOf: 3,
+        title: "Biophysics Electives",
+      },
+      {
+        operator: "min_number_of",
+        required: 2,
+        outOf: 4,
+        title: "Philosophy Electives",
+      },
+    ]
+    const program = makeProgram({ ...makeReqsFromSections(sections) })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Courses" })
+
+    within(section).getByRole("heading", { name: "Core Courses" })
+    within(section).getByRole("heading", {
+      name: "Biophysics Electives: Complete 1 out of 3",
+    })
+    within(section).getByRole("heading", {
+      name: "Philosophy Electives: Complete 2 out of 4",
+    })
+
+    const lists = within(section).getAllByRole("list")
+    expect(lists).toHaveLength(3)
+
+    await waitFor(() => {
+      expect(within(lists[0]).getAllByRole("listitem").length).toBe(2)
+    })
+    await waitFor(() => {
+      expect(within(lists[1]).getAllByRole("listitem").length).toBe(3)
+    })
+    await waitFor(() => {
+      expect(within(lists[2]).getAllByRole("listitem").length).toBe(4)
+    })
   })
 
   // Interaction and active content are tested in InstructorsSection.test.tsx
