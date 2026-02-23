@@ -1,6 +1,25 @@
 Release Notes
 =============
 
+Version 0.55.1
+--------------
+
+- fix-duplicate-property-error (#2970)
+- fix: improvements article listing page and home page (#2963)
+- Product Page Instructor Section (#2964)
+- fix(deps): update dependency litellm to v1.81.13 (#2741)
+- fix(deps): update dependency openai to v2 (#2732)
+- fix(deps): update dependency llama-index-llms-openai to ^0.6.0 (#2737)
+- [pre-commit.ci] pre-commit autoupdate (#2895)
+- fix(deps): update dependency llama-index to ^0.14.0 (#2736)
+- Product page style updates (#2962)
+- add CLAUDE.md pointing to AGENTS.md (#2966)
+- fix(deps): update dependency cryptography to v46 [security] (#2946)
+- fix(deps): update dependency django-imagekit to v6 (#2762)
+- fix(deps): update dependency cffi to v2 (#2759)
+- fix: improvements in editor exprience (#2954)
+- Replace uwsgi with granian, remove heroku-specific files (#2956)
+
 Version 0.54.1 (Released February 19, 2026)
 --------------
 
