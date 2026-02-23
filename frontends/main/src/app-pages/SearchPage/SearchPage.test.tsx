@@ -128,8 +128,8 @@ describe("SearchPage", () => {
         "free",
         "offered_by",
         "professional",
-        "resource_category",
         "resource_type",
+        "resource_type_group",
         "topic",
       ])
       expect(Object.fromEntries(apiSearchParams.entries())).toEqual(
@@ -186,7 +186,7 @@ describe("SearchPage", () => {
         count: 700,
         metadata: {
           aggregations: {
-            resource_category: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "learning_material", doc_count: 200 },
             ],
@@ -237,7 +237,7 @@ describe("SearchPage", () => {
         count: 700,
         metadata: {
           aggregations: {
-            resource_category: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "learning_material", doc_count: 200 },
             ],
@@ -273,7 +273,7 @@ describe("SearchPage", () => {
         count: 700,
         metadata: {
           aggregations: {
-            resource_category: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "learning_material", doc_count: 200 },
             ],
@@ -312,7 +312,7 @@ describe("SearchPage", () => {
         count: 700,
         metadata: {
           aggregations: {
-            resource_category: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "learning_material", doc_count: 200 },
             ],
@@ -360,7 +360,7 @@ test("admin users can set the search mode and slop", async () => {
       count: 700,
       metadata: {
         aggregations: {
-          resource_category: [
+          resource_type_group: [
             { key: "course", doc_count: 100 },
             { key: "learning_material", doc_count: 200 },
           ],
@@ -430,10 +430,10 @@ describe("Search Page Tabs", () => {
   test.each([
     { url: "", expectedActive: /All/ },
     { url: "?all", expectedActive: /All/ },
-    { url: "?resource_category=course", expectedActive: /Courses/ },
-    { url: "?resource_category=program", expectedActive: /Programs/ },
+    { url: "?resource_type_group=course", expectedActive: /Courses/ },
+    { url: "?resource_type_group=program", expectedActive: /Programs/ },
     {
-      url: "?resource_category=learning_material",
+      url: "?resource_type_group=learning_material",
       expectedActive: /Learning Materials/,
     },
   ])("Active tab determined by URL $url", async ({ url, expectedActive }) => {
@@ -442,7 +442,7 @@ describe("Search Page Tabs", () => {
         count: 1000,
         metadata: {
           aggregations: {
-            resource_type: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "podcast", doc_count: 200 },
               { key: "program", doc_count: 300 },
@@ -486,14 +486,14 @@ describe("Search Page Tabs", () => {
     await user.click(tabCourses)
     expect(tabCourses).toHaveAttribute("aria-selected")
     const params1 = new URLSearchParams(location.current.search)
-    expect(params1.get("resource_category")).toBe("course")
+    expect(params1.get("resource_type_group")).toBe("course")
     expect(params1.get("department")).toBe("8") // should preserve other params
 
     // Click "All"
     await user.click(tabAll)
     expect(tabAll).toHaveAttribute("aria-selected")
     const params2 = new URLSearchParams(location.current.search)
-    expect(params2.get("resource_category")).toBe(null)
+    expect(params2.get("resource_type_group")).toBe(null)
     expect(params2.get("department")).toBe("8") // should preserve other params
   })
 
@@ -503,14 +503,14 @@ describe("Search Page Tabs", () => {
         count: 1000,
         metadata: {
           aggregations: {
-            resource_type: [{ key: "video", doc_count: 100 }],
+            resource_type_group: [{ key: "video", doc_count: 100 }],
           },
           suggestions: [],
         },
       },
     })
     const { location } = renderWithProviders(<SearchPage />, {
-      url: "?resource_category=learning_material&resource_type=video&topic=Biology",
+      url: "?resource_type_group=learning_material&resource_type=video&topic=Biology",
     })
     const tabLM = screen.getByRole("tab", { name: /Learning Materials/ })
     const tabCourses = screen.getByRole("tab", { name: /Courses/ })
@@ -519,7 +519,7 @@ describe("Search Page Tabs", () => {
     // Click "Courses"
     await user.click(tabCourses)
     expect(location.current.search).toBe(
-      "?resource_category=course&topic=Biology",
+      "?resource_type_group=course&topic=Biology",
     )
   })
 
@@ -529,7 +529,7 @@ describe("Search Page Tabs", () => {
         count: 700,
         metadata: {
           aggregations: {
-            resource_category: [
+            resource_type_group: [
               { key: "course", doc_count: 100 },
               { key: "program", doc_count: 200 },
               { key: "learning_material", doc_count: 300 },
@@ -573,11 +573,11 @@ describe("Search Page Tabs", () => {
     })
 
     const { location } = renderWithProviders(<SearchPage />, {
-      url: "?page=3&resource_category=course",
+      url: "?page=3&resource_type_group=course",
     })
     const tabPrograms = screen.getByRole("tab", { name: /Programs/ })
     await user.click(tabPrograms)
-    expect(location.current.search).toBe("?resource_category=program")
+    expect(location.current.search).toBe("?resource_type_group=program")
   })
 })
 
