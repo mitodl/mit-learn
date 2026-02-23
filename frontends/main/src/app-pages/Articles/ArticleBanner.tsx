@@ -61,7 +61,7 @@ interface ArticleBannerProps {
 const ArticleBanner: React.FC<ArticleBannerProps> = ({
   title,
   description,
-  currentBreadcrumb = "MIT Stories",
+  currentBreadcrumb = "MIT News",
   backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
   className,
 }) => {

@@ -54,7 +54,7 @@ const MobileContent = styled.div`
   margin: 40px 0;
 `
 
-const StoriesContainer = styled.section`
+const NewsContainer = styled.section`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -86,7 +86,7 @@ const StoryCard = styled(Card)<{ mobile: boolean }>`
   ${({ mobile }) => (mobile ? "width: 274px" : "")}
 `
 
-const StoriesSlider = styled.div`
+const NewsSlider = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -240,7 +240,7 @@ const NewsEventsSection: React.FC = () => {
     return null
   }
 
-  const stories = news.results.slice(0, 6)
+  const newsList = news.results.slice(0, 6)
 
   const EventCards = events.results.map((item) => (
     <EventCard key={item.id} forwardClicksToLink>
@@ -270,7 +270,7 @@ const NewsEventsSection: React.FC = () => {
   return (
     <Section>
       <Title component="h2" variant="h2">
-        MIT Stories & Events
+        MIT News & Events
       </Title>
       <StrapLine>
         See what's happening in the world of learning with the latest news,
@@ -280,22 +280,22 @@ const NewsEventsSection: React.FC = () => {
         <MobileContent>
           <MobileContainer>
             <Typography component="h3" variant="h4">
-              Stories
+              News
             </Typography>
 
-            <StoriesSlider>
-              {stories.map((item) => (
+            <NewsSlider>
+              {newsList.map((item) => (
                 <Story
                   key={item.id}
                   mobile={true}
                   item={item as NewsFeedItem}
                 />
               ))}
-            </StoriesSlider>
+            </NewsSlider>
             {showArticleList && (
               <HeadingContainer>
-                <SeeAllButton href="/articles/" size="large" responsive>
-                  See all stories
+                <SeeAllButton href="/news/" size="large" responsive>
+                  See all news
                 </SeeAllButton>
               </HeadingContainer>
             )}
@@ -311,12 +311,12 @@ const NewsEventsSection: React.FC = () => {
       <AboveMdOnly>
         <Container>
           <Content>
-            <StoriesContainer>
+            <NewsContainer>
               <Typography component="h3" variant="h4">
-                Stories
+                News
               </Typography>
               <Grid2 container columnSpacing="24px" rowSpacing="28px">
-                {stories.map((item, index) => (
+                {newsList.map((item, index) => (
                   <Grid2
                     key={item.id}
                     size={{ xs: 12, sm: 12, md: 6, lg: 4, xl: 4 }}
@@ -333,12 +333,12 @@ const NewsEventsSection: React.FC = () => {
               </Grid2>
               {showArticleList && (
                 <HeadingContainer>
-                  <SeeAllButton href="/articles/" size="large" responsive>
-                    See all stories
+                  <SeeAllButton href="/news/" size="large" responsive>
+                    See all news
                   </SeeAllButton>
                 </HeadingContainer>
               )}
-            </StoriesContainer>
+            </NewsContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">
                 Events

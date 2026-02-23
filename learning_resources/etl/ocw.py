@@ -164,7 +164,7 @@ def transform_page(s3_key: str, page_data: dict) -> dict:
 
     """
 
-    s3_path = s3_key.split("data.json")[0]
+    s3_path = s3_key.split("data.json", maxsplit=1)[0]
     return {
         "content_type": CONTENT_TYPE_PAGE,
         "url": urljoin(settings.OCW_BASE_URL, urlparse(s3_path).path.lstrip("/")),
@@ -246,7 +246,7 @@ def transform_contentfile(
         dict: transformed content file data
 
     """
-    s3_path = s3_key.split("data.json")[0]
+    s3_path = s3_key.split("data.json", maxsplit=1)[0]
     s3_path = urlparse(s3_path).path.lstrip("/")
 
     file_type = contentfile_data.get("file_type")

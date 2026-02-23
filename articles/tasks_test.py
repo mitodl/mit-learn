@@ -80,7 +80,7 @@ class TestCallFastlyPurgeApi:
         """Test API call without auth token - skips in dev"""
         mock_request.return_value = mock_fastly_response
 
-        result = call_fastly_purge_api("/api/v1/articles/test/")
+        result = call_fastly_purge_api("/api/v1/news/test/")
 
         # Should skip purge when API key is empty (dev environment)
         assert result == {"status": "ok", "skipped": True}
@@ -98,7 +98,7 @@ class TestCallFastlyPurgeApi:
         """Test Fastly API error response"""
         mock_request.return_value = mock_fastly_error_response
 
-        result = call_fastly_purge_api("/api/v1/articles/test/")
+        result = call_fastly_purge_api("/api/v1/news/test/")
 
         assert result is False
 

@@ -73,6 +73,12 @@ const MainStoryCard = styled.div`
   border-top: 4px solid #a31f34;
   border-radius: 10px;
 
+  &:hover {
+    h2 {
+      text-decoration: underline;
+    }
+  }
+
   ${theme.breakpoints.down("sm")} {
     flex-direction: column;
     gap: 0;
@@ -203,10 +209,20 @@ const StoryCard = styled.div`
   flex-direction: row;
   gap: 24px;
   background: white;
-  border: 1px solid ${theme.custom.colors.lightGray2};
   border-radius: 8px;
   padding: 16px 16px 16px 24px;
   overflow: hidden;
+
+  &:hover {
+    border-radius: 8px;
+    border: 1px solid ${theme.custom.colors.lightGray2};
+    background: ${theme.custom.colors.white};
+    box-shadow: 0 8px 20px 0 rgb(120 147 172 / 10%);
+
+    h2 {
+      color: ${theme.custom.colors.red};
+    }
+  }
 
   ${theme.breakpoints.down("sm")} {
     flex-direction: row;
@@ -216,6 +232,12 @@ const StoryCard = styled.div`
     border: none;
     border-bottom: 1px solid ${theme.custom.colors.lightGray2};
     border-radius: 0;
+
+    &:hover {
+      border: none;
+      border-bottom: 1px solid ${theme.custom.colors.lightGray2};
+      box-shadow: none;
+    }
   }
 `
 
@@ -469,15 +491,18 @@ const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
     <MainStoryCard>
       <MainStoryImage>
         {item.image?.url && !imageError && (
-          <Image
-            src={item.image.url}
-            alt={item.image.alt || item.title}
-            fill
-            style={{ objectFit: "cover" }}
-            onError={() => setImageError(true)}
-          />
+          <Link href={item.url}>
+            <Image
+              src={item.image.url}
+              alt={item.image.alt || item.title}
+              fill
+              style={{ objectFit: "cover" }}
+              onError={() => setImageError(true)}
+            />
+          </Link>
         )}
       </MainStoryImage>
+
       <MainStoryContent>
         <MainStoryContentContainer>
           <MainStoryTitle>
@@ -590,9 +615,9 @@ const ArticleListingPage: React.FC = () => {
             </LoadingContainer>
           ) : stories.length === 0 ? (
             <EmptyState>
-              <Typography variant="h4">No Articles Available</Typography>
+              <Typography variant="h4">No News Available</Typography>
               <Typography variant="body1" color="textSecondary">
-                There are no articles to display at this time. Please check back
+                There are no news to display at this time. Please check back
                 later.
               </Typography>
             </EmptyState>
@@ -628,7 +653,7 @@ const ArticleListingPage: React.FC = () => {
                 {/* Grid Section: Other articles */}
                 {gridStories.length > 0 ? (
                   <GridContainer>
-                    <Grid2 container rowSpacing="8px" component={PlainList}>
+                    <Grid2 container rowSpacing="16px" component={PlainList}>
                       {gridStories.map((item) => (
                         <Grid2 key={item.id} size={12} component="li">
                           <RegularStory item={item as NewsFeedItem} />

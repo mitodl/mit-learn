@@ -1,15 +1,15 @@
 import React from "react"
 import { Metadata } from "next"
 import { standardizeMetadata } from "@/common/metadata"
-import { ArticleListingPage } from "@/app-pages/Articles/ArticleListingPage"
+import { ArticleNewPage } from "@/app-pages/Articles/ArticleNewPage"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "Articles Listing",
+  title: "MIT Learn| New",
   robots: "noindex, nofollow",
 })
 
-const Page: React.FC<PageProps<"/articles">> = () => {
-  return <ArticleListingPage />
+const Page: React.FC<PageProps<"/news/create">> = () => {
+  return <ArticleNewPage />
 }
 
 export default Page

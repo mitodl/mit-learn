@@ -6,6 +6,7 @@ validateEnv()
 const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
   (process.env.NEXT_PUBLIC_OPTIMIZE_IMAGES ?? "true") === "true",
 )
+const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 
 const processFeatureFlags = () => {
   const featureFlagPrefix =
@@ -107,6 +108,7 @@ const nextConfig = {
 
   images: {
     unoptimized: !NEXT_PUBLIC_OPTIMIZE_IMAGES,
+    dangerouslyAllowLocalIP: IS_LOCAL_DEV,
     remotePatterns: [
       {
         hostname: "**",

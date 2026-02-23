@@ -4,12 +4,14 @@ import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 enum HeadingIds {
   About = "about",
   What = "what-you-will-learn",
+  How = "how-you-will-learn",
   Prereqs = "prerequisites",
   Instructors = "instructors",
   WhoCanTake = "who-can-take",
   Requirements = "requirements",
   RequirementsRequired = "required-courses",
   RequirementsElectives = "elective-courses",
+  Summary = "summary",
 }
 
 type RequirementData = {
@@ -57,4 +59,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
     })
 }
 
+type ProductNoun = "Course" | "Program"
+
 export { HeadingIds, parseReqTree }
+export type { ProductNoun }

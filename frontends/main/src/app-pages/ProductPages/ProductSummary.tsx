@@ -1,5 +1,5 @@
 import React, { HTMLAttributes, useState } from "react"
-import { Alert, styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { ActionButton, Alert, styled } from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
@@ -10,6 +10,7 @@ import {
   RiTimeLine,
   RiFileCopy2Line,
   RiMenuAddLine,
+  RiInformation2Line,
 } from "@remixicon/react"
 import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
@@ -41,16 +42,29 @@ const InfoRow = styled.div(({ theme }) => ({
   width: "100%",
   display: "flex",
   gap: "8px",
-  alignItems: "baseline",
+  alignItems: "flex-start",
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body2,
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
   },
-  svg: {
+}))
+
+/**
+ * Centers an icon within a flex row. Uses height matching the text line-height
+ * so that flex-start alignment on the parent keeps it pinned to the first line.
+ */
+const InfoRowIcon = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  height: theme.typography.body2.lineHeight,
+  [theme.breakpoints.down("sm")]: {
+    height: theme.typography.body3.lineHeight,
+  },
+  flexShrink: 0,
+  "> svg": {
     width: "20px",
     height: "20px",
-    transform: "translateY(25%)",
   },
 }))
 
@@ -80,7 +94,7 @@ const InfoLabel = styled.span<{
   underline && { textDecoration: "underline" },
 ])
 const InfoLabelValue: React.FC<{
-  label: string
+  label: React.ReactNode
   value: React.ReactNode
   labelVariant?: "light" | "normal"
 }> = ({ label, value, labelVariant }) =>
@@ -128,7 +142,9 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   return (
     <InfoRow {...others}>
-      <RiCalendarLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiCalendarLine aria-hidden="true" />
+      </InfoRowIcon>
       <Stack gap="16px" width="100%">
         {manyDates ? (
           <InfoRowInner>
@@ -189,33 +205,69 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 }
 
 type LearnMoreDialogProps = {
-  buttonText: string
+  buttonText?: string
   href: string
   description: string
   title: string
+  iconOnly?: boolean
 }
+
+/**
+ * Centers an icon button inline within flowing text. Uses verticalAlign to
+ * align itself on the line box (works because inline-flex is inline-level).
+ */
+const ButtonContainer = styled.span(({ theme }) => ({
+  marginLeft: "8px",
+  // center container within text
+  display: "inline-flex",
+  verticalAlign: "middle",
+  height: theme.typography.body2.lineHeight,
+  [theme.breakpoints.down("sm")]: {
+    height: theme.typography.body3.lineHeight,
+  },
+  // center icon in container
+  alignItems: "center",
+  "> button": {
+    color: theme.custom.colors.silverGrayDark,
+  },
+}))
+
 const LearnMoreDialog: React.FC<LearnMoreDialogProps> = ({
   buttonText,
   href,
   description,
   title,
+  iconOnly = false,
 }) => {
   const [open, setOpen] = React.useState(false)
   return (
     <>
-      <UnderlinedLink
-        target="_blank"
-        rel="noopener noreferrer"
-        color="black"
-        href=""
-        role="button"
-        onClick={(event) => {
-          event.preventDefault()
-          setOpen(true)
-        }}
-      >
-        {buttonText}
-      </UnderlinedLink>
+      {iconOnly ? (
+        <ButtonContainer>
+          <ActionButton
+            size="small"
+            onClick={() => setOpen(true)}
+            aria-label={title}
+            variant="text"
+          >
+            <RiInformation2Line aria-hidden="true" />
+          </ActionButton>
+        </ButtonContainer>
+      ) : (
+        <UnderlinedLink
+          target="_blank"
+          rel="noopener noreferrer"
+          color="black"
+          href=""
+          role="button"
+          onClick={(event) => {
+            event.preventDefault()
+            setOpen(true)
+          }}
+        >
+          {buttonText}
+        </UnderlinedLink>
+      )}
       <Dialog
         onClose={() => setOpen(false)}
         open={open}
@@ -266,14 +318,23 @@ const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
 
   return (
     <InfoRow {...others}>
-      <RiComputerLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiComputerLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={pace.label} />{" "}
-        <LearnMoreDialog
-          buttonText="What's this?"
-          href={pace.href}
-          description={pace.description}
-          title={`What are ${pace.label} courses?`}
+        <InfoLabelValue
+          label="Course Format"
+          value={
+            <>
+              {pace.label}
+              <LearnMoreDialog
+                href={pace.href}
+                description={pace.description}
+                title={`What are ${pace.label} courses?`}
+                iconOnly
+              />
+            </>
+          }
         />
       </InfoRowInner>
     </InfoRow>
@@ -290,7 +351,9 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   const display = [duration, effort].filter(Boolean).join(", ")
   return (
     <InfoRow {...others}>
-      <RiTimeLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiTimeLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Estimated" value={display} />
       </InfoRowInner>
@@ -298,10 +361,12 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
+const COURSE_CERT_INFO_HREF =
+  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 const COURSE_CERT_INFO_LINK = (
   <UnderlinedLink
     color="black"
-    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
+    href={COURSE_CERT_INFO_HREF}
     target="_blank"
     rel="noopener noreferrer"
   >
@@ -354,21 +419,25 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
       {price ? (
         <>
           <InfoRowInner flexWrap={"nowrap"}>
-            <InfoLabelValue
-              label="Certificate Track"
-              value={
-                price.isDiscounted ? (
-                  <>
-                    <br />
-                    {price.finalPrice}{" "}
-                    <StrickenText>{price.originalPrice}</StrickenText>
-                  </>
-                ) : (
-                  price.finalPrice
-                )
-              }
-            />
-            {COURSE_CERT_INFO_LINK}
+            <span>
+              <UnderlinedLink
+                href={COURSE_CERT_INFO_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="black"
+              >
+                <InfoLabel>Earn a certificate</InfoLabel>
+              </UnderlinedLink>
+              :{" "}
+              {price.isDiscounted ? (
+                <>
+                  {price.finalPrice}{" "}
+                  <StrickenText>{price.originalPrice}</StrickenText>
+                </>
+              ) : (
+                price.finalPrice
+              )}
+            </span>
           </InfoRowInner>
           {hasFinancialAid ? (
             <UnderlinedLink
@@ -421,7 +490,9 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
 }) => {
   return (
     <InfoRow {...others}>
-      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiPriceTag3Line aria-hidden="true" />
+      </InfoRowIcon>
       <Stack gap="8px" width="100%">
         <InfoLabelValue label="Price" value="Free to Learn" />
         <CourseCertificateBox course={course} nextRun={nextRun} />
@@ -438,7 +509,9 @@ const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
   const label = `Part of the following ${pluralize("program", course.programs.length)}`
   return (
     <InfoRow {...others}>
-      <RiMenuAddLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiMenuAddLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <Stack gap="4px">
           <InfoLabel>{label}</InfoLabel>
@@ -456,20 +529,6 @@ const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
     </InfoRow>
   )
 }
-
-const SidebarSummaryRoot = styled.section(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "0 0 4px 4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px 32px",
-  [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-24px",
-    top: "calc(40px + 32px + 24px)",
-    borderRadius: "4px",
-  },
-}))
 
 enum TestIds {
   DatesRow = "dates-row",
@@ -498,57 +557,48 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-  enrollButton?: React.ReactNode
-}> = ({ course, enrollButton }) => {
+}> = ({ course }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <SidebarSummaryRoot aria-labelledby="course-summary">
-      <VisuallyHidden>
-        <h2 id="course-summary">Course summary</h2>
-      </VisuallyHidden>
-      <Stack gap={{ xs: "24px", md: "32px" }}>
-        <Stack gap="8px">
-          {enrollButton}
-          {!nextRun ? (
-            <Alert severity="warning">
-              No sessions of this course are currently open for enrollment. More
-              sessions may be added in the future.
-            </Alert>
-          ) : null}
-          {nextRun?.is_archived ? <ArchivedAlert /> : null}
-        </Stack>
-        {nextRun ? (
-          <CourseDatesRow
-            course={course}
-            nextRun={nextRun}
-            data-testid={TestIds.DatesRow}
-          />
-        ) : null}
-        {nextRun ? (
-          <CoursePaceRow
-            course={course}
-            nextRun={nextRun}
-            data-testid={TestIds.PaceRow}
-          />
-        ) : null}
-        <CourseDurationRow
+    <Stack gap={{ xs: "24px", md: "32px" }}>
+      {!nextRun ? (
+        <Alert severity="warning">
+          No sessions of this course are currently open for enrollment. More
+          sessions may be added in the future.
+        </Alert>
+      ) : null}
+      {nextRun?.is_archived ? <ArchivedAlert /> : null}
+      {nextRun ? (
+        <CourseDatesRow
           course={course}
           nextRun={nextRun}
-          data-testid={TestIds.DurationRow}
+          data-testid={TestIds.DatesRow}
         />
-        <CoursePriceRow
+      ) : null}
+      {nextRun ? (
+        <CoursePaceRow
           course={course}
           nextRun={nextRun}
-          data-testid={TestIds.PriceRow}
+          data-testid={TestIds.PaceRow}
         />
-        <CourseInProgramsRow
-          course={course}
-          nextRun={nextRun}
-          data-testid={TestIds.CourseInProgramsRow}
-        />
-      </Stack>
-    </SidebarSummaryRoot>
+      ) : null}
+      <CourseDurationRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.DurationRow}
+      />
+      <CoursePriceRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.PriceRow}
+      />
+      <CourseInProgramsRow
+        course={course}
+        nextRun={nextRun}
+        data-testid={TestIds.CourseInProgramsRow}
+      />
+    </Stack>
   )
 }
 
@@ -569,7 +619,9 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 
   return (
     <InfoRow {...others}>
-      <RiFileCopy2Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiFileCopy2Line aria-hidden="true" />
+      </InfoRowIcon>
 
       <InfoRowInner>
         <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
@@ -594,7 +646,9 @@ const ProgramDurationRow: React.FC<ProgramInfoRowProps> = ({
 
   return (
     <InfoRow {...others}>
-      <RiTimeLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiTimeLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Estimated" value={display} />
       </InfoRowInner>
@@ -622,35 +676,34 @@ const ProgramPaceRow: React.FC<
 > = ({ courses, ...others }) => {
   const paceCode = courses?.length ? getProgramPacing(courses) : null
   const pace = paceCode ? PACE_DATA[paceCode] : null
+  if (!pace) return null
   return (
     <InfoRow {...others}>
-      <RiComputerLine aria-hidden="true" />
+      <InfoRowIcon>
+        <RiComputerLine aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
-        <InfoLabelValue label="Course Format" value={pace?.label} />{" "}
-        {pace ? (
-          <LearnMoreDialog
-            buttonText="What's this?"
-            href={pace.href}
-            description={pace.description}
-            title={`What are ${pace.label} courses?`}
-          />
-        ) : null}
+        <InfoLabelValue
+          label="Course Format"
+          value={
+            <>
+              {pace.label}
+              <LearnMoreDialog
+                href={pace.href}
+                description={pace.description}
+                title={`What are ${pace.label} courses?`}
+                iconOnly
+              />
+            </>
+          }
+        />
       </InfoRowInner>
     </InfoRow>
   )
 }
 
-const PROGRAM_CERT_INFO_LINK = (
-  <UnderlinedLink
-    color="black"
-    href="https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{ minWidth: "fit-content" }}
-  >
-    Learn More
-  </UnderlinedLink>
-)
+const PROGRAM_CERT_INFO_HREF =
+  "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 
 const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
   program,
@@ -660,21 +713,17 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
   return (
     <CertificateBoxRoot>
       <InfoRowInner flexWrap="nowrap">
-        <InfoLabelValue
-          label="Certificate Track"
-          value={
-            <>
-              {/* Heuristic: If the price contains more than one word, insert a line
-            to avoid wrapping "$100-$200 per course" after $100, orphaning one word.
-            CSS alone either creates orphans or will overflow the container for long
-            text if text-wrap:nowrap is used.
-            */}
-              {price.trim().split(" ").length > 1 ? <br /> : null}
-              {price}
-            </>
-          }
-        />
-        {PROGRAM_CERT_INFO_LINK}
+        <span>
+          <UnderlinedLink
+            href={PROGRAM_CERT_INFO_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="black"
+          >
+            <InfoLabel>Earn a certificate</InfoLabel>
+          </UnderlinedLink>
+          : {price}
+        </span>
       </InfoRowInner>
       {program.page.financial_assistance_form_url ? (
         <UnderlinedLink
@@ -700,7 +749,9 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
 }) => {
   return (
     <InfoRow {...others}>
-      <RiPriceTag3Line aria-hidden="true" />
+      <InfoRowIcon>
+        <RiPriceTag3Line aria-hidden="true" />
+      </InfoRowIcon>
       <InfoRowInner>
         <InfoLabelValue label="Price" value="Free to Learn" />
         <ProgramCertificateBox program={program} />
@@ -715,27 +766,17 @@ const ProgramSummary: React.FC<{
    * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
    */
   courses?: CourseWithCourseRunsSerializerV2[]
-  enrollButton?: React.ReactNode
-}> = ({ program, courses, enrollButton }) => {
+}> = ({ program, courses }) => {
   return (
-    <SidebarSummaryRoot aria-labelledby="program-summary">
-      <VisuallyHidden>
-        <h2 id="program-summary">Program summary</h2>
-      </VisuallyHidden>
-      <Stack gap={{ xs: "24px", md: "32px" }}>
-        {enrollButton}
-        <RequirementsRow
-          program={program}
-          data-testid={TestIds.RequirementsRow}
-        />
-        <ProgramDurationRow
-          program={program}
-          data-testid={TestIds.DurationRow}
-        />
-        <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
-        <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
-      </Stack>
-    </SidebarSummaryRoot>
+    <Stack gap={{ xs: "24px", md: "32px" }}>
+      <RequirementsRow
+        program={program}
+        data-testid={TestIds.RequirementsRow}
+      />
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+    </Stack>
   )
 }
 

@@ -50,6 +50,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
         onClick={handleClick}
         variant="primary"
         size="large"
+        data-testid="course-enrollment-button"
       >
         {getButtonText(nextRun)}
       </WideButton>

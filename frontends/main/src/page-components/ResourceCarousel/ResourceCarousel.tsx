@@ -20,6 +20,13 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 
+const StyledCarouselV2 = styled(CarouselV2)({
+  margin: "24px 0",
+  ".MitCarousel-track": {
+    paddingBottom: "4px",
+  },
+})
+
 /* Leaving for reference while we determine wether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({
   /**
@@ -155,18 +162,6 @@ const PanelChildren: React.FC<PanelChildrenProps> = ({
   )
 }
 
-const MobileOverflow = styled.div(({ theme }) => ({
-  /**
-   * On mobile screens, the carousel is supposed to overflow the main content
-   * so its right edge is flush with screen.
-   *
-   * The mobile content margin is 16px, so we add that to its width.
-   */
-  [theme.breakpoints.down("sm")]: {
-    width: "calc(100% + 16px)",
-  },
-}))
-
 type ResourceCarouselProps = {
   config: TabConfig[]
   title: string
@@ -259,7 +254,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   )
 
   return (
-    <MobileOverflow className={className} data-testid="resource-carousel">
+    <div className={className} data-testid="resource-carousel">
       <TabContext value={tab}>
         <HeaderRow>
           <HeaderText component={titleComponent} variant={titleVariant}>
@@ -304,7 +299,11 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
         >
           {({ resources, childrenLoading, tabConfig }) => {
             return (
-              <CarouselV2 arrowsContainer={ref}>
+              <StyledCarouselV2
+                arrowsContainer={ref}
+                mobileBleed="symmetric"
+                mobileGutter={16}
+              >
                 {isLoading || childrenLoading
                   ? Array.from({ length: 6 }).map((_, index) => (
                       <ResourceCard
@@ -325,12 +324,12 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                           {...tabConfig.cardProps}
                         />
                       ))}
-              </CarouselV2>
+              </StyledCarouselV2>
             )
           }}
         </PanelChildren>
       </TabContext>
-    </MobileOverflow>
+    </div>
   )
 }
 

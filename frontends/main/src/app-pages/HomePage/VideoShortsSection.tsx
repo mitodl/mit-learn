@@ -28,6 +28,10 @@ const Header = styled.div(({ theme }) => ({
 }))
 
 const StyledCarouselV2 = styled(CarouselV2)(({ theme }) => ({
+  margin: "24px 0",
+  ".MitCarousel-track": {
+    paddingBottom: "4px",
+  },
   [theme.breakpoints.down("sm")]: {
     padding: "0 16px",
   },

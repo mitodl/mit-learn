@@ -71,9 +71,9 @@ def test_feed_item_viewset_list(client, is_news):
         factories.FeedItemFactory.create_batch(
             5, is_news=is_news, is_event=not is_news
         ),
-        key=lambda x: x.news_details.publish_date
-        if is_news
-        else x.event_details.event_datetime,
+        key=lambda x: (
+            x.news_details.publish_date if is_news else x.event_details.event_datetime
+        ),
         reverse=True,
     )
     past_event = FeedEventDetailFactory(
@@ -98,9 +98,9 @@ def test_feed_item_viewset_list_filtered(client, feed_type):
         factories.FeedItemFactory.create_batch(
             2, is_news=is_news, is_event=not is_news
         ),
-        key=lambda x: x.news_details.publish_date
-        if is_news
-        else x.event_details.event_datetime,
+        key=lambda x: (
+            x.news_details.publish_date if is_news else x.event_details.event_datetime
+        ),
         reverse=True,
     )
     # This should not be in results

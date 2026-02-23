@@ -1,13 +1,7 @@
 import React from "react"
 import { factories } from "api/mitxonline-test-utils"
 
-import {
-  renderWithProviders,
-  waitFor,
-  screen,
-  within,
-  user,
-} from "@/test-utils"
+import { renderWithProviders, screen, within, user } from "@/test-utils"
 
 import { getByImageSrc } from "ol-test-utilities"
 
@@ -30,18 +24,22 @@ test("Renders each instructor", async () => {
     name: "Meet your instructors",
   })
 
-  const items = within(section).getAllByRole("listitem")
-
   expect(instructors.length).toBe(3)
-  instructors.forEach((instructor, index) => {
-    const item = items[index]
-    within(item).getByRole("button", { name: instructor.instructor_name })
-    within(item).getByText(instructor.instructor_title)
-    getByImageSrc(item, instructor.feature_image_src)
+  instructors.forEach((instructor) => {
+    const button = within(section).getByRole("button", {
+      name: instructor.instructor_name,
+    })
+    getByImageSrc(button, instructor.feature_image_src)
   })
+
+  const defaultInstructor = instructors[0]
+  within(section).getByRole("heading", {
+    name: defaultInstructor.instructor_name,
+  })
+  expectRawContent(section, defaultInstructor.instructor_bio_long)
 })
 
-test("Opens and closes instructor dialog", async () => {
+test("Changes active instructor content on portrait click", async () => {
   const instructors = Array.from({ length: 3 }, () => makeFaculty())
   renderWithProviders(<InstructorsSection instructors={instructors} />)
 
@@ -51,18 +49,13 @@ test("Opens and closes instructor dialog", async () => {
   })
   await user.click(button)
 
-  const dialog = await screen.findByRole("dialog", {
-    name: `${instructor.instructor_name}`,
+  const section = await screen.findByRole("region", {
+    name: "Meet your instructors",
   })
-  within(dialog).getByRole("heading", {
-    level: 2,
+  within(section).getByRole("heading", {
     name: instructor.instructor_name,
   })
-  expectRawContent(dialog, instructor.instructor_bio_long)
+  expectRawContent(section, instructor.instructor_bio_long)
 
-  const closeButton = within(dialog).getByRole("button", { name: "Close" })
-  await user.click(closeButton)
-  await waitFor(() => {
-    expect(dialog).not.toBeInTheDocument()
-  })
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
 })

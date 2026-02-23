@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Stack, Typography } from "ol-components"
+import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
@@ -15,11 +15,11 @@ import { HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
-import ProductPageTemplate, {
-  HeadingData,
-  ProductNavbar,
-  WhoCanTake,
-} from "./ProductPageTemplate"
+import ProductPageTemplate from "./ProductPageTemplate"
+import ProductNavbar, { HeadingData } from "./ProductNavbar"
+import WhoCanTakeSection from "./WhoCanTakeSection"
+import WhatYoullLearnSection from "./WhatYoullLearnSection"
+import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -29,11 +29,6 @@ type CoursePageProps = {
   readableId: string
 }
 
-const WhatSection = styled.section({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-})
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -53,6 +48,12 @@ const getNavLinks = (page: CoursePageItem): HeadingData[] => {
       label: "What you'll learn",
       variant: "secondary",
       content: page.what_you_learn,
+    },
+    {
+      id: HeadingIds.How,
+      label: "How you'll learn",
+      variant: "secondary",
+      content: true,
     },
     {
       id: HeadingIds.Prereqs,
@@ -107,40 +108,30 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
-      sidebarSummary={
-        <CourseSummary
-          course={course}
-          enrollButton={<CourseEnrollmentButton course={course} />}
-        />
-      }
-      navLinks={navLinks}
+      summaryTitle="Course summary"
+      sidebarSummary={<CourseSummary course={course} />}
+      enrollButton={<CourseEnrollmentButton course={course} />}
+      navbar={<ProductNavbar navLinks={navLinks} productNoun="Course" />}
     >
-      <ProductNavbar navLinks={navLinks} productNoun="Course" />
-      <Stack gap={{ xs: "40px", sm: "56px" }}>
-        {page.about ? (
-          <AboutSection productNoun="Course" aboutHtml={page.about} />
-        ) : null}
-        {page.what_you_learn ? (
-          <WhatSection aria-labelledby={HeadingIds.What}>
-            <Typography variant="h4" component="h2" id={HeadingIds.What}>
-              What you'll learn
-            </Typography>
-            <RawHTML html={page.what_you_learn} />
-          </WhatSection>
-        ) : null}
-        {page.prerequisites ? (
-          <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
-            <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
-              Prerequisites
-            </Typography>
-            <RawHTML html={page.prerequisites} />
-          </PrerequisitesSection>
-        ) : null}
-        {page.faculty.length ? (
-          <InstructorsSection instructors={page.faculty} />
-        ) : null}
-        <WhoCanTake productNoun="Course" />
-      </Stack>
+      {page.about ? (
+        <AboutSection productNoun="Course" aboutHtml={page.about} />
+      ) : null}
+      {page.what_you_learn ? (
+        <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
+      <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
+      {page.prerequisites ? (
+        <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
+          <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>
+            Prerequisites
+          </Typography>
+          <RawHTML html={page.prerequisites} />
+        </PrerequisitesSection>
+      ) : null}
+      {page.faculty.length ? (
+        <InstructorsSection instructors={page.faculty} />
+      ) : null}
+      <WhoCanTakeSection productNoun="Course" />
     </ProductPageTemplate>
   )
 }
