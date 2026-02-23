@@ -44,7 +44,6 @@ import {
   CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-import { useRouter } from "next-nprogress-bar"
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -289,7 +288,6 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 }
 
 const useEnrollmentHandler = () => {
-  const router = useRouter()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
@@ -317,7 +315,7 @@ const useEnrollmentHandler = () => {
           { run_id: programRunId },
           {
             onSuccess: () => {
-              router.push(href)
+              window.location.href = href
             },
           },
         )
@@ -336,20 +334,19 @@ const useEnrollmentHandler = () => {
             { readable_id: readableId },
             {
               onSuccess: () => {
-                router.push(href)
+                window.location.href = href
               },
             },
           )
         }
       } else {
         const onCourseEnroll = (run: CourseRunV2) => {
-          router.push(run.courseware_url!)
+          window.location.href = run.courseware_url!
         }
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       }
     },
     [
-      router,
       mitxOnlineUser.data?.legal_address?.country,
       mitxOnlineUser.data?.user_profile?.year_of_birth,
       createB2bEnrollment,
