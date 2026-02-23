@@ -6,12 +6,11 @@ import json
 import random
 from pathlib import Path
 
-import markdown
 import pytest
-import tiktoken
 import yaml
 from faker import Faker
 
+import markdown
 from data_fixtures import utils as data_utils
 from learning_resources import utils
 from learning_resources.constants import (
@@ -626,9 +625,18 @@ def test_json_to_markdown(courses_data):
 
 
 def test_truncate_to_tokens_util(mocker):
+    class MockEncoding:
+        def encode(self, text):
+            return list(text)
+
+        def decode(self, tokens):
+            return "".join(tokens)
+
+    mock_encoding = MockEncoding()
+    mocker.patch("tiktoken.encoding_for_model", return_value=mock_encoding)
+
     model = "gpt-4o"
     content = Faker().text() * 100
     max_tokens = random.randint(1, 50)  # noqa: S311
     truncated = truncate_to_tokens(content, max_tokens, model)
-    encoding = tiktoken.encoding_for_model(model)
-    assert len(encoding.encode(truncated)) <= max_tokens
+    assert len(mock_encoding.encode(truncated)) <= max_tokens
