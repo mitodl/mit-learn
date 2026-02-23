@@ -426,6 +426,10 @@ def upsert_course_or_program(  # noqa: C901
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
 
+    if resource_type == LearningResourceType.course.name:
+        resource_category = LearningResourceType.course.value
+    else:
+        resource_category = LearningResourceType.program.value
     deduplicated_course_id = next(
         (
             record["course_id"]
@@ -493,6 +497,7 @@ def upsert_course_or_program(  # noqa: C901
             **{unique_field_name: unique_field_value},
             platform=platform,
             resource_type=resource_type,
+            resource_category=resource_category,
             defaults=resource_data,
         )
     else:
@@ -501,6 +506,7 @@ def upsert_course_or_program(  # noqa: C901
         **{unique_field_name: unique_field_value},
         platform=platform,
         resource_type=resource_type,
+        resource_category=resource_category,
         defaults=resource_data,
     )
 
@@ -1030,6 +1036,7 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
             platform=LearningResourcePlatform.objects.get(
                 code=PlatformType.podcast.name
             ),
+            resource_category=LearningResourceType.podcast_episode.value,
             defaults=episode_data,
         )
 
@@ -1073,6 +1080,7 @@ def load_podcast(podcast_data: dict) -> LearningResource:
             platform=LearningResourcePlatform.objects.get(
                 code=PlatformType.podcast.name
             ),
+            resource_category=LearningResourceType.podcast.value,
             defaults=podcast_data,
         )
         Podcast.objects.update_or_create(
@@ -1184,6 +1192,7 @@ def load_video(video_data: dict) -> LearningResource:
             platform=LearningResourcePlatform.objects.get(code=platform),
             readable_id=readable_id,
             resource_type=LearningResourceType.video.name,
+            resource_category=LearningResourceType.video.value,
             defaults=video_data,
         )
         Video.objects.update_or_create(
@@ -1240,6 +1249,7 @@ def load_article(article_data: dict) -> LearningResource:
             ),
             readable_id=readable_id,
             resource_type=LearningResourceType.article.name,
+            resource_category=LearningResourceType.article.value,
             defaults=article_data,
         )
         Article.objects.update_or_create(
@@ -1314,6 +1324,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,
+            resource_category=LearningResourceType.video_playlist.value,
             platform=LearningResourcePlatform.objects.get(
                 code=playlist_data.pop("platform", PlatformType.youtube.name),
             ),

@@ -3416,6 +3416,10 @@ components:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
           default: learning_path
           readOnly: true
+        resource_category:
+          type: string
+          readOnly: true
+          default: Learning Path
         learning_path:
           allOf:
           - $ref: '#/components/schemas/LearningPath'
@@ -3449,9 +3453,6 @@ components:
           format: uri
           nullable: true
           maxLength: 2048
-        resource_category:
-          type: string
-          maxLength: 256
         ocw_topics:
           type: array
           items:

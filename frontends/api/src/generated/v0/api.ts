@@ -2704,6 +2704,12 @@ export interface LearningPathResource {
   resource_type: LearningPathResourceResourceTypeEnum
   /**
    *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  resource_category: string
+  /**
+   *
    * @type {LearningPath}
    * @memberof LearningPathResource
    */
@@ -2756,12 +2762,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   url?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  resource_category: string
   /**
    *
    * @type {Array<string>}

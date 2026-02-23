@@ -2745,6 +2745,12 @@ export interface LearningPathResource {
   resource_type: LearningPathResourceResourceTypeEnum
   /**
    *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  resource_category: string
+  /**
+   *
    * @type {LearningPath}
    * @memberof LearningPathResource
    */
@@ -2797,12 +2803,6 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   url?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResource
-   */
-  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -2955,12 +2955,6 @@ export interface LearningPathResourceRequest {
    * @memberof LearningPathResourceRequest
    */
   url?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningPathResourceRequest
-   */
-  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -5308,12 +5302,6 @@ export interface PatchedLearningPathResourceRequest {
    * @memberof PatchedLearningPathResourceRequest
    */
   url?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof PatchedLearningPathResourceRequest
-   */
-  resource_category?: string
   /**
    *
    * @type {Array<string>}
