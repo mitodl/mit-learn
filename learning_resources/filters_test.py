@@ -7,7 +7,7 @@ import pytest
 from django.utils.http import urlencode
 
 from learning_resources.constants import (
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     LEARNING_RESOURCE_SORTBY_OPTIONS,
     CertificationType,
     LearningResourceDelivery,
@@ -294,14 +294,14 @@ def test_learning_resource_filter_resource_category(client):
     video = VideoFactory.create().learning_resource
 
     results = client.get(
-        f"{RESOURCE_API_URL}?resource_category={LEARNING_MATERIAL_RESOURCE_CATEGORY}"
+        f"{RESOURCE_API_URL}?resource_type_group={LEARNING_MATERIAL_RESOURCE_TYPE_GROUP}"
     ).json()["results"]
     assert len(results) == 2
     ids = (res["id"] for res in results)
     assert podcast.id in ids
     assert video.id in ids
 
-    resource_filter = f"resource_category={LearningResourceType.program.name}&resource_category={LEARNING_MATERIAL_RESOURCE_CATEGORY}"
+    resource_filter = f"resource_type_group={LearningResourceType.program.name}&resource_type_group={LEARNING_MATERIAL_RESOURCE_TYPE_GROUP}"
     results = client.get(f"{RESOURCE_API_URL}?{resource_filter}").json()["results"]
     assert len(results) == 3
     ids = (res["id"] for res in results)
@@ -446,17 +446,17 @@ def test_learning_resource_filter_course_features(client):
     """Test that the resource_content_tag filter works"""
 
     resource_with_exams = LearningResourceFactory.create(
-        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Exams"),
+        resource_tags=LearningResourceContentTagFactory.create_batch(1, name="Exams"),
         resource_type=LearningResourceType.video.name,
     )
     resource_with_notes = LearningResourceFactory.create(
-        content_tags=LearningResourceContentTagFactory.create_batch(
+        resource_tags=LearningResourceContentTagFactory.create_batch(
             1, name="Lecture Notes"
         ),
         resource_type=LearningResourceType.video.name,
     )
     LearningResourceFactory.create(
-        content_tags=LearningResourceContentTagFactory.create_batch(1, name="Other"),
+        resource_tags=LearningResourceContentTagFactory.create_batch(1, name="Other"),
         resource_type=LearningResourceType.video.name,
     )
 

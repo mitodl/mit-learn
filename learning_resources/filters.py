@@ -84,7 +84,7 @@ class LearningResourceFilter(FilterSet):
     course_feature = CharInFilter(
         label="Content feature for the resources. Load the 'api/v1/course_features' "
         "endpoint for a list of course features",
-        field_name="content_tags__name__iexact",
+        field_name="resource_tags__name__iexact",
     )
 
     readable_id = CharInFilter(
