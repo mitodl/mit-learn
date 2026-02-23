@@ -59,7 +59,6 @@ from learning_resources.factories import (
     ArticleFactory,
     ContentFileFactory,
     CourseFactory,
-    LearningMaterialFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -79,7 +78,6 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
-    LearningMaterial,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -1280,9 +1278,14 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert course.runs.count() == 2
 
     deleted_content_file = ContentFileFactory.create(run=course_run)
-    deleted_content_file_learning_material = LearningMaterialFactory.create(
-        content_file=deleted_content_file
+    deleted_content_file_learning_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.value,
     )
+    deleted_content_file.learning_material_resource = (
+        deleted_content_file_learning_resource
+    )
+    deleted_content_file.save()
+
     returned_content_file_id = deleted_content_file.id + 1
 
     content_data = [{"a": "b"}, {"a": "c"}]
@@ -1312,10 +1315,10 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert mock_bulk_delete.call_count == 0 if is_published else 1
     assert mock_calc_score.call_count == (1 if calc_score else 0)
     deleted_content_file.refresh_from_db()
-    deleted_content_file_learning_material.refresh_from_db()
+    deleted_content_file_learning_resource.refresh_from_db()
 
     assert not deleted_content_file.published
-    assert not deleted_content_file_learning_material.learning_resource.published
+    assert not deleted_content_file_learning_resource.learning_resource.published
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
@@ -2395,7 +2398,9 @@ def test_load_learning_materials(mocker):
         {"Programming Assignments"},
     )
 
-    learning_material = LearningMaterial.objects.last()
+    learning_material_content_file.refresh_from_db()
+
+    learning_material = learning_material_content_file
 
     resource_relationships = ocw_course.learning_resource.children.all()
     assert resource_relationships.count() == 1

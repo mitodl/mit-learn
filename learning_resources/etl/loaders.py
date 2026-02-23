@@ -389,7 +389,7 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901
+def upsert_course_or_program(  # noqa: C901, PLR0912
     resource_data: dict,
     blocklist: list[str],
     duplicates: list[dict],
