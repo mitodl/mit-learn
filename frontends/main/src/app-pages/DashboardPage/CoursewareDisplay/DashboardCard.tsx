@@ -304,11 +304,7 @@ const useNormalizedDashboardData = (
   const coursewareUrl = run?.courseware_url
   const hasEnrolled =
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
-
-  const b2bContractId =
-    resource.type === DashboardType.CourseRunEnrollment
-      ? (resource.data.b2b_contract_id ?? run?.b2b_contract ?? contractId)
-      : (run?.b2b_contract ?? contractId)
+  const b2bContractId = run?.b2b_contract ?? contractId
 
   const hasEnrollableRuns = resourceIsCourse
     ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
