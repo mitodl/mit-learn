@@ -261,7 +261,7 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
     assert resource.platform.code == PlatformType.ocw.name
     assert resource.offered_by.code == OfferedBy.ocw.name
     assert resource.departments.first().department_id == "16"
-    assert resource.content_tags.count() == 5
+    assert resource.resource_tags.count() == 5
     run = resource.runs.first()
     assert run.instructors.count() == 10
     assert run.run_id == "97db384ef34009a64df7cb86cf701979"
@@ -270,7 +270,10 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
     assert mock_calc_score.call_count == (0 if skip_content_files else 1)
 
     learning_materials = LearningResource.objects.filter(
-        resource_type=LearningResourceType.learning_material.name
+        resource_type__in=[
+            LearningResourceType.video.name,
+            LearningResourceType.document.name,
+        ]
     )
 
     assert learning_materials.count() == (0 if skip_content_files else 1)
@@ -285,10 +288,10 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
         assert learning_material.offered_by.code == OfferedBy.ocw.name
         assert learning_material.title == "Resource Title"
 
-        assert learning_material.learning_material.content_tags == [
+        assert list(learning_material.resource_tags.values_list("name", flat=True)) == [
             "Activity Assignments"
         ]
-        assert learning_material.learning_material.content_category == "Practice"
+        assert learning_material.resource_category == "Practice"
 
 
 @mock_aws

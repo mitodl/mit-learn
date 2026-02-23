@@ -948,6 +948,9 @@ def load_learning_material(
                 "resource_category": resource_category,
             },
         )
+        load_content_tags(
+            learning_resource, learning_material_tags, is_content_file=False
+        )
 
         content_file.learning_material_resource = learning_resource
         content_file.save()
