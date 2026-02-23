@@ -430,6 +430,7 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         resource_category = LearningResourceType.course.value
     else:
         resource_category = LearningResourceType.program.value
+    resource_data["resource_category"] = resource_category
     deduplicated_course_id = next(
         (
             record["course_id"]
@@ -497,7 +498,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             **{unique_field_name: unique_field_value},
             platform=platform,
             resource_type=resource_type,
-            resource_category=resource_category,
             defaults=resource_data,
         )
     else:
@@ -506,7 +506,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         **{unique_field_name: unique_field_value},
         platform=platform,
         resource_type=resource_type,
-        resource_category=resource_category,
         defaults=resource_data,
     )
 
@@ -1028,15 +1027,16 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     offered_bys_data = episode_data.pop("offered_by", {})
     image_data = episode_data.pop("image", {})
     departments_data = episode_data.pop("departments", [])
+    episode_data["resource_category"] = LearningResourceType.podcast_episode.value
 
     episode_model_data = episode_data.pop("podcast_episode", {})
+
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
             platform=LearningResourcePlatform.objects.get(
                 code=PlatformType.podcast.name
             ),
-            resource_category=LearningResourceType.podcast_episode.value,
             defaults=episode_data,
         )
 
@@ -1073,14 +1073,13 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     image_data = podcast_data.pop("image", {})
     podcast_model_data = podcast_data.pop("podcast", {})
     departments_data = podcast_data.pop("departments", [])
-
+    podcast_data["resource_category"] = LearningResourceType.podcast.value
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
             platform=LearningResourcePlatform.objects.get(
                 code=PlatformType.podcast.name
             ),
-            resource_category=LearningResourceType.podcast.value,
             defaults=podcast_data,
         )
         Podcast.objects.update_or_create(
@@ -1184,6 +1183,8 @@ def load_video(video_data: dict) -> LearningResource:
     offered_by_data = video_data.pop("offered_by", None)
     video_fields = video_data.pop("video", {})
     image_data = video_data.pop("image", None)
+    video_data["resource_category"] = LearningResourceType.video.value
+
     with transaction.atomic():
         (
             learning_resource,
@@ -1192,7 +1193,6 @@ def load_video(video_data: dict) -> LearningResource:
             platform=LearningResourcePlatform.objects.get(code=platform),
             readable_id=readable_id,
             resource_type=LearningResourceType.video.name,
-            resource_category=LearningResourceType.video.value,
             defaults=video_data,
         )
         Video.objects.update_or_create(
@@ -1238,7 +1238,7 @@ def load_article(article_data: dict) -> LearningResource:
     topics_data = article_data.pop("topics")
     offered_by_data = article_data.pop("offered_by", None)
     image_url = article_data.pop("image")
-
+    article_data["resource_category"] = LearningResourceType.article.value
     with transaction.atomic():
         (
             learning_resource,
@@ -1249,7 +1249,6 @@ def load_article(article_data: dict) -> LearningResource:
             ),
             readable_id=readable_id,
             resource_type=LearningResourceType.article.name,
-            resource_category=LearningResourceType.article.value,
             defaults=article_data,
         )
         Article.objects.update_or_create(
@@ -1314,7 +1313,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     thumbnail_data = playlist_data.pop("image", None)
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
-
+    playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
         image, _ = LearningResourceImage.objects.update_or_create(
             url=thumbnail_data.get("url"),
@@ -1324,7 +1323,6 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,
-            resource_category=LearningResourceType.video_playlist.value,
             platform=LearningResourcePlatform.objects.get(
                 code=playlist_data.pop("platform", PlatformType.youtube.name),
             ),
