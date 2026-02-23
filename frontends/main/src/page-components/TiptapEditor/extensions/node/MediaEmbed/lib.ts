@@ -1,3 +1,12 @@
+export function isVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.pathname.toLowerCase().endsWith(".mp4")
+  } catch {
+    return false
+  }
+}
+
 export function convertToEmbedUrl(url: string): string | null {
   let parsed: URL
 
@@ -8,6 +17,14 @@ export function convertToEmbedUrl(url: string): string | null {
   }
 
   const hostname = parsed.hostname.replace("www.", "")
+
+  // --- MIT LEARN MP4 VIDEOS ---
+  if (
+    hostname === "learn.mit.edu" &&
+    parsed.pathname.toLowerCase().endsWith(".mp4")
+  ) {
+    return url // Return the URL as-is for video element
+  }
 
   // --- YOUTUBE WATCH ---
   if (hostname === "youtube.com" && parsed.pathname === "/watch") {

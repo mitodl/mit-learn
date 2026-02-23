@@ -91,7 +91,6 @@ const MainCol = styled.div({
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
-  minWidth: 0,
 })
 
 const SectionsWrapper = styled.div(({ theme }) => ({

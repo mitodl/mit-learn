@@ -5,6 +5,7 @@ import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { EditableCaption } from "../shared/EditableCaption"
+import { isVideoUrl } from "./lib"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -123,7 +124,16 @@ const MediaContainer = styled.div(({ theme }) => ({
     display: "block",
   },
 
-  ".layout-full & iframe": {
+  video: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "6px",
+    display: "block",
+    objectFit: "contain",
+    backgroundColor: "#000",
+  },
+
+  ".layout-full & iframe, .layout-full & video": {
     borderRadius: 0,
   },
   ".ProseMirror-selectednode .layout-wide &": {
@@ -216,13 +226,14 @@ export const MediaEmbedNodeView = ({
       )}
 
       <MediaContainer>
-        <iframe
-          src={src}
-          frameBorder="0"
-          allowFullScreen
-          title={caption}
-          inert={editable}
-        />
+        {isVideoUrl(src) ? (
+          <video src={src} controls title={caption}>
+            <track kind="captions" />
+            Your browser does not support the video tag.
+          </video>
+        ) : (
+          <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        )}
       </MediaContainer>
 
       <EditableCaption

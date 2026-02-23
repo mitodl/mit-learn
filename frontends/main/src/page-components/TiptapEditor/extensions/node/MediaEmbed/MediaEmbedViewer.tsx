@@ -1,6 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { EditableCaption } from "../shared/EditableCaption"
+import { isVideoUrl } from "./lib"
 
 const StyledWrapper = styled.div({
   position: "relative",
@@ -35,6 +36,15 @@ const MediaContainer = styled.div({
     borderRadius: "6px",
     display: "block",
   },
+
+  video: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "6px",
+    display: "block",
+    objectFit: "contain",
+    backgroundColor: "#000",
+  },
 })
 
 interface MediaEmbedNode {
@@ -53,7 +63,14 @@ export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
   return (
     <StyledWrapper className={`layout-${layout}`}>
       <MediaContainer>
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        {isVideoUrl(src) ? (
+          <video src={src} controls title={caption}>
+            <track kind="captions" />
+            Your browser does not support the video tag.
+          </video>
+        ) : (
+          <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        )}
       </MediaContainer>
 
       <EditableCaption
