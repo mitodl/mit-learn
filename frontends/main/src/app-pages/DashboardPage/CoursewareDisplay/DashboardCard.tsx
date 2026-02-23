@@ -238,122 +238,54 @@ const getContextMenuItems = (
   return [...menuItems, ...additionalItems]
 }
 
-type NormalizedDashboardData = {
-  title: string
-  enrollmentStatus: EnrollmentStatus
-  coursewareUrl?: string | null
-  readableId?: string
-  coursewareId?: string
-  startDate?: string | null
-  endDate?: string | null
-  run?: CourseRunV2
-  b2bContractId?: number
-  hasValidCertificate: boolean
-  certificateLink: string | null
-  isAnyCourse: boolean
-  isProgram: boolean
-  resourceIsCourse: boolean
-  resourceIsCourseRunEnrollment: boolean
-  resourceIsProgramEnrollment: boolean
-  hasEnrolled: boolean
-  hasEnrollableRuns: boolean
-  disableEnrollment: boolean
-  canUpgrade: boolean
-  includeInLearnCatalog: boolean
+const getTitle = (resource: DashboardResource): string => {
+  if (resource.type === DashboardType.Course) {
+    return resource.data.title
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return resource.data.run.course.title
+  }
+  return resource.data.program.title
 }
 
-const useNormalizedDashboardData = (
+const getRun = (
   resource: DashboardResource,
   contractId?: number,
-): NormalizedDashboardData => {
-  const resourceIsCourse = resource.type === DashboardType.Course
-  const resourceIsCourseRunEnrollment =
-    resource.type === DashboardType.CourseRunEnrollment
-  const resourceIsProgramEnrollment =
-    resource.type === DashboardType.ProgramEnrollment
+): CourseRunV2 | undefined => {
+  if (resource.type === DashboardType.Course) {
+    return getBestRun(resource.data, contractId)
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return resource.data.run
+  }
+  return undefined
+}
 
-  const isAnyCourse = resourceIsCourse || resourceIsCourseRunEnrollment
-  const isProgram = resourceIsProgramEnrollment
-
-  const title =
-    resource.type === DashboardType.Course
-      ? resource.data.title
-      : resource.type === DashboardType.CourseRunEnrollment
-        ? resource.data.run.course.title
-        : resource.data.program.title
-
-  const run = resourceIsCourse
-    ? getBestRun(resource.data, contractId)
-    : resourceIsCourseRunEnrollment
-      ? resource.data.run
-      : undefined
-
+const getDashboardEnrollmentStatus = (
+  resource: DashboardResource,
+): EnrollmentStatus => {
   const hasValidCertificate =
     resource.type !== DashboardType.Course && !!resource.data.certificate?.uuid
 
-  const enrollmentStatus: EnrollmentStatus = isAnyCourse
-    ? hasValidCertificate
-      ? EnrollmentStatus.Completed
-      : resource.type === DashboardType.CourseRunEnrollment
-        ? getEnrollmentStatus(resource.data)
-        : EnrollmentStatus.NotEnrolled
-    : hasValidCertificate
-      ? EnrollmentStatus.Completed
-      : EnrollmentStatus.Enrolled
-
-  const coursewareUrl = run?.courseware_url
-  const hasEnrolled =
-    isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
-  const b2bContractId = run?.b2b_contract ?? contractId
-
-  const hasEnrollableRuns = resourceIsCourse
-    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
-    : true
-
-  const disableEnrollment = resourceIsCourse && !hasEnrollableRuns
-
-  const readableId = resourceIsCourse
-    ? run?.courseware_id
-    : resourceIsCourseRunEnrollment
-      ? resource.data.run.courseware_id
-      : resourceIsProgramEnrollment
-        ? resource.data.program.readable_id
-        : undefined
-
-  const includeInLearnCatalog = resourceIsCourse
-    ? resource.data.include_in_learn_catalog
-    : resourceIsCourseRunEnrollment
-      ? resource.data.run.course.include_in_learn_catalog
-      : true
-
-  const canUpgrade =
-    resourceIsCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-    (run?.is_upgradable ?? false)
-
-  return {
-    title,
-    enrollmentStatus,
-    coursewareUrl,
-    readableId,
-    coursewareId: readableId,
-    startDate: run?.start_date,
-    endDate: run?.end_date,
-    run,
-    b2bContractId,
-    hasValidCertificate,
-    certificateLink: getCertificateLink(resource),
-    isAnyCourse,
-    isProgram,
-    resourceIsCourse,
-    resourceIsCourseRunEnrollment,
-    resourceIsProgramEnrollment,
-    hasEnrolled,
-    hasEnrollableRuns,
-    disableEnrollment,
-    canUpgrade,
-    includeInLearnCatalog,
+  if (resource.type === DashboardType.Course) {
+    return EnrollmentStatus.NotEnrolled
   }
+
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return hasValidCertificate
+      ? EnrollmentStatus.Completed
+      : getEnrollmentStatus(resource.data)
+  }
+
+  return hasValidCertificate
+    ? EnrollmentStatus.Completed
+    : EnrollmentStatus.Enrolled
+}
+
+const getDefaultNoun = (resource: DashboardResource): string => {
+  return resource.type === DashboardType.ProgramEnrollment
+    ? "Program"
+    : "Course"
 }
 
 const useEnrollmentHandler = () => {
@@ -700,50 +632,87 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   programEnrollment,
   onUpgradeError,
 }) => {
-  const data = useNormalizedDashboardData(resource, contractId)
   const enrollment = useEnrollmentHandler()
   const useProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
 
+  const title = getTitle(resource)
+  const run = getRun(resource, contractId)
+  const enrollmentStatus = getDashboardEnrollmentStatus(resource)
+  const certificateLink = getCertificateLink(resource)
+  const displayNoun = noun ?? getDefaultNoun(resource)
+
+  const isCourse = resource.type === DashboardType.Course
+  const isCourseRunEnrollment =
+    resource.type === DashboardType.CourseRunEnrollment
+  const isProgramEnrollment = resource.type === DashboardType.ProgramEnrollment
+  const isAnyCourse = isCourse || isCourseRunEnrollment
+
+  const coursewareUrl = run?.courseware_url
+  const hasEnrolled =
+    isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
+  const b2bContractId = run?.b2b_contract ?? contractId
+
+  const hasEnrollableRuns =
+    isCourse && resource.type === DashboardType.Course
+      ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+      : true
+
+  const disableEnrollment = isCourse && !hasEnrollableRuns
+
+  const readableId = isCourse
+    ? run?.courseware_id
+    : isCourseRunEnrollment &&
+        resource.type === DashboardType.CourseRunEnrollment
+      ? resource.data.run.courseware_id
+      : isProgramEnrollment && resource.type === DashboardType.ProgramEnrollment
+        ? resource.data.program.readable_id
+        : undefined
+
+  const includeInLearnCatalog =
+    isCourse && resource.type === DashboardType.Course
+      ? resource.data.include_in_learn_catalog
+      : isCourseRunEnrollment &&
+          resource.type === DashboardType.CourseRunEnrollment
+        ? resource.data.run.course.include_in_learn_catalog
+        : true
+
+  const canUpgrade =
+    isCourseRunEnrollment &&
+    resource.type === DashboardType.CourseRunEnrollment &&
+    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    (run?.is_upgradable ?? false)
+
   // For Course resources, use the course data directly
-  // For other resources, we don't need to fetch separately
   const courseData =
-    data.resourceIsCourse && resource.type === DashboardType.Course
+    isCourse && resource.type === DashboardType.Course
       ? resource.data
       : undefined
 
-  // Compute default noun based on resource type
-  const defaultNoun = data.isAnyCourse
-    ? "Course"
-    : data.isProgram
-      ? "Program"
-      : "Unknown"
-  const displayNoun = noun ?? defaultNoun
-
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
-    if (!data.hasEnrolled && data.isAnyCourse) {
+    if (!hasEnrolled && isAnyCourse) {
       const isVerifiedProgramEnrollment =
         programEnrollment?.enrollment_mode === EnrollmentMode.Verified
-      const programRunId = data.run?.id
+      const programRunId = run?.id
 
       enrollment.enroll({
         course: courseData,
-        readableId: data.readableId,
-        href: buttonHref ?? data.coursewareUrl ?? undefined,
-        isB2B: !!data.b2bContractId,
+        readableId: readableId,
+        href: buttonHref ?? coursewareUrl ?? undefined,
+        isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programRunId: isVerifiedProgramEnrollment ? programRunId : undefined,
       })
     }
   }, [
-    data.hasEnrolled,
-    data.isAnyCourse,
-    data.readableId,
-    data.coursewareUrl,
-    data.b2bContractId,
-    data.run?.id,
+    hasEnrolled,
+    isAnyCourse,
+    readableId,
+    coursewareUrl,
+    b2bContractId,
+    run?.id,
     courseData,
     buttonHref,
     enrollment,
@@ -751,17 +720,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)
-  const titleHref = data.isAnyCourse
-    ? data.hasEnrolled
-      ? (buttonHref ?? data.coursewareUrl)
+  const titleHref = isAnyCourse
+    ? hasEnrolled
+      ? (buttonHref ?? coursewareUrl)
       : undefined
-    : data.resourceIsProgramEnrollment &&
-        resource.type === DashboardType.ProgramEnrollment
+    : isProgramEnrollment && resource.type === DashboardType.ProgramEnrollment
       ? programView(resource.data.program.id)
       : undefined
 
   const titleClick: React.MouseEventHandler | undefined =
-    data.isAnyCourse && !data.hasEnrolled
+    isAnyCourse && !hasEnrolled
       ? (e) => {
           e.preventDefault()
           handleEnrollmentClick()
@@ -772,7 +740,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const coursewareButtonClick:
     | React.MouseEventHandler<HTMLButtonElement>
     | undefined =
-    data.isAnyCourse && !data.hasEnrolled ? handleEnrollmentClick : buttonClick
+    isAnyCourse && !hasEnrolled ? handleEnrollmentClick : buttonClick
 
   // Build title section
   const titleSection = isLoading ? (
@@ -790,32 +758,32 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           href={titleHref}
           onClick={titleClick}
         >
-          {data.title}
+          {title}
         </TitleLink>
       ) : titleClick ? (
         <TitleText clickable onClick={titleClick}>
-          {data.title}
+          {title}
         </TitleText>
       ) : (
-        <TitleText>{data.title}</TitleText>
+        <TitleText>{title}</TitleText>
       )}
-      {data.certificateLink ? (
-        <SubtitleLink href={data.certificateLink}>
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink}>
           <RiAwardLine size="16px" />
           View Certificate
         </SubtitleLink>
       ) : null}
-      {data.isAnyCourse &&
-      data.resourceIsCourseRunEnrollment &&
+      {isAnyCourse &&
+      isCourseRunEnrollment &&
       resource.type === DashboardType.CourseRunEnrollment &&
       resource.data.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={data.canUpgrade}
-          certificateUpgradeDeadline={data.run?.upgrade_deadline}
-          certificateUpgradePrice={data.run?.products?.[0]?.price}
-          productId={data.run?.products?.[0]?.id}
+          canUpgrade={canUpgrade}
+          certificateUpgradeDeadline={run?.upgrade_deadline}
+          certificateUpgradePrice={run?.products?.[0]?.price}
+          productId={run?.products?.[0]?.id}
           onError={() => {
             onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
@@ -829,30 +797,31 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Build button section
   const buttonSection = isLoading ? (
     <Skeleton variant="rectangular" width={120} height={32} />
-  ) : data.isAnyCourse ? (
+  ) : isAnyCourse ? (
     <>
       <EnrollmentStatusIndicator
-        status={data.enrollmentStatus}
+        status={enrollmentStatus}
         showNotComplete={showNotComplete}
       />
       <CoursewareButton
         data-testid="courseware-button"
-        startDate={data.startDate}
-        enrollmentStatus={data.enrollmentStatus}
-        href={buttonHref ?? data.coursewareUrl}
-        endDate={data.endDate}
+        startDate={run?.start_date}
+        enrollmentStatus={enrollmentStatus}
+        href={buttonHref ?? coursewareUrl}
+        endDate={run?.end_date}
         noun={displayNoun}
         isProgram={false}
-        disabled={data.disableEnrollment}
+        disabled={disableEnrollment}
         isPending={enrollment.isPending}
         onClick={coursewareButtonClick}
       />
     </>
-  ) : data.isProgram && resource.type === DashboardType.ProgramEnrollment ? (
+  ) : isProgramEnrollment &&
+    resource.type === DashboardType.ProgramEnrollment ? (
     <CoursewareButton
       noun={displayNoun}
       isProgram={true}
-      enrollmentStatus={data.enrollmentStatus}
+      enrollmentStatus={enrollmentStatus}
       href={buttonHref ?? programView(resource.data.program.id)}
     />
   ) : null
@@ -860,16 +829,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Build start date section
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : data.isAnyCourse && data.startDate ? (
-    <CourseStartCountdown startDate={data.startDate} />
+  ) : isAnyCourse && run?.start_date ? (
+    <CourseStartCountdown startDate={run.start_date} />
   ) : null
 
   // Build context menu
   const menuItems = getContextMenuItems(
-    data.title,
+    title,
     resource,
     useProductPages ?? false,
-    data.includeInLearnCatalog,
+    includeInLearnCatalog,
     contextMenuItems,
   )
 
@@ -883,7 +852,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           size="small"
           variant="text"
           aria-label="More options"
-          status={data.enrollmentStatus}
+          status={enrollmentStatus}
           hidden={menuItems.length === 0}
         >
           <RiMore2Line />
