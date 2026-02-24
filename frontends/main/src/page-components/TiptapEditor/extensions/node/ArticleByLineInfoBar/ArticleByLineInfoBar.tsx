@@ -117,7 +117,7 @@ export const ArticleByLineInfoBarContent = ({
         title={article?.title ?? ""}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
-        pageUrl={`${NEXT_PUBLIC_ORIGIN}/articles/${article?.slug}`}
+        pageUrl={`${NEXT_PUBLIC_ORIGIN}/news/${article?.slug}`}
       />
       <InnerContainer noAuthor={!displayAuthorName && !isEditable}>
         {(displayAuthorName || isEditable) && (
