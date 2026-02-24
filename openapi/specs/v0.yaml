@@ -2921,8 +2921,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
-          readOnly: true
           nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -6611,8 +6611,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
-          readOnly: true
           nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512

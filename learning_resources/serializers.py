@@ -1126,44 +1126,49 @@ class ContentFileSerializer(serializers.ModelSerializer):
     offered_by = serializers.SerializerMethodField()
     platform = serializers.SerializerMethodField()
 
+    CONTENT_FILE_PREFETCHES = [
+        "learning_resource__course",
+        "learning_resource__platform",
+        "run__learning_resource__course",
+        "run__learning_resource__platform",
+        "content_tags",
+        Prefetch(
+            "learning_resource__topics",
+            queryset=models.LearningResourceTopic.objects.for_serialization(),
+        ),
+        Prefetch(
+            "learning_resource__offered_by",
+            queryset=models.LearningResourceOfferor.objects.for_serialization(),
+        ),
+        Prefetch(
+            "learning_resource__departments",
+            queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                "school"
+            ),
+        ),
+        Prefetch(
+            "run__learning_resource__topics",
+            queryset=models.LearningResourceTopic.objects.for_serialization(),
+        ),
+        Prefetch(
+            "run__learning_resource__offered_by",
+            queryset=models.LearningResourceOfferor.objects.for_serialization(),
+        ),
+        Prefetch(
+            "run__learning_resource__departments",
+            queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                "school"
+            ),
+        ),
+    ]
+
     def to_representation(self, instance):
-        # prefetch related run and learning resource
-        queryset = models.ContentFile.objects.prefetch_related(
-            "learning_resource__course",
-            "learning_resource__platform",
-            "run__learning_resource__course",
-            "run__learning_resource__platform",
-            "content_tags",
-            Prefetch(
-                "learning_resource__topics",
-                queryset=models.LearningResourceTopic.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__offered_by",
-                queryset=models.LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__departments",
-                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                    "school"
-                ),
-            ),
-            Prefetch(
-                "run__learning_resource__topics",
-                queryset=models.LearningResourceTopic.objects.for_serialization(),
-            ),
-            Prefetch(
-                "run__learning_resource__offered_by",
-                queryset=models.LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "run__learning_resource__departments",
-                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                    "school"
-                ),
-            ),
-        )
-        instance = queryset.get(pk=instance.pk)
+        if not self.context.get("skip_content_file_refetch", False):
+            # prefetch related run and learning resource
+            queryset = models.ContentFile.objects.prefetch_related(
+                *self.CONTENT_FILE_PREFETCHES
+            )
+            instance = queryset.get(pk=instance.pk)
         return super().to_representation(instance)
 
     def get_learning_resource(self, instance):
@@ -1265,9 +1270,18 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
 
     playlists = serializers.SerializerMethodField()
 
-    learning_material_content_files = ContentFileSerializer(
-        read_only=True, many=True, allow_null=True
-    )
+    learning_material_content_files = serializers.SerializerMethodField()
+
+    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    def get_learning_material_content_files(self, instance):
+        """Serialize content files with prefetch."""
+        content_files = instance.learning_material_content_files.all()
+        return ContentFileSerializer(
+            content_files,
+            many=True,
+            read_only=True,
+            context={**self.context, "skip_content_file_refetch": True},
+        ).data
 
     def get_playlists(self, instance) -> list[str]:
         """Get the playlist id(s) the video belongs to"""
@@ -1281,9 +1295,18 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
         default=constants.LearningResourceType.document.name
     )
 
-    learning_material_content_files = ContentFileSerializer(
-        read_only=True, many=True, allow_null=True
-    )
+    learning_material_content_files = serializers.SerializerMethodField()
+
+    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    def get_learning_material_content_files(self, instance):
+        """Serialize content files with prefetch."""
+        content_files = instance.learning_material_content_files.all()
+        return ContentFileSerializer(
+            content_files,
+            many=True,
+            read_only=True,
+            context={**self.context, "skip_content_file_refetch": True},
+        ).data
 
 
 class LearningResourceSerializer(serializers.Serializer):
