@@ -83,7 +83,10 @@ const makeReqsFromSections = (
   sections.forEach((section) => {
     if (section.operator === "all_of") {
       addCourses(
-        reqTree.addOperator({ operator: "all_of", title: section.title }),
+        reqTree.addOperator({
+          operator: "all_of",
+          title: section.title,
+        }),
         section.courseCount,
       )
     } else {
@@ -350,6 +353,9 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const section = await screen.findByRole("region", { name: "Courses" })
+    within(section).getByText(
+      `To complete this program, you must take ${numReq} required courses and ${numElective} elective courses.`,
+    )
     within(section).getByRole("heading", { name: `${titles.required}` })
     within(section).getByRole("heading", {
       name: `${titles.elective}: Complete ${numElective} out of ${numOutOf}`,

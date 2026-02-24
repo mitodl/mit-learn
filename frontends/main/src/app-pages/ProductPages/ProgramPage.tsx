@@ -103,13 +103,11 @@ type RequirementsSectionProps = {
   program: V2Program
 }
 
-const getCompletionText = (
-  parsedReqs: { requiredCourseCount: number; courseIds: number[] }[],
-) => {
+const getCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
   let electiveCount = 0
   parsedReqs.forEach((req) => {
-    if (req.requiredCourseCount < req.courseIds.length) {
+    if (req.elective) {
       electiveCount += req.requiredCourseCount
     } else {
       requiredCount += req.requiredCourseCount
