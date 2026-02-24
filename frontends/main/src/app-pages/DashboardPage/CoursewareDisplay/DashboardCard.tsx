@@ -680,7 +680,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
-    if (!hasEnrolled && isAnyCourse) {
+    if (isCourse) {
       const isVerifiedProgramEnrollment =
         programEnrollment?.enrollment_mode === EnrollmentMode.Verified
       const programRunId = run?.id
@@ -695,8 +695,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       })
     }
   }, [
-    hasEnrolled,
-    isAnyCourse,
+    isCourse,
     readableId,
     coursewareUrl,
     b2bContractId,
@@ -716,19 +715,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ? programView(resource.data.program.id)
       : undefined
 
-  const titleClick: React.MouseEventHandler | undefined =
-    isAnyCourse && !hasEnrolled
-      ? (e) => {
-          e.preventDefault()
-          handleEnrollmentClick()
-        }
-      : undefined
+  const titleClick: React.MouseEventHandler | undefined = isCourse
+    ? (e) => {
+        e.preventDefault()
+        handleEnrollmentClick()
+      }
+    : undefined
 
   // Button onClick handler
   const coursewareButtonClick:
     | React.MouseEventHandler<HTMLButtonElement>
-    | undefined =
-    isAnyCourse && !hasEnrolled ? handleEnrollmentClick : buttonClick
+    | undefined = isCourse ? handleEnrollmentClick : buttonClick
 
   // Build title section
   const titleSection = isLoading ? (
