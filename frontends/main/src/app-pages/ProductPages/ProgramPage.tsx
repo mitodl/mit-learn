@@ -114,13 +114,13 @@ const getCompletionText = (
 ) => {
   let requiredCount = 0
   let electiveCount = 0
-  for (const req of parsedReqs) {
+  parsedReqs.forEach((req) => {
     if (req.requiredCourseCount < req.courseIds.length) {
       electiveCount += req.requiredCourseCount
     } else {
       requiredCount += req.requiredCourseCount
     }
-  }
+  })
   if (requiredCount && electiveCount) {
     return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
   }

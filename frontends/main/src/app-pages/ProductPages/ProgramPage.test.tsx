@@ -117,17 +117,12 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
   expect(raw.innerHTML).toBe(htmlString)
 }
 
-const getCourseIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] => {
-  const ids: number[] = []
-  for (const node of reqTree) {
-    for (const child of node.children ?? []) {
-      if (typeof child.data.course === "number") {
-        ids.push(child.data.course)
-      }
-    }
-  }
-  return ids
-}
+const getCourseIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] =>
+  reqTree.flatMap((node) =>
+    (node.children ?? [])
+      .map((child) => child.data.course)
+      .filter((course): course is number => typeof course === "number"),
+  )
 
 const setupApis = ({
   program,
