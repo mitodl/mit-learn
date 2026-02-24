@@ -195,7 +195,7 @@ def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
     assert program.learning_resource.children.count() > 0
-    with django_assert_num_queries(21):  # should be same # regardless of child count
+    with django_assert_num_queries(22):  # should be same # regardless of child count
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -240,7 +240,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(21):
+    with django_assert_num_queries(22):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count

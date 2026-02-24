@@ -1126,47 +1126,43 @@ class ContentFileSerializer(serializers.ModelSerializer):
     offered_by = serializers.SerializerMethodField()
     platform = serializers.SerializerMethodField()
 
-    CONTENT_FILE_PREFETCHES = [
-        "learning_resource__course",
-        "learning_resource__platform",
-        "run__learning_resource__course",
-        "run__learning_resource__platform",
-        "content_tags",
-        Prefetch(
-            "learning_resource__topics",
-            queryset=models.LearningResourceTopic.objects.for_serialization(),
-        ),
-        Prefetch(
-            "learning_resource__offered_by",
-            queryset=models.LearningResourceOfferor.objects.for_serialization(),
-        ),
-        Prefetch(
-            "learning_resource__departments",
-            queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                "school"
-            ),
-        ),
-        Prefetch(
-            "run__learning_resource__topics",
-            queryset=models.LearningResourceTopic.objects.for_serialization(),
-        ),
-        Prefetch(
-            "run__learning_resource__offered_by",
-            queryset=models.LearningResourceOfferor.objects.for_serialization(),
-        ),
-        Prefetch(
-            "run__learning_resource__departments",
-            queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                "school"
-            ),
-        ),
-    ]
-
     def to_representation(self, instance):
         if not self.context.get("skip_content_file_refetch", False):
             # prefetch related run and learning resource
             queryset = models.ContentFile.objects.prefetch_related(
-                *self.CONTENT_FILE_PREFETCHES
+                "learning_resource__course",
+                "learning_resource__platform",
+                "run__learning_resource__course",
+                "run__learning_resource__platform",
+                "content_tags",
+                Prefetch(
+                    "learning_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "learning_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "learning_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                        "school"
+                    ),
+                ),
+                Prefetch(
+                    "run__learning_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "run__learning_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "run__learning_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                        "school"
+                    ),
+                ),
             )
             instance = queryset.get(pk=instance.pk)
         return super().to_representation(instance)
