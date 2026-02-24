@@ -299,20 +299,20 @@ const useEnrollmentHandler = () => {
       href,
       isB2B,
       isVerifiedProgram,
-      programRunId,
+      programCourseRunId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
       href?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
-      programRunId?: number
+      programCourseRunId?: number
     }) => {
       if (!readableId || !href) return
 
-      if (isVerifiedProgram && programRunId) {
+      if (isVerifiedProgram && programCourseRunId) {
         createEnrollment.mutate(
-          { run_id: programRunId },
+          { run_id: programCourseRunId },
           {
             onSuccess: () => {
               window.location.href = href
@@ -679,7 +679,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     if (isCourse) {
       const isVerifiedProgramEnrollment =
         programEnrollment?.enrollment_mode === EnrollmentMode.Verified
-      const programRunId = run?.id
 
       enrollment.enroll({
         course: resource.data,
@@ -687,7 +686,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
-        programRunId: isVerifiedProgramEnrollment ? programRunId : undefined,
+        programCourseRunId: isVerifiedProgramEnrollment ? run?.id : undefined,
       })
     }
   }, [
