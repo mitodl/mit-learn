@@ -308,7 +308,13 @@ const useEnrollmentHandler = () => {
       isVerifiedProgram?: boolean
       programCourseRunId?: number
     }) => {
-      if (!readableId || !href) return
+      if (!readableId || !href) {
+        console.warn("Cannot enroll: missing required data", {
+          readableId,
+          href,
+        })
+        return
+      }
 
       if (isB2B) {
         const userCountry = mitxOnlineUser.data?.legal_address?.country
