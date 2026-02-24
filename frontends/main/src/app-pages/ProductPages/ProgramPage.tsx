@@ -10,7 +10,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds, parseReqTree } from "./util"
+import { HeadingIds, parseReqTree, RequirementData } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -89,12 +89,6 @@ const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
   return Object.fromEntries(array.map((item) => [String(item[key]), item]))
 }
 
-type RequirementSubsectionInfo = {
-  title: string
-  note?: string
-  courseIds: number[]
-}
-
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
   fontSize: theme.typography.pxToRem(20), // boosted size
@@ -133,21 +127,19 @@ const getCompletionText = (
   return ""
 }
 
+const getRequirementSectionSubtitle = (reqData: RequirementData) => {
+  if (reqData.requiredCourseCount < reqData.courseIds.length) {
+    return `Complete ${reqData.requiredCourseCount} out of ${reqData.courseIds.length}`
+  }
+  return null
+}
+
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
 }) => {
   const courses = useQuery(coursesQueries.coursesForProgram(program))
   const coursesById = keyBy(courses.data?.results ?? [], "id")
   const parsedReqs = parseReqTree(program.req_tree)
-
-  const subsections: RequirementSubsectionInfo[] = parsedReqs.map((req) => ({
-    title: req.title,
-    note:
-      req.requiredCourseCount < req.courseIds.length
-        ? `Complete ${req.requiredCourseCount} out of ${req.courseIds.length}`
-        : undefined,
-    courseIds: req.courseIds,
-  }))
 
   return (
     <Stack
@@ -169,35 +161,38 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>
-        {subsections.map(({ title, note, courseIds }) => (
-          <div key={title}>
-            <ReqSubsectionTitle component="h3">
-              {title}
-              {note ? ": " : ""}
-              {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
-            </ReqSubsectionTitle>
-            <RequirementsListing>
-              {courseIds.map((courseId) => {
-                const course = coursesById[courseId]
-                const isCourseLoading = courses.isLoading || !courses.data
-                if (!isCourseLoading && !course) {
-                  return null
-                }
-                return (
-                  <li key={courseId}>
-                    <MitxOnlineCourseCard
-                      course={course}
-                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
-                      size="small"
-                      isLoading={isCourseLoading}
-                      list
-                    />
-                  </li>
-                )
-              })}
-            </RequirementsListing>
-          </div>
-        ))}
+        {parsedReqs.map((req) => {
+          const note = getRequirementSectionSubtitle(req)
+          return (
+            <div key={req.id}>
+              <ReqSubsectionTitle component="h3">
+                {req.title}
+                {note ? ": " : ""}
+                {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
+              </ReqSubsectionTitle>
+              <RequirementsListing>
+                {req.courseIds.map((courseId) => {
+                  const course = coursesById[courseId]
+                  const isCourseLoading = courses.isLoading || !courses.data
+                  if (!isCourseLoading && !course) {
+                    return null
+                  }
+                  return (
+                    <li key={courseId}>
+                      <MitxOnlineCourseCard
+                        course={course}
+                        href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                        size="small"
+                        isLoading={isCourseLoading}
+                        list
+                      />
+                    </li>
+                  )
+                })}
+              </RequirementsListing>
+            </div>
+          )
+        })}
       </Stack>
     </Stack>
   )
