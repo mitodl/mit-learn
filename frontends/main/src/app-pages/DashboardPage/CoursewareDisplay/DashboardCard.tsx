@@ -310,16 +310,7 @@ const useEnrollmentHandler = () => {
     }) => {
       if (!readableId || !href) return
 
-      if (isVerifiedProgram && programCourseRunId) {
-        createEnrollment.mutate(
-          { run_id: programCourseRunId },
-          {
-            onSuccess: () => {
-              window.location.href = href
-            },
-          },
-        )
-      } else if (isB2B) {
+      if (isB2B) {
         const userCountry = mitxOnlineUser.data?.legal_address?.country
         const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
         const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -339,6 +330,15 @@ const useEnrollmentHandler = () => {
             },
           )
         }
+      } else if (isVerifiedProgram && programCourseRunId) {
+        createEnrollment.mutate(
+          { run_id: programCourseRunId },
+          {
+            onSuccess: () => {
+              window.location.href = href
+            },
+          },
+        )
       } else {
         const onCourseEnroll = (run: CourseRunV2) => {
           window.location.href = run.courseware_url!
