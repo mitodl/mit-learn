@@ -308,15 +308,14 @@ const useEnrollmentHandler = () => {
       isVerifiedProgram?: boolean
       programCourseRunId?: number
     }) => {
-      if (!readableId || !href) {
-        console.warn("Cannot enroll: missing required data", {
-          readableId,
-          href,
-        })
-        return
-      }
-
       if (isB2B) {
+        if (!readableId || !href) {
+          console.warn("Cannot enroll in B2B course: missing required data", {
+            readableId,
+            href,
+          })
+          return
+        }
         const userCountry = mitxOnlineUser.data?.legal_address?.country
         const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
         const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -337,6 +336,13 @@ const useEnrollmentHandler = () => {
           )
         }
       } else if (isVerifiedProgram && programCourseRunId) {
+        if (!href) {
+          console.warn(
+            "Cannot enroll in verified program course: missing href",
+            { href },
+          )
+          return
+        }
         createEnrollment.mutate(
           { run_id: programCourseRunId },
           {
