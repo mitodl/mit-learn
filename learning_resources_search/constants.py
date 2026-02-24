@@ -97,8 +97,10 @@ SEARCH_FILTERS = {
     "offered_by": FilterConfig("offered_by.code"),
     "delivery": FilterConfig("delivery.code"),
     # NOTE resource_category was renamed to resource_type_group
-    # Both fields are kept for now to avoid breaking changes,
-    # but resource_category should be removed in a follow-up PR
+    # Both fields contain the resource tab data for now so that
+    # we don't break search until a reindex finishes.
+    # A follow up pr will update the next line and populate
+    # the new resource_category field.
     "resource_type_group": FilterConfig("resource_category"),
 }
 
