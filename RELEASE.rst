@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.55.1
+Version 0.55.1 (Released February 24, 2026)
 --------------
 
 - fix-duplicate-property-error (#2970)
