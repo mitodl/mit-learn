@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.55.3
+Version 0.55.3 (Released February 24, 2026)
 --------------
 
 - fix: change the new article route (#2977)
