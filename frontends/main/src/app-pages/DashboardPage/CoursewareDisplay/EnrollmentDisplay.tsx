@@ -292,7 +292,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     enrollmentQueries.courseRunEnrollmentsList(),
   )
   const { data: program, isLoading: programLoading } = useQuery(
-    programsQueries.programDetail({ id: programId }),
+    programsQueries.programDetail({ id: programId.toString() }),
   )
 
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
@@ -300,6 +300,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const enrolledInProgram = programEnrollments?.some((enrollment) => {
     return enrollment.program.id === program?.id
   })
+
+  const programEnrollment = programEnrollments?.find(
+    (enrollment) => enrollment.program.id === program?.id,
+  )
 
   // Only fetch courses if we have a program with course IDs
   const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
@@ -444,17 +448,35 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               </Typography>
             </Stack>
             <StackedCardContainer>
-              {section.courses.map((course) => (
-                <DashboardCardStyled
-                  key={getKey({
-                    resourceType: ResourceType.Course,
-                    id: course.id,
-                  })}
-                  resource={{ type: DashboardType.Course, data: course }}
-                  showNotComplete={false}
-                  variant="stacked"
-                />
-              ))}
+              {section.courses.map((course) => {
+                // Check if user has an enrollment for this course
+                const bestEnrollment = selectBestEnrollment(
+                  course,
+                  enrollmentsByCourseId[course.id] || [],
+                )
+
+                // If enrolled, show enrollment card with status, otherwise show course card
+                const resource = bestEnrollment
+                  ? {
+                      type: DashboardType.CourseRunEnrollment,
+                      data: bestEnrollment,
+                    }
+                  : { type: DashboardType.Course, data: course }
+
+                return (
+                  <DashboardCardStyled
+                    key={getKey({
+                      resourceType: ResourceType.Course,
+                      id: course.id,
+                      runId: bestEnrollment?.run.id,
+                    })}
+                    resource={resource}
+                    programEnrollment={programEnrollment}
+                    showNotComplete={false}
+                    variant="stacked"
+                  />
+                )
+              })}
             </StackedCardContainer>
           </React.Fragment>
         )

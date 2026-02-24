@@ -4,13 +4,16 @@ import {
   renderWithProviders,
   screen,
   setMockResponse,
+  setupLocationMock,
   user,
   within,
 } from "@/test-utils"
 import { EnrollmentDisplay } from "./EnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { mockAxiosInstance } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
+import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -18,6 +21,8 @@ const mockedUseFeatureFlagEnabled = jest
   .mockImplementation(() => false)
 
 describe("EnrollmentDisplay", () => {
+  setupLocationMock()
+
   const setupApis = (includeExpired: boolean = true) => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -466,6 +471,209 @@ describe("EnrollmentDisplay", () => {
       expect(titles.length).toBeGreaterThanOrEqual(1)
     })
 
+    test("Shows 'Continue' button for enrolled courses and 'Start Course' for unenrolled", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const requirements = reqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      requirements.addCourse({ course: 1 })
+      requirements.addCourse({ course: 2 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 777,
+        courses: [1, 2],
+        req_tree: reqTree.serialize(),
+      })
+
+      const enrolledRun = mitxonline.factories.courses.courseRun({
+        id: 100,
+        start_date: "2024-01-01T00:00:00Z", // Past date
+        end_date: "2099-12-31T23:59:59Z", // Far future date
+        courseware_url: faker.internet.url(),
+      })
+      const unenrolledRun = mitxonline.factories.courses.courseRun({
+        id: 200,
+      })
+
+      const courses = {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Enrolled Course",
+            courseruns: [enrolledRun],
+          }),
+          mitxonline.factories.courses.course({
+            id: 2,
+            title: "Unenrolled Course",
+            courseruns: [unenrolledRun],
+          }),
+        ],
+      }
+
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        run: {
+          ...enrolledRun,
+          course: courses.results[0],
+        },
+        certificate: null, // No certificate - course is not completed
+        grades: [], // Enrolled but not completed
+      })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
+        enrollment,
+      ])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(777), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={777} />)
+
+      await screen.findByText("Requirements")
+
+      // Wait for cards to load
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
+      )
+
+      // Find desktop cards (we'll focus on those for this test)
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const enrolledCard = cards.find((card) =>
+        within(card).queryByText("Enrolled Course"),
+      )
+      const unenrolledCard = cards.find((card) =>
+        within(card).queryByText("Unenrolled Course"),
+      )
+
+      expect(enrolledCard).toBeDefined()
+      expect(unenrolledCard).toBeDefined()
+
+      // Enrolled course should show "Continue" button and be a link
+      const continueButton = within(enrolledCard!).getByTestId(
+        "courseware-button",
+      )
+      expect(continueButton).toHaveTextContent("Continue")
+      expect(continueButton.tagName).toBe("A") // Should be a link
+
+      // Unenrolled course should show "Start Course" button
+      const startButton = within(unenrolledCard!).getByTestId(
+        "courseware-button",
+      )
+      expect(startButton).toHaveTextContent("Start Course")
+      expect(startButton.tagName).toBe("BUTTON") // Should be a button
+    })
+
+    test("Clicking unenrolled course in program opens CourseEnrollmentDialog", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const requirements = reqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      requirements.addCourse({ course: 1 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 666,
+        courses: [1],
+        req_tree: reqTree.serialize(),
+      })
+
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: null, // Non-B2B
+        is_enrollable: true,
+      })
+
+      const courses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Clickable Course",
+            courseruns: [run],
+          }),
+        ],
+      }
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), []) // No enrollments
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            enrollment_mode: "audit",
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(666), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={666} />)
+
+      await screen.findByText("Requirements")
+
+      // Wait for cards to load
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
+      )
+
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText("Clickable Course"))
+      expect(card).toBeDefined()
+
+      const startButton = within(card!).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      // Should open CourseEnrollmentDialog
+      await screen.findByRole("dialog", { name: "Clickable Course" })
+    })
+
     test("Displays correct completion count for sections with min_number_of operator", async () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -575,6 +783,106 @@ describe("EnrollmentDisplay", () => {
         "Looks like we couldn't find what you were looking for!",
       )
       expect(screen.queryByText("Requirements")).not.toBeInTheDocument()
+    })
+
+    test("Clicking 'Start Course' in verified program does one-click enrollment", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const requirements = reqTree.addOperator({
+        operator: "all_of",
+        title: "Program Requirements",
+      })
+      requirements.addCourse({ course: 1 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 888,
+        courses: [1],
+        req_tree: reqTree.serialize(),
+      })
+
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_url: faker.internet.url(),
+      })
+
+      const courses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Test Course",
+            courseruns: [run],
+            next_run_id: run.id,
+          }),
+        ],
+      }
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "verified", // Verified program enrollment
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+        })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), []) // No course enrollments yet
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [programEnrollment],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        courses,
+      )
+
+      // Mock the enrollment endpoint
+      setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
+
+      renderWithProviders(<EnrollmentDisplay programId={888} />)
+
+      await screen.findByText("Program Requirements")
+
+      // Wait for the card to load
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
+      )
+
+      // Find the card and click the button
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText("Test Course"))
+      expect(card).toBeDefined()
+
+      const startButton = within(card!).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      // Should call enrollment endpoint (not open dialog)
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "POST",
+            url: mitxonline.urls.enrollment.enrollmentsListV1(),
+          }),
+        )
+      })
+
+      // Dialog should NOT appear
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
   })
 })
