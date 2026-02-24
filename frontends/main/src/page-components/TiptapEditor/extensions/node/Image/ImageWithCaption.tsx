@@ -284,6 +284,7 @@ export function ImageWithCaptionViewer({
               src={src}
               alt={alt}
               layout={layout}
+              className="uploaded-image"
               isLoading={isLoading}
               onLoad={() => setIsLoading(false)}
               onError={() => {
@@ -439,6 +440,7 @@ export function ImageWithCaption({
             src={src}
             alt={alt || ""}
             layout={layout}
+            className="uploaded-image"
             ref={imgRef}
             onLoad={() => setIsLoading(false)}
             onError={() => setIsLoading(false)}

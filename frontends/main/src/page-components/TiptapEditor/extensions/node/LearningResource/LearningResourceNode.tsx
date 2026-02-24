@@ -19,12 +19,12 @@ declare module "@tiptap/core" {
 
 const NodeWrapper = styled(NodeViewWrapper)({
   position: "relative",
-  marginBottom: "20px",
   cursor: "pointer",
 })
 
 const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
   position: "relative",
+  marginBottom: "20px",
 
   ".ProseMirror-selectednode &": {
     borderColor: theme.custom.colors.red,
