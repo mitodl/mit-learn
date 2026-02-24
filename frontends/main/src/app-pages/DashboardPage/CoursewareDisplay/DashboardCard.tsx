@@ -651,41 +651,32 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
   const b2bContractId = run?.b2b_contract ?? contractId
 
-  const hasEnrollableRuns =
-    isCourse && resource.type === DashboardType.Course
-      ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
-      : true
+  const hasEnrollableRuns = isCourse
+    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    : true
 
   const disableEnrollment = isCourse && !hasEnrollableRuns
 
   const readableId = isCourse
     ? run?.courseware_id
-    : isCourseRunEnrollment &&
-        resource.type === DashboardType.CourseRunEnrollment
+    : isCourseRunEnrollment
       ? resource.data.run.courseware_id
-      : isProgramEnrollment && resource.type === DashboardType.ProgramEnrollment
+      : isProgramEnrollment
         ? resource.data.program.readable_id
         : undefined
 
-  const includeInLearnCatalog =
-    isCourse && resource.type === DashboardType.Course
-      ? resource.data.include_in_learn_catalog
-      : isCourseRunEnrollment &&
-          resource.type === DashboardType.CourseRunEnrollment
-        ? resource.data.run.course.include_in_learn_catalog
-        : true
+  const includeInLearnCatalog = isCourse
+    ? resource.data.include_in_learn_catalog
+    : isCourseRunEnrollment
+      ? resource.data.run.course.include_in_learn_catalog
+      : true
 
   const canUpgrade =
     isCourseRunEnrollment &&
-    resource.type === DashboardType.CourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
     (run?.is_upgradable ?? false)
 
-  // For Course resources, use the course data directly
-  const courseData =
-    isCourse && resource.type === DashboardType.Course
-      ? resource.data
-      : undefined
+  const courseData = isCourse ? resource.data : undefined
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
@@ -721,7 +712,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     ? hasEnrolled
       ? (buttonHref ?? coursewareUrl)
       : undefined
-    : isProgramEnrollment && resource.type === DashboardType.ProgramEnrollment
+    : isProgramEnrollment
       ? programView(resource.data.program.id)
       : undefined
 
@@ -772,7 +763,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       ) : null}
       {isAnyCourse &&
       isCourseRunEnrollment &&
-      resource.type === DashboardType.CourseRunEnrollment &&
       resource.data.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
