@@ -888,7 +888,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
     platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
     course_feature = LearningResourceContentTagField(
-        source="content_tags", read_only=True, allow_null=True
+        source="resource_tags", read_only=True, allow_null=True
     )
     departments = LearningResourceDepartmentSerializer(
         read_only=True, allow_null=True, many=True

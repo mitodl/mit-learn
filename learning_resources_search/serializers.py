@@ -162,7 +162,7 @@ def serialize_learning_resource_for_update(
 
     # NOTE -  resource_category was renamed to resource_type_group
     # The next line should be removed in a follow-up PR
-    serialized_data["resource_category"] = (serialized_data["resource_type_group"],)
+    serialized_data["resource_category"] = serialized_data["resource_type_group"]
 
     return {
         "resource_relations": {"name": "resource"},
