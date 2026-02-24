@@ -147,9 +147,10 @@ dev = [
 [tool.uv]
 package = false
 default-groups = "all"
+override-dependencies = ["setuptools<80"]
 
 [tool.uv.sources]
-django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" }
+django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" } # pragma: allowlist secret
 
 [tool.uv.build-backend]
 module-root = ""
