@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.55.3
+--------------
+
+- fix: change the new article route (#2977)
+- fix: remove the articles route and its relevant code (#2974)
+
 Version 0.55.1 (Released February 24, 2026)
 --------------
 
