@@ -647,8 +647,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const isAnyCourse = isCourse || isCourseRunEnrollment
 
   const coursewareUrl = run?.courseware_url
-  const hasEnrolled =
-    isAnyCourse && enrollmentStatus !== EnrollmentStatus.NotEnrolled
   const b2bContractId = run?.b2b_contract ?? contractId
 
   const hasEnrollableRuns = isCourse
@@ -708,7 +706,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   // Determine title behavior (link vs clickable text vs plain text)
   const titleHref = isAnyCourse
-    ? hasEnrolled
+    ? isCourseRunEnrollment
       ? (buttonHref ?? coursewareUrl)
       : undefined
     : isProgramEnrollment
