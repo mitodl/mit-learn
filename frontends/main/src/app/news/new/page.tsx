@@ -8,7 +8,7 @@ export const metadata: Metadata = standardizeMetadata({
   robots: "noindex, nofollow",
 })
 
-const Page: React.FC<PageProps<"/news/create">> = () => {
+const Page: React.FC<PageProps<"/news/new">> = () => {
   return <ArticleNewPage />
 }
 
