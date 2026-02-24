@@ -301,7 +301,7 @@ const useEnrollmentHandler = () => {
       isVerifiedProgram,
       programRunId,
     }: {
-      course?: CourseWithCourseRunsSerializerV2
+      course: CourseWithCourseRunsSerializerV2
       readableId?: string
       href?: string
       isB2B?: boolean
@@ -674,8 +674,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
     (run?.is_upgradable ?? false)
 
-  const courseData = isCourse ? resource.data : undefined
-
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
     if (isCourse) {
@@ -684,7 +682,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       const programRunId = run?.id
 
       enrollment.enroll({
-        course: courseData,
+        course: resource.data,
         readableId: readableId,
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
@@ -694,11 +692,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     }
   }, [
     isCourse,
+    resource,
     readableId,
     coursewareUrl,
     b2bContractId,
     run?.id,
-    courseData,
     buttonHref,
     enrollment,
     programEnrollment?.enrollment_mode,
