@@ -703,10 +703,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)
-  const titleHref = isAnyCourse
-    ? isCourseRunEnrollment
-      ? (buttonHref ?? coursewareUrl)
-      : undefined
+  const titleHref = isCourseRunEnrollment
+    ? (buttonHref ?? coursewareUrl)
     : isProgramEnrollment
       ? programView(resource.data.program.id)
       : undefined
@@ -754,8 +752,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           View Certificate
         </SubtitleLink>
       ) : null}
-      {isAnyCourse &&
-      isCourseRunEnrollment &&
+      {isCourseRunEnrollment &&
       resource.data.enrollment_mode !== EnrollmentMode.Verified &&
       offerUpgrade ? (
         <UpgradeBanner
