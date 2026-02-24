@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.55.4
+--------------
+
+- fix: fix the learning resource card space issue (#2979)
+
 Version 0.55.3 (Released February 24, 2026)
 --------------
 
