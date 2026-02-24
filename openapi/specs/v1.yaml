@@ -10358,93 +10358,6 @@ components:
       - resource_id
       - resource_readable_id
       - topics
-    ContentFileRequest:
-      type: object
-      description: Serializer class for course run ContentFiles
-      properties:
-        run_id:
-          type: integer
-        run_title:
-          type: string
-          minLength: 1
-        run_slug:
-          type: string
-          minLength: 1
-        semester:
-          type: string
-          minLength: 1
-        year:
-          type: integer
-        key:
-          type: string
-          nullable: true
-          maxLength: 1024
-        uid:
-          type: string
-          nullable: true
-          maxLength: 36
-        title:
-          type: string
-          nullable: true
-          maxLength: 1024
-        description:
-          type: string
-          nullable: true
-        url:
-          type: string
-          nullable: true
-        content_feature_type:
-          type: array
-          items:
-            type: string
-        content_type:
-          $ref: '#/components/schemas/ContentTypeEnum'
-        content:
-          type: string
-          nullable: true
-        content_title:
-          type: string
-          nullable: true
-          maxLength: 1024
-        content_author:
-          type: string
-          nullable: true
-          maxLength: 1024
-        content_language:
-          type: string
-          nullable: true
-          maxLength: 24
-        checksum:
-          type: string
-          minLength: 1
-        image_src:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 200
-        source_path:
-          type: string
-          minLength: 1
-        file_type:
-          type: string
-          nullable: true
-          maxLength: 128
-        file_extension:
-          type: string
-          nullable: true
-          maxLength: 32
-        run_readable_id:
-          type: string
-          minLength: 1
-        edx_module_id:
-          type: string
-          nullable: true
-          maxLength: 1024
-        summary:
-          type: string
-        flashcards: {}
-      required:
-      - content_feature_type
     ContentFileSearchResponse:
       type: object
       description: SearchResponseSerializer with OpenAPI annotations for Content Files
@@ -11270,8 +11183,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
-          readOnly: true
           nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
@@ -16531,8 +16444,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
-          readOnly: true
           nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512

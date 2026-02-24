@@ -394,6 +394,44 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 queryset=LearningResourceViewEvent.objects.all(),
                 to_attr="_views",
             ),
+            Prefetch(
+                "learning_material_content_files",
+                queryset=ContentFile.objects.prefetch_related(
+                    "learning_resource__course",
+                    "learning_resource__platform",
+                    "run__learning_resource__course",
+                    "run__learning_resource__platform",
+                    "content_tags",
+                    Prefetch(
+                        "learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
+                        ),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
+                        ),
+                    ),
+                ),
+            ),
             *LearningResourceDetailModel.get_subclass_prefetches(),
         ).select_related("image", "platform")
 
