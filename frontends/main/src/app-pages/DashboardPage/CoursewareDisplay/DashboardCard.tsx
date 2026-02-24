@@ -156,7 +156,7 @@ const TitleText = styled.div<{ clickable?: boolean }>(
 )
 
 const MenuButton = styled(ActionButton)<{
-  status?: EnrollmentStatus
+  status: EnrollmentStatus
 }>(({ theme, status }) => [
   {
     marginLeft: "-8px",
@@ -369,7 +369,7 @@ const useEnrollmentHandler = () => {
 type CoursewareButtonProps = {
   startDate?: string | null
   endDate?: string | null
-  enrollmentStatus?: EnrollmentStatus | null
+  enrollmentStatus: EnrollmentStatus
   href?: string | null
   disabled?: boolean
   className?: string
@@ -387,11 +387,11 @@ const getCoursewareTextAndIcon = ({
   isProgram,
 }: {
   endDate?: string | null
-  enrollmentStatus?: EnrollmentStatus | null
+  enrollmentStatus: EnrollmentStatus
   noun: string
   isProgram?: boolean
 }) => {
-  if (!enrollmentStatus || enrollmentStatus === EnrollmentStatus.NotEnrolled) {
+  if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
     return { text: `Start ${noun}`, endIcon: null }
   }
   if (
@@ -428,8 +428,7 @@ const CoursewareButton = styled(
       isProgram,
     })
     const hasStarted = startDate && isInPast(startDate)
-    const hasEnrolled =
-      enrollmentStatus && enrollmentStatus !== EnrollmentStatus.NotEnrolled
+    const hasEnrolled = enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
     // Programs or enrolled courses with started runs: show link
     if ((isProgram || hasEnrolled) && (hasStarted || !startDate) && href) {

@@ -27,7 +27,7 @@ const Ring = styled.div(({ theme }) => ({
 }))
 
 type EnrollmentStatusIndicatorProps = {
-  status?: EnrollmentStatus
+  status: EnrollmentStatus
   showNotComplete?: boolean
 }
 const EnrollmentStatusIndicator: React.FC<EnrollmentStatusIndicatorProps> = ({
