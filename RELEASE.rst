@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.55.6
+--------------
+
+- Make micromasters a searchable term (#2967)
+- Support multiple elective sections on program page (#2972)
+
 Version 0.55.5 (Released February 25, 2026)
 --------------
 
