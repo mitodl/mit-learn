@@ -3,12 +3,20 @@
 from django.db import migrations
 
 
+def delete_learning_material_resouces(apps, schema_editor):
+    LearningResource = apps.get_model("learning_resources", "LearningResource")
+    LearningResource.objects.filter(resource_type="learning_material").delete()
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("learning_resources", "0103_contentfilechanges"),
     ]
 
     operations = [
+        migrations.RunPython(
+            delete_learning_material_resouces, migrations.RunPython.noop
+        ),
         migrations.DeleteModel(
             name="LearningMaterial",
         ),
