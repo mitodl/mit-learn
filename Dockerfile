@@ -54,7 +54,7 @@ RUN apt-get update -qqy \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 COPY pyproject.toml /src
 COPY uv.lock /src
-RUN chown -R mitodl:mitodl /src
+RUN mkdir -p /opt/venv && chown -R mitodl:mitodl /src /opt/venv
 
 USER mitodl
 WORKDIR /src
