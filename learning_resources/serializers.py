@@ -1163,6 +1163,22 @@ class ContentFileSerializer(serializers.ModelSerializer):
                         "school"
                     ),
                 ),
+                "learning_material_resource__course",
+                "learning_material_resource__platform",
+                Prefetch(
+                    "learning_material_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "learning_material_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "learning_material_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization(
+                        prefetch_school=True
+                    ).select_related("school"),
+                ),
             )
             instance = queryset.get(pk=instance.pk)
         return super().to_representation(instance)
