@@ -9,12 +9,11 @@ enum HeadingIds {
   Instructors = "instructors",
   WhoCanTake = "who-can-take",
   Requirements = "requirements",
-  RequirementsRequired = "required-courses",
-  RequirementsElectives = "elective-courses",
   Summary = "summary",
 }
 
 type RequirementData = {
+  id?: number | null // In practice this should always be defined. TODO: Why doesn't OpenAPI know this?
   elective: boolean
   title: string
   courseIds: number[]
@@ -47,10 +46,11 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
           ?.map((child) => child.data.course)
           .filter((id) => typeof id === "number") || []
       const requiredCourseCount =
-        elective && node.data.operator === "min_number_of"
+        node.data.operator === "min_number_of"
           ? Number(node.data.operator_value) || courseIds.length
           : courseIds.length
       return {
+        id: node.id,
         elective,
         title,
         courseIds,
@@ -62,4 +62,4 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
 type ProductNoun = "Course" | "Program"
 
 export { HeadingIds, parseReqTree }
-export type { ProductNoun }
+export type { ProductNoun, RequirementData }
