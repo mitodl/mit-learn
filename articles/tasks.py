@@ -55,7 +55,7 @@ def purge_article_immediate(article_id):
             queue_fastly_purge_article.delay(article_id)
             return False
 
-    except Exception:  # noqa: BLE001
+    except Exception:
         log.exception(
             f"Exception during immediate purge for article {article_id}, "  # noqa: G004
             "falling back to Celery task."
