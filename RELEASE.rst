@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.55.5 (Released February 25, 2026)
+--------------
+
+- program dashboard course enrollment (#2961)
+
 Version 0.55.4 (Released February 24, 2026)
 --------------
 
