@@ -309,7 +309,7 @@ class LearningResourceFactory(DjangoModelFactory):
 
     class Params:
         no_topics = factory.Trait(topics=[])
-        no_content_tags = factory.Trait(content_tags=[])
+        no_resource_tags = factory.Trait(content_tags=[])
         no_image = factory.Trait(image=None)
 
         is_course = factory.Trait(
