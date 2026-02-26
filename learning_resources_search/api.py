@@ -11,6 +11,9 @@ from opensearch_dsl.query import MoreLikeThis, Percolate
 from opensearchpy.exceptions import NotFoundError
 
 from learning_resources.models import LearningResource
+from learning_resources.serializers import (
+    LearningResourceSerializer,
+)
 from learning_resources_search.connection import (
     get_default_alias_name,
     get_vector_model_id,
@@ -945,7 +948,7 @@ def user_subscribed_to_query(
 def get_similar_topics_qdrant(
     resource: LearningResource, value_doc: dict, num_topics: int
 ) -> list[str]:
-    from vector_search.utils import qdrant_client, vector_point_id
+    from vector_search.utils import qdrant_client, vector_point_id, vector_point_key
 
     """
     Get a list of similar topics based on vector similarity
@@ -961,10 +964,11 @@ def get_similar_topics_qdrant(
     """
     encoder = dense_encoder()
     client = qdrant_client()
+    serialized_resource = LearningResourceSerializer(resource).data
 
     response = client.retrieve(
         collection_name=RESOURCES_COLLECTION_NAME,
-        ids=[vector_point_id(resource.readable_id)],
+        ids=[vector_point_id(vector_point_key(serialized_resource))],
         with_vectors=True,
     )
 
@@ -1119,10 +1123,10 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
         list of str:
             list of learning resources
     """
-    from vector_search.utils import vector_point_id
+    from vector_search.utils import vector_point_id, vector_point_key
 
     hits = _qdrant_similar_results(
-        input_query=vector_point_id(value_doc["readable_id"]),
+        input_query=vector_point_id(vector_point_key(value_doc)),
         num_resources=num_resources,
     )
     return (

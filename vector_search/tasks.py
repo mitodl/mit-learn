@@ -13,6 +13,10 @@ from learning_resources.models import (
     Course,
     LearningResource,
 )
+from learning_resources.serializers import (
+    ContentFileSerializer,
+    LearningResourceSerializer,
+)
 from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -21,6 +25,9 @@ from learning_resources_search.constants import (
     SEARCH_CONN_EXCEPTIONS,
 )
 from learning_resources_search.exceptions import RetryError
+from learning_resources_search.serializers import (
+    serialize_bulk_learning_resources,
+)
 from learning_resources_search.tasks import wrap_retry_exception
 from main.celery import app
 from main.utils import (
@@ -37,6 +44,7 @@ from vector_search.utils import (
     filter_existing_qdrant_points_by_ids,
     remove_qdrant_records,
     vector_point_id,
+    vector_point_key,
 )
 
 log = logging.getLogger(__name__)
@@ -380,14 +388,18 @@ def embeddings_healthcheck():
             if lr.best_run
             else lr.runs.filter(published=True).order_by("-start_date").first()
         )
-        point_id = vector_point_id(lr.readable_id)
+        serialized = LearningResourceSerializer(lr).data
+        point_id = vector_point_id(vector_point_key(serialized))
         resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
         content_file_point_ids = {}
         if run:
             for cf in run.content_files.filter(published=True):
                 if cf and cf.content:
+                    serialized_cf = ContentFileSerializer(cf).data
                     point_id = vector_point_id(
-                        f"{lr.readable_id}.{run.run_id}.{cf.key}.0"
+                        vector_point_key(
+                            serialized_cf, chunk_number=0, document_type="content_file"
+                        )
                     )
                     content_file_point_ids[point_id] = {"key": cf.key, "id": cf.id}
             for batch in chunks(content_file_point_ids.keys(), chunk_size=200):
@@ -402,12 +414,15 @@ def embeddings_healthcheck():
                 )
 
     for batch in chunks(
-        all_resources.values_list("readable_id", flat=True),
+        all_resources.values_list("id", flat=True),
         chunk_size=200,
     ):
         remaining_resources.extend(
             filter_existing_qdrant_points_by_ids(
-                [vector_point_id(pid) for pid in batch],
+                [
+                    vector_point_id(serialized_resource)
+                    for serialized_resource in serialize_bulk_learning_resources(batch)
+                ],
                 collection_name=RESOURCES_COLLECTION_NAME,
             )
         )
