@@ -1020,12 +1020,7 @@ describe("CourseSummary", () => {
     })
 
     test("Renders link to one program", () => {
-      const program = {
-        id: 1,
-        readable_id: "program-1",
-        title: "Test Program 1",
-        type: "program",
-      }
+      const program = factories.programs.baseProgram()
       const run = makeRun()
       const course = makeCourse({
         next_run_id: run.id,
@@ -1038,31 +1033,16 @@ describe("CourseSummary", () => {
 
       expect(programsRow).toHaveTextContent("Part of the following program")
       const link = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: program.title,
       })
-      expect(link).toHaveAttribute("href", "/programs/program-1")
+      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
     })
 
     test("Renders links to multiple programs", () => {
       const programs = [
-        {
-          id: 1,
-          readable_id: "program-1",
-          title: "Test Program 1",
-          type: "program",
-        },
-        {
-          id: 2,
-          readable_id: "program-2",
-          title: "Test Program 2",
-          type: "program",
-        },
-        {
-          id: 3,
-          readable_id: "program-3",
-          title: "Test Program 3",
-          type: "program",
-        },
+        factories.programs.baseProgram(),
+        factories.programs.baseProgram(),
+        factories.programs.baseProgram(),
       ]
       const run = makeRun()
       const course = makeCourse({
@@ -1077,28 +1057,32 @@ describe("CourseSummary", () => {
       expect(programsRow).toHaveTextContent("Part of the following programs")
 
       const link1 = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: programs[0].title,
       })
-      expect(link1).toHaveAttribute("href", "/programs/program-1")
+      expect(link1).toHaveAttribute(
+        "href",
+        `/programs/${programs[0].readable_id}`,
+      )
 
       const link2 = within(programsRow).getByRole("link", {
-        name: "Test Program 2",
+        name: programs[1].title,
       })
-      expect(link2).toHaveAttribute("href", "/programs/program-2")
+      expect(link2).toHaveAttribute(
+        "href",
+        `/programs/${programs[1].readable_id}`,
+      )
 
       const link3 = within(programsRow).getByRole("link", {
-        name: "Test Program 3",
+        name: programs[2].title,
       })
-      expect(link3).toHaveAttribute("href", "/programs/program-3")
+      expect(link3).toHaveAttribute(
+        "href",
+        `/programs/${programs[2].readable_id}`,
+      )
     })
 
     test("Displays programs row even when no next run is found", () => {
-      const program = {
-        id: 1,
-        readable_id: "program-1",
-        title: "Test Program 1",
-        type: "program",
-      }
+      const program = factories.programs.baseProgram()
       const course = makeCourse({
         next_run_id: null,
         courseruns: [],
@@ -1111,9 +1095,9 @@ describe("CourseSummary", () => {
       expect(programsRow).toBeInTheDocument()
       expect(programsRow).toHaveTextContent("Part of the following program")
       const link = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: program.title,
       })
-      expect(link).toHaveAttribute("href", "/programs/program-1")
+      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
     })
   })
 })
