@@ -1,14 +1,30 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
-import type { PartialFactory } from "ol-test-utilities"
+import type { Factory, PartialFactory } from "ol-test-utilities"
 import type {
+  BaseProgram,
   V2Program,
   V2ProgramCollection,
   V3SimpleProgram,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
+import { enrollmentMode } from "./courses"
 
 const uniqueProgramId = new UniqueEnforcer()
+
+const baseProgram: Factory<BaseProgram> = (overrides = {}) => {
+  const defaults: BaseProgram = {
+    enrollment_modes: [enrollmentMode()],
+    title: faker.lorem.words(3),
+    id: uniqueProgramId.enforce(() => faker.number.int()),
+    readable_id: faker.lorem.slug(),
+    type: faker.lorem.words(),
+  }
+  return {
+    ...defaults,
+    ...overrides,
+  }
+}
 
 const program: PartialFactory<V2Program> = (overrides = {}) => {
   const defaults: V2Program = {
@@ -122,4 +138,4 @@ const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
   return mergeOverrides<V3SimpleProgram>(defaults, overrides)
 }
 
-export { program, programs, programCollection, simpleProgram }
+export { baseProgram, program, programs, programCollection, simpleProgram }

@@ -9,7 +9,8 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
-import { factories } from ".."
+import * as courses from "../factories/courses"
+import * as programs from "../factories/programs"
 
 const uniqueEnrollmentId = new UniqueEnforcer()
 const uniqueRunId = new UniqueEnforcer()
@@ -49,6 +50,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
     enrollment_mode: faker.helpers.arrayElement(["audit", "verified"]),
     edx_emails_subscription: faker.datatype.boolean(),
     run: {
+      enrollment_modes: [courses.enrollmentMode()],
       id: uniqueRunId.enforce(() => faker.number.int()),
       title,
       start_date: faker.date.past().toISOString(),
@@ -161,7 +163,7 @@ const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
       id: faker.number.int(),
       title: faker.lorem.words(3),
       readable_id: faker.lorem.slug(),
-      courses: factories.courses.v1Course(),
+      courses: courses.v1Course(),
       requirements: {
         required: [faker.number.int()],
         electives: [faker.number.int()],
@@ -197,7 +199,7 @@ const programEnrollment: PartialFactory<UserProgramEnrollmentDetail> = (
 const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
   overrides = {},
 ): V3UserProgramEnrollment => {
-  const program = factories.programs.simpleProgram()
+  const program = programs.simpleProgram()
   const hasCertificate = faker.datatype.boolean()
   const defaults: V3UserProgramEnrollment = {
     certificate: hasCertificate
