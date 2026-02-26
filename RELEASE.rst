@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.55.7
+Version 0.55.7 (Released February 26, 2026)
 --------------
 
 - fix: Add back langchain-litellm dependency
