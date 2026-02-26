@@ -420,7 +420,7 @@ def embeddings_healthcheck():
         remaining_resources.extend(
             filter_existing_qdrant_points_by_ids(
                 [
-                    vector_point_id(serialized_resource)
+                    vector_point_id(vector_point_key(serialized_resource))
                     for serialized_resource in serialize_bulk_learning_resources(batch)
                 ],
                 collection_name=RESOURCES_COLLECTION_NAME,
