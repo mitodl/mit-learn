@@ -295,9 +295,8 @@ def _process_resource_embeddings(serialized_resources):
         if not should_generate_resource_embeddings(doc):
             update_learning_resource_payload(doc)
             continue
-        vector_point_key = doc["readable_id"]
         metadata.append(doc)
-        ids.append(vector_point_id(vector_point_key))
+        ids.append(vector_point_id(vector_point_key(doc)))
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
         embeddings = encoder.embed_documents(docs)
@@ -306,7 +305,7 @@ def _process_resource_embeddings(serialized_resources):
 
 
 def update_learning_resource_payload(serialized_document):
-    points = [vector_point_id(serialized_document["readable_id"])]
+    points = [vector_point_id(vector_point_key(serialized_document))]
     _set_payload(
         points,
         serialized_document,
@@ -371,7 +370,7 @@ def should_generate_resource_embeddings(serialized_document):
     Determine if we should generate embeddings for a learning resource
     """
     client = qdrant_client()
-    point_id = vector_point_id(serialized_document["readable_id"])
+    point_id = vector_point_id(vector_point_key(serialized_document))
     response = client.retrieve(
         collection_name=RESOURCES_COLLECTION_NAME,
         ids=[point_id],
@@ -399,9 +398,9 @@ def should_generate_content_embeddings(
     if not point_id:
         # we just need metadata from the first chunk
         point_id = vector_point_id(
-            f"{serialized_document['resource_readable_id']}."
-            f"{serialized_document.get('run_readable_id', '')}."
-            f"{serialized_document['key']}.0"
+            vector_point_key(
+                serialized_document, chunk_number=0, document_type="content_file"
+            )
         )
     response = client.retrieve(
         collection_name=CONTENT_FILES_COLLECTION_NAME,
@@ -425,8 +424,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     ids = []
     docs = []
     for doc in serialized_resources:
-        readable_id = doc["readable_id"]
-        resource_vector_point_id = str(vector_point_id(readable_id))
+        resource_vector_point_id = str(vector_point_id(vector_point_key(doc)))
         serializer = LearningResourceMetadataDisplaySerializer(doc)
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
@@ -434,7 +432,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
         document_point_id = vector_point_id(
-            f"{doc['readable_id']}.course_information.0"
+            vector_point_key(doc, document_type="course_information")
         )
         if not should_generate_content_embeddings(
             serialized_document, document_point_id
@@ -462,7 +460,11 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         ]
         split_ids = [
             vector_point_id(
-                f"{doc['readable_id']}.course_information.{md['chunk_number']}"
+                vector_point_key(
+                    doc,
+                    document_type="course_information",
+                    chunk_number=md["chunk_number"],
+                )
             )
             for md in split_metadatas
         ]
@@ -529,7 +531,7 @@ def _generate_content_file_points(serialized_content):
             continue
 
         split_texts = [d.page_content for _, d in valid_chunks]
-        resource_vector_point_id = vector_point_id(doc["resource_readable_id"])
+        resource_vector_point_id = vector_point_id(vector_point_key(doc))
 
         for i in range(0, len(split_texts), request_chunk_size):
             chunk_texts = split_texts[i : i + request_chunk_size]
@@ -554,9 +556,9 @@ def _generate_content_file_points(serialized_content):
                 }
 
                 point_id = vector_point_id(
-                    f"{doc['resource_readable_id']}."
-                    f"{doc.get('run_readable_id', '')}."
-                    f"{doc['key']}.{chunk_id}"
+                    vector_point_key(
+                        doc, chunk_number=chunk_id, document_type="content_file"
+                    )
                 )
 
                 yield models.PointStruct(
@@ -588,7 +590,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
     if resource_type != CONTENT_FILE_TYPE:
         serialized_resources = list(serialize_bulk_learning_resources(ids))
         points = [
-            (vector_point_id(serialized["readable_id"]), serialized)
+            (vector_point_id(vector_point_key(serialized)), serialized)
             for serialized in serialized_resources
         ]
         if not overwrite:
@@ -622,9 +624,9 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             contentfile_points = [
                 (
                     vector_point_id(
-                        f"{doc['resource_readable_id']}."
-                        f"{doc.get('run_readable_id', '')}."
-                        f"{doc['key']}.0"
+                        vector_point_key(
+                            doc, chunk_number=0, document_type="content_file"
+                        )
                     ),
                     doc,
                 )
@@ -780,6 +782,45 @@ def _merge_dicts(dicts):
         if all(v == values[0] for v in values):
             result[key] = values[0]
     return result
+
+
+def vector_point_key(
+    serialized_document, chunk_number=0, document_type="learning_resource"
+):
+    """
+    Generate a consistent unique id for a vector point based on the document type
+
+    Args:
+        serialized_document (dict): The serialized document
+        to generate the key for
+        chunk_number (int): The chunk number for content files
+        document_type (str): The type of document
+    Returns:
+        str: A unique key for the vector point
+    """
+    platform = serialized_document.get("platform", {}).get("code", "")
+    if document_type == "learning_resource":
+        readable_id = serialized_document.get("readable_id") or serialized_document.get(
+            "resource_readable_id"
+        )
+        return f"{platform}.{readable_id}"
+    elif document_type == "course_information":
+        return (
+            f"{platform}."
+            f"{serialized_document['readable_id']}."
+            f"course_information.{chunk_number}"
+        )
+    elif document_type == "content_file":
+        return (
+            f"{platform}."
+            f"{serialized_document['resource_readable_id']}."
+            f"{serialized_document.get('run_readable_id', '')}."
+            f"{serialized_document['key']}."
+            f"{chunk_number}"
+        )
+    else:
+        msg = "Invalid document type for vector point key"
+        raise ValueError(msg)
 
 
 def vector_search(

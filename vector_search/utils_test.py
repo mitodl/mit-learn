@@ -80,7 +80,10 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     )
 
     if content_type == "course":
-        point_ids = [vector_point_id(resource.readable_id) for resource in resources]
+        point_ids = [
+            vector_point_id(f"{resource.platform.code}.{resource.readable_id}")
+            for resource in resources
+        ]
         assert sorted(
             [
                 p.id
@@ -92,7 +95,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         point_ids = [
             vector_point_id(
-                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
+                f"{resource['platform']['code']}.{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
@@ -122,7 +125,10 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         # filter out 3 resources that are already embedded
         mocker.patch(
             "vector_search.utils.filter_existing_qdrant_points_by_ids",
-            return_value=[vector_point_id(r.readable_id) for r in resources[0:2]],
+            return_value=[
+                vector_point_id(f"{r.platform.code}.{r.readable_id}")
+                for r in resources[0:2]
+            ],
         )
     else:
         # all contentfiles exist in qdrant
@@ -130,7 +136,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
             "vector_search.utils.filter_existing_qdrant_points_by_ids",
             return_value=[
                 vector_point_id(
-                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                    f"{doc['platform']['code']}.{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
                 )
                 for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
             ],
@@ -586,7 +592,9 @@ def test_update_payload_learning_resource(mocker):
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
     assert call_args["points"] == [
-        vector_point_id(serialized_resources[0]["readable_id"])
+        vector_point_id(
+            f"{serialized_resources[0]['platform']['code']}.{serialized_resources[0]['readable_id']}"
+        )
     ]
     # Verify payload contains the mapped values
     for src_key, dest_key in QDRANT_RESOURCE_PARAM_MAP.items():
@@ -613,6 +621,7 @@ def test_update_payload_content_file(mocker):
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == CONTENT_FILES_COLLECTION_NAME
     assert call_args["points"] == ["test-point-id"]
+
     # Verify payload contains the mapped values
     for src_key, dest_key in QDRANT_CONTENT_FILE_PARAM_MAP.items():
         if src_key in serialized_files[0]:
