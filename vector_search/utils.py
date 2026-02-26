@@ -432,7 +432,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
         document_point_id = vector_point_id(
-            vector_point_key(serialized_document, document_type="course_information")
+            vector_point_key(doc, document_type="course_information")
         )
         if not should_generate_content_embeddings(
             serialized_document, document_point_id
@@ -461,7 +461,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         split_ids = [
             vector_point_id(
                 vector_point_key(
-                    serialized_document,
+                    doc,
                     document_type="course_information",
                     chunk_number=md["chunk_number"],
                 )
@@ -799,7 +799,10 @@ def vector_point_key(
         str: A unique key for the vector point
     """
     if document_type == "learning_resource":
-        return f"{serialized_document['readable_id']}"
+        readable_id = serialized_document.get("readable_id") or serialized_document.get(
+            "resource_readable_id"
+        )
+        return f"{readable_id}"
     elif document_type == "course_information":
         return f"{serialized_document['readable_id']}.course_information.{chunk_number}"
     elif document_type == "content_file":
