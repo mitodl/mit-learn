@@ -485,6 +485,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
 }
 
+const MIN_VISIBLE = 3
+
+/**
+ * Renders the "My Learning" section for non-B2B enrollments.
+ *
+ * Cards are ordered and grouped as follows:
+ *  1. Started courses (past start date, not expired, not completed)
+ *  2. Not-yet-started courses
+ *  3. Completed courses (any passing grade)
+ *  4. Program enrollments (excluding those covered by a B2B contract)
+ *  5. Expired courses (past end date, not completed) — hidden behind "Show all"
+ *
+ * Exception: if groups 1–4 are all empty, up to MIN_VISIBLE expired courses
+ * are shown directly so the section is never blank for an enrolled user.
+ * The section is hidden entirely only when there are no enrollments at all.
+ */
 const AllEnrollmentsDisplay: React.FC = () => {
   const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
@@ -509,9 +525,23 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
   )
-  const shownEnrollments = [...started, ...notStarted, ...completed]
 
-  return shownEnrollments.length > 0 ? (
+  const normallyShown = [...started, ...notStarted, ...completed]
+  const filteredPrograms = filteredProgramEnrollments ?? []
+  const hasNormallyShown =
+    normallyShown.length > 0 || filteredPrograms.length > 0
+  const expiredVisible = hasNormallyShown
+    ? 0
+    : Math.min(expired.length, MIN_VISIBLE)
+  const shownCourseRunEnrollments = [
+    ...normallyShown,
+    ...expired.slice(0, expiredVisible),
+  ]
+  const hiddenExpired = expired.slice(expiredVisible)
+  const totalCards =
+    normallyShown.length + filteredPrograms.length + expired.length
+
+  return totalCards > 0 ? (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
@@ -530,9 +560,9 @@ const AllEnrollmentsDisplay: React.FC = () => {
         </AlertBanner>
       )}
       <EnrollmentExpandCollapse
-        shownCourseRunEnrollments={shownEnrollments}
-        hiddenCourseRunEnrollments={expired}
-        programEnrollments={filteredProgramEnrollments || []}
+        shownCourseRunEnrollments={shownCourseRunEnrollments}
+        hiddenCourseRunEnrollments={hiddenExpired}
+        programEnrollments={filteredPrograms}
         isLoading={
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||

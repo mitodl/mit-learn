@@ -125,16 +125,7 @@ describe("EnrollmentDisplay", () => {
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    // Need at least one course enrollment to render the wrapper
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
-      mitxonline.factories.enrollment.courseEnrollment({
-        b2b_contract_id: null,
-        run: {
-          ...mitxonline.factories.enrollment.courseEnrollment().run,
-          title: "Dummy Course",
-        },
-      }),
-    ])
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -223,6 +214,188 @@ describe("EnrollmentDisplay", () => {
     expect(cards).toHaveLength(0)
   })
 
+  test("Shows My Learning when only program enrollments exist", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: {
+          ...mitxonline.factories.programs.simpleProgram(),
+          title: "Solo Program",
+        },
+      })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [programEnrollment],
+    )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    expect((await screen.findAllByText("Solo Program")).length).toBeGreaterThan(
+      0,
+    )
+  })
+
+  test("Shows My Learning when only expired enrollments exist", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const expiredEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Expired Course",
+        end_date: faker.date.past().toISOString(),
+        start_date: faker.date.past().toISOString(),
+      },
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
+      expiredEnrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    expect(
+      (await screen.findAllByText("Expired Course")).length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("Shows expired courses without Show all when total cards <= MIN_VISIBLE", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    // 2 expired courses only — total = 2, under MIN_VISIBLE of 3 → all promoted, no toggle
+    const expiredEnrollments = [
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "Expired Alpha",
+          end_date: faker.date.past().toISOString(),
+          start_date: faker.date.past().toISOString(),
+        },
+      }),
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "Expired Beta",
+          end_date: faker.date.past().toISOString(),
+          start_date: faker.date.past().toISOString(),
+        },
+      }),
+    ]
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(
+      mitxonline.urls.enrollment.enrollmentsListV2(),
+      expiredEnrollments,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+    expect(
+      (await screen.findAllByText("Expired Alpha")).length,
+    ).toBeGreaterThan(0)
+    expect((await screen.findAllByText("Expired Beta")).length).toBeGreaterThan(
+      0,
+    )
+    expect(screen.queryByText("Show all")).not.toBeInTheDocument()
+  })
+
+  test("Promotes expired courses up to MIN_VISIBLE threshold, collapses the rest", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    // 1 started + 3 expired → started is present so all expired go behind "Show all"
+    const startedEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Active Course",
+        start_date: faker.date.past().toISOString(),
+        end_date: null,
+      },
+    })
+    const expiredEnrollments = [
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "A Expired Course",
+          end_date: faker.date.past().toISOString(),
+          start_date: faker.date.past().toISOString(),
+        },
+      }),
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "B Expired Course",
+          end_date: faker.date.past().toISOString(),
+          start_date: faker.date.past().toISOString(),
+        },
+      }),
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "C Expired Course",
+          end_date: faker.date.past().toISOString(),
+          start_date: faker.date.past().toISOString(),
+        },
+      }),
+    ]
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
+      startedEnrollment,
+      ...expiredEnrollments,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [],
+    )
+    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    // "Show all" toggle must exist (all 3 expired are hidden)
+    await screen.findByText("Show all")
+
+    // Only the active course is visible before expanding
+    expect(
+      (await screen.findAllByText("Active Course")).length,
+    ).toBeGreaterThan(0)
+
+    // After expanding, all expired courses appear
+    await user.click(screen.getByText("Show all"))
+    expect(
+      (await screen.findAllByText("A Expired Course")).length,
+    ).toBeGreaterThan(0)
+    expect(
+      (await screen.findAllByText("B Expired Course")).length,
+    ).toBeGreaterThan(0)
+    expect(
+      (await screen.findAllByText("C Expired Course")).length,
+    ).toBeGreaterThan(0)
+  })
+
   test("Filters B2B program enrollments from display", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -244,16 +417,7 @@ describe("EnrollmentDisplay", () => {
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    // Need at least one course enrollment to render the wrapper
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
-      mitxonline.factories.enrollment.courseEnrollment({
-        b2b_contract_id: null,
-        run: {
-          ...mitxonline.factories.enrollment.courseEnrollment().run,
-          title: "Dummy Course",
-        },
-      }),
-    ])
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
