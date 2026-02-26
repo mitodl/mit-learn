@@ -22,9 +22,9 @@ import {
   mitxonlineUrl,
   PriceWithDiscount,
   priceWithDiscount,
-  upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
@@ -200,6 +200,8 @@ const CertificateUpsell: React.FC<{
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
   const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
@@ -258,10 +260,12 @@ const CertificateUpsell: React.FC<{
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
           disabled={!canUpgrade}
-          onClick={() => {
+          onClick={async () => {
             if (!product) return
-            const url = upgradeRunUrl(product)
-            window.location.assign(url)
+            addToBasket.reset()
+            clearBasket.reset()
+            await clearBasket.mutateAsync()
+            await addToBasket.mutateAsync(product.id)
           }}
         />
       </CertificateBox>
