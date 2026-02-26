@@ -44,6 +44,11 @@ export function convertToEmbedUrl(url: string): string | null {
     return id ? `https://player.vimeo.com/video/${id}` : null
   }
 
+  // --- ODL VIDEO EMBED ---
+  if (hostname === "video.odl.mit.edu") {
+    return url
+  }
+
   // Not a supported video platform
   return null
 }
