@@ -8,6 +8,7 @@ import {
   BannerBackground,
   Typography,
 } from "ol-components"
+import VideoFrame from "@/page-components/LearningResourceExpanded/VideoFrame"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
@@ -127,6 +128,25 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   },
 }))
 
+const SidebarMedia: React.FC<{
+  videoUrl?: string | null
+  imageSrc: string
+  priority?: boolean
+}> = ({ videoUrl, imageSrc, priority }) => {
+  if (videoUrl) {
+    return <VideoFrame src={videoUrl} title="" aspect={410 / 230} />
+  }
+  return (
+    <SidebarImage
+      priority={priority}
+      width={410}
+      height={230}
+      src={imageSrc}
+      alt=""
+    />
+  )
+}
+
 const SummaryRoot = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   backgroundColor: theme.custom.colors.white,
@@ -157,6 +177,7 @@ type ProductPageTemplateProps = {
   title: string
   shortDescription: React.ReactNode
   imageSrc: string
+  videoUrl?: string | null
   sidebarSummary: React.ReactNode
   summaryTitle: string
   children: React.ReactNode
@@ -169,6 +190,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   title,
   shortDescription,
   imageSrc,
+  videoUrl,
   sidebarSummary,
   summaryTitle,
   children,
@@ -202,13 +224,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             </TitleBox>
           </MainCol>
           <SidebarCol showAbove="md" alignSelf="flex-end">
-            <SidebarImage
-              priority
-              width={410}
-              height={230}
-              src={imageSrc}
-              alt=""
-            />
+            <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} priority />
           </SidebarCol>
         </TopContainer>
       </BannerBackground>
@@ -233,14 +249,14 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               {sidebarSummary}
               <Stack gap="16px">
-                <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+                <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} />
                 {enrollButton}
               </Stack>
             </SummaryRoot>
           </Show>
           <SidebarCol showBelow="sm" alignSelf="center">
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+              <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} />
               {enrollButton}
               {sidebarSummary}
             </SummaryRoot>
