@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.55.7
+--------------
+
+- fix: Add back langchain-litellm dependency
+- chore: migrate from poetry/pip to uv for dependency management (#2975)
+- Fix contextwindow exceeded error when summarizing large transcripts (#2960)
+
 Version 0.55.6 (Released February 26, 2026)
 --------------
 
