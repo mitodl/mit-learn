@@ -3785,6 +3785,23 @@ langchain-community = ">=0.3.0,<0.4.0"
 langchain-core = ">=0.3.28,<0.4.0"
 
 [[package]]
+name = "langchain-litellm"
+version = "0.5.1"
+description = "An integration package connecting Litellm and LangChain"
+optional = false
+python-versions = "<4.0,>=3.10"
+groups = ["main"]
+files = [
+    {file = "langchain_litellm-0.5.1-py3-none-any.whl", hash = "sha256:3726c050eaaeb0b8aad0c8ceefae549917b185d176859866375f97d1d0ed6748"},
+    {file = "langchain_litellm-0.5.1.tar.gz", hash = "sha256:1af5743c424456ce12c59cbf08b4774fbc9025124b6de8249713864242db57e1"},
+]
+
+[package.dependencies]
+httpx = ">=0.28.1,<0.29.0"
+langchain-core = ">0.3.15,<2.0.0"
+litellm = ">=1.77.2,<2.0.0"
+
+[[package]]
 name = "langchain-openai"
 version = "0.3.35"
 description = "An integration package connecting OpenAI and LangChain"
@@ -9695,4 +9712,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.12"
-content-hash = "7294fab4e6ea2a9bf80824881a8268d24d438268e7af2b2bc72f4163814f4ebf"
+content-hash = "d5217b28948655f0287f8e576b519bbeeaaa6b681c20c502027b5e664b9df082"
