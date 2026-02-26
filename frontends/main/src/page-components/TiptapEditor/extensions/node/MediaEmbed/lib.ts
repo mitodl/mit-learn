@@ -45,7 +45,7 @@ export function convertToEmbedUrl(url: string): string | null {
   }
 
   // --- ODL VIDEO EMBED ---
-  if (hostname === "video.odl.mit.edu" && parsed.pathname.endsWith("/embed/")) {
+  if (hostname === "video.odl.mit.edu") {
     return url
   }
 
