@@ -6,7 +6,7 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, setMockResponse } from "api/test-utils"
+import { makeRequest, mockAxiosInstance, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -17,7 +17,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import NiceModal from "@ebay/nice-modal-react"
 import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
-import { upgradeRunUrl } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { DASHBOARD_HOME } from "@/common/urls"
@@ -257,7 +256,7 @@ describe("ProgramEnrollmentDialog", () => {
   })
 
   describe("Certificate upgrade and enrollment actions", () => {
-    test("Clicking 'Add to cart' redirects to cart page appropriately", async () => {
+    test("Clicking 'Add to cart' adds product to basket and redirects to cart", async () => {
       const assign = jest.mocked(window.location.assign)
 
       const run = upgradeableRun({ course_number: "6.005" })
@@ -280,6 +279,11 @@ describe("ProgramEnrollmentDialog", () => {
         },
       )
 
+      const clearUrl = mitxUrls.baskets.clear()
+      setMockResponse.delete(clearUrl, undefined)
+      const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+      setMockResponse.post(basketUrl, { id: 1, items: [] })
+
       renderWithProviders(null)
       await openProgramDialog(program)
 
@@ -300,10 +304,30 @@ describe("ProgramEnrollmentDialog", () => {
       })
       await user.click(upgradeButton)
 
-      // Verify redirect URL includes product_id parameter
+      // Verify clear basket API was called first
       await waitFor(() => {
-        expect(assign).toHaveBeenCalledWith(upgradeRunUrl(product))
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "DELETE",
+            url: clearUrl,
+          }),
+        )
       })
+
+      // Verify create basket API was called
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: basketUrl,
+        }),
+      )
+
+      // Verify redirect to cart page
+      const expectedCartUrl = new URL(
+        "/cart/",
+        process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+      ).toString()
+      expect(assign).toHaveBeenCalledWith(expectedCartUrl)
     })
 
     test("Clicking 'No thanks, I'll take the course...' button enrolls in the course", async () => {
