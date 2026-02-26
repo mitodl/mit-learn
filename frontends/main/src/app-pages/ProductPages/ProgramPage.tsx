@@ -10,7 +10,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds, parseReqTree } from "./util"
+import { HeadingIds, parseReqTree, RequirementData } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -89,13 +89,6 @@ const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
   return Object.fromEntries(array.map((item) => [String(item[key]), item]))
 }
 
-type RequirementSubsectionInfo = {
-  title: string
-  note?: string
-  titleId: string
-  courseIds: number[]
-}
-
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
   fontSize: theme.typography.pxToRem(20), // boosted size
@@ -110,13 +103,16 @@ type RequirementsSectionProps = {
   program: V2Program
 }
 
-const getCompletionText = ({
-  requiredCount,
-  electiveCount,
-}: {
-  requiredCount?: number
-  electiveCount?: number
-}) => {
+const getCompletionText = (parsedReqs: RequirementData[]) => {
+  let requiredCount = 0
+  let electiveCount = 0
+  parsedReqs.forEach((req) => {
+    if (req.elective) {
+      electiveCount += req.requiredCourseCount
+    } else {
+      requiredCount += req.requiredCourseCount
+    }
+  })
   if (requiredCount && electiveCount) {
     return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
   }
@@ -126,7 +122,14 @@ const getCompletionText = ({
   if (electiveCount) {
     return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
   }
-  return "" // Program has no requirements at all. Something went wrong.
+  return ""
+}
+
+const getRequirementSectionSubtitle = (reqData: RequirementData) => {
+  if (reqData.requiredCourseCount < reqData.courseIds.length) {
+    return `Complete ${reqData.requiredCourseCount} out of ${reqData.courseIds.length}`
+  }
+  return null
 }
 
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
@@ -134,30 +137,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 }) => {
   const courses = useQuery(coursesQueries.coursesForProgram(program))
   const coursesById = keyBy(courses.data?.results ?? [], "id")
-  /**
-   * req_tree allows for multiple elective sections, however
-   * the V2Program.requirements schema, from which we get course readable IDs,
-   * only supports at most one elective section and one required section.
-   */
   const parsedReqs = parseReqTree(program.req_tree)
-  const required = parsedReqs.find((req) => !req.elective)
-  const electives = parsedReqs.find((req) => req.elective)
-
-  const subsections: RequirementSubsectionInfo[] = [
-    required && {
-      title: required.title,
-      titleId: HeadingIds.RequirementsRequired,
-      courseIds: required.courseIds,
-    },
-    electives && {
-      title: electives.title,
-      note: electives
-        ? `Complete ${electives.requiredCourseCount} out of ${electives.courseIds.length}`
-        : "",
-      titleId: HeadingIds.RequirementsElectives,
-      courseIds: electives.courseIds,
-    },
-  ].filter((subsec) => subsec !== undefined)
 
   return (
     <Stack
@@ -175,42 +155,42 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           Courses
         </Typography>
         <Typography variant="body1" component="p">
-          {getCompletionText({
-            requiredCount: required?.requiredCourseCount,
-            electiveCount: electives?.requiredCourseCount,
-          })}
+          {getCompletionText(parsedReqs)}
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>
-        {subsections.map(({ title, note, titleId, courseIds }) => (
-          <div key={titleId}>
-            <ReqSubsectionTitle component="h3" id={titleId}>
-              {title}
-              {note ? ": " : ""}
-              {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
-            </ReqSubsectionTitle>
-            <RequirementsListing>
-              {courseIds.map((courseId) => {
-                const course = coursesById[courseId]
-                const isCourseLoading = courses.isLoading || !courses.data
-                if (!isCourseLoading && !course) {
-                  return null
-                }
-                return (
-                  <li key={courseId}>
-                    <MitxOnlineCourseCard
-                      course={course}
-                      href={`/courses/${encodeURIComponent(course?.readable_id)}`}
-                      size="small"
-                      isLoading={isCourseLoading}
-                      list
-                    />
-                  </li>
-                )
-              })}
-            </RequirementsListing>
-          </div>
-        ))}
+        {parsedReqs.map((req) => {
+          const note = getRequirementSectionSubtitle(req)
+          return (
+            <div key={req.id}>
+              <ReqSubsectionTitle component="h3">
+                {req.title}
+                {note ? ": " : ""}
+                {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
+              </ReqSubsectionTitle>
+              <RequirementsListing>
+                {req.courseIds.map((courseId) => {
+                  const course = coursesById[courseId]
+                  const isCourseLoading = courses.isLoading || !courses.data
+                  if (!isCourseLoading && !course) {
+                    return null
+                  }
+                  return (
+                    <li key={courseId}>
+                      <MitxOnlineCourseCard
+                        course={course}
+                        href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                        size="small"
+                        isLoading={isCourseLoading}
+                        list
+                      />
+                    </li>
+                  )
+                })}
+              </RequirementsListing>
+            </div>
+          )
+        })}
       </Stack>
     </Stack>
   )

@@ -10,6 +10,15 @@ export function isVideoUrl(url: string): boolean {
   }
 }
 
+export function isHlsVideo(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.pathname.toLowerCase().endsWith(".m3u8")
+  } catch {
+    return false
+  }
+}
+
 export function convertToEmbedUrl(url: string): string | null {
   let parsed: URL
 
@@ -20,19 +29,11 @@ export function convertToEmbedUrl(url: string): string | null {
   }
   const hostname = parsed.hostname.replace("www.", "")
 
-  // Helper to ensure URL has protocol
-  const ensureProtocol = (urlOrHost: string) => {
-    return urlOrHost.startsWith("http") ? urlOrHost : `https://${urlOrHost}`
-  }
-
   // --- MIT LEARN MP4 VIDEOS ---
   if (
     hostname ===
-      new URL(
-        ensureProtocol(
-          process.env.NEXT_PUBLIC_ORIGIN || "https://learn.mit.edu",
-        ),
-      ).hostname.replace("www.", "") &&
+      new URL(process.env.NEXT_PUBLIC_ORIGIN || "https://learn.mit.edu")
+        .hostname &&
     parsed.pathname.toLowerCase().endsWith(".mp4")
   ) {
     return url // Return the URL as-is for video element
@@ -43,11 +44,9 @@ export function convertToEmbedUrl(url: string): string | null {
   if (
     hostname ===
       new URL(
-        ensureProtocol(
-          process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN ||
-            "https://d3tsb3m56iwvoq.cloudfront.net",
-        ),
-      ).hostname.replace("www.", "") &&
+        process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN ||
+          "https://d3tsb3m56iwvoq.cloudfront.net",
+      ).hostname &&
     parsed.pathname.toLowerCase().endsWith(".m3u8")
   ) {
     return url // Return the URL as-is for video element

@@ -10,9 +10,7 @@ export const generateMetadata = async () => {
   })
 }
 
-const Page: React.FC<PageProps<"/articles/[slugOrId]/draft">> = async (
-  props,
-) => {
+const Page: React.FC<PageProps<"/news/[slugOrId]/draft">> = async (props) => {
   const { slugOrId } = await props.params
 
   // No prefetching for draft articles - the client-side component

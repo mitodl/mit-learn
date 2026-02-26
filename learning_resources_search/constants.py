@@ -129,7 +129,7 @@ LEARNING_RESOURCE_MAP = {
         "type": "nested",
         "properties": {
             "code": {"type": "keyword"},
-            "name": {"type": "keyword"},
+            "name": ENGLISH_TEXT_FIELD,
         },
     },
     "free": {"type": "boolean"},
@@ -292,7 +292,7 @@ LEARNING_RESOURCE_MAP = {
                 "type": "nested",
                 "properties": {
                     "code": {"type": "keyword"},
-                    "name": {"type": "keyword"},
+                    "name": ENGLISH_TEXT_FIELD,
                 },
             },
             "instructors": {
@@ -419,6 +419,7 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
 
 TOPICS_QUERY_FIELDS = ["topics.name"]
 DEPARTMENT_QUERY_FIELDS = ["departments.department_id", "departments.name"]
+CERTIFICATION_TYPE_QUERY_FIELDS = ["certification_type.name.english^5"]
 
 COURSE_QUERY_FIELDS = [
     "course.course_numbers.value^5",
@@ -427,13 +428,15 @@ COURSE_QUERY_FIELDS = [
 RUNS_QUERY_FIELDS = [
     "runs.year",
     "runs.semester",
-    "runs.level",
 ]
 
 RUN_INSTRUCTORS_QUERY_FIELDS = [
     "runs.instructors.last_name^5",
     "runs.instructors.full_name^5",
 ]
+
+RUN_LEVEL_QUERY_FIELDS = ["runs.level.name^5"]
+
 
 RESOURCEFILE_QUERY_FIELDS = [
     "content.english",
@@ -492,4 +495,5 @@ SYNONYMS = [
     "econ, economics",
     "natural language processing, nlp",
     "large language model, llm",
+    "micromasters, micro masters",
 ]

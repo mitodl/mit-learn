@@ -12,15 +12,15 @@ import {
   LoadingSpinner,
   Typography,
 } from "ol-components"
-import { Permission, useUserHasPermission } from "api/hooks/user"
+import { Permission } from "api/hooks/user"
 import { useArticleList } from "api/hooks/articles"
 import type { RichTextArticle } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import { ArticleBanner, DEFAULT_BACKGROUND_IMAGE_URL } from "./ArticleBanner"
 import { extractFirstImageFromArticle } from "@/common/articleUtils"
-import { notFound } from "next/navigation"
 import { articlesDraftView, articlesView } from "@/common/urls"
+import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
 
 const PAGE_SIZE = 20
 
@@ -109,8 +109,6 @@ const ArticleDraftPage: React.FC = () => {
     draft: true, // Filter for drafts only on the backend
   })
 
-  const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
-
   useEffect(() => {
     if (page > 1 && scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -120,11 +118,11 @@ const ArticleDraftPage: React.FC = () => {
   const draftArticles = articles?.results
   const totalPages = articles?.count ? Math.ceil(articles.count / PAGE_SIZE) : 0
 
-  if (!isLoadingArticles && !isArticleEditor) {
-    return notFound()
+  if (isLoadingArticles) {
+    return <LoadingSpinner loading={isLoadingArticles} />
   }
   return (
-    <>
+    <RestrictedRoute requires={Permission.ArticleEditor}>
       <ArticleBanner
         title="Draft Articles"
         description="Manage your unpublished articles that are currently in draft status."
@@ -179,7 +177,7 @@ const ArticleDraftPage: React.FC = () => {
           )}
         </Container>
       </PageWrapper>
-    </>
+    </RestrictedRoute>
   )
 }
 

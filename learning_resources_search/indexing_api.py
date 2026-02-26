@@ -159,9 +159,9 @@ def clear_and_create_index(*, index_name=None, skip_mapping=False, object_type=N
                     "custom_english": {
                         "tokenizer": "standard",
                         "filter": [
-                            "english_possessive_stemmer",
                             "lowercase",
                             "synonyms_filter",
+                            "english_possessive_stemmer",
                             "english_stop",
                             "english_keywords",
                             "english_stemmer",

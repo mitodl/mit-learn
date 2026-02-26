@@ -1,6 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { isVideoUrl } from "./lib"
+import { isVideoUrl, isHlsVideo } from "./lib"
+import { VideoJsPlayer } from "./VideoJsPlayer"
 
 const MediaContainer = styled.div(({ theme }) => ({
   position: "relative",
@@ -24,7 +25,14 @@ const MediaContainer = styled.div(({ theme }) => ({
     backgroundColor: "#000",
   },
 
-  ".layout-full & iframe, .layout-full & video": {
+  // Video.js player styling
+  ".video-js": {
+    width: "100%",
+    height: "100%",
+    borderRadius: "6px",
+  },
+
+  ".layout-full & iframe, .layout-full & video, .layout-full & .video-js": {
     borderRadius: 0,
   },
   ".ProseMirror-selectednode .layout-wide &": {
@@ -48,11 +56,14 @@ export const MediaDisplay = ({ src, caption }: MediaDisplayProps) => {
   return (
     <MediaContainer>
       {isVideoUrl(src) ? (
-        <video src={src} controls title={caption}>
-          {/* Empty track required by jsx-a11y/media-has-caption */}
-          <track kind="captions" />
-          Your browser does not support the video tag.
-        </video>
+        isHlsVideo(src) ? (
+          <VideoJsPlayer src={src} caption={caption} />
+        ) : (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={src} controls title={caption}>
+            Your browser does not support the video tag.
+          </video>
+        )
       ) : (
         <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
       )}

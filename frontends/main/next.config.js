@@ -47,6 +47,18 @@ const nextConfig = {
         destination: "/enrollmentcode/:code",
         permanent: true,
       },
+      {
+        // can be removed once fastly redirect is in place
+        source: "/articles/:slug*",
+        destination: "/news/:slug*",
+        permanent: true,
+      },
+      {
+        // can be removed once fastly redirect is in place
+        source: "/articles",
+        destination: "/news",
+        permanent: true,
+      },
     ]
   },
 

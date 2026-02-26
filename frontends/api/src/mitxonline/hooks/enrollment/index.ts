@@ -32,6 +32,9 @@ const useCreateEnrollment = () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
     },
   })
 }

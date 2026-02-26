@@ -282,7 +282,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
                   <Spacer />
                   <ButtonLink
                     variant="secondary"
-                    href="/articles/draft"
+                    href="/news/draft"
                     size="small"
                   >
                     Drafts
