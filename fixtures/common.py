@@ -42,6 +42,8 @@ def warnings_as_errors():
         warnings.filterwarnings("ignore", category=InsecureRequestWarning)
         warnings.filterwarnings("ignore", category=PytestMockWarning)
         warnings.filterwarnings("ignore", category=ResourceWarning)
+        # PyJWT 2.11+ warns when HMAC key is < 32 bytes (tests use short keys)
+        warnings.filterwarnings("ignore", module="jwt.*", category=UserWarning)
         # Ignore deprecation warnings in third party libraries
         warnings.filterwarnings(
             "ignore",
