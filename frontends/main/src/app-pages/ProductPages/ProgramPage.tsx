@@ -243,6 +243,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         />
       }
       imageSrc={imageSrc}
+      videoUrl={page.video_url}
       summaryTitle="Program summary"
       sidebarSummary={
         <ProgramSummary program={program} courses={courses.data?.results} />

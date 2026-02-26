@@ -108,6 +108,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
+      videoUrl={page.video_url}
       summaryTitle="Course summary"
       sidebarSummary={<CourseSummary course={course} />}
       enrollButton={<CourseEnrollmentButton course={course} />}
