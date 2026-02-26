@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.55.6
+Version 0.55.6 (Released February 26, 2026)
 --------------
 
 - Make micromasters a searchable term (#2967)
