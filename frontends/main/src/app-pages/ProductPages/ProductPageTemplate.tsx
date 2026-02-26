@@ -8,7 +8,7 @@ import {
   BannerBackground,
   Typography,
 } from "ol-components"
-import VideoFrame from "@/page-components/LearningResourceExpanded/VideoFrame"
+import { convertToEmbedUrl } from "@/common/utils"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
@@ -115,6 +115,19 @@ const SidebarCol = styled(Show, {
   alignSelf,
 }))
 
+const SidebarVideo = styled.iframe(({ theme }) => ({
+  borderRadius: "4px",
+  border: "none",
+  width: "100%",
+  maxWidth: "410px",
+  aspectRatio: "410 / 230",
+  display: "block",
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "4px 4px 0 0",
+  },
+}))
+
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "100%",
@@ -134,7 +147,10 @@ const SidebarMedia: React.FC<{
   priority?: boolean
 }> = ({ videoUrl, imageSrc, priority }) => {
   if (videoUrl) {
-    return <VideoFrame src={videoUrl} title="" aspect={410 / 230} />
+    const embedUrl = convertToEmbedUrl(videoUrl)
+    if (embedUrl) {
+      return <SidebarVideo src={embedUrl} title="" allowFullScreen />
+    }
   }
   return (
     <SidebarImage
