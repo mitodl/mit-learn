@@ -21,13 +21,16 @@ import {
   ResourceType,
   selectBestEnrollment,
 } from "./helpers"
-import { DashboardCard, DashboardType } from "./DashboardCard"
+import {
+  DashboardCard,
+  DashboardResource,
+  DashboardType,
+} from "./DashboardCard"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
   CourseRunEnrollmentRequestV2,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -157,18 +160,33 @@ const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
   }
 }
 
+const getResourceKey = (resource: DashboardResource): string => {
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    return getKey({
+      resourceType: ResourceType.Program,
+      id: resource.data.program.id,
+    })
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return getKey({
+      resourceType: ResourceType.Course,
+      id: resource.data.run.course.id,
+      runId: resource.data.run.id,
+    })
+  }
+  return getKey({ resourceType: ResourceType.Course, id: resource.data.id })
+}
+
 interface EnrollmentExpandCollapseProps {
-  shownCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V3UserProgramEnrollment[]
+  normallyShown: DashboardResource[]
+  maybeShown: DashboardResource[]
   isLoading?: boolean
   onUpgradeError?: (error: string) => void
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
-  shownCourseRunEnrollments,
-  hiddenCourseRunEnrollments,
-  programEnrollments,
+  normallyShown,
+  maybeShown,
   isLoading,
   onUpgradeError,
 }) => {
@@ -179,61 +197,36 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
     setShown(!shown)
   }
 
+  const shownResources = normallyShown.length
+    ? normallyShown
+    : maybeShown.slice(0, MIN_VISIBLE)
+  const hiddenResources = normallyShown.length
+    ? maybeShown
+    : maybeShown.slice(MIN_VISIBLE)
+
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownCourseRunEnrollments.map((enrollment) => {
-          return (
-            <DashboardCardStyled
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: enrollment.run.course.id,
-                runId: enrollment.run.id,
-              })}
-              Component="li"
-              resource={{
-                type: DashboardType.CourseRunEnrollment,
-                data: enrollment,
-              }}
-              showNotComplete={false}
-              isLoading={isLoading}
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
-        {programEnrollments?.map((program) => (
+        {shownResources.map((resource) => (
           <DashboardCardStyled
-            key={getKey({
-              resourceType: ResourceType.Program,
-              id: program.program.id,
-            })}
+            key={getResourceKey(resource)}
             Component="li"
-            resource={{
-              type: DashboardType.ProgramEnrollment,
-              data: program,
-            }}
+            resource={resource}
             showNotComplete={false}
             isLoading={isLoading}
             onUpgradeError={onUpgradeError}
           />
         ))}
       </EnrollmentsList>
-      {hiddenCourseRunEnrollments.length === 0 ? null : (
+      {hiddenResources.length === 0 ? null : (
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenCourseRunEnrollments.map((enrollment) => (
+              {hiddenResources.map((resource) => (
                 <DashboardCardStyled
-                  key={getKey({
-                    resourceType: ResourceType.Course,
-                    id: enrollment.run.course.id,
-                    runId: enrollment.run.id,
-                  })}
+                  key={getResourceKey(resource)}
                   Component="li"
-                  resource={{
-                    type: DashboardType.CourseRunEnrollment,
-                    data: enrollment,
-                  }}
+                  resource={resource}
                   showNotComplete={false}
                   isLoading={isLoading}
                   onUpgradeError={onUpgradeError}
@@ -485,6 +478,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
 }
 
+const MIN_VISIBLE = 3
+
+/**
+ * Renders the "My Learning" section for non-B2B enrollments.
+ *
+ * Cards are ordered and grouped as follows:
+ *  1. Started courses (past start date, not expired, not completed)
+ *  2. Not-yet-started courses
+ *  3. Completed courses (any passing grade)
+ *  4. Program enrollments (excluding those covered by a B2B contract)
+ *  5. Expired courses (past end date, not completed) — hidden behind "Show all"
+ *
+ * Exception: if groups 1–4 are all empty, up to MIN_VISIBLE expired courses
+ * are shown directly so the section is never blank for an enrolled user.
+ * The section is hidden entirely only when there are no enrollments at all.
+ */
 const AllEnrollmentsDisplay: React.FC = () => {
   const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
@@ -496,22 +505,44 @@ const AllEnrollmentsDisplay: React.FC = () => {
   )
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery(enrollmentQueries.programEnrollmentsList())
-  const filteredProgramEnrollments = programEnrollments?.filter(
-    (enrollment) => {
+  const filteredProgramEnrollments =
+    programEnrollments?.filter((enrollment) => {
       return !contracts?.some((contract) =>
         contract.programs.includes(enrollment.program.id),
       )
-    },
-  )
+    }) ?? []
 
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
   const { completed, expired, started, notStarted } = sortEnrollments(
     enrolledCourses || [],
   )
-  const shownEnrollments = [...started, ...notStarted, ...completed]
 
-  return shownEnrollments.length > 0 ? (
+  const normallyShown: DashboardResource[] = [
+    ...started.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...notStarted.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...completed.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...filteredProgramEnrollments.map((data) => ({
+      data,
+      type: DashboardType.ProgramEnrollment,
+    })),
+  ]
+  const maybeShown: DashboardResource[] = expired.map((data) => ({
+    data,
+    type: DashboardType.CourseRunEnrollment,
+  }))
+  const totalCards = normallyShown.length + maybeShown.length
+
+  return totalCards > 0 ? (
     <Wrapper>
       <Title variant="h5" component="h2">
         My Learning
@@ -530,9 +561,8 @@ const AllEnrollmentsDisplay: React.FC = () => {
         </AlertBanner>
       )}
       <EnrollmentExpandCollapse
-        shownCourseRunEnrollments={shownEnrollments}
-        hiddenCourseRunEnrollments={expired}
-        programEnrollments={filteredProgramEnrollments || []}
+        normallyShown={normallyShown}
+        maybeShown={maybeShown}
         isLoading={
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||
