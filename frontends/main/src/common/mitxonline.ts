@@ -1,5 +1,6 @@
 import type {
   CourseRunV2,
+  EnrollmentMode,
   ProductFlexiblePrice,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -94,11 +95,25 @@ const mitxonlineUrl = (relative: string) => {
   return new URL(relative, NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL).toString()
 }
 
+type EnrollmentType = "none" | "free" | "paid" | "both"
+
+const getEnrollmentType = (
+  modes: EnrollmentMode[] | undefined,
+): EnrollmentType => {
+  if (!modes || modes.length === 0) return "none"
+  const hasFree = modes.some((m) => m.requires_payment !== true)
+  const hasPaid = modes.some((m) => m.requires_payment === true)
+  if (hasFree && hasPaid) return "both"
+  if (hasFree) return "free"
+  return "paid"
+}
+
 export {
   formatProductPrice,
   priceWithDiscount,
   canUpgradeRun,
   upgradeRunUrl,
   mitxonlineUrl,
+  getEnrollmentType,
 }
-export type { PriceWithDiscount }
+export type { PriceWithDiscount, EnrollmentType }
