@@ -1,6 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { isVideoUrl, isHlsVideo } from "./lib"
+import { isVideoUrl } from "./lib"
 import { VideoJsPlayer } from "./VideoJsPlayer"
 
 const MediaContainer = styled.div(({ theme }) => ({
@@ -56,16 +56,15 @@ export const MediaDisplay = ({ src, caption }: MediaDisplayProps) => {
   return (
     <MediaContainer>
       {isVideoUrl(src) ? (
-        isHlsVideo(src) ? (
-          <VideoJsPlayer src={src} caption={caption} />
-        ) : (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={src} controls title={caption}>
-            Your browser does not support the video tag.
-          </video>
-        )
+        <VideoJsPlayer src={src} caption={caption} />
       ) : (
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
+        <iframe
+          src={src}
+          frameBorder="0"
+          allowFullScreen
+          title={caption}
+          inert={true}
+        />
       )}
     </MediaContainer>
   )
