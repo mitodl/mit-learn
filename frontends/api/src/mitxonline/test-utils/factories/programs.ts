@@ -14,7 +14,6 @@ const uniqueProgramId = new UniqueEnforcer()
 
 const baseProgram: Factory<BaseProgram> = (overrides = {}) => {
   const defaults: BaseProgram = {
-    enrollment_modes: [enrollmentMode()],
     title: faker.lorem.words(3),
     id: uniqueProgramId.enforce(() => faker.number.int()),
     readable_id: faker.lorem.slug(),
@@ -93,6 +92,7 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     enrollment_end: faker.helpers.maybe(() =>
       faker.date.future().toISOString(),
     ),
+    enrollment_modes: [enrollmentMode()],
     end_date: faker.helpers.maybe(() => faker.date.future().toISOString()),
   }
 

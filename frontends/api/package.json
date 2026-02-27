@@ -29,7 +29,7 @@
     "ol-test-utilities": "0.0.0"
   },
   "dependencies": {
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/cc/program-enrollment-fixes/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes/src/typescript/mitxonline-api-axios/package.tgz",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"
