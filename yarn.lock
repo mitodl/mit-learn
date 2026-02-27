@@ -3514,9 +3514,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes/src/typescript/mitxonline-api-axios/package.tgz":
+"@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz":
   version: 2026.2.23
-  resolution: "@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes/src/typescript/mitxonline-api-axios/package.tgz"
+  resolution: "@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
@@ -8854,7 +8854,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes/src/typescript/mitxonline-api-axios/package.tgz"
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -16014,7 +16014,7 @@ __metadata:
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.0"
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes/src/typescript/mitxonline-api-axios/package.tgz"
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
     "@mitodl/smoot-design": "npm:^6.24.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
