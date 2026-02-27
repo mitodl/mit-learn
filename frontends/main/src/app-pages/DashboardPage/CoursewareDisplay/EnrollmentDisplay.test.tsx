@@ -320,7 +320,7 @@ describe("EnrollmentDisplay", () => {
     expect(screen.queryByText("Show all")).not.toBeInTheDocument()
   })
 
-  test("Promotes expired courses up to MIN_VISIBLE threshold, collapses the rest", async () => {
+  test("Hides all expired behind Show all when normally-shown enrollments exist", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
