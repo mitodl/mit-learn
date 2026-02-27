@@ -100,16 +100,28 @@ export const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
               src: subtitlesUrl,
               srclang: "en",
               label: "English",
-              default: true,
+              default: false,
             },
             false,
           )
-          // Force the track to show immediately to trigger loading
+
+          // Get the track that was just added
           const textTracks = player.textTracks()
-          for (let i = 0; i < textTracks.length; i++) {
-            const track = textTracks.tracks_[i]
+          const lastTrackIndex = textTracks.length - 1
+          if (lastTrackIndex >= 0) {
+            const track = textTracks.tracks_[lastTrackIndex]
             if (track) {
-              track.mode = "showing"
+              // Handle track loading errors silently
+              track.addEventListener("error", () => {
+                console.warn("Subtitle track failed to load:", subtitlesUrl)
+                // Hide the track on error to prevent error messages from displaying
+                track.mode = "disabled"
+              })
+
+              // Only show the track if it loads successfully
+              track.addEventListener("load", () => {
+                track.mode = "showing"
+              })
             }
           }
         }
