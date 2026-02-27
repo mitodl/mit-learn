@@ -35,7 +35,7 @@
   },
   "version": "0.0.0",
   "devDependencies": {
-    "@next/eslint-plugin-next": "^14.2.7",
+    "@next/eslint-plugin-next": "^16.0.0",
     "@swc/core": "^1.11.29",
     "@swc/jest": "^0.2.38",
     "@testing-library/jest-dom": "^6.4.8",
