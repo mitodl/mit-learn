@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.55.8
+Version 0.55.8 (Released February 27, 2026)
 --------------
 
 - hardcode allowing to embed videos from ovs (#2987)
