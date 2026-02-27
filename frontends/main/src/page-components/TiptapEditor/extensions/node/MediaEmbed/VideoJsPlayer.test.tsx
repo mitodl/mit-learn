@@ -8,6 +8,15 @@ jest.mock("video.js", () => {
     on: jest.fn(),
     isDisposed: jest.fn(() => false),
     error: jest.fn(),
+    ready: jest.fn((callback) => {
+      // Call the callback immediately in tests
+      callback()
+    }),
+    addRemoteTextTrack: jest.fn(),
+    textTracks: jest.fn(() => ({
+      length: 0,
+      tracks_: [],
+    })),
   }
 
   const mockFn = jest.fn(() => mockPlayer)

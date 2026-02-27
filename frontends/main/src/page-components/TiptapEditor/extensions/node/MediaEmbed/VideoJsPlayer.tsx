@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef } from "react"
 import videojs from "video.js"
 import type Player from "video.js/dist/types/player"
 import "video.js/dist/video-js.css"
@@ -47,49 +47,19 @@ const deriveMediaUrls = (
   }
 }
 
-const checkUrlExists = async (url: string): Promise<boolean> => {
-  try {
-    const response = await fetch(url, { method: "HEAD" })
-    return response.ok
-  } catch {
-    return false
-  }
-}
-
 export const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   src,
   caption,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
-  const [posterUrl, setPosterUrl] = useState<string | undefined>()
-  const [subtitlesUrl, setSubtitlesUrl] = useState<string | undefined>()
 
-  // Check for related media files (poster and subtitles) for m3u8 videos
-  useEffect(() => {
-    const loadRelatedMedia = async () => {
-      if (!src.toLowerCase().endsWith(".m3u8")) {
-        return
-      }
-
-      const derivedUrls = deriveMediaUrls(src)
-      if (!derivedUrls) return
-      console.log("Derived URLs:", derivedUrls)
-      // Check if poster exists
-      const posterExists = await checkUrlExists(derivedUrls.posterUrl)
-      if (posterExists) {
-        setPosterUrl(derivedUrls.posterUrl)
-      }
-
-      // Check if subtitles exist
-      const subtitlesExist = await checkUrlExists(derivedUrls.subtitlesUrl)
-      if (subtitlesExist) {
-        setSubtitlesUrl(derivedUrls.subtitlesUrl)
-      }
-    }
-
-    loadRelatedMedia()
-  }, [src])
+  // Derive poster and subtitles URLs synchronously for m3u8 videos
+  const derivedUrls = src.toLowerCase().endsWith(".m3u8")
+    ? deriveMediaUrls(src)
+    : null
+  const posterUrl = derivedUrls?.posterUrl
+  const subtitlesUrl = derivedUrls?.subtitlesUrl
 
   useEffect(() => {
     // Make sure Video.js player is only initialized once
@@ -120,19 +90,30 @@ export const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         ],
       }))
 
-      // Add subtitles track if available
-      if (subtitlesUrl) {
-        player.addRemoteTextTrack(
-          {
-            kind: "captions",
-            src: subtitlesUrl,
-            srclang: "en",
-            label: "English",
-            default: true,
-          },
-          false,
-        )
-      }
+      // Wait for player to be ready before adding text tracks
+      player.ready(() => {
+        // Add subtitles track if available
+        if (subtitlesUrl) {
+          player.addRemoteTextTrack(
+            {
+              kind: "captions",
+              src: subtitlesUrl,
+              srclang: "en",
+              label: "English",
+              default: true,
+            },
+            false,
+          )
+          // Force the track to show immediately to trigger loading
+          const textTracks = player.textTracks()
+          for (let i = 0; i < textTracks.length; i++) {
+            const track = textTracks.tracks_[i]
+            if (track) {
+              track.mode = "showing"
+            }
+          }
+        }
+      })
 
       // Error handling
       player.on("error", () => {
