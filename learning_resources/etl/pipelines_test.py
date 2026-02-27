@@ -291,7 +291,7 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
         assert list(learning_material.resource_tags.values_list("name", flat=True)) == [
             "Activity Assignments"
         ]
-        assert learning_material.resource_category == "Practice"
+        assert learning_material.resource_category == "Practice & Assignment"
 
 
 @mock_aws

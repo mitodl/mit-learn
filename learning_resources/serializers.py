@@ -1285,7 +1285,7 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
     direct_content_files = serializers.SerializerMethodField()
 
     @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
-    def get_content_files(self, instance):
+    def get_direct_content_files(self, instance):
         """Serialize content files with prefetch."""
         content_files = instance.direct_content_files.all()
         return ContentFileSerializer(
