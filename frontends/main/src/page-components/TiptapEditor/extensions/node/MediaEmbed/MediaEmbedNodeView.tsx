@@ -5,6 +5,7 @@ import { FullWidth, WideWidth, DefaultWidth } from "./Icons"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { EditableCaption } from "../shared/EditableCaption"
+import { MediaDisplay } from "./MediaDisplay"
 
 const StyledNodeViewWrapper = styled(NodeViewWrapper, {
   shouldForwardProp: (prop) =>
@@ -110,34 +111,6 @@ const MediaLayoutToolbar = styled.div({
   },
 })
 
-const MediaContainer = styled.div(({ theme }) => ({
-  position: "relative",
-  width: "100%",
-  aspectRatio: "16 / 9",
-  overflow: "hidden",
-
-  iframe: {
-    width: "100%",
-    height: "100%",
-    borderRadius: "6px",
-    display: "block",
-  },
-
-  ".layout-full & iframe": {
-    borderRadius: 0,
-  },
-  ".ProseMirror-selectednode .layout-wide &": {
-    border: `1px solid ${theme.custom.colors.red}`,
-    padding: "8px",
-    borderRadius: "10px",
-  },
-  ".ProseMirror-selectednode .layout-full &": {
-    border: `1px solid ${theme.custom.colors.red}`,
-    padding: "8px 0",
-    borderWidth: "1px 0",
-  },
-}))
-
 interface MediaEmbedNodeProps {
   node: NodeViewProps["node"]
   editor: NodeViewProps["editor"]
@@ -215,15 +188,7 @@ export const MediaEmbedNodeView = ({
         </MediaLayoutToolbar>
       )}
 
-      <MediaContainer>
-        <iframe
-          src={src}
-          frameBorder="0"
-          allowFullScreen
-          title={caption}
-          inert={editable}
-        />
-      </MediaContainer>
+      <MediaDisplay src={src} caption={caption} />
 
       <EditableCaption
         caption={caption}
