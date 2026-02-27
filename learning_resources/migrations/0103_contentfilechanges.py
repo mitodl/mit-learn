@@ -25,19 +25,19 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="contentfile",
-            name="learning_material_resource",
+            name="direct_learning_resource",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name="learning_material_content_files",
+                related_name="direct_content_files",
                 to="learning_resources.learningresource",
             ),
         ),
         migrations.AlterUniqueTogether(
             name="contentfile",
             unique_together={
-                ("key", "run", "learning_resource", "learning_material_resource")
+                ("key", "run", "learning_resource", "direct_learning_resource")
             },
         ),
         migrations.AddConstraint(
@@ -51,15 +51,15 @@ class Migration(migrations.Migration):
                         ("learning_resource__isnull", True), ("run__isnull", False)
                     ),
                     models.Q(
-                        ("learning_material_resource__isnull", False),
+                        ("direct_learning_resource__isnull", False),
                         ("learning_resource__isnull", True),
                         ("run__isnull", True),
                     ),
                     _connector="OR",
                 ),
-                name="learning_material_resource_run_or_resource_defined",
+                name="direct_learning_resource_run_or_resource_defined",
                 violation_error_message=(
-                    "One of learning_resource, learning_material_resource, "
+                    "One of learning_resource, direct_learning_resource, "
                     "or run must be defined. "
                     "Both learning_resource and run cannot be defined at the same time."
                 ),

@@ -1282,7 +1282,7 @@ def test_load_content_files(mocker, is_published, calc_score):
     deleted_content_file_learning_resource = LearningResourceFactory.create(
         resource_type=LearningResourceType.document.value,
     )
-    deleted_content_file.learning_material_resource = (
+    deleted_content_file.direct_learning_resource = (
         deleted_content_file_learning_resource
     )
     deleted_content_file.save()
@@ -2401,7 +2401,7 @@ def test_load_learning_materials(mocker):
 
     learning_material_content_file.refresh_from_db()
 
-    learning_material = learning_material_content_file.learning_material_resource
+    learning_material = learning_material_content_file.direct_learning_resource
 
     resource_relationships = ocw_course.learning_resource.children.all()
 
@@ -2446,7 +2446,7 @@ def test_load_learning_material(mocker, learning_material_exists):
         existing_learning_material.platform = ocw_course.learning_resource.platform
         existing_learning_material.save()
 
-        content_file.learning_material_resource = existing_learning_material
+        content_file.direct_learning_resource = existing_learning_material
         content_file.save()
 
     loaders.load_learning_material(
@@ -2469,4 +2469,4 @@ def test_load_learning_material(mocker, learning_material_exists):
     assert learning_material.title == content_file.title
     assert learning_material.url == content_file.url
 
-    assert content_file.learning_material_resource_id == learning_material.id
+    assert content_file.direct_learning_resource_id == learning_material.id

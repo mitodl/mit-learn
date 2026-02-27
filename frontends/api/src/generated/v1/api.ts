@@ -2050,7 +2050,7 @@ export interface DocumentResource {
    * @type {Array<ContentFile>}
    * @memberof DocumentResource
    */
-  learning_material_content_files: Array<ContentFile> | null
+  direct_learning_resource_content_files: Array<ContentFile> | null
   /**
    *
    * @type {string}
@@ -8941,7 +8941,7 @@ export interface VideoResource {
    * @type {Array<ContentFile>}
    * @memberof VideoResource
    */
-  learning_material_content_files: Array<ContentFile> | null
+  direct_learning_resource_content_files: Array<ContentFile> | null
   /**
    *
    * @type {string}

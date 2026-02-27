@@ -1163,18 +1163,18 @@ class ContentFileSerializer(serializers.ModelSerializer):
                         "school"
                     ),
                 ),
-                "learning_material_resource__course",
-                "learning_material_resource__platform",
+                "direct_learning_resource__course",
+                "direct_learning_resource__platform",
                 Prefetch(
-                    "learning_material_resource__topics",
+                    "direct_learning_resource__topics",
                     queryset=models.LearningResourceTopic.objects.for_serialization(),
                 ),
                 Prefetch(
-                    "learning_material_resource__offered_by",
+                    "direct_learning_resource__offered_by",
                     queryset=models.LearningResourceOfferor.objects.for_serialization(),
                 ),
                 Prefetch(
-                    "learning_material_resource__departments",
+                    "direct_learning_resource__departments",
                     queryset=models.LearningResourceDepartment.objects.for_serialization(
                         prefetch_school=True
                     ).select_related("school"),
@@ -1282,12 +1282,12 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
 
     playlists = serializers.SerializerMethodField()
 
-    learning_material_content_files = serializers.SerializerMethodField()
+    direct_learning_resource_content_files = serializers.SerializerMethodField()
 
     @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
-    def get_learning_material_content_files(self, instance):
+    def get_direct_learning_resource_content_files(self, instance):
         """Serialize content files with prefetch."""
-        content_files = instance.learning_material_content_files.all()
+        content_files = instance.direct_learning_resource_content_files.all()
         return ContentFileSerializer(
             content_files,
             many=True,
@@ -1307,12 +1307,12 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
         default=constants.LearningResourceType.document.name
     )
 
-    learning_material_content_files = serializers.SerializerMethodField()
+    direct_learning_resource_content_files = serializers.SerializerMethodField()
 
     @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
-    def get_learning_material_content_files(self, instance):
+    def get_direct_learning_resource_content_files(self, instance):
         """Serialize content files with prefetch."""
-        content_files = instance.learning_material_content_files.all()
+        content_files = instance.direct_learning_resource_content_files.all()
         return ContentFileSerializer(
             content_files,
             many=True,

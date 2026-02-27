@@ -875,8 +875,8 @@ def load_content_files(
             file.published = False
             file.save()
 
-            if file.learning_material_resource:
-                resource = file.learning_material_resource
+            if file.direct_learning_resource:
+                resource = file.direct_learning_resource
                 resource.published = False
                 resource.save()
 
@@ -952,7 +952,7 @@ def load_learning_material(
             learning_resource, learning_material_tags, is_content_file=False
         )
 
-        content_file.learning_material_resource = learning_resource
+        content_file.direct_learning_resource = learning_resource
         content_file.save()
         return learning_resource.id
 

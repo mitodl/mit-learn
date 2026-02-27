@@ -395,7 +395,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 to_attr="_views",
             ),
             Prefetch(
-                "learning_material_content_files",
+                "direct_content_files",
                 queryset=ContentFile.objects.prefetch_related(
                     "learning_resource__course",
                     "learning_resource__platform",
@@ -1044,9 +1044,9 @@ class ContentFile(TimestampedModel):
         blank=True,
         null=True,
     )
-    learning_material_resource = models.ForeignKey(
+    direct_learning_resource = models.ForeignKey(
         LearningResource,
-        related_name="learning_material_content_files",
+        related_name="direct_content_files",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
@@ -1097,7 +1097,7 @@ class ContentFile(TimestampedModel):
 
     class Meta:
         unique_together = (
-            ("key", "run", "learning_resource", "learning_material_resource"),
+            ("key", "run", "learning_resource", "direct_learning_resource"),
         )
         verbose_name = "contentfile"
         # add constraint so that atleast run or learning_resource is defined (not both)
@@ -1107,14 +1107,14 @@ class ContentFile(TimestampedModel):
                     models.Q(learning_resource__isnull=False, run__isnull=True)
                     | models.Q(run__isnull=False, learning_resource__isnull=True)
                     | models.Q(
-                        learning_material_resource__isnull=False,
+                        direct_learning_resource__isnull=False,
                         learning_resource__isnull=True,
                         run__isnull=True,
                     )
                 ),
-                name="learning_material_resource_run_or_resource_defined",
+                name="direct_learning_resource_run_or_resource_defined",
                 violation_error_message=(
-                    "One of learning_resource, learning_material_resource,"
+                    "One of learning_resource, direct_learning_resource,"
                     " or run must be defined. "
                     "Both learning_resource and run cannot be defined at the"
                     " same time."
