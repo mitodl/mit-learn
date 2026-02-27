@@ -108,6 +108,9 @@ class TestPurgeArticleOnSave:
         from articles.api import purge_article_on_save
         from articles.factories import ArticleFactory
 
+        # Mock call_fastly_purge_api to fail so it falls back to Celery task
+        mocker.patch("articles.tasks.call_fastly_purge_api", return_value=False)
+
         mock_purge_article = mocker.patch(
             "articles.tasks.queue_fastly_purge_article.delay"
         )
@@ -165,6 +168,9 @@ class TestPurgeArticleOnSave:
         """Test that CDN purge is triggered when article has slug and is published"""
         from articles.api import purge_article_on_save
         from articles.factories import ArticleFactory
+
+        # Mock call_fastly_purge_api to fail so it falls back to Celery task
+        mocker.patch("articles.tasks.call_fastly_purge_api", return_value=False)
 
         mock_purge_article = mocker.patch(
             "articles.tasks.queue_fastly_purge_article.delay"

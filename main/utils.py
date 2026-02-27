@@ -92,7 +92,7 @@ def _cache_page_ignoring_cookies(
     return inner_decorator
 
 
-def call_fastly_purge_api(relative_url):
+def call_fastly_purge_api(relative_url, timeout=30):
     """
     Call the Fastly purge API.
 
@@ -102,6 +102,7 @@ def call_fastly_purge_api(relative_url):
 
     Args:
         - relative_url  The relative URL to purge.
+        - timeout       Timeout in seconds for the request (default: 30)
     Returns:
         - Dict of the response (resp.json), or False if there was an error.
     """
@@ -121,7 +122,7 @@ def call_fastly_purge_api(relative_url):
     if settings.FASTLY_API_KEY:
         headers["fastly-key"] = settings.FASTLY_API_KEY
 
-    resp = requests.request("PURGE", api_url, headers=headers, timeout=30)
+    resp = requests.request("PURGE", api_url, headers=headers, timeout=timeout)
 
     if resp.status_code >= 400:  # noqa: PLR2004
         log.error(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
