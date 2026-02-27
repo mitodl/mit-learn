@@ -1,4 +1,4 @@
-import { auth } from "./urls"
+import { auth, coursePageView, programPageView } from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -49,5 +49,37 @@ test.each([
   "login encodes the next parameter appropriately",
   ({ loginNext, signupNext, expected }) => {
     expect(auth({ next: loginNext, signupNext })).toBe(expected)
+  },
+)
+
+test.each([
+  {
+    readableId: "course-v1:MITxT+10.50x",
+    expected: "/courses/course-v1:MITxT+10.50x",
+  },
+  {
+    readableId: "some-plain-slug",
+    expected: "/courses/some-plain-slug",
+  },
+])(
+  "coursePageView does not encode RFC 3986 pchar characters",
+  ({ readableId, expected }) => {
+    expect(coursePageView(readableId)).toBe(expected)
+  },
+)
+
+test.each([
+  {
+    readableId: "program-v1:MITxT+10.50x",
+    expected: "/programs/program-v1:MITxT+10.50x",
+  },
+  {
+    readableId: "some-plain-slug",
+    expected: "/programs/some-plain-slug",
+  },
+])(
+  "programPageView does not encode RFC 3986 pchar characters",
+  ({ readableId, expected }) => {
+    expect(programPageView(readableId)).toBe(expected)
   },
 )
