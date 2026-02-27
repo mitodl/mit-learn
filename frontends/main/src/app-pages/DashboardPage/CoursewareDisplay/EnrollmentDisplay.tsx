@@ -512,13 +512,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
   )
   const { data: programEnrollments, isLoading: programEnrollmentsLoading } =
     useQuery(enrollmentQueries.programEnrollmentsList())
-  const filteredProgramEnrollments = programEnrollments?.filter(
-    (enrollment) => {
+  const filteredProgramEnrollments =
+    programEnrollments?.filter((enrollment) => {
       return !contracts?.some((contract) =>
         contract.programs.includes(enrollment.program.id),
       )
-    },
-  )
+    }) ?? []
 
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
@@ -527,9 +526,8 @@ const AllEnrollmentsDisplay: React.FC = () => {
   )
 
   const normallyShown = [...started, ...notStarted, ...completed]
-  const filteredPrograms = filteredProgramEnrollments ?? []
   const hasNormallyShown =
-    normallyShown.length > 0 || filteredPrograms.length > 0
+    normallyShown.length > 0 || filteredProgramEnrollments.length > 0
   const expiredVisible = hasNormallyShown
     ? 0
     : Math.min(expired.length, MIN_VISIBLE)
@@ -539,7 +537,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
   ]
   const hiddenExpired = expired.slice(expiredVisible)
   const totalCards =
-    normallyShown.length + filteredPrograms.length + expired.length
+    normallyShown.length + filteredProgramEnrollments.length + expired.length
 
   return totalCards > 0 ? (
     <Wrapper>
@@ -562,7 +560,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
       <EnrollmentExpandCollapse
         shownCourseRunEnrollments={shownCourseRunEnrollments}
         hiddenCourseRunEnrollments={hiddenExpired}
-        programEnrollments={filteredPrograms}
+        programEnrollments={filteredProgramEnrollments}
         isLoading={
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||
