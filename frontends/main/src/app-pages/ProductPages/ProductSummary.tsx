@@ -16,12 +16,12 @@ import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
-  EnrollmentMode,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import {
   canUpgradeRun,
+  getEnrollmentType,
   mitxonlineUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -118,19 +118,6 @@ const runStartsAnytime = (run: CourseRunV2) => {
     run.start_date &&
     isInPast(run.start_date)
   )
-}
-
-type EnrollmentType = "none" | "free" | "paid" | "both"
-
-const getEnrollmentType = (
-  modes: EnrollmentMode[] | undefined,
-): EnrollmentType => {
-  if (!modes || modes.length === 0) return "none"
-  const hasFree = modes.some((m) => m.requires_payment !== true)
-  const hasPaid = modes.some((m) => m.requires_payment === true)
-  if (hasFree && hasPaid) return "both"
-  if (hasFree) return "free"
-  return "paid"
 }
 
 type CourseInfoRowProps = {
@@ -507,15 +494,34 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   ...others
 }) => {
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
+  const product = nextRun?.products[0]
+  const canPurchase = nextRun ? canUpgradeRun(nextRun) : false
+  const hasFinancialAid = !!(
+    course.page.financial_assistance_form_url && product
+  )
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
+  })
+  const price =
+    enrollmentType === "paid" && product
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      : null
+
   if (enrollmentType === "none") return null
 
-  const paidPrice =
-    enrollmentType === "paid" && nextRun?.products[0]?.price ? (
-      <>
-        ${nextRun.products[0].price}{" "}
-        <GrayText>(includes {course.certificate_type})</GrayText>
-      </>
-    ) : null
+  const paidPrice = price ? (
+    <>
+      {price.isDiscounted ? (
+        <>
+          {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+        </>
+      ) : (
+        price.finalPrice
+      )}{" "}
+      <GrayText>(includes {course.certificate_type})</GrayText>
+    </>
+  ) : null
 
   return (
     <InfoRow {...others}>
@@ -524,7 +530,21 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
       </InfoRowIcon>
       <Stack gap="8px" width="100%">
         {enrollmentType === "paid" ? (
-          <InfoLabelValue label="Price" value={paidPrice} />
+          <>
+            <InfoLabelValue label="Price" value={paidPrice} />
+            {canPurchase && hasFinancialAid ? (
+              <UnderlinedLink
+                color="black"
+                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {price?.approvedFinancialAid
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </UnderlinedLink>
+            ) : null}
+          </>
         ) : (
           <InfoLabelValue label="Price" value="Free to Learn" />
         )}
