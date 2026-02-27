@@ -21,13 +21,16 @@ import {
   ResourceType,
   selectBestEnrollment,
 } from "./helpers"
-import { DashboardCard, DashboardType } from "./DashboardCard"
+import {
+  DashboardCard,
+  DashboardResource,
+  DashboardType,
+} from "./DashboardCard"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
   CourseRunEnrollmentRequestV2,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
@@ -157,18 +160,33 @@ const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
   }
 }
 
+const getResourceKey = (resource: DashboardResource): string => {
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    return getKey({
+      resourceType: ResourceType.Program,
+      id: resource.data.program.id,
+    })
+  }
+  if (resource.type === DashboardType.CourseRunEnrollment) {
+    return getKey({
+      resourceType: ResourceType.Course,
+      id: resource.data.run.course.id,
+      runId: resource.data.run.id,
+    })
+  }
+  return getKey({ resourceType: ResourceType.Course, id: resource.data.id })
+}
+
 interface EnrollmentExpandCollapseProps {
-  shownCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  hiddenCourseRunEnrollments: CourseRunEnrollmentRequestV2[]
-  programEnrollments?: V3UserProgramEnrollment[]
+  normallyShown: DashboardResource[]
+  maybeShown: DashboardResource[]
   isLoading?: boolean
   onUpgradeError?: (error: string) => void
 }
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
-  shownCourseRunEnrollments,
-  hiddenCourseRunEnrollments,
-  programEnrollments,
+  normallyShown,
+  maybeShown,
   isLoading,
   onUpgradeError,
 }) => {
@@ -179,61 +197,36 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
     setShown(!shown)
   }
 
+  const shownResources = normallyShown.length
+    ? normallyShown
+    : maybeShown.slice(0, MIN_VISIBLE)
+  const hiddenResources = normallyShown.length
+    ? maybeShown
+    : maybeShown.slice(MIN_VISIBLE)
+
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownCourseRunEnrollments.map((enrollment) => {
-          return (
-            <DashboardCardStyled
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: enrollment.run.course.id,
-                runId: enrollment.run.id,
-              })}
-              Component="li"
-              resource={{
-                type: DashboardType.CourseRunEnrollment,
-                data: enrollment,
-              }}
-              showNotComplete={false}
-              isLoading={isLoading}
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
-        {programEnrollments?.map((program) => (
+        {shownResources.map((resource) => (
           <DashboardCardStyled
-            key={getKey({
-              resourceType: ResourceType.Program,
-              id: program.program.id,
-            })}
+            key={getResourceKey(resource)}
             Component="li"
-            resource={{
-              type: DashboardType.ProgramEnrollment,
-              data: program,
-            }}
+            resource={resource}
             showNotComplete={false}
             isLoading={isLoading}
             onUpgradeError={onUpgradeError}
           />
         ))}
       </EnrollmentsList>
-      {hiddenCourseRunEnrollments.length === 0 ? null : (
+      {hiddenResources.length === 0 ? null : (
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenCourseRunEnrollments.map((enrollment) => (
+              {hiddenResources.map((resource) => (
                 <DashboardCardStyled
-                  key={getKey({
-                    resourceType: ResourceType.Course,
-                    id: enrollment.run.course.id,
-                    runId: enrollment.run.id,
-                  })}
+                  key={getResourceKey(resource)}
                   Component="li"
-                  resource={{
-                    type: DashboardType.CourseRunEnrollment,
-                    data: enrollment,
-                  }}
+                  resource={resource}
                   showNotComplete={false}
                   isLoading={isLoading}
                   onUpgradeError={onUpgradeError}
@@ -525,19 +518,29 @@ const AllEnrollmentsDisplay: React.FC = () => {
     enrolledCourses || [],
   )
 
-  const normallyShown = [...started, ...notStarted, ...completed]
-  const hasNormallyShown =
-    normallyShown.length > 0 || filteredProgramEnrollments.length > 0
-  const expiredVisible = hasNormallyShown
-    ? 0
-    : Math.min(expired.length, MIN_VISIBLE)
-  const shownCourseRunEnrollments = [
-    ...normallyShown,
-    ...expired.slice(0, expiredVisible),
+  const normallyShown: DashboardResource[] = [
+    ...started.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...notStarted.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...completed.map((data) => ({
+      data,
+      type: DashboardType.CourseRunEnrollment,
+    })),
+    ...filteredProgramEnrollments.map((data) => ({
+      data,
+      type: DashboardType.ProgramEnrollment,
+    })),
   ]
-  const hiddenExpired = expired.slice(expiredVisible)
-  const totalCards =
-    normallyShown.length + filteredProgramEnrollments.length + expired.length
+  const maybeShown: DashboardResource[] = expired.map((data) => ({
+    data,
+    type: DashboardType.CourseRunEnrollment,
+  }))
+  const totalCards = normallyShown.length + maybeShown.length
 
   return totalCards > 0 ? (
     <Wrapper>
@@ -558,9 +561,8 @@ const AllEnrollmentsDisplay: React.FC = () => {
         </AlertBanner>
       )}
       <EnrollmentExpandCollapse
-        shownCourseRunEnrollments={shownCourseRunEnrollments}
-        hiddenCourseRunEnrollments={hiddenExpired}
-        programEnrollments={filteredProgramEnrollments}
+        normallyShown={normallyShown}
+        maybeShown={maybeShown}
         isLoading={
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||
