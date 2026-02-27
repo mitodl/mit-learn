@@ -609,7 +609,6 @@ def test_serialize_bulk_learning_resources(mocker):
 
     for resource in resources:
         resource_data = LearningResourceSerializer(instance=resource).data
-        resource_data["resource_category"] = resource_data["resource_type_group"]
         data = {
             "_id": mocker.ANY,
             "resource_relations": mocker.ANY,
@@ -710,7 +709,6 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
 
     resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
     resource_data = LearningResourceSerializer(resource).data
-    resource_data["resource_category"] = resource_data["resource_type_group"]
     assert serializers.serialize_learning_resource_for_bulk(resource) == {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},
@@ -832,7 +830,6 @@ def test_serialize_course_numbers_for_bulk(
         return_value=datetime(2024, 1, 1, 1, 1, 1, 0, tzinfo=UTC),
     )
     resource_data = LearningResourceSerializer(resource).data
-    resource_data["resource_category"] = resource_data["resource_type_group"]
     expected_data = {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},
