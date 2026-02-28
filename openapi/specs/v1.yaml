@@ -11179,7 +11179,7 @@ components:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
           default: document
           readOnly: true
-        direct_content_files:
+        content_files:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
@@ -11283,10 +11283,10 @@ components:
       - certification
       - certification_type
       - children
+      - content_files
       - course_feature
       - delivery
       - departments
-      - direct_content_files
       - format
       - free
       - id
@@ -16440,7 +16440,7 @@ components:
             type: string
           description: Get the playlist id(s) the video belongs to
           readOnly: true
-        direct_content_files:
+        content_files:
           type: array
           items:
             $ref: '#/components/schemas/ContentFile'
@@ -16544,10 +16544,10 @@ components:
       - certification
       - certification_type
       - children
+      - content_files
       - course_feature
       - delivery
       - departments
-      - direct_content_files
       - format
       - free
       - id
