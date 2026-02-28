@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from learning_resources.constants import (
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
+    VIDEO_CONTENT_CATEGORIES,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -931,7 +932,7 @@ def load_learning_material(
     resource_category = resource_categories[0]
 
     with transaction.atomic():
-        if resource_category == "Video":
+        if resource_category in VIDEO_CONTENT_CATEGORIES:
             resource_type = LearningResourceType.video.name
         else:
             resource_type = LearningResourceType.document.name
