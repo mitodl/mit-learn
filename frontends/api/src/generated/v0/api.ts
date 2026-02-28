@@ -6824,10 +6824,10 @@ export interface VideoResource {
   playlists: Array<string>
   /**
    *
-   * @type {string}
+   * @type {Array<ContentFile>}
    * @memberof VideoResource
    */
-  direct_content_files: string
+  direct_content_files: Array<ContentFile> | null
   /**
    *
    * @type {string}

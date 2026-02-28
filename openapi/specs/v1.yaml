@@ -16441,7 +16441,10 @@ components:
           description: Get the playlist id(s) the video belongs to
           readOnly: true
         direct_content_files:
-          type: string
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentFile'
+          nullable: true
           readOnly: true
         readable_id:
           type: string
