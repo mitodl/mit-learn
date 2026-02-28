@@ -10,14 +10,37 @@ import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEn
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
+import {
+  canUpgradeRun,
+  getEnrollmentType,
+  priceWithDiscount,
+} from "@/common/mitxonline"
+import { productQueries } from "api/mitxonline-hooks/products"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 
 const WideButton = styled(Button)({
   width: "100%",
 })
 
-const getButtonText = (nextRun?: CourseRunV2) => {
+const DiscountedPriceContent = styled.span({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: "0.25em",
+})
+
+const StrickenPrice = styled.span(({ theme }) => ({
+  textDecoration: "line-through",
+  opacity: 0.75,
+  ...theme.typography.buttonSmall,
+}))
+
+const getButtonText = (nextRun?: CourseRunV2, priceDisplay?: string) => {
   if (!nextRun || nextRun.is_archived) {
     return "Access Course Materials"
+  }
+  const enrollmentType = getEnrollmentType(nextRun.enrollment_modes)
+  if (enrollmentType === "paid") {
+    return priceDisplay ? `Enroll Now—${priceDisplay}` : "Enroll Now"
   }
   return "Enroll for Free"
 }
@@ -30,14 +53,42 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+  const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
+  const product = nextRun?.products[0]
+  const canPurchase = nextRun ? canUpgradeRun(nextRun) : false
+  const hasFinancialAid = !!(
+    course.page.financial_assistance_form_url && product
+  )
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
+  })
+  const price =
+    enrollmentType === "paid" && product
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      : null
+
+  const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
+
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      NiceModal.show(CourseEnrollmentDialog, { course })
+      if (enrollmentType === "paid" && product) {
+        clearBasket.reset()
+        addToBasket.reset()
+        await clearBasket.mutateAsync()
+        await addToBasket.mutateAsync(product.id)
+      } else if (enrollmentType === "free") {
+        NiceModal.show(CourseEnrollmentDialog, { course, hideUpsell: true })
+      } else {
+        NiceModal.show(CourseEnrollmentDialog, { course })
+      }
     } else {
       setAnchor(e.currentTarget)
     }
@@ -46,13 +97,20 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   return (
     <>
       <WideButton
-        disabled={!nextRun}
+        disabled={!nextRun || isPaidWithoutPrice}
         onClick={handleClick}
         variant="primary"
         size="large"
         data-testid="course-enrollment-button"
       >
-        {getButtonText(nextRun)}
+        {price?.isDiscounted ? (
+          <DiscountedPriceContent>
+            <span>Enroll Now—{price.finalPrice}</span>
+            <StrickenPrice>{price.originalPrice}</StrickenPrice>
+          </DiscountedPriceContent>
+        ) : (
+          getButtonText(nextRun, price?.finalPrice)
+        )}
       </WideButton>
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>

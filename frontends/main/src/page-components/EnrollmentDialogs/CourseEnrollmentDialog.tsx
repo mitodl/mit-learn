@@ -22,9 +22,9 @@ import {
   mitxonlineUrl,
   PriceWithDiscount,
   priceWithDiscount,
-  upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
@@ -37,6 +37,11 @@ interface CourseEnrollmentDialogProps {
    * By default, redirects to dashboard home.
    */
   onCourseEnroll?: (run: CourseRunV2) => void
+  /**
+   * When true, the certificate upsell section is hidden.
+   * Use for free-only courses where there is no paid option.
+   */
+  hideUpsell?: boolean
 }
 
 const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
@@ -200,6 +205,8 @@ const CertificateUpsell: React.FC<{
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
   const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
@@ -258,10 +265,12 @@ const CertificateUpsell: React.FC<{
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
           disabled={!canUpgrade}
-          onClick={() => {
+          onClick={async () => {
             if (!product) return
-            const url = upgradeRunUrl(product)
-            window.location.assign(url)
+            addToBasket.reset()
+            clearBasket.reset()
+            await clearBasket.mutateAsync()
+            await addToBasket.mutateAsync(product.id)
           }}
         />
       </CertificateBox>
@@ -297,6 +306,7 @@ const RUN_DEFAULT_OPTION: SimpleSelectOption = {
 const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   course,
   onCourseEnroll,
+  hideUpsell = false,
 }) => {
   const modal = NiceModal.useModal()
   const runOptions = getRunOptions(course)
@@ -314,7 +324,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={course.title ?? ""}
       fullWidth
-      confirmText="Enroll for Free without a certificate"
+      confirmText={
+        hideUpsell ? "Enroll for Free" : "Enroll for Free without a certificate"
+      }
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
@@ -351,7 +363,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        <CertificateUpsell course={course} courseRun={run} />
+        {!hideUpsell && <CertificateUpsell course={course} courseRun={run} />}
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
@@ -369,4 +381,13 @@ const CourseEnrollmentDialog = NiceModal.create(CourseEnrollmentDialogInner)
 
 export default CourseEnrollmentDialog
 
-export { StyledSimpleSelectField, StyledFormDialog, CertificateUpsell }
+export {
+  StyledSimpleSelectField,
+  StyledFormDialog,
+  CertificateUpsell,
+  BigButton,
+  CertificateBox,
+  CertificatePriceRoot,
+  CertificateReasonItem,
+  CertificateReasonsList,
+}

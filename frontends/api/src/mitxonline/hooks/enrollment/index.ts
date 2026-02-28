@@ -1,10 +1,15 @@
 import { enrollmentQueries, enrollmentKeys } from "./queries"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { b2bApi, courseRunEnrollmentsApi } from "../../clients"
+import {
+  b2bApi,
+  courseRunEnrollmentsApi,
+  programEnrollmentsApi,
+} from "../../clients"
 import {
   B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
   CourseRunEnrollmentRequest,
+  ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 const useCreateB2bEnrollment = () => {
@@ -65,6 +70,20 @@ const useDestroyEnrollment = () => {
   })
 }
 
+const useCreateProgramEnrollment = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      opts: ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
+    ) => programEnrollmentsApi.v3ProgramEnrollmentsCreate(opts),
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
+    },
+  })
+}
+
 export {
   enrollmentQueries,
   enrollmentKeys,
@@ -72,4 +91,5 @@ export {
   useCreateEnrollment,
   useUpdateEnrollment,
   useDestroyEnrollment,
+  useCreateProgramEnrollment,
 }

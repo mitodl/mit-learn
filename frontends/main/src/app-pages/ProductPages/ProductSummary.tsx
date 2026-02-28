@@ -16,11 +16,12 @@ import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
-  V2Program,
+  V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import {
   canUpgradeRun,
+  getEnrollmentType,
   mitxonlineUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -374,6 +375,10 @@ const COURSE_CERT_INFO_LINK = (
   </UnderlinedLink>
 )
 
+const GrayText = styled.span(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+}))
+
 const CertificateBoxRoot = styled.div(({ theme }) => ({
   width: "100%",
   backgroundColor: theme.custom.colors.lightGray1,
@@ -488,14 +493,64 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   nextRun,
   ...others
 }) => {
+  const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
+  const product = nextRun?.products[0]
+  const canPurchase = nextRun ? canUpgradeRun(nextRun) : false
+  const hasFinancialAid = !!(
+    course.page.financial_assistance_form_url && product
+  )
+  const userFlexiblePrice = useQuery({
+    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+    enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
+  })
+  const price =
+    enrollmentType === "paid" && product
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      : null
+
+  if (enrollmentType === "none") return null
+
+  const paidPrice = price ? (
+    <>
+      {price.isDiscounted ? (
+        <>
+          {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
+        </>
+      ) : (
+        price.finalPrice
+      )}{" "}
+      <GrayText>(includes {course.certificate_type})</GrayText>
+    </>
+  ) : null
+
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
         <RiPriceTag3Line aria-hidden="true" />
       </InfoRowIcon>
       <Stack gap="8px" width="100%">
-        <InfoLabelValue label="Price" value="Free to Learn" />
-        <CourseCertificateBox course={course} nextRun={nextRun} />
+        {enrollmentType === "paid" ? (
+          <>
+            <InfoLabelValue label="Price" value={paidPrice} />
+            {canPurchase && hasFinancialAid ? (
+              <UnderlinedLink
+                color="black"
+                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {price?.approvedFinancialAid
+                  ? "Financial assistance applied"
+                  : "Financial assistance available"}
+              </UnderlinedLink>
+            ) : null}
+          </>
+        ) : (
+          <InfoLabelValue label="Price" value="Free to Learn" />
+        )}
+        {enrollmentType === "both" ? (
+          <CourseCertificateBox course={course} nextRun={nextRun} />
+        ) : null}
       </Stack>
     </InfoRow>
   )
@@ -603,7 +658,7 @@ const CourseSummary: React.FC<{
 }
 
 type ProgramInfoRowProps = {
-  program: V2Program
+  program: V2ProgramDetail
 } & HTMLAttributes<HTMLDivElement>
 
 const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
@@ -705,10 +760,10 @@ const ProgramPaceRow: React.FC<
 const PROGRAM_CERT_INFO_HREF =
   "https://mitxonline.zendesk.com/hc/en-us/articles/28158506908699-What-is-the-Certificate-Track-What-are-Course-and-Program-Certificates"
 
-const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
+const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
   program,
 }) => {
-  const price = program.page.price
+  const price = program.products[0]?.price
   if (!price) return null
   return (
     <CertificateBoxRoot>
@@ -741,27 +796,44 @@ const ProgramCertificateBox: React.FC<{ program: V2Program }> = ({
 }
 
 type ProgramPriceRowProps = HTMLAttributes<HTMLDivElement> & {
-  program: V2Program
+  program: V2ProgramDetail
 }
 const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   program,
   ...others
 }) => {
+  const enrollmentType = getEnrollmentType(program.enrollment_modes)
+  if (enrollmentType === "none") return null
+
+  const paidPrice =
+    enrollmentType === "paid" && program.products[0]?.price ? (
+      <>
+        ${program.products[0].price}{" "}
+        <GrayText>(includes {program.certificate_type})</GrayText>
+      </>
+    ) : null
+
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
         <RiPriceTag3Line aria-hidden="true" />
       </InfoRowIcon>
       <InfoRowInner>
-        <InfoLabelValue label="Price" value="Free to Learn" />
-        <ProgramCertificateBox program={program} />
+        {enrollmentType === "paid" ? (
+          <InfoLabelValue label="Price" value={paidPrice} />
+        ) : (
+          <InfoLabelValue label="Price" value="Free to Learn" />
+        )}
+        {enrollmentType === "both" ? (
+          <ProgramCertificateBox program={program} />
+        ) : null}
       </InfoRowInner>
     </InfoRow>
   )
 }
 
 const ProgramSummary: React.FC<{
-  program: V2Program
+  program: V2ProgramDetail
   /**
    * Avoid using this. Ideally, ProgramSummary should be based on `program` data.
    */

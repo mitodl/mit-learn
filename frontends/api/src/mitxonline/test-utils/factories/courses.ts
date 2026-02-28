@@ -5,6 +5,7 @@ import type {
   CourseRunV2,
   V1CourseWithCourseRuns,
   ProductFlexibilePrice,
+  EnrollmentMode,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
@@ -12,6 +13,15 @@ import { has } from "lodash"
 
 const uniqueCourseId = new UniqueEnforcer()
 const uniqueCourseRunId = new UniqueEnforcer()
+
+const enrollmentMode: Factory<EnrollmentMode> = (overrides = {}) => {
+  return {
+    mode_slug: faker.lorem.slug(),
+    mode_display_name: faker.lorem.words(2),
+    requires_payment: faker.datatype.boolean(),
+    ...overrides,
+  }
+}
 
 const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
   const defaults: V1CourseWithCourseRuns = {
@@ -70,6 +80,9 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
             product_flexible_price: null,
           },
         ],
+        enrollment_modes: Array.from({
+          length: faker.number.int({ min: 1, max: 3 }),
+        }).map(() => enrollmentMode()),
         approved_flexible_price_exists: faker.datatype.boolean(),
       },
     ],
@@ -110,6 +123,9 @@ const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
     course_number: faker.lorem.word(),
     products: [product()],
     approved_flexible_price_exists: faker.datatype.boolean(),
+    enrollment_modes: Array.from({
+      length: faker.number.int({ min: 1, max: 3 }),
+    }).map(() => enrollmentMode()),
   }
 
   return mergeOverrides<CourseRunV2>(defaults, overrides)
@@ -183,4 +199,12 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
 const v1Courses = makePaginatedFactory(v1Course)
 const courses = makePaginatedFactory(course)
 
-export { v1Course, v1Courses, course, courses, courseRun, product }
+export {
+  v1Course,
+  v1Courses,
+  course,
+  courses,
+  courseRun,
+  product,
+  enrollmentMode,
+}
