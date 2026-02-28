@@ -37,6 +37,11 @@ interface CourseEnrollmentDialogProps {
    * By default, redirects to dashboard home.
    */
   onCourseEnroll?: (run: CourseRunV2) => void
+  /**
+   * When true, the certificate upsell section is hidden.
+   * Use for free-only courses where there is no paid option.
+   */
+  hideUpsell?: boolean
 }
 
 const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
@@ -301,6 +306,7 @@ const RUN_DEFAULT_OPTION: SimpleSelectOption = {
 const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   course,
   onCourseEnroll,
+  hideUpsell = false,
 }) => {
   const modal = NiceModal.useModal()
   const runOptions = getRunOptions(course)
@@ -318,7 +324,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={course.title ?? ""}
       fullWidth
-      confirmText="Enroll for Free without a certificate"
+      confirmText={
+        hideUpsell ? "Enroll for Free" : "Enroll for Free without a certificate"
+      }
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
@@ -355,7 +363,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        <CertificateUpsell course={course} courseRun={run} />
+        {!hideUpsell && <CertificateUpsell course={course} courseRun={run} />}
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
@@ -373,4 +381,13 @@ const CourseEnrollmentDialog = NiceModal.create(CourseEnrollmentDialogInner)
 
 export default CourseEnrollmentDialog
 
-export { StyledSimpleSelectField, StyledFormDialog, CertificateUpsell }
+export {
+  StyledSimpleSelectField,
+  StyledFormDialog,
+  CertificateUpsell,
+  BigButton,
+  CertificateBox,
+  CertificatePriceRoot,
+  CertificateReasonItem,
+  CertificateReasonsList,
+}

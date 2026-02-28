@@ -16,6 +16,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 
 const WideButton = styled(Button)({
   width: "100%",
@@ -52,6 +53,8 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
 
@@ -72,11 +75,20 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      NiceModal.show(CourseEnrollmentDialog, { course })
+      if (enrollmentType === "paid" && product) {
+        clearBasket.reset()
+        addToBasket.reset()
+        await clearBasket.mutateAsync()
+        await addToBasket.mutateAsync(product.id)
+      } else if (enrollmentType === "free") {
+        NiceModal.show(CourseEnrollmentDialog, { course, hideUpsell: true })
+      } else {
+        NiceModal.show(CourseEnrollmentDialog, { course })
+      }
     } else {
       setAnchor(e.currentTarget)
     }
