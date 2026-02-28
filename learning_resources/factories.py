@@ -201,6 +201,9 @@ class LearningResourceFactory(DjangoModelFactory):
     resource_type = factory.fuzzy.FuzzyChoice(
         choices=constants.LearningResourceType.names()
     )
+    resource_category = factory.LazyAttribute(
+        lambda o: o.resource_type.replace("_", " ").title()
+    )
     readable_id = factory.Sequence(
         lambda n: f"RESOURCEN{n:03d}_{random.randint(1, 1000)}.MIT"  # noqa: S311
     )
