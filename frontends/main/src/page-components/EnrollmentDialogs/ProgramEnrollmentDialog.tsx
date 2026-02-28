@@ -1,106 +1,103 @@
-import React, { useState } from "react"
-import { SimpleSelectOption, Stack, Typography } from "ol-components"
+import React from "react"
+import { Stack, Typography } from "ol-components"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
-import {
-  CourseRunV2,
-  CourseWithCourseRunsSerializerV2,
-  PaginatedCourseWithCourseRunsSerializerV2List,
-  V2Program,
-} from "@mitodl/mitxonline-api-axios/v2"
-import { canUpgradeRun } from "@/common/mitxonline"
-import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { useQuery } from "@tanstack/react-query"
+import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import {
-  CertificateUpsell,
+  BigButton,
+  CertificateBox,
+  CertificatePriceRoot,
+  CertificateReasonItem,
+  CertificateReasonsList,
   StyledFormDialog,
-  StyledSimpleSelectField,
 } from "./CourseEnrollmentDialog"
+import { RiArrowRightLine, RiAwardFill, RiCheckLine } from "@remixicon/react"
 import { Alert } from "@mitodl/smoot-design"
 
 interface ProgramEnrollmentDialogProps {
-  program: V2Program
+  program: V2ProgramDetail
   /**
-   * Called after a course enrollment is successfully created
+   * Called after a program enrollment is successfully created.
    * By default, redirects to dashboard home.
    */
-  onCourseEnroll?: (run: CourseRunV2) => void
+  onProgramEnroll?: () => void
 }
 
-const COURSES_PAGE_SIZE = 100
-const getNextRun = (course?: CourseWithCourseRunsSerializerV2) => {
-  return course?.courseruns.find((run) => run.id === course.next_run_id)
-}
-const getCourseOptions = ({
-  data,
-  isLoading,
-}: {
-  data?: PaginatedCourseWithCourseRunsSerializerV2List
-  isLoading: boolean
-}): SimpleSelectOption[] => {
-  const opts: SimpleSelectOption[] =
-    data?.results.map((course) => {
-      const run = getNextRun(course)
-      const upgradeCaveat =
-        run && !canUpgradeRun(run) ? " (No certificate available)" : ""
-      const label = run
-        ? `${course.title} - ${run.course_number}${upgradeCaveat}`
-        : `${course.title} - (No available runs)`
-      return {
-        label: label,
-        value: `${course.id}`,
-      }
-    }) ?? []
-  if (isLoading) {
-    return [
-      {
-        label: "Loading courses...",
-        value: "-",
-        disabled: true,
-      },
-    ]
-  }
-  return opts
-}
-const COURSE_DEFAULT_OPTION: SimpleSelectOption = {
-  label: "Please Select",
-  value: "",
-  disabled: true,
+const CERT_REASONS = [
+  "Certificate is signed by MIT faculty",
+  "Highlight on your resume/CV",
+  "Demonstrates knowledge and skills taught in this course",
+  "Share on your social channels & LinkedIn",
+  "Enhance your college & earn a promotion",
+  "Enhance your college application with an earned certificate from MIT",
+]
+
+const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
+  program,
+}) => {
+  const product = program.products[0]
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
+
+  return (
+    <Stack gap="32px" alignItems="flex-start">
+      <Typography variant="subtitle1">
+        Would you like to get a certificate for this program?
+      </Typography>
+      <CertificateReasonsList>
+        {CERT_REASONS.map((reason, index) => (
+          <CertificateReasonItem key={index}>
+            <RiCheckLine aria-hidden="true" />
+            {reason}
+          </CertificateReasonItem>
+        ))}
+      </CertificateReasonsList>
+      <CertificateBox disabled={!product}>
+        <CertificatePriceRoot>
+          <RiAwardFill />
+          <Stack gap="4px">
+            <strong>
+              Get Certificate {product ? `$${product.price}` : null}
+            </strong>
+          </Stack>
+        </CertificatePriceRoot>
+        <BigButton
+          label="Add to Cart"
+          sublabel="to get a Certificate"
+          endIcon={<RiArrowRightLine aria-hidden="true" />}
+          disabled={!product}
+          onClick={async () => {
+            if (!product) return
+            addToBasket.reset()
+            clearBasket.reset()
+            await clearBasket.mutateAsync()
+            await addToBasket.mutateAsync(product.id)
+          }}
+        />
+      </CertificateBox>
+    </Stack>
+  )
 }
 
 const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
   program,
-  onCourseEnroll,
+  onProgramEnroll,
 }) => {
   const modal = NiceModal.useModal()
-  const courses = useQuery(
-    coursesQueries.coursesList({
-      id: program.courses,
-      page_size: COURSES_PAGE_SIZE, // in practice, these are like 3-5 courses
-    }),
-  )
-  const createEnrollment = useCreateEnrollment()
-  const [chosenCourseId, setChosenCourseId] = useState("")
-  const options = [COURSE_DEFAULT_OPTION, ...getCourseOptions(courses)]
-  const chosenCourse = courses.data?.results.find(
-    (course) => `${course.id}` === chosenCourseId,
-  )
-  const run = getNextRun(chosenCourse)
+  const createProgramEnrollment = useCreateProgramEnrollment()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!run) return
-    createEnrollment.mutate(
-      {
-        run_id: run.id,
-      },
+    createProgramEnrollment.mutate(
+      { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
       {
         onSuccess: () => {
-          if (onCourseEnroll) {
-            onCourseEnroll(run)
+          if (onProgramEnroll) {
+            onProgramEnroll()
           } else {
             router.push(DASHBOARD_HOME)
           }
@@ -115,10 +112,9 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={program.title}
       onSubmit={handleSubmit}
-      onReset={() => setChosenCourseId("")}
+      onReset={() => {}}
       fullWidth
-      confirmText="No thanks, I'll take the course for free without a certificate"
-      disabled={!run}
+      confirmText="Enroll for Free without a certificate"
     >
       <Stack
         sx={(theme) => ({
@@ -126,27 +122,12 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
         })}
         gap="24px"
       >
-        <Typography variant="body2">
-          Thank you for choosing an MITx online program. To complete your
-          enrollment in this program, you must choose a course to start with.
-          You can enroll now for free, but you will need to pay for a
-          certificate in order to earn the program credential.
-        </Typography>
-        <StyledSimpleSelectField
-          label="Choose a course:"
-          options={options}
-          value={chosenCourseId}
-          onChange={(e) => setChosenCourseId(e.target.value)}
-          error={courses.isError}
-          errorText={courses.isError ? "Error loading courses" : undefined}
-          fullWidth
-        />
-        <CertificateUpsell course={chosenCourse} courseRun={run} />
-        {createEnrollment.isError && (
+        <ProgramCertificateUpsell program={program} />
+        {createProgramEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
-              There was a problem enrolling you in this course. Please try again
-              later.
+              There was a problem enrolling you in this program. Please try
+              again later.
             </Alert>
           </div>
         )}

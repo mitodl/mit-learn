@@ -1,6 +1,9 @@
 import React from "react"
 import { styled, LoadingSpinner } from "ol-components"
-import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import {
+  enrollmentQueries,
+  useCreateProgramEnrollment,
+} from "api/mitxonline-hooks/enrollment"
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
@@ -9,10 +12,12 @@ import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/Program
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
-import { programView } from "@/common/urls"
+import { programView, DASHBOARD_HOME } from "@/common/urls"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { getEnrollmentType } from "@/common/mitxonline"
+import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useRouter } from "next-nprogress-bar"
 
 const WideButton = styled(Button)({
   width: "100%",
@@ -36,6 +41,10 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
+  const createProgramEnrollment = useCreateProgramEnrollment()
+  const router = useRouter()
   const enrollments = useQuery({
     ...enrollmentQueries.programEnrollmentsList(),
     throwOnError: false,
@@ -58,11 +67,24 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     return "Enroll for Free"
   }
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (enrollments.isLoading || me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      NiceModal.show(ProgramEnrollmentDialog, { program })
+      if (enrollmentType === "paid" && program.products[0]) {
+        const product = program.products[0]
+        clearBasket.reset()
+        addToBasket.reset()
+        await clearBasket.mutateAsync()
+        await addToBasket.mutateAsync(product.id)
+      } else if (enrollmentType === "free") {
+        createProgramEnrollment.mutate(
+          { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
+          { onSuccess: () => router.push(DASHBOARD_HOME) },
+        )
+      } else {
+        NiceModal.show(ProgramEnrollmentDialog, { program })
+      }
     } else {
       setAnchor(e.currentTarget)
     }

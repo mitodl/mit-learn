@@ -3,16 +3,18 @@ import {
   renderWithProviders,
   setMockResponse,
   screen,
+  setupLocationMock,
   user,
+  waitFor,
 } from "@/test-utils"
+import { mockAxiosInstance, makeRequest, urls, factories } from "api/test-utils"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
-import { urls, factories } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { programView } from "@/common/urls"
+import { programView, DASHBOARD_HOME } from "@/common/urls"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -25,9 +27,11 @@ const makeEnrollmentMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeUser = factories.user.user
 
-describe.each(new Array(100).fill(null))("ProgramEnrollmentButton", () => {
+describe("ProgramEnrollmentButton", () => {
   const ENROLLED = "Enrolled"
   const ENROLL_FREE = "Enroll for Free"
+
+  setupLocationMock()
 
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
@@ -111,25 +115,50 @@ describe.each(new Array(100).fill(null))("ProgramEnrollmentButton", () => {
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
-  test("Shows 'Enroll for Free' + enrollment dialog for unenrolled users", async () => {
+  test("Free-only: clicking 'Enroll for Free' enrolls immediately (no dialog)", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
-    const enrollments = [
-      makeProgramEnrollment(),
-      makeProgramEnrollment(),
-      makeProgramEnrollment(),
-    ]
-
-    setMockResponse.get(
-      mitxUrls.programEnrollments.enrollmentsListV3(),
-      enrollments,
+    const { location } = renderWithProviders(
+      <ProgramEnrollmentButton program={program} />,
     )
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
-    setMockResponse.get(
-      expect.stringContaining(mitxUrls.courses.coursesList()),
-      { count: 0, results: [] },
-    ) // for the dialog
+    setMockResponse.post(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      null,
+      { code: 201 },
+    )
+
+    const enrollButton = await screen.findByRole("button", {
+      name: ENROLL_FREE,
+    })
+    await user.click(enrollButton)
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        "post",
+        mitxUrls.programEnrollments.enrollmentsListV3(),
+        { program_id: program.id },
+      )
+    })
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+    })
+  })
+
+  test("Both: clicking 'Enroll for Free' opens enrollment dialog", async () => {
+    const program = makeProgram({
+      enrollment_modes: [
+        makeEnrollmentMode({ requires_payment: false }),
+        makeEnrollmentMode({ requires_payment: true }),
+      ],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
 
     renderWithProviders(<ProgramEnrollmentButton program={program} />)
 
@@ -139,6 +168,43 @@ describe.each(new Array(100).fill(null))("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     await screen.findByRole("dialog", { name: program.title })
+  })
+
+  test("Paid-only: clicking 'Enroll Now' clears basket, adds product, and redirects", async () => {
+    const assign = jest.mocked(window.location.assign)
+    const product = makeProduct({ price: "500" })
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const clearUrl = mitxUrls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+    const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const enrollButton = await screen.findByRole("button", {
+      name: /Enroll Now/,
+    })
+    await user.click(enrollButton)
+
+    await waitFor(() => {
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      )
+    })
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "POST", url: basketUrl }),
+    )
+    const expectedCartUrl = new URL(
+      "/cart/",
+      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+    ).toString()
+    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 
   test("Shows 'Enroll Now - $X' for paid-only enrollment", async () => {
