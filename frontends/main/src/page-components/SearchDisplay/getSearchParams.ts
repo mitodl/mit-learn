@@ -1,6 +1,6 @@
 import {
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as ResourceSearchRequest,
-  ResourceCategoryEnum,
+  ResourceTypeGroupEnum,
 } from "api"
 import { UseResourceSearchParamsProps } from "@mitodl/course-search-utils"
 import type {
@@ -15,7 +15,7 @@ type SearchParams = {
   searchParams?: URLSearchParams
   requestParams: UseResourceSearchParamsResult["params"]
   constantSearchParams?: Facets & BooleanFacets
-  resourceCategory?: ResourceCategoryEnum
+  resourceTypeGroup?: ResourceTypeGroupEnum
   facetNames: UseResourceSearchParamsProps["facets"]
   page: number
   pageSize?: number
@@ -25,7 +25,7 @@ const getSearchParams = ({
   searchParams = new URLSearchParams({}),
   requestParams,
   constantSearchParams = {},
-  resourceCategory,
+  resourceTypeGroup,
   facetNames,
   page,
   pageSize = PAGE_SIZE,
@@ -38,8 +38,8 @@ const getSearchParams = ({
     min_score: searchParams.get("min_score"),
     max_incompleteness_penalty: searchParams.get("max_incompleteness_penalty"),
     content_file_score_weight: searchParams.get("content_file_score_weight"),
-    resource_category: resourceCategory ? [resourceCategory] : null,
-    aggregations: [...(facetNames || []), "resource_category"],
+    resource_type_group: resourceTypeGroup ? [resourceTypeGroup] : null,
+    aggregations: [...(facetNames || []), "resource_type_group"],
     ...requestParams,
     offset: (Number(page) - 1) * pageSize,
     limit: pageSize,

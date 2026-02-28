@@ -34,7 +34,7 @@ import {
 } from "api/hooks/learningResources"
 import {
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
-  ResourceCategoryEnum,
+  ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -50,18 +50,18 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
-import { ResourceCategoryTabs } from "./ResourceCategoryTabs"
+import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import SliderInput from "./SliderInput"
 
-import type { TabConfig } from "./ResourceCategoryTabs"
+import type { TabConfig } from "./ResourceTypeGroupTabs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 
-const StyledResourceTabs = styled(ResourceCategoryTabs.TabList)`
+const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
   margin-top: 0;
 `
 
@@ -460,25 +460,25 @@ const TABS: TabConfig[] = [
     name: "all",
     label: "All",
     defaultTab: true,
-    resource_category: null,
+    resource_type_group: null,
     minWidth: 85,
   },
   {
     name: "courses",
     label: "Courses",
-    resource_category: ResourceCategoryEnum.Course,
+    resource_type_group: ResourceTypeGroupEnum.Course,
     minWidth: 112,
   },
   {
     name: "programs",
     label: "Programs",
-    resource_category: ResourceCategoryEnum.Program,
+    resource_type_group: ResourceTypeGroupEnum.Program,
     minWidth: 118,
   },
   {
     name: "learning-materials",
     label: "Learning Materials",
-    resource_category: ResourceCategoryEnum.LearningMaterial,
+    resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     minWidth: 172,
   },
 ]
@@ -548,7 +548,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const scrollHook = useRef<HTMLDivElement>(null)
   const activeTab =
     TABS.find(
-      (t) => t.resource_category === searchParams.get("resource_category"),
+      (t) => t.resource_type_group === searchParams.get("resource_type_group"),
     ) ??
     TABS.find((t) => t.defaultTab) ??
     TABS[0]
@@ -558,7 +558,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       searchParams,
       requestParams,
       constantSearchParams,
-      resourceCategory: activeTab?.resource_category || undefined,
+      resourceTypeGroup: activeTab?.resource_type_group || undefined,
       facetNames,
       page,
       pageSize: PAGE_SIZE,
@@ -567,7 +567,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     searchParams,
     requestParams,
     constantSearchParams,
-    activeTab?.resource_category,
+    activeTab?.resource_type_group,
     facetNames,
     page,
   ])
@@ -853,7 +853,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   return (
     <Container>
       <Grid container columnSpacing="24px" flexDirection="row-reverse">
-        <ResourceCategoryTabs.Context activeTabName={activeTab.name}>
+        <ResourceTypeGroupTabs.Context activeTabName={activeTab.name}>
           <Grid
             component="section"
             size={{ xs: 12, md: 9 }}
@@ -885,7 +885,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               />
               <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
             </Stack>
-            <ResourceCategoryTabs.TabPanels tabs={TABS}>
+            <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
               <MobileFilter>
                 <FilterButton
                   size="small"
@@ -992,7 +992,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   )}
                 />
               </PaginationContainer>
-            </ResourceCategoryTabs.TabPanels>
+            </ResourceTypeGroupTabs.TabPanels>
           </Grid>
           <Grid
             component="section"
@@ -1024,7 +1024,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </FacetsTitleContainer>
             {filterContents}
           </Grid>
-        </ResourceCategoryTabs.Context>
+        </ResourceTypeGroupTabs.Context>
       </Grid>
     </Container>
   )

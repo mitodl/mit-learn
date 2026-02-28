@@ -59,7 +59,6 @@ from learning_resources.factories import (
     ArticleFactory,
     ContentFileFactory,
     CourseFactory,
-    LearningMaterialFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -79,7 +78,6 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
-    LearningMaterial,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -100,6 +98,7 @@ non_transformable_attributes = (
     "platform",
     "departments",
     "content_tags",
+    "resource_tags",
     "resources",
     "delivery",
     "resource_prices",
@@ -1280,9 +1279,14 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert course.runs.count() == 2
 
     deleted_content_file = ContentFileFactory.create(run=course_run)
-    deleted_content_file_learning_material = LearningMaterialFactory.create(
-        content_file=deleted_content_file
+    deleted_content_file_learning_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.value,
     )
+    deleted_content_file.direct_learning_resource = (
+        deleted_content_file_learning_resource
+    )
+    deleted_content_file.save()
+
     returned_content_file_id = deleted_content_file.id + 1
 
     content_data = [{"a": "b"}, {"a": "c"}]
@@ -1312,10 +1316,10 @@ def test_load_content_files(mocker, is_published, calc_score):
     assert mock_bulk_delete.call_count == 0 if is_published else 1
     assert mock_calc_score.call_count == (1 if calc_score else 0)
     deleted_content_file.refresh_from_db()
-    deleted_content_file_learning_material.refresh_from_db()
+    deleted_content_file_learning_resource.refresh_from_db()
 
     assert not deleted_content_file.published
-    assert not deleted_content_file_learning_material.learning_resource.published
+    assert not deleted_content_file_learning_resource.published
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
@@ -2395,15 +2399,15 @@ def test_load_learning_materials(mocker):
         {"Programming Assignments"},
     )
 
-    learning_material = LearningMaterial.objects.last()
+    learning_material_content_file.refresh_from_db()
+
+    learning_material = learning_material_content_file.direct_learning_resource
 
     resource_relationships = ocw_course.learning_resource.children.all()
+
     assert resource_relationships.count() == 1
 
-    assert (
-        resource_relationships.first().child.id
-        == learning_material.learning_resource.id
-    )
+    assert resource_relationships.first().child.id == learning_material.id
     assert (
         resource_relationships.first().relation_type
         == LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS.value
@@ -2434,17 +2438,16 @@ def test_load_learning_material(mocker, learning_material_exists):
     )
 
     if learning_material_exists:
-        existing_learning_material = LearningMaterialFactory.create(
-            content_file=content_file,
-        )
+        existing_learning_material = LearningResourceFactory.create()
 
-        existing_learning_material.learning_resource.readable_id = (
+        existing_learning_material.readable_id = (
             f"{ocw_course.learning_resource.runs.first().run_id}-{content_file.key}"
         )
-        existing_learning_material.learning_resource.platform = (
-            ocw_course.learning_resource.platform
-        )
-        existing_learning_material.learning_resource.save()
+        existing_learning_material.platform = ocw_course.learning_resource.platform
+        existing_learning_material.save()
+
+        content_file.direct_learning_resource = existing_learning_material
+        content_file.save()
 
     loaders.load_learning_material(
         ocw_course.learning_resource.runs.first(),
@@ -2452,10 +2455,18 @@ def test_load_learning_material(mocker, learning_material_exists):
         {"Programming Assignments"},
     )
 
-    assert LearningMaterial.objects.count() == 1
+    assert (
+        LearningResource.objects.filter(
+            resource_type=LearningResourceType.document.name
+        ).count()
+        == 1
+    )
 
-    learning_material = LearningMaterial.objects.last()
+    learning_material = LearningResource.objects.filter(
+        resource_type=LearningResourceType.document.name
+    ).last()
 
-    assert learning_material.learning_resource.title == content_file.title
-    assert learning_material.learning_resource.url == content_file.url
-    assert learning_material.content_file.id == content_file.id
+    assert learning_material.title == content_file.title
+    assert learning_material.url == content_file.url
+
+    assert content_file.direct_learning_resource_id == learning_material.id

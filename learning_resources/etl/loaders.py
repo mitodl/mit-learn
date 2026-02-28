@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from learning_resources.constants import (
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
+    VIDEO_CONTENT_CATEGORIES,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -30,7 +31,6 @@ from learning_resources.models import (
     Article,
     ContentFile,
     Course,
-    LearningMaterial,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -283,6 +283,8 @@ def load_offered_by(
 def load_content_tags(
     learning_resources_obj: LearningResource or ContentFile,
     content_tags_data: list[str],
+    *,
+    is_content_file: bool,
 ) -> list[LearningResourceContentTag]:
     """Load the content tags for a resource into the database"""
     if content_tags_data is not None:
@@ -290,9 +292,16 @@ def load_content_tags(
         for content_tag in content_tags_data:
             tag, _ = LearningResourceContentTag.objects.get_or_create(name=content_tag)
             tags.append(tag)
-        learning_resources_obj.content_tags.set(tags)
+        if is_content_file:
+            learning_resources_obj.content_tags.set(tags)
+        else:
+            learning_resources_obj.resource_tags.set(tags)
         learning_resources_obj.save()
-    return learning_resources_obj.content_tags.all()
+    return (
+        learning_resources_obj.content_tags.all()
+        if is_content_file
+        else learning_resources_obj.resource_tags.all()
+    )
 
 
 def load_run(
@@ -381,7 +390,7 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901
+def upsert_course_or_program(  # noqa: C901, PLR0912
     resource_data: dict,
     blocklist: list[str],
     duplicates: list[dict],
@@ -418,6 +427,11 @@ def upsert_course_or_program(  # noqa: C901
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
 
+    if resource_type == LearningResourceType.course.name:
+        resource_category = LearningResourceType.course.value
+    else:
+        resource_category = LearningResourceType.program.value
+    resource_data["resource_category"] = resource_category
     deduplicated_course_id = next(
         (
             record["course_id"]
@@ -579,7 +593,7 @@ def load_course(
         load_offered_by(learning_resource, offered_bys_data)
         load_image(learning_resource, image_data)
         load_departments(learning_resource, department_data)
-        load_content_tags(learning_resource, content_tags_data)
+        load_content_tags(learning_resource, content_tags_data, is_content_file=False)
 
     update_index(learning_resource, created)
     return learning_resource
@@ -761,7 +775,7 @@ def load_content_file(
         content_file, _ = ContentFile.objects.update_or_create(
             run=course_run, key=content_file_data.get("key"), defaults=content_file_data
         )
-        load_content_tags(content_file, content_file_tags)
+        load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
         log.exception(
@@ -862,12 +876,8 @@ def load_content_files(
             file.published = False
             file.save()
 
-            learning_material = LearningMaterial.objects.filter(
-                content_file=file
-            ).last()
-
-            if learning_material:
-                resource = learning_material.learning_resource
+            if file.direct_learning_resource:
+                resource = file.direct_learning_resource
                 resource.published = False
                 resource.save()
 
@@ -915,34 +925,36 @@ def load_learning_material(
     Create learning material object from ocw content file
     """
 
-    content_categories = {
+    resource_categories = {
         OCW_COURSE_CONTENT_CATEGORY_MAPPING[tag] for tag in learning_material_tags
     }
-    content_categories = sorted(content_categories)
-    content_category = content_categories[0]
+    resource_categories = sorted(resource_categories)
+    resource_category = resource_categories[0]
 
     with transaction.atomic():
+        if resource_category in VIDEO_CONTENT_CATEGORIES:
+            resource_type = LearningResourceType.video.name
+        else:
+            resource_type = LearningResourceType.document.name
         learning_resource, _ = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             platform=course_run.learning_resource.platform,
             defaults={
-                "resource_type": LearningResourceType.learning_material.name,
+                "resource_type": resource_type,
                 "title": content_file.title,
                 "url": content_file.url,
                 "etl_source": course_run.learning_resource.etl_source,
                 "offered_by": course_run.learning_resource.offered_by,
                 "published": True,
+                "resource_category": resource_category,
             },
+        )
+        load_content_tags(
+            learning_resource, learning_material_tags, is_content_file=False
         )
 
-        LearningMaterial.objects.update_or_create(
-            learning_resource=learning_resource,
-            content_file=content_file,
-            defaults={
-                "content_tags": list(learning_material_tags),
-                "content_category": content_category,
-            },
-        )
+        content_file.direct_learning_resource = learning_resource
+        content_file.save()
         return learning_resource.id
 
 
@@ -1019,8 +1031,10 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     offered_bys_data = episode_data.pop("offered_by", {})
     image_data = episode_data.pop("image", {})
     departments_data = episode_data.pop("departments", [])
+    episode_data["resource_category"] = LearningResourceType.podcast_episode.value
 
     episode_model_data = episode_data.pop("podcast_episode", {})
+
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
@@ -1063,7 +1077,7 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     image_data = podcast_data.pop("image", {})
     podcast_model_data = podcast_data.pop("podcast", {})
     departments_data = podcast_data.pop("departments", [])
-
+    podcast_data["resource_category"] = LearningResourceType.podcast.value
     with transaction.atomic():
         learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=readable_id,
@@ -1173,6 +1187,8 @@ def load_video(video_data: dict) -> LearningResource:
     offered_by_data = video_data.pop("offered_by", None)
     video_fields = video_data.pop("video", {})
     image_data = video_data.pop("image", None)
+    video_data["resource_category"] = LearningResourceType.video.value
+
     with transaction.atomic():
         (
             learning_resource,
@@ -1226,7 +1242,7 @@ def load_article(article_data: dict) -> LearningResource:
     topics_data = article_data.pop("topics")
     offered_by_data = article_data.pop("offered_by", None)
     image_url = article_data.pop("image")
-
+    article_data["resource_category"] = LearningResourceType.article.value
     with transaction.atomic():
         (
             learning_resource,
@@ -1301,7 +1317,7 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     thumbnail_data = playlist_data.pop("image", None)
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
-
+    playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
         image, _ = LearningResourceImage.objects.update_or_create(
             url=thumbnail_data.get("url"),
