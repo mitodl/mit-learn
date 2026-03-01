@@ -67,7 +67,7 @@ dependencies = [
     "nested-lookup>=0.2.25,<0.3",
     "nh3>=0.3.0,<0.4",
     "ocw-data-parser>=0.35.1,<0.36",
-    "onnxruntime==1.22.1",
+    "onnxruntime==1.24.2",
     "openai>=2.0.0,<3",
     "opensearch-dsl>=2.0.0,<3",
     "opensearch-py>=2.0.0,<3",
