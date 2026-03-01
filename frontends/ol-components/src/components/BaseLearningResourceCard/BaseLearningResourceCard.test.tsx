@@ -181,5 +181,15 @@ describe("BaseLearningResourceCard", () => {
 
       expect(screen.queryByText("Certificate")).not.toBeInTheDocument()
     })
+
+    it("displays parent course name when provided in list mode", () => {
+      renderCard({
+        list: true,
+        title: "Child Course",
+        parentCourseName: "Parent Course",
+      })
+
+      expect(screen.getByText("From Parent Course")).toBeInTheDocument()
+    })
   })
 })

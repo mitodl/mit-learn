@@ -121,4 +121,15 @@ describe("ListCard", () => {
     })
     expect(titleHeading.getAttribute("aria-level")).toBe("2")
   })
+
+  test("renders subtitle when provided", () => {
+    renderWithTheme(
+      <ListCard>
+        <ListCard.Title>Title</ListCard.Title>
+        <ListCard.Subtitle>Subtitle</ListCard.Subtitle>
+      </ListCard>,
+    )
+
+    screen.getByText("Subtitle")
+  })
 })

@@ -453,8 +453,13 @@ def test_content_file_serializer(settings, expected_types, has_channels):
     }
     platform = PlatformType.ocw.name
     course = factories.CourseFactory.create(platform=platform)
+    direct_learning_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
     content_file = factories.ContentFileFactory.create(
-        run=course.learning_resource.runs.first(), **content_kwargs
+        run=course.learning_resource.runs.first(),
+        direct_learning_resource=direct_learning_resource,
+        **content_kwargs,
     )
     if has_channels:
         for topic in content_file.run.learning_resource.topics.all():
@@ -555,6 +560,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "edx_module_id": content_file.edx_module_id,
             "summary": content_file.summary,
             "flashcards": content_file.flashcards,
+            "direct_learning_resource_id": direct_learning_resource.id,
         },
     )
 

@@ -11,7 +11,10 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import type { ImageConfig, LearningResourceCardProps } from "ol-components"
-import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import {
+  DEFAULT_RESOURCE_IMG,
+  resourceContentFilesImageSrc,
+} from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum } from "api"
 import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
@@ -206,15 +209,23 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
-  if (resource?.resource_type === "video" && resource?.url) {
+  if (
+    resource?.resource_type === "video" &&
+    resource?.url &&
+    resource?.platform?.code === PlatformEnum.Youtube
+  ) {
     return (
       <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
     )
   } else if (resource) {
+    const imageUrl =
+      resource.image?.url ||
+      resourceContentFilesImageSrc(resource) ||
+      DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
         <Image
-          src={resource.image?.url ?? DEFAULT_RESOURCE_IMG}
+          src={imageUrl}
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
@@ -246,6 +257,7 @@ const CallToActionButton: React.FC<ButtonProps & { selected?: boolean }> = (
 
 const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
+  const accessLearningMaterial = "Access Learning Material"
   const watchOnYouTube = "Watch on YouTube"
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
@@ -255,27 +267,28 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.Article]: viewArticle,
     [ResourceTypeEnum.LearningPath]: learnMore,
-    [ResourceTypeEnum.Video]: watchOnYouTube,
-    [ResourceTypeEnum.VideoPlaylist]: watchOnYouTube,
+    [ResourceTypeEnum.Video]: learnMore,
+    [ResourceTypeEnum.VideoPlaylist]: learnMore,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
   }
-  if (
-    resource?.resource_type === ResourceTypeEnum.Video ||
-    resource?.resource_type === ResourceTypeEnum.VideoPlaylist
-  ) {
-    // Video resources should always show "Watch on YouTube" as the CTA
+
+  if (resource?.platform?.code === PlatformEnum.Youtube) {
+    // YouTube resources should always show "Watch on YouTube" as the CTA
     return watchOnYouTube
-  } else {
-    if (resource?.platform?.code === PlatformEnum.Ocw) {
-      // Non-video OCW resources should show "Access Course Materials" as the CTA
+  }
+
+  if (resource?.platform?.code === PlatformEnum.Ocw) {
+    if (resource.resource_type === ResourceTypeEnum.Course) {
       return accessCourseMaterials
     } else {
-      // Return the default CTA for the resource type
-      return callsToAction[resource?.resource_type] || learnMore
+      return accessLearningMaterial
     }
   }
+
+  // Return the default CTA for the resource type
+  return callsToAction[resource?.resource_type] || learnMore
 }
 
 const appendUtmParams = (url?: string | null, resourceTitle?: string) => {

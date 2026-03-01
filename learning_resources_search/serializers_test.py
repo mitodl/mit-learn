@@ -958,6 +958,7 @@ def test_learning_resources_search_request_serializer():
         "min_score": 0,
         "max_incompleteness_penalty": 25,
         "content_file_score_weight": 0,
+        "show_ocw_files": False,
     }
 
     serialized = LearningResourcesSearchRequestSerializer(data=data)
