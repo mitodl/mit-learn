@@ -152,6 +152,39 @@ describe("CourseEnrollmentButton", () => {
     expect(button).toBeInTheDocument()
   })
 
+  test.each([
+    {
+      label: "free-only",
+      modeOverrides: [{ requires_payment: false }],
+    },
+    {
+      label: "both",
+      modeOverrides: [{ requires_payment: false }, { requires_payment: true }],
+    },
+  ])(
+    "Clicking 'Enroll for Free' opens enrollment dialog ($label)",
+    async ({ modeOverrides }) => {
+      const run = makeRun({
+        is_archived: false,
+        is_enrollable: true,
+        enrollment_modes: modeOverrides.map((m) => makeEnrollmentMode(m)),
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+
+      renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+      const button = await screen.findByRole("button", { name: ENROLL_FREE })
+      await user.click(button)
+
+      await screen.findByRole("dialog", { name: course.title })
+    },
+  )
+
   test("Shows signup popover for anonymous users", async () => {
     const run = makeRun({
       is_archived: false,
