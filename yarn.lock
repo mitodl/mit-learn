@@ -12892,6 +12892,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "frontends@workspace:frontends"
   dependencies:
+    "@faker-js/faker": "npm:^10.0.0"
     "@jest/environment": "npm:^29.7.0"
     "@next/eslint-plugin-next": "npm:^14.2.7"
     "@swc/core": "npm:^1.11.29"

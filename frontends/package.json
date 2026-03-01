@@ -35,6 +35,7 @@
   },
   "version": "0.0.0",
   "devDependencies": {
+    "@faker-js/faker": "^10.0.0",
     "@next/eslint-plugin-next": "^14.2.7",
     "@swc/core": "^1.11.29",
     "@swc/jest": "^0.2.38",
