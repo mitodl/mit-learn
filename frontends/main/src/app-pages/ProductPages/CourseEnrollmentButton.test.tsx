@@ -62,7 +62,7 @@ describe("CourseEnrollmentButton", () => {
     renderWithProviders(<CourseEnrollmentButton course={course} />)
 
     const button = await screen.findByRole("button", {
-      name: "Enroll Now—$900.00",
+      name: "Enroll Now—$900",
     })
     expect(button).toBeInTheDocument()
     expect(button).not.toBeDisabled()
@@ -108,9 +108,9 @@ describe("CourseEnrollmentButton", () => {
 
     renderWithProviders(<CourseEnrollmentButton course={course} />)
 
-    // $100 - $50 = $50.00; accessible name includes both prices
+    // $100 - $50 = $50; accessible name includes both prices
     const button = await screen.findByRole("button", {
-      name: "Enroll Now—$50.00 $100.00",
+      name: "Enroll Now—$50 $100",
     })
     expect(button).toBeInTheDocument()
     expect(button).not.toBeDisabled()

@@ -312,7 +312,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   }
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
-  const showUpsell = getEnrollmentType(run?.enrollment_modes) === "both"
+  const enrollmentType = getEnrollmentType(run?.enrollment_modes)
+  const showUpsell =
+    !run || enrollmentType === "free" || enrollmentType === "both"
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   return (

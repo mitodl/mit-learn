@@ -4,6 +4,7 @@ import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
+import { formatPrice } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -812,7 +813,7 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       expect(priceRow).toHaveTextContent(
-        `Earn a certificate: $${run.products[0].price}`,
+        `Earn a certificate: ${formatPrice(run.products[0].price)}`,
       )
       invariant(run.upgrade_deadline)
       expect(priceRow).toHaveTextContent(
@@ -862,7 +863,7 @@ describe("CourseSummary", () => {
       renderWithProviders(<CourseSummary course={course} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(`$${product.price}`)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
       expect(priceRow).toHaveTextContent(course.certificate_type)
       expect(priceRow).not.toHaveTextContent("Free to Learn")
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
@@ -993,8 +994,8 @@ describe("CourseSummary", () => {
       // Wait for the flexible price API to be called and prices to be displayed
       // The discounted price is calculated as: $100 - $50 = $50
       await within(priceRow).findByText("Financial assistance applied")
-      expect(priceRow).toHaveTextContent("$50.00")
-      expect(priceRow).toHaveTextContent("$100.00")
+      expect(priceRow).toHaveTextContent("$50")
+      expect(priceRow).toHaveTextContent("$100")
     })
 
     test("Does NOT call flexible price API when financial aid URL is empty", () => {
@@ -1020,7 +1021,7 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       // Should show the regular price
-      expect(priceRow).toHaveTextContent(`$${product.price}`)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
       // Should NOT show financial assistance link
       expect(
         within(priceRow).queryByRole("link", { name: /financial assistance/i }),
@@ -1385,7 +1386,7 @@ describe("ProgramSummary", () => {
       renderWithProviders(<ProgramSummary program={program} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(`$${product.price}`)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
       expect(priceRow).toHaveTextContent(program.certificate_type)
       expect(priceRow).not.toHaveTextContent("Free to Learn")
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
@@ -1401,7 +1402,7 @@ describe("ProgramSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
       expect(priceRow).toHaveTextContent("Free to Learn")
       expect(priceRow).toHaveTextContent("Earn a certificate")
-      expect(priceRow).toHaveTextContent(program.products[0].price)
+      expect(priceRow).toHaveTextContent(formatPrice(program.products[0].price))
     })
 
     test.each([

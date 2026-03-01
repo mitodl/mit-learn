@@ -50,14 +50,27 @@ export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
 }
 
 /**
+ * Formats a price number or string as a USD currency string.
+ * Whole-dollar amounts show no decimal places ($100).
+ * Non-whole amounts always show exactly 2 decimal places ($100.50).
+ */
+const formatPrice = (amount: number | string): string => {
+  const num = Number(amount)
+  const fractionDigits = Number.isInteger(num) ? 0 : 2
+  return num.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  })
+}
+
+/**
  * Returns certificate price as formatted string, or null if upgrade not available
  */
 const formatProductPrice = (product: ProductFlexiblePrice) => {
   const amount = getFlexiblePriceForProduct(product)
-  return Number(amount).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  })
+  return formatPrice(amount)
 }
 
 type PriceWithDiscount = {
@@ -109,6 +122,7 @@ const getEnrollmentType = (
 }
 
 export {
+  formatPrice,
   formatProductPrice,
   priceWithDiscount,
   canUpgradeRun,

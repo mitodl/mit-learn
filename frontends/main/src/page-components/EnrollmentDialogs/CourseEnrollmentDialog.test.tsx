@@ -28,6 +28,10 @@ const bothEnrollmentModes = () => [
   mitxFactories.courses.enrollmentMode({ requires_payment: true }),
 ]
 
+const freeOnlyEnrollmentModes = () => [
+  mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+]
+
 const enrollableRun: typeof makeCourseRun = (overrides) =>
   makeCourseRun({
     is_enrollable: true,
@@ -184,6 +188,40 @@ describe("CourseEnrollmentDialog", () => {
       })
       expect(upgradeButton).toBeDisabled()
     })
+
+    test("When free-only run is chosen, upsell is shown but disabled", async () => {
+      const freeOnlyRun = makeCourseRun({
+        is_enrollable: true,
+        is_upgradable: false,
+        is_archived: false,
+        products: [],
+        enrollment_modes: freeOnlyEnrollmentModes(),
+      })
+      const course = makeCourse({ courseruns: [freeOnlyRun] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      // Upsell section should be visible
+      expect(
+        screen.getByText(/Would you like to get a certificate/i),
+      ).toBeInTheDocument()
+
+      // Certificate shows "Not available" since run is not upgradable
+      expect(screen.getByText("Not available")).toBeInTheDocument()
+
+      // Add to Cart button should be disabled
+      const upgradeButton = screen.getByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      })
+      expect(upgradeButton).toBeDisabled()
+
+      // Enroll button is enabled
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+      expect(enrollButton).toBeEnabled()
+    })
   })
 
   describe("Initial run selection", () => {
@@ -219,9 +257,14 @@ describe("CourseEnrollmentDialog", () => {
       const select = screen.getByRole("combobox", { name: /choose a date/i })
       expect(select).toHaveTextContent(/please select/i)
 
-      // No run selected yet, so no upsell and button text is plain "Enroll for Free"
+      // Upsell is shown even with no run selected
+      expect(
+        screen.getByText(/Would you like to get a certificate/i),
+      ).toBeInTheDocument()
+
+      // Enroll button is disabled with no run selected
       const enrollButton = screen.getByRole("button", {
-        name: /Enroll for Free/i,
+        name: /Enroll for Free without a certificate/i,
       })
       expect(enrollButton).toBeDisabled()
     })
@@ -510,8 +553,8 @@ describe("CourseEnrollmentDialog", () => {
 
       // Wait for the flexible price API to be called and prices to be displayed
       await screen.findByText("Financial assistance applied")
-      expect(screen.getByText(/\$50\.00/)).toBeInTheDocument()
-      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+      expect(screen.getByText(/\$50/)).toBeInTheDocument()
+      expect(screen.getByText(/\$100/)).toBeInTheDocument()
     })
 
     test("Does NOT call flexible price API when financial aid URL is empty", async () => {
@@ -529,7 +572,7 @@ describe("CourseEnrollmentDialog", () => {
       await openDialog(course)
 
       // Should show the regular price
-      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+      expect(screen.getByText(/\$100/)).toBeInTheDocument()
       // Should NOT show financial assistance link
       expect(
         screen.queryByRole("link", { name: /financial assistance/i }),

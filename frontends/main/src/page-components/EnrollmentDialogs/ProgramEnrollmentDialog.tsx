@@ -6,7 +6,7 @@ import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
-import { getEnrollmentType } from "@/common/mitxonline"
+import { formatPrice, getEnrollmentType } from "@/common/mitxonline"
 import {
   BigButton,
   CertificateBox,
@@ -61,7 +61,7 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
           <RiAwardFill />
           <Stack gap="4px">
             <strong>
-              Get Certificate {product ? `$${product.price}` : null}
+              Get Certificate {product ? formatPrice(product.price) : null}
             </strong>
           </Stack>
         </CertificatePriceRoot>

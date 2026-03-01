@@ -15,7 +15,7 @@ import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { programView, DASHBOARD_HOME } from "@/common/urls"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { getEnrollmentType } from "@/common/mitxonline"
+import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 
@@ -62,7 +62,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const getEnrollButtonText = () => {
     if (enrollmentType === "paid") {
       const price = program.products[0]?.price
-      return price ? `Enroll Now—$${price}` : "Enroll Now"
+      return price ? `Enroll Now—${formatPrice(price)}` : "Enroll Now"
     }
     return "Enroll for Free"
   }

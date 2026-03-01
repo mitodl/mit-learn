@@ -222,7 +222,7 @@ describe("ProgramEnrollmentButton", () => {
     renderWithProviders(<ProgramEnrollmentButton program={program} />)
 
     const button = await screen.findByRole("button", {
-      name: "Enroll Now—$1500",
+      name: "Enroll Now—$1,500",
     })
     expect(button).toBeInTheDocument()
     expect(button).not.toBeDisabled()

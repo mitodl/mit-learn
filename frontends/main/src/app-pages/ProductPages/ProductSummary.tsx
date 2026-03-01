@@ -21,6 +21,7 @@ import type {
 import { HeadingIds, parseReqTree } from "./util"
 import {
   canUpgradeRun,
+  formatPrice,
   getEnrollmentType,
   mitxonlineUrl,
   priceWithDiscount,
@@ -777,7 +778,7 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
           >
             <InfoLabel>Earn a certificate</InfoLabel>
           </UnderlinedLink>
-          : {price}
+          : {formatPrice(price)}
         </span>
       </InfoRowInner>
       {program.page.financial_assistance_form_url ? (
@@ -808,7 +809,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   const paidPrice =
     enrollmentType === "paid" && program.products[0]?.price ? (
       <>
-        ${program.products[0].price}{" "}
+        {formatPrice(program.products[0].price)}{" "}
         <GrayText>(includes {program.certificate_type})</GrayText>
       </>
     ) : null
