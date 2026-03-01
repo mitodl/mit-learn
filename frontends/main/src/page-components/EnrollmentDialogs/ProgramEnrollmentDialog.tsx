@@ -6,6 +6,7 @@ import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { getEnrollmentType } from "@/common/mitxonline"
 import {
   BigButton,
   CertificateBox,
@@ -89,6 +90,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
   const modal = NiceModal.useModal()
   const createProgramEnrollment = useCreateProgramEnrollment()
   const router = useRouter()
+  const showUpsell = getEnrollmentType(program.enrollment_modes) === "both"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,7 +116,9 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
       onSubmit={handleSubmit}
       onReset={() => {}}
       fullWidth
-      confirmText="Enroll for Free without a certificate"
+      confirmText={
+        showUpsell ? "Enroll for Free without a certificate" : "Enroll for Free"
+      }
     >
       <Stack
         sx={(theme) => ({
@@ -122,7 +126,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
         })}
         gap="24px"
       >
-        <ProgramCertificateUpsell program={program} />
+        {showUpsell && <ProgramCertificateUpsell program={program} />}
         {createProgramEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

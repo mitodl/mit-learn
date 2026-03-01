@@ -19,6 +19,7 @@ import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canUpgradeRun,
+  getEnrollmentType,
   mitxonlineUrl,
   PriceWithDiscount,
   priceWithDiscount,
@@ -37,11 +38,6 @@ interface CourseEnrollmentDialogProps {
    * By default, redirects to dashboard home.
    */
   onCourseEnroll?: (run: CourseRunV2) => void
-  /**
-   * When true, the certificate upsell section is hidden.
-   * Use for free-only courses where there is no paid option.
-   */
-  hideUpsell?: boolean
 }
 
 const StyledSimpleSelectField = styled(SimpleSelectField)(({ theme }) => ({
@@ -306,7 +302,6 @@ const RUN_DEFAULT_OPTION: SimpleSelectOption = {
 const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   course,
   onCourseEnroll,
-  hideUpsell = false,
 }) => {
   const modal = NiceModal.useModal()
   const runOptions = getRunOptions(course)
@@ -317,6 +312,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   }
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
+  const showUpsell = getEnrollmentType(run?.enrollment_modes) === "both"
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   return (
@@ -325,7 +321,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       title={course.title ?? ""}
       fullWidth
       confirmText={
-        hideUpsell ? "Enroll for Free" : "Enroll for Free without a certificate"
+        showUpsell ? "Enroll for Free without a certificate" : "Enroll for Free"
       }
       onSubmit={async (e) => {
         e.preventDefault()
@@ -363,7 +359,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        {!hideUpsell && <CertificateUpsell course={course} courseRun={run} />}
+        {showUpsell && <CertificateUpsell course={course} courseRun={run} />}
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

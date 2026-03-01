@@ -23,11 +23,17 @@ const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
 const makeCourse = mitxFactories.courses.course
 
+const bothEnrollmentModes = () => [
+  mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+  mitxFactories.courses.enrollmentMode({ requires_payment: true }),
+]
+
 const enrollableRun: typeof makeCourseRun = (overrides) =>
   makeCourseRun({
     is_enrollable: true,
     enrollment_start: faker.date.past().toISOString(),
     enrollment_end: faker.date.future().toISOString(),
+    enrollment_modes: bothEnrollmentModes(),
     ...overrides,
   })
 
@@ -37,6 +43,7 @@ const upgradeableRun: typeof makeCourseRun = (overrides) =>
     is_enrollable: true,
     is_archived: false,
     products: [mitxFactories.courses.product()],
+    enrollment_modes: bothEnrollmentModes(),
     ...overrides,
   })
 
@@ -212,9 +219,9 @@ describe("CourseEnrollmentDialog", () => {
       const select = screen.getByRole("combobox", { name: /choose a date/i })
       expect(select).toHaveTextContent(/please select/i)
 
-      // The enroll button should be disabled
+      // No run selected yet, so no upsell and button text is plain "Enroll for Free"
       const enrollButton = screen.getByRole("button", {
-        name: /Enroll for Free without a certificate/i,
+        name: /Enroll for Free/i,
       })
       expect(enrollButton).toBeDisabled()
     })

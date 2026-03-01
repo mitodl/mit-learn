@@ -85,7 +85,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
         await clearBasket.mutateAsync()
         await addToBasket.mutateAsync(product.id)
       } else if (enrollmentType === "free") {
-        NiceModal.show(CourseEnrollmentDialog, { course, hideUpsell: true })
+        NiceModal.show(CourseEnrollmentDialog, { course })
       } else {
         NiceModal.show(CourseEnrollmentDialog, { course })
       }

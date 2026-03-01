@@ -23,6 +23,11 @@ describe("ProgramEnrollmentDialog", () => {
   const makeProgram = mitxFactories.programs.program
   const makeProduct = mitxFactories.courses.product
 
+  const bothEnrollmentModes = () => [
+    mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+    mitxFactories.courses.enrollmentMode({ requires_payment: true }),
+  ]
+
   const openDialog = async (program: V2ProgramDetail) => {
     await act(async () => {
       NiceModal.show(ProgramEnrollmentDialog, { program })
@@ -31,7 +36,10 @@ describe("ProgramEnrollmentDialog", () => {
   }
 
   test("Dialog opens with program title", async () => {
-    const program = makeProgram({ title: "Test Program Title" })
+    const program = makeProgram({
+      title: "Test Program Title",
+      enrollment_modes: bothEnrollmentModes(),
+    })
     renderWithProviders(null)
     await openDialog(program)
     expect(screen.getByText("Test Program Title")).toBeInTheDocument()
@@ -39,7 +47,10 @@ describe("ProgramEnrollmentDialog", () => {
 
   test("Shows certificate upsell with price when product is available", async () => {
     const product = makeProduct({ price: "500" })
-    const program = makeProgram({ products: [product] })
+    const program = makeProgram({
+      products: [product],
+      enrollment_modes: bothEnrollmentModes(),
+    })
     renderWithProviders(null)
     await openDialog(program)
     expect(screen.getByText(/Get Certificate/)).toBeInTheDocument()
@@ -51,7 +62,10 @@ describe("ProgramEnrollmentDialog", () => {
   })
 
   test("Add to Cart button is disabled when no product is available", async () => {
-    const program = makeProgram({ products: [] })
+    const program = makeProgram({
+      products: [],
+      enrollment_modes: bothEnrollmentModes(),
+    })
     renderWithProviders(null)
     await openDialog(program)
     const addToCartButton = screen.getByRole("button", {
@@ -64,7 +78,10 @@ describe("ProgramEnrollmentDialog", () => {
     const assign = jest.mocked(window.location.assign)
     const product = makeProduct({ price: "300" })
     invariant(product, "Program must have a product")
-    const program = makeProgram({ products: [product] })
+    const program = makeProgram({
+      products: [product],
+      enrollment_modes: bothEnrollmentModes(),
+    })
 
     const clearUrl = mitxUrls.baskets.clear()
     setMockResponse.delete(clearUrl, undefined)
@@ -95,7 +112,7 @@ describe("ProgramEnrollmentDialog", () => {
   })
 
   test("'Enroll for Free' button enrolls in program and redirects to dashboard", async () => {
-    const program = makeProgram()
+    const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const { location } = renderWithProviders(null)
     await openDialog(program)
 
@@ -118,7 +135,7 @@ describe("ProgramEnrollmentDialog", () => {
   })
 
   test("Custom onProgramEnroll: calls callback instead of redirecting", async () => {
-    const program = makeProgram()
+    const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const onProgramEnroll = jest.fn()
     const { location } = renderWithProviders(null)
 
@@ -146,7 +163,7 @@ describe("ProgramEnrollmentDialog", () => {
   })
 
   test("Shows error message when enrollment fails", async () => {
-    const program = makeProgram()
+    const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     renderWithProviders(null)
     await openDialog(program)
 
@@ -168,5 +185,29 @@ describe("ProgramEnrollmentDialog", () => {
         ),
       ).toBeInTheDocument()
     })
+  })
+
+  test("Hides certificate upsell for free-only programs", async () => {
+    const program = makeProgram({
+      enrollment_modes: [
+        mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+    })
+    renderWithProviders(null)
+    await openDialog(program)
+
+    expect(
+      screen.queryByText(/Would you like to get a certificate/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      }),
+    ).not.toBeInTheDocument()
+
+    // Confirm button text has no "without a certificate" qualifier
+    expect(
+      screen.getByRole("button", { name: "Enroll for Free" }),
+    ).toBeInTheDocument()
   })
 })

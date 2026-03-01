@@ -145,6 +145,7 @@ describe("CourseSummary", () => {
     test("Displays a single date without 'More Dates' toggle when only one enrollable run", () => {
       const run = makeRun({
         is_enrollable: true,
+        is_archived: false,
         is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
@@ -212,16 +213,20 @@ describe("CourseSummary", () => {
         is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
+        // guuarantee the date shows (not start anytime)
+        is_enrollable: true,
       })
       const run2 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
+        is_archived: false,
         start_date: "2026-06-01",
         end_date: "2026-08-01",
       })
       const run3 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
+        is_archived: false,
         start_date: "2026-09-01",
         end_date: "2026-11-01",
       })
