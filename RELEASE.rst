@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.56.1 (Released March 02, 2026)
+--------------
+
+- explicitly set is_self_paced to false on tests that need it (#2998)
+- whitelist characters that don't need to be urlencoded (#2994)
+- fix: handle only having expired enrollments / program enrollments (#2988)
+
 Version 0.55.8 (Released February 27, 2026)
 --------------
 
