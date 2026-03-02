@@ -86,10 +86,14 @@ def posthog_transform_lrd_view_events(
     for event in events:
         properties = event.get("properties", "{}")
         properties = json.loads(properties)
+        resource = properties.get("resource")
         resource_id = properties.get("learning_resource_id")
 
+        if resource and isinstance(resource, dict):
+            resource_id = resource.get("id")
         # The PostHog data files contain other kinds of events, for example llm calls.
         # We only want to the resource views
+
         if resource_id:
             yield PostHogLearningResourceViewEvent(
                 resource_id=resource_id,
