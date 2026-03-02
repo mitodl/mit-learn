@@ -139,6 +139,7 @@ describe("CourseSummary", () => {
     test("Displays a single date without 'More Dates' toggle when only one enrollable run", () => {
       const run = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
       })
@@ -171,11 +172,13 @@ describe("CourseSummary", () => {
     test("Displays 'More Dates' toggle when multiple enrollable runs exist", () => {
       const run1 = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
       })
       const run2 = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-06-01",
         end_date: "2026-08-01",
       })
@@ -200,16 +203,19 @@ describe("CourseSummary", () => {
     test("Clicking 'More Dates' expands to show all enrollable dates, clicking 'Show Less' collapses back", async () => {
       const run1 = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
       })
       const run2 = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-06-01",
         end_date: "2026-08-01",
       })
       const run3 = makeRun({
         is_enrollable: true,
+        is_self_paced: false,
         start_date: "2026-09-01",
         end_date: "2026-11-01",
       })
