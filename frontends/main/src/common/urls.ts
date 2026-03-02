@@ -1,5 +1,16 @@
 import invariant from "tiny-invariant"
 
+// matches ! $ & ' ( ) * + , ; = : @ ~
+const SAFE_IN_PATH_SEGMENT =
+  /%21|%24|%26|%27|%28|%29|%2A|%2B|%2C|%3B|%3D|%3A|%40|%7E/gi
+
+const encodePathSegment = (pathSegment: string) => {
+  const overAggressive = encodeURIComponent(pathSegment)
+  return overAggressive.replace(SAFE_IN_PATH_SEGMENT, (match) =>
+    decodeURIComponent(match),
+  )
+}
+
 const generatePath = (
   template: string,
   params: Record<string, string | number>,
@@ -8,7 +19,7 @@ const generatePath = (
     if (params[key] === undefined) {
       throw new Error(`Missing parameter '${key}'`)
     }
-    return encodeURIComponent(params[key] as string)
+    return encodePathSegment(String(params[key]))
   })
 }
 
