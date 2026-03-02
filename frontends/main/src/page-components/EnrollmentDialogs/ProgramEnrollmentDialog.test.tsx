@@ -111,6 +111,28 @@ describe("ProgramEnrollmentDialog", () => {
     expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 
+  test("Shows error alert when 'Add to Cart' basket operation fails", async () => {
+    const product = makeProduct({ price: "300" })
+    const program = makeProgram({
+      products: [product],
+      enrollment_modes: bothEnrollmentModes(),
+    })
+
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
+
+    renderWithProviders(null)
+    await openDialog(program)
+
+    const addToCartButton = screen.getByRole("button", {
+      name: /Add to Cart.*to get a Certificate/i,
+    })
+    await user.click(addToCartButton)
+
+    await screen.findByText(
+      "There was a problem processing your enrollment. Please try again.",
+    )
+  })
+
   test("'Enroll for Free' button enrolls in program and redirects to dashboard", async () => {
     const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const { location } = renderWithProviders(null)

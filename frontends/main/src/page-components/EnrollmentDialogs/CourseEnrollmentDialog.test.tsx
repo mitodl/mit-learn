@@ -189,6 +189,27 @@ describe("CourseEnrollmentDialog", () => {
       expect(upgradeButton).toBeDisabled()
     })
 
+    test("Shows error alert when 'Add to Cart' basket operation fails", async () => {
+      const run = upgradeableRun({
+        products: [makeProduct({ price: "149.00" })],
+      })
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
+
+      const upgradeButton = await screen.findByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      })
+      await user.click(upgradeButton)
+
+      await screen.findByText(
+        "There was a problem processing your enrollment. Please try again.",
+      )
+    })
+
     test("When free-only run is chosen, upsell is shown but disabled", async () => {
       const freeOnlyRun = makeCourseRun({
         is_enrollable: true,

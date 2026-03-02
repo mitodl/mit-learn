@@ -80,6 +80,11 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
           }}
         />
       </CertificateBox>
+      {replaceBasketItem.isError && (
+        <Alert severity="error">
+          There was a problem processing your enrollment. Please try again.
+        </Alert>
+      )}
     </Stack>
   )
 }

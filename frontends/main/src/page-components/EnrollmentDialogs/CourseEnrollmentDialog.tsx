@@ -273,6 +273,11 @@ const CertificateUpsell: React.FC<{
           }}
         />
       </CertificateBox>
+      {true && (
+        <Alert severity="error">
+          There was a problem processing your enrollment. Please try again.
+        </Alert>
+      )}
     </Stack>
   )
 }
