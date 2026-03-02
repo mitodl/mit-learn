@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.56.2
+--------------
+
+- backend for standardizing learning material resources - articles, videos, documents (#2965)
+
 Version 0.56.1 (Released March 02, 2026)
 --------------
 
