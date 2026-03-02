@@ -3,10 +3,12 @@ import {
   renderWithProviders,
   setMockResponse,
   screen,
+  setupLocationMock,
   user,
+  waitFor,
 } from "@/test-utils"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
-import { urls, factories } from "api/test-utils"
+import { mockAxiosInstance, urls, factories } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
@@ -22,6 +24,8 @@ const makeUser = factories.user.user
 describe("CourseEnrollmentButton", () => {
   const ENROLL_FREE = "Enroll for Free"
   const ACCESS_MATERIALS = "Access Course Materials"
+
+  setupLocationMock()
 
   test.each([
     { isArchived: true, expectedText: ACCESS_MATERIALS },
@@ -140,6 +144,45 @@ describe("CourseEnrollmentButton", () => {
     await screen.findByRole("progressbar", { name: "Loading" })
     expect(button).toBeDisabled()
     expect(button).toHaveTextContent("Enroll Now—$500")
+  })
+
+  test("Paid-only: clicking 'Enroll Now' clears basket, adds product, and redirects to cart", async () => {
+    const assign = jest.mocked(window.location.assign)
+    const product = makeProduct({ price: "500" })
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const clearUrl = mitxUrls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+    const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", {
+      name: "Enroll Now—$500",
+    })
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "DELETE", url: clearUrl }),
+      )
+    })
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "POST", url: basketUrl }),
+    )
+    const expectedCartUrl = new URL(
+      "/cart/",
+      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+    ).toString()
+    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 
   test("Shows error alert when basket operation fails (paid)", async () => {
