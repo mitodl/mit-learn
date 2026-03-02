@@ -23,9 +23,6 @@ const useAddToBasket = () => {
         queryKey: basketQueries.basketState().queryKey,
       })
 
-      // Redirect to MITx Online cart page
-      // This should happen in useMutation because call-level onSuccess handlers
-      // are not guaranteed to run if component unmounts before mutation finishes
       const cartUrl = new URL(
         "/cart/",
         process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
@@ -65,12 +62,17 @@ const useReplaceBasketItem = () => {
   const clearBasket = useClearBasket()
 
   const mutate = (productId: number) => {
+    // Reset addToBasket so stale error state from a previous attempt is cleared
+    // immediately. (clearBasket resets itself when .mutate() is called, but
+    // addToBasket won't reset until its own .mutate() fires in onSuccess.)
+    addToBasket.reset()
     clearBasket.mutate(undefined, {
       onSuccess: () => addToBasket.mutate(productId),
     })
   }
 
   const mutateAsync = async (productId: number) => {
+    addToBasket.reset()
     await clearBasket.mutateAsync()
     await addToBasket.mutateAsync(productId)
   }
