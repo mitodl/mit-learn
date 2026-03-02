@@ -207,6 +207,72 @@ describe("ProgramEnrollmentButton", () => {
     expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 
+  test("Shows loading spinner while basket operations are in progress (paid)", async () => {
+    const product = makeProduct({ price: "500" })
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const { promise } = Promise.withResolvers()
+    setMockResponse.delete(mitxUrls.baskets.clear(), promise)
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const button = await screen.findByRole("button", { name: /Enroll Now/ })
+    await user.click(button)
+
+    await screen.findByRole("progressbar", { name: "Loading" })
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent("Enroll Now—$500")
+  })
+
+  test("Shows error alert when basket operation fails (paid)", async () => {
+    const product = makeProduct({ price: "500" })
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const button = await screen.findByRole("button", { name: /Enroll Now/ })
+    await user.click(button)
+
+    await screen.findByText(
+      "There was a problem processing your enrollment. Please try again.",
+    )
+  })
+
+  test("Shows error alert when free enrollment API fails", async () => {
+    const program = makeProgram({
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.post(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      undefined,
+      { code: 500 },
+    )
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    await user.click(button)
+
+    await screen.findByText(
+      "There was a problem processing your enrollment. Please try again.",
+    )
+  })
+
   test("Shows 'Enroll Now - $X' for paid-only enrollment", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],

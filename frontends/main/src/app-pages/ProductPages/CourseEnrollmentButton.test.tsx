@@ -116,6 +116,57 @@ describe("CourseEnrollmentButton", () => {
     expect(button).not.toBeDisabled()
   })
 
+  test("Shows loading spinner while basket operations are in progress (paid)", async () => {
+    const product = makeProduct({ price: "500" })
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const { promise } = Promise.withResolvers()
+    setMockResponse.delete(mitxUrls.baskets.clear(), promise)
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", {
+      name: "Enroll Now—$500",
+    })
+    await user.click(button)
+
+    await screen.findByRole("progressbar", { name: "Loading" })
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent("Enroll Now—$500")
+  })
+
+  test("Shows error alert when basket operation fails (paid)", async () => {
+    const product = makeProduct({ price: "500" })
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", {
+      name: "Enroll Now—$500",
+    })
+    await user.click(button)
+
+    await screen.findByText(
+      "There was a problem processing your enrollment. Please try again.",
+    )
+  })
+
   test("Shows disabled button for paid-only enrollment with no price", async () => {
     const run = makeRun({
       is_archived: false,

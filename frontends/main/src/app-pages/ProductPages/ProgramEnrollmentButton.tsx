@@ -1,5 +1,5 @@
 import React from "react"
-import { styled, LoadingSpinner } from "ol-components"
+import { styled, LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
@@ -7,7 +7,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -18,10 +18,6 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
-
-const WideButton = styled(Button)({
-  width: "100%",
-})
 
 const WideButtonLink = styled(ButtonLink)(({ href }) => [
   {
@@ -67,6 +63,15 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     return "Enroll for Free"
   }
 
+  const isPending =
+    clearBasket.isPending ||
+    addToBasket.isPending ||
+    createProgramEnrollment.isPending
+  const isError =
+    clearBasket.isError ||
+    addToBasket.isError ||
+    createProgramEnrollment.isError
+
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (enrollments.isLoading || me.isLoading) {
       return
@@ -75,9 +80,14 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
         const product = program.products[0]
         clearBasket.reset()
         addToBasket.reset()
-        await clearBasket.mutateAsync()
-        await addToBasket.mutateAsync(product.id)
+        try {
+          await clearBasket.mutateAsync()
+          await addToBasket.mutateAsync(product.id)
+        } catch {
+          // errors reflected in clearBasket.isError / addToBasket.isError
+        }
       } else if (enrollmentType === "free") {
+        createProgramEnrollment.reset()
         createProgramEnrollment.mutate(
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           { onSuccess: () => router.push(DASHBOARD_HOME) },
@@ -102,18 +112,30 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   }
   return (
     <>
-      <WideButton
-        onClick={handleClick}
-        variant="primary"
-        size="large"
-        disabled={isPaidWithoutPrice}
-      >
-        {isLoading ? (
-          <LoadingSpinner size="20px" loading={true} color="inherit" />
-        ) : (
-          getEnrollButtonText()
+      <Stack width="100%" gap="12px">
+        <Button
+          onClick={handleClick}
+          variant="primary"
+          size="large"
+          disabled={isPaidWithoutPrice || isPending}
+          endIcon={
+            isPending ? (
+              <LoadingSpinner size="16px" loading={true} color="inherit" />
+            ) : undefined
+          }
+        >
+          {isLoading ? (
+            <LoadingSpinner size="20px" loading={true} color="inherit" />
+          ) : (
+            getEnrollButtonText()
+          )}
+        </Button>
+        {isError && (
+          <Alert severity="error">
+            There was a problem processing your enrollment. Please try again.
+          </Alert>
         )}
-      </WideButton>
+      </Stack>
       <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
     </>
   )

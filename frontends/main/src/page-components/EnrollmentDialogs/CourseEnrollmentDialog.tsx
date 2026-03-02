@@ -198,9 +198,11 @@ const NumericPriceDisplay: React.FC<{
 const CertificateUpsell: React.FC<{
   course?: CourseWithCourseRunsSerializerV2
   courseRun?: CourseRunV2
-}> = ({ course, courseRun }) => {
+  isFreeOnly?: boolean
+}> = ({ course, courseRun, isFreeOnly }) => {
   const product = courseRun?.products[0]
-  const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
+  const canUpgrade =
+    !isFreeOnly && !!(product && courseRun && canUpgradeRun(courseRun))
   const addToBasket = useAddToBasket()
   const clearBasket = useClearBasket()
   const userFlexiblePrice = useQuery({
@@ -313,8 +315,6 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
   const enrollmentType = getEnrollmentType(run?.enrollment_modes)
-  const showUpsell =
-    !run || enrollmentType === "free" || enrollmentType === "both"
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   return (
@@ -322,9 +322,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={course.title ?? ""}
       fullWidth
-      confirmText={
-        showUpsell ? "Enroll for Free without a certificate" : "Enroll for Free"
-      }
+      confirmText="Enroll for Free without a certificate"
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
@@ -361,7 +359,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        {showUpsell && <CertificateUpsell course={course} courseRun={run} />}
+        <CertificateUpsell
+          course={course}
+          courseRun={run}
+          isFreeOnly={enrollmentType === "free"}
+        />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
