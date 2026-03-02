@@ -10,8 +10,8 @@ def test_article_published_actions_triggers_hook(mocker, user):
     from articles.models import Article
 
     # Mock CDN purge tasks
-    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
-    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
+    mocker.patch("articles.tasks.fastly_purge_relative_url")
+    mocker.patch("articles.tasks.fastly_purge_articles_list.delay")
 
     # Create a published article
     article = Article.objects.create(
@@ -73,8 +73,9 @@ def test_article_published_actions_logs_execution(mocker, user, caplog):
     from articles.models import Article
 
     # Mock CDN purge tasks
-    mocker.patch("articles.tasks.queue_fastly_purge_article.delay")
-    mocker.patch("articles.tasks.queue_fastly_purge_articles_list.delay")
+    mocker.patch("articles.tasks.fastly_purge_relative_url")
+    mocker.patch("articles.tasks.fastly_purge_relative_url.delay")
+    mocker.patch("articles.tasks.fastly_purge_articles_list.delay")
 
     # Create a published article
     article = Article.objects.create(
@@ -109,20 +110,22 @@ class TestPurgeArticleOnSave:
         from articles.factories import ArticleFactory
 
         # Mock call_fastly_purge_api to fail so it falls back to Celery task
-        mocker.patch("articles.tasks.call_fastly_purge_api", return_value=False)
-
-        mock_purge_article = mocker.patch(
-            "articles.tasks.queue_fastly_purge_article.delay"
+        mocker.patch(
+            "articles.tasks.call_fastly_purge_api",
+            side_effect=Exception("Network error"),
         )
+
+        mock_purge_url = mocker.patch("articles.tasks.fastly_purge_relative_url.delay")
         mock_purge_list = mocker.patch(
-            "articles.tasks.queue_fastly_purge_articles_list.delay"
+            "articles.tasks.fastly_purge_articles_list.delay"
         )
 
         article = ArticleFactory(is_published=True)
 
         purge_article_on_save(article)
 
-        mock_purge_article.assert_called_once_with(article.id)
+        # Should enqueue purge due to exception
+        mock_purge_url.assert_called_once_with(article.get_url())
         mock_purge_list.assert_called_once()
 
     def test_no_purge_on_unpublished_article(self, mocker):
@@ -130,18 +133,16 @@ class TestPurgeArticleOnSave:
         from articles.api import purge_article_on_save
         from articles.factories import ArticleFactory
 
-        mock_purge_article = mocker.patch(
-            "articles.tasks.queue_fastly_purge_article.delay"
-        )
+        mock_purge_url = mocker.patch("articles.tasks.fastly_purge_relative_url")
         mock_purge_list = mocker.patch(
-            "articles.tasks.queue_fastly_purge_articles_list.delay"
+            "articles.tasks.fastly_purge_articles_list.delay"
         )
 
         article = ArticleFactory(is_published=False)
 
         purge_article_on_save(article)
 
-        mock_purge_article.assert_not_called()
+        mock_purge_url.assert_not_called()
         mock_purge_list.assert_not_called()
 
     def test_no_purge_on_article_without_slug(self, mocker):
@@ -149,11 +150,9 @@ class TestPurgeArticleOnSave:
         from articles.api import purge_article_on_save
         from articles.factories import ArticleFactory
 
-        mock_purge_article = mocker.patch(
-            "articles.tasks.queue_fastly_purge_article.delay"
-        )
+        mock_purge_url = mocker.patch("articles.tasks.fastly_purge_relative_url")
         mock_purge_list = mocker.patch(
-            "articles.tasks.queue_fastly_purge_articles_list.delay"
+            "articles.tasks.fastly_purge_articles_list.delay"
         )
 
         article = ArticleFactory(is_published=True)
@@ -161,7 +160,7 @@ class TestPurgeArticleOnSave:
 
         purge_article_on_save(article)
 
-        mock_purge_article.assert_not_called()
+        mock_purge_url.assert_not_called()
         mock_purge_list.assert_not_called()
 
     def test_purge_on_article_with_slug(self, mocker):
@@ -170,18 +169,19 @@ class TestPurgeArticleOnSave:
         from articles.factories import ArticleFactory
 
         # Mock call_fastly_purge_api to fail so it falls back to Celery task
-        mocker.patch("articles.tasks.call_fastly_purge_api", return_value=False)
-
-        mock_purge_article = mocker.patch(
-            "articles.tasks.queue_fastly_purge_article.delay"
+        mocker.patch(
+            "articles.tasks.call_fastly_purge_api",
+            side_effect=Exception("Network error"),
         )
+
+        mock_purge_url = mocker.patch("articles.tasks.fastly_purge_relative_url.delay")
         mock_purge_list = mocker.patch(
-            "articles.tasks.queue_fastly_purge_articles_list.delay"
+            "articles.tasks.fastly_purge_articles_list.delay"
         )
 
         article = ArticleFactory(is_published=True, slug="test-article")
 
         purge_article_on_save(article)
 
-        mock_purge_article.assert_called_once_with(article.id)
+        mock_purge_url.assert_called_once_with(article.get_url())
         mock_purge_list.assert_called_once()

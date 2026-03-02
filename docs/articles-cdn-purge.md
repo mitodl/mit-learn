@@ -28,42 +28,64 @@ Two new environment variables control the Fastly CDN integration:
 
 ```python
 FASTLY_API_KEY = get_string("FASTLY_API_KEY", "")
-FASTLY_URL = get_string("FASTLY_URL", "https://api.fastly.com")
+APP_BASE_URL = get_string("APP_BASE_URL", "http://localhost:8063")
 ```
 
 **Environment Variables:**
 - `FASTLY_API_KEY`: Your Fastly API authentication key
-- `FASTLY_URL`: The Fastly API base URL (defaults to `https://api.fastly.com`)
+- `APP_BASE_URL`: The base URL of your application (e.g., `https://learn.mit.edu`)
 
 ### 2. Tasks (`articles/tasks.py`)
 
-Four Celery tasks handle CDN purging:
+Three Celery tasks handle CDN purging:
 
-#### `call_fastly_purge_api(relative_url)`
+#### `call_fastly_purge_api(relative_url, timeout=30)`
 Low-level function that makes HTTP PURGE requests to the Fastly API.
 
 **Features:**
-- Uses soft-purge for individual pages (preserves stale content)
-- Uses hard-purge for wildcard purges
-- Includes proper authentication headers
-- Returns parsed JSON response or False on error
+- Raises HTTPError for failed requests (4xx, 5xx status codes)
+- Raises RequestException for network/timeout errors
+- Returns parsed JSON response on success
+- Skips purge in dev environments (when `FASTLY_API_KEY` is empty)
 
-#### `queue_fastly_purge_article(article_id)`
-Purges a specific article from the CDN cache.
+**Usage:**
+```python
+try:
+    result = call_fastly_purge_api("/news/my-article/", timeout=5)
+    if result.get("status") == "ok":
+        print("Purge successful!")
+except requests.HTTPError:
+    print("HTTP error occurred")
+except requests.RequestException:
+    print("Network error occurred")
+```
+
+#### `fastly_purge_relative_url(relative_url, timeout=30)`
+Purges a specific relative URL from the CDN cache.
 
 **Behavior:**
-- Only purges published articles with slugs
-- Logs all operations
-- Returns True on success, False on failure
+- Can be called directly (runs immediately) or via `.delay()` (enqueued for Celery)
+- Accepts any relative URL path (e.g., `/news/article-slug/`)
+- Returns dict with status on success, `{"status": "error"}` on failure
 
-#### `queue_fastly_purge_articles_list()`
-Purges the articles list endpoint (`/api/v1/articles/`).
+**Example:**
+```python
+# Call immediately in current thread
+result = fastly_purge_relative_url("/news/article-slug/", timeout=5)
+
+# Enqueue for Celery background processing
+fastly_purge_relative_url.delay("/news/article-slug/")
+```
+
+#### `fastly_purge_articles_list()`
+Purges the articles list endpoint (`/news`).
 
 **Features:**
 - Uses `@single_task(10)` decorator to prevent duplicate runs within 10 seconds
+- Can be called directly or via `.delay()`
 - Ensures the articles list always shows current content
 
-#### `queue_fastly_full_purge()`
+#### `fastly_full_purge()`
 Purges the entire CDN cache (use sparingly).
 
 **Warning:** This purges ALL cached content, not just articles.
@@ -75,15 +97,15 @@ Returns the relative URL for an article:
 
 ```python
 article = Article.objects.get(slug="my-article")
-print(article.get_url())  # /api/v1/articles/my-article/
+print(article.get_url())  # /news/my-article/
 ```
 
 Returns `None` if the article has no slug.
 
-### 4. Signals (`articles/signals.py`)
+### 4. API Functions (`articles/api.py`)
 
-#### `purge_article_on_save`
-Django signal handler that automatically triggers CDN purge when articles are saved.
+#### `purge_article_on_save(article)`
+Handles CDN purge when articles are saved. This function implements a "try immediate, fall back to Celery" pattern.
 
 **Triggers when:**
 - An article is published (`is_published=True`)
@@ -91,14 +113,20 @@ Django signal handler that automatically triggers CDN purge when articles are sa
 - The article is saved or updated
 
 **Actions:**
-1. Queues purge for the specific article page
-2. Queues purge for the articles list page
+1. Attempts immediate purge with short timeout (5 seconds)
+2. If successful, logs and continues
+3. If fails or times out, enqueues for Celery retry
+4. Enqueues purge for the articles list page
 
 **Does not trigger when:**
 - Article is unpublished
 - Article has no slug (draft state)
 
-### 5. App Configuration (`articles/apps.py`)
+### 5. Signals (`articles/signals.py`)
+
+Django signal handler that automatically calls `purge_article_on_save()` after article saves.
+
+### 6. App Configuration (`articles/apps.py`)
 
 Registers the signals when the app is ready:
 
@@ -138,19 +166,34 @@ You can manually trigger CDN purges:
 
 ```python
 from articles.tasks import (
-    queue_fastly_purge_article,
-    queue_fastly_purge_articles_list,
-    queue_fastly_full_purge
+    fastly_purge_relative_url,
+    fastly_purge_articles_list,
+    fastly_full_purge
 )
 
-# Purge a specific article
-queue_fastly_purge_article.delay(article_id=123)
+# Purge a specific URL immediately (blocking)
+result = fastly_purge_relative_url("/news/my-article/")
+
+# Purge a specific URL via Celery (non-blocking)
+fastly_purge_relative_url.delay("/news/my-article/")
 
 # Purge the articles list
-queue_fastly_purge_articles_list.delay()
+fastly_purge_articles_list.delay()
 
 # Purge entire cache (use carefully!)
-queue_fastly_full_purge.delay()
+fastly_full_purge.delay()
+```
+
+### Backwards Compatibility
+
+For backwards compatibility, the following aliases are available but deprecated:
+
+```python
+# Old names (still work but discouraged)
+from articles.tasks import (
+    queue_fastly_purge_articles_list,  # Use fastly_purge_articles_list
+    queue_fastly_full_purge,           # Use fastly_full_purge
+)
 ```
 
 ### Django Admin

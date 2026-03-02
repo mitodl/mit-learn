@@ -104,7 +104,10 @@ def call_fastly_purge_api(relative_url, timeout=30):
         - relative_url  The relative URL to purge.
         - timeout       Timeout in seconds for the request (default: 30)
     Returns:
-        - Dict of the response (resp.json), or False if there was an error.
+        - Dict of the response (resp.json)
+    Raises:
+        - HTTPError if the API returns an error status code
+        - RequestException for network/timeout errors
     """
     # Skip Fastly purge if API key is not configured properly
     if not settings.FASTLY_API_KEY:
@@ -115,22 +118,26 @@ def call_fastly_purge_api(relative_url, timeout=30):
     # Fastly intercepts PURGE requests to your domain with the fastly-key header
     api_url = urljoin(settings.APP_BASE_URL, relative_url)
 
-    log.info(f"Purging URL: {api_url}")  # noqa: G004
+    log.info(f"Purging relative URL {relative_url}: {api_url}")  # noqa: G004
 
     headers = {}
 
     if settings.FASTLY_API_KEY:
         headers["fastly-key"] = settings.FASTLY_API_KEY
 
-    resp = requests.request("PURGE", api_url, headers=headers, timeout=timeout)
+    try:
+        resp = requests.request("PURGE", api_url, headers=headers, timeout=timeout)
+        # Raise exception for HTTP errors (4xx, 5xx)
+        resp.raise_for_status()
+    except requests.HTTPError:
+        log.exception(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
+        raise
+    except requests.RequestException:
+        log.exception(f"Fastly API network/timeout error for {api_url}")  # noqa: G004
+        raise
 
-    if resp.status_code >= 400:  # noqa: PLR2004
-        log.error(f"Fastly API Purge call failed: {resp.status_code} {resp.reason}")  # noqa: G004
-        log.error(f"Fastly returned: {resp.text}")  # noqa: G004
-        return False
-    else:
-        log.info(f"Fastly returned: {resp.text}")  # noqa: G004
-        return resp.json()
+    log.info(f"Fastly returned: {resp.text}")  # noqa: G004
+    return resp.json()
 
 
 def cache_page_for_anonymous_users(timeout, cache="default", key_prefix=""):
