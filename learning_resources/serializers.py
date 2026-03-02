@@ -19,7 +19,7 @@ from rest_framework.exceptions import ValidationError
 
 from learning_resources import constants, models
 from learning_resources.constants import (
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     Availability,
     CertificationType,
     Format,
@@ -626,7 +626,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             LearningResourceType.video.name,
             LearningResourceType.podcast_episode.name,
         ]:
-            duration = serialized_resource[resource_type].get("duration")
+            duration = (serialized_resource[resource_type] or {}).get("duration")
             if duration:
                 return str(parse_duration(duration))
         return None
@@ -888,7 +888,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     offered_by = LearningResourceOfferorSerializer(read_only=True, allow_null=True)
     platform = LearningResourcePlatformSerializer(read_only=True, allow_null=True)
     course_feature = LearningResourceContentTagField(
-        source="content_tags", read_only=True, allow_null=True
+        source="resource_tags", read_only=True, allow_null=True
     )
     departments = LearningResourceDepartmentSerializer(
         read_only=True, allow_null=True, many=True
@@ -910,7 +910,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=LearningResourceDeliverySerializer(), read_only=True
     )
     free = serializers.SerializerMethodField()
-    resource_category = serializers.SerializerMethodField()
+    resource_type_group = serializers.SerializerMethodField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
@@ -929,7 +929,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             return best_run.id
         return None
 
-    def get_resource_category(self, instance) -> str:
+    def get_resource_type_group(self, instance) -> str:
         """Return the resource category of the resource"""
         if instance.resource_type in [
             LearningResourceType.course.name,
@@ -937,7 +937,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         ]:
             return instance.resource_type
         else:
-            return LEARNING_MATERIAL_RESOURCE_CATEGORY
+            return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
     def get_free(self, instance) -> bool:
         """Return true if the resource is free/has a free option"""
@@ -985,7 +985,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "views",
             "require_summaries",
         ]
-        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
+        exclude = ["resource_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
 
 
 class ProgramResourceSerializer(LearningResourceBaseSerializer):
@@ -1022,6 +1022,10 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
 
     resource_type = LearningResourceTypeField(
         default=constants.LearningResourceType.learning_path.name
+    )
+
+    resource_category = serializers.ReadOnlyField(
+        default=constants.LearningResourceType.learning_path.value
     )
 
     learning_path = LearningPathSerializer(read_only=True)
@@ -1065,7 +1069,7 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
 
     class Meta:
         model = models.LearningResource
-        exclude = ["content_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
+        exclude = ["resource_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
         read_only_fields = ["platform", "offered_by", "readable_id"]
 
 
@@ -1087,22 +1091,6 @@ class PodcastEpisodeResourceSerializer(LearningResourceBaseSerializer):
     )
 
     podcast_episode = PodcastEpisodeSerializer(read_only=True)
-
-
-class VideoResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for video resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.video.name
-    )
-
-    video = VideoSerializer(read_only=True)
-
-    playlists = serializers.SerializerMethodField()
-
-    def get_playlists(self, instance) -> list[str]:
-        """Get the playlist id(s) the video belongs to"""
-        return [playlist.parent_id for playlist in instance.playlists]
 
 
 class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
@@ -1139,43 +1127,60 @@ class ContentFileSerializer(serializers.ModelSerializer):
     platform = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
-        # prefetch related run and learning resource
-        queryset = models.ContentFile.objects.prefetch_related(
-            "learning_resource__course",
-            "learning_resource__platform",
-            "run__learning_resource__course",
-            "run__learning_resource__platform",
-            "content_tags",
-            Prefetch(
-                "learning_resource__topics",
-                queryset=models.LearningResourceTopic.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__offered_by",
-                queryset=models.LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "learning_resource__departments",
-                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                    "school"
+        if not self.context.get("skip_content_file_refetch", False):
+            # prefetch related run and learning resource
+            queryset = models.ContentFile.objects.prefetch_related(
+                "learning_resource__course",
+                "learning_resource__platform",
+                "run__learning_resource__course",
+                "run__learning_resource__platform",
+                "content_tags",
+                Prefetch(
+                    "learning_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
                 ),
-            ),
-            Prefetch(
-                "run__learning_resource__topics",
-                queryset=models.LearningResourceTopic.objects.for_serialization(),
-            ),
-            Prefetch(
-                "run__learning_resource__offered_by",
-                queryset=models.LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "run__learning_resource__departments",
-                queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                    "school"
+                Prefetch(
+                    "learning_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
                 ),
-            ),
-        )
-        instance = queryset.get(pk=instance.pk)
+                Prefetch(
+                    "learning_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                        "school"
+                    ),
+                ),
+                Prefetch(
+                    "run__learning_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "run__learning_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "run__learning_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
+                        "school"
+                    ),
+                ),
+                "direct_learning_resource__course",
+                "direct_learning_resource__platform",
+                Prefetch(
+                    "direct_learning_resource__topics",
+                    queryset=models.LearningResourceTopic.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "direct_learning_resource__offered_by",
+                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
+                ),
+                Prefetch(
+                    "direct_learning_resource__departments",
+                    queryset=models.LearningResourceDepartment.objects.for_serialization(
+                        prefetch_school=True
+                    ).select_related("school"),
+                ),
+            )
+            instance = queryset.get(pk=instance.pk)
         return super().to_representation(instance)
 
     def get_learning_resource(self, instance):
@@ -1266,26 +1271,54 @@ class ContentFileSerializer(serializers.ModelSerializer):
         ]
 
 
-class LearningMaterialSerializer(serializers.ModelSerializer):
-    """Serializer for the LearningMaterial model"""
-
-    content_file = ContentFileSerializer(read_only=True, allow_null=True)
-
-    class Meta:
-        model = models.LearningMaterial
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
-
-
-class LearningMaterialResourceSerializer(LearningResourceBaseSerializer):
-    """
-    Serializer for LearningMaterial resources with resource_type=Lecture Notes
-    """
+class VideoResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for video resources"""
 
     resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.learning_material.name
+        default=constants.LearningResourceType.video.name
     )
 
-    learning_material = LearningMaterialSerializer(read_only=True)
+    video = VideoSerializer(read_only=True)
+
+    playlists = serializers.SerializerMethodField()
+
+    content_files = serializers.SerializerMethodField()
+
+    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    def get_content_files(self, instance):
+        """Serialize content files with prefetch."""
+        content_files = instance.direct_content_files.all()
+        return ContentFileSerializer(
+            content_files,
+            many=True,
+            read_only=True,
+            context={**self.context, "skip_content_file_refetch": True},
+        ).data
+
+    def get_playlists(self, instance) -> list[str]:
+        """Get the playlist id(s) the video belongs to"""
+        return [playlist.parent_id for playlist in instance.playlists]
+
+
+class DocumentResourceSerializer(LearningResourceBaseSerializer):
+    """Serializer for document resources"""
+
+    resource_type = LearningResourceTypeField(
+        default=constants.LearningResourceType.document.name
+    )
+
+    content_files = serializers.SerializerMethodField()
+
+    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    def get_content_files(self, instance):
+        """Serialize content files with prefetch."""
+        content_files = instance.direct_content_files.all()
+        return ContentFileSerializer(
+            content_files,
+            many=True,
+            read_only=True,
+            context={**self.context, "skip_content_file_refetch": True},
+        ).data
 
 
 class LearningResourceSerializer(serializers.Serializer):
@@ -1302,7 +1335,7 @@ class LearningResourceSerializer(serializers.Serializer):
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
             ArticleResourceSerializer,
-            LearningMaterialResourceSerializer,
+            DocumentResourceSerializer,
         )
     }
 
