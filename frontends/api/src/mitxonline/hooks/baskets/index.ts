@@ -24,6 +24,8 @@ const useAddToBasket = () => {
       })
 
       // Redirect to MITx Online cart page
+      // This should happen in useMutation because call-level onSuccess handlers
+      // are not guaranteed to run if component unmounts before mutation finishes
       const cartUrl = new URL(
         "/cart/",
         process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
@@ -50,4 +52,34 @@ const useClearBasket = () => {
   })
 }
 
-export { basketQueries, useAddToBasket, useClearBasket }
+/**
+ * Hook to replace the basket with a single product, then redirect to cart.
+ *
+ * This clears the basket before adding the new item because our cart UI does
+ * not currently allow users to remove items. Having more than one item in the
+ * basket puts users in a bad UI state. Once the cart supports item removal,
+ * this hook should be replaced with a direct call to `useAddToBasket`.
+ */
+const useReplaceBasketItem = () => {
+  const addToBasket = useAddToBasket()
+  const clearBasket = useClearBasket()
+
+  const mutate = async (productId: number) => {
+    clearBasket.reset()
+    addToBasket.reset()
+    await clearBasket.mutateAsync()
+    await addToBasket.mutateAsync(productId)
+  }
+
+  return {
+    mutate,
+    isPending: clearBasket.isPending || addToBasket.isPending,
+    isError: clearBasket.isError || addToBasket.isError,
+    reset: () => {
+      clearBasket.reset()
+      addToBasket.reset()
+    },
+  }
+}
+
+export { basketQueries, useAddToBasket, useClearBasket, useReplaceBasketItem }

@@ -3,7 +3,7 @@ import { Stack, Typography } from "ol-components"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
-import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { formatPrice, getEnrollmentType } from "@/common/mitxonline"
@@ -40,8 +40,7 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
   program,
 }) => {
   const product = program.products[0]
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+  const replaceBasketItem = useReplaceBasketItem()
 
   return (
     <Stack gap="32px" alignItems="flex-start">
@@ -72,10 +71,12 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
           disabled={!product}
           onClick={async () => {
             if (!product) return
-            addToBasket.reset()
-            clearBasket.reset()
-            await clearBasket.mutateAsync()
-            await addToBasket.mutateAsync(product.id)
+            replaceBasketItem.reset()
+            try {
+              await replaceBasketItem.mutate(product.id)
+            } catch {
+              // errors reflected in replaceBasketItem.isError
+            }
           }}
         />
       </CertificateBox>

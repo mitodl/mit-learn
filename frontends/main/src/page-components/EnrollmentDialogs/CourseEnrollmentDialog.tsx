@@ -25,7 +25,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
-import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
@@ -203,8 +203,7 @@ const CertificateUpsell: React.FC<{
   const product = courseRun?.products[0]
   const canUpgrade =
     !isFreeOnly && !!(product && courseRun && canUpgradeRun(courseRun))
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+  const replaceBasketItem = useReplaceBasketItem()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
@@ -265,10 +264,12 @@ const CertificateUpsell: React.FC<{
           disabled={!canUpgrade}
           onClick={async () => {
             if (!product) return
-            addToBasket.reset()
-            clearBasket.reset()
-            await clearBasket.mutateAsync()
-            await addToBasket.mutateAsync(product.id)
+            replaceBasketItem.reset()
+            try {
+              await replaceBasketItem.mutate(product.id)
+            } catch {
+              // errors reflected in replaceBasketItem.isError
+            }
           }}
         />
       </CertificateBox>

@@ -16,7 +16,7 @@ import { programView, DASHBOARD_HOME } from "@/common/urls"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
-import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 
 const WideButtonLink = styled(ButtonLink)(({ href }) => [
@@ -37,8 +37,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+  const replaceBasketItem = useReplaceBasketItem()
   const createProgramEnrollment = useCreateProgramEnrollment()
   const router = useRouter()
   const enrollments = useQuery({
@@ -63,14 +62,10 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     return "Enroll for Free"
   }
 
+  const isLoading = enrollments.isLoading || me.isLoading
   const isPending =
-    clearBasket.isPending ||
-    addToBasket.isPending ||
-    createProgramEnrollment.isPending
-  const isError =
-    clearBasket.isError ||
-    addToBasket.isError ||
-    createProgramEnrollment.isError
+    replaceBasketItem.isPending || createProgramEnrollment.isPending
+  const isError = replaceBasketItem.isError || createProgramEnrollment.isError
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (enrollments.isLoading || me.isLoading) {
@@ -78,13 +73,11 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && program.products[0]) {
         const product = program.products[0]
-        clearBasket.reset()
-        addToBasket.reset()
+        replaceBasketItem.reset()
         try {
-          await clearBasket.mutateAsync()
-          await addToBasket.mutateAsync(product.id)
+          await replaceBasketItem.mutate(product.id)
         } catch {
-          // errors reflected in clearBasket.isError / addToBasket.isError
+          // errors reflected in replaceBasketItem.isError
         }
       } else if (enrollmentType === "free") {
         createProgramEnrollment.reset()
@@ -99,7 +92,6 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       setAnchor(e.currentTarget)
     }
   }
-  const isLoading = enrollments.isLoading || me.isLoading
   if (enrollment) {
     const href = programDashboardEnabled ? programView(program.id) : undefined
 
@@ -117,18 +109,14 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           onClick={handleClick}
           variant="primary"
           size="large"
-          disabled={isPaidWithoutPrice || isPending}
+          disabled={isPaidWithoutPrice || isPending || isLoading}
           endIcon={
-            isPending ? (
+            isLoading || isPending ? (
               <LoadingSpinner size="16px" loading={true} color="inherit" />
             ) : undefined
           }
         >
-          {isLoading ? (
-            <LoadingSpinner size="20px" loading={true} color="inherit" />
-          ) : (
-            getEnrollButtonText()
-          )}
+          {isLoading ? null : getEnrollButtonText()}
         </Button>
         {isError && (
           <Alert severity="error">

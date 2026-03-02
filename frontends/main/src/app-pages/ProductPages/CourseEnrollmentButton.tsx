@@ -16,7 +16,7 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
-import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -49,8 +49,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+  const replaceBasketItem = useReplaceBasketItem()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
 
@@ -71,21 +70,18 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
 
-  const isPending = clearBasket.isPending || addToBasket.isPending
-  const isError = clearBasket.isError || addToBasket.isError
+  const { isPending, isError } = replaceBasketItem
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && product) {
-        clearBasket.reset()
-        addToBasket.reset()
+        replaceBasketItem.reset()
         try {
-          await clearBasket.mutateAsync()
-          await addToBasket.mutateAsync(product.id)
+          await replaceBasketItem.mutate(product.id)
         } catch {
-          // errors reflected in clearBasket.isError / addToBasket.isError
+          // errors reflected in replaceBasketItem.isError
         }
       } else {
         NiceModal.show(CourseEnrollmentDialog, { course })
