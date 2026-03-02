@@ -37,7 +37,7 @@ interface FormDialogProps {
   /**
    * A callback to reset the form. Called automatically when `open` changes.
    */
-  onReset: () => void
+  onReset?: () => void
   /**
    * Sets `novalidate` on the `<form />` element.
    *

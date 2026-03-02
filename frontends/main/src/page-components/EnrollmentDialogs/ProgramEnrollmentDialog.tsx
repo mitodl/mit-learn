@@ -115,7 +115,6 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={program.title}
       onSubmit={handleSubmit}
-      onReset={() => {}}
       fullWidth
       confirmText={
         showUpsell ? "Enroll for Free without a certificate" : "Enroll for Free"
