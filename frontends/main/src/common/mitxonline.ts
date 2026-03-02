@@ -114,8 +114,8 @@ const getEnrollmentType = (
   modes: EnrollmentMode[] | undefined,
 ): EnrollmentType => {
   if (!modes || modes.length === 0) return "none"
-  const hasFree = modes.some((m) => m.requires_payment !== true)
-  const hasPaid = modes.some((m) => m.requires_payment === true)
+  const hasFree = modes.some((m) => !m.requires_payment)
+  const hasPaid = modes.some((m) => m.requires_payment)
   if (hasFree && hasPaid) return "both"
   if (hasFree) return "free"
   return "paid"
