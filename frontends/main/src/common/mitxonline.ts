@@ -50,13 +50,20 @@ export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
 }
 
 /**
- * Formats a price number or string as a USD currency string.
- * Whole-dollar amounts show no decimal places ($100).
- * Non-whole amounts always show exactly 2 decimal places ($100.50).
+ * Format the numeric part of a price:
+ * ```ts
+ * formatPrice(100) // "$100"
+ * formatPrice(100.5) // "$100.50"
+ * formatPrice(100, { avoidCents: true }) // "$100"
+ * formatPrice(100.5, { avoidCents: true }) // "$100.50"
+ * ```
  */
-const formatPrice = (amount: number | string): string => {
+const formatPrice = (
+  amount: number | string,
+  { avoidCents = false } = {},
+): string => {
   const num = Number(amount)
-  const fractionDigits = Number.isInteger(num) ? 0 : 2
+  const fractionDigits = avoidCents && Number.isInteger(num) ? 0 : 2
   return num.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
@@ -68,9 +75,12 @@ const formatPrice = (amount: number | string): string => {
 /**
  * Returns certificate price as formatted string, or null if upgrade not available
  */
-const formatProductPrice = (product: ProductFlexiblePrice) => {
+const formatProductPrice = (
+  product: ProductFlexiblePrice,
+  { avoidCents = false } = {},
+) => {
   const amount = getFlexiblePriceForProduct(product)
-  return formatPrice(amount)
+  return formatPrice(amount, { avoidCents })
 }
 
 type PriceWithDiscount = {
@@ -86,13 +96,15 @@ type PriceWithDiscount = {
 const priceWithDiscount = ({
   product,
   flexiblePrice,
+  avoidCents = false,
 }: {
   product: ProductFlexiblePrice
   flexiblePrice?: ProductFlexiblePrice
+  avoidCents?: boolean
 }): PriceWithDiscount => {
-  const originalPrice = formatProductPrice(product)
+  const originalPrice = formatProductPrice(product, { avoidCents })
   const finalPrice = flexiblePrice
-    ? formatProductPrice(flexiblePrice)
+    ? formatProductPrice(flexiblePrice, { avoidCents })
     : originalPrice
   const isDiscounted = originalPrice !== finalPrice
 

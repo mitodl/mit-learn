@@ -65,7 +65,11 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   })
   const price =
     enrollmentType === "paid" && product
-      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      ? priceWithDiscount({
+          product,
+          flexiblePrice: userFlexiblePrice.data,
+          avoidCents: true,
+        })
       : null
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price

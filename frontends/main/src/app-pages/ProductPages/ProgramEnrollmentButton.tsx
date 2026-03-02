@@ -57,7 +57,9 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const getEnrollButtonText = () => {
     if (enrollmentType === "paid") {
       const price = program.products[0]?.price
-      return price ? `Enroll Now—${formatPrice(price)}` : "Enroll Now"
+      return price
+        ? `Enroll Now—${formatPrice(price, { avoidCents: true })}`
+        : "Enroll Now"
     }
     return "Enroll for Free"
   }
