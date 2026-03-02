@@ -4062,7 +4062,7 @@ def test_get_similar_topics_qdrant_uses_cached_embedding(mocker):
     """
     Test that get_similar_topics_qdrant uses a cached embedding when available
     """
-    resource = MagicMock()
+    resource = LearningResourceFactory.create()
     resource.readable_id = "test-resource"
     value_doc = {"title": "Test Title", "description": "Test Description"}
     num_topics = 3
