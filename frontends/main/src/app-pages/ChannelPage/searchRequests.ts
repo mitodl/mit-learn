@@ -59,10 +59,10 @@ const getFacetManifestForChannelType = (
   channelType: ChannelTypeEnum,
   offerors: Record<string, LearningResourceOfferor>,
   constantSearchParams: Facets,
-  resourceCategory: string | null,
+  resourceTypeGroup: string | null,
 ): FacetManifest => {
   const facets = FACETS_BY_CHANNEL_TYPE[channelType] || []
-  return getFacetManifest(offerors, resourceCategory)
+  return getFacetManifest(offerors, resourceTypeGroup)
     .filter(
       (facetSetting) =>
         !Object.keys(constantSearchParams).includes(facetSetting.name) &&
@@ -77,13 +77,13 @@ export const getFacets = (
   channelType: ChannelTypeEnum,
   offerors: Record<string, LearningResourceOfferor>,
   constantSearchParams: Facets,
-  resourceCategory: string | null,
+  resourceTypeGroup: string | null,
 ) => {
   const facetManifest = getFacetManifestForChannelType(
     channelType,
     offerors,
     constantSearchParams,
-    resourceCategory,
+    resourceTypeGroup,
   )
 
   const facetNames = Array.from(

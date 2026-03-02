@@ -58,7 +58,10 @@ def _post_gen_tags(obj, create, extracted, **kwargs):  # noqa: ARG001
             random.randint(1, 5)  # noqa: S311
         )
 
-    obj.content_tags.set(extracted)
+    if isinstance(obj, models.LearningResource):
+        obj.resource_tags.set(extracted)
+    else:
+        obj.content_tags.set(extracted)
 
 
 class LearningResourceContentTagFactory(DjangoModelFactory):
@@ -198,6 +201,9 @@ class LearningResourceFactory(DjangoModelFactory):
     resource_type = factory.fuzzy.FuzzyChoice(
         choices=constants.LearningResourceType.names()
     )
+    resource_category = factory.LazyAttribute(
+        lambda o: o.resource_type.replace("_", " ").title()
+    )
     readable_id = factory.Sequence(
         lambda n: f"RESOURCEN{n:03d}_{random.randint(1, 1000)}.MIT"  # noqa: S311
     )
@@ -214,7 +220,7 @@ class LearningResourceFactory(DjangoModelFactory):
     offered_by = factory.SubFactory(LearningResourceOfferorFactory)
     departments = factory.PostGeneration(_post_gen_departments)
     topics = factory.PostGeneration(_post_gen_topics)
-    content_tags = factory.PostGeneration(_post_gen_tags)
+    resource_tags = factory.PostGeneration(_post_gen_tags)
     completeness = 1
     published = True
     delivery = factory.List(random.choices(LearningResourceDelivery.names()))  # noqa: S311
@@ -313,7 +319,7 @@ class LearningResourceFactory(DjangoModelFactory):
 
     class Params:
         no_topics = factory.Trait(topics=[])
-        no_content_tags = factory.Trait(content_tags=[])
+        no_resource_tags = factory.Trait(content_tags=[])
         no_image = factory.Trait(image=None)
 
         is_course = factory.Trait(
@@ -875,23 +881,6 @@ class ArticleFactory(DjangoModelFactory):
 
     class Params:
         is_unpublished = factory.Trait(learning_resource__published=False)
-
-
-class LearningMaterialFactory(DjangoModelFactory):
-    """Factory for Learning Material Resources"""
-
-    learning_resource = factory.SubFactory(
-        LearningResourceFactory,
-        platform=factory.SubFactory(
-            LearningResourcePlatformFactory, code=PlatformType.ocw.name
-        ),
-    )
-
-    content_file = factory.SubFactory(ContentFileFactory)
-
-    class Meta:
-        model = models.LearningMaterial
-        skip_postgeneration_save = True
 
 
 class VideoFactory(DjangoModelFactory):
