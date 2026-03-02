@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.56.1
+Version 0.56.1 (Released March 02, 2026)
 --------------
 
 - explicitly set is_self_paced to false on tests that need it (#2998)
