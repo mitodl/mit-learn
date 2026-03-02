@@ -65,8 +65,6 @@ const useReplaceBasketItem = () => {
   const clearBasket = useClearBasket()
 
   const mutate = async (productId: number) => {
-    clearBasket.reset()
-    addToBasket.reset()
     await clearBasket.mutateAsync()
     await addToBasket.mutateAsync(productId)
   }
