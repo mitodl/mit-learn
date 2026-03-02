@@ -67,20 +67,13 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     replaceBasketItem.isPending || createProgramEnrollment.isPending
   const isError = replaceBasketItem.isError || createProgramEnrollment.isError
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (enrollments.isLoading || me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && program.products[0]) {
-        const product = program.products[0]
-        replaceBasketItem.reset()
-        try {
-          await replaceBasketItem.mutate(product.id)
-        } catch {
-          // errors reflected in replaceBasketItem.isError
-        }
+        replaceBasketItem.mutate(program.products[0].id)
       } else if (enrollmentType === "free") {
-        createProgramEnrollment.reset()
         createProgramEnrollment.mutate(
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           { onSuccess: () => router.push(DASHBOARD_HOME) },

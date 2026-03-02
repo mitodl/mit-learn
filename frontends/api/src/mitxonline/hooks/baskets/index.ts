@@ -64,19 +64,22 @@ const useReplaceBasketItem = () => {
   const addToBasket = useAddToBasket()
   const clearBasket = useClearBasket()
 
-  const mutate = async (productId: number) => {
+  const mutate = (productId: number) => {
+    clearBasket.mutate(undefined, {
+      onSuccess: () => addToBasket.mutate(productId),
+    })
+  }
+
+  const mutateAsync = async (productId: number) => {
     await clearBasket.mutateAsync()
     await addToBasket.mutateAsync(productId)
   }
 
   return {
     mutate,
+    mutateAsync,
     isPending: clearBasket.isPending || addToBasket.isPending,
     isError: clearBasket.isError || addToBasket.isError,
-    reset: () => {
-      clearBasket.reset()
-      addToBasket.reset()
-    },
   }
 }
 

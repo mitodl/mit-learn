@@ -72,17 +72,12 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const { isPending, isError } = replaceBasketItem
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = async (e) => {
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && product) {
-        replaceBasketItem.reset()
-        try {
-          await replaceBasketItem.mutate(product.id)
-        } catch {
-          // errors reflected in replaceBasketItem.isError
-        }
+        replaceBasketItem.mutate(product.id)
       } else {
         NiceModal.show(CourseEnrollmentDialog, { course })
       }

@@ -69,14 +69,9 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
           disabled={!product}
-          onClick={async () => {
+          onClick={() => {
             if (!product) return
-            replaceBasketItem.reset()
-            try {
-              await replaceBasketItem.mutate(product.id)
-            } catch {
-              // errors reflected in replaceBasketItem.isError
-            }
+            replaceBasketItem.mutate(product.id)
           }}
         />
       </CertificateBox>
