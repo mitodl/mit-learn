@@ -2,7 +2,8 @@ import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollment,
+  CourseRunEnrollmentV3,
   CourseRunGrade,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -29,13 +30,13 @@ const grade: PartialFactory<CourseRunGrade> = (overrides = {}) => {
   return mergeOverrides<CourseRunGrade>(defaults, overrides)
 }
 
-const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
+const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
   overrides = {},
 ) => {
   const title =
     overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
 
-  const defaults: CourseRunEnrollmentRequestV2 = {
+  const defaults: CourseRunEnrollmentV3 = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
     b2b_contract_id: null, // Default to personal enrollment (not B2B)
     b2b_organization_id: null, // Default to personal enrollment (not B2B)
@@ -43,12 +44,10 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
       uuid: faker.string.uuid(),
       link: faker.internet.url(),
     },
-    approved_flexible_price_exists: faker.datatype.boolean(),
     grades: [],
     enrollment_mode: faker.helpers.arrayElement(["audit", "verified"]),
     edx_emails_subscription: faker.datatype.boolean(),
     run: {
-      enrollment_modes: [courses.enrollmentMode()],
       id: uniqueRunId.enforce(() => faker.number.int()),
       title,
       start_date: faker.date.past().toISOString(),
@@ -62,78 +61,18 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
       run_tag: faker.lorem.word(),
       live: faker.datatype.boolean(),
       course_number: faker.lorem.word(),
-      approved_flexible_price_exists: faker.datatype.boolean(),
-      products: [
-        {
-          id: faker.number.int(),
-          price: faker.commerce.price(),
-          description: faker.lorem.sentence(),
-          is_active: faker.datatype.boolean(),
-        },
-      ],
       course: {
         id: uniqueCourseId.enforce(() => faker.number.int()),
         title,
         readable_id: faker.lorem.slug(),
-        next_run_id: faker.number.int(),
-        departments: [
-          {
-            name: faker.company.name(),
-          },
-        ],
-        page: {
-          page_url: faker.internet.url(),
-          feature_image_src: faker.image.url(),
-          description: faker.lorem.paragraph(),
-          live: faker.datatype.boolean(),
-          length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
-          effort: `${faker.number.int({ min: 1, max: 10 })} hours/week`,
-          financial_assistance_form_url: faker.internet.url(),
-          current_price: faker.number.int({ min: 0, max: 1000 }),
-          instructors: [
-            {
-              name: faker.person.fullName(),
-              bio: faker.lorem.paragraph(),
-            },
-          ],
-        },
-        programs: null,
-        topics: faker.helpers.multiple(
-          () => ({ name: faker.lorem.word(), id: faker.number.int() }),
-          { count: { min: 0, max: 5 } },
-        ),
-        certificate_type: faker.helpers.arrayElement([
-          "completion",
-          "verified",
-          "professional",
-          "micromasters",
-        ]),
-        required_prerequisites: faker.datatype.boolean(),
-        duration: `${faker.number.int({ min: 4, max: 16 })} weeks`,
-        min_weeks: faker.number.int({ min: 4, max: 8 }),
-        max_weeks: faker.number.int({ min: 12, max: 20 }),
-        min_price: faker.number.int({ min: 0, max: 500 }),
-        max_price: faker.number.int({ min: 500, max: 2000 }),
-        time_commitment: `${faker.number.int({ min: 2, max: 15 })} hours per week`,
-        availability: faker.helpers.arrayElement([
-          "current",
-          "starting_soon",
-          "upcoming",
-          "archived",
-        ]),
-        min_weekly_hours: faker.number.int({ min: 2, max: 5 }).toString(),
-        max_weekly_hours: faker.number.int({ min: 8, max: 15 }).toString(),
-        include_in_learn_catalog: faker.datatype.boolean({ probability: 0.8 }),
-        ingest_content_files_for_ai: faker.datatype.boolean({
-          probability: 0.3,
-        }),
+        type: "course",
       },
     },
   }
-  return mergeOverrides<CourseRunEnrollmentRequestV2>(defaults, overrides)
+  return mergeOverrides<CourseRunEnrollmentV3>(defaults, overrides)
 }
 
-const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
+const programErnollment: PartialFactory<V3UserProgramEnrollment> = (
   overrides = {},
 ): V3UserProgramEnrollment => {
   const program = programs.simpleProgram()
@@ -152,8 +91,8 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
 }
 
 // Not paginated
-const courseEnrollments = (count: number): CourseRunEnrollmentRequestV2[] => {
+const courseEnrollments = (count: number): CourseRunEnrollmentV3[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 
-export { courseEnrollment, courseEnrollments, grade, programEnrollmentV3 }
+export { courseEnrollment, courseEnrollments, grade, programErnollment }

@@ -116,13 +116,14 @@ describe("EnrollmentDisplay", () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
+    const programEnrollment = mitxonline.factories.enrollment.programErnollment(
+      {
         program: {
           ...mitxonline.factories.programs.simpleProgram(),
           title: "My Test Program",
         },
-      })
+      },
+    )
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
@@ -155,13 +156,14 @@ describe("EnrollmentDisplay", () => {
         },
       },
     })
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
+    const programEnrollment = mitxonline.factories.enrollment.programErnollment(
+      {
         program: {
           ...mitxonline.factories.programs.simpleProgram(),
           title: "My Test Program",
         },
-      })
+      },
+    )
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [
@@ -218,13 +220,14 @@ describe("EnrollmentDisplay", () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
+    const programEnrollment = mitxonline.factories.enrollment.programErnollment(
+      {
         program: {
           ...mitxonline.factories.programs.simpleProgram(),
           title: "Solo Program",
         },
-      })
+      },
+    )
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
@@ -401,7 +404,7 @@ describe("EnrollmentDisplay", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     const b2bProgramEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
+      mitxonline.factories.enrollment.programErnollment({
         program: {
           ...mitxonline.factories.programs.simpleProgram(),
           title: "B2B Program",
@@ -409,7 +412,7 @@ describe("EnrollmentDisplay", () => {
       })
 
     const nonB2BProgramEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
+      mitxonline.factories.enrollment.programErnollment({
         program: {
           ...mitxonline.factories.programs.simpleProgram(),
           title: "Personal Program",
@@ -455,7 +458,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             program: {
               id: program.id,
               title: program.title,
@@ -517,7 +520,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             program: {
               id: program.id,
               title: program.title,
@@ -592,7 +595,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             program: {
               id: program.id,
               title: program.title,
@@ -698,7 +701,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             program: {
               id: program.id,
               title: program.title,
@@ -796,7 +799,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             enrollment_mode: "audit",
             program: {
               id: program.id,
@@ -887,7 +890,7 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             program: {
               id: program.id,
               title: program.title,
@@ -988,7 +991,7 @@ describe("EnrollmentDisplay", () => {
       }
 
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           enrollment_mode: "verified", // Verified program enrollment
           program: {
             id: program.id,

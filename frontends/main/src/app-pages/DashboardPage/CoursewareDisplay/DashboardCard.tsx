@@ -39,7 +39,7 @@ import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
   CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -60,7 +60,7 @@ export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 
 export type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
-  | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
+  | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
   | { type: "program-enrollment"; data: V3UserProgramEnrollment }
 
 /**

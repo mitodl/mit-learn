@@ -1211,7 +1211,7 @@ describe.each([
         })
 
         const programEnrollment =
-          mitxonline.factories.enrollment.programEnrollmentV3({
+          mitxonline.factories.enrollment.programErnollment({
             enrollment_mode: "verified",
           })
 
@@ -1266,7 +1266,7 @@ describe.each([
       })
 
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           enrollment_mode: "audit", // Audit, not verified
         })
 
@@ -1396,7 +1396,7 @@ describe.each([
     test("renders program card with title", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
           }),
@@ -1418,7 +1418,7 @@ describe.each([
     test("program card title links to program dashboard", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program Title",
             id: 123,
@@ -1444,7 +1444,7 @@ describe.each([
     test("program card does not show course-specific elements", () => {
       setupUserApis()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           program: mitxonline.factories.programs.simpleProgram({
             title: "Test Program",
           }),
@@ -1531,7 +1531,7 @@ describe.each([
 
       const program = mitxonline.factories.programs.simpleProgram()
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           program,
         })
 
@@ -1569,7 +1569,7 @@ describe.each([
         readable_id: "test-program-123",
       })
       const programEnrollment =
-        mitxonline.factories.enrollment.programEnrollmentV3({
+        mitxonline.factories.enrollment.programErnollment({
           program,
         })
 

@@ -32,6 +32,7 @@ APP_BASE_URL = get_string("APP_BASE_URL", "http://localhost:8063")
 ```
 
 **Environment Variables:**
+
 - `FASTLY_API_KEY`: Your Fastly API authentication key
 - `APP_BASE_URL`: The base URL of your application (e.g., `https://learn.mit.edu`)
 
@@ -81,6 +82,7 @@ fastly_purge_relative_url.delay("/news/article-slug/")
 Purges the articles list endpoint (`/news`).
 
 **Features:**
+
 - Uses `@single_task(10)` decorator to prevent duplicate runs within 10 seconds
 - Can be called directly or via `.delay()`
 - Ensures the articles list always shows current content
@@ -93,6 +95,7 @@ Purges the entire CDN cache (use sparingly).
 ### 3. Model Method (`articles/models.py`)
 
 #### `Article.get_url()`
+
 Returns the relative URL for an article:
 
 ```python
@@ -108,6 +111,7 @@ Returns `None` if the article has no slug.
 Handles CDN purge when articles are saved. This function implements a "try immediate, fall back to Celery" pattern.
 
 **Triggers when:**
+
 - An article is published (`is_published=True`)
 - The article has a slug
 - The article is saved or updated
@@ -119,6 +123,7 @@ Handles CDN purge when articles are saved. This function implements a "try immed
 4. Enqueues purge for the articles list page
 
 **Does not trigger when:**
+
 - Article is unpublished
 - Article has no slug (draft state)
 
@@ -264,11 +269,13 @@ logger = logging.getLogger("fastly_purge")
 ```
 
 **Log Levels:**
+
 - `INFO`: Successful purges, task execution
 - `DEBUG`: Detailed information (URLs, article IDs)
 - `ERROR`: Failed API calls, missing articles
 
 **Example logs:**
+
 ```
 INFO: Processing purge request for article 123
 DEBUG: Article URL is /api/v1/articles/my-article/
@@ -281,6 +288,7 @@ INFO: Purge request processed OK.
 ### Article not purging from CDN
 
 **Check:**
+
 1. Is the article published? (`is_published=True`)
 2. Does the article have a slug?
 3. Are `FASTLY_API_KEY` and `FASTLY_URL` configured?
@@ -298,6 +306,7 @@ Your `FASTLY_API_KEY` is invalid or expired. Generate a new API key from your Fa
 ### Celery tasks not running
 
 Ensure your Celery worker is running:
+
 ```bash
 celery -A main.celery:app worker -E -Q default --concurrency=2 -B -l INFO
 ```
