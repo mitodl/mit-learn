@@ -798,7 +798,7 @@ def vector_point_key(
     Returns:
         str: A unique key for the vector point
     """
-    platform = serialized_document.get("platform", {}).get("code", "")
+    platform = (serialized_document.get("platform") or {}).get("code", "")
     if document_type == "learning_resource":
         readable_id = serialized_document.get("readable_id") or serialized_document.get(
             "resource_readable_id"
