@@ -214,8 +214,6 @@ describe("CourseSummary", () => {
         is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
-        // guuarantee the date shows (not start anytime)
-        is_enrollable: true,
       })
       const run2 = makeRun({
         is_enrollable: true,
