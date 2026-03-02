@@ -90,7 +90,12 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     <>
       <Stack width="100%" gap="12px">
         <Button
-          disabled={!nextRun || isPaidWithoutPrice || isPending}
+          disabled={
+            !nextRun ||
+            enrollmentType === "none" ||
+            isPaidWithoutPrice ||
+            isPending
+          }
           onClick={handleClick}
           variant="primary"
           size="large"

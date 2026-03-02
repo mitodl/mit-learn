@@ -102,7 +102,12 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           onClick={handleClick}
           variant="primary"
           size="large"
-          disabled={isPaidWithoutPrice || isPending || isLoading}
+          disabled={
+            enrollmentType === "none" ||
+            isPaidWithoutPrice ||
+            isPending ||
+            isLoading
+          }
           endIcon={
             isLoading || isPending ? (
               <LoadingSpinner size="16px" loading={true} color="inherit" />

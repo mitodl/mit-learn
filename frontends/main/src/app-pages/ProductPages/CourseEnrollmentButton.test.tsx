@@ -210,6 +210,22 @@ describe("CourseEnrollmentButton", () => {
     )
   })
 
+  test("Shows disabled button when there are no enrollment modes", async () => {
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    expect(button).toBeDisabled()
+  })
+
   test("Shows disabled button for paid-only enrollment with no price", async () => {
     const run = makeRun({
       is_archived: false,

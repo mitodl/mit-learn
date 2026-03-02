@@ -294,6 +294,20 @@ describe("ProgramEnrollmentButton", () => {
     expect(button).not.toBeDisabled()
   })
 
+  test("Shows disabled button when there are no enrollment modes", async () => {
+    const program = makeProgram({
+      enrollment_modes: [],
+    })
+
+    setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    expect(button).toBeDisabled()
+  })
+
   test("Shows disabled button for paid-only enrollment with no price", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
