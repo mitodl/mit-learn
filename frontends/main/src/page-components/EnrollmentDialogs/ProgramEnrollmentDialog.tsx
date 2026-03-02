@@ -30,7 +30,7 @@ interface ProgramEnrollmentDialogProps {
 const CERT_REASONS = [
   "Certificate is signed by MIT faculty",
   "Highlight on your resume/CV",
-  "Demonstrates knowledge and skills taught in this course",
+  "Demonstrates knowledge and skills taught in this program",
   "Share on your social channels & LinkedIn",
   "Enhance your college & earn a promotion",
   "Enhance your college application with an earned certificate from MIT",
