@@ -12326,9 +12326,9 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;learning_material&#x60; - learning material
-     * @param {boolean} [title__isnull] Filter to learning resources where title is null/not null
+     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean} [url__isnull] Filter to learning resources where url is null/not null
+     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -12350,9 +12350,9 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       readable_id?: string,
       resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
-      title__isnull?: boolean,
+      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean,
+      url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v0/vector_learning_resources_search/`
@@ -12498,9 +12498,9 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;learning_material&#x60; - learning material
-     * @param {boolean} [title__isnull] Filter to learning resources where title is null/not null
+     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean} [url__isnull] Filter to learning resources where url is null/not null
+     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -12522,9 +12522,9 @@ export const VectorLearningResourcesSearchApiFp = function (
       readable_id?: string,
       resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
-      title__isnull?: boolean,
+      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean,
+      url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -12753,7 +12753,7 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
    * @type {boolean}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
-  readonly title__isnull?: boolean
+  readonly title__isnull?: boolean | null
 
   /**
    * The topic name. To see a list of options go to api/v1/topics/
@@ -12767,7 +12767,7 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
    * @type {boolean}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
-  readonly url__isnull?: boolean
+  readonly url__isnull?: boolean | null
 }
 
 /**

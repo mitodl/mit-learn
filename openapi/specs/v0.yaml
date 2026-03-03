@@ -1344,6 +1344,7 @@ paths:
         name: title__isnull
         schema:
           type: boolean
+          nullable: true
         description: Filter to learning resources where title is null/not null
       - in: query
         name: topic
@@ -1357,6 +1358,7 @@ paths:
         name: url__isnull
         schema:
           type: boolean
+          nullable: true
         description: Filter to learning resources where url is null/not null
       tags:
       - vector_learning_resources_search
