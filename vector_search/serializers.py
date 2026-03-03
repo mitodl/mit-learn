@@ -151,11 +151,13 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
     url__isnull = serializers.BooleanField(
         required=False,
         default=None,
+        allow_null=True,
         help_text="Filter to learning resources where url is null/not null",
     )
     title__isnull = serializers.BooleanField(
         required=False,
         default=None,
+        allow_null=True,
         help_text="Filter to learning resources where title is null/not null",
     )
 
