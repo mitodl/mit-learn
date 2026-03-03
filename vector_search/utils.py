@@ -870,44 +870,79 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
     return count_result.count > 0
 
 
-def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
+def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):  # noqa: C901,PLR0912
     """
-    Generate Qdrant query conditions from query params
-    Args:
-        params (dict): Query params
-    Returns:
-        FieldCondition[]:
-            List of Qdrant FieldCondition objects
+    Return a list of Qdrant FieldCondition objects based on params
     """
-    conditions = []
+    must = []
+    must_not = []
+
     if collection_name == RESOURCES_COLLECTION_NAME:
-        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
+        qdrant_param_map = QDRANT_RESOURCE_PARAM_MAP
     elif collection_name == TOPICS_COLLECTION_NAME:
-        QDRANT_PARAM_MAP = QDRANT_TOPICS_PARAM_MAP
+        qdrant_param_map = QDRANT_TOPICS_PARAM_MAP
     else:
-        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
+        qdrant_param_map = QDRANT_CONTENT_FILE_PARAM_MAP
+
     if not params:
-        return conditions
-    for param in params:
-        if param in QDRANT_PARAM_MAP and params[param] is not None:
-            if type(params[param]) is list:
+        return None
+
+    for param, value in params.items():
+        if value is None:
+            continue
+
+        lookup = None
+        if "__" in param:
+            base_param, lookup = param.split("__", 1)
+        else:
+            base_param = param
+
+        if base_param in qdrant_param_map:
+            qdrant_key = qdrant_param_map[base_param]
+
+            if lookup == "isnull":
+                condition = models.IsNullCondition(
+                    is_null=models.PayloadField(key=qdrant_key)
+                )
+                if value is True:
+                    must.append(condition)
+                else:
+                    must_not.append(condition)
+
+            elif lookup == "isempty":
+                # For isempty, we usually want the base field if it's an array
+                key = qdrant_key.replace("[].name", "")
+                condition = models.IsEmptyCondition(
+                    is_empty=models.PayloadField(key=key)
+                )
+                if value is True:
+                    must.append(condition)
+                else:
+                    must_not.append(condition)
+
+            elif type(value) is list:
                 """
                 Account for array wrapped booleans which should only match value
                 We can also use MatchValue for arrays with a single item
                 """
-                if len(params[param]) == 1 and type(params[param][0]) is bool:
-                    match_condition = models.MatchValue(value=params[param][0])
+                if len(value) == 1 and type(value[0]) is bool:
+                    match_condition = models.MatchValue(value=value[0])
                 else:
-                    match_condition = models.MatchAny(any=params[param])
-            else:
-                match_condition = models.MatchValue(value=params[param])
-            conditions.append(
-                models.FieldCondition(
-                    key=QDRANT_PARAM_MAP[param], match=match_condition
+                    match_condition = models.MatchAny(any=value)
+
+                must.append(
+                    models.FieldCondition(key=qdrant_key, match=match_condition)
                 )
-            )
-    if conditions:
-        return models.Filter(must=conditions)
+            else:
+                must.append(
+                    models.FieldCondition(
+                        key=qdrant_key, match=models.MatchValue(value=value)
+                    )
+                )
+
+    if must or must_not:
+        return models.Filter(must=must, must_not=must_not)
+
     return None
 
 
