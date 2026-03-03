@@ -324,9 +324,9 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       title={course.title ?? ""}
       fullWidth
       confirmText={
-        enrollmentType === "paid"
-          ? null
-          : "Enroll for Free without a certificate"
+        enrollmentType === "free" || enrollmentType === "both"
+          ? "Enroll for Free without a certificate"
+          : null
       }
       onSubmit={async (e) => {
         e.preventDefault()
@@ -367,7 +367,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
         <CertificateUpsell
           course={course}
           courseRun={run}
-          isFreeOnly={enrollmentType === "free"}
+          isFreeOnly={enrollmentType !== "paid" && enrollmentType !== "both"}
         />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>

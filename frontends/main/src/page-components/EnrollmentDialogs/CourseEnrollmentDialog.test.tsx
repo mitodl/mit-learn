@@ -283,11 +283,12 @@ describe("CourseEnrollmentDialog", () => {
         screen.getByText(/Would you like to get a certificate/i),
       ).toBeInTheDocument()
 
-      // Enroll button is disabled with no run selected
-      const enrollButton = screen.getByRole("button", {
-        name: /Enroll for Free without a certificate/i,
-      })
-      expect(enrollButton).toBeDisabled()
+      // Enroll button is hidden until a run is selected
+      expect(
+        screen.queryByRole("button", {
+          name: /Enroll for Free without a certificate/i,
+        }),
+      ).not.toBeInTheDocument()
     })
 
     test("Initial selection is reset when dialog is reopened", async () => {
