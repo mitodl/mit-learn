@@ -42,6 +42,8 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "offered_by": "offered_by.code",
     "delivery": "delivery[].code",
     "resource_category": "resource_category",
+    "title": "title",
+    "url": "url",
 }
 
 
@@ -66,6 +68,8 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
     "delivery[].code": models.PayloadSchemaType.KEYWORD,
     "resource_category": models.PayloadSchemaType.KEYWORD,
+    "url": models.PayloadSchemaType.KEYWORD,
+    "title": models.PayloadSchemaType.KEYWORD,
 }
 
 

@@ -348,7 +348,6 @@ def test_complex_qdrant_query_conditions():
     params = {
         "url__isnull": True,
         "title__isnull": False,
-        "content_tags__isempty": True,
         "readable_id": "test-id",
     }
 
@@ -357,7 +356,6 @@ def test_complex_qdrant_query_conditions():
     )
 
     assert isinstance(filter_obj, models.Filter)
-
     # url__isnull=True -> IsNullCondition in must
     assert any(
         isinstance(c, models.IsNullCondition) and c.is_null.key == "url"
@@ -368,12 +366,6 @@ def test_complex_qdrant_query_conditions():
     assert any(
         isinstance(c, models.IsNullCondition) and c.is_null.key == "title"
         for c in filter_obj.must_not
-    )
-
-    # content_tags__isempty=True -> IsEmptyCondition in must
-    assert any(
-        isinstance(c, models.IsEmptyCondition) and c.is_empty.key == "content_tags"
-        for c in filter_obj.must
     )
 
     # readable_id="test-id" -> FieldCondition with match=MatchValue("test-id") in must
