@@ -17,15 +17,11 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { useQueryClient } from "@tanstack/react-query"
 import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
-  newsEventsKeys,
 } from "api/hooks/newsEvents"
 import type { NewsFeedItem } from "api/v0"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { LocalDate } from "ol-utilities"
 import { linkifyText } from "@/common/utils"
 import { ArticleBanner } from "./ArticleBanner"
@@ -210,6 +206,7 @@ const StoryCard = styled.div`
   border-radius: 8px;
   padding: 16px 16px 16px 24px;
   overflow: hidden;
+  border: 1px solid transparent;
 
   &:hover {
     border-radius: 8px;
@@ -560,16 +557,6 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get("page") ?? "1", 10)
-
-  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
-  const queryClient = useQueryClient()
-
-  // Invalidate cache when feature flag changes
-  React.useEffect(() => {
-    if (showArticleList) {
-      queryClient.invalidateQueries({ queryKey: newsEventsKeys.listRoot() })
-    }
-  }, [showArticleList, queryClient])
 
   const { data: news, isLoading } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],

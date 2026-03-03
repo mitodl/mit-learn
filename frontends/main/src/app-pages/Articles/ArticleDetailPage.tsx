@@ -4,6 +4,7 @@ import React from "react"
 import { useArticleDetailRetrieve } from "api/hooks/articles"
 import { LoadingSpinner, styled } from "ol-components"
 import { ArticleEditor } from "@/page-components/TiptapEditor/ArticleEditor"
+import { notFound } from "next/navigation"
 import { LearningResourceProvider } from "@/page-components/TiptapEditor/extensions/node/LearningResource/LearningResourceDataProvider"
 
 const PageContainer = styled.div({
@@ -34,6 +35,9 @@ export const ArticleDetailPage = ({
         <Spinner color="inherit" loading size={32} />
       </LearningResourceProvider>
     )
+  }
+  if (!article) {
+    return notFound()
   }
 
   return (
