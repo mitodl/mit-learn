@@ -806,15 +806,7 @@ def vector_search(
 
     client = qdrant_client()
     encoder = dense_encoder()
-    qdrant_conditions = qdrant_query_conditions(
-        params, collection_name=search_collection
-    )
-
-    search_filter = models.Filter(
-        must=[
-            *qdrant_conditions,
-        ]
-    )
+    search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     if query_string:
         search_params = {
             "collection_name": search_collection,
@@ -873,9 +865,7 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
     client = qdrant_client()
     count_result = client.count(
         collection_name=collection_name,
-        count_filter=models.Filter(
-            must=qdrant_query_conditions(document, collection_name=collection_name)
-        ),
+        count_filter=qdrant_query_conditions(document, collection_name=collection_name),
     )
     return count_result.count > 0
 
@@ -916,7 +906,9 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
                     key=QDRANT_PARAM_MAP[param], match=match_condition
                 )
             )
-    return conditions
+    if conditions:
+        return models.Filter(must=conditions)
+    return None
 
 
 def filter_existing_qdrant_points_by_ids(
@@ -1003,13 +995,7 @@ def remove_points_matching_params(
         """
         client.delete(
             collection_name=collection_name,
-            points_selector=models.FilterSelector(
-                filter=models.Filter(
-                    must=[
-                        *qdrant_conditions,
-                    ]
-                )
-            ),
+            points_selector=qdrant_conditions,
         )
 
 
@@ -1023,11 +1009,9 @@ def retrieve_points_matching_params(
     Retrieve points from Qdrant matching params and yield them one by one.
     """
     client = qdrant_client()
-    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
-    if not qdrant_conditions:
+    search_filter = qdrant_query_conditions(params, collection_name=collection_name)
+    if not search_filter:
         return
-
-    search_filter = models.Filter(must=qdrant_conditions)
 
     next_page_offset = None
 
