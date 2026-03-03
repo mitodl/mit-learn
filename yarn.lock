@@ -3514,13 +3514,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz":
-  version: 2026.2.23
-  resolution: "@mitodl/mitxonline-api-axios@https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
+"@mitodl/mitxonline-api-axios@npm:^2026.3.3":
+  version: 2026.3.3
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.3.3"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/f750bbf32fe6cbebc5acca6c60e8bcf034eda3618957372f0b920ad42b121fee9c254fa10f1e0321f237a4ed1657b0b1c76638dfc337c81f2e55dfb63dee5606
+  checksum: 10/cdc7283dce5067141851d7a3969086f733132f3fadda8e843a169ae06bc2b97154c53008c3c3aa599ba45756649b9241efc7315a9a7bd705f46817480dfa8b69
   languageName: node
   linkType: hard
 
@@ -8863,7 +8863,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.3"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -16058,7 +16058,7 @@ __metadata:
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.1"
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/refs/heads/jkachel/fix-program-serializers-missing-modes-rebased/src/typescript/mitxonline-api-axios/package.tgz"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.3"
     "@mitodl/smoot-design": "npm:^6.24.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
