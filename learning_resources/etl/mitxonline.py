@@ -153,23 +153,30 @@ def extract_courses():
     return []
 
 
-def parse_prices(parent_data: dict) -> list[dict]:
+def parse_prices(
+    parent_data: dict, mode_data: list, *, fully_enrollable: bool = True
+) -> list[dict]:
     """
-    Return a list of unique prices for a course/program.
-    $0.00 (free) is always included for the non-certificate option.
-    Other prices come from the parent course/program's min_price & max_price fields.
+    Return a list of unique prices for a course/program run.
     """
     free_price_str = "0.00"
-    return [
+    if not fully_enrollable or (
+        not parent_data.get("min_price") and not parent_data.get("max_price")
+    ):
+        return [transform_price(Decimal(free_price_str))]
+
+    prices = [
         transform_price(price)
         for price in sorted(
             {
-                Decimal(free_price_str),
                 Decimal(parent_data.get("min_price") or free_price_str),
                 Decimal(parent_data.get("max_price") or free_price_str),
             }
         )
     ]
+    if "audit" in [mode.get("mode_slug") for mode in mode_data]:
+        prices.append(transform_price(Decimal(free_price_str)))
+    return prices
 
 
 def parse_departments(departments_data: list[dict or str]) -> list[str]:
@@ -257,7 +264,12 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices": parse_prices(course) if fully_enrollable else [],
+        "enrollment_modes": course_run.get("enrollment_modes", []),
+        "prices": parse_prices(
+            course,
+            course_run.get("enrollment_modes", []),
+            fully_enrollable=fully_enrollable,
+        ),
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)
@@ -435,7 +447,11 @@ def transform_programs(programs: list[dict]) -> list[dict]:
                     "description": clean_data(
                         parse_page_attribute(program, "description")
                     ),
-                    "prices": parse_prices(program),
+                    "prices": parse_prices(
+                        program,
+                        program.get("enrollment_modes", []),
+                        fully_enrollable=True,
+                    ),
                     "status": RunStatus.current.value
                     if parse_page_attribute(program, "page_url")
                     else RunStatus.archived.value,

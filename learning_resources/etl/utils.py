@@ -1084,17 +1084,21 @@ def transform_delivery(resource_delivery: str) -> list[str]:
 
 
 def parse_certification(offeror, runs_data):
-    """Return true/false depending on offeror and run status"""
+    """Return true/false depending on offeror, run status, and enrollment modes"""
     if offeror != OfferedBy.mitx.name:
         return False
-    return bool(
-        [
-            status
-            for status in [
-                run.get("status") for run in runs_data if run.get("published", True)
-            ]
-            if (status and status != RunStatus.archived.value)
-        ]
+    return any(
+        run.get("status")
+        and run.get("status") != RunStatus.archived.value
+        and (
+            "enrollment_modes" not in run
+            or any(
+                mode.get("mode_slug") == "verified"
+                for mode in run.pop("enrollment_modes", [])
+            )
+        )
+        for run in runs_data
+        if run.get("published", True)
     )
 
 
