@@ -197,7 +197,7 @@ const getContextMenuItems = (
   if (resource.type === DashboardType.CourseRunEnrollment) {
     const detailsUrl = useProductPages
       ? coursePageView(resource.data.run.course.readable_id)
-      : resource.data.run.course.page?.page_url
+      : mitxonlineUrl(`/courses/${resource.data.run.course.readable_id}`)
 
     const courseMenuItems = []
 
