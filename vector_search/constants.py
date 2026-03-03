@@ -72,6 +72,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
 QDRANT_CONTENT_FILE_INDEXES = {
     "chunk_number": models.PayloadSchemaType.INTEGER,
     "key": models.PayloadSchemaType.KEYWORD,
+    "title": models.PayloadSchemaType.KEYWORD,
     "course_number": models.PayloadSchemaType.INTEGER,
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
