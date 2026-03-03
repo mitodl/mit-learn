@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 0.55.8 (Released February 27, 2026)
+--------------
+
+- hardcode allowing to embed videos from ovs (#2987)
+
+Version 0.55.7 (Released February 26, 2026)
+--------------
+
+- fix: Add back langchain-litellm dependency
+- chore: migrate from poetry/pip to uv for dependency management (#2975)
+- Fix contextwindow exceeded error when summarizing large transcripts (#2960)
+
+Version 0.55.6 (Released February 26, 2026)
+--------------
+
+- Make micromasters a searchable term (#2967)
+- Support multiple elective sections on program page (#2972)
+
+Version 0.55.5 (Released February 25, 2026)
+--------------
+
+- program dashboard course enrollment (#2961)
+
 Version 0.55.4 (Released February 24, 2026)
 --------------
 

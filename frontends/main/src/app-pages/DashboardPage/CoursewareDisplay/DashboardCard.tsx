@@ -58,7 +58,7 @@ export const DashboardType = {
 } as const
 export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 
-type DashboardResource =
+export type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
   | { type: "program-enrollment"; data: V3UserProgramEnrollment }

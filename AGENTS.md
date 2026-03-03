@@ -44,17 +44,17 @@ Run inside Docker containers with `docker compose`:
 
 ```bash
 # Run all tests (parallel)
-docker compose run --rm web poetry run pytest -n logical
+docker compose run --rm web uv run pytest -n logical
 
 # Run specific test file
-docker compose run --rm web poetry run pytest learning_resources/models_test.py
+docker compose run --rm web uv run pytest learning_resources/models_test.py
 
 # Run specific test
-docker compose run --rm web poetry run pytest learning_resources/models_test.py::test_name -v
+docker compose run --rm web uv run pytest learning_resources/models_test.py::test_name -v
 
 # Lint and format with ruff
-docker compose run --rm web poetry run ruff format .
-docker compose run --rm web poetry run ruff check . --fix
+docker compose run --rm web uv run ruff format .
+docker compose run --rm web uv run ruff check . --fix
 
 # Run Django management commands
 docker compose run --rm web python manage.py <command>

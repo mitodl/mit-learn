@@ -16,6 +16,7 @@ from learning_resources_search.connection import (
     get_vector_model_id,
 )
 from learning_resources_search.constants import (
+    CERTIFICATION_TYPE_QUERY_FIELDS,
     CONTENT_FILE_TYPE,
     COURSE_QUERY_FIELDS,
     COURSE_TYPE,
@@ -29,6 +30,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_TYPES,
     RESOURCEFILE_QUERY_FIELDS,
     RUN_INSTRUCTORS_QUERY_FIELDS,
+    RUN_LEVEL_QUERY_FIELDS,
     RUNS_QUERY_FIELDS,
     SEARCH_FILTERS,
     SOURCE_EXCLUDED_FIELDS,
@@ -300,6 +302,18 @@ def generate_learning_resources_text_clause(
                 },
                 {
                     "nested": {
+                        "path": "certification_type",
+                        "query": {
+                            query_type: {
+                                "query": text,
+                                "fields": CERTIFICATION_TYPE_QUERY_FIELDS,
+                                **extra_params,
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
                         "path": "course.course_numbers",
                         "query": {
                             query_type: {
@@ -332,7 +346,24 @@ def generate_learning_resources_text_clause(
                                     query_type: {
                                         "query": text,
                                         "fields": RUN_INSTRUCTORS_QUERY_FIELDS,
-                                        "type": "best_fields",
+                                        **extra_params,
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "runs",
+                        "query": {
+                            "nested": {
+                                "path": "runs.level",
+                                "query": {
+                                    query_type: {
+                                        "query": text,
+                                        "fields": RUN_LEVEL_QUERY_FIELDS,
+                                        **extra_params,
                                     }
                                 },
                             }

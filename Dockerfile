@@ -25,25 +25,17 @@ RUN mkdir /src && \
     adduser --disabled-password --gecos "" mitodl && \
     mkdir /var/media && chown -R mitodl:mitodl /var/media
 
-FROM system AS poetry
+FROM system AS uv
 
-## Set some poetry and python config
+## Set some python config
 ENV  \
   PYTHONUNBUFFERED=1 \
   PYTHONDONTWRITEBYTECODE=1 \
-  PIP_DISABLE_PIP_VERSION_CHECK=on \
-  POETRY_NO_INTERACTION=1 \
-  POETRY_VERSION=2.1.3 \
-  POETRY_VIRTUALENVS_CREATE=true \
-  POETRY_CACHE_DIR='/tmp/cache/poetry' \
-  POETRY_HOME='/home/mitodl/.local' \
-  VIRTUAL_ENV='/opt/venv'
-ENV PATH="$VIRTUAL_ENV/bin:$POETRY_HOME/bin:$PATH"
+  UV_PROJECT_ENVIRONMENT='/opt/venv'
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install poetry
-RUN pip install --no-cache-dir "poetry==$POETRY_VERSION"
-
-
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Install Chromium (commented out lines illustrate the syntax for getting specific chromium versions)
 RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
@@ -61,22 +53,14 @@ RUN apt-get update -qqy \
   && apt-get -qqy install chromium-driver \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 COPY pyproject.toml /src
-COPY poetry.lock /src
-RUN chown -R mitodl:mitodl /src && \
-    mkdir ${VIRTUAL_ENV} && chown -R mitodl:mitodl ${VIRTUAL_ENV}
+COPY uv.lock /src
+RUN mkdir -p /opt/venv && chown -R mitodl:mitodl /src /opt/venv
 
-## Install poetry itself, and pre-create a venv with predictable name
 USER mitodl
-RUN curl -sSL https://install.python-poetry.org \
-  | \
-  POETRY_VERSION=${POETRY_VERSION} \
-  POETRY_HOME=${POETRY_HOME} \
-  python3 -q
 WORKDIR /src
-RUN python3 -m venv $VIRTUAL_ENV
-RUN poetry install && rm -rf /tmp/cache
+RUN uv sync --frozen --no-install-project
 
-FROM poetry AS code
+FROM uv AS code
 
 # Add project
 USER root
