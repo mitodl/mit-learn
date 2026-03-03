@@ -17,6 +17,9 @@ import {
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
+import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useRouter } from "next-nprogress-bar"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -50,8 +53,13 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
   const replaceBasketItem = useReplaceBasketItem()
+  const createEnrollment = useCreateEnrollment()
+  const router = useRouter()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
+
+  const enrollableRuns = course.courseruns.filter((run) => run.is_enrollable)
+  const hasMultipleRuns = enrollableRuns.length > 1
 
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
@@ -74,16 +82,22 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
 
-  const { isPending, isError } = replaceBasketItem
+  const isPending = replaceBasketItem.isPending || createEnrollment.isPending
+  const isError = replaceBasketItem.isError || createEnrollment.isError
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      if (enrollmentType === "paid" && product) {
-        replaceBasketItem.mutate(product.id)
-      } else {
+      if (enrollmentType === "both" || hasMultipleRuns) {
         NiceModal.show(CourseEnrollmentDialog, { course })
+      } else if (enrollmentType === "paid" && product) {
+        replaceBasketItem.mutate(product.id)
+      } else if (nextRun) {
+        createEnrollment.mutate(
+          { run_id: nextRun.id },
+          { onSuccess: () => router.push(DASHBOARD_HOME) },
+        )
       }
     } else {
       setAnchor(e.currentTarget)

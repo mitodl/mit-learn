@@ -13,6 +13,7 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
+import { DASHBOARD_HOME } from "@/common/urls"
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -262,38 +263,146 @@ describe("CourseEnrollmentButton", () => {
     expect(button).toBeInTheDocument()
   })
 
-  test.each([
-    {
-      label: "free-only",
-      modeOverrides: [{ requires_payment: false }],
-    },
-    {
-      label: "both",
-      modeOverrides: [{ requires_payment: false }, { requires_payment: true }],
-    },
-  ])(
-    "Clicking 'Enroll for Free' opens enrollment dialog ($label)",
-    async ({ modeOverrides }) => {
-      const run = makeRun({
-        is_archived: false,
-        is_enrollable: true,
-        enrollment_modes: modeOverrides.map((m) => makeEnrollmentMode(m)),
-      })
-      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+  test("Clicking 'Enroll for Free' opens enrollment dialog (both, 1 run)", async () => {
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [
+        makeEnrollmentMode({ requires_payment: false }),
+        makeEnrollmentMode({ requires_payment: true }),
+      ],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
-      setMockResponse.get(
-        urls.userMe.get(),
-        makeUser({ is_authenticated: true }),
-      )
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
 
-      renderWithProviders(<CourseEnrollmentButton course={course} />)
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
 
-      const button = await screen.findByRole("button", { name: ENROLL_FREE })
-      await user.click(button)
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    await user.click(button)
 
-      await screen.findByRole("dialog", { name: course.title })
-    },
-  )
+    await screen.findByRole("dialog", { name: course.title })
+  })
+
+  test("Opens enrollment dialog when multiple runs are available (free-only, 2 runs)", async () => {
+    const run1 = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const run2 = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const course = makeCourse({
+      next_run_id: run1.id,
+      courseruns: [run1, run2],
+    })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    await user.click(button)
+
+    await screen.findByRole("dialog", { name: course.title })
+  })
+
+  test("Opens enrollment dialog when multiple runs are available (paid-only, 2 runs)", async () => {
+    const product = makeProduct({ price: "500" })
+    const run1 = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [product],
+    })
+    const run2 = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [makeProduct({ price: "500" })],
+    })
+    const course = makeCourse({
+      next_run_id: run1.id,
+      courseruns: [run1, run2],
+    })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", {
+      name: "Enroll Now—$500",
+    })
+    await user.click(button)
+
+    await screen.findByRole("dialog", { name: course.title })
+  })
+
+  test("Non-enrollable runs are ignored: 2 runs but only 1 enrollable takes direct action", async () => {
+    const enrollableRun = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const nonEnrollableRun = makeRun({
+      is_archived: false,
+      is_enrollable: false,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [makeProduct({ price: "500" })],
+    })
+    const course = makeCourse({
+      next_run_id: enrollableRun.id,
+      courseruns: [enrollableRun, nonEnrollableRun],
+    })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const enrollUrl = mitxUrls.enrollment.enrollmentsListV1()
+    setMockResponse.post(enrollUrl, {})
+
+    const { location } = renderWithProviders(
+      <CourseEnrollmentButton course={course} />,
+    )
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+    })
+
+    // No dialog should have opened despite 2 total runs
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  test("Free-only, 1 run: clicking enrolls directly and redirects to dashboard home", async () => {
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+    const enrollUrl = mitxUrls.enrollment.enrollmentsListV1()
+    setMockResponse.post(enrollUrl, {})
+
+    const { location } = renderWithProviders(
+      <CourseEnrollmentButton course={course} />,
+    )
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+    })
+
+    // No dialog should have opened
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
 
   test("Shows signup popover for anonymous users", async () => {
     const run = makeRun({

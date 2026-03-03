@@ -323,7 +323,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={course.title ?? ""}
       fullWidth
-      confirmText="Enroll for Free without a certificate"
+      confirmText={
+        enrollmentType === "paid"
+          ? null
+          : "Enroll for Free without a certificate"
+      }
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return

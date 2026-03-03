@@ -19,13 +19,15 @@ interface FormDialogProps {
    */
   title: string
   /**
-   * Content (e.g., text) of confirm button in DialogActions
+   * Sets the text for the cancel button. If `null`, the cancel button is not
+   * rendered.
    */
-  confirmText?: string
+  cancelText?: string | null
   /**
-   * Content (e.g., text) of cancel button in DialogActions
+   * Sets the text for the confirm button. If `null`, the confirm button is not
+   * rendered.
    */
-  cancelText?: string
+  confirmText?: string | null
   /**
    * Called when modal is closed.
    */
