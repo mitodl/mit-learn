@@ -462,13 +462,39 @@ def test_program_run_start_date_value(  # noqa: PLR0913
 @pytest.mark.parametrize(
     ("min_price", "max_price", "mode_data", "fully_enrollable", "expected"),
     [
-        (None, 100, [{"mode_slug": "audit"}], True, [0, 100, 0]),
-        (100, 1000, [{"mode_slug": "audit"}], True, [100, 1000, 0]),
-        (99.99, 3000, [{"mode_slug": "audit"}], True, [99.99, 3000, 0]),
-        (9.99, None, [{"mode_slug": "audit"}], True, [0, 9.99, 0]),
+        # Both modes: verified prices + free for audit
+        (
+            100,
+            1000,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [100, 1000, 0],
+        ),
+        (
+            None,
+            100,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [0, 100, 0],
+        ),
+        (
+            9.99,
+            None,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [0, 9.99, 0],
+        ),
+        # Audit only: free only (no verified prices)
+        (100, 1000, [{"mode_slug": "audit"}], True, [0]),
+        (99.99, 3000, [{"mode_slug": "audit"}], True, [0]),
+        # Verified only: verified prices, no free
         (100, 1000, [{"mode_slug": "verified"}], True, [100, 1000]),
-        (100, 1000, [], True, [100, 1000]),
+        # No modes: fallback to free
+        (100, 1000, [], True, [0]),
+        # Not fully enrollable: always free
+        (100, 1000, [{"mode_slug": "verified"}, {"mode_slug": "audit"}], False, [0]),
         (100, 1000, [{"mode_slug": "audit"}], False, [0]),
+        # No prices set: always free regardless of modes
         (None, None, [{"mode_slug": "audit"}], True, [0]),
         (None, None, [{"mode_slug": "verified"}], True, [0]),
     ],
@@ -479,6 +505,122 @@ def test_parse_prices(min_price, max_price, mode_data, fully_enrollable, expecte
     assert parse_prices(program_data, mode_data, fully_enrollable=fully_enrollable) == [
         {"amount": float(price), "currency": CURRENCY_USD} for price in expected
     ]
+
+
+@pytest.mark.parametrize(
+    ("enrollment_modes", "expected_prices"),
+    [
+        # Both modes: verified prices + free audit price
+        (
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            [100, 200, 0],
+        ),
+        # Audit only: free only
+        (
+            [{"mode_slug": "audit"}],
+            [0],
+        ),
+        # Verified only: verified prices, no free
+        (
+            [{"mode_slug": "verified"}],
+            [100, 200],
+        ),
+        # No modes: free only
+        (
+            [],
+            [0],
+        ),
+    ],
+)
+def test_transform_run_prices_by_enrollment_mode(
+    mocker, enrollment_modes, expected_prices
+):
+    """Test that run prices reflect enrollment modes correctly"""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    course = {
+        "min_price": 100,
+        "max_price": 200,
+        "page": {
+            "page_url": "/courses/test/",
+            "live": True,
+            "description": "Test",
+            "feature_image_src": None,
+            "instructors": [],
+        },
+        "availability": "dated",
+        "duration": "",
+        "time_commitment": "",
+        "min_weeks": None,
+        "max_weeks": None,
+        "min_weekly_hours": None,
+        "max_weekly_hours": None,
+    }
+    run = {
+        "title": "Test Run",
+        "courseware_id": "course-v1:MITxT+TEST+1T2024",
+        "start_date": "2024-01-01T00:00:00Z",
+        "end_date": "2024-06-01T00:00:00Z",
+        "enrollment_start": "2023-12-01T00:00:00Z",
+        "enrollment_end": "2024-05-01T00:00:00Z",
+        "is_enrollable": True,
+        "is_self_paced": False,
+        "enrollment_modes": enrollment_modes,
+        "page": {},
+    }
+    result = _transform_run(run, course)
+    assert result["prices"] == [
+        {"amount": float(p), "currency": CURRENCY_USD} for p in expected_prices
+    ]
+
+
+def test_transform_run_prices_not_fully_enrollable(mocker):
+    """Test that non-enrollable runs always get free-only prices regardless of modes"""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    course = {
+        "min_price": 100,
+        "max_price": 200,
+        "page": {
+            "page_url": "/courses/test/",
+            "live": True,
+            "description": "Test",
+            "feature_image_src": None,
+            "instructors": [],
+        },
+        "availability": "dated",
+        "duration": "",
+        "time_commitment": "",
+        "min_weeks": None,
+        "max_weeks": None,
+        "min_weekly_hours": None,
+        "max_weekly_hours": None,
+    }
+    free_price = [{"amount": 0.0, "currency": CURRENCY_USD}]
+    for modes in (
+        [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+        [{"mode_slug": "audit"}],
+        [{"mode_slug": "verified"}],
+        [],
+    ):
+        run = {
+            "title": "Test Run",
+            "courseware_id": "course-v1:MITxT+TEST+1T2024",
+            "start_date": "2024-01-01T00:00:00Z",
+            "end_date": "2024-06-01T00:00:00Z",
+            "enrollment_start": "2023-12-01T00:00:00Z",
+            "enrollment_end": "2024-05-01T00:00:00Z",
+            "is_enrollable": False,
+            "is_self_paced": False,
+            "enrollment_modes": modes,
+            "page": {},
+        }
+        result = _transform_run(run, course)
+        assert result["prices"] == free_price, (
+            f"Expected free-only prices for non-enrollable run with modes {modes}"
+        )
 
 
 @pytest.mark.parametrize(

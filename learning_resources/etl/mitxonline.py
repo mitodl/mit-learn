@@ -159,24 +159,31 @@ def parse_prices(
     """
     Return a list of unique prices for a course/program run.
     """
-    free_price_str = "0.00"
+    free_price = transform_price(Decimal("0.00"))
+    mode_slugs = [mode.get("mode_slug") for mode in mode_data]
+    has_verified = "verified" in mode_slugs
+    has_audit = "audit" in mode_slugs
+
     if not fully_enrollable or (
         not parent_data.get("min_price") and not parent_data.get("max_price")
     ):
-        return [transform_price(Decimal(free_price_str))]
+        return [free_price]
 
-    prices = [
-        transform_price(price)
-        for price in sorted(
-            {
-                Decimal(parent_data.get("min_price") or free_price_str),
-                Decimal(parent_data.get("max_price") or free_price_str),
-            }
-        )
-    ]
-    if "audit" in [mode.get("mode_slug") for mode in mode_data]:
-        prices.append(transform_price(Decimal(free_price_str)))
-    return prices
+    prices = []
+    if has_verified:
+        prices = [
+            transform_price(price)
+            for price in sorted(
+                {
+                    Decimal(parent_data.get("min_price") or "0.00"),
+                    Decimal(parent_data.get("max_price") or "0.00"),
+                }
+            )
+        ]
+    if has_audit:
+        prices.append(free_price)
+
+    return prices or [free_price]
 
 
 def parse_departments(departments_data: list[dict or str]) -> list[str]:
