@@ -144,12 +144,15 @@ const SidebarImage = styled(Image)(({ theme }) => ({
 const SidebarMedia: React.FC<{
   videoUrl?: string | null
   imageSrc: string
+  title: string
   priority?: boolean
-}> = ({ videoUrl, imageSrc, priority }) => {
+}> = ({ videoUrl, imageSrc, title, priority }) => {
   if (videoUrl) {
     const embedUrl = convertToEmbedUrl(videoUrl)
     if (embedUrl) {
-      return <SidebarVideo src={embedUrl} title="" allowFullScreen />
+      return (
+        <SidebarVideo src={embedUrl} title={`${title} video`} allowFullScreen />
+      )
     }
   }
   return (
@@ -240,7 +243,12 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             </TitleBox>
           </MainCol>
           <SidebarCol showAbove="md" alignSelf="flex-end">
-            <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} priority />
+            <SidebarMedia
+              videoUrl={videoUrl}
+              imageSrc={imageSrc}
+              title={title}
+              priority
+            />
           </SidebarCol>
         </TopContainer>
       </BannerBackground>
@@ -265,14 +273,22 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               {sidebarSummary}
               <Stack gap="16px">
-                <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} />
+                <SidebarMedia
+                  videoUrl={videoUrl}
+                  imageSrc={imageSrc}
+                  title={title}
+                />
                 {enrollButton}
               </Stack>
             </SummaryRoot>
           </Show>
           <SidebarCol showBelow="sm" alignSelf="center">
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarMedia videoUrl={videoUrl} imageSrc={imageSrc} />
+              <SidebarMedia
+                videoUrl={videoUrl}
+                imageSrc={imageSrc}
+                title={title}
+              />
               {enrollButton}
               {sidebarSummary}
             </SummaryRoot>
