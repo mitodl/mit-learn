@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.56.4
+--------------
+
+- Learning resource views ETL fix (#2993)
+- fix: make direct call to cdn purge (#2983)
+- backend for standardizing learning material resources - articles, videos, documents (#2965)
+
 Version 0.56.1 (Released March 02, 2026)
 --------------
 
