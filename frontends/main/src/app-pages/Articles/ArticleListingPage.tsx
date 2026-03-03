@@ -24,10 +24,8 @@ import {
   newsEventsKeys,
 } from "api/hooks/newsEvents"
 import type { NewsFeedItem } from "api/v0"
-import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
 import { linkifyText } from "@/common/utils"
 import { ArticleBanner } from "./ArticleBanner"
@@ -566,8 +564,6 @@ const ArticleListingPage: React.FC = () => {
   const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
   const queryClient = useQueryClient()
 
-  const flagsLoaded = useFeatureFlagsLoaded()
-
   // Invalidate cache when feature flag changes
   React.useEffect(() => {
     if (showArticleList) {
@@ -589,13 +585,6 @@ const ArticleListingPage: React.FC = () => {
   const mainStory =
     page === 1 && stories.length > 0 ? (stories[0] as NewsFeedItem) : null
   const gridStories = page === 1 ? stories.slice(1) : stories
-
-  if (!flagsLoaded && showArticleList === undefined) {
-    return <LoadingSpinner loading={!flagsLoaded} />
-  }
-  if (!showArticleList) {
-    return notFound()
-  }
 
   return (
     <>
