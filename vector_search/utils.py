@@ -874,8 +874,6 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params
     """
-    if not params:
-        return None
 
     collection_param_map = {
         RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
@@ -883,7 +881,8 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
         CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
     }
     qdrant_param_map = collection_param_map.get(collection_name)
-
+    if not params or not qdrant_param_map:
+        return None
     must = []
     must_not = []
 
