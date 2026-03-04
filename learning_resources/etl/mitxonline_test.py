@@ -800,3 +800,61 @@ def test_is_fully_enrollable(mocker, run_data, expected):
     mock_now = datetime(2023, 6, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
     assert is_fully_enrollable(run_data) == expected
+
+
+@pytest.mark.parametrize(
+    ("enrollment_modes", "expected"),
+    [
+        (
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "verified"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "audit"}],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+        (
+            [],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+    ],
+)
+def test_transform_program_certification_by_enrollment_modes(
+    mocker,
+    mock_mitxonline_programs_data,
+    mock_mitxonline_courses_data,
+    enrollment_modes,
+    expected,
+):
+    """Test that program certification and certification_type depend on
+    whether enrollment_modes includes 'verified'.
+    """
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    program = mock_mitxonline_programs_data["results"][0].copy()
+    program["page"] = {**program["page"]}
+    program["page"]["page_url"] = "/programs/test/"
+    program["page"]["live"] = True
+    program["certificate_type"] = "Certificate of Completion"
+    program["enrollment_modes"] = enrollment_modes
+
+    results = list(transform_programs([program]))
+    result = results[0]
+
+    assert result["certification"] is expected["certification"]
+    assert result["certification_type"] == expected["certification_type"]
