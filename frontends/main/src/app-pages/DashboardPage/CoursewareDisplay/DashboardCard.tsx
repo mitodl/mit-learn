@@ -35,7 +35,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import { mitxonlineUrl } from "@/common/mitxonline"
-import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -527,20 +527,14 @@ const UpgradeBanner: React.FC<
   onError,
   ...others
 }) => {
-  const addToBasket = useAddToBasket()
-  const clearBasket = useClearBasket()
+  const replaceBasketItem = useReplaceBasketItem()
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     if (!productId) return
 
     try {
-      // Reset mutation state to allow retry after error
-      addToBasket.reset()
-      clearBasket.reset()
-
-      await clearBasket.mutateAsync()
-      await addToBasket.mutateAsync(productId)
+      await replaceBasketItem.mutateAsync(productId)
     } catch (error) {
       onError?.(error as Error)
     }
