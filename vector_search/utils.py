@@ -1015,7 +1015,9 @@ def remove_points_matching_params(
         """
         client.delete(
             collection_name=collection_name,
-            points_selector=qdrant_conditions,
+            points_selector=models.FilterSelector(
+                filter=qdrant_conditions,
+            ),
         )
 
 
