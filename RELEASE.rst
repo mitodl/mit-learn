@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.56.5 (Released March 04, 2026)
+--------------
+
+- feat: video thumbnail for product page sidebar (#2992)
+- remove dependency on Wagtail page_url from MITx Online (#3008)
+- Product pages, Purchasable Programs + enrollment_modes (#2995)
+
 Version 0.56.4 (Released March 04, 2026)
 --------------
 
