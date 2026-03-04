@@ -169,20 +169,18 @@ def parse_prices(
     ):
         return [free_price]
 
-    prices = []
+    price_set = set()
     if has_verified:
-        prices = [
-            transform_price(price)
-            for price in sorted(
-                {
-                    Decimal(parent_data.get("min_price") or "0.00"),
-                    Decimal(parent_data.get("max_price") or "0.00"),
-                }
-            )
-        ]
+        price_set.update(
+            {
+                Decimal(parent_data.get("min_price") or "0.00"),
+                Decimal(parent_data.get("max_price") or "0.00"),
+            }
+        )
     if has_audit:
-        prices.append(free_price)
+        price_set.add(Decimal("0.00"))
 
+    prices = [transform_price(price) for price in sorted(price_set)]
     return prices or [free_price]
 
 

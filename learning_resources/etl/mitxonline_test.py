@@ -462,27 +462,27 @@ def test_program_run_start_date_value(  # noqa: PLR0913
 @pytest.mark.parametrize(
     ("min_price", "max_price", "mode_data", "fully_enrollable", "expected"),
     [
-        # Both modes: verified prices + free for audit
+        # Both modes: verified prices + free for audit (deduplicated, sorted)
         (
             100,
             1000,
             [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             True,
-            [100, 1000, 0],
+            [0, 100, 1000],
         ),
         (
             None,
             100,
             [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             True,
-            [0, 100, 0],
+            [0, 100],
         ),
         (
             9.99,
             None,
             [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             True,
-            [0, 9.99, 0],
+            [0, 9.99],
         ),
         # Audit only: free only (no verified prices)
         (100, 1000, [{"mode_slug": "audit"}], True, [0]),
@@ -510,10 +510,10 @@ def test_parse_prices(min_price, max_price, mode_data, fully_enrollable, expecte
 @pytest.mark.parametrize(
     ("enrollment_modes", "expected_prices"),
     [
-        # Both modes: verified prices + free audit price
+        # Both modes: verified prices + free audit price (deduplicated, sorted)
         (
             [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
-            [100, 200, 0],
+            [0, 100, 200],
         ),
         # Audit only: free only
         (
