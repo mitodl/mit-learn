@@ -361,7 +361,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                     "school"
                 ),
             ),
-            "content_tags",
+            "resource_tags",
             Prefetch(
                 "runs",
                 queryset=LearningResourceRun.objects.filter(published=True)
@@ -393,6 +393,44 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 "views",
                 queryset=LearningResourceViewEvent.objects.all(),
                 to_attr="_views",
+            ),
+            Prefetch(
+                "direct_content_files",
+                queryset=ContentFile.objects.prefetch_related(
+                    "learning_resource__course",
+                    "learning_resource__platform",
+                    "run__learning_resource__course",
+                    "run__learning_resource__platform",
+                    "content_tags",
+                    Prefetch(
+                        "learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
+                        ),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
+                        ),
+                    ),
+                ),
             ),
             *LearningResourceDetailModel.get_subclass_prefetches(),
         ).select_related("image", "platform")
@@ -446,12 +484,13 @@ class LearningResource(TimestampedModel):
         db_index=True,
         choices=((member.name, member.value) for member in LearningResourceType),
     )
+    resource_category = models.CharField(max_length=256)
     topics = models.ManyToManyField(LearningResourceTopic)
     ocw_topics = ArrayField(models.CharField(max_length=128), default=list, blank=True)
     offered_by = models.ForeignKey(
         LearningResourceOfferor, null=True, on_delete=models.SET_NULL
     )
-    content_tags = models.ManyToManyField(LearningResourceContentTag)
+    resource_tags = models.ManyToManyField(LearningResourceContentTag)
     resources = models.ManyToManyField(
         "self", through="LearningResourceRelationship", symmetrical=False, blank=True
     )
@@ -1005,6 +1044,13 @@ class ContentFile(TimestampedModel):
         blank=True,
         null=True,
     )
+    direct_learning_resource = models.ForeignKey(
+        LearningResource,
+        related_name="direct_content_files",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
     learning_resource = models.ForeignKey(
         LearningResource,
         related_name="resource_content_files",
@@ -1043,13 +1089,16 @@ class ContentFile(TimestampedModel):
     edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
+    duration = models.CharField(max_length=11, null=True, blank=True)  # noqa: DJ001
 
     def save(self, **kwargs):
         self.checksum = checksum_for_content(self.content)
         super().save(**kwargs)
 
     class Meta:
-        unique_together = (("key", "run"),)
+        unique_together = (
+            ("key", "run", "learning_resource", "direct_learning_resource"),
+        )
         verbose_name = "contentfile"
         # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
@@ -1057,10 +1106,18 @@ class ContentFile(TimestampedModel):
                 check=(
                     models.Q(learning_resource__isnull=False, run__isnull=True)
                     | models.Q(run__isnull=False, learning_resource__isnull=True)
+                    | models.Q(
+                        direct_learning_resource__isnull=False,
+                        learning_resource__isnull=True,
+                        run__isnull=True,
+                    )
                 ),
-                name="run_or_resource_defined",
+                name="direct_learning_resource_run_or_resource_defined",
                 violation_error_message=(
-                    "Either run or learning_resource should be defined (but not both)"
+                    "One of learning_resource, direct_learning_resource,"
+                    " or run must be defined. "
+                    "Both learning_resource and run cannot be defined at the"
+                    " same time."
                 ),
             ),
         ]
@@ -1183,46 +1240,6 @@ class PodcastEpisode(LearningResourceDetailModel):
 
     class Meta:
         ordering = ("id",)
-
-
-class LearningMaterialQuerySet(LearningResourceDetailQuerySet):
-    """QuerySet for LearningMaterial"""
-
-    def for_serialization(self):
-        """Return queryset for serialization"""
-        return self
-
-
-class LearningMaterial(LearningResourceDetailModel):
-    """Data model for course learning materials"""
-
-    objects = LearningMaterialQuerySet.as_manager()
-
-    learning_resource = models.OneToOneField(
-        LearningResource,
-        related_name="learning_material",
-        on_delete=models.CASCADE,
-    )
-
-    content_file = models.OneToOneField(
-        ContentFile,
-        related_name="learning_material",
-        on_delete=models.CASCADE,
-    )
-
-    content_tags = ArrayField(
-        models.CharField(max_length=256, null=False, blank=False), null=True, blank=True
-    )
-
-    content_category = models.CharField(  # noqa: DJ001
-        max_length=128,
-        choices=constants.VALID_COURSE_CONTENT_CATEGORY_CHOICES,
-        null=True,
-        blank=True,
-    )
-
-    def __str__(self):
-        return f"LearningMaterial: {self.learning_resource.readable_id}"
 
 
 class VideoChannel(TimestampedModel):

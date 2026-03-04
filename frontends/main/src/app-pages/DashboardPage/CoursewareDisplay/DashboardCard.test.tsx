@@ -1477,21 +1477,23 @@ describe.each([
     test.each([
       {
         useProductPages: false,
-        description: "uses marketing URLs when feature flag is disabled",
+        description:
+          "uses constructed legacy URL when feature flag is disabled",
+        getExpectedHref: (readableId: string) =>
+          `http://mitxonline.odl.local:8065/courses/${readableId}`,
       },
       {
         useProductPages: true,
         description: "uses product page URLs when feature flag is enabled",
+        getExpectedHref: (readableId: string) => `/courses/${readableId}`,
       },
     ])(
       "Context menu for course enrollment $description",
-      async ({ useProductPages }) => {
+      async ({ useProductPages, getExpectedHref }) => {
         mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
         setupUserApis()
 
-        const marketingUrl = faker.internet.url()
         const course = dashboardCourse({
-          page: { page_url: marketingUrl },
           include_in_learn_catalog: true,
         })
         const run = course.courseruns[0]
@@ -1500,7 +1502,7 @@ describe.each([
           enrollment_mode: EnrollmentMode.Verified,
           run: {
             ...run,
-            course: { ...course, page: { page_url: marketingUrl } },
+            course: { ...course },
           },
         })
 
@@ -1523,16 +1525,10 @@ describe.each([
           name: "View Course Details",
         })
 
-        if (useProductPages) {
-          // Should have product page URL as href
-          expect(viewDetailsItem).toHaveAttribute(
-            "href",
-            `/courses/${course.readable_id}`,
-          )
-        } else {
-          // Should have marketing URL as href
-          expect(viewDetailsItem).toHaveAttribute("href", marketingUrl)
-        }
+        expect(viewDetailsItem).toHaveAttribute(
+          "href",
+          getExpectedHref(course.readable_id),
+        )
       },
     )
 
@@ -1610,96 +1606,55 @@ describe.each([
       )
     })
 
-    test("Context menu for course enrollment without marketing URL shows View Details only when flag is enabled", async () => {
-      setupUserApis()
+    test.each([{ useProductPages: false }, { useProductPages: true }])(
+      "Context menu for course enrollment shows View Details (flag=$useProductPages) using readable_id",
+      async ({ useProductPages }) => {
+        setupUserApis()
 
-      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        enrollment_mode: EnrollmentMode.Verified,
-        run: {
-          ...mitxonline.factories.courses.courseRun(),
-          course: {
-            ...mitxonline.factories.courses.course(),
-            include_in_learn_catalog: true,
+        const course = mitxonline.factories.courses.course({
+          include_in_learn_catalog: true,
+          readable_id: "test-course-readable-id",
+        })
+        const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+          grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+          enrollment_mode: EnrollmentMode.Verified,
+          run: {
+            ...mitxonline.factories.courses.courseRun(),
+            course,
           },
-        },
-      })
-      // Remove the page property to simulate a course without a marketing URL
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (enrollment.run.course as any).page
+        })
 
-      // Test with flag disabled (no marketing URL, no View Details menu item)
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
-      renderWithProviders(
-        <DashboardCard
-          resource={{
-            type: DashboardType.CourseRunEnrollment,
-            data: enrollment,
-          }}
-        />,
-      )
+        mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
+        renderWithProviders(
+          <DashboardCard
+            resource={{
+              type: DashboardType.CourseRunEnrollment,
+              data: enrollment,
+            }}
+          />,
+        )
 
-      const card = getCard()
-      const contextMenuButton = within(card).getByRole("button", {
-        name: "More options",
-      })
-      await user.click(contextMenuButton)
+        const card = getCard()
+        const contextMenuButton = within(card).getByRole("button", {
+          name: "More options",
+        })
+        await user.click(contextMenuButton)
 
-      // Should not have View Course Details when flag is off and no marketing URL
-      expect(
-        screen.queryByRole("menuitem", { name: "View Course Details" }),
-      ).not.toBeInTheDocument()
+        // View Course Details is always present when include_in_learn_catalog=true
+        // (URL is constructed from readable_id, not fetched from Wagtail page_url)
+        expect(
+          screen.getByRole("menuitem", { name: "View Course Details" }),
+        ).toBeInTheDocument()
 
-      // Should still have Email Settings and Unenroll
-      expect(
-        screen.getByRole("menuitem", { name: "Email Settings" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("menuitem", { name: "Unenroll" }),
-      ).toBeInTheDocument()
-    })
-
-    // Separate test for the flag enabled case
-    test("Context menu for course enrollment without marketing URL shows View Details when flag is enabled", async () => {
-      setupUserApis()
-
-      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        enrollment_mode: EnrollmentMode.Verified,
-        run: {
-          ...mitxonline.factories.courses.courseRun(),
-          course: {
-            ...mitxonline.factories.courses.course(),
-            include_in_learn_catalog: true,
-          },
-        },
-      })
-      // Remove the page property to simulate a course without a marketing URL
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (enrollment.run.course as any).page
-
-      // Test with flag enabled
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
-      renderWithProviders(
-        <DashboardCard
-          resource={{
-            type: DashboardType.CourseRunEnrollment,
-            data: enrollment,
-          }}
-        />,
-      )
-
-      const card = getCard()
-      const contextMenuButton = within(card).getByRole("button", {
-        name: "More options",
-      })
-      await user.click(contextMenuButton)
-
-      // Should have View Course Details when flag is on (product pages always exist)
-      expect(
-        screen.getByRole("menuitem", { name: "View Course Details" }),
-      ).toBeInTheDocument()
-    })
+        // Should also have Email Settings and Unenroll
+        expect(
+          screen.getByRole("menuitem", { name: "Email Settings" }),
+        ).toBeInTheDocument()
+        expect(
+          screen.getByRole("menuitem", { name: "Unenroll" }),
+        ).toBeInTheDocument()
+      },
+    )
 
     test("Context menu does not show View Details for courses not in learn catalog", async () => {
       setupUserApis()

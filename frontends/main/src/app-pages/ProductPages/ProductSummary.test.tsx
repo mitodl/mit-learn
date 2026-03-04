@@ -4,6 +4,7 @@ import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
+import { formatPrice } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -12,7 +13,13 @@ const makeRun = factories.courses.courseRun
 const makeCourse = factories.courses.course
 const makeProduct = factories.courses.product
 const makeFlexiblePrice = factories.products.flexiblePrice
+const makeEnrollmentMode = factories.courses.enrollmentMode
 const { RequirementTreeBuilder } = factories.requirements
+
+// Enrollment mode helpers for common test setups
+const freeMode = () => makeEnrollmentMode({ requires_payment: false })
+const paidMode = () => makeEnrollmentMode({ requires_payment: true })
+const bothModes = () => [freeMode(), paidMode()]
 
 describe("CourseSummary", () => {
   test.each([
@@ -139,6 +146,7 @@ describe("CourseSummary", () => {
     test("Displays a single date without 'More Dates' toggle when only one enrollable run", () => {
       const run = makeRun({
         is_enrollable: true,
+        is_archived: false,
         is_self_paced: false,
         start_date: "2026-03-01",
         end_date: "2026-05-01",
@@ -210,12 +218,14 @@ describe("CourseSummary", () => {
       const run2 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
+        is_archived: false,
         start_date: "2026-06-01",
         end_date: "2026-08-01",
       })
       const run3 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
+        is_archived: false,
         start_date: "2026-09-01",
         end_date: "2026-11-01",
       })
@@ -771,7 +781,7 @@ describe("CourseSummary", () => {
         runOverrides: { is_archived: true, products: [makeProduct()] },
       },
     ])("Does not offer certificate if $label", ({ runOverrides }) => {
-      const run = makeRun(runOverrides)
+      const run = makeRun({ ...runOverrides, enrollment_modes: bothModes() })
       const course = makeCourse({
         next_run_id: run.id,
         courseruns: shuffle([run, makeRun()]),
@@ -791,6 +801,7 @@ describe("CourseSummary", () => {
         products: [makeProduct()],
         is_enrollable: true,
         is_upgradable: true,
+        enrollment_modes: bothModes(),
       })
       const course = makeCourse({
         next_run_id: run.id,
@@ -800,7 +811,7 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       expect(priceRow).toHaveTextContent(
-        `Earn a certificate: $${run.products[0].price}`,
+        `Earn a certificate: ${formatPrice(run.products[0].price)}`,
       )
       invariant(run.upgrade_deadline)
       expect(priceRow).toHaveTextContent(
@@ -809,19 +820,67 @@ describe("CourseSummary", () => {
       expect(priceRow).not.toHaveTextContent("Certificate deadline passed")
     })
 
-    test("Price row displays with 'Certificate deadline passed' when no next run is found", () => {
+    test("Price row does not render when no next run is found", () => {
       const course = makeCourse({
         next_run_id: null,
         courseruns: [],
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
+    })
 
-      expect(priceRow).toBeInTheDocument()
+    test("Price row does not render when enrollment_modes is empty", () => {
+      const run = makeRun({ enrollment_modes: [] })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} />)
+
+      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
+    })
+
+    test("Shows only 'Free to Learn' with no cert box when all enrollment modes are free", () => {
+      const run = makeRun({
+        enrollment_modes: [freeMode()],
+        products: [makeProduct()],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
       expect(priceRow).toHaveTextContent("Free to Learn")
-      expect(priceRow).toHaveTextContent("Certificate deadline passed")
-      expect(priceRow).not.toHaveTextContent("Payment deadline")
+      expect(priceRow).not.toHaveTextContent("Earn a certificate")
+    })
+
+    test("Shows paid price with certificate type and no cert box when all enrollment modes are paid", () => {
+      const product = makeProduct({ price: "899.00" })
+      const run = makeRun({
+        enrollment_modes: [paidMode()],
+        products: [product],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
+      expect(priceRow).toHaveTextContent(course.certificate_type)
+      expect(priceRow).not.toHaveTextContent("Free to Learn")
+      expect(priceRow).not.toHaveTextContent("Earn a certificate")
+    })
+
+    test("Shows 'Free to Learn' and cert box when enrollment modes include both free and paid", () => {
+      const run = makeRun({
+        is_archived: false,
+        is_enrollable: true,
+        products: [makeProduct()],
+        is_upgradable: true,
+        enrollment_modes: bothModes(),
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(priceRow).toHaveTextContent("Free to Learn")
+      expect(priceRow).toHaveTextContent("Earn a certificate")
     })
   })
 
@@ -841,6 +900,7 @@ describe("CourseSummary", () => {
           products: [product],
           is_enrollable: true,
           is_upgradable: true,
+          enrollment_modes: bothModes(),
         })
         const course = makeCourse({
           next_run_id: run.id,
@@ -912,6 +972,7 @@ describe("CourseSummary", () => {
         products: [product],
         is_enrollable: true,
         is_upgradable: true,
+        enrollment_modes: bothModes(),
       })
       const course = makeCourse({
         next_run_id: run.id,
@@ -931,8 +992,8 @@ describe("CourseSummary", () => {
       // Wait for the flexible price API to be called and prices to be displayed
       // The discounted price is calculated as: $100 - $50 = $50
       await within(priceRow).findByText("Financial assistance applied")
-      expect(priceRow).toHaveTextContent("$50.00")
-      expect(priceRow).toHaveTextContent("$100.00")
+      expect(priceRow).toHaveTextContent("$50")
+      expect(priceRow).toHaveTextContent("$100")
     })
 
     test("Does NOT call flexible price API when financial aid URL is empty", () => {
@@ -942,6 +1003,7 @@ describe("CourseSummary", () => {
         products: [product],
         is_enrollable: true,
         is_upgradable: true,
+        enrollment_modes: bothModes(),
       })
       const course = makeCourse({
         next_run_id: run.id,
@@ -957,7 +1019,7 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       // Should show the regular price
-      expect(priceRow).toHaveTextContent(`$${product.price}`)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
       // Should NOT show financial assistance link
       expect(
         within(priceRow).queryByRole("link", { name: /financial assistance/i }),
@@ -971,6 +1033,7 @@ describe("CourseSummary", () => {
         products: [],
         is_enrollable: true,
         is_upgradable: false,
+        enrollment_modes: bothModes(),
       })
       const course = makeCourse({
         next_run_id: run.id,
@@ -1026,12 +1089,7 @@ describe("CourseSummary", () => {
     })
 
     test("Renders link to one program", () => {
-      const program = {
-        id: 1,
-        readable_id: "program-1",
-        title: "Test Program 1",
-        type: "program",
-      }
+      const program = factories.programs.baseProgram()
       const run = makeRun()
       const course = makeCourse({
         next_run_id: run.id,
@@ -1044,31 +1102,16 @@ describe("CourseSummary", () => {
 
       expect(programsRow).toHaveTextContent("Part of the following program")
       const link = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: program.title,
       })
-      expect(link).toHaveAttribute("href", "/programs/program-1")
+      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
     })
 
     test("Renders links to multiple programs", () => {
       const programs = [
-        {
-          id: 1,
-          readable_id: "program-1",
-          title: "Test Program 1",
-          type: "program",
-        },
-        {
-          id: 2,
-          readable_id: "program-2",
-          title: "Test Program 2",
-          type: "program",
-        },
-        {
-          id: 3,
-          readable_id: "program-3",
-          title: "Test Program 3",
-          type: "program",
-        },
+        factories.programs.baseProgram(),
+        factories.programs.baseProgram(),
+        factories.programs.baseProgram(),
       ]
       const run = makeRun()
       const course = makeCourse({
@@ -1083,28 +1126,32 @@ describe("CourseSummary", () => {
       expect(programsRow).toHaveTextContent("Part of the following programs")
 
       const link1 = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: programs[0].title,
       })
-      expect(link1).toHaveAttribute("href", "/programs/program-1")
+      expect(link1).toHaveAttribute(
+        "href",
+        `/programs/${programs[0].readable_id}`,
+      )
 
       const link2 = within(programsRow).getByRole("link", {
-        name: "Test Program 2",
+        name: programs[1].title,
       })
-      expect(link2).toHaveAttribute("href", "/programs/program-2")
+      expect(link2).toHaveAttribute(
+        "href",
+        `/programs/${programs[1].readable_id}`,
+      )
 
       const link3 = within(programsRow).getByRole("link", {
-        name: "Test Program 3",
+        name: programs[2].title,
       })
-      expect(link3).toHaveAttribute("href", "/programs/program-3")
+      expect(link3).toHaveAttribute(
+        "href",
+        `/programs/${programs[2].readable_id}`,
+      )
     })
 
     test("Displays programs row even when no next run is found", () => {
-      const program = {
-        id: 1,
-        readable_id: "program-1",
-        title: "Test Program 1",
-        type: "program",
-      }
+      const program = factories.programs.baseProgram()
       const course = makeCourse({
         next_run_id: null,
         courseruns: [],
@@ -1117,16 +1164,18 @@ describe("CourseSummary", () => {
       expect(programsRow).toBeInTheDocument()
       expect(programsRow).toHaveTextContent("Part of the following program")
       const link = within(programsRow).getByRole("link", {
-        name: "Test Program 1",
+        name: program.title,
       })
-      expect(link).toHaveAttribute("href", "/programs/program-1")
+      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
     })
   })
 })
 
 describe("ProgramSummary", () => {
   test("renders program summary rows", async () => {
-    const program = factories.programs.program()
+    const program = factories.programs.program({
+      enrollment_modes: bothModes(),
+    })
     renderWithProviders(<ProgramSummary program={program} />)
 
     screen.getByTestId(TestIds.PriceRow)
@@ -1308,24 +1357,50 @@ describe("ProgramSummary", () => {
   })
 
   describe("Price & Certificate Row", () => {
-    test("Shows 'Free to Learn'", () => {
-      const program = factories.programs.program()
+    test("Price row does not render when enrollment_modes is empty", () => {
+      const program = factories.programs.program({ enrollment_modes: [] })
+      renderWithProviders(<ProgramSummary program={program} />)
+
+      expect(screen.queryByTestId(TestIds.PriceRow)).toBeNull()
+    })
+
+    test("Shows only 'Free to Learn' with no cert box when all enrollment modes are free", () => {
+      const program = factories.programs.program({
+        enrollment_modes: [freeMode()],
+      })
       renderWithProviders(<ProgramSummary program={program} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-
       expect(priceRow).toHaveTextContent("Free to Learn")
+      expect(priceRow).not.toHaveTextContent("Earn a certificate")
     })
 
-    test("Renders certificate information", () => {
-      const program = factories.programs.program()
-      invariant(program.page.price)
+    test("Shows paid price with certificate type and no cert box when all enrollment modes are paid", () => {
+      const product = factories.courses.product({ price: "1499.00" })
+      const program = factories.programs.program({
+        enrollment_modes: [paidMode()],
+        products: [product],
+      })
       renderWithProviders(<ProgramSummary program={program} />)
 
-      const certRow = screen.getByTestId(TestIds.PriceRow)
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(priceRow).toHaveTextContent(formatPrice(product.price))
+      expect(priceRow).toHaveTextContent(program.certificate_type)
+      expect(priceRow).not.toHaveTextContent("Free to Learn")
+      expect(priceRow).not.toHaveTextContent("Earn a certificate")
+    })
 
-      expect(certRow).toHaveTextContent("Earn a certificate")
-      expect(certRow).toHaveTextContent(program.page.price)
+    test("Shows 'Free to Learn' and cert box when enrollment modes include both free and paid", () => {
+      const program = factories.programs.program({
+        enrollment_modes: bothModes(),
+      })
+      invariant(program.products[0])
+      renderWithProviders(<ProgramSummary program={program} />)
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(priceRow).toHaveTextContent("Free to Learn")
+      expect(priceRow).toHaveTextContent("Earn a certificate")
+      expect(priceRow).toHaveTextContent(formatPrice(program.products[0].price))
     })
 
     test.each([
@@ -1338,6 +1413,7 @@ describe("ProgramSummary", () => {
           ? `/financial-aid/${faker.string.alphanumeric(10)}`
           : ""
         const program = factories.programs.program({
+          enrollment_modes: bothModes(),
           page: { financial_assistance_form_url: financialAidUrl },
         })
         renderWithProviders(<ProgramSummary program={program} />)

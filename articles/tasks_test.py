@@ -1,15 +1,16 @@
 """Tests for articles CDN purge tasks"""
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from requests import Response
 
 from articles.factories import ArticleFactory
 from articles.tasks import (
-    queue_fastly_full_purge,
-    queue_fastly_purge_article,
-    queue_fastly_purge_articles_list,
+    fastly_full_purge,
+    fastly_purge_articles_list,
+    fastly_purge_relative_url,
 )
 from main.utils import call_fastly_purge_api
 
@@ -31,6 +32,7 @@ def mock_fastly_error_response():
     response.status_code = 403
     response.reason = "Forbidden"
     response.text = '{"status": "error", "msg": "Invalid API key"}'
+    response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
     return response
 
 
@@ -98,122 +100,59 @@ class TestCallFastlyPurgeApi:
         """Test Fastly API error response"""
         mock_request.return_value = mock_fastly_error_response
 
-        result = call_fastly_purge_api("/api/v1/news/test/")
-
-        assert result is False
+        with pytest.raises(requests.HTTPError):
+            call_fastly_purge_api("/api/v1/news/test/")
 
 
 @pytest.mark.django_db
-@patch("articles.tasks.queue_fastly_purge_articles_list.delay")
-class TestQueueFastlyPurgeArticle:
-    """Tests for queue_fastly_purge_article task"""
+class TestFastlyPurgeRelativeUrl:
+    """Tests for fastly_purge_relative_url task"""
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("main.utils.requests.request")
-    def test_purge_published_article(self, mock_request, _mock_fastly_response):  # noqa: PT019
-        """Test purging a published article"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"status": "ok"}
-        mock_request.return_value = mock_response
+    def test_purge_url_success(self, mock_request, mock_fastly_response):
+        """Test purging a URL successfully"""
+        mock_request.return_value = mock_fastly_response
 
-        article = ArticleFactory(is_published=True)
-        # Manually set slug since factory doesn't do it
-        article.slug = "test-article"
-        article.save()
+        article = ArticleFactory(is_published=True, slug="test-article")
+        article_url = article.get_url()
 
-        # Reset mock since signal was triggered during creation
-        mock_request.reset_mock()
+        result = fastly_purge_relative_url(article_url)
 
-        result = queue_fastly_purge_article(article.id)
-
-        assert result is True
+        assert result["status"] == "ok"
         mock_request.assert_called_once()
 
-    @patch("main.utils.requests.request")
-    def test_purge_unpublished_article(self, mock_request, _mock_fastly_response):  # noqa: PT019
-        """Test that unpublished articles are not purged"""
-        article = ArticleFactory(is_published=False)
-        article.slug = "test-article"
-        article.save()
-
-        result = queue_fastly_purge_article(article.id)
-
-        assert result is False
-        mock_request.assert_not_called()
-
-    @patch("main.utils.requests.request")
-    def test_purge_article_without_slug(self, mock_request, _mock_fastly_response):  # noqa: PT019
-        """Test that articles without slug are not purged"""
-        article = ArticleFactory(is_published=True)
-        # Don't set slug, leave it None - reset it to None
-        article.slug = None
-        article.save()
-
-        # Reset mock since signal was triggered during creation
-        mock_request.reset_mock()
-
-        result = queue_fastly_purge_article(article.id)
-
-        assert result is False
-        mock_request.assert_not_called()
-
-    @patch("main.utils.requests.request")
-    def test_purge_nonexistent_article(self, mock_request, _mock_fastly_response):  # noqa: PT019
-        """Test purging a non-existent article"""
-        result = queue_fastly_purge_article(99999)
-
-        assert result is False
-        mock_request.assert_not_called()
-
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("main.utils.requests.request")
-    def test_purge_article_api_failure(self, mock_request, _mock_fastly_response):  # noqa: PT019
+    def test_purge_url_api_failure(self, mock_request, mock_fastly_error_response):
         """Test handling API failure"""
-        mock_response = Mock()
-        mock_response.status_code = 500
-        mock_response.json.return_value = {"status": "error"}
-        mock_request.return_value = mock_response
+        mock_request.return_value = mock_fastly_error_response
 
-        article = ArticleFactory(is_published=True)
-        article.slug = "test-article"
-        article.save()
-
-        result = queue_fastly_purge_article(article.id)
-
-        assert result is False
+        with pytest.raises(requests.HTTPError):
+            fastly_purge_relative_url("/news/test-article/")
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
     @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
     @patch("main.utils.requests.request")
-    def test_purge_article_api_error_status(
-        self,
-        mock_request,
-        _mock_fastly_response,  # noqa: PT019
-    ):
-        """Test handling API error status"""
-        mock_response = Mock()
-        mock_response.status_code = 404
-        mock_response.json.return_value = {"status": "error"}
-        mock_request.return_value = mock_response
+    def test_purge_url_with_timeout(self, mock_request, mock_fastly_response):
+        """Test purging with custom timeout"""
+        mock_request.return_value = mock_fastly_response
 
-        article = ArticleFactory(is_published=True)
-        article.slug = "test-article"
-        article.save()
+        result = fastly_purge_relative_url("/news/test/", timeout=5)
 
-        result = queue_fastly_purge_article(article.id)
-
-        assert result is False
+        assert result["status"] == "ok"
+        call_kwargs = mock_request.call_args.kwargs
+        assert call_kwargs["timeout"] == 5
 
 
 @pytest.mark.django_db
-class TestQueueFastlyFullPurge:
-    """Tests for queue_fastly_full_purge task"""
+class TestFastlyFullPurge:
+    """Tests for fastly_full_purge task"""
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
@@ -223,9 +162,9 @@ class TestQueueFastlyFullPurge:
         """Test successful full cache purge"""
         mock_request.return_value = mock_fastly_response
 
-        result = queue_fastly_full_purge()
+        result = fastly_full_purge()
 
-        assert result is True
+        assert result["status"] == "ok"
         mock_request.assert_called_once()
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
@@ -236,14 +175,13 @@ class TestQueueFastlyFullPurge:
         """Test failed full cache purge"""
         mock_request.return_value = mock_fastly_error_response
 
-        result = queue_fastly_full_purge()
-
-        assert result is False
+        with pytest.raises(requests.HTTPError):
+            fastly_full_purge()
 
 
 @pytest.mark.django_db
-class TestQueueFastlyPurgeArticlesList:
-    """Tests for queue_fastly_purge_articles_list task"""
+class TestFastlyPurgeArticlesList:
+    """Tests for fastly_purge_articles_list task"""
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
     @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
@@ -257,9 +195,9 @@ class TestQueueFastlyPurgeArticlesList:
         mock_request.return_value = mock_fastly_response
         mock_redis.return_value.get.return_value = None
 
-        result = queue_fastly_purge_articles_list()
+        result = fastly_purge_articles_list()
 
-        assert result is True
+        assert result["status"] == "ok"
         mock_request.assert_called_once()
 
     @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
@@ -274,6 +212,5 @@ class TestQueueFastlyPurgeArticlesList:
         mock_request.return_value = mock_fastly_error_response
         mock_redis.return_value.get.return_value = None
 
-        result = queue_fastly_purge_articles_list()
-
-        assert result is False
+        with pytest.raises(requests.HTTPError):
+            fastly_purge_articles_list()

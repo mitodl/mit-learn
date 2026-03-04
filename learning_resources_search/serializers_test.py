@@ -16,7 +16,7 @@ from channels.factories import ChannelUnitDetailFactory
 from learning_resources import factories
 from learning_resources.constants import (
     DEPARTMENTS,
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     CertificationType,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -608,6 +608,8 @@ def test_serialize_bulk_learning_resources(mocker):
     expected = []
 
     for resource in resources:
+        resource_data = LearningResourceSerializer(instance=resource).data
+        resource_data["resource_category"] = resource_data["resource_type_group"]
         data = {
             "_id": mocker.ANY,
             "resource_relations": mocker.ANY,
@@ -616,7 +618,7 @@ def test_serialize_bulk_learning_resources(mocker):
             "is_learning_material": mocker.ANY,
             "featured_rank": None,
             "is_incomplete_or_stale": mocker.ANY,
-            **LearningResourceSerializer(instance=resource).data,
+            **resource_data,
         }
 
         if resource.resource_type == LearningResourceType.course.name:
@@ -707,7 +709,8 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
         channel.save()
 
     resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
-
+    resource_data = LearningResourceSerializer(resource).data
+    resource_data["resource_category"] = resource_data["resource_type_group"]
     assert serializers.serialize_learning_resource_for_bulk(resource) == {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},
@@ -717,7 +720,7 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
         "featured_rank": 3.4 if has_featured_rank else None,
         "is_incomplete_or_stale": is_incomplete or is_stale,
         **free_dict,
-        **LearningResourceSerializer(resource).data,
+        **resource_data,
     }
 
 
@@ -731,7 +734,7 @@ def test_get_resource_age_date():
         resource_type=LearningResourceType.podcast_episode.name
     )
     assert (
-        get_resource_age_date(podcast, LEARNING_MATERIAL_RESOURCE_CATEGORY)
+        get_resource_age_date(podcast, LEARNING_MATERIAL_RESOURCE_TYPE_GROUP)
         == podcast.last_modified
     )
 
@@ -828,6 +831,8 @@ def test_serialize_course_numbers_for_bulk(
         "learning_resources_search.serializers.get_resource_age_date",
         return_value=datetime(2024, 1, 1, 1, 1, 1, 0, tzinfo=UTC),
     )
+    resource_data = LearningResourceSerializer(resource).data
+    resource_data["resource_category"] = resource_data["resource_type_group"]
     expected_data = {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},
@@ -837,7 +842,7 @@ def test_serialize_course_numbers_for_bulk(
         "resource_age_date": datetime(2024, 1, 1, 1, 1, 1, 0, tzinfo=UTC),
         "featured_rank": None,
         "is_incomplete_or_stale": False,
-        **LearningResourceSerializer(resource).data,
+        **resource_data,
     }
     expected_data["course"]["course_numbers"][0] = {
         **expected_data["course"]["course_numbers"][0],
@@ -915,14 +920,14 @@ def test_learning_resources_search_request_serializer():
         "certification": "false",
         "certification_type": [CertificationType.none.name],
         "free": True,
-        "resource_category": ["course", "program"],
+        "resource_type_group": ["course", "program"],
         "topic": ["Math", "Atoms,Molecules,and Ions"],
         "offered_by": ["xpro", "ocw"],
         "platform": ["xpro", "edx", "ocw"],
         "department": ["18", "5"],
         "level": ["high_school", "undergraduate"],
         "course_feature": ["Lecture Videos"],
-        "aggregations": ["resource_type", "platform", "level", "resource_category"],
+        "aggregations": ["resource_type", "platform", "level", "resource_type_group"],
         "yearly_decay_percent": "0.25",
         "search_mode": "phrase",
         "slop": 2,
@@ -939,7 +944,7 @@ def test_learning_resources_search_request_serializer():
         "sortby": "-start_date",
         "professional": [True],
         "certification": [False],
-        "resource_category": ["course", "program"],
+        "resource_type_group": ["course", "program"],
         "certification_type": [CertificationType.none.name],
         "free": [True],
         "offered_by": ["xpro", "ocw"],
@@ -948,7 +953,7 @@ def test_learning_resources_search_request_serializer():
         "department": ["18", "5"],
         "level": ["high_school", "undergraduate"],
         "course_feature": ["Lecture Videos"],
-        "aggregations": ["resource_type", "platform", "level", "resource_category"],
+        "aggregations": ["resource_type", "platform", "level", "resource_type_group"],
         "yearly_decay_percent": 0.25,
         "dev_mode": False,
         "search_mode": "phrase",
