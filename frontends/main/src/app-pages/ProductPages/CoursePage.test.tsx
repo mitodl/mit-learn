@@ -202,6 +202,36 @@ describe("CoursePage", () => {
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
+  test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {
+    const course = makeCourse()
+    const videoId = "abc123"
+    const page = makePage({
+      course_details: course,
+      video_url: `https://www.youtube.com/watch?v=${videoId}`,
+    })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    await screen.findByRole("heading", { name: page.title })
+    const iframe = document.querySelector(
+      `iframe[src="https://www.youtube.com/embed/${videoId}"]`,
+    )
+    expect(iframe).toBeInTheDocument()
+  })
+
+  test("Shows an image in the sidebar when video_url is null", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course, video_url: null })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(
+      document.querySelector("iframe[src*='youtube.com/embed']"),
+    ).not.toBeInTheDocument()
+    expect(document.querySelector("img")).toBeInTheDocument()
+  })
+
   test.each([
     { courses: [], pages: [makePage()] },
     { courses: [makeCourse()], pages: [] },

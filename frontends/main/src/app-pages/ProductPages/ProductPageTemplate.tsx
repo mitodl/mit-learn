@@ -8,6 +8,7 @@ import {
   BannerBackground,
   Typography,
 } from "ol-components"
+import { convertToEmbedUrl } from "@/common/utils"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
@@ -114,6 +115,19 @@ const SidebarCol = styled(Show, {
   alignSelf,
 }))
 
+const SidebarVideo = styled.iframe(({ theme }) => ({
+  borderRadius: "4px",
+  border: "none",
+  width: "100%",
+  maxWidth: "410px",
+  aspectRatio: "410 / 230",
+  display: "block",
+  [theme.breakpoints.down("md")]: {
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "4px 4px 0 0",
+  },
+}))
+
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "4px",
   width: "100%",
@@ -126,6 +140,31 @@ const SidebarImage = styled(Image)(({ theme }) => ({
     borderRadius: "4px 4px 0 0",
   },
 }))
+
+const SidebarMedia: React.FC<{
+  videoUrl?: string | null
+  imageSrc: string
+  title: string
+  priority?: boolean
+}> = ({ videoUrl, imageSrc, title, priority }) => {
+  if (videoUrl) {
+    const embedUrl = convertToEmbedUrl(videoUrl)
+    if (embedUrl) {
+      return (
+        <SidebarVideo src={embedUrl} title={`${title} video`} allowFullScreen />
+      )
+    }
+  }
+  return (
+    <SidebarImage
+      priority={priority}
+      width={410}
+      height={230}
+      src={imageSrc}
+      alt=""
+    />
+  )
+}
 
 const SummaryRoot = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -157,6 +196,7 @@ type ProductPageTemplateProps = {
   title: string
   shortDescription: React.ReactNode
   imageSrc: string
+  videoUrl?: string | null
   sidebarSummary: React.ReactNode
   summaryTitle: string
   children: React.ReactNode
@@ -169,6 +209,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   title,
   shortDescription,
   imageSrc,
+  videoUrl,
   sidebarSummary,
   summaryTitle,
   children,
@@ -202,12 +243,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             </TitleBox>
           </MainCol>
           <SidebarCol showAbove="md" alignSelf="flex-end">
-            <SidebarImage
+            <SidebarMedia
+              videoUrl={videoUrl}
+              imageSrc={imageSrc}
+              title={title}
               priority
-              width={410}
-              height={230}
-              src={imageSrc}
-              alt=""
             />
           </SidebarCol>
         </TopContainer>
@@ -233,14 +273,22 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
               {sidebarSummary}
               <Stack gap="16px">
-                <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+                <SidebarMedia
+                  videoUrl={videoUrl}
+                  imageSrc={imageSrc}
+                  title={title}
+                />
                 {enrollButton}
               </Stack>
             </SummaryRoot>
           </Show>
           <SidebarCol showBelow="sm" alignSelf="center">
             <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarImage width={410} height={230} src={imageSrc} alt="" />
+              <SidebarMedia
+                videoUrl={videoUrl}
+                imageSrc={imageSrc}
+                title={title}
+              />
               {enrollButton}
               {sidebarSummary}
             </SummaryRoot>
