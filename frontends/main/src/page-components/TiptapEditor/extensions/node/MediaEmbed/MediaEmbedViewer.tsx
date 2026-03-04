@@ -1,6 +1,7 @@
 import React from "react"
 import styled from "@emotion/styled"
 import { EditableCaption } from "../shared/EditableCaption"
+import { MediaDisplay } from "./MediaDisplay"
 
 const StyledWrapper = styled.div({
   position: "relative",
@@ -23,20 +24,6 @@ const StyledWrapper = styled.div({
   },
 })
 
-const MediaContainer = styled.div({
-  position: "relative",
-  width: "100%",
-  aspectRatio: "16 / 9",
-  overflow: "hidden",
-
-  iframe: {
-    width: "100%",
-    height: "100%",
-    borderRadius: "6px",
-    display: "block",
-  },
-})
-
 interface MediaEmbedNode {
   attrs: {
     src?: string
@@ -52,9 +39,7 @@ export const MediaEmbedViewer = ({ node }: { node?: MediaEmbedNode }) => {
 
   return (
     <StyledWrapper className={`layout-${layout}`}>
-      <MediaContainer>
-        <iframe src={src} frameBorder="0" allowFullScreen title={caption} />
-      </MediaContainer>
+      <MediaDisplay src={src} caption={caption} />
 
       <EditableCaption
         caption={caption}

@@ -1,3 +1,15 @@
+export function isVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return (
+      parsed.pathname.toLowerCase().endsWith(".mp4") ||
+      parsed.pathname.toLowerCase().endsWith(".m3u8")
+    )
+  } catch {
+    return false
+  }
+}
+
 export function convertToEmbedUrl(url: string): string | null {
   let parsed: URL
 
@@ -6,8 +18,27 @@ export function convertToEmbedUrl(url: string): string | null {
   } catch {
     return null // not a valid URL
   }
-
   const hostname = parsed.hostname.replace("www.", "")
+
+  // --- MIT LEARN MP4 VIDEOS ---
+  if (
+    hostname ===
+    new URL(process.env.NEXT_PUBLIC_ORIGIN || "https://learn.mit.edu").hostname
+  ) {
+    return url // Return the URL as-is for video element
+  }
+
+  // --- CLOUDFRONT M3U8 VIDEOS ---
+
+  if (
+    hostname ===
+    new URL(
+      process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN ||
+        "https://d3tsb3m56iwvoq.cloudfront.net",
+    ).hostname
+  ) {
+    return url // Return the URL as-is for video element
+  }
 
   // --- YOUTUBE WATCH ---
   if (hostname === "youtube.com" && parsed.pathname === "/watch") {
