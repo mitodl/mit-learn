@@ -20,7 +20,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds, parseReqTree } from "./util"
 import {
-  canUpgradeRun,
+  canPurchaseRun,
   formatPrice,
   getEnrollmentType,
   mitxonlineUrl,
@@ -403,17 +403,17 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
   nextRun,
   course,
 }) => {
-  const canUpgrade = nextRun ? canUpgradeRun(nextRun) : false
+  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
   const product = nextRun?.products[0]
   const hasFinancialAid = !!(
     course?.page.financial_assistance_form_url && product
   )
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
-    enabled: canUpgrade && hasFinancialAid,
+    enabled: canPurchase && hasFinancialAid,
   })
   const price =
-    canUpgrade && product
+    canPurchase && product
       ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
       : null
 
@@ -496,7 +496,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
 }) => {
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
-  const canPurchase = nextRun ? canUpgradeRun(nextRun) : false
+  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
   const hasFinancialAid = !!(
     course.page.financial_assistance_form_url && product
   )

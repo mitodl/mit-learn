@@ -18,7 +18,7 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
-  canUpgradeRun,
+  canPurchaseRun,
   getEnrollmentType,
   mitxonlineUrl,
   PriceWithDiscount,
@@ -198,19 +198,20 @@ const NumericPriceDisplay: React.FC<{
 const CertificateUpsell: React.FC<{
   course?: CourseWithCourseRunsSerializerV2
   courseRun?: CourseRunV2
-  isFreeOnly?: boolean
-}> = ({ course, courseRun, isFreeOnly }) => {
+}> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
-  const canUpgrade =
-    !isFreeOnly && !!(product && courseRun && canUpgradeRun(courseRun))
+  const enrollmentType = getEnrollmentType(courseRun?.enrollment_modes)
+  const enabled =
+    (enrollmentType === "both" || enrollmentType === "paid") &&
+    !!(product && courseRun && canPurchaseRun(courseRun))
   const replaceBasketItem = useReplaceBasketItem()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
     }),
-    enabled: canUpgrade && !!course?.page.financial_assistance_form_url,
+    enabled: enabled && !!course?.page.financial_assistance_form_url,
   })
-  const price = canUpgrade
+  const price = enabled
     ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
     : null
   const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
@@ -233,7 +234,7 @@ const CertificateUpsell: React.FC<{
           </CertificateReasonItem>
         ))}
       </CertificateReasonsList>
-      <CertificateBox disabled={!canUpgrade}>
+      <CertificateBox disabled={!enabled}>
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
@@ -252,8 +253,8 @@ const CertificateUpsell: React.FC<{
                   : "Financial assistance available"}
               </UnderlinedLink>
             ) : null}
-            <CertDate disabled={!canUpgrade}>
-              {canUpgrade ? deadlineUI : "Not available"}
+            <CertDate disabled={!enabled}>
+              {enabled ? deadlineUI : "Not available"}
             </CertDate>
           </Stack>
         </CertificatePriceRoot>
@@ -261,7 +262,7 @@ const CertificateUpsell: React.FC<{
           label="Add to Cart"
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
-          disabled={!canUpgrade}
+          disabled={!enabled}
           onClick={() => {
             if (!product) return
             replaceBasketItem.mutate(product.id)
@@ -288,7 +289,7 @@ const getRunOptions = (
         .map((d) => formatDate(d))
         .join(" - ")
       return {
-        label: canUpgradeRun(run)
+        label: canPurchaseRun(run)
           ? dates
           : `${dates} (No certificate available)`,
         value: `${run.id}`,
@@ -364,11 +365,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           onChange={(e) => setChosenRun(e.target.value)}
           fullWidth
         />
-        <CertificateUpsell
-          course={course}
-          courseRun={run}
-          isFreeOnly={enrollmentType !== "paid" && enrollmentType !== "both"}
-        />
+        <CertificateUpsell course={course} courseRun={run} />
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">

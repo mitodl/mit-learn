@@ -21,7 +21,7 @@ const upgradeRunUrl = (product: ProductFlexiblePrice): string => {
   }
 }
 
-const canUpgradeRun = (run: CourseRunV2): boolean => {
+const canPurchaseRun = (run: CourseRunV2): boolean => {
   // Prefer to handle this on backend
   // See https://github.com/mitodl/hq/issues/9450
   return (
@@ -137,7 +137,7 @@ export {
   formatPrice,
   formatProductPrice,
   priceWithDiscount,
-  canUpgradeRun,
+  canPurchaseRun,
   upgradeRunUrl,
   mitxonlineUrl,
   getEnrollmentType,

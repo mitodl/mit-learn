@@ -11,7 +11,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import {
-  canUpgradeRun,
+  canPurchaseRun,
   getEnrollmentType,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -63,7 +63,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
-  const canPurchase = nextRun ? canUpgradeRun(nextRun) : false
+  const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
   const hasFinancialAid = !!(
     course.page.financial_assistance_form_url && product
   )
