@@ -1,4 +1,12 @@
+import { faker } from "@faker-js/faker/locale/en"
 import failOnConsole from "jest-fail-on-console"
+
+const seed = process.env.FAKER_SEED
+  ? parseInt(process.env.FAKER_SEED, 10)
+  : Math.floor(Math.random() * 0xffffffff)
+faker.seed(seed)
+console.info(`Faker seed: ${seed}  →  FAKER_SEED=${seed} to reproduce`)
+
 import "@testing-library/jest-dom"
 import "cross-fetch/polyfill"
 import { resetAllWhenMocks } from "jest-when"

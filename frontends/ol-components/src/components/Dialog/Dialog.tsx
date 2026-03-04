@@ -67,8 +67,16 @@ type DialogProps = {
   title?: string
   message?: string
   children?: React.ReactNode
-  cancelText?: string
-  confirmText?: string
+  /**
+   * Sets the text for the cancel button. If `null`, the cancel button is not
+   * rendered.
+   */
+  cancelText?: string | null
+  /**
+   * Sets the text for the confirm button. If `null`, the confirm button is not
+   * rendered.
+   */
+  confirmText?: string | null
   /**
    * Defaults to `true`. If `true`, dialog grows to `maxWidth`. See
    * [Dialog Props](https://mui.com/material-ui/api/dialog/#props).
@@ -160,17 +168,21 @@ const Dialog: React.FC<DialogProps> = ({
         actions
       ) : (
         <DialogActions>
-          <Button variant="secondary" onClick={onClose}>
-            {cancelText}
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            onClick={onConfirm && handleConfirm}
-            disabled={confirming || isSubmitting || disabled}
-          >
-            {confirmText}
-          </Button>
+          {cancelText === null ? null : (
+            <Button variant="secondary" onClick={onClose}>
+              {cancelText}
+            </Button>
+          )}
+          {confirmText === null ? null : (
+            <Button
+              variant="primary"
+              type="submit"
+              onClick={onConfirm && handleConfirm}
+              disabled={confirming || isSubmitting || disabled}
+            >
+              {confirmText}
+            </Button>
+          )}
         </DialogActions>
       )}
     </MuiDialog>

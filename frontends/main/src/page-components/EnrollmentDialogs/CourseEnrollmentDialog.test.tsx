@@ -7,7 +7,7 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, setMockResponse } from "api/test-utils"
+import { makeRequest, mockAxiosInstance, setMockResponse } from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
@@ -15,7 +15,6 @@ import {
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import NiceModal from "@ebay/nice-modal-react"
 import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
-import { upgradeRunUrl } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { DASHBOARD_HOME } from "@/common/urls"
@@ -24,11 +23,21 @@ const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
 const makeCourse = mitxFactories.courses.course
 
+const bothEnrollmentModes = () => [
+  mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+  mitxFactories.courses.enrollmentMode({ requires_payment: true }),
+]
+
+const freeOnlyEnrollmentModes = () => [
+  mitxFactories.courses.enrollmentMode({ requires_payment: false }),
+]
+
 const enrollableRun: typeof makeCourseRun = (overrides) =>
   makeCourseRun({
     is_enrollable: true,
     enrollment_start: faker.date.past().toISOString(),
     enrollment_end: faker.date.future().toISOString(),
+    enrollment_modes: bothEnrollmentModes(),
     ...overrides,
   })
 
@@ -38,6 +47,7 @@ const upgradeableRun: typeof makeCourseRun = (overrides) =>
     is_enrollable: true,
     is_archived: false,
     products: [mitxFactories.courses.product()],
+    enrollment_modes: bothEnrollmentModes(),
     ...overrides,
   })
 
@@ -178,6 +188,61 @@ describe("CourseEnrollmentDialog", () => {
       })
       expect(upgradeButton).toBeDisabled()
     })
+
+    test("Shows error alert when 'Add to Cart' basket operation fails", async () => {
+      const run = upgradeableRun({
+        products: [makeProduct({ price: "149.00" })],
+      })
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
+
+      const upgradeButton = await screen.findByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      })
+      await user.click(upgradeButton)
+
+      await screen.findByText(
+        "There was a problem processing your enrollment. Please try again.",
+      )
+    })
+
+    test("When free-only run is chosen, upsell is shown but disabled", async () => {
+      const freeOnlyRun = makeCourseRun({
+        is_enrollable: true,
+        is_upgradable: false,
+        is_archived: false,
+        products: [],
+        enrollment_modes: freeOnlyEnrollmentModes(),
+      })
+      const course = makeCourse({ courseruns: [freeOnlyRun] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      // Upsell section should be visible
+      expect(
+        screen.getByText(/Would you like to get a certificate/i),
+      ).toBeInTheDocument()
+
+      // Certificate shows "Not available" since run is not upgradable
+      expect(screen.getByText("Not available")).toBeInTheDocument()
+
+      // Add to Cart button should be disabled
+      const upgradeButton = screen.getByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      })
+      expect(upgradeButton).toBeDisabled()
+
+      // Enroll button is enabled
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+      expect(enrollButton).toBeEnabled()
+    })
   })
 
   describe("Initial run selection", () => {
@@ -213,11 +278,17 @@ describe("CourseEnrollmentDialog", () => {
       const select = screen.getByRole("combobox", { name: /choose a date/i })
       expect(select).toHaveTextContent(/please select/i)
 
-      // The enroll button should be disabled
-      const enrollButton = screen.getByRole("button", {
-        name: /Enroll for Free without a certificate/i,
-      })
-      expect(enrollButton).toBeDisabled()
+      // Upsell is shown even with no run selected
+      expect(
+        screen.getByText(/Would you like to get a certificate/i),
+      ).toBeInTheDocument()
+
+      // Enroll button is hidden until a run is selected
+      expect(
+        screen.queryByRole("button", {
+          name: /Enroll for Free without a certificate/i,
+        }),
+      ).not.toBeInTheDocument()
     })
 
     test("Initial selection is reset when dialog is reopened", async () => {
@@ -281,13 +352,18 @@ describe("CourseEnrollmentDialog", () => {
       })
     })
 
-    test("Clicking upgrade button redirects to MITxOnline cart with correct URL", async () => {
+    test("Clicking upgrade link adds product to basket and redirects to cart", async () => {
       const assign = jest.mocked(window.location.assign)
 
       const run = upgradeableRun()
       const product = run.products[0]
       invariant(product, "Upgradeable run must have a product")
       const course = mitxFactories.courses.course({ courseruns: [run] })
+
+      const clearUrl = mitxUrls.baskets.clear()
+      setMockResponse.delete(clearUrl, undefined)
+      const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
+      setMockResponse.post(basketUrl, { id: 1, items: [] })
 
       renderWithProviders(<div />)
       await openDialog(course)
@@ -301,10 +377,30 @@ describe("CourseEnrollmentDialog", () => {
 
       await user.click(upgradeButton)
 
-      // Verify redirect URL includes product_id parameter
+      // Verify clear basket API was called first
       await waitFor(() => {
-        expect(assign).toHaveBeenCalledWith(upgradeRunUrl(product))
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "DELETE",
+            url: clearUrl,
+          }),
+        )
       })
+
+      // Verify create basket API was called
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: basketUrl,
+        }),
+      )
+
+      // Verify redirect to cart page
+      const expectedCartUrl = new URL(
+        "/cart/",
+        process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
+      ).toString()
+      expect(assign).toHaveBeenCalledWith(expectedCartUrl)
     })
 
     test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
@@ -479,8 +575,8 @@ describe("CourseEnrollmentDialog", () => {
 
       // Wait for the flexible price API to be called and prices to be displayed
       await screen.findByText("Financial assistance applied")
-      expect(screen.getByText(/\$50\.00/)).toBeInTheDocument()
-      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+      expect(screen.getByText(/\$50/)).toBeInTheDocument()
+      expect(screen.getByText(/\$100/)).toBeInTheDocument()
     })
 
     test("Does NOT call flexible price API when financial aid URL is empty", async () => {
@@ -498,7 +594,7 @@ describe("CourseEnrollmentDialog", () => {
       await openDialog(course)
 
       // Should show the regular price
-      expect(screen.getByText(/\$100\.00/)).toBeInTheDocument()
+      expect(screen.getByText(/\$100/)).toBeInTheDocument()
       // Should NOT show financial assistance link
       expect(
         screen.queryByRole("link", { name: /financial assistance/i }),

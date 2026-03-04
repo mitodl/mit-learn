@@ -1,11 +1,39 @@
 import { factories } from "api/mitxonline-test-utils"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
+  formatPrice,
   getFlexiblePriceForProduct,
   priceWithDiscount,
 } from "@/common/mitxonline"
 
 const makeFlexiblePrice = factories.products.flexiblePrice
+
+describe("formatPrice", () => {
+  test.each([
+    { input: 100, expected: "$100.00" },
+    { input: "100.00", expected: "$100.00" },
+    { input: 149, expected: "$149.00" },
+    { input: "149.00", expected: "$149.00" },
+    { input: 100.5, expected: "$100.50" },
+    { input: "100.50", expected: "$100.50" },
+    { input: 100.25, expected: "$100.25" },
+    { input: "99.99", expected: "$99.99" },
+  ])("formatPrice($input) === '$expected'", ({ input, expected }) => {
+    expect(formatPrice(input)).toBe(expected)
+  })
+
+  test.each([
+    { input: 100, expected: "$100" },
+    { input: "100.00", expected: "$100" },
+    { input: 100.5, expected: "$100.50" },
+    { input: "99.99", expected: "$99.99" },
+  ])(
+    "formatPrice($input, { avoidCents: true }) === '$expected'",
+    ({ input, expected }) => {
+      expect(formatPrice(input, { avoidCents: true })).toBe(expected)
+    },
+  )
+})
 
 describe("getFlexiblePriceForProduct", () => {
   test("Applies dollars-off discount correctly", () => {
