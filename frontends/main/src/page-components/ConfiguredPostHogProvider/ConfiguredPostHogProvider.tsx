@@ -6,6 +6,7 @@ import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 
 const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
 const POSTHOG_API_HOST = process.env.NEXT_PUBLIC_POSTHOG_API_HOST
+const POSTHOG_UI_HOST = process.env.NEXT_PUBLIC_POSTHOG_UI_HOST
 const FEATURE_FLAGS = process.env.FEATURE_FLAGS
 
 const PosthogIdentifier = () => {
@@ -41,6 +42,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
     if (POSTHOG_API_KEY) {
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
+        ui_host: POSTHOG_UI_HOST,
         bootstrap: {
           featureFlags: FEATURE_FLAGS
             ? {
