@@ -870,75 +870,60 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
     return count_result.count > 0
 
 
-def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):  # noqa: C901,PLR0912
+def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params
     """
-    must = []
-    must_not = []
-
-    if collection_name == RESOURCES_COLLECTION_NAME:
-        qdrant_param_map = QDRANT_RESOURCE_PARAM_MAP
-    elif collection_name == TOPICS_COLLECTION_NAME:
-        qdrant_param_map = QDRANT_TOPICS_PARAM_MAP
-    else:
-        qdrant_param_map = QDRANT_CONTENT_FILE_PARAM_MAP
-
     if not params:
         return None
+
+    collection_param_map = {
+        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
+        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
+        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
+    }
+    qdrant_param_map = collection_param_map.get(collection_name)
+
+    must = []
+    must_not = []
 
     for param, value in params.items():
         if value is None:
             continue
 
-        lookup = None
-        if "__" in param:
-            base_param, lookup = param.split("__", 1)
+        base_param, _, lookup = param.partition("__")
+
+        if base_param not in qdrant_param_map:
+            continue
+
+        qdrant_key = qdrant_param_map[base_param]
+
+        if lookup == "isnull":
+            condition = models.IsNullCondition(
+                is_null=models.PayloadField(key=qdrant_key)
+            )
+            (must if value is True else must_not).append(condition)
+
+        elif lookup == "isempty":
+            key = qdrant_key.replace("[].name", "")
+            condition = models.IsEmptyCondition(is_empty=models.PayloadField(key=key))
+            (must if value is True else must_not).append(condition)
+
+        elif isinstance(value, list):
+            # Single-item bool lists must use MatchValue; all others use MatchAny
+            match_condition = (
+                models.MatchValue(value=value[0])
+                if len(value) == 1 and isinstance(value[0], bool)
+                else models.MatchAny(any=value)
+            )
+            must.append(models.FieldCondition(key=qdrant_key, match=match_condition))
+
         else:
-            base_param = param
-
-        if base_param in qdrant_param_map:
-            qdrant_key = qdrant_param_map[base_param]
-
-            if lookup == "isnull":
-                condition = models.IsNullCondition(
-                    is_null=models.PayloadField(key=qdrant_key)
+            must.append(
+                models.FieldCondition(
+                    key=qdrant_key, match=models.MatchValue(value=value)
                 )
-                if value is True:
-                    must.append(condition)
-                else:
-                    must_not.append(condition)
-
-            elif lookup == "isempty":
-                # For isempty, we usually want the base field if it's an array
-                key = qdrant_key.replace("[].name", "")
-                condition = models.IsEmptyCondition(
-                    is_empty=models.PayloadField(key=key)
-                )
-                if value is True:
-                    must.append(condition)
-                else:
-                    must_not.append(condition)
-
-            elif type(value) is list:
-                """
-                Account for array wrapped booleans which should only match value
-                We can also use MatchValue for arrays with a single item
-                """
-                if len(value) == 1 and type(value[0]) is bool:
-                    match_condition = models.MatchValue(value=value[0])
-                else:
-                    match_condition = models.MatchAny(any=value)
-
-                must.append(
-                    models.FieldCondition(key=qdrant_key, match=match_condition)
-                )
-            else:
-                must.append(
-                    models.FieldCondition(
-                        key=qdrant_key, match=models.MatchValue(value=value)
-                    )
-                )
+            )
 
     if must or must_not:
         return models.Filter(must=must, must_not=must_not)
