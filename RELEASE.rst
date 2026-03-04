@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.56.6
+--------------
+
+- remove temporary code setting resource_category to resource_type_group (#2981)
+
 Version 0.56.5 (Released March 04, 2026)
 --------------
 
