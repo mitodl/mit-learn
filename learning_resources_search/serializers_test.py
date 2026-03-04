@@ -886,6 +886,20 @@ def test_serialize_content_file_for_bulk():
 
 
 @pytest.mark.django_db
+def test_serialize_content_file_for_bulk_with_truncate():
+    """
+    Test that serialize_content_file_for_bulk yields correct data
+    """
+    content_file = factories.ContentFileFactory.create()
+    content_file.content = "a" * 40000000
+    content_file.save()
+    serialized = serializers.serialize_content_file_for_bulk(
+        content_file, truncate=True
+    )
+    assert (len(serialized["content"])) == 10000000
+
+
+@pytest.mark.django_db
 def test_serialize_content_file_for_bulk_deletion():
     """
     Test that serialize_content_file_for_bulk_deletio yields correct data

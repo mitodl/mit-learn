@@ -58,6 +58,8 @@ OCW_SEMESTER_TO_MONTH_MAPPING = {
     None: 1,
 }
 
+OPENSEARCH_CONTENT_LENGTH_LIMIT = 10000000
+
 
 class SearchCourseNumberSerializer(CourseNumberSerializer):
     """Serializer for CourseNumber, including extra fields for search"""
@@ -692,19 +694,28 @@ class PercolateQuerySubscriptionRequestSerializer(
         return search_data
 
 
-def serialize_content_file_for_update(content_file_obj):
+def serialize_content_file_for_update(content_file_obj, *, truncate=False):
     """Serialize a content file for API request"""
     parent = (
         content_file_obj.run.learning_resource_id
         if content_file_obj.run
         else content_file_obj.learning_resource.id
     )
+
+    serialized = ContentFileSerializer(content_file_obj).data
+
+    if (
+        truncate
+        and len(serialized.get("content") or "") > OPENSEARCH_CONTENT_LENGTH_LIMIT
+    ):
+        serialized["content"] = serialized["content"][:OPENSEARCH_CONTENT_LENGTH_LIMIT]
+
     return {
         "resource_relations": {
             "name": CONTENT_FILE_TYPE,
             "parent": parent,
         },
-        **ContentFileSerializer(content_file_obj).data,
+        **serialized,
     }
 
 
@@ -825,16 +836,18 @@ def serialize_for_deletion(opensearch_object_id):
     return {"_id": opensearch_object_id, "_op_type": "delete"}
 
 
-def serialize_content_file_for_bulk(content_file_obj):
+def serialize_content_file_for_bulk(content_file_obj, *, truncate=False):
     """
     Serialize a content file for bulk API request
 
     Args:
         content_file_obj (ContentFile): A content file for a course
+        truncate (bool): Whether to truncate the content field to
+            OPENSEARCH_CONTENT_LENGTH_LIMIT
     """
     return {
         "_id": gen_content_file_id(content_file_obj.id),
-        **serialize_content_file_for_update(content_file_obj),
+        **serialize_content_file_for_update(content_file_obj, truncate=truncate),
     }
 
 

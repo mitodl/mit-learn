@@ -478,7 +478,7 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
     """
 
     documents = (
-        serialize_content_file_for_bulk(content_file)
+        serialize_content_file_for_bulk(content_file, truncate=True)
         for content_file in ContentFile.objects.filter(
             pk__in=content_file_ids
         ).for_serialization()
