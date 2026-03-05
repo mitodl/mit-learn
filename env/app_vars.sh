@@ -78,6 +78,7 @@ echo "YOUTUBE_CONFIG_URL=https://raw.githubusercontent.com/mitodl/open-video-dat
 echo "POSTHOG_ENABLED=True" >>.env
 echo "POSTHOG_TIMEOUT_MS=1000" >>.env
 echo "POSTHOG_API_HOST=https://app.posthog.com" >>.env
+echo "POSTHOG_UI_HOST=https://us.posthog.com" >>.env
 echo "POSTHOG_PROJECT_ID=63497" >>.env
 echo >>.env
 echo "# Heroku Interopelated Vars" >>.env
