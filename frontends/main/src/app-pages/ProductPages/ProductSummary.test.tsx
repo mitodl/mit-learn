@@ -1061,7 +1061,7 @@ describe("CourseSummary", () => {
     })
   })
 
-  describe("In Programs Row", () => {
+  describe("Program Bundle Upsell", () => {
     test("Does not render when programs array is null", () => {
       const run = makeRun()
       const course = makeCourse({
@@ -1071,8 +1071,9 @@ describe("CourseSummary", () => {
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const programsRow = screen.queryByTestId(TestIds.CourseInProgramsRow)
-      expect(programsRow).toBeNull()
+      expect(
+        screen.queryByTestId(TestIds.ProgramBundleUpsell),
+      ).not.toBeInTheDocument()
     })
 
     test("Does not render when programs array is empty", () => {
@@ -1084,89 +1085,92 @@ describe("CourseSummary", () => {
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const programsRow = screen.queryByTestId(TestIds.CourseInProgramsRow)
-      expect(programsRow).toBeNull()
+      expect(
+        screen.queryByTestId(TestIds.ProgramBundleUpsell),
+      ).not.toBeInTheDocument()
     })
 
-    test("Renders link to one program", () => {
-      const program = factories.programs.baseProgram()
+    test("Renders upsell for one program with price and View Program link", async () => {
+      const baseProgram = factories.programs.baseProgram()
+      const programDetail = factories.programs.program({
+        id: baseProgram.id,
+        readable_id: baseProgram.readable_id,
+        title: baseProgram.title,
+      })
+      setMockResponse.get(
+        urls.programs.programDetail(baseProgram.id),
+        programDetail,
+      )
       const run = makeRun()
       const course = makeCourse({
         next_run_id: run.id,
         courseruns: [run],
-        programs: [program],
+        programs: [baseProgram],
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const programsRow = screen.getByTestId(TestIds.CourseInProgramsRow)
-
-      expect(programsRow).toHaveTextContent("Part of the following program")
-      const link = within(programsRow).getByRole("link", {
-        name: program.title,
-      })
-      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
+      const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
+      expect(upsell).toHaveTextContent("Want a program certificate?")
+      expect(upsell).toHaveTextContent(programDetail.title)
+      const link = within(upsell).getByRole("link", { name: "View Program" })
+      expect(link).toHaveAttribute(
+        "href",
+        `/programs/${programDetail.readable_id}`,
+      )
     })
 
-    test("Renders links to multiple programs", () => {
-      const programs = [
-        factories.programs.baseProgram(),
+    test("Renders upsell for multiple programs", async () => {
+      const basePrograms = [
         factories.programs.baseProgram(),
         factories.programs.baseProgram(),
       ]
+      const programDetails = basePrograms.map((bp) =>
+        factories.programs.program({
+          id: bp.id,
+          readable_id: bp.readable_id,
+          title: bp.title,
+        }),
+      )
+      programDetails.forEach((pd, i) => {
+        setMockResponse.get(urls.programs.programDetail(basePrograms[i].id), pd)
+      })
       const run = makeRun()
       const course = makeCourse({
         next_run_id: run.id,
         courseruns: [run],
-        programs: programs,
+        programs: basePrograms,
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const programsRow = screen.getByTestId(TestIds.CourseInProgramsRow)
-
-      expect(programsRow).toHaveTextContent("Part of the following programs")
-
-      const link1 = within(programsRow).getByRole("link", {
-        name: programs[0].title,
-      })
-      expect(link1).toHaveAttribute(
-        "href",
-        `/programs/${programs[0].readable_id}`,
-      )
-
-      const link2 = within(programsRow).getByRole("link", {
-        name: programs[1].title,
-      })
-      expect(link2).toHaveAttribute(
-        "href",
-        `/programs/${programs[1].readable_id}`,
-      )
-
-      const link3 = within(programsRow).getByRole("link", {
-        name: programs[2].title,
-      })
-      expect(link3).toHaveAttribute(
-        "href",
-        `/programs/${programs[2].readable_id}`,
-      )
+      const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
+      // "Want a program certificate?" appears once
+      expect(
+        within(upsell).getAllByText("Want a program certificate?"),
+      ).toHaveLength(1)
+      const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
+      expect(items).toHaveLength(2)
+      expect(items[0]).toHaveTextContent(programDetails[0].title)
+      expect(items[1]).toHaveTextContent(programDetails[1].title)
     })
 
-    test("Displays programs row even when no next run is found", () => {
-      const program = factories.programs.baseProgram()
+    test("Renders even when no next run is found", async () => {
+      const baseProgram = factories.programs.baseProgram()
+      const programDetail = factories.programs.program({
+        id: baseProgram.id,
+        readable_id: baseProgram.readable_id,
+      })
+      setMockResponse.get(
+        urls.programs.programDetail(baseProgram.id),
+        programDetail,
+      )
       const course = makeCourse({
         next_run_id: null,
         courseruns: [],
-        programs: [program],
+        programs: [baseProgram],
       })
       renderWithProviders(<CourseSummary course={course} />)
 
-      const programsRow = screen.getByTestId(TestIds.CourseInProgramsRow)
-
-      expect(programsRow).toBeInTheDocument()
-      expect(programsRow).toHaveTextContent("Part of the following program")
-      const link = within(programsRow).getByRole("link", {
-        name: program.title,
-      })
-      expect(link).toHaveAttribute("href", `/programs/${program.readable_id}`)
+      await screen.findByTestId(TestIds.ProgramBundleUpsell)
     })
   })
 })
