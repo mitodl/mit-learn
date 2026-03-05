@@ -17,17 +17,11 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import { useQueryClient } from "@tanstack/react-query"
 import {
   useNewsEventsList,
   NewsEventsListFeedTypeEnum,
-  newsEventsKeys,
 } from "api/hooks/newsEvents"
 import type { NewsFeedItem } from "api/v0"
-import { notFound } from "next/navigation"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { LocalDate } from "ol-utilities"
 import { linkifyText } from "@/common/utils"
 import { ArticleBanner } from "./ArticleBanner"
@@ -212,6 +206,7 @@ const StoryCard = styled.div`
   border-radius: 8px;
   padding: 16px 16px 16px 24px;
   overflow: hidden;
+  border: 1px solid transparent;
 
   &:hover {
     border-radius: 8px;
@@ -563,18 +558,6 @@ const ArticleListingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get("page") ?? "1", 10)
 
-  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
-  const queryClient = useQueryClient()
-
-  const flagsLoaded = useFeatureFlagsLoaded()
-
-  // Invalidate cache when feature flag changes
-  React.useEffect(() => {
-    if (showArticleList) {
-      queryClient.invalidateQueries({ queryKey: newsEventsKeys.listRoot() })
-    }
-  }, [showArticleList, queryClient])
-
   const { data: news, isLoading } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
     limit: PAGE_SIZE,
@@ -589,13 +572,6 @@ const ArticleListingPage: React.FC = () => {
   const mainStory =
     page === 1 && stories.length > 0 ? (stories[0] as NewsFeedItem) : null
   const gridStories = page === 1 ? stories.slice(1) : stories
-
-  if (!flagsLoaded && showArticleList === undefined) {
-    return <LoadingSpinner loading={!flagsLoaded} />
-  }
-  if (!showArticleList) {
-    return notFound()
-  }
 
   return (
     <>
