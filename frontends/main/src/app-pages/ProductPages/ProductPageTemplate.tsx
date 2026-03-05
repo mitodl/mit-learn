@@ -263,8 +263,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </VisuallyHidden>
         <SidebarCol showAbove="md">
           <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-            {enrollButton}
             {sidebarSummary}
+            {enrollButton}
           </SummaryRoot>
         </SidebarCol>
         <MainCol>
@@ -289,8 +289,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                 imageSrc={imageSrc}
                 title={title}
               />
-              {enrollButton}
               {sidebarSummary}
+              {enrollButton}
             </SummaryRoot>
           </SidebarCol>
           <SectionsWrapper>{children}</SectionsWrapper>
