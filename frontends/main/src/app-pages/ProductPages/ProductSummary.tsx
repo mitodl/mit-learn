@@ -1,6 +1,7 @@
 import React, { HTMLAttributes, useState } from "react"
-import { ActionButton, Alert, styled } from "@mitodl/smoot-design"
+import { ActionButton, Alert, ButtonLink, styled } from "@mitodl/smoot-design"
 import { productQueries } from "api/mitxonline-hooks/products"
+import { programsQueries } from "api/mitxonline-hooks/programs"
 import { Dialog, Link, Skeleton, Stack, Typography } from "ol-components"
 import type { StackProps } from "ol-components"
 import {
@@ -9,11 +10,11 @@ import {
   RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
-  RiMenuAddLine,
   RiInformation2Line,
 } from "@remixicon/react"
 import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
 import type {
+  BaseProgram,
   CourseWithCourseRunsSerializerV2,
   CourseRunV2,
   V2ProgramDetail,
@@ -26,7 +27,7 @@ import {
   mitxonlineUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
-import { useQuery } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { programPageView } from "@/common/urls"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
@@ -557,32 +558,104 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
-  course,
-  ...others
+const WideButtonLink = styled(ButtonLink)({ width: "100%" })
+
+const BundleUpsellContainer = styled.div(({ theme }) => ({
+  // bleed to edges of the padded SummaryRoot card
+  marginLeft: "-24px",
+  marginRight: "-24px",
+  marginBottom: "-24px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
+  borderRadius: "0 0 4px 4px",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  padding: "24px",
+}))
+
+const BundleUpsellItem = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  alignItems: "center",
+  textAlign: "center",
+})
+
+const BundlePrice = styled.span(({ theme }) => ({
+  ...theme.typography.h4,
+  color: theme.custom.colors.red,
+}))
+
+const BundleStrikenPrice = styled.span(({ theme }) => ({
+  textDecoration: "line-through",
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.body1,
+}))
+
+const BundlePriceRow = styled.div({
+  display: "flex",
+  gap: "8px",
+  alignItems: "center",
+  justifyContent: "center",
+})
+
+const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
+  program,
 }) => {
-  if (!course.programs || course.programs.length === 0) return null
-  const label = `Part of the following ${pluralize("program", course.programs.length)}`
+  const price = program.products[0]?.price
+  const priceFormatted = price ? formatPrice(price) : null
+  const strikePriceFormatted = price
+    ? formatPrice(String(Number(price) * 1.2))
+    : null
+
   return (
-    <InfoRow {...others}>
-      <InfoRowIcon>
-        <RiMenuAddLine aria-hidden="true" />
-      </InfoRowIcon>
-      <InfoRowInner>
-        <Stack gap="4px">
-          <InfoLabel>{label}</InfoLabel>
-          {course.programs.map((p) => (
-            <UnderlinedLink
-              color="black"
-              key={p.readable_id}
-              href={programPageView(p.readable_id)}
-            >
-              {p.title}
-            </UnderlinedLink>
-          ))}
-        </Stack>
-      </InfoRowInner>
-    </InfoRow>
+    <BundleUpsellItem data-testid="program-bundle-upsell-item">
+      <Typography variant="h5">
+        Get all {program.title} + Certificate
+      </Typography>
+      {priceFormatted ? (
+        <BundlePriceRow>
+          <BundlePrice>{priceFormatted}</BundlePrice>
+          <BundleStrikenPrice>{strikePriceFormatted}</BundleStrikenPrice>
+        </BundlePriceRow>
+      ) : null}
+      <WideButtonLink
+        variant="bordered"
+        size="large"
+        href={programPageView(program.readable_id)}
+      >
+        View Program
+      </WideButtonLink>
+    </BundleUpsellItem>
+  )
+}
+
+const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
+  programs,
+}) => {
+  const programDetails = useQueries({
+    queries: programs.map((p) =>
+      programsQueries.programDetail({ id: String(p.id) }),
+    ),
+  })
+
+  const loaded = programDetails
+    .map((q) => q.data)
+    .filter((d): d is V2ProgramDetail => !!d)
+
+  if (loaded.length === 0) return null
+
+  return (
+    <BundleUpsellContainer data-testid="program-bundle-upsell">
+      <Typography variant="body2" sx={{ textAlign: "center" }}>
+        Want a program certificate?
+      </Typography>
+      {loaded.map((program) => (
+        <ProgramBundleUpsellItem key={program.id} program={program} />
+      ))}
+    </BundleUpsellContainer>
   )
 }
 
@@ -593,7 +666,7 @@ enum TestIds {
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
   CertificateTrackRow = "certificate-track-row",
-  CourseInProgramsRow = "course-in-programs-row",
+  ProgramBundleUpsell = "program-bundle-upsell",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -613,7 +686,8 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-}> = ({ course }) => {
+  enrollButton?: React.ReactNode
+}> = ({ course, enrollButton }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
@@ -649,11 +723,10 @@ const CourseSummary: React.FC<{
         nextRun={nextRun}
         data-testid={TestIds.PriceRow}
       />
-      <CourseInProgramsRow
-        course={course}
-        nextRun={nextRun}
-        data-testid={TestIds.CourseInProgramsRow}
-      />
+      {enrollButton}
+      {course.programs && course.programs.length > 0 ? (
+        <ProgramBundleUpsell programs={course.programs} />
+      ) : null}
     </Stack>
   )
 }
