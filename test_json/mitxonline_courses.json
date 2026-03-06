@@ -81,7 +81,11 @@
               "product_flexible_price": null
             }
           ],
-          "approved_flexible_price_exists": false
+          "approved_flexible_price_exists": false,
+          "enrollment_modes": [
+            { "mode_slug": "verified" },
+            { "mode_slug": "audit" }
+          ]
         },
         {
           "title": "Introduction to Differential Equations",
@@ -112,7 +116,11 @@
               "product_flexible_price": null
             }
           ],
-          "approved_flexible_price_exists": false
+          "approved_flexible_price_exists": false,
+          "enrollment_modes": [
+            { "mode_slug": "verified" },
+            { "mode_slug": "audit" }
+          ]
         }
       ]
     },
@@ -193,7 +201,8 @@
               "product_flexible_price": null
             }
           ],
-          "approved_flexible_price_exists": false
+          "approved_flexible_price_exists": false,
+          "enrollment_modes": [{ "mode_slug": "audit" }]
         }
       ]
     },
@@ -267,7 +276,8 @@
               "product_flexible_price": null
             }
           ],
-          "approved_flexible_price_exists": false
+          "approved_flexible_price_exists": false,
+          "enrollment_modes": [{ "mode_slug": "verified" }]
         }
       ]
     }
