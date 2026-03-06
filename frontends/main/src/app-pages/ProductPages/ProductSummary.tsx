@@ -734,6 +734,7 @@ const SummaryRows = styled.div(({ theme }) => ({
     display: "block",
     columnCount: 2,
     columnGap: "48px",
+    columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
     "> *": {
       breakInside: "avoid",
       marginBottom: "24px",
