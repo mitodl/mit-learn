@@ -41,6 +41,8 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "platform": "platform.code",
     "offered_by": "offered_by.code",
     "delivery": "delivery[].code",
+    "title": "title",
+    "url": "url",
     "resource_type_group": "resource_type_group",
 }
 
@@ -65,6 +67,8 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
     "delivery[].code": models.PayloadSchemaType.KEYWORD,
+    "url": models.PayloadSchemaType.KEYWORD,
+    "title": models.PayloadSchemaType.KEYWORD,
     "resource_type_group": models.PayloadSchemaType.KEYWORD,
 }
 
@@ -72,6 +76,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
 QDRANT_CONTENT_FILE_INDEXES = {
     "chunk_number": models.PayloadSchemaType.INTEGER,
     "key": models.PayloadSchemaType.KEYWORD,
+    "title": models.PayloadSchemaType.KEYWORD,
     "course_number": models.PayloadSchemaType.INTEGER,
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
