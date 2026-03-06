@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.56.8
+--------------
+
+- update mitxonline client (#3020)
+- Set the posthog UI host (#3011)
+- fix: remove feature flag on detail and listing page (#3003)
+
 Version 0.56.6 (Released March 05, 2026)
 --------------
 
