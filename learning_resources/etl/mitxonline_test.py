@@ -32,7 +32,9 @@ from learning_resources.etl.mitxonline import (
     parse_page_attribute,
     parse_prices,
     transform_courses,
+    transform_program_as_course,
     transform_programs,
+    transform_programs_as_courses,
     transform_topics,
 )
 from learning_resources.etl.utils import (
@@ -42,7 +44,7 @@ from learning_resources.etl.utils import (
     strip_enrollment_modes,
 )
 from learning_resources.test_utils import set_up_topics
-from main.test_utils import any_instance_of
+from main.test_utils import any_instance_of, assert_json_equal
 from main.utils import clean_data
 
 pytestmark = pytest.mark.django_db
@@ -131,9 +133,15 @@ def test_mitxonline_transform_programs(
         return_value=mock_mitxonline_courses_data["results"],
     )
 
-    result = transform_programs(mock_mitxonline_programs_data["results"])
+    # Filter out display_mode="course" programs (these are handled separately)
+    regular_programs = [
+        p
+        for p in mock_mitxonline_programs_data["results"]
+        if p.get("display_mode") != "course"
+    ]
+    result = transform_programs(regular_programs)
     expected = []
-    for program_data in mock_mitxonline_programs_data["results"]:
+    for program_data in regular_programs:
         expected_courses = []
         for course_data in sorted(
             mock_mitxonline_courses_data["results"],
@@ -450,12 +458,16 @@ def test_program_run_start_date_value(  # noqa: PLR0913
     )
 
     """Test that the start date value is correctly determined for program runs"""
-    mock_mitxonline_programs_data["results"][0]["start_date"] = start_dt
-    mock_mitxonline_programs_data["results"][0]["enrollment_start"] = enrollment_dt
+    # Use only regular programs (not display_mode="course")
+    regular_programs = [
+        p
+        for p in mock_mitxonline_programs_data["results"]
+        if p.get("display_mode") != "course"
+    ]
+    regular_programs[0]["start_date"] = start_dt
+    regular_programs[0]["enrollment_start"] = enrollment_dt
 
-    transformed_programs = list(
-        transform_programs(mock_mitxonline_programs_data["results"])
-    )
+    transformed_programs = list(transform_programs(regular_programs))
 
     assert transformed_programs[0]["runs"][0]["start_date"] == _parse_datetime(
         expected_dt
@@ -861,3 +873,134 @@ def test_transform_program_certification_by_enrollment_modes(
 
     assert result["certification"] is expected["certification"]
     assert result["certification_type"] == expected["certification_type"]
+
+
+def test_mitxonline_transform_programs_as_courses(
+    mock_mitxonline_programs_data, mock_mitxonline_courses_data, mocker, settings
+):
+    """Test that programs with display_mode='course' are transformed into course-shaped dicts"""
+    set_up_topics(is_mitx=True)
+
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    course_programs = [
+        p
+        for p in mock_mitxonline_programs_data["results"]
+        if p.get("display_mode") == "course"
+    ]
+    assert len(course_programs) > 0, (
+        "Fixture should have at least one display_mode=course program"
+    )
+
+    result = transform_programs_as_courses(course_programs)
+    expected = [transform_program_as_course(p) for p in course_programs]
+    assert_json_equal(result, expected)
+
+    # Verify the key properties that distinguish these from regular programs
+    for transformed in result:
+        assert transformed["resource_type"] == LearningResourceType.course.name
+        assert transformed["content_tags"] == ["Program as Course"]
+        assert "course" in transformed
+        assert "courses" not in transformed
+
+
+def test_transform_program_as_course(
+    mock_mitxonline_programs_data, mock_mitxonline_courses_data, mocker, settings
+):
+    """Test that a single program with display_mode='course' is transformed correctly"""
+    set_up_topics(is_mitx=True)
+
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    program = next(
+        p
+        for p in mock_mitxonline_programs_data["results"]
+        if p.get("display_mode") == "course"
+    )
+
+    result = transform_program_as_course(program)
+
+    base_url = settings.MITX_ONLINE_BASE_URL
+    expected = {
+        "readable_id": "program-v1:MITxT+UAI.DS",
+        "platform": PlatformType.mitxonline.name,
+        "etl_source": ETLSource.mitxonline.name,
+        "resource_type": LearningResourceType.course.name,
+        "title": "UAI Applied Data Science",
+        "offered_by": OFFERED_BY,
+        "topics": [{"name": "Mathematics"}],
+        "departments": ["18"],
+        "runs": [
+            {
+                "run_id": "program-v1:MITxT+UAI.DS",
+                "enrollment_start": _parse_datetime("2024-01-01T00:00:00Z"),
+                "enrollment_end": _parse_datetime("2024-04-01T00:00:00Z"),
+                "start_date": _parse_datetime("2024-01-15T00:00:00Z"),
+                "end_date": _parse_datetime("2024-04-15T00:00:00Z"),
+                "title": "UAI Applied Data Science",
+                "published": True,
+                "url": f"{base_url}/programs/program-v1:MITxT+UAI.DS/",
+                "image": {"url": f"{base_url}/static/images/uai-data-science.png"},
+                "description": "<p>Applied Data Science program displayed as a course.</p>",
+                "prices": [
+                    {"amount": 0.0, "currency": CURRENCY_USD},
+                    {"amount": 100.0, "currency": CURRENCY_USD},
+                    {"amount": 200.0, "currency": CURRENCY_USD},
+                ],
+                "status": RunStatus.current.value,
+                "availability": "anytime",
+                "format": [Format.asynchronous.name],
+                "pace": [Pace.instructor_paced.name],
+                "duration": "10-12 weeks",
+                "min_weeks": 10,
+                "max_weeks": 12,
+                "time_commitment": "5-7 hrs/wk",
+                "min_weekly_hours": 5,
+                "max_weekly_hours": 7,
+            }
+        ],
+        "force_ingest": False,
+        "content_tags": ["Program as Course"],
+        "course": {
+            "course_numbers": [
+                {
+                    "value": "program-v1:MITxT+UAI.DS",
+                    "listing_type": "primary",
+                    "department": None,
+                    "sort_coursenum": "program-v1:MITxT+UAI.DS",
+                    "primary": True,
+                }
+            ]
+        },
+        "published": True,
+        "professional": False,
+        "certification": True,
+        "certification_type": CertificationType.completion.name,
+        "image": {"url": f"{base_url}/static/images/uai-data-science.png"},
+        "url": f"{base_url}/programs/program-v1:MITxT+UAI.DS/",
+        "description": "<p>Applied Data Science program displayed as a course.</p>",
+        "availability": "anytime",
+        "format": [Format.asynchronous.name],
+        "pace": [Pace.instructor_paced.name],
+    }
+    assert_json_equal(result, expected)
+
+
+def test_mitxonline_transform_programs_as_courses_empty():
+    """Test that transform_programs_as_courses returns empty list for empty input"""
+    assert transform_programs_as_courses([]) == []

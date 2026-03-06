@@ -354,6 +354,111 @@ def _transform_course(course):
     }
 
 
+def transform_program_as_course(program: dict) -> dict:
+    """
+    Transform a MITx Online program into a course-shaped dict.
+
+    Used for programs with display_mode="course" that should be ingested
+    as LearningResource objects with resource_type=course.
+
+    Args:
+        program (dict): program data from MITx Online API
+
+    Returns:
+        dict: normalized course data
+    """
+    courses = transform_courses(
+        [
+            course
+            for course in _fetch_courses_by_ids(program.get("courses", []))
+            if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
+        ]
+    )
+    pace = sorted({course_pace for course in courses for course_pace in course["pace"]})
+    run = {
+        "run_id": program["readable_id"],
+        "enrollment_start": _parse_datetime(program.get("enrollment_start")),
+        "enrollment_end": _parse_datetime(program.get("enrollment_end")),
+        "start_date": _parse_datetime(
+            program.get("start_date") or program.get("enrollment_start")
+        ),
+        "end_date": _parse_datetime(program.get("end_date")),
+        "title": program["title"],
+        "published": bool(parse_page_attribute(program, "page_url")),
+        "url": parse_page_attribute(program, "page_url", is_url=True),
+        "image": _transform_image(program),
+        "description": clean_data(parse_page_attribute(program, "description")),
+        "prices": parse_prices(
+            program,
+            program.get("enrollment_modes", []),
+            fully_enrollable=True,
+        ),
+        "status": RunStatus.current.value
+        if parse_page_attribute(program, "page_url")
+        else RunStatus.archived.value,
+        "availability": program.get("availability"),
+        "format": [Format.asynchronous.name],
+        "pace": pace,
+        "duration": program.get("duration") or "",
+        "min_weeks": program.get("min_weeks"),
+        "max_weeks": program.get("max_weeks"),
+        "time_commitment": program.get("time_commitment") or "",
+        "min_weekly_hours": parse_string_to_int(program.get("min_weekly_hours")),
+        "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
+    }
+    runs = [run]
+    has_certification = parse_certification(OFFERED_BY["code"], runs)
+    return {
+        "readable_id": program["readable_id"],
+        "platform": PlatformType.mitxonline.name,
+        "etl_source": ETLSource.mitxonline.name,
+        "resource_type": LearningResourceType.course.name,
+        "title": program["title"],
+        "offered_by": OFFERED_BY,
+        "topics": transform_topics(program.get("topics", []), OFFERED_BY["code"]),
+        "departments": parse_departments(program.get("departments", [])),
+        "runs": runs,
+        "force_ingest": False,
+        "content_tags": ["Program as Course"],
+        "course": {
+            "course_numbers": generate_course_numbers_json(
+                program["readable_id"], is_ocw=False
+            ),
+        },
+        "published": bool(
+            parse_page_attribute(program, "page_url")
+            and parse_page_attribute(program, "live")
+        ),
+        "professional": False,
+        "certification": has_certification,
+        "certification_type": parse_certificate_type(
+            program.get("certificate_type", CertificationType.none.name)
+        )
+        if has_certification
+        else CertificationType.none.name,
+        "image": _transform_image(program),
+        "url": parse_page_attribute(program, "page_url", is_url=True),
+        "description": clean_data(parse_page_attribute(program, "description")),
+        "availability": program.get("availability"),
+        "format": [Format.asynchronous.name],
+        "pace": pace,
+    }
+
+
+def transform_programs_as_courses(programs: list[dict]) -> list[dict]:
+    """
+    Transform a list of MITx Online programs into course-shaped dicts.
+
+    Args:
+        programs (list of dict): programs data (already filtered to those
+            that should be ingested as courses)
+
+    Returns:
+        list of dict: normalized course data
+    """
+    return [transform_program_as_course(program) for program in programs]
+
+
 def transform_courses(courses):
     """
     Transforms a list of courses into our normalized data structure
@@ -469,9 +574,26 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "published": bool(
                 parse_page_attribute(program, "page_url")
                 and parse_page_attribute(program, "live")
-            ),  # a program is only considered published if it has a page url
+            ),
             "format": [Format.asynchronous.name],
             "pace": pace,
             "runs": [run],
             "courses": courses,
         }
+
+
+def is_program_course(program: dict) -> bool:
+    """
+    Determine if a MITx Online program should be ingested as a course.
+
+    Args:
+        program (dict): program data from MITx Online API
+
+    Returns:
+        bool: True if the program should be ingested as a course, False otherwise
+    """
+    return program.get("display_mode") == "course" or (
+        settings.MITX_ONLINE_PROGRAMS_AS_COURSES
+        and program.get("readable_id") in settings.MITX_ONLINE_PROGRAMS_AS_COURSES
+        and settings.ENVIRONMENT == "dev"
+    )

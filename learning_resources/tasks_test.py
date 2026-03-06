@@ -63,7 +63,8 @@ def test_cache_is_cleared_after_task_run(mocker, mocked_celery):
     """Test that the search cache is cleared out after every task run"""
     mocker.patch("learning_resources.tasks.ocw_courses_etl", autospec=True)
     mocker.patch("learning_resources.tasks.get_content_tasks", autospec=True)
-    mocker.patch("learning_resources.tasks.pipelines")
+    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
+    mock_pipelines.mitxonline_etl.return_value = ([], [])
     mocked_clear_views_cache = mocker.patch(
         "learning_resources.tasks.clear_views_cache"
     )
@@ -107,9 +108,9 @@ def test_get_mit_edx_data_valid(mocker):
 def test_get_mitxonline_data(mocker):
     """Verify that the get_mitxonline_data invokes the MITx Online ETL pipeline"""
     mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
+    mock_pipelines.mitxonline_etl.return_value = ([], [])
     tasks.get_mitxonline_data.delay()
-    mock_pipelines.mitxonline_programs_etl.assert_called_once_with()
-    mock_pipelines.mitxonline_courses_etl.assert_called_once_with()
+    mock_pipelines.mitxonline_etl.assert_called_once_with()
 
 
 def test_get_oll_data(mocker):

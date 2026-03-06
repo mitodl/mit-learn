@@ -66,21 +66,42 @@ mit_edx_programs_etl = compose(
     mit_edx_programs.extract,
 )
 
-mitxonline_programs_etl = compose(
-    load_programs(
+
+def mitxonline_etl() -> tuple[list[LearningResource], list[LearningResource]]:
+    """
+    ETL for MITx Online courses and programs.
+
+    Programs with display_mode='course' are ingested as courses.
+    All other programs are ingested normally.
+    """
+    all_programs = list(mitxonline.extract_programs())
+
+    # Partition programs: display_mode="course" → load as courses, rest → as programs
+    regular_programs = [p for p in all_programs if not mitxonline.is_program_course(p)]
+    course_programs = [p for p in all_programs if mitxonline.is_program_course(p)]
+
+    # Courses: regular courses + programs-as-courses combined for single prune pass
+    courses_data = list(mitxonline.transform_courses(mitxonline.extract_courses()))
+    programs_as_courses = mitxonline.transform_programs_as_courses(course_programs)
+    all_courses_data = courses_data + programs_as_courses
+
+    courses = loaders.load_courses(
         ETLSource.mitxonline.name,
+        all_courses_data,
+        config=CourseLoaderConfig(prune=True),
+    )
+
+    # Programs: only regular programs
+    programs = loaders.load_programs(
+        ETLSource.mitxonline.name,
+        list(mitxonline.transform_programs(regular_programs)),
         config=ProgramLoaderConfig(
             courses=CourseLoaderConfig(fetch_only=True), prune=True
         ),
-    ),
-    mitxonline.transform_programs,
-    mitxonline.extract_programs,
-)
-mitxonline_courses_etl = compose(
-    load_courses(ETLSource.mitxonline.name, config=CourseLoaderConfig(prune=True)),
-    mitxonline.transform_courses,
-    mitxonline.extract_courses,
-)
+    )
+
+    return courses, programs
+
 
 oll_etl = compose(
     load_courses(ETLSource.oll.name, config=CourseLoaderConfig(prune=True)),

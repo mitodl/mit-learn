@@ -122,8 +122,7 @@ def get_mit_edx_data(
 @app.task
 def get_mitxonline_data() -> int:
     """Execute the MITX Online ETL pipeline"""
-    courses = pipelines.mitxonline_courses_etl()
-    programs = pipelines.mitxonline_programs_etl()
+    courses, programs = pipelines.mitxonline_etl()
     clear_views_cache()
     return len(courses) + len(programs)
 
