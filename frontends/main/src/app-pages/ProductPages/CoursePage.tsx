@@ -7,7 +7,7 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseSummary } from "./ProductSummary"
+import { CourseSummary, ProgramBundleUpsell } from "./ProductSummary"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
@@ -111,11 +111,12 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       summaryTitle="Course summary"
-      sidebarSummary={
-        <CourseSummary
-          course={course}
-          enrollButton={<CourseEnrollmentButton course={course} />}
-        />
+      sidebarSummary={<CourseSummary course={course} />}
+      enrollButton={<CourseEnrollmentButton course={course} />}
+      programUpsell={
+        course.programs?.length ? (
+          <ProgramBundleUpsell programs={course.programs} />
+        ) : undefined
       }
       navbar={<ProductNavbar navLinks={navLinks} productNoun="Course" />}
     >

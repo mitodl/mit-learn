@@ -561,7 +561,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
 const WideButtonLink = styled(ButtonLink)({ width: "100%" })
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
-  // bleed to edges of the padded SummaryRoot card
+  // bleed to edges of the padded SummaryRoot card (base: matches 24px SummaryRoot padding)
   marginLeft: "-24px",
   marginRight: "-24px",
   marginBottom: "-24px",
@@ -573,6 +573,27 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: "24px",
   padding: "24px",
+  // Desktop: SummaryRoot has 32px horizontal padding — bleed to match
+  [theme.breakpoints.up("md")]: {
+    marginLeft: "-32px",
+    marginRight: "-32px",
+    padding: "32px",
+  },
+  // Tablet: bundle sits inside right grid column, not bleeding to card edges
+  [theme.breakpoints.between("sm", "md")]: {
+    marginLeft: 0,
+    marginRight: 0,
+    marginBottom: 0,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "4px",
+  },
+  // Mobile: SummaryRoot has 16px padding — bleed to match
+  [theme.breakpoints.down("sm")]: {
+    marginLeft: "-16px",
+    marginRight: "-16px",
+    marginBottom: "-16px",
+    padding: "24px 16px",
+  },
 }))
 
 const BundleUpsellItem = styled.div({
@@ -686,8 +707,7 @@ const ArchivedAlert: React.FC = () => {
 
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
-  enrollButton?: React.ReactNode
-}> = ({ course, enrollButton }) => {
+}> = ({ course }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
@@ -723,10 +743,6 @@ const CourseSummary: React.FC<{
         nextRun={nextRun}
         data-testid={TestIds.PriceRow}
       />
-      {enrollButton}
-      {course.programs && course.programs.length > 0 ? (
-        <ProgramBundleUpsell programs={course.programs} />
-      ) : null}
     </Stack>
   )
 }
@@ -926,4 +942,10 @@ const ProgramSummary: React.FC<{
   )
 }
 
-export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }
+export {
+  CourseSummary,
+  ProgramSummary,
+  ProgramBundleUpsell,
+  UnderlinedLink,
+  TestIds,
+}
