@@ -396,6 +396,7 @@ def transform_program_as_course(program: dict) -> dict:
         "status": RunStatus.current.value
         if parse_page_attribute(program, "page_url")
         else RunStatus.archived.value,
+        "enrollment_modes": program.get("enrollment_modes", []),
         "availability": program.get("availability"),
         "format": [Format.asynchronous.name],
         "pace": pace,

@@ -1001,6 +1001,72 @@ def test_transform_program_as_course(
     assert_json_equal(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("enrollment_modes", "expected"),
+    [
+        (
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "verified"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "audit"}],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+        (
+            [],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+    ],
+)
+def test_transform_program_as_course_certification_by_enrollment_modes(  # noqa: PLR0913
+    mocker,
+    mock_mitxonline_programs_data,
+    mock_mitxonline_courses_data,
+    settings,
+    enrollment_modes,
+    expected,
+):
+    """Test that program-as-course certification depends on
+    whether enrollment_modes includes 'verified'.
+    """
+    set_up_topics(is_mitx=True)
+
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    program = next(
+        p
+        for p in mock_mitxonline_programs_data["results"]
+        if p.get("display_mode") == "course"
+    )
+    program = {**program, "enrollment_modes": enrollment_modes}
+    program["page"] = {**program["page"]}
+    program["page"]["page_url"] = "/programs/test/"
+    program["page"]["live"] = True
+    program["certificate_type"] = "Certificate of Completion"
+
+    result = transform_program_as_course(program)
+
+    assert result["certification"] is expected["certification"]
+    assert result["certification_type"] == expected["certification_type"]
+
+
 def test_mitxonline_transform_programs_as_courses_empty():
     """Test that transform_programs_as_courses returns empty list for empty input"""
     assert transform_programs_as_courses([]) == []
