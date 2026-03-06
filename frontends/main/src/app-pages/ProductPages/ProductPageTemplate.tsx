@@ -7,6 +7,7 @@ import {
   Breadcrumbs,
   BannerBackground,
   Typography,
+  HEADER_HEIGHT,
 } from "ol-components"
 import { convertToEmbedUrl } from "@/common/utils"
 import { backgroundSrcSetCSS } from "ol-utilities"
@@ -122,6 +123,13 @@ const SidebarCol = styled(Show, {
 const SummaryCol = styled.div(({ theme }) => ({
   width: "100%",
   maxWidth: "410px",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    // Without this, the flex child stretches to the main column's height
+    // and sticky has no room to scroll.
+    alignSelf: "flex-start",
+    top: `${HEADER_HEIGHT + 24}px`,
+  },
   [theme.breakpoints.down("md")]: {
     maxWidth: "none",
   },
@@ -189,12 +197,7 @@ const SummaryCard = styled.div(({ theme }) => ({
   boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
   overflow: "hidden",
   [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-54px",
-    top: "calc(40px + 32px + 24px)",
-  },
-  [theme.breakpoints.down("md")]: {
-    marginTop: "24px",
+    marginTop: "40px",
   },
 }))
 
