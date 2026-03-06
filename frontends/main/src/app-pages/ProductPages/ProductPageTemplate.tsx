@@ -257,7 +257,6 @@ type ProductPageTemplateProps = {
   sidebarSummary: React.ReactNode
   summaryTitle: string
   children: React.ReactNode
-  navbar: React.ReactNode
   enrollButton?: React.ReactNode
   programUpsell?: React.ReactNode
 }
@@ -273,7 +272,6 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollButton,
   programUpsell,
-  navbar,
 }) => {
   return (
     <Page>
@@ -326,7 +324,6 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
           </SummaryRoot>
         </SummaryCol>
         <MainCol>
-          {navbar}
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>

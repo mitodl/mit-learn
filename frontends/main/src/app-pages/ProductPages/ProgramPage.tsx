@@ -16,11 +16,10 @@ import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
-import ProductNavbar, { HeadingData } from "./ProductNavbar"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
-import { ProgramPageItem, V2Program } from "@mitodl/mitxonline-api-axios/v2"
+import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -37,42 +36,6 @@ const PrerequisitesSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
-
-const getNavLinks = (page: ProgramPageItem): HeadingData[] => {
-  const all = [
-    {
-      id: HeadingIds.About,
-      label: "About",
-      variant: "primary",
-      content: page.about,
-    },
-    {
-      id: HeadingIds.What,
-      label: "What you'll learn",
-      variant: "secondary",
-      content: page.what_you_learn,
-    },
-    {
-      id: HeadingIds.How,
-      label: "How you'll learn",
-      variant: "secondary",
-      content: true,
-    },
-    {
-      id: HeadingIds.Prereqs,
-      label: "Prerequisites",
-      variant: "secondary",
-      content: page.prerequisites,
-    },
-    {
-      id: HeadingIds.Instructors,
-      label: "Instructors",
-      variant: "secondary",
-      content: page.faculty.length,
-    },
-  ] as const
-  return all.filter((item) => item.content)
-}
 
 const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
@@ -223,8 +186,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     return null
   }
 
-  const navLinks = getNavLinks(page)
-
   const imageSrc = page.feature_image
     ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
@@ -249,7 +210,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <ProgramSummary program={program} courses={courses.data?.results} />
       }
       enrollButton={<ProgramEnrollmentButton program={program} />}
-      navbar={<ProductNavbar navLinks={navLinks} productNoun="Program" />}
     >
       {page.about ? (
         <AboutSection productNoun="Program" aboutHtml={page.about} />
