@@ -558,7 +558,13 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const WideButtonLink = styled(ButtonLink)({ width: "100%" })
+const WideButtonLink = styled(ButtonLink)(({ theme }) => ({
+  width: "100%",
+  [theme.breakpoints.between("sm", "md")]: {
+    width: "auto",
+    marginLeft: "auto",
+  },
+}))
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -572,7 +578,6 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   },
   // Tablet: standalone bordered card in the right column
   [theme.breakpoints.between("sm", "md")]: {
-    marginTop: "16px",
     borderTop: "none",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "4px",
@@ -582,13 +587,31 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const BundleUpsellItem = styled.div({
+const BundleUpsellItem = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
   alignItems: "center",
   textAlign: "center",
-})
+  "& + &": {
+    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+    paddingTop: "24px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    flexDirection: "row",
+    textAlign: "left",
+    alignItems: "center",
+  },
+}))
+
+const BundleUpsellText = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  [theme.breakpoints.between("sm", "md")]: {
+    flex: 1,
+  },
+}))
 
 const BundlePrice = styled.span(({ theme }) => ({
   ...theme.typography.h4,
@@ -601,37 +624,38 @@ const BundleStrikenPrice = styled.span(({ theme }) => ({
   ...theme.typography.body1,
 }))
 
-const BundlePriceRow = styled.div({
+const BundlePriceRow = styled.div(({ theme }) => ({
   display: "flex",
   gap: "8px",
   alignItems: "center",
   justifyContent: "center",
-})
+  [theme.breakpoints.between("sm", "md")]: {
+    justifyContent: "flex-start",
+  },
+}))
 
 const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
   program,
 }) => {
   const price = program.products[0]?.price
   const priceFormatted = price ? formatPrice(price) : null
+  if (!priceFormatted) return null
   // TODO: Replace hardcoded 1.2x markup with real unbundled price from the API
-  const strikePriceFormatted = price
-    ? formatPrice(String(Number(price) * 1.2))
-    : null
+  const strikePriceFormatted = formatPrice(String(Number(price) * 1.2))
 
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
-      <Typography variant="h5">
-        Get all {program.title} + Certificate
-      </Typography>
-      {priceFormatted ? (
+      <BundleUpsellText>
+        <Typography variant="h5">
+          Get all {program.title} + Certificate
+        </Typography>
         <BundlePriceRow>
           <BundlePrice>{priceFormatted}</BundlePrice>
           <BundleStrikenPrice>{strikePriceFormatted}</BundleStrikenPrice>
         </BundlePriceRow>
-      ) : null}
+      </BundleUpsellText>
       <WideButtonLink
         variant="bordered"
-        size="large"
         href={programPageView(program.readable_id)}
       >
         View Program
@@ -695,13 +719,38 @@ const ArchivedAlert: React.FC = () => {
   )
 }
 
+/**
+ * Flex column by default; on tablet switches to CSS multi-column so
+ * metadata rows flow top-to-bottom then wrap to the next column.
+ */
+const SummaryRows = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  [theme.breakpoints.up("md")]: {
+    gap: "32px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    display: "block",
+    columnCount: 2,
+    columnGap: "48px",
+    "> *": {
+      breakInside: "avoid",
+      marginBottom: "24px",
+      "&:last-child": {
+        marginBottom: 0,
+      },
+    },
+  },
+}))
+
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <Stack gap={{ xs: "24px", md: "32px" }}>
+    <SummaryRows>
       {!nextRun ? (
         <Alert severity="warning">
           No sessions of this course are currently open for enrollment. More
@@ -733,7 +782,7 @@ const CourseSummary: React.FC<{
         nextRun={nextRun}
         data-testid={TestIds.PriceRow}
       />
-    </Stack>
+    </SummaryRows>
   )
 }
 
@@ -920,7 +969,7 @@ const ProgramSummary: React.FC<{
   courses?: CourseWithCourseRunsSerializerV2[]
 }> = ({ program, courses }) => {
   return (
-    <Stack gap={{ xs: "24px", md: "32px" }}>
+    <SummaryRows>
       <RequirementsRow
         program={program}
         data-testid={TestIds.RequirementsRow}
@@ -928,7 +977,7 @@ const ProgramSummary: React.FC<{
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
       <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
-    </Stack>
+    </SummaryRows>
   )
 }
 
