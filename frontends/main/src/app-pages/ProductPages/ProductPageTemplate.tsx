@@ -181,9 +181,6 @@ const SidebarMedia: React.FC<{
 /**
  * Outer card wrapper: border, shadow, radius. No padding — children control
  * their own insets so that elements like the bundle upsell can span edge-to-edge.
- *
- * On tablet this becomes a two-column grid itself so that SummaryContent (metadata)
- * and the upsell/actions sit side by side.
  */
 const SummaryCard = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -196,80 +193,31 @@ const SummaryCard = styled.div(({ theme }) => ({
     marginTop: "-54px",
     top: "calc(40px + 32px + 24px)",
   },
-  [theme.breakpoints.between("sm", "md")]: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "0 48px",
-    padding: "24px",
-  },
   [theme.breakpoints.down("md")]: {
     marginTop: "24px",
   },
 }))
 
-/**
- * Padded content area — metadata rows. On tablet the padding comes from
- * SummaryCard's grid padding; this area spans all rows in column 1.
- */
+/** Padded content area inside the summary card. */
 const SummaryContent = styled.div(({ theme }) => ({
   padding: "24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "32px",
   [theme.breakpoints.up("md")]: {
     padding: "24px 32px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    padding: 0,
-    gridColumn: "1",
-    gridRow: "1 / -1",
   },
   [theme.breakpoints.down("sm")]: {
     padding: "16px",
   },
 }))
 
-/**
- * Wraps the right-column items (enroll, upsell, AskTIM) so they form a
- * single grid child on tablet. On desktop/mobile it's just a flex column.
- */
-const RightCol = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  [theme.breakpoints.between("sm", "md")]: {
-    gridColumn: "2",
-    gap: "16px",
-  },
-}))
-
-const ActionsArea = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: "32px",
-  padding: "8px 24px 0",
-  [theme.breakpoints.up("md")]: {
-    padding: "8px 32px 0",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    padding: 0,
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "8px 16px 0",
-  },
-}))
+/** Enrollment button — only visible on desktop (sticky sidebar). */
+const DesktopEnrollArea = styled(Show)({
+  padding: "8px 32px 24px",
+})
 
 const AskTimButton = styled(Button)(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.2)",
-  margin: "24px",
-  [theme.breakpoints.up("md")]: {
-    margin: "24px 32px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    margin: "16px 0 0",
-  },
-  [theme.breakpoints.down("sm")]: {
-    margin: "16px",
-  },
+  marginTop: "16px",
+  alignSelf: "flex-start",
   color: theme.custom.colors.darkGray2,
   svg: {
     color: theme.custom.colors.mitRed,
@@ -345,20 +293,18 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         <SummaryCol>
           <SummaryCard as="section" aria-labelledby={HeadingIds.Summary}>
             <SummaryContent>{sidebarSummary}</SummaryContent>
-            <RightCol>
-              <ActionsArea>{enrollButton}</ActionsArea>
-              {programUpsell}
-              <AskTimButton
-                variant="bordered"
-                size="large"
-                startIcon={<RiSparkling2Line />}
-                onClick={() => console.log("AskTIM clicked")}
-                data-testid="ask-tim-button"
-              >
-                AskTIM about this course
-              </AskTimButton>
-            </RightCol>
+            <DesktopEnrollArea showAbove="md">{enrollButton}</DesktopEnrollArea>
+            {programUpsell}
           </SummaryCard>
+          <AskTimButton
+            variant="bordered"
+            size="large"
+            startIcon={<RiSparkling2Line />}
+            onClick={() => console.log("AskTIM clicked")}
+            data-testid="ask-tim-button"
+          >
+            AskTIM about this course
+          </AskTimButton>
         </SummaryCol>
         <MainCol>
           <SectionsWrapper>{children}</SectionsWrapper>
