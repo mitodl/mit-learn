@@ -953,6 +953,34 @@ paths:
           * `-id` - -id
           * `resource_readable_id` - resource_readable_id
           * `-resource_readable_id` - -resource_readable_id
+      - in: query
+        name: title
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: 'The title of the content file. '
+      - in: query
+        name: title__isnull
+        schema:
+          type: boolean
+          nullable: true
+        description: Filter to content files where title is null/not null
+      - in: query
+        name: url
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: 'The url of the content file. '
+      - in: query
+        name: url__isnull
+        schema:
+          type: boolean
+          nullable: true
+        description: Filter to content files where url is null/not null
       tags:
       - vector_content_files_search
       responses:
@@ -1312,6 +1340,12 @@ paths:
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
+        name: title__isnull
+        schema:
+          type: boolean
+          nullable: true
+        description: Filter to learning resources where title is null/not null
+      - in: query
         name: topic
         schema:
           type: array
@@ -1319,6 +1353,12 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: url__isnull
+        schema:
+          type: boolean
+          nullable: true
+        description: Filter to learning resources where url is null/not null
       tags:
       - vector_learning_resources_search
       responses:

@@ -148,6 +148,18 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(resource_type_group_choices)}"
         ),
     )
+    url__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to learning resources where url is null/not null",
+    )
+    title__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to learning resources where title is null/not null",
+    )
 
 
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
@@ -247,6 +259,29 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         help_text=(
             "The number of chunks in each group. Only relevant when group_by is used"
         ),
+    )
+    url = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The url of the content file. ",
+    )
+    title = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The title of the content file. ",
+    )
+
+    url__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to content files where url is null/not null",
+    )
+    title__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to content files where title is null/not null",
     )
 
 
