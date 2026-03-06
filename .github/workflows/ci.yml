@@ -153,6 +153,7 @@ jobs:
           MITOL_AXIOS_WITH_CREDENTIALS: true
           CSRF_COOKIE_NAME: learn_csrftoken_ci
           POSTHOG_API_HOST: https://app.posthog.com
+          POSTHOG_UI_HOST: https://us.posthog.com
           POSTHOG_PROJECT_ID: fake-posthog-project-id
           POSTHOG_API_KEY: fake-posthog-api-key
           SENTRY_DSN: fake-sentry-dsn
@@ -173,6 +174,7 @@ jobs:
             --build-arg NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS=$MITOL_AXIOS_WITH_CREDENTIALS \
             --build-arg NEXT_PUBLIC_CSRF_COOKIE_NAME=$CSRF_COOKIE_NAME \
             --build-arg NEXT_PUBLIC_POSTHOG_API_HOST=$POSTHOG_API_HOST \
+            --build-arg NEXT_PUBLIC_POSTHOG_UI_HOST=$POSTHOG_UI_HOST \
             --build-arg NEXT_PUBLIC_POSTHOG_PROJECT_ID=$POSTHOG_PROJECT_ID \
             --build-arg NEXT_PUBLIC_POSTHOG_API_KEY=$POSTHOG_API_KEY \
             --build-arg NEXT_PUBLIC_SENTRY_DSN=$SENTRY_DSN \

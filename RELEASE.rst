@@ -1,6 +1,32 @@
 Release Notes
 =============
 
+Version 0.56.6 (Released March 05, 2026)
+--------------
+
+- remove temporary code setting resource_category to resource_type_group (#2981)
+
+Version 0.56.5 (Released March 04, 2026)
+--------------
+
+- feat: video thumbnail for product page sidebar (#2992)
+- remove dependency on Wagtail page_url from MITx Online (#3008)
+- Product pages, Purchasable Programs + enrollment_modes (#2995)
+
+Version 0.56.4 (Released March 04, 2026)
+--------------
+
+- Learning resource views ETL fix (#2993)
+- fix: make direct call to cdn purge (#2983)
+- backend for standardizing learning material resources - articles, videos, documents (#2965)
+
+Version 0.56.1 (Released March 02, 2026)
+--------------
+
+- explicitly set is_self_paced to false on tests that need it (#2998)
+- whitelist characters that don't need to be urlencoded (#2994)
+- fix: handle only having expired enrollments / program enrollments (#2988)
+
 Version 0.55.8 (Released February 27, 2026)
 --------------
 

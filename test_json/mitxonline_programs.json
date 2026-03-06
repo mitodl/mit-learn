@@ -113,7 +113,11 @@
       "max_weeks": 14,
       "time_commitment": "5-7 hrs/wk",
       "min_weekly_hours": "5",
-      "max_weekly_hours": "7"
+      "max_weekly_hours": "7",
+      "enrollment_modes": [
+        { "mode_slug": "verified" },
+        { "mode_slug": "audit" }
+      ]
     }
   ]
 }

@@ -131,77 +131,21 @@ def test_mitxonline_transform_programs(
     )
 
     result = transform_programs(mock_mitxonline_programs_data["results"])
-    expected = [
-        {
-            "readable_id": program_data["readable_id"],
-            "title": program_data["title"],
-            "offered_by": OFFERED_BY,
-            "etl_source": ETLSource.mitxonline.name,
-            "platform": PlatformType.mitxonline.name,
-            "resource_type": LearningResourceType.program.name,
-            "departments": [
-                get_department_id_by_name(program_data["departments"][0]["name"])
+    expected = []
+    for program_data in mock_mitxonline_programs_data["results"]:
+        expected_courses = []
+        for course_data in sorted(
+            mock_mitxonline_courses_data["results"],
+            key=lambda x: x["readable_id"],
+        ):
+            if "PROCTORED EXAM" in course_data["title"]:
+                continue
+            runs = [
+                _transform_run(course_run, course_data)
+                for course_run in course_data["courseruns"]
             ]
-            if program_data["departments"]
-            else [],
-            "professional": False,
-            "certification": bool(
-                program_data.get("page", {}).get("page_url", None) is not None
-            ),
-            "certification_type": parse_certificate_type(
-                program_data["certificate_type"]
-            )
-            if bool(program_data.get("page", {}).get("page_url", None) is not None)
-            else None,
-            "image": _transform_image(program_data),
-            "description": clean_data(
-                program_data.get("page", {}).get("description", None)
-            ),
-            "published": bool(
-                program_data.get("page", {}).get("page_url", None) is not None
-                and program_data.get("page", {}).get("live", None)
-            ),
-            "url": parse_page_attribute(program_data, "page_url", is_url=True),
-            "availability": program_data["availability"],
-            "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
-            "format": [Format.asynchronous.name],
-            "pace": [Pace.instructor_paced.name],
-            "runs": [
-                {
-                    "run_id": program_data["readable_id"],
-                    "start_date": any_instance_of(datetime, type(None)),
-                    "end_date": any_instance_of(datetime, type(None)),
-                    "enrollment_start": any_instance_of(datetime, type(None)),
-                    "enrollment_end": any_instance_of(datetime, type(None)),
-                    "published": bool(
-                        program_data.get("page", {}).get("page_url", None) is not None
-                    ),
-                    "prices": parse_prices(program_data),
-                    "image": _transform_image(program_data),
-                    "title": program_data["title"],
-                    "description": clean_data(
-                        program_data.get("page", {}).get("description", None)
-                    ),
-                    "url": parse_page_attribute(program_data, "page_url", is_url=True),
-                    "status": RunStatus.current.value
-                    if parse_page_attribute(program_data, "page_url")
-                    else RunStatus.archived.value,
-                    "availability": program_data["availability"],
-                    "format": [Format.asynchronous.name],
-                    "pace": [Pace.instructor_paced.name],
-                    "duration": program_data.get("duration"),
-                    "time_commitment": program_data.get("time_commitment"),
-                    "min_weeks": program_data.get("min_weeks"),
-                    "max_weeks": program_data.get("max_weeks"),
-                    "min_weekly_hours": parse_string_to_int(
-                        program_data.get("min_weekly_hours")
-                    ),
-                    "max_weekly_hours": parse_string_to_int(
-                        program_data.get("max_weekly_hours")
-                    ),
-                }
-            ],
-            "courses": [
+            has_certification = parse_certification(OFFERED_BY["code"], runs)
+            expected_courses.append(
                 {
                     "readable_id": course_data["readable_id"],
                     "offered_by": OFFERED_BY,
@@ -233,23 +177,11 @@ def test_mitxonline_transform_programs(
                         > 0
                         and course_data.get("include_in_learn_catalog", False)
                     ),
-                    "certification": parse_certification(
-                        OFFERED_BY["code"],
-                        [
-                            _transform_run(course_run, course_data)
-                            for course_run in course_data["courseruns"]
-                        ],
-                    ),
+                    "certification": has_certification,
                     "certification_type": parse_certificate_type(
                         course_data["certificate_type"]
                     )
-                    if parse_certification(
-                        OFFERED_BY["code"],
-                        [
-                            _transform_run(course_run, course_data)
-                            for course_run in course_data["courseruns"]
-                        ],
-                    )
+                    if has_certification
                     else CertificationType.none.name,
                     "url": parse_page_attribute(course_data, "page_url", is_url=True),
                     "availability": course_data["availability"],
@@ -258,56 +190,7 @@ def test_mitxonline_transform_programs(
                     "topics": transform_topics(
                         course_data["topics"], OFFERED_BY["code"]
                     ),
-                    "runs": [
-                        {
-                            "run_id": course_run_data["courseware_id"],
-                            "title": course_run_data["title"],
-                            "image": _transform_image(course_run_data),
-                            "start_date": any_instance_of(datetime, type(None)),
-                            "end_date": any_instance_of(datetime, type(None)),
-                            "enrollment_start": any_instance_of(datetime, type(None)),
-                            "enrollment_end": any_instance_of(datetime, type(None)),
-                            "url": parse_page_attribute(
-                                course_data, "page_url", is_url=True
-                            ),
-                            "description": any_instance_of(str, type(None)),
-                            "published": bool(
-                                course_run_data["is_enrollable"]
-                                and course_data["page"]["live"]
-                            ),
-                            "prices": parse_prices(course_data)
-                            if is_fully_enrollable(
-                                course_run_data,
-                            )
-                            else [],
-                            "instructors": [
-                                {"full_name": instructor["name"]}
-                                for instructor in parse_page_attribute(
-                                    course_data, "instructors", is_list=True
-                                )
-                            ],
-                            "status": RunStatus.current.value
-                            if (
-                                parse_page_attribute(course_data, "page_url")
-                                and is_fully_enrollable(course_run_data)
-                            )
-                            else RunStatus.archived.value,
-                            "availability": course_data["availability"],
-                            "format": [Format.asynchronous.name],
-                            "pace": [Pace.instructor_paced.name],
-                            "duration": course_data.get("duration"),
-                            "min_weeks": course_data.get("min_weeks"),
-                            "max_weeks": course_data.get("max_weeks"),
-                            "time_commitment": course_data.get("time_commitment"),
-                            "min_weekly_hours": parse_string_to_int(
-                                course_data.get("min_weekly_hours")
-                            ),
-                            "max_weekly_hours": parse_string_to_int(
-                                course_data.get("max_weekly_hours")
-                            ),
-                        }
-                        for course_run_data in course_data["courseruns"]
-                    ],
+                    "runs": runs,
                     "course": {
                         "course_numbers": [
                             {
@@ -320,15 +203,83 @@ def test_mitxonline_transform_programs(
                         ]
                     },
                 }
-                for course_data in sorted(
-                    mock_mitxonline_courses_data["results"],
-                    key=lambda x: x["readable_id"],
-                )
-                if "PROCTORED EXAM" not in course_data["title"]
-            ],
-        }
-        for program_data in mock_mitxonline_programs_data["results"]
-    ]
+            )
+        expected.append(
+            {
+                "readable_id": program_data["readable_id"],
+                "title": program_data["title"],
+                "offered_by": OFFERED_BY,
+                "etl_source": ETLSource.mitxonline.name,
+                "platform": PlatformType.mitxonline.name,
+                "resource_type": LearningResourceType.program.name,
+                "departments": [
+                    get_department_id_by_name(program_data["departments"][0]["name"])
+                ]
+                if program_data["departments"]
+                else [],
+                "professional": False,
+                "certification": program_data.get("certificate_type") is not None,
+                "certification_type": parse_certificate_type(
+                    program_data["certificate_type"]
+                ),
+                "image": _transform_image(program_data),
+                "description": clean_data(
+                    program_data.get("page", {}).get("description", None)
+                ),
+                "published": bool(
+                    program_data.get("page", {}).get("page_url", None) is not None
+                    and program_data.get("page", {}).get("live", None)
+                ),
+                "url": parse_page_attribute(program_data, "page_url", is_url=True),
+                "availability": program_data["availability"],
+                "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
+                "format": [Format.asynchronous.name],
+                "pace": [Pace.instructor_paced.name],
+                "runs": [
+                    {
+                        "run_id": program_data["readable_id"],
+                        "start_date": any_instance_of(datetime, type(None)),
+                        "end_date": any_instance_of(datetime, type(None)),
+                        "enrollment_start": any_instance_of(datetime, type(None)),
+                        "enrollment_end": any_instance_of(datetime, type(None)),
+                        "published": bool(
+                            program_data.get("page", {}).get("page_url", None)
+                            is not None
+                        ),
+                        "prices": parse_prices(
+                            program_data,
+                            program_data.get("enrollment_modes", []),
+                            fully_enrollable=True,
+                        ),
+                        "image": _transform_image(program_data),
+                        "title": program_data["title"],
+                        "description": clean_data(
+                            program_data.get("page", {}).get("description", None)
+                        ),
+                        "url": parse_page_attribute(
+                            program_data, "page_url", is_url=True
+                        ),
+                        "status": RunStatus.current.value
+                        if parse_page_attribute(program_data, "page_url")
+                        else RunStatus.archived.value,
+                        "availability": program_data["availability"],
+                        "format": [Format.asynchronous.name],
+                        "pace": [Pace.instructor_paced.name],
+                        "duration": program_data.get("duration") or "",
+                        "time_commitment": program_data.get("time_commitment") or "",
+                        "min_weeks": program_data.get("min_weeks"),
+                        "max_weeks": program_data.get("max_weeks"),
+                        "min_weekly_hours": parse_string_to_int(
+                            program_data.get("min_weekly_hours")
+                        ),
+                        "max_weekly_hours": parse_string_to_int(
+                            program_data.get("max_weekly_hours")
+                        ),
+                    }
+                ],
+                "courses": expected_courses,
+            }
+        )
     result = sorted(result, key=lambda x: x["readable_id"])
     expected = sorted(expected, key=lambda x: x["readable_id"])
     assert result == expected
@@ -343,81 +294,77 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
 
     result = transform_courses(mock_mitxonline_courses_data["results"])
-    expected = [
-        {
-            "readable_id": course_data["readable_id"],
-            "platform": PlatformType.mitxonline.name,
-            "etl_source": ETLSource.mitxonline.name,
-            "force_ingest": course_data.get("ingest_content_files_for_ai", False),
-            "resource_type": LearningResourceType.course.name,
-            "departments": [
-                get_department_id_by_name(course_data["departments"][0]["name"])
-            ],
-            "title": course_data["title"],
-            "image": _transform_image(course_data),
-            "description": clean_data(
-                course_data.get("page", {}).get("description", None)
-            ),
-            "offered_by": OFFERED_BY,
-            "published": bool(
-                course_data.get("page", {}).get("page_url", None)
-                and course_data.get("page", {}).get("live", None)
-                and len(
-                    [run for run in course_data["courseruns"] if run["is_enrollable"]]
-                )
-                > 0
-                and course_data.get("include_in_learn_catalog", False)
-            ),
-            "professional": False,
-            "certification": parse_certification(
-                OFFERED_BY["code"],
-                [
-                    _transform_run(course_run, course_data)
-                    for course_run in course_data["courseruns"]
+    expected = []
+    for course_data in mock_mitxonline_courses_data["results"]:
+        if "PROCTORED EXAM" in course_data["title"]:
+            continue
+        runs = [
+            _transform_run(course_run, course_data)
+            for course_run in course_data["courseruns"]
+        ]
+        has_certification = parse_certification(OFFERED_BY["code"], runs)
+        expected.append(
+            {
+                "readable_id": course_data["readable_id"],
+                "platform": PlatformType.mitxonline.name,
+                "etl_source": ETLSource.mitxonline.name,
+                "force_ingest": course_data.get("ingest_content_files_for_ai", False),
+                "resource_type": LearningResourceType.course.name,
+                "departments": [
+                    get_department_id_by_name(course_data["departments"][0]["name"])
                 ],
-            ),
-            "certification_type": parse_certificate_type(
-                course_data["certificate_type"]
-            )
-            if parse_certification(
-                OFFERED_BY["code"],
-                [
-                    _transform_run(course_run, course_data)
-                    for course_run in course_data["courseruns"]
-                ],
-            )
-            else CertificationType.none.name,
-            "topics": transform_topics(course_data["topics"], OFFERED_BY["code"]),
-            "url": (
-                urljoin(
-                    settings.MITX_ONLINE_BASE_URL,
-                    course_data["page"]["page_url"],
+                "title": course_data["title"],
+                "image": _transform_image(course_data),
+                "description": clean_data(
+                    course_data.get("page", {}).get("description", None)
+                ),
+                "offered_by": OFFERED_BY,
+                "published": bool(
+                    course_data.get("page", {}).get("page_url", None)
+                    and course_data.get("page", {}).get("live", None)
+                    and len(
+                        [
+                            run
+                            for run in course_data["courseruns"]
+                            if run["is_enrollable"]
+                        ]
+                    )
+                    > 0
+                    and course_data.get("include_in_learn_catalog", False)
+                ),
+                "professional": False,
+                "certification": has_certification,
+                "certification_type": parse_certificate_type(
+                    course_data["certificate_type"]
                 )
-                if course_data.get("page", {}).get("page_url")
-                else None
-            ),
-            "runs": [
-                _transform_run(course_run_data, course_data)
-                for course_run_data in course_data["courseruns"]
-            ],
-            "course": {
-                "course_numbers": [
-                    {
-                        "value": course_data["readable_id"],
-                        "department": ANY,
-                        "listing_type": CourseNumberType.primary.value,
-                        "primary": True,
-                        "sort_coursenum": course_data["readable_id"],
-                    }
-                ]
-            },
-            "availability": course_data["availability"],
-            "format": [Format.asynchronous.name],
-            "pace": [Pace.instructor_paced.name],
-        }
-        for course_data in mock_mitxonline_courses_data["results"]
-        if "PROCTORED EXAM" not in course_data["title"]
-    ]
+                if has_certification
+                else CertificationType.none.name,
+                "topics": transform_topics(course_data["topics"], OFFERED_BY["code"]),
+                "url": (
+                    urljoin(
+                        settings.MITX_ONLINE_BASE_URL,
+                        course_data["page"]["page_url"],
+                    )
+                    if course_data.get("page", {}).get("page_url")
+                    else None
+                ),
+                "runs": runs,
+                "course": {
+                    "course_numbers": [
+                        {
+                            "value": course_data["readable_id"],
+                            "department": ANY,
+                            "listing_type": CourseNumberType.primary.value,
+                            "primary": True,
+                            "sort_coursenum": course_data["readable_id"],
+                        }
+                    ]
+                },
+                "availability": course_data["availability"],
+                "format": [Format.asynchronous.name],
+                "pace": [Pace.instructor_paced.name],
+            }
+        )
     assert expected == result
 
 
@@ -513,21 +460,167 @@ def test_program_run_start_date_value(  # noqa: PLR0913
 
 
 @pytest.mark.parametrize(
-    ("min_price", "max_price", "expected"),
+    ("min_price", "max_price", "mode_data", "fully_enrollable", "expected"),
     [
-        (None, 100, [0, 100]),
-        (100, 1000, [0, 100, 1000]),
-        (99.99, 3000, [0.00, 99.99, 3000]),
-        (9.99, None, [0, 9.99]),
+        # Both modes: verified prices + free for audit (deduplicated, sorted)
+        (
+            100,
+            1000,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [0, 100, 1000],
+        ),
+        (
+            None,
+            100,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [0, 100],
+        ),
+        (
+            9.99,
+            None,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+            [0, 9.99],
+        ),
+        # Audit only: free only (no verified prices)
+        (100, 1000, [{"mode_slug": "audit"}], True, [0]),
+        (99.99, 3000, [{"mode_slug": "audit"}], True, [0]),
+        # Verified only: verified prices, no free
+        (100, 1000, [{"mode_slug": "verified"}], True, [100, 1000]),
+        # No modes: fallback to free
+        (100, 1000, [], True, [0]),
+        # Not fully enrollable: always free
+        (100, 1000, [{"mode_slug": "verified"}, {"mode_slug": "audit"}], False, [0]),
+        (100, 1000, [{"mode_slug": "audit"}], False, [0]),
+        # No prices set: always free regardless of modes
+        (None, None, [{"mode_slug": "audit"}], True, [0]),
+        (None, None, [{"mode_slug": "verified"}], True, [0]),
     ],
 )
-def test_parse_prices(min_price, max_price, expected):
+def test_parse_prices(min_price, max_price, mode_data, fully_enrollable, expected):
     """Test that the prices are correctly parsed from the parent data"""
     program_data = {"min_price": min_price, "max_price": max_price}
-    assert parse_prices(program_data) == sorted(
-        [{"amount": float(price), "currency": CURRENCY_USD} for price in expected],
-        key=lambda x: x["amount"],
-    )
+    assert parse_prices(program_data, mode_data, fully_enrollable=fully_enrollable) == [
+        {"amount": float(price), "currency": CURRENCY_USD} for price in expected
+    ]
+
+
+@pytest.mark.parametrize(
+    ("enrollment_modes", "expected_prices"),
+    [
+        # Both modes: verified prices + free audit price (deduplicated, sorted)
+        (
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            [0, 100, 200],
+        ),
+        # Audit only: free only
+        (
+            [{"mode_slug": "audit"}],
+            [0],
+        ),
+        # Verified only: verified prices, no free
+        (
+            [{"mode_slug": "verified"}],
+            [100, 200],
+        ),
+        # No modes: free only
+        (
+            [],
+            [0],
+        ),
+    ],
+)
+def test_transform_run_prices_by_enrollment_mode(
+    mocker, enrollment_modes, expected_prices
+):
+    """Test that run prices reflect enrollment modes correctly"""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    course = {
+        "min_price": 100,
+        "max_price": 200,
+        "page": {
+            "page_url": "/courses/test/",
+            "live": True,
+            "description": "Test",
+            "feature_image_src": None,
+            "instructors": [],
+        },
+        "availability": "dated",
+        "duration": "",
+        "time_commitment": "",
+        "min_weeks": None,
+        "max_weeks": None,
+        "min_weekly_hours": None,
+        "max_weekly_hours": None,
+    }
+    run = {
+        "title": "Test Run",
+        "courseware_id": "course-v1:MITxT+TEST+1T2024",
+        "start_date": "2024-01-01T00:00:00Z",
+        "end_date": "2024-06-01T00:00:00Z",
+        "enrollment_start": "2023-12-01T00:00:00Z",
+        "enrollment_end": "2024-05-01T00:00:00Z",
+        "is_enrollable": True,
+        "is_self_paced": False,
+        "enrollment_modes": enrollment_modes,
+        "page": {},
+    }
+    result = _transform_run(run, course)
+    assert result["prices"] == [
+        {"amount": float(p), "currency": CURRENCY_USD} for p in expected_prices
+    ]
+
+
+def test_transform_run_prices_not_fully_enrollable(mocker):
+    """Test that non-enrollable runs always get free-only prices regardless of modes"""
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+
+    course = {
+        "min_price": 100,
+        "max_price": 200,
+        "page": {
+            "page_url": "/courses/test/",
+            "live": True,
+            "description": "Test",
+            "feature_image_src": None,
+            "instructors": [],
+        },
+        "availability": "dated",
+        "duration": "",
+        "time_commitment": "",
+        "min_weeks": None,
+        "max_weeks": None,
+        "min_weekly_hours": None,
+        "max_weekly_hours": None,
+    }
+    free_price = [{"amount": 0.0, "currency": CURRENCY_USD}]
+    for modes in (
+        [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+        [{"mode_slug": "audit"}],
+        [{"mode_slug": "verified"}],
+        [],
+    ):
+        run = {
+            "title": "Test Run",
+            "courseware_id": "course-v1:MITxT+TEST+1T2024",
+            "start_date": "2024-01-01T00:00:00Z",
+            "end_date": "2024-06-01T00:00:00Z",
+            "enrollment_start": "2023-12-01T00:00:00Z",
+            "enrollment_end": "2024-05-01T00:00:00Z",
+            "is_enrollable": False,
+            "is_self_paced": False,
+            "enrollment_modes": modes,
+            "page": {},
+        }
+        result = _transform_run(run, course)
+        assert result["prices"] == free_price, (
+            f"Expected free-only prices for non-enrollable run with modes {modes}"
+        )
 
 
 @pytest.mark.parametrize(
@@ -707,3 +800,61 @@ def test_is_fully_enrollable(mocker, run_data, expected):
     mock_now = datetime(2023, 6, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
     assert is_fully_enrollable(run_data) == expected
+
+
+@pytest.mark.parametrize(
+    ("enrollment_modes", "expected"),
+    [
+        (
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "verified"}],
+            {
+                "certification": True,
+                "certification_type": CertificationType.completion.name,
+            },
+        ),
+        (
+            [{"mode_slug": "audit"}],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+        (
+            [],
+            {"certification": False, "certification_type": CertificationType.none.name},
+        ),
+    ],
+)
+def test_transform_program_certification_by_enrollment_modes(
+    mocker,
+    mock_mitxonline_programs_data,
+    mock_mitxonline_courses_data,
+    enrollment_modes,
+    expected,
+):
+    """Test that program certification and certification_type depend on
+    whether enrollment_modes includes 'verified'.
+    """
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    program = mock_mitxonline_programs_data["results"][0].copy()
+    program["page"] = {**program["page"]}
+    program["page"]["page_url"] = "/programs/test/"
+    program["page"]["live"] = True
+    program["certificate_type"] = "Certificate of Completion"
+    program["enrollment_modes"] = enrollment_modes
+
+    results = list(transform_programs([program]))
+    result = results[0]
+
+    assert result["certification"] is expected["certification"]
+    assert result["certification_type"] == expected["certification_type"]

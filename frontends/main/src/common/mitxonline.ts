@@ -1,5 +1,7 @@
 import type {
+  BaseProduct,
   CourseRunV2,
+  EnrollmentMode,
   ProductFlexiblePrice,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -20,7 +22,7 @@ const upgradeRunUrl = (product: ProductFlexiblePrice): string => {
   }
 }
 
-const canUpgradeRun = (run: CourseRunV2): boolean => {
+const canPurchaseRun = (run: CourseRunV2): boolean => {
   // Prefer to handle this on backend
   // See https://github.com/mitodl/hq/issues/9450
   return (
@@ -49,13 +51,25 @@ export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
 }
 
 /**
- * Returns certificate price as formatted string, or null if upgrade not available
+ * Format the numeric part of a price:
+ * ```ts
+ * formatPrice(100) // "$100"
+ * formatPrice(100.5) // "$100.50"
+ * formatPrice(100, { avoidCents: true }) // "$100"
+ * formatPrice(100.5, { avoidCents: true }) // "$100.50"
+ * ```
  */
-const formatProductPrice = (product: ProductFlexiblePrice) => {
-  const amount = getFlexiblePriceForProduct(product)
-  return Number(amount).toLocaleString("en-US", {
+const formatPrice = (
+  amount: number | string,
+  { avoidCents = false } = {},
+): string => {
+  const num = Number(amount)
+  const fractionDigits = avoidCents && Number.isInteger(num) ? 0 : 2
+  return num.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   })
 }
 
@@ -72,13 +86,15 @@ type PriceWithDiscount = {
 const priceWithDiscount = ({
   product,
   flexiblePrice,
+  avoidCents = false,
 }: {
-  product: ProductFlexiblePrice
+  product: BaseProduct
   flexiblePrice?: ProductFlexiblePrice
+  avoidCents?: boolean
 }): PriceWithDiscount => {
-  const originalPrice = formatProductPrice(product)
+  const originalPrice = formatPrice(product.price, { avoidCents })
   const finalPrice = flexiblePrice
-    ? formatProductPrice(flexiblePrice)
+    ? formatPrice(getFlexiblePriceForProduct(flexiblePrice), { avoidCents })
     : originalPrice
   const isDiscounted = originalPrice !== finalPrice
 
@@ -94,11 +110,25 @@ const mitxonlineUrl = (relative: string) => {
   return new URL(relative, NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL).toString()
 }
 
+type EnrollmentType = "none" | "free" | "paid" | "both"
+
+const getEnrollmentType = (
+  modes: EnrollmentMode[] | undefined,
+): EnrollmentType => {
+  if (!modes || modes.length === 0) return "none"
+  const hasFree = modes.some((m) => !m.requires_payment)
+  const hasPaid = modes.some((m) => m.requires_payment)
+  if (hasFree && hasPaid) return "both"
+  if (hasFree) return "free"
+  return "paid"
+}
+
 export {
-  formatProductPrice,
+  formatPrice,
   priceWithDiscount,
-  canUpgradeRun,
+  canPurchaseRun,
   upgradeRunUrl,
   mitxonlineUrl,
+  getEnrollmentType,
 }
-export type { PriceWithDiscount }
+export type { PriceWithDiscount, EnrollmentType }

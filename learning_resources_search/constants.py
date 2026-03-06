@@ -96,7 +96,7 @@ SEARCH_FILTERS = {
     "platform": FilterConfig("platform.code"),
     "offered_by": FilterConfig("offered_by.code"),
     "delivery": FilterConfig("delivery.code"),
-    "resource_category": FilterConfig("resource_category"),
+    "resource_type_group": FilterConfig("resource_type_group"),
 }
 
 SEARCH_NESTED_FILTERS = {
@@ -198,6 +198,7 @@ LEARNING_RESOURCE_MAP = {
     "professional": {"type": "boolean"},
     "resource_type": {"type": "keyword"},
     "resource_category": {"type": "keyword"},
+    "resource_type_group": {"type": "keyword"},
     "topics": {
         "type": "nested",
         "properties": {
