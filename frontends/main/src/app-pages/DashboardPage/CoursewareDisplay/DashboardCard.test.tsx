@@ -346,7 +346,6 @@ describe.each([
                 price: faker.commerce.price(),
                 description: faker.lorem.sentence(),
                 is_active: true,
-                product_flexible_price: null,
               },
             ],
           }),
@@ -369,7 +368,6 @@ describe.each([
                 price: faker.commerce.price(),
                 description: faker.lorem.sentence(),
                 is_active: true,
-                product_flexible_price: null,
               },
             ],
           }),
@@ -438,7 +436,6 @@ describe.each([
             price: faker.commerce.price(),
             description: faker.lorem.sentence(),
             is_active: true,
-            product_flexible_price: null,
           },
         ],
       })
@@ -485,7 +482,6 @@ describe.each([
           price: certificateUpgradePrice,
           description: faker.lorem.sentence(),
           is_active: true,
-          product_flexible_price: null,
         },
       ],
     })
@@ -530,7 +526,6 @@ describe.each([
           price: certificateUpgradePrice,
           description: faker.lorem.sentence(),
           is_active: true,
-          product_flexible_price: null,
         },
       ],
     })
@@ -599,7 +594,6 @@ describe.each([
           price: faker.commerce.price(),
           description: faker.lorem.sentence(),
           is_active: true,
-          product_flexible_price: null,
         },
       ],
     })
@@ -655,7 +649,6 @@ describe.each([
           price: faker.commerce.price(),
           description: faker.lorem.sentence(),
           is_active: true,
-          product_flexible_price: null,
         },
       ],
     })

@@ -69,7 +69,6 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
           price: faker.commerce.price(),
           description: faker.lorem.sentence(),
           is_active: faker.datatype.boolean(),
-          product_flexible_price: null,
         },
       ],
       course: {
