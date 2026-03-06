@@ -59,7 +59,6 @@ const BottomContainer = styled(Container)(({ theme }) => ({
 
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    alignItems: "center",
     gap: "0px",
     paddingTop: "24px",
   },
@@ -113,6 +112,18 @@ const SidebarCol = styled(Show, {
   width: "100%",
   maxWidth: "410px",
   alignSelf,
+}))
+
+/**
+ * Column for the summary info box. Unlike SidebarCol, this is always visible.
+ * On desktop it acts as a fixed-width sidebar; below md it goes full-width.
+ */
+const SummaryCol = styled.div(({ theme }) => ({
+  width: "100%",
+  maxWidth: "410px",
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "none",
+  },
 }))
 
 const SidebarVideo = styled.iframe(({ theme }) => ({
@@ -172,23 +183,69 @@ const SummaryRoot = styled.div(({ theme }) => ({
   borderRadius: "4px",
   boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
   padding: "24px",
-  display: "flex",
-  flexDirection: "column",
+  display: "grid",
+  gridTemplateColumns: "1fr",
   gap: "32px",
   [theme.breakpoints.up("md")]: {
     position: "sticky",
     marginTop: "-54px",
     top: "calc(40px + 32px + 24px)",
     borderRadius: "4px",
+    padding: "24px 32px",
   },
   [theme.breakpoints.between("sm", "md")]: {
-    flexDirection: "row",
-    gap: "48px",
+    gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "auto",
+    gap: "24px 48px",
   },
   [theme.breakpoints.down("md")]: {
     marginTop: "24px",
   },
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px",
+  },
 }))
+
+const MetadataArea = styled.div(({ theme }) => ({
+  [theme.breakpoints.between("sm", "md")]: {
+    gridColumn: "1",
+    gridRow: "1 / -1",
+  },
+}))
+
+const ActionsArea = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "32px",
+  [theme.breakpoints.between("sm", "md")]: {
+    gridColumn: "2",
+    gap: "16px",
+  },
+}))
+
+const AskTimButton: React.FC = () => (
+  <Typography
+    variant="body2"
+    component="button"
+    onClick={() => console.log("AskTIM clicked")}
+    data-testid="ask-tim-button"
+    sx={(theme) => ({
+      cursor: "pointer",
+      background: "none",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
+      borderRadius: "4px",
+      padding: "16px",
+      width: "100%",
+      textAlign: "center",
+      boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
+      "&:hover": {
+        backgroundColor: theme.custom.colors.lightGray1,
+      },
+    })}
+  >
+    Ask<strong>TIM</strong> about this course
+  </Typography>
+)
 
 type ProductPageTemplateProps = {
   tags: string[]
@@ -202,6 +259,7 @@ type ProductPageTemplateProps = {
   children: React.ReactNode
   navbar: React.ReactNode
   enrollButton?: React.ReactNode
+  programUpsell?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -214,6 +272,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   summaryTitle,
   children,
   enrollButton,
+  programUpsell,
   navbar,
 }) => {
   return (
@@ -253,46 +312,21 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
-        {/*
-         * The summary section is rendered 3 times (desktop, tablet, mobile)
-         * with different layouts, but only one is visible at a time via CSS.
-         * A single visually-hidden heading serves all three.
-         */}
         <VisuallyHidden>
           <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
         </VisuallyHidden>
-        <SidebarCol showAbove="md">
+        <SummaryCol>
           <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-            {sidebarSummary}
-            {enrollButton}
+            <MetadataArea>{sidebarSummary}</MetadataArea>
+            <ActionsArea>
+              {enrollButton}
+              {programUpsell}
+              <AskTimButton />
+            </ActionsArea>
           </SummaryRoot>
-        </SidebarCol>
+        </SummaryCol>
         <MainCol>
           {navbar}
-          <Show showBetween={["sm", "md"]}>
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              {sidebarSummary}
-              <Stack gap="16px">
-                <SidebarMedia
-                  videoUrl={videoUrl}
-                  imageSrc={imageSrc}
-                  title={title}
-                />
-                {enrollButton}
-              </Stack>
-            </SummaryRoot>
-          </Show>
-          <SidebarCol showBelow="sm" alignSelf="center">
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarMedia
-                videoUrl={videoUrl}
-                imageSrc={imageSrc}
-                title={title}
-              />
-              {sidebarSummary}
-              {enrollButton}
-            </SummaryRoot>
-          </SidebarCol>
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>
