@@ -16,11 +16,9 @@ import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
-import ProductNavbar, { HeadingData } from "./ProductNavbar"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
-import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
@@ -34,42 +32,6 @@ const PrerequisitesSection = styled.section({
   flexDirection: "column",
   gap: "16px",
 })
-
-const getNavLinks = (page: CoursePageItem): HeadingData[] => {
-  const all = [
-    {
-      id: HeadingIds.About,
-      label: "About",
-      variant: "primary",
-      content: page.about,
-    },
-    {
-      id: HeadingIds.What,
-      label: "What you'll learn",
-      variant: "secondary",
-      content: page.what_you_learn,
-    },
-    {
-      id: HeadingIds.How,
-      label: "How you'll learn",
-      variant: "secondary",
-      content: true,
-    },
-    {
-      id: HeadingIds.Prereqs,
-      label: "Prerequisites",
-      variant: "secondary",
-      content: page.prerequisites,
-    },
-    {
-      id: HeadingIds.Instructors,
-      label: "Instructors",
-      variant: "secondary",
-      content: page.faculty.length ? "x" : undefined,
-    },
-  ] as const
-  return all.filter((item) => item.content)
-}
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
@@ -95,8 +57,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     }
   }
 
-  const navLinks = getNavLinks(page)
-
   const imageSrc = page.feature_image
     ? page.course_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
@@ -117,7 +77,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
           <ProgramBundleUpsell programs={course.programs} />
         ) : undefined
       }
-      navbar={<ProductNavbar navLinks={navLinks} productNoun="Course" />}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
