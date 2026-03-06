@@ -40,7 +40,7 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
-from vector_search.encoders.utils import dense_encoder
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,8 @@ def qdrant_client():
 def points_generator(
     ids,
     metadata,
-    encoded_docs,
-    vector_name,
+    dense_encoded_docs,
+    sparse_encoded_docs,
 ):
     """
     Get a generator for embedding points to store in Qdrant
@@ -68,23 +68,32 @@ def points_generator(
     Args:
         ids (list): list of unique point ids
         metadata (list): list of metadata dictionaries
-        encoded_docs (list): list of vectorized documents
-        vector_name (str): name of the vector in qdrant
+        dense_encoded_docs (list): list of vectorized documents
+        sparse_encoded_docs
     Returns:
         generator:
             A generator of PointStruct objects
     """
+    dense_vector_name = dense_encoder().model_name
+    sparse_vector_name = sparse_encoder().model_name
     if ids is None:
         ids = iter(lambda: uuid.uuid4().hex, None)
     if metadata is None:
         metadata = iter(dict, None)
-    for idx, meta, vector in zip(ids, metadata, encoded_docs):
+    for idx, meta, dense_vector, sparse_vector in zip(
+        ids, metadata, dense_encoded_docs, sparse_encoded_docs
+    ):
         payload = meta
         point_data = {"id": idx, "payload": payload}
-        if any(vector):
-            point_vector: dict[str, models.Vector] = {vector_name: vector}
+        if any(dense_vector):
+            point_vector: dict[str, models.Vector] = {
+                dense_vector_name: dense_vector,
+                sparse_vector_name: models.SparseVector(
+                    indices=sparse_vector["indices"],
+                    values=sparse_vector["values"],
+                ),
+            }
             point_data["vector"] = point_vector
-        yield models.PointStruct(**point_data)
 
 
 def create_qdrant_collections(force_recreate):
@@ -112,7 +121,8 @@ def create_qdrant_collection(collection_name, force_recreate):
     Create or recreate a QDrant collection
     """
     client = qdrant_client()
-    encoder = dense_encoder()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
     # True if either of the collections were recreated
     if not client.collection_exists(collection_name=collection_name) or force_recreate:
         client.delete_collection(collection_name)
@@ -120,9 +130,14 @@ def create_qdrant_collection(collection_name, force_recreate):
             collection_name=collection_name,
             on_disk_payload=True,
             vectors_config={
-                encoder.model_short_name(): models.VectorParams(
-                    size=encoder.dim(), distance=models.Distance.COSINE
+                encoder_dense.model_short_name(): models.VectorParams(
+                    size=encoder_dense.dim(), distance=models.Distance.COSINE
                 ),
+            },
+            sparse_vectors_config={
+                encoder_sparse.model_name: models.SparseVectorParams(
+                    index=models.SparseIndexParams(on_disk=True),
+                )
             },
             replication_factor=2,
             shard_number=6,
@@ -131,7 +146,6 @@ def create_qdrant_collection(collection_name, force_recreate):
                 unindexed_filtering_retrieve=False,
                 unindexed_filtering_update=False,
             ),
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
             optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
             quantization_config=models.BinaryQuantization(
                 binary=models.BinaryQuantizationConfig(
