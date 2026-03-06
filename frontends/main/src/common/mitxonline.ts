@@ -1,4 +1,5 @@
 import type {
+  BaseProduct,
   CourseRunV2,
   EnrollmentMode,
   ProductFlexiblePrice,
@@ -72,17 +73,6 @@ const formatPrice = (
   })
 }
 
-/**
- * Returns certificate price as formatted string, or null if upgrade not available
- */
-const formatProductPrice = (
-  product: ProductFlexiblePrice,
-  { avoidCents = false } = {},
-) => {
-  const amount = getFlexiblePriceForProduct(product)
-  return formatPrice(amount, { avoidCents })
-}
-
 type PriceWithDiscount = {
   isDiscounted: boolean
   /**
@@ -98,13 +88,13 @@ const priceWithDiscount = ({
   flexiblePrice,
   avoidCents = false,
 }: {
-  product: ProductFlexiblePrice
+  product: BaseProduct
   flexiblePrice?: ProductFlexiblePrice
   avoidCents?: boolean
 }): PriceWithDiscount => {
-  const originalPrice = formatProductPrice(product, { avoidCents })
+  const originalPrice = formatPrice(product.price, { avoidCents })
   const finalPrice = flexiblePrice
-    ? formatProductPrice(flexiblePrice, { avoidCents })
+    ? formatPrice(getFlexiblePriceForProduct(flexiblePrice), { avoidCents })
     : originalPrice
   const isDiscounted = originalPrice !== finalPrice
 
@@ -135,7 +125,6 @@ const getEnrollmentType = (
 
 export {
   formatPrice,
-  formatProductPrice,
   priceWithDiscount,
   canPurchaseRun,
   upgradeRunUrl,
