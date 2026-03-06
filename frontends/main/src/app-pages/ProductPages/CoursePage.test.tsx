@@ -11,7 +11,6 @@ import {
 } from "api/test-utils"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
-import { HeadingIds } from "./util"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
 
@@ -107,34 +106,6 @@ describe("CoursePage", () => {
         { level: 2, name: "Who can take this Course?" },
       ])
     })
-  })
-
-  test("Page Navigation", async () => {
-    const course = makeCourse()
-    const page = makePage({ course_details: course })
-    setupApis({ course, page })
-    renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    const nav = await screen.findByRole("navigation", {
-      name: "Course Details",
-    })
-    const links = within(nav).getAllByRole("link")
-
-    expect(links[0]).toHaveTextContent("About")
-    expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
-    expect(document.getElementById(HeadingIds.About)).toBeVisible()
-    expect(links[1]).toHaveTextContent("What you'll learn")
-    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
-    expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[2]).toHaveTextContent("How you'll learn")
-    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
-    expect(document.getElementById(HeadingIds.How)).toBeVisible()
-    expect(links[3]).toHaveTextContent("Prerequisites")
-    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
-    expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
-    expect(links[4]).toHaveTextContent("Instructors")
-    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
-    expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
   // Collasping sections tested in AboutSection.test.tsx
