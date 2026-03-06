@@ -104,7 +104,9 @@ const TermsPage: React.FC = () => {
             </Link>{" "}
             prior to registering for a {SITE_NAME} account or using any portion
             of the {SITE_NAME} website ("Site"), including accessing any
-            Offering.
+            Offering. Please be advised that certain Offerings may have other
+            terms associated with its service. To the extent those terms differ
+            from these TOS, the Offering-specific terms shall govern.
           </BodyText>
           <BodyText variant="body1">
             These TOS, the Privacy Policy, and the Honor Code are agreements
@@ -230,19 +232,22 @@ const TermsPage: React.FC = () => {
             content posted to the Site or through any Offering contained on the
             Site, including but not limited to texts, exams, video, images, and
             other instructional materials provided in connection with the
-            modules / courses offered on the Site, as well as User Postings
-            posted by other users.
+            modules / courses offered on the Site, as well as outputs generated
+            by the Site’s AI tools and User Postings posted by other users.
           </BodyText>
           <BodyText variant="body1">
-            Unless otherwise indicated, all content on the Site and in the
-            various Offerings is protected by United States and foreign
-            copyright laws, and you may engage only in personal, noncommercial
-            use of the Site Content. You may not otherwise reproduce,
-            retransmit, distribute, display, publish, commercially exploit or
-            otherwise make available any content in print, electronic, or any
-            other medium. You may not record any portion of any module / course.
-            Any additional presentation of any module / course or of materials
-            derived from any module / course is also strictly prohibited.
+            Unless otherwise indicated or as provided for in a specific
+            Offering, all content on the Site and in the various Offerings is
+            protected by United States and foreign copyright laws, and you may
+            engage only in personal, noncommercial use of the Site Content. You
+            may not otherwise reproduce, retransmit, distribute, display,
+            publish, commercially exploit or otherwise make available any
+            content in print, electronic, or any other medium or use any Site
+            Content for developing, training, or improving artificial
+            intelligence systems or large language models. You may not record
+            any portion of any module / course. Any additional presentation of
+            any module / course or of materials derived from any module / course
+            is also strictly prohibited.
           </BodyText>
           <BodyText variant="body1">
             Certain reference documents, digital textbooks, figures,
@@ -681,10 +686,11 @@ const TermsPage: React.FC = () => {
             Entire Agreement.
           </BodyText>
           <BodyText variant="body1">
-            These TOS, the Honor Code, and the Privacy Policy together
-            constitute the entire agreement between you and {SITE_NAME} with
-            respect to your use of the Site and its Offerings, superseding any
-            prior agreements between you and MIT regarding your use of the Site.
+            These TOS, the Honor Code, any Offering-specific terms of service,
+            and the Privacy Policy together constitute the entire agreement
+            between you and {SITE_NAME} with respect to your use of the Site and
+            its Offerings, superseding any prior agreements between you and MIT
+            regarding your use of the Site.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Waiver and Severability of TOS.
@@ -715,7 +721,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on June 9, 2025.
+            These terms of service were last updated on February 6, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>

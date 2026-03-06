@@ -301,9 +301,7 @@ const Header: FunctionComponent = () => {
       <Bar position="fixed">
         <StyledToolbar variant="dense">
           <DesktopOnly>
-            <StyledMITLogoLink
-              logo={user?.is_authenticated ? "learn_authenticated" : "learn"}
-            />
+            <StyledMITLogoLink logo="learn" />
             <LeftSpacer />
             <MenuButton
               ref={desktopTrigger}
