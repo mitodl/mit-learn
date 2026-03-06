@@ -561,37 +561,23 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
 const WideButtonLink = styled(ButtonLink)({ width: "100%" })
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
-  // bleed to edges of the padded SummaryRoot card (base: matches 24px SummaryRoot padding)
-  marginLeft: "-24px",
-  marginRight: "-24px",
-  marginBottom: "-24px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
-  borderRadius: "0 0 4px 4px",
-  overflow: "hidden",
   display: "flex",
   flexDirection: "column",
   gap: "24px",
   padding: "24px",
-  // Desktop: SummaryRoot has 32px horizontal padding — bleed to match
   [theme.breakpoints.up("md")]: {
-    marginLeft: "-32px",
-    marginRight: "-32px",
-    padding: "32px",
+    padding: "24px 32px",
   },
-  // Tablet: bundle sits inside right grid column, not bleeding to card edges
+  // Tablet: standalone bordered card in the right column
   [theme.breakpoints.between("sm", "md")]: {
-    marginLeft: 0,
-    marginRight: 0,
-    marginBottom: 0,
+    marginTop: "16px",
+    borderTop: "none",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "4px",
   },
-  // Mobile: SummaryRoot has 16px padding — bleed to match
   [theme.breakpoints.down("sm")]: {
-    marginLeft: "-16px",
-    marginRight: "-16px",
-    marginBottom: "-16px",
     padding: "24px 16px",
   },
 }))
@@ -627,6 +613,7 @@ const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
 }) => {
   const price = program.products[0]?.price
   const priceFormatted = price ? formatPrice(price) : null
+  // TODO: Replace hardcoded 1.2x markup with real unbundled price from the API
   const strikePriceFormatted = price
     ? formatPrice(String(Number(price) * 1.2))
     : null
@@ -653,6 +640,9 @@ const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
   )
 }
 
+// Fetches full program details individually. Ideally we'd use the listing
+// endpoint, but it doesn't include product/price info. In practice only 1–2
+// programs are fetched per course.
 const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   programs,
 }) => {
