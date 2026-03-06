@@ -153,23 +153,35 @@ def extract_courses():
     return []
 
 
-def parse_prices(parent_data: dict) -> list[dict]:
+def parse_prices(
+    parent_data: dict, mode_data: list, *, fully_enrollable: bool = True
+) -> list[dict]:
     """
-    Return a list of unique prices for a course/program.
-    $0.00 (free) is always included for the non-certificate option.
-    Other prices come from the parent course/program's min_price & max_price fields.
+    Return a list of unique prices for a course/program run.
     """
-    free_price_str = "0.00"
-    return [
-        transform_price(price)
-        for price in sorted(
+    free_price = transform_price(Decimal("0.00"))
+    mode_slugs = [mode.get("mode_slug") for mode in mode_data]
+    has_verified = "verified" in mode_slugs
+    has_audit = "audit" in mode_slugs
+
+    if not fully_enrollable or (
+        not parent_data.get("min_price") and not parent_data.get("max_price")
+    ):
+        return [free_price]
+
+    price_set = set()
+    if has_verified:
+        price_set.update(
             {
-                Decimal(free_price_str),
-                Decimal(parent_data.get("min_price") or free_price_str),
-                Decimal(parent_data.get("max_price") or free_price_str),
+                Decimal(parent_data.get("min_price") or "0.00"),
+                Decimal(parent_data.get("max_price") or "0.00"),
             }
         )
-    ]
+    if has_audit:
+        price_set.add(Decimal("0.00"))
+
+    prices = [transform_price(price) for price in sorted(price_set)]
+    return prices or [free_price]
 
 
 def parse_departments(departments_data: list[dict or str]) -> list[str]:
@@ -257,7 +269,12 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         ),
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
-        "prices": parse_prices(course) if fully_enrollable else [],
+        "enrollment_modes": course_run.get("enrollment_modes", []),
+        "prices": parse_prices(
+            course,
+            course_run.get("enrollment_modes", []),
+            fully_enrollable=fully_enrollable,
+        ),
         "instructors": [
             {"full_name": instructor["name"]}
             for instructor in parse_page_attribute(course, "instructors", is_list=True)
@@ -391,6 +408,41 @@ def transform_programs(programs: list[dict]) -> list[dict]:
         pace = sorted(
             {course_pace for course in courses for course_pace in course["pace"]}
         )
+        run = {
+            "run_id": program["readable_id"],
+            "enrollment_start": _parse_datetime(program.get("enrollment_start")),
+            "enrollment_end": _parse_datetime(program.get("enrollment_end")),
+            "start_date": _parse_datetime(
+                program.get("start_date") or program.get("enrollment_start")
+            ),
+            "end_date": _parse_datetime(program.get("end_date")),
+            "title": program["title"],
+            "published": bool(
+                parse_page_attribute(program, "page_url")
+            ),  # program only considered published if it has a product/price
+            "url": parse_page_attribute(program, "page_url", is_url=True),
+            "image": _transform_image(program),
+            "description": clean_data(parse_page_attribute(program, "description")),
+            "enrollment_modes": program.get("enrollment_modes", []),
+            "prices": parse_prices(
+                program,
+                program.get("enrollment_modes", []),
+                fully_enrollable=True,
+            ),
+            "status": RunStatus.current.value
+            if parse_page_attribute(program, "page_url")
+            else RunStatus.archived.value,
+            "availability": program.get("availability"),
+            "format": [Format.asynchronous.name],
+            "pace": pace,
+            "duration": program.get("duration") or "",
+            "min_weeks": program.get("min_weeks"),
+            "max_weeks": program.get("max_weeks"),
+            "time_commitment": program.get("time_commitment") or "",
+            "min_weekly_hours": parse_string_to_int(program.get("min_weekly_hours")),
+            "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
+        }
+        has_certification = parse_certification(OFFERED_BY["code"], [run])
         yield {
             "readable_id": program["readable_id"],
             "title": program["title"],
@@ -400,10 +452,12 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "departments": parse_departments(program.get("departments", [])),
             "platform": PlatformType.mitxonline.name,
             "professional": False,
-            "certification": program.get("certificate_type") is not None,
+            "certification": has_certification,
             "certification_type": parse_certificate_type(
                 program.get("certificate_type", CertificationType.none.name)
-            ),
+            )
+            if has_certification
+            else CertificationType.none.name,
             "topics": transform_topics(program.get("topics", []), OFFERED_BY["code"]),
             "description": clean_data(parse_page_attribute(program, "description")),
             "url": parse_page_attribute(program, "page_url", is_url=True),
@@ -415,44 +469,6 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             ),  # a program is only considered published if it has a page url
             "format": [Format.asynchronous.name],
             "pace": pace,
-            "runs": [
-                {
-                    "run_id": program["readable_id"],
-                    "enrollment_start": _parse_datetime(
-                        program.get("enrollment_start")
-                    ),
-                    "enrollment_end": _parse_datetime(program.get("enrollment_end")),
-                    "start_date": _parse_datetime(
-                        program.get("start_date") or program.get("enrollment_start")
-                    ),
-                    "end_date": _parse_datetime(program.get("end_date")),
-                    "title": program["title"],
-                    "published": bool(
-                        parse_page_attribute(program, "page_url")
-                    ),  # program only considered published if it has a product/price
-                    "url": parse_page_attribute(program, "page_url", is_url=True),
-                    "image": _transform_image(program),
-                    "description": clean_data(
-                        parse_page_attribute(program, "description")
-                    ),
-                    "prices": parse_prices(program),
-                    "status": RunStatus.current.value
-                    if parse_page_attribute(program, "page_url")
-                    else RunStatus.archived.value,
-                    "availability": program.get("availability"),
-                    "format": [Format.asynchronous.name],
-                    "pace": pace,
-                    "duration": program.get("duration") or "",
-                    "min_weeks": program.get("min_weeks"),
-                    "max_weeks": program.get("max_weeks"),
-                    "time_commitment": program.get("time_commitment") or "",
-                    "min_weekly_hours": parse_string_to_int(
-                        program.get("min_weekly_hours")
-                    ),
-                    "max_weekly_hours": parse_string_to_int(
-                        program.get("max_weekly_hours")
-                    ),
-                }
-            ],
+            "runs": [run],
             "courses": courses,
         }
