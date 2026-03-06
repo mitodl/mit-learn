@@ -2,7 +2,12 @@ import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
-import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
+import {
+  CourseSummary,
+  ProgramSummary,
+  ProgramBundleUpsell,
+  TestIds,
+} from "./ProductSummary"
 import { formatDate } from "ol-utilities"
 import { formatPrice } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
@@ -1060,118 +1065,66 @@ describe("CourseSummary", () => {
       ).toBeNull()
     })
   })
+})
 
-  describe("Program Bundle Upsell", () => {
-    test("Does not render when programs array is null", () => {
-      const run = makeRun()
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        programs: null,
-      })
-      renderWithProviders(<CourseSummary course={course} />)
+describe("ProgramBundleUpsell", () => {
+  test("Does not render when no program details are loaded", () => {
+    renderWithProviders(<ProgramBundleUpsell programs={[]} />)
 
-      expect(
-        screen.queryByTestId(TestIds.ProgramBundleUpsell),
-      ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId(TestIds.ProgramBundleUpsell),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Renders upsell for one program with price and View Program link", async () => {
+    const baseProgram = factories.programs.baseProgram()
+    const programDetail = factories.programs.program({
+      id: baseProgram.id,
+      readable_id: baseProgram.readable_id,
+      title: baseProgram.title,
     })
+    setMockResponse.get(
+      urls.programs.programDetail(baseProgram.id),
+      programDetail,
+    )
+    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
-    test("Does not render when programs array is empty", () => {
-      const run = makeRun()
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        programs: [],
-      })
-      renderWithProviders(<CourseSummary course={course} />)
+    const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
+    expect(upsell).toHaveTextContent("Want a program certificate?")
+    expect(upsell).toHaveTextContent(programDetail.title)
+    const link = within(upsell).getByRole("link", { name: "View Program" })
+    expect(link).toHaveAttribute(
+      "href",
+      `/programs/${programDetail.readable_id}`,
+    )
+  })
 
-      expect(
-        screen.queryByTestId(TestIds.ProgramBundleUpsell),
-      ).not.toBeInTheDocument()
+  test("Renders upsell for multiple programs", async () => {
+    const basePrograms = [
+      factories.programs.baseProgram(),
+      factories.programs.baseProgram(),
+    ]
+    const programDetails = basePrograms.map((bp) =>
+      factories.programs.program({
+        id: bp.id,
+        readable_id: bp.readable_id,
+        title: bp.title,
+      }),
+    )
+    programDetails.forEach((pd, i) => {
+      setMockResponse.get(urls.programs.programDetail(basePrograms[i].id), pd)
     })
+    renderWithProviders(<ProgramBundleUpsell programs={basePrograms} />)
 
-    test("Renders upsell for one program with price and View Program link", async () => {
-      const baseProgram = factories.programs.baseProgram()
-      const programDetail = factories.programs.program({
-        id: baseProgram.id,
-        readable_id: baseProgram.readable_id,
-        title: baseProgram.title,
-      })
-      setMockResponse.get(
-        urls.programs.programDetail(baseProgram.id),
-        programDetail,
-      )
-      const run = makeRun()
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        programs: [baseProgram],
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-      expect(upsell).toHaveTextContent("Want a program certificate?")
-      expect(upsell).toHaveTextContent(programDetail.title)
-      const link = within(upsell).getByRole("link", { name: "View Program" })
-      expect(link).toHaveAttribute(
-        "href",
-        `/programs/${programDetail.readable_id}`,
-      )
-    })
-
-    test("Renders upsell for multiple programs", async () => {
-      const basePrograms = [
-        factories.programs.baseProgram(),
-        factories.programs.baseProgram(),
-      ]
-      const programDetails = basePrograms.map((bp) =>
-        factories.programs.program({
-          id: bp.id,
-          readable_id: bp.readable_id,
-          title: bp.title,
-        }),
-      )
-      programDetails.forEach((pd, i) => {
-        setMockResponse.get(urls.programs.programDetail(basePrograms[i].id), pd)
-      })
-      const run = makeRun()
-      const course = makeCourse({
-        next_run_id: run.id,
-        courseruns: [run],
-        programs: basePrograms,
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-      // "Want a program certificate?" appears once
-      expect(
-        within(upsell).getAllByText("Want a program certificate?"),
-      ).toHaveLength(1)
-      const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
-      expect(items).toHaveLength(2)
-      expect(items[0]).toHaveTextContent(programDetails[0].title)
-      expect(items[1]).toHaveTextContent(programDetails[1].title)
-    })
-
-    test("Renders even when no next run is found", async () => {
-      const baseProgram = factories.programs.baseProgram()
-      const programDetail = factories.programs.program({
-        id: baseProgram.id,
-        readable_id: baseProgram.readable_id,
-      })
-      setMockResponse.get(
-        urls.programs.programDetail(baseProgram.id),
-        programDetail,
-      )
-      const course = makeCourse({
-        next_run_id: null,
-        courseruns: [],
-        programs: [baseProgram],
-      })
-      renderWithProviders(<CourseSummary course={course} />)
-
-      await screen.findByTestId(TestIds.ProgramBundleUpsell)
-    })
+    const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
+    // "Want a program certificate?" appears once
+    expect(
+      within(upsell).getAllByText("Want a program certificate?"),
+    ).toHaveLength(1)
+    const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent(programDetails[0].title)
+    expect(items[1]).toHaveTextContent(programDetails[1].title)
   })
 })
 
