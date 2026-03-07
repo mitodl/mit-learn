@@ -1,7 +1,13 @@
 import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { setMockResponse } from "api/test-utils"
-import { renderWithProviders, screen, within, user } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  waitFor,
+  within,
+  user,
+} from "@/test-utils"
 import {
   CourseSummary,
   ProgramSummary,
@@ -1119,7 +1125,7 @@ describe("ProgramBundleUpsell", () => {
     )
   })
 
-  test("Does not render upsell item when program has no price", async () => {
+  test("Does not render when program has no price", async () => {
     const baseProgram = factories.programs.baseProgram()
     const programDetail = factories.programs.program({
       id: baseProgram.id,
@@ -1130,12 +1136,18 @@ describe("ProgramBundleUpsell", () => {
       urls.programs.programDetail(baseProgram.id),
       programDetail,
     )
-    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
+    const { queryClient } = renderWithProviders(
+      <ProgramBundleUpsell programs={[baseProgram]} />,
+    )
 
-    // Container renders (program loaded), but no items since no price
-    await screen.findByTestId(TestIds.ProgramBundleUpsell)
+    // Wait for the program detail query to finish
+    await waitFor(() => {
+      expect(queryClient.isFetching()).toBe(0)
+    })
+
+    // Neither container nor items should render
     expect(
-      screen.queryByTestId("program-bundle-upsell-item"),
+      screen.queryByTestId(TestIds.ProgramBundleUpsell),
     ).not.toBeInTheDocument()
   })
 

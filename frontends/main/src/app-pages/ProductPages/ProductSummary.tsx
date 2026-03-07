@@ -567,22 +567,22 @@ const WideButtonLink = styled(ButtonLink)(({ theme }) => ({
 }))
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
-  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
   display: "flex",
   flexDirection: "column",
   gap: "8px",
-  padding: "24px",
   [theme.breakpoints.up("md")]: {
+    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
     padding: "24px 32px",
   },
   // Tablet: standalone bordered card in the right column
   [theme.breakpoints.between("sm", "md")]: {
-    borderTop: "none",
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRadius: "4px",
+    padding: "24px",
   },
   [theme.breakpoints.down("sm")]: {
+    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
     padding: "24px 16px",
   },
 }))
@@ -692,18 +692,19 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
     ),
   })
 
-  const loaded = programDetails
+  const allSettled = programDetails.every((q) => !q.isLoading)
+  const pricedPrograms = programDetails
     .map((q) => q.data)
-    .filter((d): d is V2ProgramDetail => !!d)
+    .filter((d): d is V2ProgramDetail => !!d && !!d.products[0]?.price)
 
-  if (loaded.length === 0) return null
+  if (!allSettled || pricedPrograms.length === 0) return null
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
       <Typography variant="body2" sx={{ textAlign: "center" }}>
         Best value
       </Typography>
-      {loaded.map((program) => (
+      {pricedPrograms.map((program) => (
         <ProgramBundleUpsellItem key={program.id} program={program} />
       ))}
     </BundleUpsellContainer>
