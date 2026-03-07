@@ -218,9 +218,12 @@ const DesktopEnrollArea = styled(Show)({
 })
 
 const AskTimButton = styled(Button)(({ theme }) => ({
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.2)",
+  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
   marginTop: "16px",
-  alignSelf: "flex-start",
+  width: "100%",
+  [theme.breakpoints.between("sm", "md")]: {
+    width: "auto",
+  },
   color: theme.custom.colors.darkGray2,
   svg: {
     color: theme.custom.colors.mitRed,
