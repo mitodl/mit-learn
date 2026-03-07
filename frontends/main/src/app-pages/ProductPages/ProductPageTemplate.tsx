@@ -249,8 +249,9 @@ type ProductPageTemplateProps = {
   sidebarSummary: React.ReactNode
   summaryTitle: string
   children: React.ReactNode
-  enrollButton?: React.ReactNode
+  enrollButton: React.ReactNode
   programUpsell?: React.ReactNode
+  productNoun: "course" | "program"
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -264,6 +265,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollButton,
   programUpsell,
+  productNoun,
 }) => {
   return (
     <Page>
@@ -315,10 +317,10 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             variant="bordered"
             size="large"
             startIcon={<RiSparkling2Line />}
-            onClick={() => console.log("AskTIM clicked")}
+            onClick={() => void 0}
             data-testid="ask-tim-button"
           >
-            AskTIM about this course
+            AskTIM about this {productNoun}
           </AskTimButton>
         </SummaryCol>
         <MainCol>
