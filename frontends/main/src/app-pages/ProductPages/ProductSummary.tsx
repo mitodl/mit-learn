@@ -571,7 +571,7 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
   display: "flex",
   flexDirection: "column",
-  gap: "24px",
+  gap: "8px",
   padding: "24px",
   [theme.breakpoints.up("md")]: {
     padding: "24px 32px",
@@ -590,12 +590,15 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
 const BundleUpsellItem = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: "24px",
   alignItems: "center",
   textAlign: "center",
   "& + &": {
-    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-    paddingTop: "24px",
+    paddingTop: "16px",
+    [theme.breakpoints.between("sm", "md")]: {
+      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+      paddingTop: "24px",
+    },
   },
   [theme.breakpoints.between("sm", "md")]: {
     flexDirection: "row",
@@ -607,7 +610,7 @@ const BundleUpsellItem = styled.div(({ theme }) => ({
 const BundleUpsellText = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "4px",
+  gap: "8px",
   [theme.breakpoints.between("sm", "md")]: {
     flex: 1,
   },
@@ -618,8 +621,7 @@ const BundlePrice = styled.span(({ theme }) => ({
   color: theme.custom.colors.red,
 }))
 
-const BundleStrikenPrice = styled.span(({ theme }) => ({
-  textDecoration: "line-through",
+const BundleDiscount = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body1,
 }))
@@ -634,24 +636,38 @@ const BundlePriceRow = styled.div(({ theme }) => ({
   },
 }))
 
+const BundleUpsellTitle = styled.span(({ theme }) => ({
+  ...theme.typography.h5,
+  fontWeight: theme.typography.fontWeightRegular,
+  "> strong": {
+    fontWeight: theme.typography.fontWeightBold,
+  },
+}))
+
 const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
   program,
 }) => {
   const price = program.products[0]?.price
-  const priceFormatted = price ? formatPrice(price) : null
+  const priceFormatted = price ? formatPrice(price, { avoidCents: true }) : null
   if (!priceFormatted) return null
-  // TODO: Replace hardcoded 1.2x markup with real unbundled price from the API
-  const strikePriceFormatted = formatPrice(String(Number(price) * 1.2))
+
+  const parsedReqs = parseReqTree(program.req_tree)
+  const totalCourses = parsedReqs.reduce(
+    (sum, req) => sum + req.requiredCourseCount,
+    0,
+  )
 
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
       <BundleUpsellText>
-        <Typography variant="h5">
-          Get all {program.title} + Certificate
-        </Typography>
+        <BundleUpsellTitle>
+          Get all {totalCourses} <strong>{program.title}</strong> Courses +
+          Certificate
+        </BundleUpsellTitle>
         <BundlePriceRow>
           <BundlePrice>{priceFormatted}</BundlePrice>
-          <BundleStrikenPrice>{strikePriceFormatted}</BundleStrikenPrice>
+          {/* TODO: Replace hardcoded discount with real savings from the API */}
+          <BundleDiscount>(19% off)</BundleDiscount>
         </BundlePriceRow>
       </BundleUpsellText>
       <WideButtonLink
@@ -685,7 +701,7 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
       <Typography variant="body2" sx={{ textAlign: "center" }}>
-        Want a program certificate?
+        Best value
       </Typography>
       {loaded.map((program) => (
         <ProgramBundleUpsellItem key={program.id} program={program} />
