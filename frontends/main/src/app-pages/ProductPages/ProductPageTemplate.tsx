@@ -212,10 +212,19 @@ const SummaryContent = styled.div(({ theme }) => ({
   },
 }))
 
-/** Enrollment button — only visible on desktop (sticky sidebar). */
-const DesktopEnrollArea = styled(Show)({
-  padding: "8px 32px 24px",
-})
+const EnrollArea = styled.div(({ theme }) => ({
+  padding: "8px 24px 24px",
+  [theme.breakpoints.up("md")]: {
+    padding: "8px 32px 24px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    maxWidth: "50%",
+    marginInline: "auto",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "8px 16px 16px",
+  },
+}))
 
 const AskTimButton = styled(Button)(({ theme }) => ({
   boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
@@ -299,7 +308,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         <SummaryCol>
           <SummaryCard as="section" aria-labelledby={HeadingIds.Summary}>
             <SummaryContent>{sidebarSummary}</SummaryContent>
-            <DesktopEnrollArea showAbove="md">{enrollButton}</DesktopEnrollArea>
+            <EnrollArea>{enrollButton}</EnrollArea>
             {programUpsell}
           </SummaryCard>
           <AskTimButton
