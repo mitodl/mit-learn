@@ -1076,12 +1076,27 @@ describe("ProgramBundleUpsell", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("Renders upsell for one program with price and View Program link", async () => {
+  test("Renders upsell with program title, course count, price, and View Program link", async () => {
+    const requirements = new RequirementTreeBuilder()
+    const required = requirements.addOperator({ operator: "all_of" })
+    required.addCourse()
+    required.addCourse()
+    required.addCourse()
+    const electives = requirements.addOperator({
+      operator: "min_number_of",
+      operator_value: "2",
+    })
+    electives.addCourse()
+    electives.addCourse()
+    electives.addCourse()
+
     const baseProgram = factories.programs.baseProgram()
     const programDetail = factories.programs.program({
       id: baseProgram.id,
       readable_id: baseProgram.readable_id,
-      title: baseProgram.title,
+      title: "Data Science",
+      req_tree: requirements.serialize(),
+      products: [factories.courses.product({ price: "750" })],
     })
     setMockResponse.get(
       urls.programs.programDetail(baseProgram.id),
@@ -1090,8 +1105,13 @@ describe("ProgramBundleUpsell", () => {
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
     const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-    expect(upsell).toHaveTextContent("Want a program certificate?")
-    expect(upsell).toHaveTextContent(programDetail.title)
+    expect(upsell).toHaveTextContent("Best value")
+    // 3 required + 2 electives = 5 total courses
+    expect(upsell).toHaveTextContent(
+      "Get all 5 Data Science Courses + Certificate",
+    )
+    expect(upsell).toHaveTextContent("$750")
+    expect(upsell).toHaveTextContent("(19% off)")
     const link = within(upsell).getByRole("link", { name: "View Program" })
     expect(link).toHaveAttribute(
       "href",
@@ -1099,16 +1119,45 @@ describe("ProgramBundleUpsell", () => {
     )
   })
 
+  test("Does not render upsell item when program has no price", async () => {
+    const baseProgram = factories.programs.baseProgram()
+    const programDetail = factories.programs.program({
+      id: baseProgram.id,
+      readable_id: baseProgram.readable_id,
+      products: [],
+    })
+    setMockResponse.get(
+      urls.programs.programDetail(baseProgram.id),
+      programDetail,
+    )
+    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
+
+    // Container renders (program loaded), but no items since no price
+    await screen.findByTestId(TestIds.ProgramBundleUpsell)
+    expect(
+      screen.queryByTestId("program-bundle-upsell-item"),
+    ).not.toBeInTheDocument()
+  })
+
   test("Renders upsell for multiple programs", async () => {
+    const makeReqTree = (courseCount: number) => {
+      const requirements = new RequirementTreeBuilder()
+      const required = requirements.addOperator({ operator: "all_of" })
+      for (let i = 0; i < courseCount; i++) required.addCourse()
+      return requirements.serialize()
+    }
+
     const basePrograms = [
       factories.programs.baseProgram(),
       factories.programs.baseProgram(),
     ]
-    const programDetails = basePrograms.map((bp) =>
+    const programDetails = basePrograms.map((bp, i) =>
       factories.programs.program({
         id: bp.id,
         readable_id: bp.readable_id,
         title: bp.title,
+        req_tree: makeReqTree(i + 3),
+        products: [factories.courses.product({ price: "500" })],
       }),
     )
     programDetails.forEach((pd, i) => {
@@ -1117,10 +1166,7 @@ describe("ProgramBundleUpsell", () => {
     renderWithProviders(<ProgramBundleUpsell programs={basePrograms} />)
 
     const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-    // "Want a program certificate?" appears once
-    expect(
-      within(upsell).getAllByText("Want a program certificate?"),
-    ).toHaveLength(1)
+    expect(within(upsell).getAllByText("Best value")).toHaveLength(1)
     const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent(programDetails[0].title)
