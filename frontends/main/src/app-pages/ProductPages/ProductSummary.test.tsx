@@ -1130,9 +1130,22 @@ describe("ProgramBundleUpsell", () => {
     )
 
     resolve(programDetail)
-    // ensure request finished
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
-    // ensure rerenders triggered
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0)) // ensure request finished
+    expect(
+      screen.queryByTestId(TestIds.ProgramBundleUpsell),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Does not render when program detail fetch fails", async () => {
+    const baseProgram = factories.programs.baseProgram()
+    const { promise, reject } = Promise.withResolvers()
+    setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
+    const { queryClient } = renderWithProviders(
+      <ProgramBundleUpsell programs={[baseProgram]} />,
+    )
+
+    reject(new Error("Network error"))
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0)) // ensure request finished
     expect(
       screen.queryByTestId(TestIds.ProgramBundleUpsell),
     ).not.toBeInTheDocument()
