@@ -733,11 +733,19 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   })
 
   const anyLoading = programDetails.some((q) => q.isLoading)
+  const failedPrograms = programDetails.filter((q) => q.isError)
   const pricedPrograms = programDetails
     .map((q) => q.data)
     .filter((d): d is V2ProgramDetail => !!d && !!d.products[0]?.price)
 
-  if (!anyLoading && pricedPrograms.length === 0) return null
+  if (!anyLoading && pricedPrograms.length === 0) {
+    if (failedPrograms.length > 0) {
+      console.warn(
+        `ProgramBundleUpsell: ${failedPrograms.length}/${programs.length} program detail queries failed`,
+      )
+    }
+    return null
+  }
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
