@@ -644,6 +644,9 @@ const BundleUpsellTitle = styled.span(({ theme }) => ({
   },
 }))
 
+// For now we use a static 19% discount that is aligned with business rules
+const BUNDLE_DISCOUNT_LABEL = "(19% off)"
+
 const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
   program,
 }) => {
@@ -666,8 +669,7 @@ const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
         </BundleUpsellTitle>
         <BundlePriceRow>
           <BundlePrice>{priceFormatted}</BundlePrice>
-          {/* TODO: Replace hardcoded discount with real savings from the API */}
-          <BundleDiscount>(19% off)</BundleDiscount>
+          <BundleDiscount>{BUNDLE_DISCOUNT_LABEL}</BundleDiscount>
         </BundlePriceRow>
       </BundleUpsellText>
       <WideButtonLink
@@ -695,7 +697,7 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   const allSettled = programDetails.every((q) => !q.isLoading)
   const pricedPrograms = programDetails
     .map((q) => q.data)
-    .filter((d): d is V2ProgramDetail => !!d && !!d.products[0]?.price)
+    .filter((d) => !!d && !!d.products[0]?.price)
 
   if (!allSettled || pricedPrograms.length === 0) return null
 
