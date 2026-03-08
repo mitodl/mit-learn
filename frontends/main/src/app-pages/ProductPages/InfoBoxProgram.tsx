@@ -9,11 +9,11 @@ import { HeadingIds } from "./util"
 import { ProgramSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import {
-  SummaryCard,
-  SummaryContent,
-  EnrollArea,
+  InfoBoxCard,
+  InfoBoxContent,
+  InfoBoxEnrollArea,
   AskTimButton,
-} from "./CourseInfoBox"
+} from "./InfoBoxParts"
 
 type ProgramInfoBoxProps = {
   program: V2ProgramDetail
@@ -26,17 +26,17 @@ const ProgramInfoBox: React.FC<ProgramInfoBoxProps> = ({
 }) => {
   return (
     <>
-      <SummaryCard as="section" aria-labelledby={HeadingIds.Summary}>
+      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
         <VisuallyHidden>
           <h2 id={HeadingIds.Summary}>Program summary</h2>
         </VisuallyHidden>
-        <SummaryContent>
+        <InfoBoxContent>
           <ProgramSummary program={program} courses={courses} />
-        </SummaryContent>
-        <EnrollArea>
+        </InfoBoxContent>
+        <InfoBoxEnrollArea>
           <ProgramEnrollmentButton program={program} />
-        </EnrollArea>
-      </SummaryCard>
+        </InfoBoxEnrollArea>
+      </InfoBoxCard>
       <AskTimButton
         variant="bordered"
         size="large"

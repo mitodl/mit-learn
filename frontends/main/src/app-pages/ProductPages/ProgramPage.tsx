@@ -22,7 +22,7 @@ import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import ProgramInfoBox from "./ProgramInfoBox"
+import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 
