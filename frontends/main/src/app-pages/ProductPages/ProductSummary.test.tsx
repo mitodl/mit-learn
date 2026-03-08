@@ -11,6 +11,7 @@ import {
 } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
 import { formatPrice } from "@/common/mitxonline"
+import { allowConsoleErrors } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -1129,6 +1130,7 @@ describe("ProgramBundleUpsell", () => {
   })
 
   test("Shows loading skeleton then disappears when program detail fetch fails", async () => {
+    allowConsoleErrors()
     const baseProgram = factories.programs.baseProgram()
     const { promise, reject } = Promise.withResolvers()
     setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
