@@ -17,12 +17,14 @@ jest.mock("./ProductSummary", () => {
   return {
     ...actual,
     CourseSummary: () => <div data-testid="mock-course-summary" />,
-    ProgramBundleUpsell: ({ programs }: { programs: unknown[] }) => (
-      <div data-testid="program-bundle-upsell">
-        {programs.length} program(s)
-      </div>
-    ),
   }
+})
+
+jest.mock("./ProgramBundleUpsell", () => {
+  const MockProgramBundleUpsell = ({ programs }: { programs: unknown[] }) => (
+    <div data-testid="program-bundle-upsell">{programs.length} program(s)</div>
+  )
+  return { __esModule: true, default: MockProgramBundleUpsell }
 })
 
 describe("CourseInfoBox", () => {
