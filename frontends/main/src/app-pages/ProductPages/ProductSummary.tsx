@@ -591,7 +591,6 @@ const BundleUpsellItem = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
-  alignItems: "center",
   textAlign: "center",
   "& + &": {
     paddingTop: "16px",
@@ -618,12 +617,14 @@ const BundleUpsellText = styled.div(({ theme }) => ({
 
 const BundlePrice = styled.span(({ theme }) => ({
   ...theme.typography.h4,
+  display: "block",
   color: theme.custom.colors.red,
 }))
 
 const BundleDiscount = styled.span(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
   ...theme.typography.body1,
+  display: "block",
+  color: theme.custom.colors.darkGray2,
 }))
 
 const BundlePriceRow = styled.div(({ theme }) => ({
@@ -638,6 +639,7 @@ const BundlePriceRow = styled.div(({ theme }) => ({
 
 const BundleUpsellTitle = styled.span(({ theme }) => ({
   ...theme.typography.h5,
+  display: "block",
   fontWeight: theme.typography.fontWeightRegular,
   "> strong": {
     fontWeight: theme.typography.fontWeightBold,
@@ -647,9 +649,45 @@ const BundleUpsellTitle = styled.span(({ theme }) => ({
 // For now we use a static 19% discount that is aligned with business rules
 const BUNDLE_DISCOUNT_LABEL = "(19% off)"
 
-const ProgramBundleUpsellItem: React.FC<{ program: V2ProgramDetail }> = ({
+type ProgramBundleUpsellItemProps =
+  | { loading: true; program?: undefined }
+  | { loading?: false; program: V2ProgramDetail }
+
+const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
+  loading,
   program,
 }) => {
+  if (loading) {
+    return (
+      <BundleUpsellItem>
+        <BundleUpsellText>
+          <BundleUpsellTitle>
+            <Skeleton width="80%" variant="text" sx={{ mx: "auto" }} />
+            <Skeleton
+              width="60%"
+              variant="text"
+              sx={(theme) => ({
+                mx: "auto",
+                [theme.breakpoints.between("sm", "md")]: {
+                  display: "none",
+                },
+              })}
+            />
+          </BundleUpsellTitle>
+          <BundlePriceRow>
+            <BundlePrice>
+              <Skeleton width={60} variant="text" />
+            </BundlePrice>
+            <BundleDiscount>
+              <Skeleton width={50} variant="text" />
+            </BundleDiscount>
+          </BundlePriceRow>
+        </BundleUpsellText>
+        <Skeleton width="100%" variant="rectangular" height={40} />
+      </BundleUpsellItem>
+    )
+  }
+
   const price = program.products[0]?.price
   const priceFormatted = price ? formatPrice(price, { avoidCents: true }) : null
   if (!priceFormatted) return null
@@ -694,21 +732,32 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
     ),
   })
 
-  const allSettled = programDetails.every((q) => !q.isLoading)
+  const anyLoading = programDetails.some((q) => q.isLoading)
   const pricedPrograms = programDetails
     .map((q) => q.data)
-    .filter((d) => !!d && !!d.products[0]?.price)
+    .filter((d): d is V2ProgramDetail => !!d && !!d.products[0]?.price)
 
-  if (!allSettled || pricedPrograms.length === 0) return null
+  if (!anyLoading && pricedPrograms.length === 0) return null
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
-      <Typography variant="body2" sx={{ textAlign: "center" }}>
-        Best value
-      </Typography>
-      {pricedPrograms.map((program) => (
-        <ProgramBundleUpsellItem key={program.id} program={program} />
-      ))}
+      {anyLoading ? (
+        <>
+          <Skeleton width={80} height={20} sx={{ mx: "auto" }} />
+          {programs.map((p) => (
+            <ProgramBundleUpsellItem key={p.id} loading />
+          ))}
+        </>
+      ) : (
+        <>
+          <Typography variant="body2" sx={{ textAlign: "center" }}>
+            Best value
+          </Typography>
+          {pricedPrograms.map((program) => (
+            <ProgramBundleUpsellItem key={program.id} program={program} />
+          ))}
+        </>
+      )}
     </BundleUpsellContainer>
   )
 }
