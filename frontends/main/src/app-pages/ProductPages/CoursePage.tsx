@@ -7,7 +7,6 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseSummary, ProgramBundleUpsell } from "./ProductSummary"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
@@ -21,7 +20,7 @@ import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import CourseEnrollmentButton from "./CourseEnrollmentButton"
+import CourseInfoBox from "./CourseInfoBox"
 
 type CoursePageProps = {
   readableId: string
@@ -64,20 +63,12 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   return (
     <ProductPageTemplate
       tags={["MITx"]}
-      productNoun="course"
       currentBreadcrumbLabel="Course"
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      summaryTitle="Course summary"
-      sidebarSummary={<CourseSummary course={course} />}
-      enrollButton={<CourseEnrollmentButton course={course} />}
-      programUpsell={
-        course.programs?.length ? (
-          <ProgramBundleUpsell programs={course.programs} />
-        ) : undefined
-      }
+      infoBox={<CourseInfoBox course={course} />}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
