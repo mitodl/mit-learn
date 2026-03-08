@@ -1,13 +1,8 @@
 import React from "react"
 import { factories, urls } from "api/mitxonline-test-utils"
 import { setMockResponse } from "api/test-utils"
-import {
-  renderWithProviders,
-  screen,
-  waitFor,
-  within,
-  user,
-} from "@/test-utils"
+import { renderWithProviders, screen, within, user } from "@/test-utils"
+import { waitForElementToBeRemoved } from "@testing-library/react"
 import {
   CourseSummary,
   ProgramSummary,
@@ -1101,8 +1096,8 @@ describe("ProgramBundleUpsell", () => {
     )
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
-    const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-    expect(upsell).toHaveTextContent("Best value")
+    await screen.findByText("Best value")
+    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
     // 3 required + 2 electives = 5 total courses
     expect(upsell).toHaveTextContent(
       "Get all 5 Data Science Courses + Certificate",
@@ -1116,7 +1111,7 @@ describe("ProgramBundleUpsell", () => {
     )
   })
 
-  test("Does not render when program has no price", async () => {
+  test("Shows loading skeleton then disappears when program has no price", async () => {
     const baseProgram = factories.programs.baseProgram()
     const programDetail = factories.programs.program({
       id: baseProgram.id,
@@ -1125,30 +1120,24 @@ describe("ProgramBundleUpsell", () => {
     })
     const { promise, resolve } = Promise.withResolvers()
     setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
-    const { queryClient } = renderWithProviders(
-      <ProgramBundleUpsell programs={[baseProgram]} />,
-    )
+    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
+
+    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
 
     resolve(programDetail)
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0)) // ensure request finished
-    expect(
-      screen.queryByTestId(TestIds.ProgramBundleUpsell),
-    ).not.toBeInTheDocument()
+    await waitForElementToBeRemoved(upsell)
   })
 
-  test("Does not render when program detail fetch fails", async () => {
+  test("Shows loading skeleton then disappears when program detail fetch fails", async () => {
     const baseProgram = factories.programs.baseProgram()
     const { promise, reject } = Promise.withResolvers()
     setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
-    const { queryClient } = renderWithProviders(
-      <ProgramBundleUpsell programs={[baseProgram]} />,
-    )
+    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
+
+    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
 
     reject(new Error("Network error"))
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0)) // ensure request finished
-    expect(
-      screen.queryByTestId(TestIds.ProgramBundleUpsell),
-    ).not.toBeInTheDocument()
+    await waitForElementToBeRemoved(upsell)
   })
 
   test("Renders upsell for multiple programs", async () => {
@@ -1159,6 +1148,7 @@ describe("ProgramBundleUpsell", () => {
       return requirements.serialize()
     }
 
+    const prices = ["500", "900"]
     const basePrograms = [
       factories.programs.baseProgram(),
       factories.programs.baseProgram(),
@@ -1169,7 +1159,7 @@ describe("ProgramBundleUpsell", () => {
         readable_id: bp.readable_id,
         title: bp.title,
         req_tree: makeReqTree(i + 3),
-        products: [factories.courses.product({ price: "500" })],
+        products: [factories.courses.product({ price: prices[i] })],
       }),
     )
     programDetails.forEach((pd, i) => {
@@ -1177,12 +1167,14 @@ describe("ProgramBundleUpsell", () => {
     })
     renderWithProviders(<ProgramBundleUpsell programs={basePrograms} />)
 
-    const upsell = await screen.findByTestId(TestIds.ProgramBundleUpsell)
-    expect(within(upsell).getAllByText("Best value")).toHaveLength(1)
+    await screen.findByText("Best value")
+    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
     const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent(programDetails[0].title)
+    expect(items[0]).toHaveTextContent("$500")
     expect(items[1]).toHaveTextContent(programDetails[1].title)
+    expect(items[1]).toHaveTextContent("$900")
   })
 })
 
