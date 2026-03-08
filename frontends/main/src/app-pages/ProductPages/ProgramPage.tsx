@@ -20,10 +20,9 @@ import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
-import { ProgramSummary } from "./ProductSummary"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import ProgramInfoBox from "./ProgramInfoBox"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 
@@ -196,7 +195,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   return (
     <ProductPageTemplate
       tags={tags}
-      productNoun="program"
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={
@@ -207,11 +205,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      summaryTitle="Program summary"
-      sidebarSummary={
-        <ProgramSummary program={program} courses={courses.data?.results} />
+      infoBox={
+        <ProgramInfoBox program={program} courses={courses.data?.results} />
       }
-      enrollButton={<ProgramEnrollmentButton program={program} />}
     >
       {page.about ? (
         <AboutSection productNoun="Program" aboutHtml={page.about} />
