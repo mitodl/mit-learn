@@ -30,6 +30,12 @@ describe("ProgramInfoBox", () => {
     expect(section).toBeInTheDocument()
   })
 
+  test("renders program summary", () => {
+    const program = makeProgram()
+    renderWithProviders(<ProgramInfoBox program={program} />)
+    expect(screen.getByTestId("mock-program-summary")).toBeInTheDocument()
+  })
+
   test("renders enrollment button", () => {
     const program = makeProgram()
     renderWithProviders(<ProgramInfoBox program={program} />)

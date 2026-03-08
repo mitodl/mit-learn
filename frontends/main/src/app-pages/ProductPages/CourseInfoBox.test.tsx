@@ -35,6 +35,12 @@ describe("CourseInfoBox", () => {
     expect(section).toBeInTheDocument()
   })
 
+  test("renders course summary", () => {
+    const course = makeCourse()
+    renderWithProviders(<CourseInfoBox course={course} />)
+    expect(screen.getByTestId("mock-course-summary")).toBeInTheDocument()
+  })
+
   test("renders enrollment button", () => {
     const course = makeCourse()
     renderWithProviders(<CourseInfoBox course={course} />)
