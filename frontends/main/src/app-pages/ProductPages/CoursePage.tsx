@@ -20,7 +20,7 @@ import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import CourseInfoBox from "./CourseInfoBox"
+import CourseInfoBox from "./InfoBoxCourse"
 
 type CoursePageProps = {
   readableId: string

@@ -1,7 +1,7 @@
 import React from "react"
 import { factories } from "api/mitxonline-test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
-import CourseInfoBox from "./CourseInfoBox"
+import CourseInfoBox from "./InfoBoxCourse"
 
 const makeCourse = factories.courses.course
 

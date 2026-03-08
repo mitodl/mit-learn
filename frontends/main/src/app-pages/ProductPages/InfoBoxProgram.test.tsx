@@ -1,7 +1,7 @@
 import React from "react"
 import { factories } from "api/mitxonline-test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
-import ProgramInfoBox from "./ProgramInfoBox"
+import ProgramInfoBox from "./InfoBoxProgram"
 
 const makeProgram = factories.programs.program
 
