@@ -27,6 +27,13 @@ const makeFlexiblePrice = factories.products.flexiblePrice
 const makeEnrollmentMode = factories.courses.enrollmentMode
 const { RequirementTreeBuilder } = factories.requirements
 
+/** ISO date string relative to now. Positive = future, negative = past. */
+const monthsFromNow = (months: number): string => {
+  const d = new Date()
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString()
+}
+
 // Enrollment mode helpers for common test setups
 const freeMode = () => makeEnrollmentMode({ requires_payment: false })
 const paidMode = () => makeEnrollmentMode({ requires_payment: true })
@@ -103,7 +110,7 @@ describe("CourseSummary", () => {
     test("Renders 'Start: Anytime' plus and end date for start anytime courses", () => {
       // For "Anytime" to show, run must be self-paced, not archived, and have a start date in the past
       const run = makeRun({
-        start_date: "2025-01-01", // Past date
+        start_date: monthsFromNow(-12),
         is_self_paced: true,
         is_archived: false,
         is_enrollable: true,
@@ -159,13 +166,9 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_archived: false,
         is_self_paced: false,
-        start_date: "2026-03-01",
-        end_date: "2026-05-01",
       })
       const nonEnrollableRun = makeRun({
         is_enrollable: false,
-        start_date: "2025-01-01",
-        end_date: "2025-03-01",
       })
       const course = makeCourse({
         next_run_id: run.id,
@@ -192,14 +195,10 @@ describe("CourseSummary", () => {
       const run1 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
-        start_date: "2026-03-01",
-        end_date: "2026-05-01",
       })
       const run2 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
       })
       const course = makeCourse({
         next_run_id: run1.id,
@@ -223,22 +222,22 @@ describe("CourseSummary", () => {
       const run1 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
-        start_date: "2026-03-01",
-        end_date: "2026-05-01",
+        start_date: monthsFromNow(3),
+        end_date: monthsFromNow(5),
       })
       const run2 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
         is_archived: false,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
       })
       const run3 = makeRun({
         is_enrollable: true,
         is_self_paced: false,
         is_archived: false,
-        start_date: "2026-09-01",
-        end_date: "2026-11-01",
+        start_date: monthsFromNow(9),
+        end_date: monthsFromNow(11),
       })
       const course = makeCourse({
         next_run_id: run1.id,
@@ -294,22 +293,22 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: true, // This will show "Start: Anytime" (past date)
         is_archived: false,
-        start_date: "2025-01-01", // Past date
-        end_date: "2026-03-01",
+        start_date: monthsFromNow(-12),
+        end_date: monthsFromNow(3),
       })
       const middleRun = makeRun({
         is_enrollable: true,
         is_self_paced: false, // Ensure dates display normally (not "Anytime")
         is_archived: false,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
       })
       const newestRun = makeRun({
         is_enrollable: true,
         is_self_paced: false, // Ensure dates display normally (not "Anytime")
         is_archived: false,
-        start_date: "2026-09-01",
-        end_date: "2026-11-01",
+        start_date: monthsFromNow(9),
+        end_date: monthsFromNow(11),
       })
 
       const course = makeCourse({
@@ -357,18 +356,18 @@ describe("CourseSummary", () => {
     test("Initially displays the date for the run with next_run_id when multiple enrollable runs exist", () => {
       const run1 = makeRun({
         is_enrollable: true,
-        start_date: "2026-01-01",
-        end_date: "2026-03-01",
+        start_date: monthsFromNow(1),
+        end_date: monthsFromNow(3),
       })
       const run2 = makeRun({
         is_enrollable: true,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
       })
       const run3 = makeRun({
         is_enrollable: true,
-        start_date: "2026-09-01",
-        end_date: "2026-11-01",
+        start_date: monthsFromNow(9),
+        end_date: monthsFromNow(11),
       })
 
       const course = makeCourse({
@@ -395,18 +394,18 @@ describe("CourseSummary", () => {
     test("Never displays dates for non-enrollable runs", async () => {
       const enrollableRun = makeRun({
         is_enrollable: true,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
       })
       const nonEnrollableRun1 = makeRun({
         is_enrollable: false,
-        start_date: "2026-01-01",
-        end_date: "2026-03-01",
+        start_date: monthsFromNow(1),
+        end_date: monthsFromNow(3),
       })
       const nonEnrollableRun2 = makeRun({
         is_enrollable: false,
-        start_date: "2026-09-01",
-        end_date: "2026-11-01",
+        start_date: monthsFromNow(9),
+        end_date: monthsFromNow(11),
       })
 
       const course = makeCourse({
@@ -469,18 +468,13 @@ describe("CourseSummary", () => {
     test("When multiple enrollable runs exist, only shows runs with start dates after expanding", async () => {
       const runWithDate = makeRun({
         is_enrollable: true,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
       })
       const runWithoutDate = makeRun({
         is_enrollable: true,
         start_date: null,
-        end_date: "2026-11-01",
       })
       const anotherRunWithDate = makeRun({
         is_enrollable: true,
-        start_date: "2026-09-01",
-        end_date: "2026-11-01",
       })
 
       const course = makeCourse({
@@ -514,12 +508,9 @@ describe("CourseSummary", () => {
     test("End date is not displayed for runs without end date when expanded", async () => {
       const runWithEndDate = makeRun({
         is_enrollable: true,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
       })
       const runWithoutEndDate = makeRun({
         is_enrollable: true,
-        start_date: "2026-09-01",
         end_date: null,
       })
 
@@ -563,8 +554,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: true,
         is_archived: false,
-        start_date: "2025-01-01", // Past date
-        end_date: "2026-12-01",
+        start_date: monthsFromNow(-12),
+        end_date: monthsFromNow(12),
       })
 
       // Run that should show actual date (not self-paced)
@@ -572,8 +563,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: false,
         is_archived: false,
-        start_date: "2026-06-01",
-        end_date: "2026-08-01",
+        start_date: monthsFromNow(6),
+        end_date: monthsFromNow(8),
       })
 
       // Run that should show actual date (self-paced but future start date)
@@ -581,8 +572,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: true,
         is_archived: false,
-        start_date: "2026-09-01", // Future date
-        end_date: "2026-11-01",
+        start_date: monthsFromNow(9),
+        end_date: monthsFromNow(11),
       })
 
       const course = makeCourse({
@@ -627,8 +618,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: true,
         is_archived: true, // Archived!
-        start_date: "2025-01-01", // Past date
-        end_date: "2025-12-01",
+        start_date: monthsFromNow(-18),
+        end_date: monthsFromNow(-3),
       })
 
       // Active anytime run for comparison
@@ -636,8 +627,8 @@ describe("CourseSummary", () => {
         is_enrollable: true,
         is_self_paced: true,
         is_archived: false,
-        start_date: "2025-06-01", // Past date
-        end_date: "2026-12-01",
+        start_date: monthsFromNow(-6),
+        end_date: monthsFromNow(12),
       })
 
       const course = makeCourse({
@@ -1132,20 +1123,16 @@ describe("ProgramBundleUpsell", () => {
       readable_id: baseProgram.readable_id,
       products: [],
     })
-    setMockResponse.get(
-      urls.programs.programDetail(baseProgram.id),
-      programDetail,
-    )
+    const { promise, resolve } = Promise.withResolvers()
+    setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
     const { queryClient } = renderWithProviders(
       <ProgramBundleUpsell programs={[baseProgram]} />,
     )
 
-    // Wait for the program detail query to finish
-    await waitFor(() => {
-      expect(queryClient.isFetching()).toBe(0)
-    })
-
-    // Neither container nor items should render
+    resolve(programDetail)
+    // ensure request finished
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
+    // ensure rerenders triggered
     expect(
       screen.queryByTestId(TestIds.ProgramBundleUpsell),
     ).not.toBeInTheDocument()
