@@ -58,10 +58,14 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   justifyContent: "space-between",
   gap: "56px",
   flexDirection: "row-reverse",
-
+  paddingTop: "72px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    gap: "0px",
+    gap: "32px",
+    paddingTop: "40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "40px",
     paddingTop: "24px",
   },
 }))
@@ -99,10 +103,11 @@ const SectionsWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "56px",
-  marginTop: "40px",
   [theme.breakpoints.down("md")]: {
     gap: "40px",
-    marginTop: "36px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "32px",
   },
 }))
 
@@ -117,6 +122,11 @@ const SidebarCol = styled(Show, {
 }))
 
 /**
+ * Pixel distance below header at which the summary box should begin when
+ * scrolling.
+ */
+const OFFSET_FROM_HEADER = 72
+/**
  * Column for the summary info box. Unlike SidebarCol, this is always visible.
  * On desktop it acts as a fixed-width sidebar; below md it goes full-width.
  */
@@ -128,7 +138,7 @@ const SummaryCol = styled.div(({ theme }) => ({
     // Without this, the flex child stretches to the main column's height
     // and sticky has no room to scroll.
     alignSelf: "flex-start",
-    top: `${HEADER_HEIGHT + 24}px`,
+    top: `${HEADER_HEIGHT + OFFSET_FROM_HEADER}px`,
   },
   [theme.breakpoints.down("md")]: {
     maxWidth: "none",
@@ -196,9 +206,6 @@ const SummaryCard = styled.div(({ theme }) => ({
   borderRadius: "4px",
   boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
   overflow: "hidden",
-  [theme.breakpoints.up("md")]: {
-    marginTop: "40px",
-  },
 }))
 
 /** Padded content area inside the summary card. */
