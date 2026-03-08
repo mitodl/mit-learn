@@ -7,6 +7,7 @@ import {
   RiCalendarLine,
   RiComputerLine,
   RiPriceTag3Line,
+  RiSparkling2Line,
   RiTimeLine,
 } from "@remixicon/react"
 import { formatDate, isInPast, LocalDate, NoSSR } from "ol-utilities"
@@ -43,7 +44,8 @@ import {
   SummaryContent,
   EnrollArea,
   AskTimButton,
-  RiSparkling2Line,
+  PACE_DATA,
+  getCourseRunPacing,
 } from "./InfoBoxShared"
 
 const dateLoading = (
@@ -144,27 +146,6 @@ const CourseDatesRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   )
 }
 
-const SELF_PACED = "self_paced"
-const INSTRUCTOR_PACED = "instructor_paced"
-
-const PACE_DATA = {
-  [INSTRUCTOR_PACED]: {
-    label: "Instructor-Paced",
-    description:
-      "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
-    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
-  },
-  [SELF_PACED]: {
-    label: "Self-Paced",
-    description:
-      "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
-    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
-  },
-}
-
-const getCourseRunPacing = (run: CourseRunV2) => {
-  return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
-}
 const CoursePaceRow: React.FC<CourseInfoRowProps & NeedsNextRun> = ({
   nextRun,
   ...others
@@ -230,7 +211,7 @@ const COURSE_CERT_INFO_LINK = (
   </UnderlinedLink>
 )
 
-const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
+const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
   nextRun,
   course,
 }) => {

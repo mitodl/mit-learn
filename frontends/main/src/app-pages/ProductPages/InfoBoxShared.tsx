@@ -2,7 +2,8 @@ import React, { useState } from "react"
 import { ActionButton, styled, Button } from "@mitodl/smoot-design"
 import { Dialog, Link, Typography, Stack } from "ol-components"
 import type { StackProps } from "ol-components"
-import { RiInformation2Line, RiSparkling2Line } from "@remixicon/react"
+import { RiInformation2Line } from "@remixicon/react"
+import type { CourseRunV2 } from "@mitodl/mitxonline-api-axios/v2"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -271,6 +272,28 @@ const AskTimButton = styled(Button)(({ theme }) => ({
   },
 }))
 
+const SELF_PACED = "self_paced"
+const INSTRUCTOR_PACED = "instructor_paced"
+
+const PACE_DATA = {
+  [INSTRUCTOR_PACED]: {
+    label: "Instructor-Paced",
+    description:
+      "Guided learning. Follow a set schedule with specific due dates for assignments and exams. Course materials released on a schedule. Earn your certificate shortly after the course ends.",
+    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994938130075-What-are-Instructor-Paced-courses-on-MITx-Online",
+  },
+  [SELF_PACED]: {
+    label: "Self-Paced",
+    description:
+      "Flexible learning. Enroll at any time and progress at your own speed. All course materials available immediately. Adaptable due dates and extended timelines. Earn your certificate as soon as you pass the course.",
+    href: "https://mitxonline.zendesk.com/hc/en-us/articles/21994872904475-What-are-Self-Paced-courses-on-MITx-Online",
+  },
+}
+
+const getCourseRunPacing = (run: CourseRunV2) => {
+  return run.is_self_paced || run.is_archived ? SELF_PACED : INSTRUCTOR_PACED
+}
+
 export {
   ResponsiveLink,
   UnderlinedLink,
@@ -289,6 +312,9 @@ export {
   SummaryContent,
   EnrollArea,
   AskTimButton,
-  RiSparkling2Line,
+  SELF_PACED,
+  INSTRUCTOR_PACED,
+  PACE_DATA,
+  getCourseRunPacing,
 }
 export type { InfoLabelProps, LearnMoreDialogProps }
