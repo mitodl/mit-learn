@@ -3,7 +3,8 @@ import { VisuallyHidden } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
 import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
-import { CourseSummary, ProgramBundleUpsell } from "./ProductSummary"
+import { CourseSummary } from "./ProductSummary"
+import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
 import {
   InfoBoxCard,
