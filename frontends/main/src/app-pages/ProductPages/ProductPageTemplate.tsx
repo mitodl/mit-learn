@@ -13,10 +13,8 @@ import { convertToEmbedUrl } from "@/common/utils"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { Button, styled, VisuallyHidden } from "@mitodl/smoot-design"
-import { RiSparkling2Line } from "@remixicon/react"
+import { styled } from "@mitodl/smoot-design"
 import Image from "next/image"
-import { HeadingIds } from "./util"
 import type { Breakpoint } from "@mui/system"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
@@ -196,56 +194,6 @@ const SidebarMedia: React.FC<{
   )
 }
 
-/**
- * Outer card wrapper: border, shadow, radius. No padding — children control
- * their own insets so that elements like the bundle upsell can span edge-to-edge.
- */
-const SummaryCard = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  overflow: "hidden",
-}))
-
-/** Padded content area inside the summary card. */
-const SummaryContent = styled.div(({ theme }) => ({
-  padding: "24px",
-  [theme.breakpoints.up("md")]: {
-    padding: "24px 32px",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "16px",
-  },
-}))
-
-const EnrollArea = styled.div(({ theme }) => ({
-  padding: "8px 24px 24px",
-  [theme.breakpoints.up("md")]: {
-    padding: "8px 32px 24px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    maxWidth: "50%",
-    marginInline: "auto",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "8px 16px 16px",
-  },
-}))
-
-const AskTimButton = styled(Button)(({ theme }) => ({
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
-  marginTop: "16px",
-  width: "100%",
-  [theme.breakpoints.between("sm", "md")]: {
-    width: "auto",
-  },
-  color: theme.custom.colors.darkGray2,
-  svg: {
-    color: theme.custom.colors.mitRed,
-  },
-}))
-
 type ProductPageTemplateProps = {
   tags: string[]
   currentBreadcrumbLabel: string
@@ -253,12 +201,8 @@ type ProductPageTemplateProps = {
   shortDescription: React.ReactNode
   imageSrc: string
   videoUrl?: string | null
-  sidebarSummary: React.ReactNode
-  summaryTitle: string
+  infoBox: React.ReactNode
   children: React.ReactNode
-  enrollButton: React.ReactNode
-  programUpsell?: React.ReactNode
-  productNoun: "course" | "program"
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -267,12 +211,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   shortDescription,
   imageSrc,
   videoUrl,
-  sidebarSummary,
-  summaryTitle,
+  infoBox,
   children,
-  enrollButton,
-  programUpsell,
-  productNoun,
 }) => {
   return (
     <Page>
@@ -311,25 +251,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
-        </VisuallyHidden>
-        <SummaryCol>
-          <SummaryCard as="section" aria-labelledby={HeadingIds.Summary}>
-            <SummaryContent>{sidebarSummary}</SummaryContent>
-            <EnrollArea>{enrollButton}</EnrollArea>
-            {programUpsell}
-          </SummaryCard>
-          <AskTimButton
-            variant="bordered"
-            size="large"
-            startIcon={<RiSparkling2Line />}
-            onClick={() => void 0}
-            data-testid="ask-tim-button"
-          >
-            AskTIM about this {productNoun}
-          </AskTimButton>
-        </SummaryCol>
+        <SummaryCol>{infoBox}</SummaryCol>
         <MainCol>
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
