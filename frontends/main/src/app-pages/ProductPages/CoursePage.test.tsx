@@ -189,8 +189,8 @@ describe("CoursePage", () => {
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
-    const buttons = await screen.findAllByTestId("course-enrollment-button")
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    const button = await screen.findByTestId("course-enrollment-button")
+    expect(button).toBeInTheDocument()
   })
 
   test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {
