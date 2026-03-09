@@ -48,11 +48,10 @@ describe("ProgramBundleUpsell", () => {
     })
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
-    await screen.findByText("Best value")
-    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
+    const upsell = await screen.findByTestId("program-bundle-upsell-item")
     // 3 required + 2 electives = 5 total courses
     expect(upsell).toHaveTextContent(
-      "Get all 5 Data Science Courses + Certificate",
+      "Get all 5 Data Science Courses + Certificates",
     )
     expect(upsell).toHaveTextContent("$750")
     expect(upsell).toHaveTextContent("(19% off)")
@@ -127,9 +126,7 @@ describe("ProgramBundleUpsell", () => {
     )
     renderWithProviders(<ProgramBundleUpsell programs={basePrograms} />)
 
-    await screen.findByText("Best value")
-    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
-    const items = within(upsell).getAllByTestId("program-bundle-upsell-item")
+    const items = await screen.findAllByTestId("program-bundle-upsell-item")
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent(programDetails[0].title)
     expect(items[0]).toHaveTextContent("$500")
