@@ -45,6 +45,7 @@ describe("Learning Resource List Card", () => {
       })
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
+        resource_category: expectedLabel,
         best_run_id: 1,
         runs: [run],
       })
@@ -52,10 +53,10 @@ describe("Learning Resource List Card", () => {
       setup({ resource })
 
       const card = screen.getByRole("article", {
-        name: `${expectedLabel}: ${resource.title}`,
+        name: `${resource.resource_category}: ${resource.title}`,
       })
 
-      within(card).getByText(expectedLabel)
+      within(card).getByText(resource.resource_category)
       within(card).getByText(resource.title)
       within(card).getByText("Starts:")
       within(card).getByText(formatTestDate(startDate))
@@ -400,5 +401,20 @@ describe("Learning Resource List Card", () => {
       setup({ resource })
       screen.getByText("Paid")
     })
+  })
+
+  test("Renders parent course name", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: "Test Course Title",
+          course_number: ["TEST-101"],
+        }),
+      ],
+    })
+
+    setup({ resource })
+    screen.getByText("From TEST-101: Test Course Title")
   })
 })

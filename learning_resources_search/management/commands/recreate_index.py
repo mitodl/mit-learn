@@ -69,6 +69,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     f"Reindexing in progress. Reindexing indexes already exist:"
                     f" {', '.join(existing_reindexing_indexes)}"
+                    f"\nUse --remove_existing_reindexing_tags if you want to continue"
                 )
                 return
 

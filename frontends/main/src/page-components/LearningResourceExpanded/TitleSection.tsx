@@ -3,7 +3,6 @@ import styled from "@emotion/styled"
 import { Skeleton, theme, Typography } from "ol-components"
 import { ActionButton } from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
-import { getReadableResourceType } from "ol-utilities"
 import { RiCloseLargeLine } from "@remixicon/react"
 
 const TitleContainer = styled.div({
@@ -50,7 +49,7 @@ const TitleSection: React.FC<{
   ref: React.Ref<HTMLDivElement>
 }> = ({ resource, onClickClose, titleId, ref }) => {
   const type = resource ? (
-    getReadableResourceType(resource.resource_type)
+    resource.resource_category
   ) : (
     <Skeleton variant="text" width="33%" />
   )
