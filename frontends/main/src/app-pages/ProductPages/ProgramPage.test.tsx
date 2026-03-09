@@ -424,10 +424,10 @@ describe("ProgramPage", () => {
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
-    const buttons = await screen.findAllByRole("button", {
+    const button = await screen.findByRole("button", {
       name: /enroll/i,
     })
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    expect(button).toBeInTheDocument()
   })
 
   test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {
