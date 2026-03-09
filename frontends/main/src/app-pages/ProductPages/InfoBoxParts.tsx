@@ -29,8 +29,9 @@ export const InfoBoxEnrollArea = styled.div(({ theme }) => ({
     padding: "8px 32px 24px",
   },
   [theme.breakpoints.between("sm", "md")]: {
-    maxWidth: "50%",
-    marginInline: "auto",
+    display: "flex",
+    justifyContent: "flex-end",
+    "> *": { flex: "0 1 50%" },
   },
   [theme.breakpoints.down("sm")]: {
     padding: "8px 16px 16px",

@@ -1,5 +1,5 @@
 import React from "react"
-import { styled, LoadingSpinner, Stack } from "ol-components"
+import { LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
@@ -18,16 +18,6 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
-
-const WideButtonLink = styled(ButtonLink)(({ href }) => [
-  {
-    width: "100%",
-  },
-  !href && {
-    pointerEvents: "none",
-    cursor: "default",
-  },
-])
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
@@ -87,37 +77,36 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       setAnchor(e.currentTarget)
     }
   }
-  if (enrollment) {
-    const href = programDashboardEnabled ? programView(program.id) : undefined
+  const href = programDashboardEnabled ? programView(program.id) : undefined
 
-    return (
-      <WideButtonLink href={href}>
-        Enrolled
-        <RiCheckLine aria-hidden="true" />
-      </WideButtonLink>
-    )
-  }
   return (
     <>
-      <Stack width="100%" gap="12px">
-        <Button
-          onClick={handleClick}
-          variant="primary"
-          size="large"
-          disabled={
-            enrollmentType === "none" ||
-            isPaidWithoutPrice ||
-            isPending ||
-            isLoading
-          }
-          endIcon={
-            isLoading || isPending ? (
-              <LoadingSpinner size="16px" loading={true} color="inherit" />
-            ) : undefined
-          }
-        >
-          {isLoading ? null : getEnrollButtonText()}
-        </Button>
+      <Stack gap="12px">
+        {enrollment ? (
+          <ButtonLink href={href}>
+            Enrolled
+            <RiCheckLine aria-hidden="true" />
+          </ButtonLink>
+        ) : (
+          <Button
+            onClick={handleClick}
+            variant="primary"
+            size="large"
+            disabled={
+              enrollmentType === "none" ||
+              isPaidWithoutPrice ||
+              isPending ||
+              isLoading
+            }
+            endIcon={
+              isLoading || isPending ? (
+                <LoadingSpinner size="16px" loading={true} color="inherit" />
+              ) : undefined
+            }
+          >
+            {isLoading ? null : getEnrollButtonText()}
+          </Button>
+        )}
         {isError && (
           <Alert severity="error">
             There was a problem processing your enrollment. Please try again.
