@@ -1,4 +1,4 @@
-import { styled, Button } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
 
 /**
  * Outer card wrapper: border, shadow, radius. No padding — children control
@@ -34,18 +34,5 @@ export const InfoBoxEnrollArea = styled.div(({ theme }) => ({
   },
   [theme.breakpoints.down("sm")]: {
     padding: "8px 16px 16px",
-  },
-}))
-
-export const AskTimButton = styled(Button)(({ theme }) => ({
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
-  marginTop: "16px",
-  width: "100%",
-  [theme.breakpoints.between("sm", "md")]: {
-    width: "auto",
-  },
-  color: theme.custom.colors.darkGray2,
-  svg: {
-    color: theme.custom.colors.mitRed,
   },
 }))
