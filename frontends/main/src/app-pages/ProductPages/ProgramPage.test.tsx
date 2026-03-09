@@ -227,7 +227,7 @@ describe("ProgramPage", () => {
         assertHeadings(
           [
             { level: 1, name: page.title },
-            { level: 2, name: "Program summary" },
+            { level: 2, name: "Program Information" },
             { level: 2, name: "About this Program" },
             { level: 2, name: "Courses" },
             { level: 3, name: "Core Dog Courses" },
