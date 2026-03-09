@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.56.9
+Version 0.56.9 (Released March 09, 2026)
 --------------
 
 - Complex filters for Vector endpoint (title and url fields) (#3012)
