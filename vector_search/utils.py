@@ -243,10 +243,17 @@ def embed_topics():
         )
         ids.append(str(topic.topic_uuid))
     if len(docs) > 0:
-        encoder = dense_encoder()
-        embeddings = encoder.embed_documents(docs)
-        vector_name = encoder.model_short_name()
-        points = points_generator(ids, metadata, embeddings, vector_name)
+        encoder_dense = dense_encoder()
+        encoder_sparse = sparse_encoder()
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+
+        points = points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
         client.upload_points(TOPICS_COLLECTION_NAME, points=points, wait=False)
 
 
