@@ -19,7 +19,7 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
-import { V2Program } from "@mitodl/mitxonline-api-axios/v2"
+import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
@@ -62,7 +62,7 @@ const ReqTitleNote = styled("span")(({ theme }) => ({
 }))
 
 type RequirementsSectionProps = {
-  program: V2Program
+  program: V2ProgramDetail
 }
 
 const getCompletionText = (parsedReqs: RequirementData[]) => {

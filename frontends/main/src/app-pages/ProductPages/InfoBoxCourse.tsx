@@ -13,22 +13,20 @@ type CourseInfoBoxProps = {
 
 const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
   return (
-    <>
-      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>Course Information</h2>
-        </VisuallyHidden>
-        <InfoBoxContent>
-          <CourseSummary course={course} />
-        </InfoBoxContent>
-        <InfoBoxEnrollArea>
-          <CourseEnrollmentButton course={course} />
-        </InfoBoxEnrollArea>
-        {course.programs?.length ? (
-          <ProgramBundleUpsell programs={course.programs} />
-        ) : null}
-      </InfoBoxCard>
-    </>
+    <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
+      <VisuallyHidden>
+        <h2 id={HeadingIds.Summary}>Course Information</h2>
+      </VisuallyHidden>
+      <InfoBoxContent>
+        <CourseSummary course={course} />
+      </InfoBoxContent>
+      <InfoBoxEnrollArea>
+        <CourseEnrollmentButton course={course} />
+      </InfoBoxEnrollArea>
+      {course.programs?.length ? (
+        <ProgramBundleUpsell programs={course.programs} />
+      ) : null}
+    </InfoBoxCard>
   )
 }
 

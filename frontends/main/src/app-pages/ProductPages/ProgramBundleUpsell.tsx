@@ -8,7 +8,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { parseReqTree } from "./util"
 import { formatPrice } from "@/common/mitxonline"
-import { useQueries } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { programPageView } from "@/common/urls"
 
 const WideButtonLink = styled(ButtonLink)(({ theme }) => ({
@@ -174,28 +174,23 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
   )
 }
 
-// Fetches full program details individually. Ideally we'd use the listing
-// endpoint, but it doesn't include product/price info. In practice only 1–2
-// programs are fetched per course.
 const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   programs,
 }) => {
-  const programDetails = useQueries({
-    queries: programs.map((p) =>
-      programsQueries.programDetail({ id: String(p.id) }),
-    ),
+  const ids = programs.map((p) => p.id)
+  const { data, isLoading, isError } = useQuery({
+    ...programsQueries.programsList({ id: ids }),
+    enabled: ids.length > 0,
   })
 
-  const anyLoading = programDetails.some((q) => q.isLoading)
-  const failedPrograms = programDetails.filter((q) => q.isError)
-  const pricedPrograms = programDetails
-    .map((q) => q.data)
-    .filter((d): d is V2ProgramDetail => !!d && !!d.products[0]?.price)
+  const pricedPrograms = (data?.results ?? []).filter(
+    (d): d is V2ProgramDetail => !!d.products[0]?.price,
+  )
 
-  if (!anyLoading && pricedPrograms.length === 0) {
-    if (failedPrograms.length > 0) {
+  if (!isLoading && pricedPrograms.length === 0) {
+    if (isError) {
       console.warn(
-        `ProgramBundleUpsell: ${failedPrograms.length}/${programs.length} program detail queries failed`,
+        `ProgramBundleUpsell: programs list query failed for ids=${ids.join(",")}`,
       )
     }
     return null
@@ -203,7 +198,7 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
-      {anyLoading ? (
+      {isLoading ? (
         <>
           <Skeleton width={80} height={20} sx={{ mx: "auto" }} />
           {programs.map((p) => (

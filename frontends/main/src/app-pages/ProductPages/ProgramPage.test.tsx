@@ -461,15 +461,15 @@ describe("ProgramPage", () => {
   })
 
   test.each([
-    { courses: [], pages: [makePage()] },
+    { programs: [], pages: [makePage()] },
     {
-      courses: [makeProgram({ ...makeReqs() })],
+      programs: [makeProgram({ ...makeReqs() })],
       pages: [],
     },
-  ])("Returns 404 if no program found", async ({ courses, pages }) => {
+  ])("Returns 404 if no program found", async ({ programs, pages }) => {
     setMockResponse.get(
       urls.programs.programsList({ readable_id: "readable_id" }),
-      { results: courses },
+      { results: programs },
     )
     setMockResponse.get(urls.pages.programPages("readable_id"), {
       items: pages,
