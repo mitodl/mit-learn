@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.56.10
+---------------
+
+- Avoid unnecessary task calls for contentfiles if none exist (#3017)
+- add ocw learning materials to search (#3018)
+
 Version 0.56.9 (Released March 09, 2026)
 --------------
 
