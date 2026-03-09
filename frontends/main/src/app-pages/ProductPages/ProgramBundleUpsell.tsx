@@ -165,6 +165,7 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
       </BundleUpsellText>
       <WideButtonLink
         variant="bordered"
+        size="large"
         href={programPageView(program.readable_id)}
       >
         View Program
