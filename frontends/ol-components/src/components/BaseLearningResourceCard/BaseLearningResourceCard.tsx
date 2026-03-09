@@ -107,6 +107,7 @@ interface BaseLearningResourceCardProps {
   footerContent?: React.ReactNode
   draggable?: boolean
   editMenu?: React.ReactNode | null
+  parentCourseName?: string | null
 }
 
 const FILLED_PROPS = { variant: "primary" } as const
@@ -295,6 +296,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   footerContent,
   draggable = false,
   editMenu = null,
+  parentCourseName = null,
 }) => {
   if (isLoading) {
     if (list && condensed) {
@@ -520,6 +522,9 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           >
             {title}
           </ListCard.Title>
+        )}
+        {parentCourseName && (
+          <ListCard.Subtitle>From {parentCourseName}</ListCard.Subtitle>
         )}
         <ListCard.Actions>
           {actions.map((action, index) => (

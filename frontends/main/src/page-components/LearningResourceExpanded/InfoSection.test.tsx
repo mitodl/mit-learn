@@ -6,7 +6,7 @@ import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
-import { AvailabilityEnum } from "api"
+import { AvailabilityEnum, ResourceTypeEnum } from "api"
 import { factories } from "api/test-utils"
 
 // This is a pipe followed by a zero-width space
@@ -412,5 +412,37 @@ describe("Learning resource info section format and location", () => {
       return node?.textContent === "Format:Online" || false
     })
     expect(within(section).queryByText("In person")).toBeNull()
+  })
+})
+
+describe("Learning resource info section parent course", () => {
+  test("Shows parent course when it exists", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      content_files: [
+        factories.learningResources.contentFile({
+          run_title: "Test Course Title",
+          course_number: ["TEST-101"],
+        }),
+      ],
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText("Parent Course:")
+    within(section).getByText("TEST-101: Test Course Title")
+  })
+
+  test("Does not show parent course when content files are missing", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      content_files: null,
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    expect(within(section).queryByText("Parent Course:")).toBeNull()
   })
 })

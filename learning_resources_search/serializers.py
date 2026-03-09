@@ -160,10 +160,6 @@ def serialize_learning_resource_for_update(
         resource_age_date and resource_age_date.year <= STALENESS_CUTOFF
     ) or (learning_resource_obj.completeness < COMPLETENESS_CUTOFF)
 
-    # NOTE -  resource_category was renamed to resource_type_group
-    # The next line should be removed in a follow-up PR
-    serialized_data["resource_category"] = serialized_data["resource_type_group"]
-
     return {
         "resource_relations": {"name": "resource"},
         "created_on": learning_resource_obj.created_on,
@@ -257,6 +253,7 @@ LEARNING_RESOURCE_AGGREGATIONS = [
     "free",
     "delivery",
     "resource_type_group",
+    "resource_category",
 ]
 
 CONTENT_FILE_AGGREGATIONS = ["topic", "content_feature_type", "platform", "offered_by"]
@@ -422,6 +419,11 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             \n\n{build_choice_description_list(resource_type_group_choices)}"
         ),
     )
+    resource_category = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The resource category for the resource",
+    )
     search_mode_choices = [
         ("phrase", "phrase"),
         ("best_fields", "best_fields"),
@@ -472,6 +474,12 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             "Score weight for content file data.  1 is the default."
             " 0 means content files are ignored"
         ),
+    )
+    show_ocw_files = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=False,
+        help_text="Whether to include select OCW content files in search results.",
     )
 
 

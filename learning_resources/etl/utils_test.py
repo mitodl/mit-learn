@@ -404,36 +404,65 @@ def test_parse_bad_format(mocker):
 
 
 @pytest.mark.parametrize(
-    ("offered_by", "status", "has_cert"),
+    ("offered_by", "status", "enrollment_modes", "has_cert"),
     [
         (
             OfferedBy.ocw.name,
             RunStatus.archived.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.ocw.name,
             RunStatus.current.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.archived.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.current.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             True,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.upcoming.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [{"mode_slug": "audit"}],
+            False,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [{"mode_slug": "verified"}],
+            True,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [],
+            False,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            None,
             True,
         ),
     ],
 )
-def test_parse_certification(offered_by, status, has_cert):
+def test_parse_certification(offered_by, status, enrollment_modes, has_cert):
     """The parse_certification function should return the expected bool value"""
     offered_by_obj = LearningResourceOfferorFactory.create(code=offered_by)
 
@@ -445,7 +474,18 @@ def test_parse_certification(offered_by, status, has_cert):
         ),
     ).learning_resource
     assert resource.runs.count() == 1
-    runs = [{"status": status, **run} for run in resource.runs.all().values()]
+    runs = [
+        {
+            "status": status,
+            **(
+                {"enrollment_modes": enrollment_modes}
+                if enrollment_modes is not None
+                else {}
+            ),
+            **run,
+        }
+        for run in resource.runs.all().values()
+    ]
     assert parse_certification(offered_by_obj.code, runs) == has_cert
 
 

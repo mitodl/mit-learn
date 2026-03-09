@@ -1,7 +1,7 @@
 import { Extension } from "@tiptap/core"
 import { Plugin } from "@tiptap/pm/state"
 
-import { convertToEmbedUrl } from "./lib"
+import { convertToEmbedUrl } from "@/common/utils"
 import { createURLToNodeHandler } from "../shared/createURLToNodeHandler"
 
 function extractMediaEmbedUrl(text: string): string | null {

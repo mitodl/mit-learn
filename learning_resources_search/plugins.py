@@ -169,6 +169,8 @@ class SearchIndexPlugin:
         Args:
             run(LearningResourceRun): The Learning Resource run that was removed
         """
+        if not run.content_files.exists():
+            return
         deindex_tasks = [
             tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
         ]
@@ -193,6 +195,8 @@ class SearchIndexPlugin:
          Args:
              run(LearningResourceRun): The LearningResourceRun that was upserted
         """
+        if not run.content_files.exists():
+            return
         if run.published:
             index_tasks = []
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:

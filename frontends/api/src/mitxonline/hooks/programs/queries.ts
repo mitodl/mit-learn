@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 import type {
   PaginatedV2ProgramCollectionList,
-  PaginatedV2ProgramList,
+  PaginatedV2ProgramDetailList,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
   ProgramsApiProgramsRetrieveV2Request,
@@ -37,7 +37,7 @@ const programsQueries = {
   programsList: (opts: ProgramsApiProgramsListV2Request) =>
     queryOptions({
       queryKey: programsKeys.programsList(opts),
-      queryFn: async (): Promise<PaginatedV2ProgramList> => {
+      queryFn: async (): Promise<PaginatedV2ProgramDetailList> => {
         return programsApi.programsListV2(opts).then((res) => res.data)
       },
     }),

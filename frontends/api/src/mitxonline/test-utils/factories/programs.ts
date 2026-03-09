@@ -1,17 +1,32 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
-import type { PartialFactory } from "ol-test-utilities"
+import type { Factory, PartialFactory } from "ol-test-utilities"
 import type {
-  V2Program,
+  BaseProgram,
   V2ProgramCollection,
+  V2ProgramDetail,
   V3SimpleProgram,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
+import * as courses from "./courses"
 
 const uniqueProgramId = new UniqueEnforcer()
 
-const program: PartialFactory<V2Program> = (overrides = {}) => {
-  const defaults: V2Program = {
+const baseProgram: Factory<BaseProgram> = (overrides = {}) => {
+  const defaults: BaseProgram = {
+    title: faker.lorem.words(3),
+    id: uniqueProgramId.enforce(() => faker.number.int()),
+    readable_id: faker.lorem.slug(),
+    type: faker.lorem.words(),
+  }
+  return {
+    ...defaults,
+    ...overrides,
+  }
+}
+
+const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
+  const defaults: V2ProgramDetail = {
     id: uniqueProgramId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
     readable_id: faker.lorem.slug(),
@@ -77,10 +92,12 @@ const program: PartialFactory<V2Program> = (overrides = {}) => {
     enrollment_end: faker.helpers.maybe(() =>
       faker.date.future().toISOString(),
     ),
+    enrollment_modes: [courses.enrollmentMode()],
     end_date: faker.helpers.maybe(() => faker.date.future().toISOString()),
+    products: [courses.product()],
   }
 
-  return mergeOverrides<V2Program>(defaults, overrides)
+  return mergeOverrides<V2ProgramDetail>(defaults, overrides)
 }
 
 const programs = makePaginatedFactory(program)
@@ -122,4 +139,4 @@ const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
   return mergeOverrides<V3SimpleProgram>(defaults, overrides)
 }
 
-export { program, programs, programCollection, simpleProgram }
+export { baseProgram, program, programs, programCollection, simpleProgram }

@@ -109,7 +109,7 @@ type CardProps = {
  *
  * **Custom Layout:** Use ListCard.Content to create a custom layout.
  */
-type Card = FC<CardProps> & Omit<BaseCard, "Image">
+type Card = FC<CardProps> & Omit<BaseCard, "Image" | "Subtitle">
 
 const ListCardCondensed: Card = ({
   children,

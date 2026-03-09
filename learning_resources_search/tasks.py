@@ -266,6 +266,8 @@ def send_subscription_emails(self, subscription_type, period="daily"):
     new_learning_resources = LearningResource.objects.filter(
         published=True,
         created_on__gt=since,
+        # We do not want to send emails for ocw content file resources
+        # since the feature is not live yet.
         direct_content_files__isnull=True,
     )
     rows = _get_percolated_rows(new_learning_resources, subscription_type)
@@ -663,7 +665,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                 for ids in chunks(
                     LearningResource.objects.filter(
                         published=True,
-                        direct_content_files__isnull=True,
                     )
                     .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
@@ -684,7 +685,6 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
                         LearningResource.objects.filter(
                             published=True,
                             resource_type=resource_type,
-                            direct_content_files__isnull=True,
                         )
                         .order_by("id")
                         .values_list("id", flat=True),
@@ -895,7 +895,6 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=True,
                 resource_type=resource_type,
-                direct_content_files__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),
@@ -909,7 +908,6 @@ def get_update_learning_resource_tasks(resource_type):
             LearningResource.objects.filter(
                 published=False,
                 resource_type=resource_type,
-                direct_content_files__isnull=True,
             )
             .order_by("id")
             .values_list("id", flat=True),

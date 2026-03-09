@@ -40,6 +40,7 @@ const getSearchParams = ({
     content_file_score_weight: searchParams.get("content_file_score_weight"),
     resource_type_group: resourceTypeGroup ? [resourceTypeGroup] : null,
     aggregations: [...(facetNames || []), "resource_type_group"],
+    show_ocw_files: searchParams.get("show_ocw_files") === "true",
     ...requestParams,
     offset: (Number(page) - 1) * pageSize,
     limit: pageSize,

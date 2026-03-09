@@ -18,6 +18,7 @@ import {
   ButtonProps,
   childCheckboxStyles,
   VisuallyHidden,
+  Checkbox,
 } from "@mitodl/smoot-design"
 import { keyBy } from "lodash"
 import {
@@ -669,6 +670,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     min_score: number
     max_incompleteness_penalty: number
     content_file_score_weight: number
+    show_ocw_files: boolean
   }
 
   const AdminOptions = (
@@ -823,6 +825,28 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               Score weight adjustment for content file matches. 1 means no
               adjustment. 0 means content file matches are not counted in the
               score. Only affects the results if there is a search term.
+            </ExplanationContainer>
+            <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
+            <Checkbox
+              checked={
+                searchParams.get("show_ocw_files")
+                  ? searchParams.get("show_ocw_files") === "true"
+                  : (adminParams?.show_ocw_files ?? false)
+              }
+              onChange={(e) =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev)
+                  if (e.target.checked) {
+                    next.set("show_ocw_files", "true")
+                  } else {
+                    next.delete("show_ocw_files")
+                  }
+                  return next
+                })
+              }
+            />
+            <ExplanationContainer>
+              Toggle to include or exclude OCW files in the search results.
             </ExplanationContainer>
           </div>
         ) : null}
