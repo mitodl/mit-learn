@@ -10,31 +10,45 @@ import {
   HEADER_HEIGHT,
 } from "ol-components"
 import { convertToEmbedUrl } from "@/common/utils"
-import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
-import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
 import { styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
 
-const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
-  paddingBottom: "24px",
-  [theme.breakpoints.down("md")]: {
-    paddingBottom: "16px",
+const GradientBanner = styled(BannerBackground)(({ theme }) => ({
+  background:
+    "radial-gradient(53.28% 106.57% at 50% 14.6%, #1D7B83 0%, #1E1E54 100%)",
+  padding: 0,
+  [theme.breakpoints.down("sm")]: {
+    padding: 0,
+  },
+}))
+
+const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
+  "& > span": {
+    paddingBottom: 0,
   },
 }))
 
 const TitleBox = styled(Stack)(({ theme }) => ({
   color: theme.custom.colors.white,
 }))
-const ProductTag = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.darkGray1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "4px 12px",
-  borderRadius: "4px",
-  ...theme.typography.subtitle2,
+
+const ContentStack = styled(Stack)(({ theme }) => ({
+  gap: "32px",
+  marginTop: "16px",
+  [theme.breakpoints.down("md")]: {
+    gap: "16px",
+    marginTop: 0,
+  },
+}))
+
+const EnrollButton = styled.div(({ theme }) => ({
+  width: "240px",
+
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }))
 
 const Page = styled.div(({ theme }) => ({
@@ -46,11 +60,21 @@ const Page = styled.div(({ theme }) => ({
   height: "100%",
 }))
 
-const TopContainer = styled(Container)({
+const TopContainer = styled(Container)(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
-  gap: "56px",
-})
+  gap: "64px",
+  padding: "104px 0",
+
+  [theme.breakpoints.down("md")]: {
+    gap: "16px",
+    padding: "64px 40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "16px",
+    padding: "32px 24px",
+  },
+}))
 const BottomContainer = styled(Container)(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
@@ -113,10 +137,13 @@ const SidebarCol = styled(Show, {
   shouldForwardProp: (prop) => prop !== "alignSelf",
 })<{
   alignSelf?: React.CSSProperties["alignSelf"]
-}>(({ alignSelf }) => ({
+}>(({ theme, alignSelf }) => ({
   width: "100%",
-  maxWidth: "410px",
+  maxWidth: "540px",
   alignSelf,
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "364px",
+  },
 }))
 
 /**
@@ -143,29 +170,31 @@ const SummaryCol = styled.div(({ theme }) => ({
   },
 }))
 
-const SidebarVideo = styled.iframe(({ theme }) => ({
-  borderRadius: "4px",
+const SidebarVideo = styled.iframe(() => ({
+  borderRadius: "16px",
+  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   border: "none",
   width: "100%",
-  maxWidth: "410px",
-  aspectRatio: "410 / 230",
+  maxWidth: "540px",
+  aspectRatio: "540 / 306",
   display: "block",
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px 4px 0 0",
-  },
 }))
 
 const SidebarImage = styled(Image)(({ theme }) => ({
-  borderRadius: "4px",
+  borderRadius: "16px",
+  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   width: "100%",
-  maxWidth: "410px",
-  aspectRatio: "410 / 230",
+  maxWidth: "540px",
+  aspectRatio: "540 / 306",
   height: "auto",
   display: "block",
   [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px 4px 0 0",
+    maxWidth: "464px",
+    aspectRatio: "464 / 261",
+  },
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "100%",
+    aspectRatio: "16 / 9", // Adjust this to your desired mobile aspect ratio
   },
 }))
 
@@ -186,8 +215,8 @@ const SidebarMedia: React.FC<{
   return (
     <SidebarImage
       priority={priority}
-      width={410}
-      height={230}
+      width={540}
+      height={306}
       src={imageSrc}
       alt=""
     />
@@ -202,10 +231,10 @@ type ProductPageTemplateProps = {
   imageSrc: string
   videoUrl?: string | null
   infoBox: React.ReactNode
+  enrollmentAction: React.ReactNode
   children: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
-  tags,
   currentBreadcrumbLabel,
   title,
   shortDescription,
@@ -213,10 +242,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   videoUrl,
   infoBox,
   children,
+  enrollmentAction,
 }) => {
   return (
     <Page>
-      <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
+      <GradientBanner>
         <TopContainer data-testid="banner-container">
           <MainCol>
             <StyledBreadcrumbs
@@ -225,22 +255,31 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               current={currentBreadcrumbLabel}
             />
             <TitleBox alignItems="flex-start" gap="4px">
-              <Stack direction="row" gap="8px">
-                {tags.map((tag) => {
-                  return <ProductTag key={tag}>{tag}</ProductTag>
-                })}
-              </Stack>
-              <Stack alignItems="flex-start" gap="16px">
-                <Typography component="h1" typography={{ xs: "h3", sm: "h2" }}>
+              <ContentStack alignItems="flex-start">
+                <SidebarCol showBelow="sm" alignSelf="flex-end">
+                  <SidebarMedia
+                    videoUrl={videoUrl}
+                    imageSrc={imageSrc}
+                    title={title}
+                    priority
+                  />
+                </SidebarCol>
+                <Typography
+                  component="h1"
+                  typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                >
                   {title}
                 </Typography>
-                <Typography typography={{ xs: "body2", sm: "body1" }}>
+                <Typography
+                  typography={{ xs: "body2", sm: "body3", md: "body2" }}
+                >
                   {shortDescription}
                 </Typography>
-              </Stack>
+                <EnrollButton>{enrollmentAction}</EnrollButton>
+              </ContentStack>
             </TitleBox>
           </MainCol>
-          <SidebarCol showAbove="md" alignSelf="flex-end">
+          <SidebarCol showAbove="sm" alignSelf="flex-end">
             <SidebarMedia
               videoUrl={videoUrl}
               imageSrc={imageSrc}
@@ -249,7 +288,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
             />
           </SidebarCol>
         </TopContainer>
-      </BannerBackground>
+      </GradientBanner>
       <BottomContainer>
         <SummaryCol>{infoBox}</SummaryCol>
         <MainCol>

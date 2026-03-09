@@ -31,9 +31,13 @@ const WideButtonLink = styled(ButtonLink)(({ href }) => [
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
+  variant: "primary" | "secondary"
+  className?: string
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -102,8 +106,9 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       <Stack width="100%" gap="12px">
         <Button
           onClick={handleClick}
-          variant="primary"
+          variant={variant}
           size="large"
+          className={className}
           disabled={
             enrollmentType === "none" ||
             isPaidWithoutPrice ||
