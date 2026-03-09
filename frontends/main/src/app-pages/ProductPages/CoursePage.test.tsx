@@ -163,7 +163,7 @@ describe("CoursePage", () => {
     expectRawContent(section, page.prerequisites)
   })
 
-  test("Renders program bundle upsell when course belongs to a program", async () => {
+  test("Renders program bundle upsell when course belongs to a program (content tested in ProgramBundleUpsell.test)", async () => {
     const baseProgram = factories.programs.baseProgram()
     const programDetail = factories.programs.program({
       id: baseProgram.id,
@@ -173,10 +173,9 @@ describe("CoursePage", () => {
     const course = makeCourse({ programs: [baseProgram] })
     const page = makePage({ course_details: course })
     setupApis({ course, page })
-    setMockResponse.get(
-      urls.programs.programDetail(baseProgram.id),
-      programDetail,
-    )
+    setMockResponse.get(urls.programs.programsList({ id: [baseProgram.id] }), {
+      results: [programDetail],
+    })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
     expect(

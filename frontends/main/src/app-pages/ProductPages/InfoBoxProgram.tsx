@@ -19,19 +19,17 @@ const ProgramInfoBox: React.FC<ProgramInfoBoxProps> = ({
   courses,
 }) => {
   return (
-    <>
-      <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>Program Information</h2>
-        </VisuallyHidden>
-        <InfoBoxContent>
-          <ProgramSummary program={program} courses={courses} />
-        </InfoBoxContent>
-        <InfoBoxEnrollArea>
-          <ProgramEnrollmentButton program={program} />
-        </InfoBoxEnrollArea>
-      </InfoBoxCard>
-    </>
+    <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
+      <VisuallyHidden>
+        <h2 id={HeadingIds.Summary}>Program Information</h2>
+      </VisuallyHidden>
+      <InfoBoxContent>
+        <ProgramSummary program={program} courses={courses} />
+      </InfoBoxContent>
+      <InfoBoxEnrollArea>
+        <ProgramEnrollmentButton program={program} />
+      </InfoBoxEnrollArea>
+    </InfoBoxCard>
   )
 }
 
