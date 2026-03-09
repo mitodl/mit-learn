@@ -22,7 +22,7 @@ const mockedUseFeatureFlagEnabled = jest
   .mockImplementation(() => false)
 
 const makeProgram = mitxFactories.programs.program
-const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
+const makeProgramEnrollment = mitxFactories.enrollment.programErnollment
 const makeEnrollmentMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeUser = factories.user.user

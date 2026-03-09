@@ -20,12 +20,12 @@ import {
 } from "ol-components"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import {
-  CourseRunEnrollmentRequestV2,
   ContractPage,
   OrganizationPage,
   V2ProgramCollection,
   V2Program,
   V3UserProgramEnrollment,
+  CourseRunEnrollmentV3,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
@@ -234,7 +234,7 @@ const useProgramCollectionCourses = (
 const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   contract: ContractPage
-  enrollments?: CourseRunEnrollmentRequestV2[]
+  enrollments?: CourseRunEnrollmentV3[]
 }> = ({ collection, contract, enrollments }) => {
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection, contract.id)
@@ -349,7 +349,7 @@ const OrgProgramCollectionDisplay: React.FC<{
 const OrgProgramDisplay: React.FC<{
   program: V2Program
   contract?: ContractPage
-  courseRunEnrollments?: CourseRunEnrollmentRequestV2[]
+  courseRunEnrollments?: CourseRunEnrollmentV3[]
   programEnrollments?: V3UserProgramEnrollment[]
   programLoading: boolean
   orgId: number

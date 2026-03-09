@@ -7,7 +7,7 @@ import { setMockResponse } from "../../../test-utils"
 import moment from "moment"
 import {
   ContractPage,
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   OrganizationPage,
   User,
@@ -231,7 +231,7 @@ const setupProgramsAndCourses = () => {
 const createEnrollmentsForContractRuns = (
   courses: CourseWithCourseRunsSerializerV2[],
   contractIds: number[],
-): CourseRunEnrollmentRequestV2[] => {
+): CourseRunEnrollmentV3[] => {
   return courses.flatMap((course) =>
     course.courseruns
       .filter(
