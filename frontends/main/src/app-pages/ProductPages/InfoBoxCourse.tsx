@@ -22,7 +22,7 @@ const CourseInfoBox: React.FC<CourseInfoBoxProps> = ({ course }) => {
     <>
       <InfoBoxCard as="section" aria-labelledby={HeadingIds.Summary}>
         <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>Course summary</h2>
+          <h2 id={HeadingIds.Summary}>Course Information</h2>
         </VisuallyHidden>
         <InfoBoxContent>
           <CourseSummary course={course} />
