@@ -96,7 +96,7 @@ describe("CoursePage", () => {
     await waitFor(() => {
       assertHeadings([
         { level: 1, name: page.title },
-        { level: 2, name: "Course summary" },
+        { level: 2, name: "Course Information" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
         { level: 2, name: "How you'll learn" },
@@ -161,6 +161,27 @@ describe("CoursePage", () => {
 
     const section = await screen.findByRole("region", { name: "Prerequisites" })
     expectRawContent(section, page.prerequisites)
+  })
+
+  test("Renders program bundle upsell when course belongs to a program", async () => {
+    const baseProgram = factories.programs.baseProgram()
+    const programDetail = factories.programs.program({
+      id: baseProgram.id,
+      readable_id: baseProgram.readable_id,
+      products: [factories.courses.product({ price: "500" })],
+    })
+    const course = makeCourse({ programs: [baseProgram] })
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    setMockResponse.get(
+      urls.programs.programDetail(baseProgram.id),
+      programDetail,
+    )
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    expect(
+      await screen.findByTestId("program-bundle-upsell"),
+    ).toBeInTheDocument()
   })
 
   test("Renders an enrollment button", async () => {
