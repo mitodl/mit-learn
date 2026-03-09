@@ -31,34 +31,68 @@ const IMG_CONFIG: ImageConfig = {
 describe("CallToActionSection", () => {
   describe("Resource URL rendering", () => {
     it.each([
-      { resourceType: ResourceTypeEnum.Course, expectedText: "Learn More" },
-      { resourceType: ResourceTypeEnum.Program, expectedText: "Learn More" },
+      {
+        resourceType: ResourceTypeEnum.Course,
+        platform: PlatformEnum.Xpro,
+        expectedText: "Learn More",
+      },
+      {
+        resourceType: ResourceTypeEnum.Course,
+        platform: PlatformEnum.Ocw,
+        expectedText: "Access Course Materials",
+      },
+
+      {
+        resourceType: ResourceTypeEnum.Program,
+        platform: PlatformEnum.Xpro,
+        expectedText: "Learn More",
+      },
       {
         resourceType: ResourceTypeEnum.Video,
+        platform: PlatformEnum.Youtube,
         expectedText: "Watch on YouTube",
       },
       {
+        resourceType: ResourceTypeEnum.Video,
+        platform: PlatformEnum.Ocw,
+        expectedText: "Access Learning Material",
+      },
+      {
         resourceType: ResourceTypeEnum.VideoPlaylist,
+        platform: PlatformEnum.Youtube,
         expectedText: "Watch on YouTube",
       },
       {
         resourceType: ResourceTypeEnum.Podcast,
         expectedText: "Listen to Podcast",
+        platform: PlatformEnum.Podcast,
       },
       {
         resourceType: ResourceTypeEnum.PodcastEpisode,
         expectedText: "Listen to Podcast",
+        platform: PlatformEnum.Podcast,
       },
-      { resourceType: ResourceTypeEnum.Article, expectedText: "View Article" },
       {
-        resourceType: ResourceTypeEnum.LearningPath,
+        resourceType: ResourceTypeEnum.Article,
+        expectedText: "View Article",
+        platform: PlatformEnum.Climate,
+      },
+      {
+        resourceType: ResourceTypeEnum.Document,
+        expectedText: "Access Learning Material",
+        platform: PlatformEnum.Ocw,
+      },
+      {
+        resourceType: ResourceTypeEnum.Document,
         expectedText: "Learn More",
+        platform: PlatformEnum.Xpro,
       },
     ])(
-      "renders link with correct text for $resourceType",
-      ({ resourceType, expectedText }) => {
+      "renders link with correct text for $resourceType and platform $platform",
+      ({ resourceType, expectedText, platform }) => {
         const resource = factories.learningResources.resource({
           resource_type: resourceType,
+          platform: { code: platform },
           url: "https://example.com/resource",
         })
 
@@ -74,27 +108,6 @@ describe("CallToActionSection", () => {
         expect(link).toBeInTheDocument()
       },
     )
-
-    it("renders 'Access Course Materials' for OCW courses", () => {
-      const resource = factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Course,
-        platform: { code: PlatformEnum.Ocw },
-        url: "https://ocw.mit.edu/course",
-      })
-
-      renderWithProviders(
-        <CallToActionSection
-          imgConfig={IMG_CONFIG}
-          resource={resource}
-          shareUrl="https://learn.mit.edu/test"
-        />,
-      )
-
-      const link = screen.getByRole("link", {
-        name: "Access Course Materials",
-      })
-      expect(link).toBeInTheDocument()
-    })
   })
 
   describe("UTM parameters", () => {

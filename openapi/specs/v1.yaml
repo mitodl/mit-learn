@@ -4078,6 +4078,7 @@ paths:
             - free
             - delivery
             - resource_type_group
+            - resource_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -4093,6 +4094,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_type_group` - resource_type_group
+              * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -4431,6 +4433,14 @@ paths:
           minLength: 1
         description: The search text
       - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -4491,6 +4501,13 @@ paths:
           * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
           * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
           * `most_fields` - most_fields\n* `hybrid` - hybrid"
+      - in: query
+        name: show_ocw_files
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: Whether to include select OCW content files in search results.
       - in: query
         name: slop
         schema:
@@ -4588,6 +4605,7 @@ paths:
             - free
             - delivery
             - resource_type_group
+            - resource_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -4603,6 +4621,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_type_group` - resource_type_group
+              * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -4941,6 +4960,14 @@ paths:
           minLength: 1
         description: The search text
       - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -5001,6 +5028,13 @@ paths:
           * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
           * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
           * `most_fields` - most_fields\n* `hybrid` - hybrid"
+      - in: query
+        name: show_ocw_files
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: Whether to include select OCW content files in search results.
       - in: query
         name: slop
         schema:
@@ -5123,6 +5157,7 @@ paths:
             - free
             - delivery
             - resource_type_group
+            - resource_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -5138,6 +5173,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_type_group` - resource_type_group
+              * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -5476,6 +5512,14 @@ paths:
           minLength: 1
         description: The search text
       - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -5536,6 +5580,13 @@ paths:
           * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
           * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
           * `most_fields` - most_fields\n* `hybrid` - hybrid"
+      - in: query
+        name: show_ocw_files
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: Whether to include select OCW content files in search results.
       - in: query
         name: slop
         schema:
@@ -5649,6 +5700,7 @@ paths:
             - free
             - delivery
             - resource_type_group
+            - resource_category
             type: string
             description: |-
               * `resource_type` - resource_type
@@ -5664,6 +5716,7 @@ paths:
               * `free` - free
               * `delivery` - delivery
               * `resource_type_group` - resource_type_group
+              * `resource_category` - resource_category
         description: Show resource counts by category
       - in: query
         name: certification
@@ -6002,6 +6055,14 @@ paths:
           minLength: 1
         description: The search text
       - in: query
+        name: resource_category
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        description: The resource category for the resource
+      - in: query
         name: resource_type
         schema:
           type: array
@@ -6062,6 +6123,13 @@ paths:
           * `phrase` - phrase\n* `best_fields` - best_fields\n* `most_fields` - most_fields\n\
           * `hybrid` - hybrid\n\n* `phrase` - phrase\n* `best_fields` - best_fields\n\
           * `most_fields` - most_fields\n* `hybrid` - hybrid"
+      - in: query
+        name: show_ocw_files
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+        description: Whether to include select OCW content files in search results.
       - in: query
         name: slop
         schema:
@@ -9788,6 +9856,7 @@ components:
       - free
       - delivery
       - resource_type_group
+      - resource_category
       type: string
       description: |-
         * `resource_type` - resource_type
@@ -9803,6 +9872,7 @@ components:
         * `free` - free
         * `delivery` - delivery
         * `resource_type_group` - resource_type_group
+        * `resource_category` - resource_category
       x-enum-descriptions:
       - resource_type
       - certification
@@ -9817,6 +9887,7 @@ components:
       - free
       - delivery
       - resource_type_group
+      - resource_category
     ArticleImageUploadRequest:
       type: object
       properties:
@@ -10241,6 +10312,9 @@ components:
           readOnly: true
         run_id:
           type: integer
+        direct_learning_resource_id:
+          type: integer
+          nullable: true
         run_title:
           type: string
         run_slug:
@@ -11185,15 +11259,16 @@ components:
             $ref: '#/components/schemas/ContentFile'
           nullable: true
           readOnly: true
+        description:
+          type: string
+          nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
         title:
           type: string
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true
@@ -11287,6 +11362,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - description
       - format
       - free
       - id
@@ -11322,9 +11398,6 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true
@@ -13871,6 +13944,12 @@ components:
           description: "The resource type grouping of learning resource          \
             \   \n\n* `course` - Course\n* `program` - Program\n* `learning_material`\
             \ - Learning Material"
+        resource_category:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: The resource category for the resource
         search_mode:
           allOf:
           - $ref: '#/components/schemas/SearchModeEnum'
@@ -13908,6 +13987,11 @@ components:
           nullable: true
           description: Score weight for content file data.  1 is the default. 0 means
             content files are ignored
+        show_ocw_files:
+          type: boolean
+          nullable: true
+          default: false
+          description: Whether to include select OCW content files in search results.
         source_type:
           allOf:
           - $ref: '#/components/schemas/SourceTypeEnum'
@@ -16446,15 +16530,16 @@ components:
             $ref: '#/components/schemas/ContentFile'
           nullable: true
           readOnly: true
+        description:
+          type: string
+          nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
         title:
           type: string
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true
@@ -16548,6 +16633,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - description
       - format
       - free
       - id
@@ -16585,9 +16671,6 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true

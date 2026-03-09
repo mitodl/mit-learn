@@ -128,6 +128,7 @@ describe("SearchPage", () => {
         "free",
         "offered_by",
         "professional",
+        "resource_category",
         "resource_type",
         "resource_type_group",
         "topic",
@@ -180,7 +181,7 @@ describe("SearchPage", () => {
     expect(location.current.search).toBe("?topic=Physics")
   })
 
-  test("Shows Learning Resource facet only if learning materials tab is selected", async () => {
+  test("Shows Resource Category facet only if learning materials tab is selected", async () => {
     setMockApiResponses({
       search: {
         count: 700,
@@ -190,10 +191,10 @@ describe("SearchPage", () => {
               { key: "course", doc_count: 100 },
               { key: "learning_material", doc_count: 200 },
             ],
-            resource_type: [
-              { key: "course", doc_count: 100 },
-              { key: "podcast", doc_count: 100 },
-              { key: "video", doc_count: 100 },
+            resource_category: [
+              { key: "Course", doc_count: 100 },
+              { key: "Podcast", doc_count: 100 },
+              { key: "Video", doc_count: 100 },
             ],
           },
           suggestions: [],
@@ -203,12 +204,12 @@ describe("SearchPage", () => {
     renderWithProviders(<SearchPage />)
 
     const facetsContainer = screen.getByTestId("facets-container")
-    expect(within(facetsContainer).queryByText("Resource Type")).toBeNull()
+    expect(within(facetsContainer).queryByText("Resource Category")).toBeNull()
     const tabLearningMaterial = screen.getByRole("tab", {
       name: /Learning Material/,
     })
     await user.click(tabLearningMaterial)
-    await within(facetsContainer).findByText("Resource Type")
+    await within(facetsContainer).findByText("Resource Category")
   })
 
   test.each([
@@ -497,7 +498,7 @@ describe("Search Page Tabs", () => {
     expect(params2.get("department")).toBe("8") // should preserve other params
   })
 
-  test("Switching from learning materials tab clears resource type only", async () => {
+  test("Switching from learning materials tab clears resource category only", async () => {
     setMockApiResponses({
       search: {
         count: 1000,
@@ -510,7 +511,7 @@ describe("Search Page Tabs", () => {
       },
     })
     const { location } = renderWithProviders(<SearchPage />, {
-      url: "?resource_type_group=learning_material&resource_type=video&topic=Biology",
+      url: "?resource_type_group=learning_material&resource_category=Video&topic=Biology",
     })
     const tabLM = screen.getByRole("tab", { name: /Learning Materials/ })
     const tabCourses = screen.getByRole("tab", { name: /Courses/ })

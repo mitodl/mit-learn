@@ -24,16 +24,11 @@ export const getFacetManifest = (
       ],
     },
     {
-      name: "resource_type",
-      title: "Resource Type",
+      name: "resource_category",
+      title: "Resource Category",
       type: "static",
       expandedOnLoad: true,
       preserveItems: true,
-      labelFunction: (key: string) =>
-        key
-          .split("_")
-          .map((word) => capitalize(word))
-          .join(" "),
     },
     {
       name: "certification_type",

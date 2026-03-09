@@ -843,6 +843,12 @@ export interface ContentFile {
   run_id?: number
   /**
    *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  direct_learning_resource_id?: number | null
+  /**
+   *
    * @type {string}
    * @memberof ContentFile
    */
@@ -2060,6 +2066,12 @@ export interface DocumentResource {
    * @type {string}
    * @memberof DocumentResource
    */
+  description: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
   readable_id: string
   /**
    *
@@ -2067,12 +2079,6 @@ export interface DocumentResource {
    * @memberof DocumentResource
    */
   title: string
-  /**
-   *
-   * @type {string}
-   * @memberof DocumentResource
-   */
-  description?: string | null
   /**
    *
    * @type {string}
@@ -6833,6 +6839,12 @@ export interface VideoResource {
    * @type {string}
    * @memberof VideoResource
    */
+  description: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
   readable_id: string
   /**
    *
@@ -6840,12 +6852,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   title: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  description?: string | null
   /**
    *
    * @type {string}
