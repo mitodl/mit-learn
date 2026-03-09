@@ -74,8 +74,8 @@ def points_generator(
         generator:
             A generator of PointStruct objects
     """
-    dense_vector_name = dense_encoder().model_name
-    sparse_vector_name = sparse_encoder().model_name
+    dense_vector_name = dense_encoder().model_short_name()
+    sparse_vector_name = sparse_encoder().model_short_name()
     if ids is None:
         ids = iter(lambda: uuid.uuid4().hex, None)
     if metadata is None:
@@ -94,6 +94,7 @@ def points_generator(
                 ),
             }
             point_data["vector"] = point_vector
+            yield models.PointStruct(**point_data)
 
 
 def create_qdrant_collections(force_recreate):
@@ -135,7 +136,7 @@ def create_qdrant_collection(collection_name, force_recreate):
                 ),
             },
             sparse_vectors_config={
-                encoder_sparse.model_name: models.SparseVectorParams(
+                encoder_sparse.model_short_name(): models.SparseVectorParams(
                     index=models.SparseIndexParams(on_disk=True),
                 )
             },
@@ -303,8 +304,9 @@ def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
     ids = []
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
+
     for doc in serialized_resources:
         if not should_generate_resource_embeddings(doc):
             update_learning_resource_payload(doc)
@@ -313,8 +315,14 @@ def _process_resource_embeddings(serialized_resources):
         ids.append(vector_point_id(vector_point_key(doc)))
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        return points_generator(ids, metadata, embeddings, vector_name)
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        return points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
     return None
 
 
@@ -432,8 +440,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     Embed general course info as a document in the contentfile collection
     """
     client = qdrant_client()
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
     metadata = []
     ids = []
     docs = []
@@ -486,8 +494,14 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         docs.extend(split_texts)
         ids.extend(split_ids)
     if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        points = points_generator(ids, metadata, embeddings, vector_name)
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        points = points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
@@ -495,8 +509,8 @@ def _generate_content_file_points(serialized_content):
     """
     Chunk and embed content file documents, yielding PointStructs
     """
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
 
     """
     Break up requests according to chunk size to stay under openai limits
@@ -536,7 +550,7 @@ def _generate_content_file_points(serialized_content):
             remove_params, collection_name=CONTENT_FILES_COLLECTION_NAME
         )
 
-        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
+        split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
@@ -549,9 +563,10 @@ def _generate_content_file_points(serialized_content):
 
         for i in range(0, len(split_texts), request_chunk_size):
             chunk_texts = split_texts[i : i + request_chunk_size]
-            chunk_embeddings = encoder.embed_documents(chunk_texts)
+            dense_chunk_embeddings = encoder_dense.embed_documents(chunk_texts)
+            sparse_chunk_embeddings = encoder_sparse.embed_documents(chunk_texts)
 
-            for j, embedding in enumerate(chunk_embeddings):
+            for j, dense_embedding in enumerate(dense_chunk_embeddings):
                 # Map back to the original valid_chunk index
                 relative_index = i + j
                 if relative_index >= len(valid_chunks):
@@ -576,11 +591,17 @@ def _generate_content_file_points(serialized_content):
                 )
 
                 yield models.PointStruct(
-                    id=point_id, payload=metadata, vector={vector_name: embedding}
+                    id=point_id,
+                    payload=metadata,
+                    vector={
+                        encoder_dense.model_short_name(): dense_embedding,
+                        encoder_sparse.model_short_name(): sparse_chunk_embeddings[j],
+                    },
                 )
             # Explicitly free memory for large chunks
             del chunk_texts
-            del chunk_embeddings
+            del dense_chunk_embeddings
+            del sparse_chunk_embeddings
             gc.collect()
 
 
@@ -860,13 +881,25 @@ def vector_search(
     """
 
     client = qdrant_client()
-    encoder = dense_encoder()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     if query_string:
         search_params = {
             "collection_name": search_collection,
-            "using": encoder.model_short_name(),
-            "query": encoder.embed_query(query_string),
+            "prefetch": [
+                models.Prefetch(
+                    query=models.SparseVector(**encoder_sparse.embed(query_string)),
+                    using=encoder_sparse.model_short_name(),
+                    limit=20,
+                ),
+                models.Prefetch(
+                    query=encoder_dense.embed_query(query_string),  # <-- dense vector
+                    using=encoder_dense.model_short_name(),
+                    limit=20,
+                ),
+            ],
+            "query": models.FusionQuery(fusion=models.Fusion.RRF),
             "query_filter": search_filter,
             "search_params": models.SearchParams(indexed_only=True),
             "limit": limit,
