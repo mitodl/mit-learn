@@ -1,6 +1,5 @@
 import React from "react"
 import { VisuallyHidden } from "@mitodl/smoot-design"
-import { RiSparkling2Line } from "@remixicon/react"
 import type {
   V2ProgramDetail,
   CourseWithCourseRunsSerializerV2,
@@ -8,12 +7,7 @@ import type {
 import { HeadingIds } from "./util"
 import { ProgramSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
-import {
-  InfoBoxCard,
-  InfoBoxContent,
-  InfoBoxEnrollArea,
-  AskTimButton,
-} from "./InfoBoxParts"
+import { InfoBoxCard, InfoBoxContent, InfoBoxEnrollArea } from "./InfoBoxParts"
 
 type ProgramInfoBoxProps = {
   program: V2ProgramDetail
@@ -37,15 +31,6 @@ const ProgramInfoBox: React.FC<ProgramInfoBoxProps> = ({
           <ProgramEnrollmentButton program={program} />
         </InfoBoxEnrollArea>
       </InfoBoxCard>
-      <AskTimButton
-        variant="bordered"
-        size="large"
-        startIcon={<RiSparkling2Line />}
-        onClick={() => void 0}
-        data-testid="ask-tim-button"
-      >
-        AskTIM about this program
-      </AskTimButton>
     </>
   )
 }
