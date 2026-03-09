@@ -397,7 +397,7 @@ const StrickenText = styled.span(({ theme }) => ({
   },
 }))
 
-const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
+const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
   nextRun,
   course,
 }) => {

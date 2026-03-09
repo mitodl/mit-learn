@@ -43,10 +43,9 @@ describe("ProgramBundleUpsell", () => {
       req_tree: requirements.serialize(),
       products: [factories.courses.product({ price: "750" })],
     })
-    setMockResponse.get(
-      urls.programs.programDetail(baseProgram.id),
-      programDetail,
-    )
+    setMockResponse.get(urls.programs.programsList({ id: [baseProgram.id] }), {
+      results: [programDetail],
+    })
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
     await screen.findByText("Best value")
@@ -72,12 +71,15 @@ describe("ProgramBundleUpsell", () => {
       products: [],
     })
     const { promise, resolve } = Promise.withResolvers()
-    setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
+    setMockResponse.get(
+      urls.programs.programsList({ id: [baseProgram.id] }),
+      promise,
+    )
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
     const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
 
-    resolve(programDetail)
+    resolve({ results: [programDetail] })
     await waitForElementToBeRemoved(upsell)
   })
 
@@ -85,7 +87,10 @@ describe("ProgramBundleUpsell", () => {
     allowConsoleErrors()
     const baseProgram = factories.programs.baseProgram()
     const { promise, reject } = Promise.withResolvers()
-    setMockResponse.get(urls.programs.programDetail(baseProgram.id), promise)
+    setMockResponse.get(
+      urls.programs.programsList({ id: [baseProgram.id] }),
+      promise,
+    )
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
     const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
@@ -116,9 +121,10 @@ describe("ProgramBundleUpsell", () => {
         products: [factories.courses.product({ price: prices[i] })],
       }),
     )
-    programDetails.forEach((pd, i) => {
-      setMockResponse.get(urls.programs.programDetail(basePrograms[i].id), pd)
-    })
+    setMockResponse.get(
+      urls.programs.programsList({ id: basePrograms.map((bp) => bp.id) }),
+      { results: programDetails },
+    )
     renderWithProviders(<ProgramBundleUpsell programs={basePrograms} />)
 
     await screen.findByText("Best value")
