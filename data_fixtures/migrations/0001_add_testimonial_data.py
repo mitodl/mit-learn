@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.contenttypes.management import create_contenttypes
 from django.core.files import File
 from django.db import migrations
 
@@ -226,11 +227,36 @@ fixtures = [
 ]
 
 
+def ensure_permissions(apps, schema_editor):
+    """
+    Create permissions for widgets app before upserting offerors.
+    This is needed because creating channels triggers signals that assign permissions.
+    """
+    from django.contrib.auth.management import create_permissions
+
+    # Get the widgets app config
+    try:
+        from django.apps import apps as django_apps
+
+        widgets_app_config = django_apps.get_app_config("widgets")
+
+        # Create contenttypes first
+        create_contenttypes(widgets_app_config, verbosity=0)
+
+        # Create permissions
+        create_permissions(widgets_app_config, verbosity=0)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Could not create permissions: %s", e)
+
+
 def load_initial_fixtures(apps, schema_editor):
     """
     Load initial static fixtures required by
     management commands further down
     """
+    # Ensure permissions exist before creating offerors
+    ensure_permissions(apps, schema_editor)
+
     offerors = upsert_offered_by_data()
     departments = upsert_department_data()
     schools = upsert_school_data()
@@ -272,15 +298,29 @@ def load_fixtures(apps, schema_editor):
             """
             Save the image from fixture so alternate sizes are generated
             """
-            with Path.open(
-                f"{settings.BASE_DIR}/testimonials/fixtures/avatars/{fixture['attestant_name']}.png",
-                "rb",
-            ) as imagefile:
-                testimonial.avatar.save("avatar.png", File(imagefile), save=True)
+            try:
+                with Path.open(
+                    f"{settings.BASE_DIR}/testimonials/fixtures/avatars/{fixture['attestant_name']}.png",
+                    "rb",
+                ) as imagefile:
+                    testimonial.avatar.save("avatar.png", File(imagefile), save=True)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "Could not save avatar for %s: %s", fixture["attestant_name"], e
+                )
 
 
 class Migration(migrations.Migration):
-    dependencies = []
+    dependencies = [
+        ("learning_resources", "0100_learningresourceofferor_display_facet"),
+        ("widgets", "0003_alter_widgetinstance_configuration"),
+        ("channels", "0001_initial"),
+        ("auth", "0012_alter_user_first_name_max_length"),
+        (
+            "guardian",
+            "0003_remove_groupobjectpermission_guardian_gr_content_ae6aec_idx_and_more",
+        ),
+    ]
 
     operations = [
         migrations.RunPython(load_initial_fixtures, migrations.RunPython.noop),

@@ -38,6 +38,7 @@ def add_climate_offeror(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("data_fixtures", "0018_add_mit_climate_platform"),
+        ("learning_resources", "0100_learningresourceofferor_display_facet"),
     ]
 
     operations = [
