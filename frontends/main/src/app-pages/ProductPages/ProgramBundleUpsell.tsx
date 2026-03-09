@@ -1,7 +1,7 @@
 import React from "react"
 import { ButtonLink, styled } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { Skeleton, Typography } from "ol-components"
+import { Skeleton } from "ol-components"
 import type {
   BaseProgram,
   V2ProgramDetail,
@@ -11,13 +11,9 @@ import { formatPrice } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
 import { programPageView } from "@/common/urls"
 
-const WideButtonLink = styled(ButtonLink)(({ theme }) => ({
+const WideButtonLink = styled(ButtonLink)({
   width: "100%",
-  [theme.breakpoints.between("sm", "md")]: {
-    width: "auto",
-    marginLeft: "auto",
-  },
-}))
+})
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
   boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
@@ -43,7 +39,7 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
 const BundleUpsellItem = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "24px",
+  gap: "8px",
   textAlign: "center",
   "& + &": {
     paddingTop: "16px",
@@ -56,15 +52,18 @@ const BundleUpsellItem = styled.div(({ theme }) => ({
     flexDirection: "row",
     textAlign: "left",
     alignItems: "center",
+    gap: "32px",
   },
 }))
 
-const BundleUpsellText = styled.div(({ theme }) => ({
+const BundleUpsellActions = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: "24px",
+  alignItems: "center",
   [theme.breakpoints.between("sm", "md")]: {
-    flex: 1,
+    marginLeft: "auto",
+    gap: "8px",
   },
 }))
 
@@ -93,10 +92,6 @@ const BundlePriceRow = styled.div(({ theme }) => ({
 const BundleUpsellTitle = styled.span(({ theme }) => ({
   ...theme.typography.h5,
   display: "block",
-  fontWeight: theme.typography.fontWeightRegular,
-  "> strong": {
-    fontWeight: theme.typography.fontWeightBold,
-  },
 }))
 
 // For now we use a static 19% discount that is aligned with business rules
@@ -113,20 +108,20 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
   if (loading) {
     return (
       <BundleUpsellItem>
-        <BundleUpsellText>
-          <BundleUpsellTitle>
-            <Skeleton width="80%" variant="text" sx={{ mx: "auto" }} />
-            <Skeleton
-              width="60%"
-              variant="text"
-              sx={(theme) => ({
-                mx: "auto",
-                [theme.breakpoints.between("sm", "md")]: {
-                  display: "none",
-                },
-              })}
-            />
-          </BundleUpsellTitle>
+        <BundleUpsellTitle>
+          <Skeleton width="80%" variant="text" sx={{ mx: "auto" }} />
+          <Skeleton
+            width="60%"
+            variant="text"
+            sx={(theme) => ({
+              mx: "auto",
+              [theme.breakpoints.between("sm", "md")]: {
+                display: "none",
+              },
+            })}
+          />
+        </BundleUpsellTitle>
+        <BundleUpsellActions>
           <BundlePriceRow>
             <BundlePrice>
               <Skeleton width={60} variant="text" />
@@ -135,8 +130,8 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
               <Skeleton width={50} variant="text" />
             </BundleDiscount>
           </BundlePriceRow>
-        </BundleUpsellText>
-        <Skeleton width="100%" variant="rectangular" height={40} />
+          <Skeleton width="100%" variant="rectangular" height={40} />
+        </BundleUpsellActions>
       </BundleUpsellItem>
     )
   }
@@ -153,23 +148,22 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
 
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
-      <BundleUpsellText>
-        <BundleUpsellTitle>
-          Get all {totalCourses} <strong>{program.title}</strong> Courses +
-          Certificate
-        </BundleUpsellTitle>
+      <BundleUpsellTitle>
+        Get all {totalCourses} {program.title} Courses + Certificates
+      </BundleUpsellTitle>
+      <BundleUpsellActions>
         <BundlePriceRow>
           <BundlePrice>{priceFormatted}</BundlePrice>
           <BundleDiscount>{BUNDLE_DISCOUNT_LABEL}</BundleDiscount>
         </BundlePriceRow>
-      </BundleUpsellText>
-      <WideButtonLink
-        variant="bordered"
-        size="large"
-        href={programPageView(program.readable_id)}
-      >
-        View Program
-      </WideButtonLink>
+        <WideButtonLink
+          variant="bordered"
+          size="large"
+          href={programPageView(program.readable_id)}
+        >
+          View Program
+        </WideButtonLink>
+      </BundleUpsellActions>
     </BundleUpsellItem>
   )
 }
@@ -198,23 +192,11 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
-      {isLoading ? (
-        <>
-          <Skeleton width={80} height={20} sx={{ mx: "auto" }} />
-          {programs.map((p) => (
-            <ProgramBundleUpsellItem key={p.id} loading />
-          ))}
-        </>
-      ) : (
-        <>
-          <Typography variant="body2" sx={{ textAlign: "center" }}>
-            Best value
-          </Typography>
-          {pricedPrograms.map((program) => (
+      {isLoading
+        ? programs.map((p) => <ProgramBundleUpsellItem key={p.id} loading />)
+        : pricedPrograms.map((program) => (
             <ProgramBundleUpsellItem key={program.id} program={program} />
           ))}
-        </>
-      )}
     </BundleUpsellContainer>
   )
 }
