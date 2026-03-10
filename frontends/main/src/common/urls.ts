@@ -1,3 +1,5 @@
+import type { BaseProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import invariant from "tiny-invariant"
 
 // matches ! $ & ' ( ) * + , ; = : @ ~
@@ -217,5 +219,14 @@ export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
-export const programPageView = (readableId: string) =>
-  generatePath(PROGRAM_PAGE_VIEW, { readableId })
+export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
+export const programPageView = (program: {
+  readable_id: string
+  display_mode?: BaseProgramDisplayMode | null
+}) => {
+  const pattern =
+    program.display_mode === DisplayModeEnum.Course
+      ? PROGRAM_AS_COURSE_PAGE_VIEW
+      : PROGRAM_PAGE_VIEW
+  return generatePath(pattern, { readableId: program.readable_id })
+}
