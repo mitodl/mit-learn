@@ -1,3 +1,4 @@
+from qdrant_client import models
 from sklearn.feature_extraction.text import HashingVectorizer
 
 from vector_search.encoders.base import BaseEncoder
@@ -24,7 +25,7 @@ class SparseHashEncoder(BaseEncoder):
         }
 
     def embed_documents(self, documents):
-        return [self.embed(doc) for doc in documents]
+        return [models.SparseVector(**self.embed(doc)) for doc in documents]
 
     def embed(self, text):
         tfidf_matrix = self.vectorizer.transform([text])

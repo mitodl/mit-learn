@@ -9,6 +9,8 @@ class BaseEncoder(Embeddings, ABC):
     Conforms to the langchain Embeddings interface
     """
 
+    requires_cloud_inferencing = False
+
     def model_short_name(self):
         """
         Return the short name of the model

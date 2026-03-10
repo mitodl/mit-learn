@@ -47,11 +47,17 @@ logger = logging.getLogger(__name__)
 
 @cache
 def qdrant_client():
+    enable_cloud_inference = (
+        dense_encoder().requires_cloud_inferencing
+        or sparse_encoder().requires_cloud_inferencing
+    )
+
     return QdrantClient(
         url=settings.QDRANT_HOST,
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
+        cloud_inference=enable_cloud_inference,
         timeout=settings.QDRANT_CLIENT_TIMEOUT,
     )
 
@@ -88,10 +94,7 @@ def points_generator(
         if any(dense_vector):
             point_vector: dict[str, models.Vector] = {
                 dense_vector_name: dense_vector,
-                sparse_vector_name: models.SparseVector(
-                    indices=sparse_vector["indices"],
-                    values=sparse_vector["values"],
-                ),
+                sparse_vector_name: sparse_vector,
             }
             point_data["vector"] = point_vector
             yield models.PointStruct(**point_data)
