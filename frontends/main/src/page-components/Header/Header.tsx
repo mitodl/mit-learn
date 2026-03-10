@@ -282,7 +282,6 @@ const Header: FunctionComponent = () => {
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
-  const { data: user } = useUserMe()
   const drawerToggleEvent = drawerOpen
     ? PostHogEvents.ClosedNavDrawer
     : PostHogEvents.OpenedNavDrawer
@@ -301,9 +300,7 @@ const Header: FunctionComponent = () => {
       <Bar position="fixed">
         <StyledToolbar variant="dense">
           <DesktopOnly>
-            <StyledMITLogoLink
-              logo={user?.is_authenticated ? "learn_authenticated" : "learn"}
-            />
+            <StyledMITLogoLink logo="learn" />
             <LeftSpacer />
             <MenuButton
               ref={desktopTrigger}
@@ -314,9 +311,7 @@ const Header: FunctionComponent = () => {
           <MobileOnly>
             <MenuButton ref={mobileTrigger} onClick={menuClick} />
             <LeftSpacer />
-            <StyledMITLogoLink
-              logo={user?.is_authenticated ? "learn_authenticated" : "learn"}
-            />
+            <StyledMITLogoLink logo="learn" />
           </MobileOnly>
           <Spacer />
           <UserView />
