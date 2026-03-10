@@ -904,16 +904,18 @@ def vector_search(
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),
                     using=encoder_sparse.model_short_name(),
-                    limit=limit,
+                    limit=limit * 100,
                 ),
                 models.Prefetch(
                     query=encoder_dense.embed_query(query_string),  # <-- dense vector
                     using=encoder_dense.model_short_name(),
-                    limit=limit,
+                    limit=limit * 100,
                 ),
             ],
             "query": models.FusionQuery(fusion=models.Fusion.RRF),
             "query_filter": search_filter,
+            "with_vectors": False,
+            "with_payload": True,
             "search_params": models.SearchParams(indexed_only=True, exact=False),
             "limit": limit,
         }
@@ -944,6 +946,7 @@ def vector_search(
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
+            with_vectors=False,
         )[0]
 
     if search_collection == RESOURCES_COLLECTION_NAME:
