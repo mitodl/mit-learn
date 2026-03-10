@@ -1,3 +1,4 @@
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { auth, coursePageView, programPageView } from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
@@ -68,18 +69,38 @@ test.each([
   },
 )
 
-test.each([
-  {
-    readableId: "program-v1:MITxT+10.50x",
-    expected: "/programs/program-v1:MITxT+10.50x",
-  },
-  {
-    readableId: "some-plain-slug",
-    expected: "/programs/some-plain-slug",
-  },
-])(
-  "programPageView does not encode RFC 3986 pchar characters",
-  ({ readableId, expected }) => {
-    expect(programPageView(readableId)).toBe(expected)
-  },
-)
+test("programPageView returns /programs/ path for program with no display_mode", () => {
+  expect(
+    programPageView({
+      readable_id: "program-v1:MITxT+10.50x",
+      display_mode: null,
+    }),
+  ).toBe("/programs/program-v1:MITxT+10.50x")
+})
+
+test("programPageView returns /programs/ path for program with empty display_mode", () => {
+  expect(
+    programPageView({
+      readable_id: "some-plain-slug",
+      display_mode: "" as DisplayModeEnum,
+    }),
+  ).toBe("/programs/some-plain-slug")
+})
+
+test("programPageView returns /courses/p/ path when display_mode is course", () => {
+  expect(
+    programPageView({
+      readable_id: "program-v1:MITxT+18.01x",
+      display_mode: DisplayModeEnum.Course,
+    }),
+  ).toBe("/courses/p/program-v1:MITxT+18.01x")
+})
+
+test("programPageView does not encode RFC 3986 pchar characters", () => {
+  expect(
+    programPageView({
+      readable_id: "program-v1:MITxT+10.50x",
+      display_mode: null,
+    }),
+  ).toBe("/programs/program-v1:MITxT+10.50x")
+})
