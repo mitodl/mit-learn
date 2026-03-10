@@ -323,7 +323,10 @@ const getResourceUrl = (
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return coursePageView(resource.readable_id)
     } else if (resource.resource_type === ResourceTypeEnum.Program) {
-      return programPageView(resource.readable_id)
+      return programPageView({
+        readable_id: resource.readable_id,
+        display_mode: null,
+      })
     }
   }
   return resource.url

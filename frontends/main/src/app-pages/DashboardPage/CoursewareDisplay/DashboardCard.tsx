@@ -182,7 +182,7 @@ const getContextMenuItems = (
   const menuItems = []
   if (resource.type === DashboardType.ProgramEnrollment) {
     const detailsUrl = useProductPages
-      ? programPageView(resource.data.program.readable_id)
+      ? programPageView(resource.data.program)
       : mitxonlineUrl(`/programs/${resource.data.program.readable_id}`)
 
     if (detailsUrl && includeInLearnCatalog) {
