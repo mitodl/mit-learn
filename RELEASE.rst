@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.57.0
+Version 0.57.0 (Released March 10, 2026)
 --------------
 
 - Make sure enrollment_modes are always removed from mitxonline run dicts (#3033)
