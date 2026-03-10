@@ -50,6 +50,7 @@ from vector_search.utils import (
     vector_point_id,
     vector_search,
 )
+from vector_search.utils import qdrant_client as vector_qdrant_client
 
 pytestmark = pytest.mark.django_db
 
@@ -1092,3 +1093,25 @@ def test_set_payload_batched(mocker):
     # Check third batch
     call3_kwargs = mock_client.set_payload.mock_calls[2].kwargs
     assert call3_kwargs["points"] == ["point_4"]
+
+
+def test_qdrant_cloud_inference_client(mocker, settings):
+    """
+    Test that cloud inferencing is enabled in the qdrant client
+    if one of the encoders requires it
+    """
+    mocker.patch("qdrant_client.QdrantClient")
+    settings.QDRANT_SPARSE_ENCODER = (
+        "vector_search.encoders.qdrant_cloud.QdrantCloudEncoder"
+    )
+
+    vector_qdrant_client.cache_clear()
+    client = vector_qdrant_client()
+    assert client.cloud_inference is True
+    settings.QDRANT_SPARSE_ENCODER = (
+        "vector_search.encoders.sparse_hash.SparseHashEncoder"
+    )
+    settings.QDRANT_ENCODER = "vector_search.encoders.sparse_hash.SparseHashEncoder"
+    vector_qdrant_client.cache_clear()
+    client = vector_qdrant_client()
+    assert getattr(client, "cloud_inference", None) is False
