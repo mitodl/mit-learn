@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.57.0
+--------------
+
+- Make sure enrollment_modes are always removed from mitxonline run dicts (#3033)
+- fix: change mit log link to home and termsof services (#3021)
+
 Version 0.56.10 (Released March 10, 2026)
 ---------------
 
