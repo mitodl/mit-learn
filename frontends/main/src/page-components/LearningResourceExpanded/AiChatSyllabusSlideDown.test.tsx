@@ -6,7 +6,9 @@ import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
 import invariant from "tiny-invariant"
 
-const mockAiChat = jest.fn(() => <div data-testid="mock-ai-chat" />)
+const mockAiChat = jest.fn<React.JSX.Element, [Record<string, unknown>]>(() => (
+  <div data-testid="mock-ai-chat" />
+))
 jest.mock("@mitodl/smoot-design/ai", () => {
   const actual = jest.requireActual("@mitodl/smoot-design/ai")
   return {

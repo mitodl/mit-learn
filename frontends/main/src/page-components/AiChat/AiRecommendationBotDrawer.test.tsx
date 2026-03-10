@@ -3,7 +3,9 @@ import { renderWithProviders } from "@/test-utils"
 import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
-const mockAiChat = jest.fn(() => <div data-testid="mock-ai-chat" />)
+const mockAiChat = jest.fn<React.JSX.Element, [Record<string, unknown>]>(() => (
+  <div data-testid="mock-ai-chat" />
+))
 jest.mock("@mitodl/smoot-design/ai", () => {
   const actual = jest.requireActual("@mitodl/smoot-design/ai")
   return {
