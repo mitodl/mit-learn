@@ -842,4 +842,13 @@ const ProgramSummary: React.FC<{
   )
 }
 
-export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }
+export {
+  CourseSummary,
+  ProgramSummary,
+  ProgramDurationRow,
+  ProgramPaceRow,
+  ProgramPriceRow,
+  SummaryRows,
+  UnderlinedLink,
+  TestIds,
+}
