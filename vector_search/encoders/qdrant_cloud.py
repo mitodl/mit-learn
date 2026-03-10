@@ -1,6 +1,7 @@
 import logging
 
 import tiktoken
+from django.conf import settings
 from qdrant_client import models
 
 from vector_search.encoders.base import BaseEncoder
@@ -31,6 +32,9 @@ class QdrantCloudEncoder(BaseEncoder):
             models.Document(
                 text=text,
                 model=self.model_name,
+                options={
+                    "openai-api-key": settings.OPENAI_API_KEY,
+                },
             )
             for text in texts
         ]
