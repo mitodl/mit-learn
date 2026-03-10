@@ -39,6 +39,7 @@ from learning_resources.etl.utils import (
     get_department_id_by_name,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
 )
 from learning_resources.test_utils import set_up_topics
 from main.test_utils import any_instance_of
@@ -145,6 +146,7 @@ def test_mitxonline_transform_programs(
                 for course_run in course_data["courseruns"]
             ]
             has_certification = parse_certification(OFFERED_BY["code"], runs)
+            strip_enrollment_modes(runs)
             expected_courses.append(
                 {
                     "readable_id": course_data["readable_id"],
@@ -303,6 +305,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
             for course_run in course_data["courseruns"]
         ]
         has_certification = parse_certification(OFFERED_BY["code"], runs)
+        strip_enrollment_modes(runs)
         expected.append(
             {
                 "readable_id": course_data["readable_id"],
