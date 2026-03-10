@@ -830,7 +830,7 @@ QDRANT_BASE_COLLECTION_NAME = get_string(
 )
 QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
-    name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
+    name="QDRANT_SPARSE_MODEL", default="sklearn/hashing_vectorizer_sparse_model"
 )
 QDRANT_SPARSE_ENCODER = get_string(
     name="QDRANT_SPARSE_ENCODER",
