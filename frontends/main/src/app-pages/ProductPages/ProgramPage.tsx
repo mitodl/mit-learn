@@ -46,6 +46,7 @@ const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)({
   border: "1px solid #B8C2CC",
   color: "white",
   padding: "18px 24px",
+  height: "48px",
 })
 
 const RequirementsListing = styled(PlainList)({

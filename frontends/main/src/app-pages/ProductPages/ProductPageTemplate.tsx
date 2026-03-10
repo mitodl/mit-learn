@@ -8,6 +8,7 @@ import {
   BannerBackground,
   Typography,
   HEADER_HEIGHT,
+  Grid2,
 } from "ol-components"
 import { convertToEmbedUrl } from "@/common/utils"
 import { HOME } from "@/common/urls"
@@ -61,17 +62,12 @@ const Page = styled.div(({ theme }) => ({
 }))
 
 const TopContainer = styled(Container)(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "64px",
   padding: "104px 0",
 
   [theme.breakpoints.down("md")]: {
-    gap: "16px",
     padding: "64px 40px",
   },
   [theme.breakpoints.down("sm")]: {
-    gap: "16px",
     padding: "32px 24px",
   },
 }))
@@ -115,7 +111,6 @@ const Show = styled("div", {
 
 const MainCol = styled.div({
   width: "100%",
-  flex: 1,
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
@@ -137,13 +132,9 @@ const SidebarCol = styled(Show, {
   shouldForwardProp: (prop) => prop !== "alignSelf",
 })<{
   alignSelf?: React.CSSProperties["alignSelf"]
-}>(({ theme, alignSelf }) => ({
+}>(({ alignSelf }) => ({
   width: "100%",
-  maxWidth: "540px",
   alignSelf,
-  [theme.breakpoints.down("md")]: {
-    maxWidth: "364px",
-  },
 }))
 
 /**
@@ -175,8 +166,7 @@ const SidebarVideo = styled.iframe(() => ({
   boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   border: "none",
   width: "100%",
-  maxWidth: "540px",
-  aspectRatio: "540 / 306",
+  aspectRatio: "16 / 9",
   display: "block",
 }))
 
@@ -184,17 +174,27 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "16px",
   boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   width: "100%",
-  maxWidth: "540px",
-  aspectRatio: "540 / 306",
+  aspectRatio: "16/9",
   height: "auto",
   display: "block",
-  [theme.breakpoints.down("md")]: {
-    maxWidth: "464px",
-    aspectRatio: "464 / 261",
-  },
   [theme.breakpoints.down("sm")]: {
     maxWidth: "100%",
-    aspectRatio: "16 / 9", // Adjust this to your desired mobile aspect ratio
+  },
+}))
+
+const ShortDescription = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body1,
+  display: "-webkit-box",
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    WebkitLineClamp: 2,
+  },
+
+  [theme.breakpoints.down("md")]: {
+    WebkitLineClamp: 2,
   },
 }))
 
@@ -248,45 +248,47 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
     <Page>
       <GradientBanner>
         <TopContainer data-testid="banner-container">
-          <MainCol>
-            <StyledBreadcrumbs
-              variant="dark"
-              ancestors={[{ href: HOME, label: "Home" }]}
-              current={currentBreadcrumbLabel}
-            />
-            <TitleBox alignItems="flex-start" gap="4px">
-              <ContentStack alignItems="flex-start">
-                <SidebarCol showBelow="sm" alignSelf="flex-end">
-                  <SidebarMedia
-                    videoUrl={videoUrl}
-                    imageSrc={imageSrc}
-                    title={title}
-                    priority
-                  />
-                </SidebarCol>
-                <Typography
-                  component="h1"
-                  typography={{ xs: "h4", sm: "h4", md: "h4" }}
-                >
-                  {title}
-                </Typography>
-                <Typography
-                  typography={{ xs: "body2", sm: "body3", md: "body2" }}
-                >
-                  {shortDescription}
-                </Typography>
-                <EnrollButton>{enrollmentAction}</EnrollButton>
-              </ContentStack>
-            </TitleBox>
-          </MainCol>
-          <SidebarCol showAbove="sm" alignSelf="flex-end">
-            <SidebarMedia
-              videoUrl={videoUrl}
-              imageSrc={imageSrc}
-              title={title}
-              priority
-            />
-          </SidebarCol>
+          <Grid2 container spacing={{ xs: 2, sm: 2, md: 8 }}>
+            <Grid2 size={{ xs: 12, sm: 6, md: 7 }}>
+              <MainCol>
+                <StyledBreadcrumbs
+                  variant="dark"
+                  ancestors={[{ href: HOME, label: "Home" }]}
+                  current={currentBreadcrumbLabel}
+                />
+                <TitleBox alignItems="flex-start" gap="4px">
+                  <ContentStack alignItems="flex-start">
+                    <SidebarCol showBelow="sm" alignSelf="flex-end">
+                      <SidebarMedia
+                        videoUrl={videoUrl}
+                        imageSrc={imageSrc}
+                        title={title}
+                        priority
+                      />
+                    </SidebarCol>
+                    <Typography
+                      component="h1"
+                      typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                    >
+                      {title}
+                    </Typography>
+                    <ShortDescription>{shortDescription}</ShortDescription>
+                    <EnrollButton>{enrollmentAction}</EnrollButton>
+                  </ContentStack>
+                </TitleBox>
+              </MainCol>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 5 }}>
+              <SidebarCol showAbove="sm" alignSelf="flex-end">
+                <SidebarMedia
+                  videoUrl={videoUrl}
+                  imageSrc={imageSrc}
+                  title={title}
+                  priority
+                />
+              </SidebarCol>
+            </Grid2>
+          </Grid2>
         </TopContainer>
       </GradientBanner>
       <BottomContainer>
