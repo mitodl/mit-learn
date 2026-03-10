@@ -46,9 +46,13 @@ const getButtonText = (nextRun?: CourseRunV2, priceDisplay?: string) => {
 
 type CourseEnrollmentButtonProps = {
   course: CourseWithCourseRunsSerializerV2
+  variant?: "primary" | "secondary"
+  className?: string
 }
 const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   course,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -106,8 +110,9 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   return (
     <>
-      <Stack gap="12px">
+      <Stack width="100%" gap="12px">
         <Button
+          className={className}
           disabled={
             !nextRun ||
             enrollmentType === "none" ||
@@ -115,7 +120,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
             isPending
           }
           onClick={handleClick}
-          variant="primary"
+          variant={variant}
           size="large"
           data-testid="course-enrollment-button"
           endIcon={

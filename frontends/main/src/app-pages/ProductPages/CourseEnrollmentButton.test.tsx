@@ -132,7 +132,11 @@ describe("CourseEnrollmentButton", () => {
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
-    const { promise } = Promise.withResolvers()
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    let resolvePromise: () => void
+    const promise = new Promise<void>((resolve) => {
+      resolvePromise = resolve
+    })
     setMockResponse.delete(mitxUrls.baskets.clear(), promise)
 
     renderWithProviders(<CourseEnrollmentButton course={course} />)

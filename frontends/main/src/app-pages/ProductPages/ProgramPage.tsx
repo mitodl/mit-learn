@@ -25,6 +25,7 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
+import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 
 type ProgramPageProps = {
   readableId: string
@@ -38,6 +39,14 @@ const PrerequisitesSection = styled.section({
 
 const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
+})
+
+const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)({
+  borderRadius: "4px",
+  border: "1px solid #B8C2CC",
+  color: "white",
+  padding: "18px 24px",
+  height: "48px",
 })
 
 const RequirementsListing = styled(PlainList)({
@@ -189,11 +198,8 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
 
-  const tags = ["MITx", program.program_type].filter((t): t is string => !!t)
-
   return (
     <ProductPageTemplate
-      tags={tags}
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={
@@ -204,6 +210,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       }
       imageSrc={imageSrc}
       videoUrl={page.video_url}
+      enrollmentAction={
+        <StyledProgramEnrollmentButton program={program} variant="secondary" />
+      }
       infoBox={
         <ProgramInfoBox program={program} courses={courses.data?.results} />
       }

@@ -1,5 +1,5 @@
 import React from "react"
-import { LoadingSpinner, Stack } from "ol-components"
+import { styled, LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
@@ -19,11 +19,25 @@ import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 
+const WideButtonLink = styled(ButtonLink)(({ href }) => [
+  {
+    width: "100%",
+  },
+  !href && {
+    pointerEvents: "none",
+    cursor: "default",
+  },
+])
+
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
+  variant: "primary" | "secondary"
+  className?: string
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -77,36 +91,38 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       setAnchor(e.currentTarget)
     }
   }
-  const href = programDashboardEnabled ? programView(program.id) : undefined
+  if (enrollment) {
+    const href = programDashboardEnabled ? programView(program.id) : undefined
 
+    return (
+      <WideButtonLink href={href} className={className}>
+        Enrolled
+        <RiCheckLine aria-hidden="true" />
+      </WideButtonLink>
+    )
+  }
   return (
     <>
-      <Stack gap="12px">
-        {enrollment ? (
-          <ButtonLink href={href}>
-            Enrolled
-            <RiCheckLine aria-hidden="true" />
-          </ButtonLink>
-        ) : (
-          <Button
-            onClick={handleClick}
-            variant="primary"
-            size="large"
-            disabled={
-              enrollmentType === "none" ||
-              isPaidWithoutPrice ||
-              isPending ||
-              isLoading
-            }
-            endIcon={
-              isLoading || isPending ? (
-                <LoadingSpinner size="16px" loading={true} color="inherit" />
-              ) : undefined
-            }
-          >
-            {isLoading ? null : getEnrollButtonText()}
-          </Button>
-        )}
+      <Stack width="100%" gap="12px">
+        <Button
+          onClick={handleClick}
+          variant={variant}
+          size="large"
+          className={className}
+          disabled={
+            enrollmentType === "none" ||
+            isPaidWithoutPrice ||
+            isPending ||
+            isLoading
+          }
+          endIcon={
+            isLoading || isPending ? (
+              <LoadingSpinner size="16px" loading={true} color="inherit" />
+            ) : undefined
+          }
+        >
+          {isLoading ? null : getEnrollButtonText()}
+        </Button>
         {isError && (
           <Alert severity="error">
             There was a problem processing your enrollment. Please try again.
