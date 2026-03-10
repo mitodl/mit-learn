@@ -1084,18 +1084,28 @@ def transform_delivery(resource_delivery: str) -> list[str]:
 
 
 def parse_certification(offeror, runs_data):
-    """Return true/false depending on offeror and run status"""
+    """Return true/false depending on offeror, run status, and enrollment modes"""
     if offeror != OfferedBy.mitx.name:
         return False
-    return bool(
-        [
-            status
-            for status in [
-                run.get("status") for run in runs_data if run.get("published", True)
-            ]
-            if (status and status != RunStatus.archived.value)
-        ]
+    return any(
+        run.get("status")
+        and run.get("status") != RunStatus.archived.value
+        and (
+            run.get("enrollment_modes") is None
+            or any(
+                mode.get("mode_slug") == "verified"
+                for mode in (run.get("enrollment_modes") or [])
+            )
+        )
+        for run in runs_data
+        if run.get("published", True)
     )
+
+
+def strip_enrollment_modes(runs_data):
+    """Remove enrollment_modes from run dicts before passing downstream."""
+    for run in runs_data:
+        run.pop("enrollment_modes", None)
 
 
 def iso8601_duration(duration_str: str) -> str | None:

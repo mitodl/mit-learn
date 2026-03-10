@@ -133,6 +133,16 @@ export const Footer = styled.span`
   white-space: nowrap;
 `
 
+export const Subtitle = styled.span`
+  display: block;
+  ${{ ...theme.typography.body3 }}
+  color: ${theme.custom.colors.silverGrayDark};
+  margin-top: 4px;
+  ${theme.breakpoints.down("md")} {
+    margin-top: 2px;
+  }
+`
+
 export const Bottom = styled.div`
   display: flex;
   justify-content: space-between;
@@ -199,6 +209,7 @@ type CardProps = {
  *   <ListCard.Image src="image-url" />
  *   <ListCard.Info>Info</ListCard.Info>
  *   <ListCard.Title href="link-url">Title</ListCard.Title>
+ *   <ListCard.Subtitle>Subtitle</ListCard.Subtitle>
  *   <ListCard.Footer>Footer</ListCard.Footer>
  *   <ListCard.Actions>Actions</ListCard.Actions>
  * </ListCard>
@@ -217,6 +228,7 @@ export type Card = FC<CardProps> & {
    * Card title with optional `href`.
    */
   Title: FC<TitleProps>
+  Subtitle: FC<{ children: ReactNode }>
   Footer: FC<{ children: ReactNode }>
   Actions: FC<{ children: ReactNode }>
   Action: FC<ActionButtonProps>
@@ -233,6 +245,7 @@ const ListCard: Card = ({
   let content,
     imageProps,
     info,
+    subtitle,
     footer,
     actions,
     title: TitleProps = {}
@@ -246,6 +259,7 @@ const ListCard: Card = ({
     else if (element.type === Image) imageProps = element.props as ImageProps
     else if (element.type === Info) info = element.props.children
     else if (element.type === Title) title = element.props as TitleProps
+    else if (element.type === Subtitle) subtitle = element.props.children
     else if (element.type === Footer) footer = element.props.children
     else if (element.type === Actions) actions = element.props.children
   })
@@ -274,6 +288,7 @@ const ListCard: Card = ({
       <Body>
         <Info>{info}</Info>
         {title && <LinkableTitle title={title} />}
+        {subtitle && <Subtitle>{subtitle}</Subtitle>}
         <Bottom>
           <Footer>{footer}</Footer>
           {actions && <Actions data-card-actions>{actions}</Actions>}
@@ -292,6 +307,7 @@ ListCard.Content = Content
 ListCard.Image = Image
 ListCard.Info = Info
 ListCard.Title = Title
+ListCard.Subtitle = Subtitle
 ListCard.Footer = Footer
 ListCard.Actions = Actions
 ListCard.Action = ListCardActionButton

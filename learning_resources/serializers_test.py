@@ -15,7 +15,7 @@ from channels.models import Channel
 from learning_resources import factories, serializers
 from learning_resources.constants import (
     CURRENCY_USD,
-    LEARNING_MATERIAL_RESOURCE_CATEGORY,
+    LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     Availability,
     CertificationType,
     Format,
@@ -240,9 +240,9 @@ def test_learning_resource_serializer(  # noqa: PLR0913
         LearningResourceType.course.name,
         LearningResourceType.program.name,
     ]:
-        resource_category = resource.resource_type
+        resource_type_group = resource.resource_type
     else:
-        resource_category = LEARNING_MATERIAL_RESOURCE_CATEGORY
+        resource_type_group = LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
     assert result == expected
     assert result == {
         "id": resource.id,
@@ -291,10 +291,11 @@ def test_learning_resource_serializer(  # noqa: PLR0913
                 )
             )
         ),
-        "resource_category": resource_category,
+        "resource_category": resource.resource_category,
+        "resource_type_group": resource_type_group,
         "published": resource.published,
         "readable_id": resource.readable_id,
-        "course_feature": sorted([tag.name for tag in resource.content_tags.all()]),
+        "course_feature": sorted([tag.name for tag in resource.resource_tags.all()]),
         "resource_type": resource.resource_type,
         "url": resource.url,
         "image": serializers.LearningResourceImageSerializer(
@@ -452,8 +453,13 @@ def test_content_file_serializer(settings, expected_types, has_channels):
     }
     platform = PlatformType.ocw.name
     course = factories.CourseFactory.create(platform=platform)
+    direct_learning_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
     content_file = factories.ContentFileFactory.create(
-        run=course.learning_resource.runs.first(), **content_kwargs
+        run=course.learning_resource.runs.first(),
+        direct_learning_resource=direct_learning_resource,
+        **content_kwargs,
     )
     if has_channels:
         for topic in content_file.run.learning_resource.topics.all():
@@ -554,6 +560,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "edx_module_id": content_file.edx_module_id,
             "summary": content_file.summary,
             "flashcards": content_file.flashcards,
+            "direct_learning_resource_id": direct_learning_resource.id,
         },
     )
 

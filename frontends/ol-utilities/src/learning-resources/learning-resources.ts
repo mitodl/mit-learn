@@ -12,7 +12,7 @@ const readableResourceTypes: Record<ResourceTypeEnum, string> = {
   [ResourceTypeEnum.PodcastEpisode]: "Podcast Episode",
   [ResourceTypeEnum.Video]: "Video",
   [ResourceTypeEnum.VideoPlaylist]: "Video Playlist",
-  [ResourceTypeEnum.LearningMaterial]: "Learning Material",
+  [ResourceTypeEnum.Document]: "Document",
 }
 const getReadableResourceType = (resourceType: ResourceTypeEnum): string =>
   readableResourceTypes[resourceType]
@@ -138,6 +138,36 @@ const getResourceLanguage = (resource: LearningResource) => {
   return resource.runs?.[resource.runs.length - 1]?.languages?.[0]
 }
 
+const formattedParentCourseName = (resource: LearningResource) => {
+  if (
+    (resource.resource_type === ResourceTypeEnum.Document ||
+      resource.resource_type === ResourceTypeEnum.Video) &&
+    resource.content_files &&
+    resource.content_files.length > 0
+  ) {
+    const courseTitle = resource.content_files[0]?.run_title
+    const courseId = resource.content_files[0]?.course_number?.[0]
+    if (courseTitle && courseId) {
+      return `${courseId}: ${courseTitle}`
+    }
+  }
+  return null
+}
+
+const resourceContentFilesImageSrc = (
+  resource: LearningResource,
+): string | null => {
+  if (
+    (resource.resource_type === ResourceTypeEnum.Document ||
+      resource.resource_type === ResourceTypeEnum.Video) &&
+    resource.content_files &&
+    resource.content_files.length > 0
+  ) {
+    return resource.content_files[0]?.image_src || null
+  }
+  return null
+}
+
 export {
   DEFAULT_RESOURCE_IMG,
   embedlyCroppedImage,
@@ -146,5 +176,7 @@ export {
   formatRunDate,
   allRunsAreIdentical,
   getResourceLanguage,
+  formattedParentCourseName,
+  resourceContentFilesImageSrc,
 }
 export type { EmbedlyConfig }

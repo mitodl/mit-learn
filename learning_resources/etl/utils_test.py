@@ -23,6 +23,7 @@ from learning_resources.etl.utils import (
     get_s3_prefix_for_source,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -404,36 +405,65 @@ def test_parse_bad_format(mocker):
 
 
 @pytest.mark.parametrize(
-    ("offered_by", "status", "has_cert"),
+    ("offered_by", "status", "enrollment_modes", "has_cert"),
     [
         (
             OfferedBy.ocw.name,
             RunStatus.archived.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.ocw.name,
             RunStatus.current.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.archived.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             False,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.current.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
             True,
         ),
         (
             OfferedBy.mitx.name,
             RunStatus.upcoming.value,
+            [{"mode_slug": "verified"}, {"mode_slug": "audit"}],
+            True,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [{"mode_slug": "audit"}],
+            False,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [{"mode_slug": "verified"}],
+            True,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            [],
+            False,
+        ),
+        (
+            OfferedBy.mitx.name,
+            RunStatus.current.value,
+            None,
             True,
         ),
     ],
 )
-def test_parse_certification(offered_by, status, has_cert):
+def test_parse_certification(offered_by, status, enrollment_modes, has_cert):
     """The parse_certification function should return the expected bool value"""
     offered_by_obj = LearningResourceOfferorFactory.create(code=offered_by)
 
@@ -445,8 +475,43 @@ def test_parse_certification(offered_by, status, has_cert):
         ),
     ).learning_resource
     assert resource.runs.count() == 1
-    runs = [{"status": status, **run} for run in resource.runs.all().values()]
+    runs = [
+        {
+            "status": status,
+            **(
+                {"enrollment_modes": enrollment_modes}
+                if enrollment_modes is not None
+                else {}
+            ),
+            **run,
+        }
+        for run in resource.runs.all().values()
+    ]
     assert parse_certification(offered_by_obj.code, runs) == has_cert
+
+
+def test_parse_certification_handles_explicit_none_enrollment_modes():
+    """A run with enrollment_modes=None should not error and should be treated as cert-eligible for MITx."""
+    runs = [
+        {
+            "published": True,
+            "status": RunStatus.current.value,
+            "enrollment_modes": None,
+        }
+    ]
+
+    assert parse_certification(OfferedBy.mitx.name, runs) is True
+
+
+def test_strip_enrollment_modes():
+    """strip_enrollment_modes should remove enrollment_modes from all run dicts."""
+    runs = [
+        {"status": "current", "enrollment_modes": [{"mode_slug": "verified"}]},
+        {"status": "current"},
+        {"status": "current", "enrollment_modes": None},
+    ]
+    strip_enrollment_modes(runs)
+    assert all("enrollment_modes" not in run for run in runs)
 
 
 @pytest.mark.parametrize(

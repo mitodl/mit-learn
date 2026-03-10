@@ -24,15 +24,15 @@ describe("Header", () => {
     })
   })
 
-  it("Includes a link to the Dashboard for authenticated user", async () => {
+  it("Includes a link to the Homepage for authenticated user", async () => {
     setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
     renderWithProviders(<Header />)
     const header = screen.getByRole("banner")
     const links = await within(header).findAllByRole("link", {
-      name: "Your MIT Learning Journey",
+      name: "MIT Learn Homepage",
     })
     links.forEach((link) => {
-      expect(link).toHaveAttribute("href", "/dashboard")
+      expect(link).toHaveAttribute("href", "/")
     })
   })
 })

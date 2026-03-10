@@ -317,35 +317,70 @@ def test_qdrant_query_conditions(mocker):
         "resource_type": ["course", "podcast"],
         "free": True,
     }
-    query_conditions = qdrant_query_conditions(params)
+    filter_obj = qdrant_query_conditions(params)
 
+    assert isinstance(filter_obj, models.Filter)
     assert (
         models.FieldCondition(
             key="offered_by.code", match=models.MatchAny(any=["ocw", "edx"])
         )
-        in query_conditions
+        in filter_obj.must
     )
     assert (
         models.FieldCondition(key="platform.code", match=models.MatchAny(any=["edx"]))
-        in query_conditions
+        in filter_obj.must
     )
     assert (
         models.FieldCondition(
             key="resource_type", match=models.MatchAny(any=["course", "podcast"])
         )
-        in query_conditions
+        in filter_obj.must
     )
     assert (
         models.FieldCondition(
             key="topics[].name",
             match=models.MatchAny(any=["test topic 1", "test topic 2"]),
         )
-        in query_conditions
+        in filter_obj.must
     )
     # test that items not in the filter map are ignored
-    assert (
-        models.FieldCondition(key="q", match=models.MatchValue(value="test"))
-        not in query_conditions
+    assert not any(
+        isinstance(c, models.FieldCondition) and c.key == "q" for c in filter_obj.must
+    )
+
+
+def test_complex_qdrant_query_conditions():
+    """Test that __isnull and __isempty lookups are correctly translated"""
+    params = {
+        "url__isnull": True,
+        "title__isnull": False,
+        "readable_id": "test-id",
+    }
+
+    filter_obj = qdrant_query_conditions(
+        params, collection_name=RESOURCES_COLLECTION_NAME
+    )
+
+    assert isinstance(filter_obj, models.Filter)
+    # url__isnull=True -> IsNullCondition in must
+    assert any(
+        isinstance(c, models.IsNullCondition) and c.is_null.key == "url"
+        for c in filter_obj.must
+    )
+
+    # title__isnull=False -> IsNullCondition in must_not
+    assert any(
+        isinstance(c, models.IsNullCondition) and c.is_null.key == "title"
+        for c in filter_obj.must_not
+    )
+
+    # readable_id="test-id" -> FieldCondition with match=MatchValue("test-id") in must
+    assert any(
+        isinstance(c, models.FieldCondition)
+        and c.key == "readable_id"
+        and isinstance(c.match, models.MatchValue)
+        and c.match.value == "test-id"
+        for c in filter_obj.must
     )
 
 

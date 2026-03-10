@@ -114,6 +114,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, overwrite):
                 code=PlatformType.canvas.name
             ),
             "resource_type": LearningResourceType.course.name,
+            "resource_category": LearningResourceType.course.value,
         },
     )
     if resource.runs.count() == 0:

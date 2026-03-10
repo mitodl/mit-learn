@@ -4,6 +4,7 @@ import type { Factory, PartialFactory } from "ol-test-utilities"
 import { UniqueEnforcer } from "enforce-unique"
 import { makePaginatedFactory, mergeOverrides } from "ol-test-utilities"
 import type {
+  ContentFile,
   CourseNumber,
   CourseResource,
   LearningPathRelationship,
@@ -30,7 +31,7 @@ import type {
   VideoResource,
   LearningResourceRelationship,
   LearningResourceSummary,
-  LearningMaterialResource,
+  DocumentResource,
 } from "api"
 import {
   AvailabilityEnum,
@@ -41,6 +42,7 @@ import {
   LearningResourceRunLevelInnerCodeEnum,
   PlatformEnum,
   CourseResourceCertificationTypeCodeEnum,
+  ContentTypeEnum,
 } from "api"
 
 const uniqueEnforcerId = new UniqueEnforcer()
@@ -234,6 +236,29 @@ const learningResourceRun: Factory<LearningResourceRun> = (overrides = {}) => {
   return run
 }
 
+const contentFile: Factory<ContentFile> = (overrides = {}) => {
+  return {
+    id: uniqueEnforcerId.enforce(() => faker.number.int()),
+    departments: repeat(learningResourceDepartment, { min: 0, max: 3 }),
+    topics: repeat(learningResourceTopic, { min: 0, max: 3 }),
+    require_summaries: faker.datatype.boolean(),
+    content_feature_type: repeat(faker.lorem.word, { min: 0, max: 3 }),
+    resource_id: uniqueEnforcerId.enforce(() => faker.number.int()).toString(),
+    resource_readable_id: faker.string.alphanumeric(32).toLowerCase(),
+    course_number: repeat(faker.lorem.word, { min: 0, max: 3 }),
+    offered_by: learningResourceOfferor(),
+    platform: learningResourcePlatform(),
+    title: faker.lorem.sentence(),
+    description: faker.lorem.paragraph(),
+    key: faker.string.uuid(),
+    uid: faker.string.uuid(),
+    url: faker.internet.url(),
+    content_type: faker.helpers.arrayElement(Object.values(ContentTypeEnum)),
+    content: faker.lorem.paragraph(),
+    ...overrides,
+  }
+}
+
 const learningResourceTopic: Factory<LearningResourceTopic> = (
   overrides = {},
 ) => {
@@ -323,8 +348,8 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
       return video(overrides)
     case ResourceTypeEnum.Article:
       return article(overrides)
-    case ResourceTypeEnum.LearningMaterial:
-      return learningMaterial(overrides)
+    case ResourceTypeEnum.Document:
+      return document(overrides)
 
     default:
       throw Error(`Invalid resource type: ${overrides.resource_type}`)
@@ -551,12 +576,12 @@ const article: LearningResourceFactory<ArticleResource> = (overrides = {}) => {
 
 const articles = makePaginatedFactory(article)
 
-const learningMaterial: LearningResourceFactory<LearningMaterialResource> = (
+const document: LearningResourceFactory<DocumentResource> = (
   overrides = {},
 ) => {
-  return mergeOverrides<LearningMaterialResource>(
+  return mergeOverrides<DocumentResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.LearningMaterial },
+    { resource_type: ResourceTypeEnum.Document },
     {},
     overrides,
   )
@@ -626,6 +651,7 @@ export {
   learningResourceSummaries as resourceSummaries,
   learningResourceSummary as resourceSummary,
   learningResourceRun as run,
+  contentFile,
   learningResourceImage as image,
   learningResourceDepartment as department,
   departments,

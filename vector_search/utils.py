@@ -847,15 +847,7 @@ def vector_search(
 
     client = qdrant_client()
     encoder = dense_encoder()
-    qdrant_conditions = qdrant_query_conditions(
-        params, collection_name=search_collection
-    )
-
-    search_filter = models.Filter(
-        must=[
-            *qdrant_conditions,
-        ]
-    )
+    search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     if query_string:
         search_params = {
             "collection_name": search_collection,
@@ -914,50 +906,69 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
     client = qdrant_client()
     count_result = client.count(
         collection_name=collection_name,
-        count_filter=models.Filter(
-            must=qdrant_query_conditions(document, collection_name=collection_name)
-        ),
+        count_filter=qdrant_query_conditions(document, collection_name=collection_name),
     )
     return count_result.count > 0
 
 
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
-    Generate Qdrant query conditions from query params
-    Args:
-        params (dict): Query params
-    Returns:
-        FieldCondition[]:
-            List of Qdrant FieldCondition objects
+    Return a list of Qdrant FieldCondition objects based on params
     """
-    conditions = []
-    if collection_name == RESOURCES_COLLECTION_NAME:
-        QDRANT_PARAM_MAP = QDRANT_RESOURCE_PARAM_MAP
-    elif collection_name == TOPICS_COLLECTION_NAME:
-        QDRANT_PARAM_MAP = QDRANT_TOPICS_PARAM_MAP
-    else:
-        QDRANT_PARAM_MAP = QDRANT_CONTENT_FILE_PARAM_MAP
-    if not params:
-        return conditions
-    for param in params:
-        if param in QDRANT_PARAM_MAP and params[param] is not None:
-            if type(params[param]) is list:
-                """
-                Account for array wrapped booleans which should only match value
-                We can also use MatchValue for arrays with a single item
-                """
-                if len(params[param]) == 1 and type(params[param][0]) is bool:
-                    match_condition = models.MatchValue(value=params[param][0])
-                else:
-                    match_condition = models.MatchAny(any=params[param])
-            else:
-                match_condition = models.MatchValue(value=params[param])
-            conditions.append(
+
+    collection_param_map = {
+        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
+        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
+        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
+    }
+    qdrant_param_map = collection_param_map.get(collection_name)
+    if not params or not qdrant_param_map:
+        return None
+    must = []
+    must_not = []
+
+    for param, value in params.items():
+        if value is None:
+            continue
+
+        base_param, _, lookup = param.partition("__")
+
+        if base_param not in qdrant_param_map:
+            continue
+
+        qdrant_key = qdrant_param_map[base_param]
+
+        if lookup == "isnull":
+            condition = models.IsNullCondition(
+                is_null=models.PayloadField(key=qdrant_key)
+            )
+            (must if value is True else must_not).append(condition)
+
+        elif lookup == "isempty":
+            key = qdrant_key.replace("[].name", "")
+            condition = models.IsEmptyCondition(is_empty=models.PayloadField(key=key))
+            (must if value is True else must_not).append(condition)
+
+        elif isinstance(value, list):
+            # Single-item bool lists must use MatchValue; all others use MatchAny
+            match_condition = (
+                models.MatchValue(value=value[0])
+                if len(value) == 1 and isinstance(value[0], bool)
+                else models.MatchAny(any=value)
+            )
+            must.append(models.FieldCondition(key=qdrant_key, match=match_condition))
+
+        else:
+            must.append(
                 models.FieldCondition(
-                    key=QDRANT_PARAM_MAP[param], match=match_condition
+                    key=qdrant_key, match=models.MatchValue(value=value)
                 )
             )
-    return conditions
+
+    if must or must_not:
+        return models.Filter(must=must, must_not=must_not)
+
+    return None
 
 
 def filter_existing_qdrant_points_by_ids(
@@ -1045,11 +1056,7 @@ def remove_points_matching_params(
         client.delete(
             collection_name=collection_name,
             points_selector=models.FilterSelector(
-                filter=models.Filter(
-                    must=[
-                        *qdrant_conditions,
-                    ]
-                )
+                filter=qdrant_conditions,
             ),
         )
 
@@ -1064,11 +1071,9 @@ def retrieve_points_matching_params(
     Retrieve points from Qdrant matching params and yield them one by one.
     """
     client = qdrant_client()
-    qdrant_conditions = qdrant_query_conditions(params, collection_name=collection_name)
-    if not qdrant_conditions:
+    search_filter = qdrant_query_conditions(params, collection_name=collection_name)
+    if not search_filter:
         return
-
-    search_filter = models.Filter(must=qdrant_conditions)
 
     next_page_offset = None
 

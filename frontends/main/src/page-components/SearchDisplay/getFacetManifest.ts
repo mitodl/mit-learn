@@ -9,7 +9,7 @@ const LEARNING_MATERIAL = "learning_material"
 
 export const getFacetManifest = (
   offerors: Record<string, LearningResourceOfferor>,
-  resourceCategory: string | null,
+  resourceTypeGroup: string | null,
 ) => {
   const manifest = [
     {
@@ -24,16 +24,11 @@ export const getFacetManifest = (
       ],
     },
     {
-      name: "resource_type",
-      title: "Resource Type",
+      name: "resource_category",
+      title: "Resource Category",
       type: "static",
       expandedOnLoad: true,
       preserveItems: true,
-      labelFunction: (key: string) =>
-        key
-          .split("_")
-          .map((word) => capitalize(word))
-          .join(" "),
     },
     {
       name: "certification_type",
@@ -80,8 +75,8 @@ export const getFacetManifest = (
     },
   ]
 
-  //Only display the resource_type facet if the resource_category is learning_material
-  if (resourceCategory !== LEARNING_MATERIAL) {
+  //Only display the resource_type facet if the resource_type_group is learning_material
+  if (resourceTypeGroup !== LEARNING_MATERIAL) {
     manifest.splice(1, 1)
   }
 

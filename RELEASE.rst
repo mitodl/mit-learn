@@ -1,6 +1,53 @@
 Release Notes
 =============
 
+Version 0.57.0 (Released March 10, 2026)
+--------------
+
+- Make sure enrollment_modes are always removed from mitxonline run dicts (#3033)
+- fix: change mit log link to home and termsof services (#3021)
+
+Version 0.56.10 (Released March 10, 2026)
+---------------
+
+- Avoid unnecessary task calls for contentfiles if none exist (#3017)
+- add ocw learning materials to search (#3018)
+
+Version 0.56.9 (Released March 09, 2026)
+--------------
+
+- Complex filters for Vector endpoint (title and url fields) (#3012)
+- Conditional audit/cert availability for mitxonline resources (#3007)
+- update mitxonline client (#3020)
+- Set the posthog UI host (#3011)
+- fix: remove feature flag on detail and listing page (#3003)
+
+Version 0.56.6 (Released March 05, 2026)
+--------------
+
+- remove temporary code setting resource_category to resource_type_group (#2981)
+
+Version 0.56.5 (Released March 04, 2026)
+--------------
+
+- feat: video thumbnail for product page sidebar (#2992)
+- remove dependency on Wagtail page_url from MITx Online (#3008)
+- Product pages, Purchasable Programs + enrollment_modes (#2995)
+
+Version 0.56.4 (Released March 04, 2026)
+--------------
+
+- Learning resource views ETL fix (#2993)
+- fix: make direct call to cdn purge (#2983)
+- backend for standardizing learning material resources - articles, videos, documents (#2965)
+
+Version 0.56.1 (Released March 02, 2026)
+--------------
+
+- explicitly set is_self_paced to false on tests that need it (#2998)
+- whitelist characters that don't need to be urlencoded (#2994)
+- fix: handle only having expired enrollments / program enrollments (#2988)
+
 Version 0.55.8 (Released February 27, 2026)
 --------------
 

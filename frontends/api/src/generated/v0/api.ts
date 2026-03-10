@@ -146,7 +146,7 @@ export interface ArticleResource {
    * @type {string}
    * @memberof ArticleResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -225,6 +225,12 @@ export interface ArticleResource {
    * @memberof ArticleResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ArticleResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -818,51 +824,6 @@ export interface ChannelUnitDetail {
   unit: LearningResourceOfferorDetail
 }
 /**
- * * `Lecture Notes` - Lecture Notes * `Readings` - Readings * `Practice` - Practice * `Open Textbooks` - Open Textbooks * `Lecture Audio` - Lecture Audio * `Video` - Video
- * @export
- * @enum {string}
- */
-
-export const ContentCategoryEnumDescriptions = {
-  "Lecture Notes": "Lecture Notes",
-  Readings: "Readings",
-  Practice: "Practice",
-  "Open Textbooks": "Open Textbooks",
-  "Lecture Audio": "Lecture Audio",
-  Video: "Video",
-} as const
-
-export const ContentCategoryEnum = {
-  /**
-   * Lecture Notes
-   */
-  LectureNotes: "Lecture Notes",
-  /**
-   * Readings
-   */
-  Readings: "Readings",
-  /**
-   * Practice
-   */
-  Practice: "Practice",
-  /**
-   * Open Textbooks
-   */
-  OpenTextbooks: "Open Textbooks",
-  /**
-   * Lecture Audio
-   */
-  LectureAudio: "Lecture Audio",
-  /**
-   * Video
-   */
-  Video: "Video",
-} as const
-
-export type ContentCategoryEnum =
-  (typeof ContentCategoryEnum)[keyof typeof ContentCategoryEnum]
-
-/**
  * Serializer class for course run ContentFiles
  * @export
  * @interface ContentFile
@@ -880,6 +841,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   run_id?: number
+  /**
+   *
+   * @type {number}
+   * @memberof ContentFile
+   */
+  direct_learning_resource_id?: number | null
   /**
    *
    * @type {string}
@@ -1352,7 +1319,7 @@ export interface CourseResource {
    * @type {string}
    * @memberof CourseResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -1437,6 +1404,12 @@ export interface CourseResource {
    * @memberof CourseResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof CourseResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -1945,6 +1918,319 @@ export type DepartmentChannelTypeEnum =
   (typeof DepartmentChannelTypeEnum)[keyof typeof DepartmentChannelTypeEnum]
 
 /**
+ * Serializer for document resources
+ * @export
+ * @interface DocumentResource
+ */
+export interface DocumentResource {
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  id: number
+  /**
+   *
+   * @type {Array<LearningResourceTopic>}
+   * @memberof DocumentResource
+   */
+  topics?: Array<LearningResourceTopic>
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  position: number | null
+  /**
+   *
+   * @type {LearningResourceOfferor}
+   * @memberof DocumentResource
+   */
+  offered_by: LearningResourceOfferor | null
+  /**
+   *
+   * @type {LearningResourcePlatform}
+   * @memberof DocumentResource
+   */
+  platform: LearningResourcePlatform | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof DocumentResource
+   */
+  course_feature: Array<string> | null
+  /**
+   *
+   * @type {Array<LearningResourceDepartment>}
+   * @memberof DocumentResource
+   */
+  departments: Array<LearningResourceDepartment> | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  certification: boolean
+  /**
+   *
+   * @type {CourseResourceCertificationType}
+   * @memberof DocumentResource
+   */
+  certification_type: CourseResourceCertificationType
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof DocumentResource
+   */
+  prices: Array<string>
+  /**
+   *
+   * @type {Array<LearningResourcePrice>}
+   * @memberof DocumentResource
+   */
+  resource_prices: Array<LearningResourcePrice>
+  /**
+   *
+   * @type {Array<LearningResourceRun>}
+   * @memberof DocumentResource
+   */
+  runs: Array<LearningResourceRun> | null
+  /**
+   *
+   * @type {LearningResourceImage}
+   * @memberof DocumentResource
+   */
+  image: LearningResourceImage | null
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  views: number
+  /**
+   *
+   * @type {Array<CourseResourceDeliveryInner>}
+   * @memberof DocumentResource
+   */
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  free: boolean
+  /**
+   * Return the resource category of the resource
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  resource_type_group: string
+  /**
+   *
+   * @type {Array<CourseResourceFormatInner>}
+   * @memberof DocumentResource
+   */
+  format: Array<CourseResourceFormatInner>
+  /**
+   *
+   * @type {Array<CourseResourcePaceInner>}
+   * @memberof DocumentResource
+   */
+  pace: Array<CourseResourcePaceInner>
+  /**
+   *
+   * @type {LearningResourceRelationshipChildField}
+   * @memberof DocumentResource
+   */
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  best_run_id: number | null
+  /**
+   *
+   * @type {DocumentResourceResourceTypeEnum}
+   * @memberof DocumentResource
+   */
+  resource_type: DocumentResourceResourceTypeEnum
+  /**
+   *
+   * @type {Array<ContentFile>}
+   * @memberof DocumentResource
+   */
+  content_files: Array<ContentFile> | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  description: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  full_description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  last_modified?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  published?: boolean
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof DocumentResource
+   */
+  languages?: Array<string> | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  resource_category: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof DocumentResource
+   */
+  ocw_topics?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  professional: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  next_start_date?: string | null
+  /**
+   *
+   * @type {AvailabilityEnum}
+   * @memberof DocumentResource
+   */
+  availability?: AvailabilityEnum | null
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  completeness?: number
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  license_cc?: boolean
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  test_mode?: boolean
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  continuing_ed_credits?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  location?: string
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  duration?: string
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  min_weeks?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  max_weeks?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof DocumentResource
+   */
+  time_commitment?: string
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  min_weekly_hours?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof DocumentResource
+   */
+  max_weekly_hours?: number | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof DocumentResource
+   */
+  require_summaries: boolean
+}
+
+/**
+ *
+ * @export
+ * @enum {string}
+ */
+
+export const DocumentResourceResourceTypeEnumDescriptions = {
+  document: "",
+} as const
+
+export const DocumentResourceResourceTypeEnum = {
+  Document: "document",
+} as const
+
+export type DocumentResourceResourceTypeEnum =
+  (typeof DocumentResourceResourceTypeEnum)[keyof typeof DocumentResourceResourceTypeEnum]
+
+/**
  * Serializer for News FeedItem
  * @export
  * @interface EventFeedItem
@@ -2241,350 +2527,6 @@ export const GoalsEnum = {
 export type GoalsEnum = (typeof GoalsEnum)[keyof typeof GoalsEnum]
 
 /**
- * Serializer for the LearningMaterial model
- * @export
- * @interface LearningMaterial
- */
-export interface LearningMaterial {
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterial
-   */
-  id: number
-  /**
-   *
-   * @type {ContentFile}
-   * @memberof LearningMaterial
-   */
-  content_file: ContentFile | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningMaterial
-   */
-  content_tags?: Array<string> | null
-  /**
-   *
-   * @type {LearningMaterialContentCategory}
-   * @memberof LearningMaterial
-   */
-  content_category?: LearningMaterialContentCategory | null
-}
-/**
- * @type LearningMaterialContentCategory
- * @export
- */
-export type LearningMaterialContentCategory = BlankEnum | ContentCategoryEnum
-
-/**
- * Serializer for LearningMaterial resources with resource_type=Lecture Notes
- * @export
- * @interface LearningMaterialResource
- */
-export interface LearningMaterialResource {
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  id: number
-  /**
-   *
-   * @type {Array<LearningResourceTopic>}
-   * @memberof LearningMaterialResource
-   */
-  topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  position: number | null
-  /**
-   *
-   * @type {LearningResourceOfferor}
-   * @memberof LearningMaterialResource
-   */
-  offered_by: LearningResourceOfferor | null
-  /**
-   *
-   * @type {LearningResourcePlatform}
-   * @memberof LearningMaterialResource
-   */
-  platform: LearningResourcePlatform | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningMaterialResource
-   */
-  course_feature: Array<string> | null
-  /**
-   *
-   * @type {Array<LearningResourceDepartment>}
-   * @memberof LearningMaterialResource
-   */
-  departments: Array<LearningResourceDepartment> | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  certification: boolean
-  /**
-   *
-   * @type {CourseResourceCertificationType}
-   * @memberof LearningMaterialResource
-   */
-  certification_type: CourseResourceCertificationType
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningMaterialResource
-   */
-  prices: Array<string>
-  /**
-   *
-   * @type {Array<LearningResourcePrice>}
-   * @memberof LearningMaterialResource
-   */
-  resource_prices: Array<LearningResourcePrice>
-  /**
-   *
-   * @type {Array<LearningResourceRun>}
-   * @memberof LearningMaterialResource
-   */
-  runs: Array<LearningResourceRun> | null
-  /**
-   *
-   * @type {LearningResourceImage}
-   * @memberof LearningMaterialResource
-   */
-  image: LearningResourceImage | null
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  views: number
-  /**
-   *
-   * @type {Array<CourseResourceDeliveryInner>}
-   * @memberof LearningMaterialResource
-   */
-  delivery: Array<CourseResourceDeliveryInner>
-  /**
-   * Return true if the resource is free/has a free option
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  free: boolean
-  /**
-   * Return the resource category of the resource
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  resource_category: string
-  /**
-   *
-   * @type {Array<CourseResourceFormatInner>}
-   * @memberof LearningMaterialResource
-   */
-  format: Array<CourseResourceFormatInner>
-  /**
-   *
-   * @type {Array<CourseResourcePaceInner>}
-   * @memberof LearningMaterialResource
-   */
-  pace: Array<CourseResourcePaceInner>
-  /**
-   *
-   * @type {LearningResourceRelationshipChildField}
-   * @memberof LearningMaterialResource
-   */
-  children: LearningResourceRelationshipChildField | null
-  /**
-   * Return the best run id for the resource, if it has runs
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  best_run_id: number | null
-  /**
-   *
-   * @type {LearningMaterialResourceResourceTypeEnum}
-   * @memberof LearningMaterialResource
-   */
-  resource_type: LearningMaterialResourceResourceTypeEnum
-  /**
-   *
-   * @type {LearningMaterial}
-   * @memberof LearningMaterialResource
-   */
-  learning_material: LearningMaterial
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  title: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  full_description?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  last_modified?: string | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  published?: boolean
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningMaterialResource
-   */
-  languages?: Array<string> | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  url?: string | null
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningMaterialResource
-   */
-  ocw_topics?: Array<string>
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  professional: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  next_start_date?: string | null
-  /**
-   *
-   * @type {AvailabilityEnum}
-   * @memberof LearningMaterialResource
-   */
-  availability?: AvailabilityEnum | null
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  completeness?: number
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  license_cc?: boolean
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  test_mode?: boolean
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  continuing_ed_credits?: string | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  location?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  duration?: string
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  min_weeks?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  max_weeks?: number | null
-  /**
-   *
-   * @type {string}
-   * @memberof LearningMaterialResource
-   */
-  time_commitment?: string
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  min_weekly_hours?: number | null
-  /**
-   *
-   * @type {number}
-   * @memberof LearningMaterialResource
-   */
-  max_weekly_hours?: number | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningMaterialResource
-   */
-  require_summaries: boolean
-}
-
-/**
- *
- * @export
- * @enum {string}
- */
-
-export const LearningMaterialResourceResourceTypeEnumDescriptions = {
-  learning_material: "",
-} as const
-
-export const LearningMaterialResourceResourceTypeEnum = {
-  LearningMaterial: "learning_material",
-} as const
-
-export type LearningMaterialResourceResourceTypeEnum =
-  (typeof LearningMaterialResourceResourceTypeEnum)[keyof typeof LearningMaterialResourceResourceTypeEnum]
-
-/**
  * Serializer for the LearningPath model
  * @export
  * @interface LearningPath
@@ -2735,7 +2677,7 @@ export interface LearningPathResource {
    * @type {string}
    * @memberof LearningPathResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -2766,6 +2708,12 @@ export interface LearningPathResource {
    * @memberof LearningPathResource
    */
   resource_type: LearningPathResourceResourceTypeEnum
+  /**
+   *
+   * @type {string}
+   * @memberof LearningPathResource
+   */
+  resource_category: string
   /**
    *
    * @type {LearningPath}
@@ -2942,7 +2890,7 @@ export type LearningPathResourceResourceTypeEnum =
 export type LearningResource =
   | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
-  | ({ resource_type: "learning_material" } & LearningMaterialResource)
+  | ({ resource_type: "document" } & DocumentResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
   | ({ resource_type: "podcast" } & PodcastResource)
   | ({ resource_type: "podcast_episode" } & PodcastEpisodeResource)
@@ -4486,7 +4434,7 @@ export interface PodcastEpisodeResource {
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4571,6 +4519,12 @@ export interface PodcastEpisodeResource {
    * @memberof PodcastEpisodeResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastEpisodeResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -4793,7 +4747,7 @@ export interface PodcastResource {
    * @type {string}
    * @memberof PodcastResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4878,6 +4832,12 @@ export interface PodcastResource {
    * @memberof PodcastResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof PodcastResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -5502,7 +5462,7 @@ export interface ProgramResource {
    * @type {string}
    * @memberof ProgramResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -5587,6 +5547,12 @@ export interface ProgramResource {
    * @memberof ProgramResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof ProgramResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -6506,7 +6472,7 @@ export interface VideoPlaylistResource {
    * @type {string}
    * @memberof VideoPlaylistResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -6591,6 +6557,12 @@ export interface VideoPlaylistResource {
    * @memberof VideoPlaylistResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoPlaylistResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -6813,7 +6785,7 @@ export interface VideoResource {
    * @type {string}
    * @memberof VideoResource
    */
-  resource_category: string
+  resource_type_group: string
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -6858,6 +6830,18 @@ export interface VideoResource {
   playlists: Array<string>
   /**
    *
+   * @type {Array<ContentFile>}
+   * @memberof VideoResource
+   */
+  content_files: Array<ContentFile> | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  description: string | null
+  /**
+   *
    * @type {string}
    * @memberof VideoResource
    */
@@ -6868,12 +6852,6 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   title: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResource
-   */
-  description?: string | null
   /**
    *
    * @type {string}
@@ -6904,6 +6882,12 @@ export interface VideoResource {
    * @memberof VideoResource
    */
   url?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof VideoResource
+   */
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -11794,6 +11778,10 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
      * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
      * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {Array<string>} [title] The title of the content file.
+     * @param {boolean | null} [title__isnull] Filter to content files where title is null/not null
+     * @param {Array<string>} [url] The url of the content file.
+     * @param {boolean | null} [url__isnull] Filter to content files where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -11814,6 +11802,10 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       resource_readable_id?: Array<string>,
       run_readable_id?: Array<string>,
       sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      title?: Array<string>,
+      title__isnull?: boolean | null,
+      url?: Array<string>,
+      url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v0/vector_content_files_search/`
@@ -11896,6 +11888,22 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["sortby"] = sortby
       }
 
+      if (title) {
+        localVarQueryParameter["title"] = title
+      }
+
+      if (title__isnull !== undefined) {
+        localVarQueryParameter["title__isnull"] = title__isnull
+      }
+
+      if (url) {
+        localVarQueryParameter["url"] = url
+      }
+
+      if (url__isnull !== undefined) {
+        localVarQueryParameter["url__isnull"] = url__isnull
+      }
+
       setSearchParams(localVarUrlObj, localVarQueryParameter)
       let headersFromBaseOptions =
         baseOptions && baseOptions.headers ? baseOptions.headers : {}
@@ -11942,6 +11950,10 @@ export const VectorContentFilesSearchApiFp = function (
      * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
      * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
      * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
+     * @param {Array<string>} [title] The title of the content file.
+     * @param {boolean | null} [title__isnull] Filter to content files where title is null/not null
+     * @param {Array<string>} [url] The url of the content file.
+     * @param {boolean | null} [url__isnull] Filter to content files where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -11962,6 +11974,10 @@ export const VectorContentFilesSearchApiFp = function (
       resource_readable_id?: Array<string>,
       run_readable_id?: Array<string>,
       sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
+      title?: Array<string>,
+      title__isnull?: boolean | null,
+      url?: Array<string>,
+      url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -11987,6 +12003,10 @@ export const VectorContentFilesSearchApiFp = function (
           resource_readable_id,
           run_readable_id,
           sortby,
+          title,
+          title__isnull,
+          url,
+          url__isnull,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -12045,6 +12065,10 @@ export const VectorContentFilesSearchApiFactory = function (
           requestParameters.resource_readable_id,
           requestParameters.run_readable_id,
           requestParameters.sortby,
+          requestParameters.title,
+          requestParameters.title__isnull,
+          requestParameters.url,
+          requestParameters.url__isnull,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -12169,6 +12193,34 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
    * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
    */
   readonly sortby?: VectorContentFilesSearchRetrieveSortbyEnum
+
+  /**
+   * The title of the content file.
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly title?: Array<string>
+
+  /**
+   * Filter to content files where title is null/not null
+   * @type {boolean}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly title__isnull?: boolean | null
+
+  /**
+   * The url of the content file.
+   * @type {Array<string>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly url?: Array<string>
+
+  /**
+   * Filter to content files where url is null/not null
+   * @type {boolean}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly url__isnull?: boolean | null
 }
 
 /**
@@ -12208,6 +12260,10 @@ export class VectorContentFilesSearchApi extends BaseAPI {
         requestParameters.resource_readable_id,
         requestParameters.run_readable_id,
         requestParameters.sortby,
+        requestParameters.title,
+        requestParameters.title__isnull,
+        requestParameters.url,
+        requestParameters.url__isnull,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -12252,9 +12308,11 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;learning_material&#x60; - learning material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -12274,9 +12332,11 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       professional?: boolean | null,
       q?: string,
       readable_id?: string,
-      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
+      title__isnull?: boolean | null,
       topic?: Array<string>,
+      url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       const localVarPath = `/api/v0/vector_learning_resources_search/`
@@ -12355,16 +12415,24 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["readable_id"] = readable_id
       }
 
-      if (resource_category) {
-        localVarQueryParameter["resource_category"] = resource_category
-      }
-
       if (resource_type) {
         localVarQueryParameter["resource_type"] = resource_type
       }
 
+      if (resource_type_group) {
+        localVarQueryParameter["resource_type_group"] = resource_type_group
+      }
+
+      if (title__isnull !== undefined) {
+        localVarQueryParameter["title__isnull"] = title__isnull
+      }
+
       if (topic) {
         localVarQueryParameter["topic"] = topic
+      }
+
+      if (url__isnull !== undefined) {
+        localVarQueryParameter["url__isnull"] = url__isnull
       }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
@@ -12412,9 +12480,11 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>} [resource_category] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;learning_material&#x60; - learning material
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
+     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -12434,9 +12504,11 @@ export const VectorLearningResourcesSearchApiFp = function (
       professional?: boolean | null,
       q?: string,
       readable_id?: string,
-      resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
+      resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
+      title__isnull?: boolean | null,
       topic?: Array<string>,
+      url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -12461,9 +12533,11 @@ export const VectorLearningResourcesSearchApiFp = function (
           professional,
           q,
           readable_id,
-          resource_category,
           resource_type,
+          resource_type_group,
+          title__isnull,
           topic,
+          url__isnull,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -12521,9 +12595,11 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.professional,
           requestParameters.q,
           requestParameters.readable_id,
-          requestParameters.resource_category,
           requestParameters.resource_type,
+          requestParameters.resource_type_group,
+          requestParameters.title__isnull,
           requestParameters.topic,
+          requestParameters.url__isnull,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -12643,18 +12719,25 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly readable_id?: string
 
   /**
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;document&#x60; - document
+   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'document'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
+
+  /**
    * The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
    * @type {Array<'course' | 'program' | 'learning_material'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
-  readonly resource_category?: Array<VectorLearningResourcesSearchRetrieveResourceCategoryEnum>
+  readonly resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>
 
   /**
-   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;article&#x60; - article * &#x60;learning_material&#x60; - learning material
-   * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'article' | 'learning_material'>}
+   * Filter to learning resources where title is null/not null
+   * @type {boolean}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
-  readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
+  readonly title__isnull?: boolean | null
 
   /**
    * The topic name. To see a list of options go to api/v1/topics/
@@ -12662,6 +12745,13 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly topic?: Array<string>
+
+  /**
+   * Filter to learning resources where url is null/not null
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly url__isnull?: boolean | null
 }
 
 /**
@@ -12700,9 +12790,11 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.q,
         requestParameters.readable_id,
-        requestParameters.resource_category,
         requestParameters.resource_type,
+        requestParameters.resource_type_group,
+        requestParameters.title__isnull,
         requestParameters.topic,
+        requestParameters.url__isnull,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -12833,16 +12925,6 @@ export type VectorLearningResourcesSearchRetrievePlatformEnum =
 /**
  * @export
  */
-export const VectorLearningResourcesSearchRetrieveResourceCategoryEnum = {
-  Course: "course",
-  Program: "program",
-  LearningMaterial: "learning_material",
-} as const
-export type VectorLearningResourcesSearchRetrieveResourceCategoryEnum =
-  (typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceCategoryEnum]
-/**
- * @export
- */
 export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   Course: "course",
   Program: "program",
@@ -12852,10 +12934,20 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   Video: "video",
   VideoPlaylist: "video_playlist",
   Article: "article",
-  LearningMaterial: "learning_material",
+  Document: "document",
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum = {
+  Course: "course",
+  Program: "program",
+  LearningMaterial: "learning_material",
+} as const
+export type VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum =
+  (typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum]
 
 /**
  * VideoShortsApi - axios parameter creator

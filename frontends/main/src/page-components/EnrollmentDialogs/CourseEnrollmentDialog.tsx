@@ -18,13 +18,14 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
-  canUpgradeRun,
+  canPurchaseRun,
+  getEnrollmentType,
   mitxonlineUrl,
   PriceWithDiscount,
   priceWithDiscount,
-  upgradeRunUrl,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
+import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
@@ -199,14 +200,18 @@ const CertificateUpsell: React.FC<{
   courseRun?: CourseRunV2
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
-  const canUpgrade = !!(product && courseRun && canUpgradeRun(courseRun))
+  const enrollmentType = getEnrollmentType(courseRun?.enrollment_modes)
+  const enabled =
+    (enrollmentType === "both" || enrollmentType === "paid") &&
+    !!(product && courseRun && canPurchaseRun(courseRun))
+  const replaceBasketItem = useReplaceBasketItem()
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
     }),
-    enabled: canUpgrade && !!course?.page.financial_assistance_form_url,
+    enabled: enabled && !!course?.page.financial_assistance_form_url,
   })
-  const price = canUpgrade
+  const price = enabled
     ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
     : null
   const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
@@ -229,7 +234,7 @@ const CertificateUpsell: React.FC<{
           </CertificateReasonItem>
         ))}
       </CertificateReasonsList>
-      <CertificateBox disabled={!canUpgrade}>
+      <CertificateBox disabled={!enabled}>
         <CertificatePriceRoot>
           <RiAwardFill />
           <Stack gap="4px">
@@ -248,8 +253,8 @@ const CertificateUpsell: React.FC<{
                   : "Financial assistance available"}
               </UnderlinedLink>
             ) : null}
-            <CertDate disabled={!canUpgrade}>
-              {canUpgrade ? deadlineUI : "Not available"}
+            <CertDate disabled={!enabled}>
+              {enabled ? deadlineUI : "Not available"}
             </CertDate>
           </Stack>
         </CertificatePriceRoot>
@@ -257,14 +262,18 @@ const CertificateUpsell: React.FC<{
           label="Add to Cart"
           sublabel="to get a Certificate"
           endIcon={<RiArrowRightLine aria-hidden="true" />}
-          disabled={!canUpgrade}
+          disabled={!enabled}
           onClick={() => {
             if (!product) return
-            const url = upgradeRunUrl(product)
-            window.location.assign(url)
+            replaceBasketItem.mutate(product.id)
           }}
         />
       </CertificateBox>
+      {replaceBasketItem.isError && (
+        <Alert severity="error">
+          There was a problem processing your enrollment. Please try again.
+        </Alert>
+      )}
     </Stack>
   )
 }
@@ -280,7 +289,7 @@ const getRunOptions = (
         .map((d) => formatDate(d))
         .join(" - ")
       return {
-        label: canUpgradeRun(run)
+        label: canPurchaseRun(run)
           ? dates
           : `${dates} (No certificate available)`,
         value: `${run.id}`,
@@ -307,6 +316,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   }
   const [chosenRun, setChosenRun] = React.useState<string>(getDefaultOption)
   const run = course.courseruns.find((r) => `${r.id}` === chosenRun)
+  const enrollmentType = getEnrollmentType(run?.enrollment_modes)
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
   return (
@@ -314,7 +324,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       {...muiDialogV5(modal)}
       title={course.title ?? ""}
       fullWidth
-      confirmText="Enroll for Free without a certificate"
+      confirmText={
+        enrollmentType === "free" || enrollmentType === "both"
+          ? "Enroll for Free without a certificate"
+          : null
+      }
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
@@ -369,4 +383,13 @@ const CourseEnrollmentDialog = NiceModal.create(CourseEnrollmentDialogInner)
 
 export default CourseEnrollmentDialog
 
-export { StyledSimpleSelectField, StyledFormDialog, CertificateUpsell }
+export {
+  StyledSimpleSelectField,
+  StyledFormDialog,
+  CertificateUpsell,
+  BigButton,
+  CertificateBox,
+  CertificatePriceRoot,
+  CertificateReasonItem,
+  CertificateReasonsList,
+}

@@ -17,8 +17,6 @@ import type { NewsFeedItem, EventFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { RiArrowRightSLine } from "@remixicon/react"
 import Link from "next/link"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 
 const Section = styled.section`
   background: ${theme.custom.colors.white};
@@ -222,8 +220,6 @@ export const Story: React.FC<{ item: NewsFeedItem; mobile: boolean }> = ({
 }
 
 const NewsEventsSection: React.FC = () => {
-  const showArticleList = useFeatureFlagEnabled(FeatureFlags.ArticleView)
-
   const { data: news } = useNewsEventsList({
     feed_type: [NewsEventsListFeedTypeEnum.News],
     limit: 6,
@@ -292,13 +288,11 @@ const NewsEventsSection: React.FC = () => {
                 />
               ))}
             </NewsSlider>
-            {showArticleList && (
-              <HeadingContainer>
-                <SeeAllButton href="/news/" size="large" responsive>
-                  See all news
-                </SeeAllButton>
-              </HeadingContainer>
-            )}
+            <HeadingContainer>
+              <SeeAllButton href="/news/" size="large" responsive>
+                See all news
+              </SeeAllButton>
+            </HeadingContainer>
           </MobileContainer>
           <MobileContainer>
             <Typography component="h3" variant="h4">
@@ -331,13 +325,11 @@ const NewsEventsSection: React.FC = () => {
                   </Grid2>
                 ))}
               </Grid2>
-              {showArticleList && (
-                <HeadingContainer>
-                  <SeeAllButton href="/news/" size="large" responsive>
-                    See all news
-                  </SeeAllButton>
-                </HeadingContainer>
-              )}
+              <HeadingContainer>
+                <SeeAllButton href="/news/" size="large" responsive>
+                  See all news
+                </SeeAllButton>
+              </HeadingContainer>
             </NewsContainer>
             <EventsContainer>
               <Typography component="h3" variant="h4">

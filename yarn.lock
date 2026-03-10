@@ -3478,11 +3478,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "@mitodl/course-search-utils@npm:3.5.0"
+"@mitodl/course-search-utils@npm:^3.5.2":
+  version: 3.5.2
+  resolution: "@mitodl/course-search-utils@npm:3.5.2"
   dependencies:
-    "@mitodl/mit-learn-api-axios": "npm:2025.10.28"
+    "@mitodl/mit-learn-api-axios": "npm:^2026.3.4"
     "@remixicon/react": "npm:^4.2.0"
     axios: "npm:^1.6.7"
     fuse.js: "npm:^7.0.0"
@@ -3500,27 +3500,27 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/f7b31dc385bc9220b54ec580f21c9a7c90c5a4e69ee86617642f8934bdd79bfd1f2bac4dfdbeadd7edf71c768e67fd5b3af0cd526fdaaacbcfb13eec9a4f7afb
+  checksum: 10/1889d2ea1ba2494fed6c45a598fb802d8ff3896db92d98d652afa52b480107ac042c91c7e5fd91cfbd4b1ac994a0041abb2a76990d22c83d71af9675102057f7
   languageName: node
   linkType: hard
 
-"@mitodl/mit-learn-api-axios@npm:2025.10.28":
-  version: 2025.10.28
-  resolution: "@mitodl/mit-learn-api-axios@npm:2025.10.28"
+"@mitodl/mit-learn-api-axios@npm:^2026.3.4":
+  version: 2026.3.4
+  resolution: "@mitodl/mit-learn-api-axios@npm:2026.3.4"
   dependencies:
     "@types/node": "npm:^22.0.0"
     axios: "npm:^1.6.5"
-  checksum: 10/0832d24ab89078c315dc01ce40a3350752dee76a1a26649807c846858365e13834dc2ba76c8f4324667f5982690675445ad7c1b44e9d847bccfd7290b29df9b6
+  checksum: 10/1617b281821aaee9f44a4a1e6632cd8a2441277d17044265f2004f6e0ec1532095e5a85d334dc9666737ebdbe44144bb4690c4cc9d033a9e065c4bcf66f648c3
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2026.2.19":
-  version: 2026.2.19
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.2.19"
+"@mitodl/mitxonline-api-axios@npm:^2026.3.5":
+  version: 2026.3.5
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.3.5"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/f424abd31845dde524cc5022e1b3d131619068be0297f7c55d67b3ab0462397359c05b520123ff77f276d075838ca899d0f7d71cfcffc0ad293a101917605b35
+  checksum: 10/f003d6298317bbbdc99ad1dcb44e93fd33f1b9c887ecde3a3e0e772361fce01f927d1a9693bbf7108099a986a84551d6cb1c877d0d34ccffa31021e4bf9f099e
   languageName: node
   linkType: hard
 
@@ -7413,7 +7413,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.0.0":
+"@types/node@npm:*":
   version: 22.7.5
   resolution: "@types/node@npm:22.7.5"
   dependencies:
@@ -7437,6 +7437,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~6.19.2"
   checksum: 10/6d2f92b7b320c32ba0c2bc54d21651bd21690998a2e27f00d15019d4db3e0ec30fce85332efed5e37d4cda078ff93ea86ee3e92b76b7a25a9b92a52a039b60b2
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^22.0.0":
+  version: 22.19.15
+  resolution: "@types/node@npm:22.19.15"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10/c75bc9a8dbc49a61f3e6f49304cf7b1c05e818a1071b46e9effd1a51af7a1b5c10fd2e04f314b74ce78f4ca7e3ddc1d6e61c94c2e3354c8be9f9f7ee5e79e23c
   languageName: node
   linkType: hard
 
@@ -8854,7 +8863,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.2.19"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.5"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -9223,7 +9232,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.12.2, axios@npm:^1.6.5, axios@npm:^1.6.7":
+"axios@npm:^1.12.2, axios@npm:^1.6.5":
   version: 1.12.2
   resolution: "axios@npm:1.12.2"
   dependencies:
@@ -9231,6 +9240,17 @@ __metadata:
     form-data: "npm:^4.0.4"
     proxy-from-env: "npm:^1.1.0"
   checksum: 10/886a79770594eaad76493fecf90344b567bd956240609b5dcd09bd0afe8d3e6f1ad6d3257a93a483b6192b409d4b673d9515a34619e3e3ed1b2c0ec2a83b20ba
+  languageName: node
+  linkType: hard
+
+"axios@npm:^1.6.7":
+  version: 1.13.6
+  resolution: "axios@npm:1.13.6"
+  dependencies:
+    follow-redirects: "npm:^1.15.11"
+    form-data: "npm:^4.0.5"
+    proxy-from-env: "npm:^1.1.0"
+  checksum: 10/a7ed83c2af3ef21d64609df0f85e76893a915a864c5934df69241001d0578082d6521a0c730bf37518ee458821b5695957cb10db9fc705f2a8996c8686ea7a89
   languageName: node
   linkType: hard
 
@@ -12748,6 +12768,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"follow-redirects@npm:^1.15.11":
+  version: 1.15.11
+  resolution: "follow-redirects@npm:1.15.11"
+  peerDependenciesMeta:
+    debug:
+      optional: true
+  checksum: 10/07372fd74b98c78cf4d417d68d41fdaa0be4dcacafffb9e67b1e3cf090bc4771515e65020651528faab238f10f9b9c0d9707d6c1574a6c0387c5de1042cde9ba
+  languageName: node
+  linkType: hard
+
 "fontkit@npm:^2.0.2":
   version: 2.0.4
   resolution: "fontkit@npm:2.0.4"
@@ -12820,6 +12850,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"form-data@npm:^4.0.5":
+  version: 4.0.5
+  resolution: "form-data@npm:4.0.5"
+  dependencies:
+    asynckit: "npm:^0.4.0"
+    combined-stream: "npm:^1.0.8"
+    es-set-tostringtag: "npm:^2.1.0"
+    hasown: "npm:^2.0.2"
+    mime-types: "npm:^2.1.12"
+  checksum: 10/52ecd6e927c8c4e215e68a7ad5e0f7c1031397439672fd9741654b4a94722c4182e74cc815b225dcb5be3f4180f36428f67c6dd39eaa98af0dcfdd26c00c19cd
+  languageName: node
+  linkType: hard
+
 "formik@npm:^2.4.6":
   version: 2.4.6
   resolution: "formik@npm:2.4.6"
@@ -12849,6 +12892,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "frontends@workspace:frontends"
   dependencies:
+    "@faker-js/faker": "npm:^10.0.0"
     "@jest/environment": "npm:^29.7.0"
     "@next/eslint-plugin-next": "npm:^14.2.7"
     "@swc/core": "npm:^1.11.29"
@@ -13011,9 +13055,9 @@ __metadata:
   linkType: hard
 
 "fuse.js@npm:^7.0.0":
-  version: 7.0.0
-  resolution: "fuse.js@npm:7.0.0"
-  checksum: 10/d75d35f2d61afa85b8248f9cbfc7d4df29ae47ea574a15ad5c3c2a41930c5ed78668346295508b59ec4929fcb1a5cd6d9a8c649b5a3bc8b18e515f4e4cb9809d
+  version: 7.1.0
+  resolution: "fuse.js@npm:7.1.0"
+  checksum: 10/9f9105e54372897a46cb3e04074f0db5bd0a428320d4618276a57e6142d7502235a556f05cf87aa3c5d6d9c6fdfa06b901b78379c48aa0951672ccbc4a1bfe70
   languageName: node
   linkType: hard
 
@@ -16013,8 +16057,8 @@ __metadata:
     "@faker-js/faker": "npm:^10.0.0"
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
-    "@mitodl/course-search-utils": "npm:^3.5.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.2.19"
+    "@mitodl/course-search-utils": "npm:^3.5.2"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.5"
     "@mitodl/smoot-design": "npm:^6.24.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
@@ -22188,6 +22232,13 @@ __metadata:
   version: 6.19.8
   resolution: "undici-types@npm:6.19.8"
   checksum: 10/cf0b48ed4fc99baf56584afa91aaffa5010c268b8842f62e02f752df209e3dea138b372a60a963b3b2576ed932f32329ce7ddb9cb5f27a6c83040d8cd74b7a70
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10/ec8f41aa4359d50f9b59fa61fe3efce3477cc681908c8f84354d8567bb3701fafdddf36ef6bff307024d3feb42c837cf6f670314ba37fc8145e219560e473d14
   languageName: node
   linkType: hard
 

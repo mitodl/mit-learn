@@ -462,6 +462,31 @@ def generate_filter_clauses(search_params):
 
             all_filter_clauses[filter_name] = {"bool": {"should": clauses_for_filter}}
 
+    if search_params.get("endpoint") == LEARNING_RESOURCE and not search_params.get(
+        "show_ocw_files"
+    ):
+        ocw_clause = {
+            "bool": {
+                "should": [
+                    {
+                        "bool": {
+                            "must_not": [
+                                {
+                                    "nested": {
+                                        "path": "offered_by",
+                                        "query": {"term": {"offered_by.code": "ocw"}},
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {"term": {"resource_type": "course"}},
+                ],
+                "minimum_should_match": 1,
+            }
+        }
+        all_filter_clauses["show_ocw_files"] = ocw_clause
+
     return all_filter_clauses
 
 
@@ -607,6 +632,7 @@ def adjust_original_query_for_percolate(query):
         "search_mode",
         "slop",
         "use_dfs_query_then_fetch",
+        "show_ocw_files",
     ]:
         query.pop(key, None)
     return order_params(query)
