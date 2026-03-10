@@ -150,12 +150,15 @@ def create_qdrant_collection(collection_name, force_recreate):
                 unindexed_filtering_retrieve=False,
                 unindexed_filtering_update=False,
             ),
-            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
+            optimizers_config=models.OptimizersConfigDiff(
+                default_segment_number=2, prevent_unoptimized=True
+            ),
             quantization_config=models.BinaryQuantization(
                 binary=models.BinaryQuantizationConfig(
                     always_ram=True,
                 ),
             ),
+            hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
 
 
@@ -911,7 +914,7 @@ def vector_search(
             ],
             "query": models.FusionQuery(fusion=models.Fusion.RRF),
             "query_filter": search_filter,
-            "search_params": models.SearchParams(indexed_only=True),
+            "search_params": models.SearchParams(indexed_only=True, exact=False),
             "limit": limit,
         }
         if "group_by" in params:
@@ -950,7 +953,7 @@ def vector_search(
     count_result = client.count(
         collection_name=search_collection,
         count_filter=search_filter,
-        exact=True,
+        exact=False,
     )
 
     return {
