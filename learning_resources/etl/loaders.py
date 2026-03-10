@@ -28,7 +28,6 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
-    Article,
     ContentFile,
     Course,
     LearningResource,
