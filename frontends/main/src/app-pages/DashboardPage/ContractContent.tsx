@@ -465,7 +465,11 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     enrollmentQueries.programEnrollmentsList(),
   )
   const programsQuery = useQuery(
-    programsQueries.programsList({ org_id: orgId, contract_id: contract.id }),
+    programsQueries.programsList({
+      org_id: orgId,
+      contract_id: contract.id,
+      page_size: 30,
+    }),
   )
   const programCollectionsQuery = useQuery(
     programCollectionQueries.programCollectionsList({}),

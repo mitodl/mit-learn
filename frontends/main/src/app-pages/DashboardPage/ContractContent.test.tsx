@@ -140,6 +140,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: contract.id,
+        page_size: 30,
       }),
       {
         results: [programA, programB],
@@ -709,6 +710,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: orgX.contracts[0].id,
+        page_size: 30,
       }),
       {
         results: [programWithCertificate],
