@@ -901,12 +901,12 @@ def vector_search(
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),
                     using=encoder_sparse.model_short_name(),
-                    limit=20,
+                    limit=limit,
                 ),
                 models.Prefetch(
                     query=encoder_dense.embed_query(query_string),  # <-- dense vector
                     using=encoder_dense.model_short_name(),
-                    limit=20,
+                    limit=limit,
                 ),
             ],
             "query": models.FusionQuery(fusion=models.Fusion.RRF),
