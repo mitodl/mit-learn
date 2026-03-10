@@ -28,11 +28,15 @@ class QdrantCloudEncoder(BaseEncoder):
         return self.get_embedding(documents)
 
     def get_embedding(self, texts):
+        """
+        Return Documents with text and model name for qdrant cloud inferencing.
+        """
         return [
             models.Document(
                 text=text,
                 model=self.model_name,
                 options={
+                    # required for openai models
                     "openai-api-key": settings.OPENAI_API_KEY,
                 },
             )
