@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.56.10
+Version 0.56.10 (Released March 10, 2026)
 ---------------
 
 - Avoid unnecessary task calls for contentfiles if none exist (#3017)
