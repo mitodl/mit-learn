@@ -26,6 +26,7 @@ from learning_resources.etl.utils import (
     get_department_id_by_name,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
     transform_price,
     transform_topics,
 )
@@ -314,6 +315,7 @@ def _transform_course(course):
         if course_run
     ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
+    strip_enrollment_modes(runs)
     return {
         "readable_id": course["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -443,6 +445,7 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
         has_certification = parse_certification(OFFERED_BY["code"], [run])
+        strip_enrollment_modes([run])
         yield {
             "readable_id": program["readable_id"],
             "title": program["title"],
