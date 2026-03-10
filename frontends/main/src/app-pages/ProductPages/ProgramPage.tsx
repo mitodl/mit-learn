@@ -198,11 +198,8 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     ? page.program_details.page.feature_image_src
     : DEFAULT_RESOURCE_IMG
 
-  const tags = ["MITx", program.program_type].filter((t): t is string => !!t)
-
   return (
     <ProductPageTemplate
-      tags={tags}
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={

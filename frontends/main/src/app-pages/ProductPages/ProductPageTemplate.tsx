@@ -224,7 +224,6 @@ const SidebarMedia: React.FC<{
 }
 
 type ProductPageTemplateProps = {
-  tags: string[]
   currentBreadcrumbLabel: string
   title: string
   shortDescription: React.ReactNode
