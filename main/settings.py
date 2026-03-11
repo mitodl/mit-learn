@@ -307,10 +307,6 @@ DEFAULT_DATABASE_CONFIG = dj_database_url.parse(
         "sqlite:///{}".format(os.path.join(BASE_DIR, "db.sqlite3")),  # noqa: PTH118
     )
 )
-DEFAULT_DATABASE_CONFIG["DISABLE_SERVER_SIDE_CURSORS"] = get_bool(
-    "MITOL_DB_DISABLE_SS_CURSORS",
-    True,  # noqa: FBT003
-)
 DEFAULT_DATABASE_CONFIG["CONN_MAX_AGE"] = get_int("MITOL_DB_CONN_MAX_AGE", 0)
 
 if get_bool("MITOL_DB_DISABLE_SSL", False):  # noqa: FBT003
