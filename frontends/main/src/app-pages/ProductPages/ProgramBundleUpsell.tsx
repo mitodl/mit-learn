@@ -64,6 +64,7 @@ const BundleUpsellActions = styled.div(({ theme }) => ({
   [theme.breakpoints.between("sm", "md")]: {
     marginLeft: "auto",
     gap: "8px",
+    whiteSpace: "nowrap",
   },
 }))
 
