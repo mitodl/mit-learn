@@ -7,7 +7,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonLink, styled } from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -18,6 +18,13 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
+
+const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
+  !href && {
+    pointerEvents: "none",
+    cursor: "default",
+  },
+])
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
@@ -83,10 +90,10 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     <>
       <Stack gap="12px">
         {enrollment ? (
-          <ButtonLink href={href}>
+          <ButtonLinkWithDisabled href={href}>
             Enrolled
             <RiCheckLine aria-hidden="true" />
-          </ButtonLink>
+          </ButtonLinkWithDisabled>
         ) : (
           <Button
             onClick={handleClick}
