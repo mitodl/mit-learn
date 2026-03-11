@@ -64,6 +64,7 @@ class OfferedBy(ExtendedEnum):
     mitpe = "MIT Professional Education"
     see = "MIT Sloan Executive Education"
     climate = "MIT Climate"
+    ovs = "ODL Video Service"
 
 
 class PlatformType(ExtendedEnum):
@@ -92,6 +93,7 @@ class PlatformType(ExtendedEnum):
     youtube = "YouTube"
     canvas = "Canvas"
     climate = "MIT Climate"
+    ovs = "ODL Video Service"
 
 
 class PrivacyLevel(ExtendedEnum):

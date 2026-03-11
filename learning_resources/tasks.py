@@ -336,6 +336,20 @@ def get_podcast_data():
     return len(list(results))
 
 
+@app.task
+def get_ovs_data():
+    """
+    Execute the OVS ETL pipeline
+
+    Returns:
+        int:
+            The number of results that were fetched
+    """
+    results = pipelines.ovs_etl()
+    clear_views_cache()
+    return len(list(results))
+
+
 @app.task(acks_late=True)
 def get_ocw_courses(
     *,

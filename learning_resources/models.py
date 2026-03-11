@@ -1273,6 +1273,8 @@ class Video(LearningResourceDetailModel):
     )
     duration = models.CharField(max_length=11)
     transcript = models.TextField(blank=True, default="")
+    caption_urls = models.JSONField(default=list, blank=True)
+    cover_image_url = models.URLField(max_length=2048, blank=True)
 
     def __str__(self):
         return f"Video: {self.id} - {self.learning_resource.readable_id}"
