@@ -1,0 +1,39 @@
+import { styled } from "@mitodl/smoot-design"
+
+/**
+ * Outer card wrapper: border, shadow, radius. No padding — children control
+ * their own insets so that elements like the bundle upsell can span edge-to-edge.
+ */
+export const InfoBoxCard = styled.div(({ theme }) => ({
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  backgroundColor: theme.custom.colors.white,
+  borderRadius: "4px",
+  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
+  overflow: "hidden",
+}))
+
+/** Padded content area inside the summary card. */
+export const InfoBoxContent = styled.div(({ theme }) => ({
+  padding: "24px",
+  [theme.breakpoints.up("md")]: {
+    padding: "24px 32px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px",
+  },
+}))
+
+export const InfoBoxEnrollArea = styled.div(({ theme }) => ({
+  padding: "8px 24px 24px",
+  [theme.breakpoints.up("md")]: {
+    padding: "8px 32px 24px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    display: "flex",
+    justifyContent: "flex-end",
+    "> *": { flex: "0 1 50%" },
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "8px 16px 16px",
+  },
+}))
