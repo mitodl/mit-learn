@@ -29,7 +29,7 @@ test("Renders each instructor", async () => {
     const button = within(section).getByRole("button", {
       name: instructor.instructor_name,
     })
-    getByImageSrc(button, instructor.feature_image_src)
+    getByImageSrc(button, instructor.feature_image_src || "")
   })
 
   const defaultInstructor = instructors[0]
