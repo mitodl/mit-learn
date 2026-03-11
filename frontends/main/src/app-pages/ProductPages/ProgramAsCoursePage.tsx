@@ -63,13 +63,7 @@ const ModulesListing = styled(PlainList)({
   display: "flex",
   flexDirection: "column",
   gap: "8px",
-  marginTop: "24px",
 })
-
-const ModuleSubsectionTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h5,
-  fontSize: theme.typography.pxToRem(20),
-})) as typeof Typography
 
 const ModuleTitleNote = styled("span")(({ theme }) => ({
   ...theme.typography.body1,
@@ -116,7 +110,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
     const moduleCount = req.courseIds.length
     return (
       <Stack
-        gap={{ xs: "24px", sm: "32px" }}
+        gap="16px"
         component="section"
         aria-labelledby={HeadingIds.Modules}
       >
@@ -148,7 +142,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
       <Typography variant="h4" component="h2" id={HeadingIds.Modules}>
         Modules
       </Typography>
-      <Stack gap={{ xs: "32px", sm: "56px" }}>
+      <Stack gap="24px">
         {parsedReqs.map((req) => {
           const note =
             req.requiredCourseCount < req.courseIds.length
@@ -156,11 +150,11 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
               : null
           return (
             <div key={req.id}>
-              <ModuleSubsectionTitle component="h3">
+              <Typography variant="h5" component="h3">
                 {req.title}
                 {note ? ": " : ""}
                 {note ? <ModuleTitleNote>{note}</ModuleTitleNote> : null}
-              </ModuleSubsectionTitle>
+              </Typography>
               {renderCourseList(req.courseIds)}
             </div>
           )
