@@ -47,7 +47,6 @@ const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)({
   color: "#4A4A4A",
   padding: "18px 24px",
   height: "48px",
-  background: "#FFF",
 })
 
 const RequirementsListing = styled(PlainList)({
@@ -201,7 +200,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      currentBreadcrumbLabel="Program"
+      currentBreadcrumbLabel="Learning Path"
       title={page.title}
       shortDescription={
         <DescriptionHTML
@@ -212,7 +211,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton program={program} variant="secondary" />
+        <StyledProgramEnrollmentButton program={program} variant="bordered" />
       }
       infoBox={
         <ProgramInfoBox program={program} courses={courses.data?.results} />

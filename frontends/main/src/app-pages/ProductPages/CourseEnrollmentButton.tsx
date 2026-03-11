@@ -5,7 +5,7 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { Alert, Button } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -46,7 +46,7 @@ const getButtonText = (nextRun?: CourseRunV2, priceDisplay?: string) => {
 
 type CourseEnrollmentButtonProps = {
   course: CourseWithCourseRunsSerializerV2
-  variant?: "primary" | "secondary"
+  variant?: ButtonProps["variant"]
   className?: string
 }
 const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({

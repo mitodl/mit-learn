@@ -33,7 +33,6 @@ const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)({
   color: "#4A4A4A",
   padding: "18px 24px",
   height: "48px",
-  background: "#FFF",
 })
 
 const PrerequisitesSection = styled.section({
@@ -72,14 +71,14 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      currentBreadcrumbLabel="Course"
+      currentBreadcrumbLabel="Learning Path"
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       infoBox={<CourseInfoBox course={course} />}
       enrollmentAction={
-        <StyledCourseEnrollmentButton course={course} variant="secondary" />
+        <StyledCourseEnrollmentButton course={course} variant="bordered" />
       }
     >
       {page.about ? (

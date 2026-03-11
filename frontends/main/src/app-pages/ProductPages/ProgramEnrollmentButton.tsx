@@ -7,7 +7,13 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Alert, Button, ButtonLink, styled } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  styled,
+  ButtonProps,
+} from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -28,7 +34,7 @@ const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
-  variant?: "primary" | "secondary"
+  variant?: ButtonProps["variant"]
   className?: string
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
