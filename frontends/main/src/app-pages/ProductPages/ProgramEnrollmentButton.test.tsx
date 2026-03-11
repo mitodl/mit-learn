@@ -41,20 +41,14 @@ describe("ProgramEnrollmentButton", () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
-    let resolveEnrollment!: (value: unknown) => void,
-      resolveUser!: (value: unknown) => void
-    const enrollmentPromise = new Promise((resolve) => {
-      resolveEnrollment = resolve
-    })
-    const userPromise = new Promise((resolve) => {
-      resolveUser = resolve
-    })
+    const enrollmentResponse = Promise.withResolvers()
+    const userResponse = Promise.withResolvers()
 
     setMockResponse.get(
       mitxUrls.programEnrollments.enrollmentsListV3(),
-      enrollmentPromise,
+      enrollmentResponse.promise,
     )
-    setMockResponse.get(urls.userMe.get(), userPromise)
+    setMockResponse.get(urls.userMe.get(), userResponse.promise)
 
     renderWithProviders(
       <ProgramEnrollmentButton program={program} variant="primary" />,
@@ -64,12 +58,12 @@ describe("ProgramEnrollmentButton", () => {
     screen.getByRole("progressbar", { name: "Loading" })
     expect(screen.queryByText(ENROLL_FREE)).toBeNull()
     // resolve
-    resolveEnrollment([])
-    await enrollmentPromise
+    enrollmentResponse.resolve([])
+    await enrollmentResponse.promise
     screen.getByRole("progressbar", { name: "Loading" })
     expect(screen.queryByText(ENROLL_FREE)).toBeNull()
 
-    resolveUser(makeUser({ is_authenticated: false }))
+    userResponse.resolve(makeUser({ is_authenticated: false }))
     await screen.findByRole("button", { name: ENROLL_FREE })
     expect(screen.queryByRole("progressbar", { name: "Loading" })).toBeNull()
   })
@@ -232,10 +226,7 @@ describe("ProgramEnrollmentButton", () => {
 
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
-    let _resolvePromise: () => void
-    const promise = new Promise<void>((resolve) => {
-      _resolvePromise = resolve
-    })
+    const { promise } = Promise.withResolvers()
     setMockResponse.delete(mitxUrls.baskets.clear(), promise)
 
     renderWithProviders(
