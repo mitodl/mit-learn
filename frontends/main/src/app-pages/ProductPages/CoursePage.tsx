@@ -27,13 +27,11 @@ type CoursePageProps = {
   readableId: string
 }
 
-const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)({
-  borderRadius: "4px",
-  border: "1px solid #B8C2CC",
-  color: "#4A4A4A",
-  padding: "18px 24px",
-  height: "48px",
-})
+const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+  }),
+)
 
 const PrerequisitesSection = styled.section({
   display: "flex",

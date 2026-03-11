@@ -41,13 +41,11 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
 
-const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)({
-  borderRadius: "4px",
-  border: "1px solid #B8C2CC",
-  color: "#4A4A4A",
-  padding: "18px 24px",
-  height: "48px",
-})
+const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+  }),
+)
 
 const RequirementsListing = styled(PlainList)({
   display: "flex",
