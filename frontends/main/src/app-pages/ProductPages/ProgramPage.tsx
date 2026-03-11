@@ -44,9 +44,10 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
 const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)({
   borderRadius: "4px",
   border: "1px solid #B8C2CC",
-  color: "white",
+  color: "#4A4A4A",
   padding: "18px 24px",
   height: "48px",
+  background: "#FFF",
 })
 
 const RequirementsListing = styled(PlainList)({

@@ -184,17 +184,8 @@ const SidebarImage = styled(Image)(({ theme }) => ({
 
 const ShortDescription = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
-  display: "-webkit-box",
-  WebkitLineClamp: 3,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body2,
-    WebkitLineClamp: 2,
-  },
-
-  [theme.breakpoints.down("md")]: {
-    WebkitLineClamp: 2,
   },
 }))
 
@@ -262,7 +253,6 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                         videoUrl={videoUrl}
                         imageSrc={imageSrc}
                         title={title}
-                        priority
                       />
                     </SidebarCol>
                     <Typography
@@ -277,7 +267,10 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                 </TitleBox>
               </MainCol>
             </Grid2>
-            <Grid2 size={{ xs: 12, sm: 6, md: 5 }}>
+            <Grid2
+              size={{ xs: 12, sm: 6, md: 5 }}
+              style={{ display: "flex", alignSelf: "center" }}
+            >
               <SidebarCol showAbove="sm" alignSelf="flex-end">
                 <SidebarMedia
                   videoUrl={videoUrl}
