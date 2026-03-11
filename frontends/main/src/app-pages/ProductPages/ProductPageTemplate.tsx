@@ -7,14 +7,14 @@ import {
   Breadcrumbs,
   BannerBackground,
   Typography,
+  HEADER_HEIGHT,
 } from "ol-components"
 import { convertToEmbedUrl } from "@/common/utils"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
 import Image from "next/image"
-import { HeadingIds } from "./util"
 import type { Breakpoint } from "@mui/system"
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
@@ -56,11 +56,14 @@ const BottomContainer = styled(Container)(({ theme }) => ({
   justifyContent: "space-between",
   gap: "56px",
   flexDirection: "row-reverse",
-
+  paddingTop: "72px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    alignItems: "center",
-    gap: "0px",
+    gap: "32px",
+    paddingTop: "40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "40px",
     paddingTop: "24px",
   },
 }))
@@ -98,10 +101,11 @@ const SectionsWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "56px",
-  marginTop: "40px",
   [theme.breakpoints.down("md")]: {
     gap: "40px",
-    marginTop: "36px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "32px",
   },
 }))
 
@@ -113,6 +117,30 @@ const SidebarCol = styled(Show, {
   width: "100%",
   maxWidth: "410px",
   alignSelf,
+}))
+
+/**
+ * Pixel distance below header at which the summary box should begin when
+ * scrolling.
+ */
+const OFFSET_FROM_HEADER = 72
+/**
+ * Column for the summary info box. Unlike SidebarCol, this is always visible.
+ * On desktop it acts as a fixed-width sidebar; below md it goes full-width.
+ */
+const SummaryCol = styled.div(({ theme }) => ({
+  width: "100%",
+  maxWidth: "410px",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    // Without this, the flex child stretches to the main column's height
+    // and sticky has no room to scroll.
+    alignSelf: "flex-start",
+    top: `${HEADER_HEIGHT + OFFSET_FROM_HEADER}px`,
+  },
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "none",
+  },
 }))
 
 const SidebarVideo = styled.iframe(({ theme }) => ({
@@ -166,30 +194,6 @@ const SidebarMedia: React.FC<{
   )
 }
 
-const SummaryRoot = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "32px",
-  [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-54px",
-    top: "calc(40px + 32px + 24px)",
-    borderRadius: "4px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    flexDirection: "row",
-    gap: "48px",
-  },
-  [theme.breakpoints.down("md")]: {
-    marginTop: "24px",
-  },
-}))
-
 type ProductPageTemplateProps = {
   tags: string[]
   currentBreadcrumbLabel: string
@@ -197,11 +201,8 @@ type ProductPageTemplateProps = {
   shortDescription: React.ReactNode
   imageSrc: string
   videoUrl?: string | null
-  sidebarSummary: React.ReactNode
-  summaryTitle: string
+  infoBox: React.ReactNode
   children: React.ReactNode
-  navbar: React.ReactNode
-  enrollButton?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   tags,
@@ -210,11 +211,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   shortDescription,
   imageSrc,
   videoUrl,
-  sidebarSummary,
-  summaryTitle,
+  infoBox,
   children,
-  enrollButton,
-  navbar,
 }) => {
   return (
     <Page>
@@ -253,46 +251,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         </TopContainer>
       </BannerBackground>
       <BottomContainer>
-        {/*
-         * The summary section is rendered 3 times (desktop, tablet, mobile)
-         * with different layouts, but only one is visible at a time via CSS.
-         * A single visually-hidden heading serves all three.
-         */}
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
-        </VisuallyHidden>
-        <SidebarCol showAbove="md">
-          <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-            {enrollButton}
-            {sidebarSummary}
-          </SummaryRoot>
-        </SidebarCol>
+        <SummaryCol>{infoBox}</SummaryCol>
         <MainCol>
-          {navbar}
-          <Show showBetween={["sm", "md"]}>
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              {sidebarSummary}
-              <Stack gap="16px">
-                <SidebarMedia
-                  videoUrl={videoUrl}
-                  imageSrc={imageSrc}
-                  title={title}
-                />
-                {enrollButton}
-              </Stack>
-            </SummaryRoot>
-          </Show>
-          <SidebarCol showBelow="sm" alignSelf="center">
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarMedia
-                videoUrl={videoUrl}
-                imageSrc={imageSrc}
-                title={title}
-              />
-              {enrollButton}
-              {sidebarSummary}
-            </SummaryRoot>
-          </SidebarCol>
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>

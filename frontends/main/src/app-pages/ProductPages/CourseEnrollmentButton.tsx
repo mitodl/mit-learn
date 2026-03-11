@@ -106,7 +106,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   return (
     <>
-      <Stack width="100%" gap="12px">
+      <Stack gap="12px">
         <Button
           disabled={
             !nextRun ||

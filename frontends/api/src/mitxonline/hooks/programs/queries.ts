@@ -5,7 +5,7 @@ import type {
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
   ProgramsApiProgramsRetrieveV2Request,
-  V2Program,
+  V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { programCollectionsApi, programsApi } from "../../clients"
 
@@ -30,7 +30,7 @@ const programsQueries = {
   programDetail: (opts: ProgramsApiProgramsRetrieveV2Request) =>
     queryOptions({
       queryKey: programsKeys.programDetail(opts),
-      queryFn: async (): Promise<V2Program> => {
+      queryFn: async (): Promise<V2ProgramDetail> => {
         return programsApi.programsRetrieveV2(opts).then((res) => res.data)
       },
     }),
