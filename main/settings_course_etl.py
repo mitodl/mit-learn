@@ -2,7 +2,7 @@
 Django settings specific to learning_resources ingestion
 """
 
-from main.envs import get_bool, get_int, get_list_of_str, get_string
+from main.envs import get_bool, get_int, get_string
 
 # EDX API Credentials
 EDX_API_URL = get_string("EDX_API_URL", None)
@@ -56,9 +56,6 @@ MITX_ONLINE_COURSE_BUCKET_PREFIX = get_string(
 MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
 MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
-MITX_ONLINE_PROGRAMS_AS_COURSES = get_list_of_str(
-    "MITX_ONLINE_PROGRAMS_AS_COURSES", default=[]
-)
 
 # Open Learning Library settings
 OLL_COURSE_BUCKET_PREFIX = get_string(

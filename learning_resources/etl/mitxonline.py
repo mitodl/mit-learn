@@ -30,6 +30,7 @@ from learning_resources.etl.utils import (
     transform_price,
     transform_topics,
 )
+from main import features
 from main.utils import clean_data, now_in_utc
 
 log = logging.getLogger(__name__)
@@ -409,6 +410,7 @@ def transform_program_as_course(program: dict) -> dict:
     }
     runs = [run]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
+    strip_enrollment_modes(runs)
     return {
         "readable_id": program["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -587,14 +589,15 @@ def is_program_course(program: dict) -> bool:
     """
     Determine if a MITx Online program should be ingested as a course.
 
+    Requires the "program-to-course" feature flag to be enabled. When enabled,
+    programs with display_mode="course" are ingested as courses.
+
     Args:
         program (dict): program data from MITx Online API
 
     Returns:
         bool: True if the program should be ingested as a course, False otherwise
     """
-    return program.get("display_mode") == "course" or (
-        settings.MITX_ONLINE_PROGRAMS_AS_COURSES
-        and program.get("readable_id") in settings.MITX_ONLINE_PROGRAMS_AS_COURSES
-        and settings.ENVIRONMENT == "dev"
+    return program.get("display_mode") == "course" and features.is_enabled(
+        "program-to-course", default=False
     )

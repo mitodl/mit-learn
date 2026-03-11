@@ -28,6 +28,7 @@ from learning_resources.etl.mitxonline import (
     extract_courses,
     extract_programs,
     is_fully_enrollable,
+    is_program_course,
     parse_certificate_type,
     parse_page_attribute,
     parse_prices,
@@ -1070,3 +1071,25 @@ def test_transform_program_as_course_certification_by_enrollment_modes(  # noqa:
 def test_mitxonline_transform_programs_as_courses_empty():
     """Test that transform_programs_as_courses returns empty list for empty input"""
     assert transform_programs_as_courses([]) == []
+
+
+@pytest.mark.parametrize(
+    ("flag_enabled", "display_mode", "expected"),
+    [
+        (True, "course", True),
+        (True, "program", False),
+        (True, None, False),
+        (False, "course", False),
+        (False, "program", False),
+    ],
+)
+def test_is_program_course(mocker, flag_enabled, display_mode, expected):
+    """Test that is_program_course checks the feature flag and display_mode"""
+    mocker.patch(
+        "learning_resources.etl.mitxonline.features.is_enabled",
+        return_value=flag_enabled,
+    )
+    program = {"readable_id": "program-v1:test"}
+    if display_mode is not None:
+        program["display_mode"] = display_mode
+    assert is_program_course(program) is expected

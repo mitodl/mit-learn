@@ -89,6 +89,10 @@ def test_mit_edx_programs_etl():
 
 def test_mitxonline_etl(mocker):
     """Verify that the combined mitxonline etl pipeline executes correctly"""
+    mocker.patch(
+        "learning_resources.etl.mitxonline.features.is_enabled",
+        return_value=True,
+    )
     regular_program = {"readable_id": "prog-1", "title": "Regular Program"}
     course_program = {
         "readable_id": "prog-2",
