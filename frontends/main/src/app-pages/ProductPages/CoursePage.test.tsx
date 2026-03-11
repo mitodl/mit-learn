@@ -232,6 +232,21 @@ describe("CoursePage", () => {
     expect(document.querySelector("img")).toBeInTheDocument()
   })
 
+  test("Uses DEFAULT_RESOURCE_IMG when feature_image_src is falsy", async () => {
+    const course = makeCourse({
+      page: { feature_image_src: "" },
+    })
+    const page = makePage({ course_details: course, video_url: null })
+    setupApis({ course, page })
+    const { view } = renderWithProviders(
+      <CoursePage readableId={course.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    const imgs = Array.from(view.container.querySelectorAll("img"))
+    expect(imgs.some((img) => img.src.includes("default_resource"))).toBe(true)
+  })
+
   test.each([
     { courses: [], pages: [makePage()] },
     { courses: [makeCourse()], pages: [] },
