@@ -26,10 +26,10 @@ export const generateMetadata = async (
     }
     const [program] = programPages.items
 
-    // Note: feature_image.src is relative to mitxonline root.
-    const image = program.feature_image
-      ? program.program_details.page.feature_image_src
-      : DEFAULT_RESOURCE_IMG
+    // feature_image_src will be nullable in a future MITx Online API update
+    // (null means no image set). Fall back to our own default image.
+    const image =
+      program.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
     return standardizeMetadata({
       title: program.title,

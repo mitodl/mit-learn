@@ -97,9 +97,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   const navLinks = getNavLinks(page)
 
-  const imageSrc = page.feature_image
-    ? page.course_details.page.feature_image_src
-    : DEFAULT_RESOURCE_IMG
+  // feature_image_src will be nullable in a future MITx Online API update
+  // (null means no image set). Fall back to our own default image.
+  const imageSrc =
+    page.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
   return (
     <ProductPageTemplate
