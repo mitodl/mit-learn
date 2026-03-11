@@ -133,6 +133,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
   }
 
   // Multiple roots fallback
+  // This is unexpected.
   return (
     <Stack
       gap={{ xs: "24px", sm: "32px" }}
@@ -150,7 +151,11 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
               : null
           return (
             <div key={req.id}>
-              <Typography variant="h5" component="h3">
+              <Typography
+                variant="h5"
+                component="h3"
+                sx={{ marginBottom: "4px" }}
+              >
                 {req.title}
                 {note ? ": " : ""}
                 {note ? <ModuleTitleNote>{note}</ModuleTitleNote> : null}
