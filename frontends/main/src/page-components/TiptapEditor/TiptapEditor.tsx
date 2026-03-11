@@ -67,6 +67,9 @@ const Container = styled.div<{
 
   ".tiptap.ProseMirror.simple-editor, .tiptap-viewer": {
     padding: "0 24px",
+    [theme.breakpoints.down("sm")]: {
+      padding: "0 16px",
+    },
   },
   ...(readOnly
     ? {
