@@ -121,7 +121,7 @@ YOUTUBE_CONFIG_URL = get_string("YOUTUBE_CONFIG_URL", None)
 # OVS (ODL Video Service) settings
 OVS_API_BASE_URL = get_string(
     "OVS_API_BASE_URL",
-    "https://video-rc.odl.mit.edu/api/v0/public/videos/",
+    "https://video-rc.odl.mit.edu",
 )
 
 # course catalog podcast etl settings

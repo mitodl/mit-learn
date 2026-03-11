@@ -175,7 +175,7 @@ def ocw_courses_etl(
 
 youtube_etl = compose(loaders.load_video_channels, youtube.transform, youtube.extract)
 
-ovs_etl = compose(loaders.load_videos, ovs.transform, ovs.extract)
+ovs_etl = compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract)
 
 posthog_etl = compose(
     posthog.load_posthog_lrd_view_events,

@@ -16,7 +16,9 @@ from learning_resources.etl.ovs import (
     _build_caption_urls,
     _duration_to_iso8601,
     _get_cover_image_url,
+    _get_resource_url,
     _get_source_url,
+    _transform_collection,
     _transform_video,
     extract,
     transform,
@@ -217,6 +219,17 @@ class TestHelpers:
         """Test source URL with no sources"""
         assert _get_source_url({"sources": []}) is None
 
+    def test_get_resource_url_with_cta_link(self):
+        """Test resource URL uses cta_link when available"""
+        video = {"key": "abc123", "cta_link": "https://example.com/watch/abc123"}
+        assert _get_resource_url(video) == "https://example.com/watch/abc123"
+
+    def test_get_resource_url_without_cta_link(self, settings):
+        """Test resource URL falls back to OVS base URL + /videos/{key}"""
+        settings.OVS_API_BASE_URL = "https://video-rc.odl.mit.edu"
+        video = {"key": "abc123", "cta_link": None}
+        assert _get_resource_url(video) == "https://video-rc.odl.mit.edu/videos/abc123"
+
     @pytest.mark.parametrize(
         ("seconds", "expected"),
         [
@@ -250,7 +263,7 @@ class TestTransform:
             result["description"]
             == "An introductory lecture on machine learning concepts."
         )
-        assert "video__index.m3u8" in result["url"]
+        assert "/videos/96fb932aa5644d8e8f6a5fafe42caa87" in result["url"]
         assert result["image"]["url"] is not None
         assert result["last_modified"] == "2020-03-23T15:14:38.254631Z"
         assert result["offered_by"] == {"code": OfferedBy.ovs.name}
@@ -270,14 +283,75 @@ class TestTransform:
         assert result["readable_id"] == "abcdef1234567890abcdef1234567890"
         assert result["title"] == "Advanced Data Structures"
         assert result["image"] is None
+        assert "/videos/abcdef1234567890abcdef1234567890" in result["url"]
         assert result["video"]["duration"] == "PT0S"
         assert result["video"]["caption_urls"] == []
         assert result["video"]["cover_image_url"] is None
 
-    def test_transform_generator(self, ovs_api_response):
-        """Test that transform yields transformed videos"""
+    def test_transform_collection(self):
+        """Test transforming a collection into playlist data"""
+        collection = {
+            "key": "abc123",
+            "title": "Test Collection",
+            "description": "A test collection",
+            "is_public": True,
+        }
+        result = _transform_collection(collection)
+        assert result["playlist_id"] == "abc123"
+        assert result["platform"] == PlatformType.ovs.name
+        assert result["title"] == "Test Collection"
+        assert result["offered_by"] == {"code": OfferedBy.ovs.name}
+
+    def test_transform_groups_by_collection(self, ovs_api_response):
+        """Test that transform groups videos into playlists by collection"""
         videos = ovs_api_response["results"]
         results = list(transform(videos))
+        # Two videos in two different collections = 2 playlists
         assert len(results) == 2
-        assert results[0]["readable_id"] == videos[0]["key"]
-        assert results[1]["readable_id"] == videos[1]["key"]
+        for playlist in results:
+            assert "playlist_id" in playlist
+            assert "videos" in playlist
+            assert len(playlist["videos"]) == 1
+
+    def test_transform_merges_same_collection(self):
+        """Test that videos in the same collection are merged into one playlist"""
+        videos = [
+            {
+                "key": "video1",
+                "title": "Video 1",
+                "description": "",
+                "created_at": "2020-01-01T00:00:00Z",
+                "sources": [],
+                "videothumbnail_set": [],
+                "videosubtitle_set": [],
+                "cta_link": None,
+                "duration": 0,
+                "collection": {
+                    "key": "collection1",
+                    "title": "Same Collection",
+                    "description": "",
+                    "is_public": True,
+                },
+            },
+            {
+                "key": "video2",
+                "title": "Video 2",
+                "description": "",
+                "created_at": "2020-01-02T00:00:00Z",
+                "sources": [],
+                "videothumbnail_set": [],
+                "videosubtitle_set": [],
+                "cta_link": None,
+                "duration": 0,
+                "collection": {
+                    "key": "collection1",
+                    "title": "Same Collection",
+                    "description": "",
+                    "is_public": True,
+                },
+            },
+        ]
+        results = list(transform(videos))
+        assert len(results) == 1
+        assert results[0]["playlist_id"] == "collection1"
+        assert len(results[0]["videos"]) == 2

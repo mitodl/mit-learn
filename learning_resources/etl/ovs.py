@@ -16,6 +16,8 @@ from learning_resources.etl.constants import ETLSource
 
 log = logging.getLogger(__name__)
 
+OVS_API_PATH = "/api/v0/public/videos/"
+
 
 def _get_cloudfront_domain(video_data: dict) -> str | None:
     """
@@ -131,6 +133,25 @@ def _duration_to_iso8601(duration_seconds: float) -> str:
     return "".join(parts)
 
 
+def _get_resource_url(video_data: dict) -> str:
+    """
+    Get the user-facing URL for a video resource.
+
+    Uses cta_link if available, otherwise builds a URL from OVS_API_BASE_URL.
+
+    Args:
+        video_data: OVS video API response dict
+
+    Returns:
+        URL string for the resource
+    """
+    cta_link = video_data.get("cta_link")
+    if cta_link:
+        return cta_link
+    base_url = settings.OVS_API_BASE_URL.rstrip("/")
+    return f"{base_url}/videos/{video_data['key']}"
+
+
 def extract(*, url=None):
     """
     Extract public non-YouTube videos from the OVS API.
@@ -138,12 +159,12 @@ def extract(*, url=None):
     Handles pagination via the `next` field in the response.
 
     Args:
-        url: optional override for the API URL
+        url: optional override for the full API URL
 
     Yields:
         dict: individual video data dicts from the API
     """
-    api_url = url or settings.OVS_API_BASE_URL
+    api_url = url or f"{settings.OVS_API_BASE_URL.rstrip('/')}{OVS_API_PATH}"
 
     # Add exclude_resource=youtube param
     parsed = urlparse(api_url)
@@ -188,7 +209,7 @@ def _transform_video(video_data: dict) -> dict:
         "resource_type": LearningResourceType.video.name,
         "title": video_data.get("title", ""),
         "description": video_data.get("description", ""),
-        "url": _get_source_url(video_data),
+        "url": _get_resource_url(video_data),
         "image": image_data,
         "last_modified": video_data.get("created_at"),
         "offered_by": {"code": OfferedBy.ovs.name},
@@ -202,15 +223,50 @@ def _transform_video(video_data: dict) -> dict:
     }
 
 
+def _transform_collection(collection_data: dict) -> dict:
+    """
+    Transform an OVS collection into a playlist dict.
+
+    Args:
+        collection_data: the collection dict from an OVS video response
+
+    Returns:
+        dict with playlist metadata (without videos, which are added later)
+    """
+    return {
+        "playlist_id": collection_data["key"],
+        "platform": PlatformType.ovs.name,
+        "title": collection_data.get("title", ""),
+        "description": collection_data.get("description", ""),
+        "offered_by": {"code": OfferedBy.ovs.name},
+        "published": True,
+    }
+
+
 def transform(extracted_videos):
     """
-    Transform extracted OVS videos into LearningResource format.
+    Transform extracted OVS videos, grouped by collection into playlists.
 
     Args:
         extracted_videos: iterable of video dicts from extract()
 
     Yields:
-        dict: normalized video data for load_video()
+        dict: playlist data with nested videos list
     """
+    from collections import defaultdict
+
+    collections = {}
+    collection_videos = defaultdict(list)
+
     for video_data in extracted_videos:
-        yield _transform_video(video_data)
+        collection = video_data.get("collection")
+        if not collection or not collection.get("key"):
+            continue
+        collection_key = collection["key"]
+        if collection_key not in collections:
+            collections[collection_key] = _transform_collection(collection)
+        collection_videos[collection_key].append(_transform_video(video_data))
+
+    for collection_key, playlist_data in collections.items():
+        playlist_data["videos"] = collection_videos[collection_key]
+        yield playlist_data

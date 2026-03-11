@@ -1310,7 +1310,11 @@ class VideoPlaylist(LearningResourceDetailModel):
     )
 
     channel = models.ForeignKey(
-        VideoChannel, on_delete=models.CASCADE, related_name="playlists"
+        VideoChannel,
+        on_delete=models.CASCADE,
+        related_name="playlists",
+        null=True,
+        blank=True,
     )
 
     @cached_property
