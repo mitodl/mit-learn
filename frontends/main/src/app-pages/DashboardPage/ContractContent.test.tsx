@@ -289,6 +289,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         id: programIds,
         contract_id: orgX.contracts[0].id,
+        page_size: programIds.length,
       }),
       { results: [programB, programA] }, // Return in same order as requested
     )
@@ -367,6 +368,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         id: programIds,
         contract_id: orgX.contracts[0].id,
+        page_size: programIds.length,
       }),
       { results: [programA, programB] }, // API returns A first
     )
@@ -429,6 +431,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         id: [programA.id],
         contract_id: orgX.contracts[0].id,
+        page_size: 1,
       }),
       { results: [programA] },
     )
@@ -492,6 +495,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         id: programIds,
         contract_id: orgX.contracts[0].id,
+        page_size: programIds.length,
       }),
       { results: [programB, programA] },
     )
@@ -645,6 +649,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         id: programIds,
         contract_id: orgX.contracts[0].id,
+        page_size: programIds.length,
       }),
       { results: [programANoCourses, programB] },
     )

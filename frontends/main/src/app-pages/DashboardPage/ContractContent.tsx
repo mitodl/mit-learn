@@ -207,6 +207,7 @@ const useProgramCollectionCourses = (
     ...programsQueries.programsList({
       id: programIds,
       contract_id: contractId,
+      page_size: programIds.length,
     }),
     enabled: programIds.length > 0,
   })
