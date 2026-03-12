@@ -281,15 +281,6 @@ const getDashboardEnrollmentStatus = (
     : EnrollmentStatus.Enrolled
 }
 
-const getDefaultNoun = (resource: DashboardResource): string => {
-  if (resource.type === DashboardType.ProgramEnrollment) {
-    const displayMode = (resource.data.program as { display_mode?: string })
-      .display_mode
-    return displayMode === "course" ? "Course" : "Program"
-  }
-  return "Course"
-}
-
 const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
@@ -382,7 +373,6 @@ type CoursewareButtonProps = {
   href?: string | null
   disabled?: boolean
   className?: string
-  noun: string
   isProgram?: boolean
   isPending?: boolean
   "data-testid"?: string
@@ -392,26 +382,24 @@ type CoursewareButtonProps = {
 const getCoursewareTextAndIcon = ({
   endDate,
   enrollmentStatus,
-  noun,
   isProgram,
 }: {
   endDate?: string | null
   enrollmentStatus: EnrollmentStatus
-  noun: string
   isProgram?: boolean
 }) => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${noun}`, endIcon: null }
+    return { text: "Start", endIcon: null }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${noun}`, endIcon: null }
+    return { text: "View", endIcon: null }
   }
-  // Programs show "View Program" when enrolled, courses show "Continue"
+  // Programs show "View" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: `View ${noun}`, endIcon: null }
+    return { text: "View", endIcon: null }
   }
   return { text: "Continue", endIcon: <RiArrowRightLine /> }
 }
@@ -424,7 +412,6 @@ const CoursewareButton = styled(
     href,
     disabled,
     className,
-    noun,
     isProgram,
     onClick,
     isPending,
@@ -432,7 +419,6 @@ const CoursewareButton = styled(
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
       endDate,
-      noun,
       enrollmentStatus,
       isProgram,
     })
@@ -608,7 +594,6 @@ type DashboardCardProps = {
   resource: DashboardResource
   showNotComplete?: boolean
   offerUpgrade?: boolean
-  noun?: string
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
   buttonHref?: string | null
@@ -716,7 +701,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   resource,
   showNotComplete = true,
   offerUpgrade = true,
-  noun,
   contextMenuItems = [],
   isLoading = false,
   buttonHref,
@@ -735,7 +719,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   const run = getRun(resource, contractId)
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
   const certificateLink = getCertificateLink(resource)
-  const displayNoun = noun ?? getDefaultNoun(resource)
 
   const isCourse = resource.type === DashboardType.Course
   const isCourseRunEnrollment =
@@ -864,7 +847,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
         enrollmentStatus={enrollmentStatus}
         href={buttonHref ?? coursewareUrl}
         endDate={run?.end_date}
-        noun={displayNoun}
         isProgram={false}
         disabled={disableEnrollment}
         isPending={enrollment.isPending}
@@ -926,7 +908,6 @@ type DashboardProgramCardProps = DashboardCardSharedProps & {
 
 const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
   resource,
-  noun,
   contextMenuItems = [],
   isLoading = false,
   buttonHref,
@@ -938,7 +919,6 @@ const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
   const title = getTitle(resource)
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
   const certificateLink = getCertificateLink(resource)
-  const displayNoun = noun ?? getDefaultNoun(resource)
 
   const titleSection = isLoading ? (
     <>
@@ -967,7 +947,6 @@ const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
     <Skeleton variant="rectangular" width={120} height={32} />
   ) : (
     <CoursewareButton
-      noun={displayNoun}
       isProgram={true}
       enrollmentStatus={enrollmentStatus}
       href={buttonHref ?? programView(resource.data.program.id)}
