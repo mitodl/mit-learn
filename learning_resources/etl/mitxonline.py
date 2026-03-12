@@ -372,6 +372,8 @@ def transform_courses(courses):
 
 
 def _fetch_courses_by_ids(course_ids):
+    if not course_ids:
+        return []
     if settings.MITX_ONLINE_COURSES_API_URL:
         return list(
             _fetch_data(
