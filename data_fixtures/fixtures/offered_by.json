@@ -136,21 +136,5 @@
       "created_on": "2023-08-08T14:27:25.128989+00:00",
       "updated_on": "2023-08-08T14:27:25.128989+00:00"
     }
-  },
-  {
-    "model": "learning_resources.LearningResourceOfferor",
-    "fields": {
-      "name": "ODL Video Service",
-      "code": "ovs",
-      "professional": false,
-      "offerings": ["Videos"],
-      "audience": ["Everyone"],
-      "formats": ["Online"],
-      "fee": ["Free"],
-      "certifications": ["No Certificates"],
-      "content_types": ["Academic"],
-      "created_on": "2026-03-11T00:00:00+00:00",
-      "updated_on": "2026-03-11T00:00:00+00:00"
-    }
   }
 ]
