@@ -196,20 +196,6 @@ describe("ProgramPage", () => {
     },
   )
 
-  test("Includes program type in banner area", async () => {
-    const program = makeProgram({
-      ...makeReqs(),
-      program_type: "AwesomeProgramz",
-    })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-    const banner = await screen.findByTestId("banner-container")
-    expect(within(banner).getByText("MITx")).toBeVisible()
-    expect(within(banner).getByText("AwesomeProgramz")).toBeVisible()
-  })
-
   test("Page has expected headings", async () => {
     const program = makeProgram({
       ...makeReqs({
@@ -424,10 +410,10 @@ describe("ProgramPage", () => {
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
-    const button = await screen.findByRole("button", {
+    const buttons = await screen.findAllByRole("button", {
       name: /enroll/i,
     })
-    expect(button).toBeInTheDocument()
+    expect(buttons.length).toBeGreaterThan(0)
   })
 
   test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {

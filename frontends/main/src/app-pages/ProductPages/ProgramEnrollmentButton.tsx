@@ -7,7 +7,13 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Alert, Button, ButtonLink, styled } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  styled,
+  ButtonProps,
+} from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -28,9 +34,13 @@ const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
+  variant?: ButtonProps["variant"]
+  className?: string
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -90,15 +100,16 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     <>
       <Stack gap="12px">
         {enrollment ? (
-          <ButtonLinkWithDisabled href={href}>
+          <ButtonLinkWithDisabled href={href} className={className}>
             Enrolled
             <RiCheckLine aria-hidden="true" />
           </ButtonLinkWithDisabled>
         ) : (
           <Button
             onClick={handleClick}
-            variant="primary"
+            variant={variant}
             size="large"
+            className={className}
             disabled={
               enrollmentType === "none" ||
               isPaidWithoutPrice ||
