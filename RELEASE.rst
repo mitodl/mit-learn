@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.57.1
+--------------
+
+- fix: change the banner design (#3032)
+- Advertise parent programs on course product pages (#3029)
+- Make sure x-csrf headers are sent for AI response feedback requests (#3035)
+- handle null values coming back on feature_img_src from mitxonline (#3015)
+- Increase page size to 30 for contract programs (#3036)
+
 Version 0.57.0 (Released March 10, 2026)
 --------------
 
