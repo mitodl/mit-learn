@@ -1201,7 +1201,6 @@ paths:
             - mitpe
             - see
             - climate
-            - ovs
             type: string
             description: |-
               * `mitx` - MITx
@@ -1211,12 +1210,10 @@ paths:
               * `mitpe` - MIT Professional Education
               * `see` - MIT Sloan Executive Education
               * `climate` - MIT Climate
-              * `ovs` - ODL Video Service
         description: "The organization that offers the learning resource         \
           \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
           \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
-          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate\n* `ovs`\
-          \ - ODL Video Service"
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: offset
         schema:
