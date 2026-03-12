@@ -34,56 +34,67 @@ describe("CallToActionSection", () => {
       {
         resourceType: ResourceTypeEnum.Course,
         platform: PlatformEnum.Xpro,
+        resourceCategory: "Course",
         expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Course,
         platform: PlatformEnum.Ocw,
+        resourceCategory: "Course",
         expectedText: "Access Course Materials",
       },
 
       {
         resourceType: ResourceTypeEnum.Program,
         platform: PlatformEnum.Xpro,
+        resourceCategory: "Program",
         expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Youtube,
+        resourceCategory: "Lecture Video",
         expectedText: "Watch on YouTube",
       },
       {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Ocw,
+        resourceCategory: "Lecture Video",
         expectedText: "Access Learning Material",
       },
       {
         resourceType: ResourceTypeEnum.VideoPlaylist,
         platform: PlatformEnum.Youtube,
+        resourceCategory: "Video Playlist",
         expectedText: "Watch on YouTube",
       },
       {
         resourceType: ResourceTypeEnum.Podcast,
         expectedText: "Listen to Podcast",
+        resourceCategory: "Podcast",
         platform: PlatformEnum.Podcast,
       },
       {
         resourceType: ResourceTypeEnum.PodcastEpisode,
         expectedText: "Listen to Podcast",
+        resourceCategory: "Podcast Episode",
         platform: PlatformEnum.Podcast,
       },
       {
-        resourceType: ResourceTypeEnum.Article,
+        resourceType: ResourceTypeEnum.Document,
+        resourceCategory: "Article",
         expectedText: "View Article",
         platform: PlatformEnum.Climate,
       },
       {
         resourceType: ResourceTypeEnum.Document,
         expectedText: "Access Learning Material",
+        resourceCategory: "Assignment",
         platform: PlatformEnum.Ocw,
       },
       {
         resourceType: ResourceTypeEnum.Document,
+        resourceCategory: "Assignment",
         expectedText: "Learn More",
         platform: PlatformEnum.Xpro,
       },
