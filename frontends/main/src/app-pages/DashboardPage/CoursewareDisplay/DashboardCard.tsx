@@ -282,9 +282,12 @@ const getDashboardEnrollmentStatus = (
 }
 
 const getDefaultNoun = (resource: DashboardResource): string => {
-  return resource.type === DashboardType.ProgramEnrollment
-    ? "Program"
-    : "Course"
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    const displayMode = (resource.data.program as { display_mode?: string })
+      .display_mode
+    return displayMode === "course" ? "Course" : "Program"
+  }
+  return "Course"
 }
 
 const useEnrollmentHandler = () => {
@@ -618,230 +621,36 @@ type DashboardCardProps = {
   onUpgradeError?: (error: string) => void
 }
 
-const DashboardCard: React.FC<DashboardCardProps> = ({
-  resource,
-  showNotComplete = true,
-  offerUpgrade = true,
-  noun,
-  contextMenuItems = [],
-  isLoading = false,
-  buttonHref,
-  buttonClick,
+type DashboardCardSharedProps = Omit<DashboardCardProps, "resource">
+
+type DashboardCourseResource =
+  | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
+  | { type: "courserun-enrollment"; data: CourseRunEnrollmentRequestV2 }
+
+type DashboardProgramResource = {
+  type: "program-enrollment"
+  data: V3UserProgramEnrollment
+}
+
+type DashboardCardLayoutProps = {
+  titleSection: React.ReactNode
+  buttonSection: React.ReactNode
+  startDateSection: React.ReactNode
+  contextMenu: React.ReactNode
+  Component?: React.ElementType
+  className?: string
+  variant?: "default" | "stacked"
+}
+
+const DashboardCardLayout: React.FC<DashboardCardLayoutProps> = ({
+  titleSection,
+  buttonSection,
+  startDateSection,
+  contextMenu,
   Component,
   className,
   variant = "default",
-  contractId,
-  programEnrollment,
-  onUpgradeError,
 }) => {
-  const enrollment = useEnrollmentHandler()
-  const useProductPages = useFeatureFlagEnabled(
-    FeatureFlags.MitxOnlineProductPages,
-  )
-
-  const title = getTitle(resource)
-  const run = getRun(resource, contractId)
-  const enrollmentStatus = getDashboardEnrollmentStatus(resource)
-  const certificateLink = getCertificateLink(resource)
-  const displayNoun = noun ?? getDefaultNoun(resource)
-
-  const isCourse = resource.type === DashboardType.Course
-  const isCourseRunEnrollment =
-    resource.type === DashboardType.CourseRunEnrollment
-  const isProgramEnrollment = resource.type === DashboardType.ProgramEnrollment
-  const isAnyCourse = isCourse || isCourseRunEnrollment
-
-  const coursewareUrl = run?.courseware_url
-  const b2bContractId = run?.b2b_contract ?? contractId
-
-  const hasEnrollableRuns = isCourse
-    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
-    : true
-
-  const disableEnrollment = isCourse && !hasEnrollableRuns
-
-  const readableId = isCourse
-    ? run?.courseware_id
-    : isCourseRunEnrollment
-      ? resource.data.run.courseware_id
-      : isProgramEnrollment
-        ? resource.data.program.readable_id
-        : undefined
-
-  const includeInLearnCatalog = isCourse
-    ? resource.data.include_in_learn_catalog
-    : isCourseRunEnrollment
-      ? resource.data.run.course.include_in_learn_catalog
-      : true
-
-  const canUpgrade =
-    isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-    (run?.is_upgradable ?? false)
-
-  // Handle enrollment click for courses
-  const handleEnrollmentClick = React.useCallback(() => {
-    if (isCourse) {
-      const isVerifiedProgramEnrollment =
-        programEnrollment?.enrollment_mode === EnrollmentMode.Verified
-
-      enrollment.enroll({
-        course: resource.data,
-        readableId: readableId,
-        href: buttonHref ?? coursewareUrl ?? undefined,
-        isB2B: !!b2bContractId,
-        isVerifiedProgram: isVerifiedProgramEnrollment,
-        programCourseRunId: isVerifiedProgramEnrollment ? run?.id : undefined,
-      })
-    }
-  }, [
-    isCourse,
-    resource,
-    readableId,
-    coursewareUrl,
-    b2bContractId,
-    run?.id,
-    buttonHref,
-    enrollment,
-    programEnrollment?.enrollment_mode,
-  ])
-
-  // Determine title behavior (link vs clickable text vs plain text)
-  const titleHref = isCourseRunEnrollment
-    ? (buttonHref ?? coursewareUrl)
-    : isProgramEnrollment
-      ? programView(resource.data.program.id)
-      : undefined
-
-  const titleClick: React.MouseEventHandler | undefined = isCourse
-    ? (e) => {
-        e.preventDefault()
-        handleEnrollmentClick()
-      }
-    : undefined
-
-  // Button onClick handler
-  const coursewareButtonClick:
-    | React.MouseEventHandler<HTMLButtonElement>
-    | undefined = isCourse ? handleEnrollmentClick : buttonClick
-
-  // Build title section
-  const titleSection = isLoading ? (
-    <>
-      <Skeleton variant="text" width="95%" height={16} />
-      <Skeleton variant="text" width={120} height={16} />
-      <Skeleton variant="text" width={120} height={16} />
-    </>
-  ) : (
-    <>
-      {titleHref ? (
-        <TitleLink
-          size="medium"
-          color="black"
-          href={titleHref}
-          onClick={titleClick}
-        >
-          {title}
-        </TitleLink>
-      ) : titleClick ? (
-        <TitleText clickable onClick={titleClick}>
-          {title}
-        </TitleText>
-      ) : (
-        <TitleText>{title}</TitleText>
-      )}
-      {certificateLink ? (
-        <SubtitleLink href={certificateLink}>
-          <RiAwardLine size="16px" />
-          View Certificate
-        </SubtitleLink>
-      ) : null}
-      {isCourseRunEnrollment &&
-      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-      offerUpgrade ? (
-        <UpgradeBanner
-          data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
-          certificateUpgradeDeadline={run?.upgrade_deadline}
-          certificateUpgradePrice={run?.products?.[0]?.price}
-          productId={run?.products?.[0]?.id}
-          onError={() => {
-            onUpgradeError?.(
-              "There was a problem adding the certificate to your cart.",
-            )
-          }}
-        />
-      ) : null}
-    </>
-  )
-
-  // Build button section
-  const buttonSection = isLoading ? (
-    <Skeleton variant="rectangular" width={120} height={32} />
-  ) : isAnyCourse ? (
-    <>
-      <EnrollmentStatusIndicator
-        status={enrollmentStatus}
-        showNotComplete={showNotComplete}
-      />
-      <CoursewareButton
-        data-testid="courseware-button"
-        startDate={run?.start_date}
-        enrollmentStatus={enrollmentStatus}
-        href={buttonHref ?? coursewareUrl}
-        endDate={run?.end_date}
-        noun={displayNoun}
-        isProgram={false}
-        disabled={disableEnrollment}
-        isPending={enrollment.isPending}
-        onClick={coursewareButtonClick}
-      />
-    </>
-  ) : isProgramEnrollment &&
-    resource.type === DashboardType.ProgramEnrollment ? (
-    <CoursewareButton
-      noun={displayNoun}
-      isProgram={true}
-      enrollmentStatus={enrollmentStatus}
-      href={buttonHref ?? programView(resource.data.program.id)}
-    />
-  ) : null
-
-  // Build start date section
-  const startDateSection = isLoading ? (
-    <Skeleton variant="text" width={100} height={24} />
-  ) : isAnyCourse && run?.start_date ? (
-    <CourseStartCountdown startDate={run.start_date} />
-  ) : null
-
-  // Build context menu
-  const menuItems = getContextMenuItems(
-    title,
-    resource,
-    useProductPages ?? false,
-    includeInLearnCatalog,
-    contextMenuItems,
-  )
-
-  const contextMenu = isLoading ? (
-    <Skeleton variant="rectangular" width={12} height={24} />
-  ) : (
-    <SimpleMenu
-      items={menuItems}
-      trigger={
-        <MenuButton
-          size="small"
-          variant="text"
-          aria-label="More options"
-          status={enrollmentStatus}
-          hidden={menuItems.length === 0}
-        >
-          <RiMore2Line />
-        </MenuButton>
-      }
-    />
-  )
-
   return (
     <>
       <CardRoot
@@ -898,4 +707,348 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 }
 
-export { DashboardCard, CardRoot as DashboardCardRoot, getContextMenuItems }
+type DashboardCourseCardProps = DashboardCardSharedProps & {
+  resource: DashboardCourseResource
+  useProductPages: boolean
+}
+
+const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
+  resource,
+  showNotComplete = true,
+  offerUpgrade = true,
+  noun,
+  contextMenuItems = [],
+  isLoading = false,
+  buttonHref,
+  buttonClick,
+  Component,
+  className,
+  variant = "default",
+  contractId,
+  programEnrollment,
+  onUpgradeError,
+  useProductPages,
+}) => {
+  const enrollment = useEnrollmentHandler()
+
+  const title = getTitle(resource)
+  const run = getRun(resource, contractId)
+  const enrollmentStatus = getDashboardEnrollmentStatus(resource)
+  const certificateLink = getCertificateLink(resource)
+  const displayNoun = noun ?? getDefaultNoun(resource)
+
+  const isCourse = resource.type === DashboardType.Course
+  const isCourseRunEnrollment =
+    resource.type === DashboardType.CourseRunEnrollment
+
+  const coursewareUrl = run?.courseware_url
+  const b2bContractId = run?.b2b_contract ?? contractId
+
+  const hasEnrollableRuns = isCourse
+    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    : true
+
+  const disableEnrollment = isCourse && !hasEnrollableRuns
+
+  const readableId = isCourse
+    ? run?.courseware_id
+    : isCourseRunEnrollment
+      ? resource.data.run.courseware_id
+      : undefined
+
+  const includeInLearnCatalog = isCourse
+    ? resource.data.include_in_learn_catalog
+    : resource.data.run.course.include_in_learn_catalog
+
+  const canUpgrade =
+    isCourseRunEnrollment &&
+    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    (run?.is_upgradable ?? false)
+
+  const handleEnrollmentClick = React.useCallback(() => {
+    if (!isCourse) return
+
+    const isVerifiedProgramEnrollment =
+      programEnrollment?.enrollment_mode === EnrollmentMode.Verified
+
+    enrollment.enroll({
+      course: resource.data,
+      readableId,
+      href: buttonHref ?? coursewareUrl ?? undefined,
+      isB2B: !!b2bContractId,
+      isVerifiedProgram: isVerifiedProgramEnrollment,
+      programCourseRunId: isVerifiedProgramEnrollment ? run?.id : undefined,
+    })
+  }, [
+    b2bContractId,
+    buttonHref,
+    coursewareUrl,
+    enrollment,
+    isCourse,
+    programEnrollment?.enrollment_mode,
+    readableId,
+    resource,
+    run?.id,
+  ])
+
+  const titleHref = isCourseRunEnrollment ? (buttonHref ?? coursewareUrl) : null
+  const titleClick: React.MouseEventHandler | undefined = isCourse
+    ? (e) => {
+        e.preventDefault()
+        handleEnrollmentClick()
+      }
+    : undefined
+
+  const coursewareButtonClick:
+    | React.MouseEventHandler<HTMLButtonElement>
+    | undefined = isCourse ? handleEnrollmentClick : buttonClick
+
+  const titleSection = isLoading ? (
+    <>
+      <Skeleton variant="text" width="95%" height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+    </>
+  ) : (
+    <>
+      {titleHref ? (
+        <TitleLink
+          size="medium"
+          color="black"
+          href={titleHref}
+          onClick={titleClick}
+        >
+          {title}
+        </TitleLink>
+      ) : (
+        <TitleText clickable={Boolean(titleClick)} onClick={titleClick}>
+          {title}
+        </TitleText>
+      )}
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink}>
+          <RiAwardLine size="16px" />
+          View Certificate
+        </SubtitleLink>
+      ) : null}
+      {isCourseRunEnrollment &&
+      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+      offerUpgrade ? (
+        <UpgradeBanner
+          data-testid="upgrade-root"
+          canUpgrade={canUpgrade}
+          certificateUpgradeDeadline={run?.upgrade_deadline}
+          certificateUpgradePrice={run?.products?.[0]?.price}
+          productId={run?.products?.[0]?.id}
+          onError={() => {
+            onUpgradeError?.(
+              "There was a problem adding the certificate to your cart.",
+            )
+          }}
+        />
+      ) : null}
+    </>
+  )
+
+  const buttonSection = isLoading ? (
+    <Skeleton variant="rectangular" width={120} height={32} />
+  ) : (
+    <>
+      <EnrollmentStatusIndicator
+        status={enrollmentStatus}
+        showNotComplete={showNotComplete}
+      />
+      <CoursewareButton
+        data-testid="courseware-button"
+        startDate={run?.start_date}
+        enrollmentStatus={enrollmentStatus}
+        href={buttonHref ?? coursewareUrl}
+        endDate={run?.end_date}
+        noun={displayNoun}
+        isProgram={false}
+        disabled={disableEnrollment}
+        isPending={enrollment.isPending}
+        onClick={coursewareButtonClick}
+      />
+    </>
+  )
+
+  const startDateSection = isLoading ? (
+    <Skeleton variant="text" width={100} height={24} />
+  ) : run?.start_date ? (
+    <CourseStartCountdown startDate={run.start_date} />
+  ) : null
+
+  const menuItems = getContextMenuItems(
+    title,
+    resource,
+    useProductPages,
+    includeInLearnCatalog,
+    contextMenuItems,
+  )
+
+  const contextMenu = isLoading ? (
+    <Skeleton variant="rectangular" width={12} height={24} />
+  ) : (
+    <SimpleMenu
+      items={menuItems}
+      trigger={
+        <MenuButton
+          size="small"
+          variant="text"
+          aria-label="More options"
+          status={enrollmentStatus}
+          hidden={menuItems.length === 0}
+        >
+          <RiMore2Line />
+        </MenuButton>
+      }
+    />
+  )
+
+  return (
+    <DashboardCardLayout
+      titleSection={titleSection}
+      buttonSection={buttonSection}
+      startDateSection={startDateSection}
+      contextMenu={contextMenu}
+      Component={Component}
+      className={className}
+      variant={variant}
+    />
+  )
+}
+
+type DashboardProgramCardProps = DashboardCardSharedProps & {
+  resource: DashboardProgramResource
+  useProductPages: boolean
+}
+
+const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
+  resource,
+  noun,
+  contextMenuItems = [],
+  isLoading = false,
+  buttonHref,
+  Component,
+  className,
+  variant = "default",
+  useProductPages,
+}) => {
+  const title = getTitle(resource)
+  const enrollmentStatus = getDashboardEnrollmentStatus(resource)
+  const certificateLink = getCertificateLink(resource)
+  const displayNoun = noun ?? getDefaultNoun(resource)
+
+  const titleSection = isLoading ? (
+    <>
+      <Skeleton variant="text" width="95%" height={16} />
+      <Skeleton variant="text" width={120} height={16} />
+    </>
+  ) : (
+    <>
+      <TitleLink
+        size="medium"
+        color="black"
+        href={programView(resource.data.program.id)}
+      >
+        {title}
+      </TitleLink>
+      {certificateLink ? (
+        <SubtitleLink href={certificateLink}>
+          <RiAwardLine size="16px" />
+          View Certificate
+        </SubtitleLink>
+      ) : null}
+    </>
+  )
+
+  const buttonSection = isLoading ? (
+    <Skeleton variant="rectangular" width={120} height={32} />
+  ) : (
+    <CoursewareButton
+      noun={displayNoun}
+      isProgram={true}
+      enrollmentStatus={enrollmentStatus}
+      href={buttonHref ?? programView(resource.data.program.id)}
+    />
+  )
+
+  const startDateSection = isLoading ? (
+    <Skeleton variant="text" width={100} height={24} />
+  ) : null
+
+  const menuItems = getContextMenuItems(
+    title,
+    resource,
+    useProductPages,
+    true,
+    contextMenuItems,
+  )
+
+  const contextMenu = isLoading ? (
+    <Skeleton variant="rectangular" width={12} height={24} />
+  ) : (
+    <SimpleMenu
+      items={menuItems}
+      trigger={
+        <MenuButton
+          size="small"
+          variant="text"
+          aria-label="More options"
+          status={enrollmentStatus}
+          hidden={menuItems.length === 0}
+        >
+          <RiMore2Line />
+        </MenuButton>
+      }
+    />
+  )
+
+  return (
+    <DashboardCardLayout
+      titleSection={titleSection}
+      buttonSection={buttonSection}
+      startDateSection={startDateSection}
+      contextMenu={contextMenu}
+      Component={Component}
+      className={className}
+      variant={variant}
+    />
+  )
+}
+
+const DashboardCard: React.FC<DashboardCardProps> = ({
+  resource,
+  ...props
+}) => {
+  const useProductPages = useFeatureFlagEnabled(
+    FeatureFlags.MitxOnlineProductPages,
+  )
+
+  if (resource.type === DashboardType.ProgramEnrollment) {
+    return (
+      <DashboardProgramCard
+        resource={resource}
+        useProductPages={useProductPages ?? false}
+        {...props}
+      />
+    )
+  }
+
+  return (
+    <DashboardCourseCard
+      resource={resource}
+      useProductPages={useProductPages ?? false}
+      {...props}
+    />
+  )
+}
+
+export {
+  DashboardCard,
+  DashboardCourseCard,
+  DashboardProgramCard,
+  CardRoot as DashboardCardRoot,
+  getContextMenuItems,
+}
