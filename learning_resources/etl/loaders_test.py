@@ -1783,6 +1783,9 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
         "learning_resources.etl.loaders.most_common_topics",
         return_value=expected_topics,
     )
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
     if playlist_exists:
         playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
@@ -1833,11 +1836,23 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
     if playlist_exists:
         deleted_video.refresh_from_db()
         assert not deleted_video.published
+        mock_bulk_unpublish.assert_called_once_with(
+            [deleted_video.id],
+            LearningResourceType.video.name,
+        )
+    else:
+        mock_bulk_unpublish.assert_called_once_with(
+            [],
+            LearningResourceType.video.name,
+        )
 
 
 def test_load_playlists_unpublish(mocker):
     """Test load_playlists when a video/playlist gets unpublished"""
     mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
 
     playlists = sorted(
@@ -1874,6 +1889,15 @@ def test_load_playlists_unpublish(mocker):
             assert playlist.learning_resource.published is True
         else:
             assert playlist.learning_resource.published is False
+
+    expected_unpublished_ids = sorted(p.learning_resource.id for p in playlists[1:])
+    playlist_unpublish_call = next(
+        call
+        for call in mock_bulk_unpublish.call_args_list
+        if call[0][1] == LearningResourceType.video_playlist.name
+    )
+    actual_unpublished_ids = sorted(playlist_unpublish_call[0][0])
+    assert actual_unpublished_ids == expected_unpublished_ids
 
 
 def test_load_video_channels():

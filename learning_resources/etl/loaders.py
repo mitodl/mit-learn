@@ -1280,9 +1280,10 @@ def load_ovs_playlist(playlist_data: dict) -> LearningResource:
         resource_type=LearningResourceType.video.name,
         published=True,
     ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
     unpublished_videos.update(published=False)
     bulk_resources_unpublished_actions(
-        unpublished_videos.values_list("id", flat=True),
+        unpublished_video_ids,
         LearningResourceType.video.name,
     )
 
@@ -1330,9 +1331,10 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
         platform=ovs_platform,
         published=True,
     ).exclude(id__in=playlist_ids)
+    stale_playlist_ids = list(stale_playlists.values_list("id", flat=True))
     stale_playlists.update(published=False)
     bulk_resources_unpublished_actions(
-        stale_playlists.values_list("id", flat=True),
+        stale_playlist_ids,
         LearningResourceType.video_playlist.name,
     )
 
@@ -1473,9 +1475,10 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         resource_type=LearningResourceType.video.name,
         published=True,
     ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
     unpublished_videos.update(published=False)
     bulk_resources_unpublished_actions(
-        unpublished_videos.values_list("id", flat=True),
+        unpublished_video_ids,
         LearningResourceType.video.name,
     )
 
