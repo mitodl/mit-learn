@@ -21,10 +21,17 @@ import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
+import CourseEnrollmentButton from "./CourseEnrollmentButton"
 
 type CoursePageProps = {
   readableId: string
 }
+
+const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+  }),
+)
 
 const PrerequisitesSection = styled.section({
   display: "flex",
@@ -63,13 +70,15 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      tags={["MITx"]}
-      currentBreadcrumbLabel="Course"
+      currentBreadcrumbLabel="Learning Path"
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       infoBox={<CourseInfoBox course={course} />}
+      enrollmentAction={
+        <StyledCourseEnrollmentButton course={course} variant="bordered" />
+      }
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />

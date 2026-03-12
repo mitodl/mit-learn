@@ -5,7 +5,7 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { Alert, Button } from "@mitodl/smoot-design"
+import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -46,9 +46,13 @@ const getButtonText = (nextRun?: CourseRunV2, priceDisplay?: string) => {
 
 type CourseEnrollmentButtonProps = {
   course: CourseWithCourseRunsSerializerV2
+  variant?: ButtonProps["variant"]
+  className?: string
 }
 const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   course,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -108,6 +112,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     <>
       <Stack gap="12px">
         <Button
+          className={className}
           disabled={
             !nextRun ||
             enrollmentType === "none" ||
@@ -115,7 +120,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
             isPending
           }
           onClick={handleClick}
-          variant="primary"
+          variant={variant}
           size="large"
           data-testid="course-enrollment-button"
           endIcon={

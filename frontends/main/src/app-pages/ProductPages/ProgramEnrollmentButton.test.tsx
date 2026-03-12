@@ -50,7 +50,9 @@ describe("ProgramEnrollmentButton", () => {
     )
     setMockResponse.get(urls.userMe.get(), userResponse.promise)
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     await Promise.resolve() // tick forward
     screen.getByRole("progressbar", { name: "Loading" })
@@ -83,7 +85,9 @@ describe("ProgramEnrollmentButton", () => {
     )
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const enrolledButton = await screen.findByText(ENROLLED)
     // When feature flag is off, button should not have href
@@ -109,7 +113,9 @@ describe("ProgramEnrollmentButton", () => {
     )
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const enrolledLink = await screen.findByRole("link", { name: ENROLLED })
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
@@ -120,7 +126,7 @@ describe("ProgramEnrollmentButton", () => {
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
     const { location } = renderWithProviders(
-      <ProgramEnrollmentButton program={program} />,
+      <ProgramEnrollmentButton program={program} variant="primary" />,
     )
 
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
@@ -160,7 +166,9 @@ describe("ProgramEnrollmentButton", () => {
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const enrollButton = await screen.findByRole("button", {
       name: ENROLL_FREE,
@@ -185,7 +193,9 @@ describe("ProgramEnrollmentButton", () => {
     const basketUrl = mitxUrls.baskets.createFromProduct(product.id)
     setMockResponse.post(basketUrl, { id: 1, items: [] })
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const enrollButton = await screen.findByRole("button", {
       name: /Enroll Now/,
@@ -219,7 +229,9 @@ describe("ProgramEnrollmentButton", () => {
     const { promise } = Promise.withResolvers()
     setMockResponse.delete(mitxUrls.baskets.clear(), promise)
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: /Enroll Now/ })
     await user.click(button)
@@ -240,7 +252,9 @@ describe("ProgramEnrollmentButton", () => {
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.delete(mitxUrls.baskets.clear(), undefined, { code: 500 })
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: /Enroll Now/ })
     await user.click(button)
@@ -263,7 +277,9 @@ describe("ProgramEnrollmentButton", () => {
       { code: 500 },
     )
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: ENROLL_FREE })
     await user.click(button)
@@ -285,7 +301,9 @@ describe("ProgramEnrollmentButton", () => {
       makeUser({ is_authenticated: false }),
     )
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", {
       name: "Enroll Now—$1,500",
@@ -302,7 +320,9 @@ describe("ProgramEnrollmentButton", () => {
     setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: ENROLL_FREE })
     expect(button).toBeDisabled()
@@ -320,7 +340,9 @@ describe("ProgramEnrollmentButton", () => {
       makeUser({ is_authenticated: false }),
     )
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: "Enroll Now" })
     expect(button).toBeDisabled()
@@ -340,7 +362,9 @@ describe("ProgramEnrollmentButton", () => {
       makeUser({ is_authenticated: false }),
     )
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const button = await screen.findByRole("button", { name: ENROLL_FREE })
     expect(button).toBeInTheDocument()
@@ -359,7 +383,9 @@ describe("ProgramEnrollmentButton", () => {
       makeUser({ is_authenticated: false }),
     )
 
-    renderWithProviders(<ProgramEnrollmentButton program={program} />)
+    renderWithProviders(
+      <ProgramEnrollmentButton program={program} variant="primary" />,
+    )
 
     const enrollButton = await screen.findByRole("button", {
       name: ENROLL_FREE,
