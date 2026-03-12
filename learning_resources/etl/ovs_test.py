@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+import requests
 
 from learning_resources.constants import (
     Availability,
@@ -14,13 +15,20 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ovs import (
     _build_caption_urls,
     _duration_to_iso8601,
+    _fetch_transcript,
     _get_cover_image_url,
     _get_resource_url,
     _get_source_url,
     _transform_collection,
     _transform_video,
     extract,
+    get_ovs_transcripts,
+    get_ovs_videos_for_transcripts_job,
     transform,
+)
+from learning_resources.factories import (
+    LearningResourcePlatformFactory,
+    VideoFactory,
 )
 from main.test_utils import assert_json_equal
 
@@ -387,3 +395,252 @@ class TestTransform:
         assert len(results) == 1
         assert results[0]["playlist_id"] == "collection1"
         assert len(results[0]["videos"]) == 2
+
+
+@pytest.fixture
+def ovs_platform():
+    """Create OVS platform for tests."""
+    return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
+
+
+def test_fetch_transcript_english(mocker):
+    """Should fetch and return English transcript text via Tika"""
+    mock_extract = mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        return_value={"content": "  Hello world transcript  "},
+    )
+    caption_urls = [
+        {"language": "en", "url": "https://example.com/subtitles_en.vtt"},
+    ]
+    result = _fetch_transcript(caption_urls)
+    assert result == "Hello world transcript"
+    mock_extract.assert_called_once_with(
+        "https://example.com/subtitles_en.vtt", mime_type="text/vtt"
+    )
+
+
+def test_fetch_transcript_picks_english(mocker):
+    """Should pick the English caption from multiple languages"""
+    mock_extract = mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        return_value={"content": "English text"},
+    )
+    caption_urls = [
+        {"language": "es", "url": "https://example.com/subtitles_es.vtt"},
+        {"language": "en", "url": "https://example.com/subtitles_en.vtt"},
+    ]
+    result = _fetch_transcript(caption_urls)
+    assert result == "English text"
+    mock_extract.assert_called_once_with(
+        "https://example.com/subtitles_en.vtt", mime_type="text/vtt"
+    )
+
+
+def test_fetch_transcript_no_english(mocker):
+    """Should return empty string when no English caption exists"""
+    mock_extract = mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+    )
+    caption_urls = [
+        {"language": "es", "url": "https://example.com/subtitles_es.vtt"},
+    ]
+    result = _fetch_transcript(caption_urls)
+    assert result == ""
+    mock_extract.assert_not_called()
+
+
+def test_fetch_transcript_empty_captions(mocker):
+    """Should return empty string for empty caption list"""
+    mocker.patch("learning_resources.etl.ovs.extract_text_from_url")
+    assert _fetch_transcript([]) == ""
+
+
+def test_fetch_transcript_request_error(mocker):
+    """Should return empty string and log warning on request failure"""
+    mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        side_effect=requests.RequestException("Connection error"),
+    )
+    caption_urls = [
+        {"language": "en", "url": "https://example.com/subtitles_en.vtt"},
+    ]
+    result = _fetch_transcript(caption_urls)
+    assert result == ""
+
+
+def test_fetch_transcript_tika_returns_none(mocker):
+    """Should return empty string when Tika returns None"""
+    mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        return_value=None,
+    )
+    caption_urls = [
+        {"language": "en", "url": "https://example.com/subtitles_en.vtt"},
+    ]
+    result = _fetch_transcript(caption_urls)
+    assert result == ""
+
+
+def test_filters_ovs_videos_without_transcripts(ovs_platform):
+    """Should return OVS videos with empty transcripts"""
+    video = VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert list(results) == [video.learning_resource]
+
+
+def test_excludes_videos_with_transcripts(ovs_platform):
+    """Should exclude videos that already have transcripts"""
+    VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="Existing transcript",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert results.count() == 0
+
+
+def test_includes_with_overwrite(ovs_platform):
+    """Should include videos with existing transcripts when overwrite=True"""
+    video = VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="Existing transcript",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    results = get_ovs_videos_for_transcripts_job(overwrite=True)
+    assert list(results) == [video.learning_resource]
+
+
+def test_excludes_non_ovs_videos():
+    """Should not return YouTube or other platform videos"""
+    yt_platform = LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+    VideoFactory.create(
+        learning_resource__platform=yt_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert results.count() == 0
+
+
+def test_excludes_videos_without_english_captions(ovs_platform):
+    """Should not return videos that only have non-English captions"""
+    VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[{"language": "es", "url": "https://example.com/es.vtt"}],
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert results.count() == 0
+
+
+def test_excludes_videos_with_empty_captions(ovs_platform):
+    """Should not return videos with empty caption_urls"""
+    VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[],
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert results.count() == 0
+
+
+def test_excludes_unpublished(ovs_platform):
+    """Should not return unpublished videos"""
+    VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=False,
+        transcript="",
+    )
+    results = get_ovs_videos_for_transcripts_job()
+    assert results.count() == 0
+
+
+def test_fetches_and_saves_transcript(mocker, ovs_platform):
+    """Should fetch transcript, save to video, and update index"""
+    video = VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        return_value={"content": "Transcript text"},
+    )
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.ovs.update_index",
+    )
+
+    get_ovs_transcripts([video.learning_resource])
+
+    video.refresh_from_db()
+    assert video.transcript == "Transcript text"
+    mock_update_index.assert_called_once_with(
+        video.learning_resource, newly_created=False
+    )
+
+
+def test_skips_videos_without_captions(mocker, ovs_platform):
+    """Should skip videos with no caption_urls"""
+    video = VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[],
+    )
+    mock_extract = mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+    )
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.ovs.update_index",
+    )
+
+    get_ovs_transcripts([video.learning_resource])
+
+    mock_extract.assert_not_called()
+    mock_update_index.assert_not_called()
+    video.refresh_from_db()
+    assert video.transcript == ""
+
+
+def test_skips_when_fetch_returns_empty(mocker, ovs_platform):
+    """Should not save or reindex when transcript fetch returns empty"""
+    video = VideoFactory.create(
+        learning_resource__platform=ovs_platform,
+        learning_resource__resource_type=LearningResourceType.video.name,
+        learning_resource__published=True,
+        transcript="",
+        caption_urls=[{"language": "en", "url": "https://example.com/en.vtt"}],
+    )
+    mocker.patch(
+        "learning_resources.etl.ovs.extract_text_from_url",
+        return_value=None,
+    )
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.ovs.update_index",
+    )
+
+    get_ovs_transcripts([video.learning_resource])
+
+    mock_update_index.assert_not_called()
+    video.refresh_from_db()
+    assert video.transcript == ""

@@ -12,6 +12,9 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.loaders import update_index
+from learning_resources.etl.utils import extract_text_from_url
+from learning_resources.models import LearningResource
 
 log = logging.getLogger(__name__)
 
@@ -269,3 +272,69 @@ def transform(extracted_videos):
     for collection_key, playlist_data in collections.items():
         playlist_data["videos"] = collection_videos[collection_key]
         yield playlist_data
+
+
+def _fetch_transcript(caption_urls: list[dict]) -> str:
+    """
+    Fetch English transcript text from a list of caption URLs using Tika.
+
+    Args:
+        caption_urls: list of dicts with language and url keys
+
+    Returns:
+        Extracted transcript text, or empty string if unavailable
+    """
+    for caption in caption_urls:
+        if caption.get("language") == "en":
+            try:
+                result = extract_text_from_url(caption["url"], mime_type="text/vtt")
+                if result and result.get("content"):
+                    return result["content"].strip()
+            except requests.RequestException:
+                log.warning("Failed to fetch transcript from %s", caption["url"])
+            break
+    return ""
+
+
+def get_ovs_videos_for_transcripts_job(
+    *, overwrite: bool = False
+) -> list[LearningResource]:
+    """
+    Get OVS video resources that need transcripts.
+
+    Args:
+        overwrite: if True, include videos that already have transcripts
+
+    Returns:
+        QuerySet of LearningResource objects
+    """
+    video_resources = LearningResource.objects.select_related("video").filter(
+        published=True,
+        resource_type=LearningResourceType.video.name,
+        platform__code=PlatformType.ovs.name,
+        video__caption_urls__contains=[{"language": "en"}],
+    )
+
+    if not overwrite:
+        video_resources = video_resources.filter(video__transcript="")
+
+    return video_resources
+
+
+def get_ovs_transcripts(video_resources):
+    """
+    Fetch transcripts for OVS video resources from their caption URLs.
+
+    Args:
+        video_resources: iterable of LearningResource objects with related video
+    """
+    for resource in video_resources:
+        caption_urls = resource.video.caption_urls
+        if not caption_urls:
+            continue
+        transcript = _fetch_transcript(caption_urls)
+        if transcript:
+            video = resource.video
+            video.transcript = transcript
+            video.save()
+            update_index(resource, newly_created=False)

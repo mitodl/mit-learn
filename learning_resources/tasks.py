@@ -12,7 +12,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.etl import pipelines, youtube
+from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -483,6 +483,23 @@ def get_youtube_transcripts(
 
     log.info("Updating transcripts for %i videos", videos.count())
     youtube.get_youtube_transcripts(videos)
+    clear_views_cache()
+
+
+@app.task
+def get_ovs_transcripts(*, overwrite=False):
+    """
+    Fetch transcripts for OVS videos from their caption URLs.
+
+    Args:
+        overwrite (bool):
+            if true, transcripts are updated for videos that already have transcripts
+    """
+
+    videos = ovs.get_ovs_videos_for_transcripts_job(overwrite=overwrite)
+
+    log.info("Updating OVS transcripts for %i videos", videos.count())
+    ovs.get_ovs_transcripts(videos)
     clear_views_cache()
 
 
