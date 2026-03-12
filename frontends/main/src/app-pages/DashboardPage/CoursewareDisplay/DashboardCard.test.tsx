@@ -269,23 +269,23 @@ describe.each([
     {
       createCourse: pastDashboardCourse,
       enrollmentData: { grades: [] },
-      expected: { label: "View", usesCourseNoun: true },
+      expected: { label: "View" },
       case: "past",
     },
     {
       createCourse: currentDashboardCourse,
       enrollmentData: { grades: [] },
-      expected: { label: "Continue", usesCourseNoun: false },
+      expected: { label: "Continue" },
       case: "current",
     },
     {
       createCourse: futureDashboardCourse,
       enrollmentData: { grades: [] },
-      expected: { label: "Continue", usesCourseNoun: false },
+      expected: { label: "Continue" },
       case: "future",
     },
   ])(
-    "Courseware CTA shows correct label based on courseNoun prop and dates (case $case)",
+    "Courseware CTA shows correct label based on dates (case $case)",
     ({ createCourse, enrollmentData, expected }) => {
       setupUserApis()
       const course = createCourse()
@@ -295,7 +295,7 @@ describe.each([
         run: { ...run, course: course }, // Include course in run
         certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
       })
-      const { view } = renderWithProviders(
+      renderWithProviders(
         <DashboardCard
           resource={{
             type: DashboardType.CourseRunEnrollment,
@@ -306,31 +306,7 @@ describe.each([
       const card = getCard()
       const coursewareCTA = within(card).getByTestId("courseware-button")
 
-      if (expected.usesCourseNoun) {
-        expect(coursewareCTA).toHaveTextContent(`${expected.label} Course`)
-      } else {
-        expect(coursewareCTA).toHaveTextContent(expected.label)
-      }
-
-      const courseNoun = faker.word.noun()
-      view.rerender(
-        <DashboardCard
-          noun={courseNoun}
-          resource={{
-            type: DashboardType.CourseRunEnrollment,
-            data: enrollment,
-          }}
-        />,
-      )
-
-      if (expected.usesCourseNoun) {
-        expect(coursewareCTA).toHaveTextContent(
-          `${expected.label} ${courseNoun}`,
-        )
-      } else {
-        // "Continue" doesn't use noun
-        expect(coursewareCTA).toHaveTextContent(expected.label)
-      }
+      expect(coursewareCTA).toHaveTextContent(expected.label)
     },
   )
 
@@ -961,7 +937,7 @@ describe.each([
       enrollmentData: {
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
       },
-      expectedText: "View Course",
+      expectedText: "View",
     },
     {
       enrollmentData: { grades: [] },
@@ -969,7 +945,7 @@ describe.each([
     },
     {
       enrollmentData: null,
-      expectedText: "Start Course",
+      expectedText: "Start",
     },
   ])(
     "CoursewareButton shows correct text based on enrollment status",
@@ -1009,7 +985,7 @@ describe.each([
     },
   )
 
-  test("CoursewareButton shows 'View Course' when course has ended even if not completed", () => {
+  test("CoursewareButton shows 'View' when course has ended even if not completed", () => {
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({
       start_date: faker.date.past().toISOString(),
@@ -1032,7 +1008,7 @@ describe.each([
     const card = getCard()
     const coursewareButton = within(card).getByTestId("courseware-button")
 
-    expect(coursewareButton).toHaveTextContent("View Course")
+    expect(coursewareButton).toHaveTextContent("View")
   })
 
   const setupEnrollmentApis = (opts: {
