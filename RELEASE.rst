@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.57.0 (Released March 10, 2026)
+--------------
+
+- Make sure enrollment_modes are always removed from mitxonline run dicts (#3033)
+- fix: change mit log link to home and termsof services (#3021)
+
+Version 0.56.10 (Released March 10, 2026)
+---------------
+
+- Avoid unnecessary task calls for contentfiles if none exist (#3017)
+- add ocw learning materials to search (#3018)
+
 Version 0.56.9 (Released March 09, 2026)
 --------------
 

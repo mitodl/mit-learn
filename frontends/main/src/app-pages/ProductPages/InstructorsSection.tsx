@@ -185,7 +185,7 @@ const InstructorsSection: React.FC<{ instructors: Faculty[] }> = ({
                   <InstructorImage
                     width={84}
                     height={84}
-                    src={instructor.feature_image_src}
+                    src={instructor.feature_image_src || ""}
                     alt=""
                   />
                 </InstructorAvatar>

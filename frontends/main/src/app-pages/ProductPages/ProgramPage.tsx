@@ -192,9 +192,10 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     return null
   }
 
-  const imageSrc = page.feature_image
-    ? page.program_details.page.feature_image_src
-    : DEFAULT_RESOURCE_IMG
+  // feature_image_src will be nullable in a future MITx Online API update
+  // (null means no image set). Fall back to our own default image.
+  const imageSrc =
+    page.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
   return (
     <ProductPageTemplate

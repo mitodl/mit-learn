@@ -161,13 +161,23 @@ const SummaryCol = styled.div(({ theme }) => ({
   },
 }))
 
-const SidebarVideo = styled.iframe(() => ({
+const SidebarVideo = styled.iframe(({ theme }) => ({
   borderRadius: "16px",
-  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   border: "none",
+  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
+  maxWidth: "410px",
   width: "100%",
   aspectRatio: "16 / 9",
-  display: "block",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    // Without this, the flex child stretches to the main column's height
+    // and sticky has no room to scroll.
+    alignSelf: "flex-start",
+    top: `${HEADER_HEIGHT + OFFSET_FROM_HEADER}px`,
+  },
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "none",
+  },
 }))
 
 const SidebarImage = styled(Image)(({ theme }) => ({
