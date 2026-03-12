@@ -57,7 +57,6 @@ MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
 MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
 
-
 # Open Learning Library settings
 OLL_COURSE_BUCKET_PREFIX = get_string(
     "OLL_COURSE_BUCKET_PREFIX", "open-learning-library/courses"

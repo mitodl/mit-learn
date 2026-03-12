@@ -554,6 +554,35 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
         assert getattr(result, key) == value, f"Property {key} should equal {value}"
 
 
+def test_load_course_content_tags(mock_upsert_tasks):
+    """Test that content_tags in course data are persisted as resource_tags"""
+    platform = LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+    now = now_in_utc()
+    props = {
+        "readable_id": "program-v1:MITx+test",
+        "platform": platform.code,
+        "etl_source": ETLSource.mitxonline.name,
+        "resource_type": LearningResourceType.course.name,
+        "title": "Test Program as Course",
+        "image": {"url": "https://www.test.edu/image.jpg"},
+        "description": "description",
+        "url": "https://test.edu",
+        "published": True,
+        "content_tags": ["Program as Course"],
+        "runs": [
+            {
+                "run_id": "program-v1:MITx+test",
+                "start_date": now,
+                "end_date": now + timedelta(30),
+            }
+        ],
+    }
+    result = load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+    assert list(result.resource_tags.values_list("name", flat=True)) == [
+        "Program as Course"
+    ]
+
+
 def test_load_course_bad_platform(mocker):
     """A bad platform should log an exception and not create the course"""
     mock_log = mocker.patch("learning_resources.etl.loaders.log.exception")

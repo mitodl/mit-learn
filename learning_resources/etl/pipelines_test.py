@@ -87,56 +87,72 @@ def test_mit_edx_programs_etl():
     assert result == mock_load_programs.return_value
 
 
-def test_mitxonline_programs_etl():
-    """Verify that mitxonline programs etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.mitxonline.extract_programs", autospec=True),
-        patch("learning_resources.etl.mitxonline.transform_programs", autospec=False),
-        patch("learning_resources.etl.loaders.load_programs", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_programs = patches
-        result = pipelines.mitxonline_programs_etl()
+def test_mitxonline_etl(mocker):
+    """Verify that the combined mitxonline etl pipeline executes correctly"""
+    mocker.patch(
+        "learning_resources.etl.mitxonline.features.is_enabled",
+        return_value=True,
+    )
+    regular_program = {"readable_id": "prog-1", "title": "Regular Program"}
+    course_program = {
+        "readable_id": "prog-2",
+        "title": "Course Program",
+        "display_mode": "course",
+    }
+    mock_extract_programs = mocker.patch(
+        "learning_resources.etl.mitxonline.extract_programs",
+        return_value=[regular_program, course_program],
+    )
+    mock_extract_courses = mocker.patch(
+        "learning_resources.etl.mitxonline.extract_courses",
+        return_value=[{"id": 1}],
+    )
+    mock_transform_courses = mocker.patch(
+        "learning_resources.etl.mitxonline.transform_courses",
+        return_value=[{"readable_id": "course-1"}],
+    )
+    mock_transform_programs_as_courses = mocker.patch(
+        "learning_resources.etl.mitxonline.transform_programs_as_courses",
+        return_value=[{"readable_id": "prog-2-as-course"}],
+    )
+    mock_transform_programs = mocker.patch(
+        "learning_resources.etl.mitxonline.transform_programs",
+        return_value=[{"readable_id": "prog-1-transformed"}],
+    )
+    mock_load_courses = mocker.patch("learning_resources.etl.loaders.load_courses")
+    mock_load_programs = mocker.patch("learning_resources.etl.loaders.load_programs")
 
-    mock_extract.assert_called_once_with()
+    results = pipelines.mitxonline_etl()
 
-    # each of these should be called with the return value of the extract
-    mock_transform.assert_called_once_with(mock_extract.return_value)
+    mock_extract_programs.assert_called_once_with()
+    mock_extract_courses.assert_called_once_with()
 
-    # load_courses should be called *only* with the return value of transform
+    # transform_courses should be called with extracted courses
+    mock_transform_courses.assert_called_once_with(mock_extract_courses.return_value)
+
+    # transform_programs_as_courses should get only display_mode="course" programs
+    mock_transform_programs_as_courses.assert_called_once_with([course_program])
+
+    # transform_programs should get only regular programs
+    mock_transform_programs.assert_called_once_with([regular_program])
+
+    # load_courses should get combined regular courses + programs-as-courses
+    mock_load_courses.assert_called_once_with(
+        ETLSource.mitxonline.name,
+        [{"readable_id": "course-1"}, {"readable_id": "prog-2-as-course"}],
+        config=CourseLoaderConfig(prune=True),
+    )
+
+    # load_programs should get only regular program transforms
     mock_load_programs.assert_called_once_with(
         ETLSource.mitxonline.name,
-        mock_transform.return_value,
+        list(mock_transform_programs.return_value),
         config=ProgramLoaderConfig(
             courses=CourseLoaderConfig(fetch_only=True), prune=True
         ),
     )
 
-    assert result == mock_load_programs.return_value
-
-
-def test_mitxonline_courses_etl():
-    """Verify that mitxonline courses etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.mitxonline.extract_courses", autospec=True),
-        patch("learning_resources.etl.mitxonline.transform_courses", autospec=False),
-        patch("learning_resources.etl.loaders.load_courses", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_courses = patches
-        result = pipelines.mitxonline_courses_etl()
-
-    mock_extract.assert_called_once_with()
-
-    # each of these should be called with the return value of the extract
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-
-    # load_courses should be called *only* with the return value of transform
-    mock_load_courses.assert_called_once_with(
-        ETLSource.mitxonline.name,
-        mock_transform.return_value,
-        config=CourseLoaderConfig(prune=True),
-    )
-
-    assert result == mock_load_courses.return_value
+    assert results == (mock_load_courses.return_value, mock_load_programs.return_value)
 
 
 def test_oll_etl():

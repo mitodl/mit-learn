@@ -1,5 +1,5 @@
 {
-  "count": 9,
+  "count": 10,
   "next": null,
   "previous": null,
   "results": [
@@ -111,6 +111,58 @@
       "duration": "12-14 weeks",
       "min_weeks": 12,
       "max_weeks": 14,
+      "time_commitment": "5-7 hrs/wk",
+      "min_weekly_hours": "5",
+      "max_weekly_hours": "7",
+      "enrollment_modes": [
+        { "mode_slug": "verified" },
+        { "mode_slug": "audit" }
+      ]
+    },
+    {
+      "title": "UAI Applied Data Science",
+      "readable_id": "program-v1:MITxT+UAI.DS",
+      "id": 99,
+      "courses": [62, 74],
+      "requirements": {
+        "required": [62, 74],
+        "electives": []
+      },
+      "req_tree": [],
+      "page": {
+        "feature_image_src": "/static/images/uai-data-science.png",
+        "page_url": "/programs/program-v1:MITxT+UAI.DS/",
+        "financial_assistance_form_url": "",
+        "description": "\u003Cp\u003EApplied Data Science program displayed as a course.\u003C/p\u003E",
+        "live": true,
+        "length": "10 weeks",
+        "effort": "5 hrs/wk",
+        "price": "$100"
+      },
+      "display_mode": "course",
+      "min_price": 100,
+      "max_price": 200,
+      "program_type": "Series",
+      "certificate_type": "Certificate of Completion",
+      "departments": [
+        {
+          "name": "Mathematics"
+        }
+      ],
+      "live": true,
+      "topics": [
+        {
+          "name": "Mathematics"
+        }
+      ],
+      "availability": "anytime",
+      "start_date": "2024-01-15T00:00:00Z",
+      "end_date": "2024-04-15T00:00:00Z",
+      "enrollment_start": "2024-01-01T00:00:00Z",
+      "enrollment_end": "2024-04-01T00:00:00Z",
+      "duration": "10-12 weeks",
+      "min_weeks": 10,
+      "max_weeks": 12,
       "time_commitment": "5-7 hrs/wk",
       "min_weekly_hours": "5",
       "max_weekly_hours": "7",
