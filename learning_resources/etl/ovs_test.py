@@ -34,6 +34,15 @@ from main.test_utils import assert_json_equal
 
 pytestmark = pytest.mark.django_db
 
+OVS_TEST_BASE_URL = "https://video.odl.mit.edu"
+
+
+@pytest.fixture(autouse=True)
+def ovs_settings(settings):
+    """Ensure OVS_API_BASE_URL is set for all tests in this module"""
+    settings.OVS_API_BASE_URL = OVS_TEST_BASE_URL
+    return settings
+
 
 @pytest.fixture
 def ovs_api_response():

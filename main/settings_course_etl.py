@@ -118,10 +118,10 @@ OPEN_VIDEO_MIN_DOC_FREQ = get_int("OPEN_VIDEO_MIN_DOC_FREQ", 15)
 YOUTUBE_DEVELOPER_KEY = get_string("YOUTUBE_DEVELOPER_KEY", None)
 YOUTUBE_CONFIG_URL = get_string("YOUTUBE_CONFIG_URL", None)
 
-# OVS (ODL Video Service) settings
+# OVS (ODL Video Service) settings — public API, no auth required
 OVS_API_BASE_URL = get_string(
     "OVS_API_BASE_URL",
-    "https://video-rc.odl.mit.edu",
+    None,
 )
 
 # course catalog podcast etl settings

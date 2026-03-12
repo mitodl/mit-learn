@@ -166,6 +166,9 @@ def extract(*, url=None):
     Yields:
         dict: individual video data dicts from the API
     """
+    if not url and not settings.OVS_API_BASE_URL:
+        log.warning("OVS_API_BASE_URL is not configured; skipping OVS ETL")
+        return
     api_url = url or f"{settings.OVS_API_BASE_URL.rstrip('/')}{OVS_API_PATH}"
 
     # Add exclude_resource=youtube param

@@ -1246,60 +1246,15 @@ def load_ovs_playlist(playlist_data: dict) -> LearningResource:
     """
     Load a single OVS playlist (collection) and its videos into the database.
 
+    Delegates to load_playlist with the sentinel OVS video channel.
+
     Args:
         playlist_data (dict): playlist data including nested videos list
 
     Returns:
         LearningResource: the created or updated playlist resource
     """
-    playlist_id = playlist_data.pop("playlist_id")
-    videos_data = playlist_data.pop("videos", [])
-    offered_bys_data = playlist_data.pop("offered_by", None)
-    playlist_data["resource_category"] = LearningResourceType.video_playlist.value
-
-    with transaction.atomic():
-        playlist_resource, created = LearningResource.objects.update_or_create(
-            readable_id=playlist_id,
-            resource_type=LearningResourceType.video_playlist.name,
-            platform=LearningResourcePlatform.objects.get(
-                code=playlist_data.pop("platform", PlatformType.ovs.name),
-            ),
-            defaults=playlist_data,
-        )
-        VideoPlaylist.objects.update_or_create(
-            learning_resource=playlist_resource,
-            defaults={"channel": _get_ovs_video_channel()},
-        )
-        load_offered_by(playlist_resource, offered_bys_data)
-
-    video_resources = load_videos(videos_data)
-    load_topics(playlist_resource, most_common_topics(video_resources))
-
-    # Unpublish videos previously in this playlist that are no longer included
-    unpublished_videos = playlist_resource.resources.filter(
-        resource_type=LearningResourceType.video.name,
-        published=True,
-    ).exclude(id__in=[video.id for video in video_resources])
-    unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
-    unpublished_videos.update(published=False)
-    bulk_resources_unpublished_actions(
-        unpublished_video_ids,
-        LearningResourceType.video.name,
-    )
-
-    # Rebuild playlist-video relationships
-    playlist_resource.resources.clear()
-    for idx, video in enumerate(video_resources):
-        playlist_resource.resources.add(
-            video,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS,
-                "position": idx,
-            },
-        )
-    update_index(playlist_resource, created)
-
-    return playlist_resource
+    return load_playlist(_get_ovs_video_channel(), playlist_data)
 
 
 def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
@@ -1450,11 +1405,12 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     offered_bys_data = playlist_data.pop("offered_by", None)
     playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
-        image, _ = LearningResourceImage.objects.update_or_create(
-            url=thumbnail_data.get("url"),
-            alt=thumbnail_data.get("alt"),
-        )
-        playlist_data["image"] = image
+        if thumbnail_data:
+            image, _ = LearningResourceImage.objects.update_or_create(
+                url=thumbnail_data.get("url"),
+                alt=thumbnail_data.get("alt"),
+            )
+            playlist_data["image"] = image
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,
