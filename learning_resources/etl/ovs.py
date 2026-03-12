@@ -231,11 +231,13 @@ def _transform_collection(collection_data: dict) -> dict:
     Returns:
         dict with playlist metadata (without videos, which are added later)
     """
+    base_url = settings.OVS_API_BASE_URL.rstrip("/")
     return {
         "playlist_id": collection_data["key"],
         "platform": PlatformType.ovs.name,
         "title": collection_data.get("title", ""),
         "description": collection_data.get("description", ""),
+        "url": f"{base_url}/collections/{collection_data['key']}",
         "published": True,
     }
 

@@ -312,8 +312,9 @@ class TestTransform:
             },
         )
 
-    def test_transform_collection(self):
+    def test_transform_collection(self, settings):
         """Test transforming a collection into playlist data"""
+        settings.OVS_API_BASE_URL = "https://video-rc.odl.mit.edu"
         collection = {
             "key": "abc123",
             "title": "Test Collection",
@@ -328,6 +329,7 @@ class TestTransform:
                 "platform": PlatformType.ovs.name,
                 "title": "Test Collection",
                 "description": "A test collection",
+                "url": f"{settings.OVS_API_BASE_URL.rstrip('/')}/collections/abc123",
                 "published": True,
             },
         )
