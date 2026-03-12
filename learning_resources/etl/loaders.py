@@ -1228,6 +1228,20 @@ def load_videos(videos_data: iter) -> list[LearningResource]:
     return [load_video(video_data) for video_data in videos_data]
 
 
+def _get_ovs_video_channel() -> VideoChannel:
+    """
+    Get or create the sentinel VideoChannel for OVS playlists.
+
+    Returns:
+        VideoChannel: the OVS video channel
+    """
+    channel, _ = VideoChannel.objects.get_or_create(
+        channel_id="ovs",
+        defaults={"title": "ODL Video Service"},
+    )
+    return channel
+
+
 def load_ovs_playlist(playlist_data: dict) -> LearningResource:
     """
     Load a single OVS playlist (collection) and its videos into the database.
@@ -1254,7 +1268,7 @@ def load_ovs_playlist(playlist_data: dict) -> LearningResource:
         )
         VideoPlaylist.objects.update_or_create(
             learning_resource=playlist_resource,
-            defaults={"channel": None},
+            defaults={"channel": _get_ovs_video_channel()},
         )
         load_offered_by(playlist_resource, offered_bys_data)
 
@@ -1301,6 +1315,13 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
     ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
 
     playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
+
+    if not playlists:
+        log.warning(
+            "OVS ETL returned no playlists; aborting to avoid unpublishing all data"
+        )
+        return []
+
     playlist_ids = [p.id for p in playlists]
 
     # Unpublish OVS playlists that were not in this load
