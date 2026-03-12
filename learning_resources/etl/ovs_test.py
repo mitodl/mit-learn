@@ -8,7 +8,6 @@ import pytest
 from learning_resources.constants import (
     Availability,
     LearningResourceType,
-    OfferedBy,
     PlatformType,
 )
 from learning_resources.etl.constants import ETLSource
@@ -23,6 +22,7 @@ from learning_resources.etl.ovs import (
     extract,
     transform,
 )
+from main.test_utils import assert_json_equal
 
 pytestmark = pytest.mark.django_db
 
@@ -250,43 +250,67 @@ class TestHelpers:
 class TestTransform:
     """Tests for transform functions"""
 
-    def test_transform_video_with_subtitles(self, ovs_video_with_subtitles):
+    def test_transform_video_with_subtitles(self, ovs_video_with_subtitles, settings):
         """Test transforming a video with thumbnails and subtitles"""
         result = _transform_video(ovs_video_with_subtitles)
 
-        assert result["readable_id"] == "96fb932aa5644d8e8f6a5fafe42caa87"
-        assert result["platform"] == PlatformType.ovs.name
-        assert result["etl_source"] == ETLSource.ovs.name
-        assert result["resource_type"] == LearningResourceType.video.name
-        assert result["title"] == "Introduction to Machine Learning"
-        assert (
-            result["description"]
-            == "An introductory lecture on machine learning concepts."
+        assert_json_equal(
+            result,
+            {
+                "readable_id": "96fb932aa5644d8e8f6a5fafe42caa87",
+                "platform": PlatformType.ovs.name,
+                "etl_source": ETLSource.ovs.name,
+                "resource_type": LearningResourceType.video.name,
+                "title": "Introduction to Machine Learning",
+                "description": "An introductory lecture on machine learning concepts.",
+                "url": f"{settings.OVS_API_BASE_URL}/videos/96fb932aa5644d8e8f6a5fafe42caa87",
+                "image": {
+                    "url": "https://d1rlgptj9v7p9j.cloudfront.net/thumbnails/96fb932aa5644d8e8f6a5fafe42caa87/video_thumbnail_00001.jpg",
+                },
+                "last_modified": "2020-03-23T15:14:38.254631Z",
+                "availability": Availability.anytime.name,
+                "published": True,
+                "video": {
+                    "duration": "PT1H1M1S",
+                    "caption_urls": [
+                        {
+                            "language": "en",
+                            "language_name": "English",
+                            "url": "https://d1rlgptj9v7p9j.cloudfront.net/subtitles/96fb932aa5644d8e8f6a5fafe42caa87/subtitles_en.vtt",
+                        }
+                    ],
+                    "cover_image_url": "https://d1rlgptj9v7p9j.cloudfront.net/thumbnails/96fb932aa5644d8e8f6a5fafe42caa87/video_thumbnail_00001.jpg",
+                },
+            },
         )
-        assert "/videos/96fb932aa5644d8e8f6a5fafe42caa87" in result["url"]
-        assert result["image"]["url"] is not None
-        assert result["last_modified"] == "2020-03-23T15:14:38.254631Z"
-        assert result["offered_by"] == {"code": OfferedBy.ovs.name}
-        assert result["availability"] == Availability.anytime.name
-        assert result["published"] is True
 
-        video = result["video"]
-        assert video["duration"] == "PT1H1M1S"
-        assert len(video["caption_urls"]) == 1
-        assert video["caption_urls"][0]["language"] == "en"
-        assert video["cover_image_url"] is not None
-
-    def test_transform_video_without_subtitles(self, ovs_video_without_subtitles):
+    def test_transform_video_without_subtitles(
+        self, ovs_video_without_subtitles, settings
+    ):
         """Test transforming a video without thumbnails or subtitles"""
         result = _transform_video(ovs_video_without_subtitles)
 
-        assert result["readable_id"] == "abcdef1234567890abcdef1234567890"
-        assert result["title"] == "Advanced Data Structures"
-        assert result["image"] is None
-        assert "/videos/abcdef1234567890abcdef1234567890" in result["url"]
-        assert result["video"]["duration"] == "PT0S"
-        assert result["video"]["caption_urls"] == []
-        assert result["video"]["cover_image_url"] is None
+        assert_json_equal(
+            result,
+            {
+                "readable_id": "abcdef1234567890abcdef1234567890",
+                "platform": PlatformType.ovs.name,
+                "etl_source": ETLSource.ovs.name,
+                "resource_type": LearningResourceType.video.name,
+                "title": "Advanced Data Structures",
+                "description": "",
+                "url": f"{settings.OVS_API_BASE_URL}/videos/abcdef1234567890abcdef1234567890",
+                "image": None,
+                "last_modified": "2021-05-10T10:00:00.000000Z",
+                "availability": Availability.anytime.name,
+                "published": True,
+                "video": {
+                    "duration": "PT0S",
+                    "caption_urls": [],
+                    "cover_image_url": None,
+                },
+            },
+        )
 
     def test_transform_collection(self):
         """Test transforming a collection into playlist data"""
@@ -297,10 +321,16 @@ class TestTransform:
             "is_public": True,
         }
         result = _transform_collection(collection)
-        assert result["playlist_id"] == "abc123"
-        assert result["platform"] == PlatformType.ovs.name
-        assert result["title"] == "Test Collection"
-        assert result["offered_by"] == {"code": OfferedBy.ovs.name}
+        assert_json_equal(
+            result,
+            {
+                "playlist_id": "abc123",
+                "platform": PlatformType.ovs.name,
+                "title": "Test Collection",
+                "description": "A test collection",
+                "published": True,
+            },
+        )
 
     def test_transform_groups_by_collection(self, ovs_api_response):
         """Test that transform groups videos into playlists by collection"""

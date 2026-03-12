@@ -9,7 +9,6 @@ from django.conf import settings
 from learning_resources.constants import (
     Availability,
     LearningResourceType,
-    OfferedBy,
     PlatformType,
 )
 from learning_resources.etl.constants import ETLSource
@@ -212,7 +211,6 @@ def _transform_video(video_data: dict) -> dict:
         "url": _get_resource_url(video_data),
         "image": image_data,
         "last_modified": video_data.get("created_at"),
-        "offered_by": {"code": OfferedBy.ovs.name},
         "availability": Availability.anytime.name,
         "published": True,
         "video": {
@@ -238,7 +236,6 @@ def _transform_collection(collection_data: dict) -> dict:
         "platform": PlatformType.ovs.name,
         "title": collection_data.get("title", ""),
         "description": collection_data.get("description", ""),
-        "offered_by": {"code": OfferedBy.ovs.name},
         "published": True,
     }
 
