@@ -34,12 +34,14 @@ const BannerBackground = styled.div<BannerBackgroundProps>(
     theme,
     backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
     backgroundSize = "cover",
-    backgroundDim = 0.4,
+    backgroundDim = 0,
   }) => {
     const backgroundUrlFn = standardizeBackgroundUrl(backgroundUrl)
+
     return {
+      backgroundAttachment: "fixed",
       backgroundImage: backgroundDim
-        ? `linear-gradient(rgba(0, 0, 0, ${backgroundDim}), rgba(0, 0, 0, ${backgroundDim})), ${backgroundUrlFn}`
+        ? `linear-gradient(rgba(0 0 0 / ${backgroundDim}%), rgba(0 0 0 / ${backgroundDim}%)), ${backgroundUrlFn}`
         : backgroundUrlFn,
       backgroundSize: backgroundSize,
       backgroundPosition: "center top",
@@ -49,7 +51,7 @@ const BannerBackground = styled.div<BannerBackgroundProps>(
       [theme.breakpoints.up("lg")]: {
         backgroundSize:
           backgroundUrl === DEFAULT_BACKGROUND_IMAGE_URL
-            ? "cover"
+            ? "140%"
             : backgroundSize,
       },
       [theme.breakpoints.down("sm")]: {
@@ -117,7 +119,7 @@ const TYPOGRAPHY_DEFAULTS = {
 const Banner = ({
   backgroundUrl = DEFAULT_BACKGROUND_IMAGE_URL,
   backgroundSize = "cover",
-  backgroundDim = 0.8,
+  backgroundDim = 0,
   navText,
   avatar,
   title,

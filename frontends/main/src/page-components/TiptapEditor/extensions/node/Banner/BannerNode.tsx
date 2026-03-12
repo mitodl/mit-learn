@@ -12,6 +12,8 @@ import { Container, BannerBackground, Breadcrumbs } from "ol-components"
 import styled from "@emotion/styled"
 import type { ExtendedNodeConfig } from "../types"
 import { getTitle } from "../lib"
+const DEFAULT_BACKGROUND_IMAGE_URL =
+  "/images/backgrounds/background_steps_dark.jpg"
 
 const FullWidthContainer = styled.div({
   position: "relative",
@@ -62,6 +64,7 @@ const StyledNodeViewContent = styled(NodeViewContent)(({ theme }) => ({
 
 const StyledBannerBackground = styled(BannerBackground)(({ theme }) => ({
   padding: "64px 0",
+  backgroundAttachment: "inherit",
   [theme.breakpoints.down("sm")]: {
     padding: "32px 0",
     backgroundAttachment: "inherit",
@@ -87,7 +90,10 @@ const BannerWrapper = (props?: { node?: ProseMirrorNode }) => {
   return (
     <NodeViewWrapper as="div">
       <FullWidthContainer>
-        <StyledBannerBackground>
+        <StyledBannerBackground
+          backgroundDim={40}
+          backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
+        >
           <InnerContainer>
             <Breadcrumbs
               variant="dark"
