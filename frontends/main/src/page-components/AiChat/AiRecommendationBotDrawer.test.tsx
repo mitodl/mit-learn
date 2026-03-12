@@ -28,7 +28,7 @@ describe("AiRecommendationBotDrawer", () => {
     const call = mockAiChat.mock.calls[0][0] as Record<string, unknown>
     const requestOpts = call.requestOpts as Record<string, unknown>
     expect(requestOpts.csrfCookieName).toBe(
-      process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken",
+      process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
     )
     expect(requestOpts.csrfHeaderName).toBe("X-CSRFToken")
     expect((requestOpts.fetchOpts as Record<string, unknown>).credentials).toBe(
