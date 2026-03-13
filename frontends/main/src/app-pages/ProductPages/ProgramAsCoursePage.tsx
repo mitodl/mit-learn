@@ -23,14 +23,15 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  V2ProgramDetail,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
+import { keyBy } from "lodash"
 
 type ProgramAsCoursePageProps = {
   readableId: string
 }
-
-const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> =>
-  Object.fromEntries(array.map((item) => [String(item[key]), item]))
 
 const ModuleCardContainer = styled.div(({ theme }) => ({
   borderRadius: "8px",
@@ -74,11 +75,16 @@ const ModuleTitleNote = styled("span")(({ theme }) => ({
 
 type ModulesSectionProps = {
   program: V2ProgramDetail
+  courses?: CourseWithCourseRunsSerializerV2[]
+  isLoading?: boolean
 }
 
-const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
-  const courses = useQuery(coursesQueries.coursesForProgram(program))
-  const coursesById = keyBy(courses.data?.results ?? [], "id")
+const ModulesSection: React.FC<ModulesSectionProps> = ({
+  program,
+  courses,
+  isLoading,
+}) => {
+  const coursesById = keyBy(courses ?? [], "id")
   const parsedReqs = parseReqTree(program.req_tree)
 
   if (parsedReqs.length === 0) return null
@@ -96,11 +102,10 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
     <ModulesListing>
       {courseIds.map((courseId) => {
         const course = coursesById[courseId]
-        const isCourseLoading = courses.isLoading || !courses.data
-        if (!isCourseLoading && !course) return null
+        if (!isLoading && !course) return null
         return (
           <li key={courseId}>
-            <ModuleCard title={course?.title} isLoading={isCourseLoading} />
+            <ModuleCard title={course?.title} isLoading={isLoading} />
           </li>
         )
       })}
@@ -147,15 +152,17 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
       </Typography>
       <Stack gap="24px">
         {parsedReqs.map((req) => {
+          const headingId = `modules-subsection-${req.id}`
           const note =
             req.requiredCourseCount < req.courseIds.length
               ? `Complete ${req.requiredCourseCount} out of ${req.courseIds.length}`
               : null
           return (
-            <div key={req.id}>
+            <section key={req.id} aria-labelledby={headingId}>
               <Typography
                 variant="h5"
                 component="h3"
+                id={headingId}
                 sx={{ marginBottom: "4px" }}
               >
                 {req.title}
@@ -163,7 +170,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
                 {note ? <ModuleTitleNote>{note}</ModuleTitleNote> : null}
               </Typography>
               {renderCourseList(req.courseIds)}
-            </div>
+            </section>
           )
         })}
       </Stack>
@@ -244,7 +251,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
       ) : null}
-      <ModulesSection program={program} />
+      <ModulesSection
+        program={program}
+        courses={courses.data?.results}
+        isLoading={courses.isLoading}
+      />
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}

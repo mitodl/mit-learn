@@ -101,3 +101,12 @@ test("programPageView returns /courses/p/ path when display_mode is course", () 
     }),
   ).toBe("/courses/p/program-v1:MITxT+18.01x")
 })
+
+test("programPageView falls back to /programs/ for unknown display_mode values", () => {
+  expect(
+    programPageView({
+      readable_id: "some-slug",
+      display_mode: "unknown-future-value" as never,
+    }),
+  ).toBe("/programs/some-slug")
+})

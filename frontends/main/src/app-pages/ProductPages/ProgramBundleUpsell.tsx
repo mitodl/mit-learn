@@ -6,6 +6,7 @@ import type {
   BaseProgram,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { parseReqTree } from "./util"
 import { formatPrice } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
@@ -182,7 +183,15 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   })
 
   const pricedPrograms = (data?.results ?? []).filter(
-    (d): d is V2ProgramDetail => !!d.products[0]?.price,
+    (d): d is V2ProgramDetail =>
+      /**
+       * Exclude programs with display_mode="course" from bundle upsell.
+       * These programs are presented as courses and should not appear as
+       * bundleable programs. If this filter is triggered, it likely indicates
+       * unexpected data — a course (enrolled in via the course page) should
+       * not be associated with a program bundle.
+       */
+      d.display_mode !== DisplayModeEnum.Course && !!d.products[0]?.price,
   )
 
   if (!isLoading && pricedPrograms.length === 0) {
