@@ -56,7 +56,6 @@ from learning_resources.etl.loaders import (
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
-    ArticleFactory,
     ContentFileFactory,
     CourseFactory,
     LearningResourceContentTagFactory,
@@ -2318,8 +2317,8 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
 
 
 @pytest.mark.django_db
-def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant):
-    articles_data = [
+def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant):
+    documents_data = [
         {
             "title": "test",
             "readable_id": "test-article",
@@ -2333,24 +2332,25 @@ def test_load_articles(mocker, climate_platform, mock_get_similar_topics_qdrant)
             "offered_by": {
                 "code": OfferedBy.climate.name,
             },
+            "platform": PlatformType.climate.name,
         }
     ]
-    unpublished_article = ArticleFactory.create()
+    unpublished_article = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        etl_source=ETLSource.mit_climate.name,
+    )
     mock_bulk_unpublish = mocker.patch(
         "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
         autospec=True,
     )
-    result = loaders.load_articles(articles_data)
+    result = loaders.load_documents(ETLSource.mit_climate.name, documents_data)
 
-    assert result[0].title == articles_data[0]["title"]
+    assert result[0].title == documents_data[0]["title"]
 
-    # Ensure unpublished articles are handled
+    # Ensure unpublished documents are handled
+    assert mock_bulk_unpublish.mock_calls[0].args[0][0] == unpublished_article.id
     assert (
-        mock_bulk_unpublish.mock_calls[0].args[0][0]
-        == unpublished_article.learning_resource.id
-    )
-    assert (
-        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.article.name
+        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.document.name
     )
 
 
