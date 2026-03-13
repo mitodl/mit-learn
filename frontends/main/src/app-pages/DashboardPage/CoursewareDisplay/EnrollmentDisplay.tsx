@@ -29,7 +29,7 @@ import {
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollmentV3,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
@@ -110,15 +110,10 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const alphabeticalSort = (
-  a: CourseRunEnrollmentRequestV2,
-  b: CourseRunEnrollmentRequestV2,
-) => a.run.course.title.localeCompare(b.run.course.title)
+const alphabeticalSort = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
+  a.run.course.title.localeCompare(b.run.course.title)
 
-const startsSooner = (
-  a: CourseRunEnrollmentRequestV2,
-  b: CourseRunEnrollmentRequestV2,
-) => {
+const startsSooner = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) => {
   if (!a.run.start_date && !b.run.start_date) return 0
   if (!a.run.start_date) return 1
   if (!b.run.start_date) return -1
@@ -126,11 +121,11 @@ const startsSooner = (
   const y = new Date(b.run.start_date)
   return x.getTime() - y.getTime()
 }
-const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
-  const expired: CourseRunEnrollmentRequestV2[] = []
-  const completed: CourseRunEnrollmentRequestV2[] = []
-  const started: CourseRunEnrollmentRequestV2[] = []
-  const notStarted: CourseRunEnrollmentRequestV2[] = []
+const sortEnrollments = (enrollments: CourseRunEnrollmentV3[]) => {
+  const expired: CourseRunEnrollmentV3[] = []
+  const completed: CourseRunEnrollmentV3[] = []
+  const started: CourseRunEnrollmentV3[] = []
+  const notStarted: CourseRunEnrollmentV3[] = []
   enrollments.forEach((enrollment) => {
     if (!enrollment?.b2b_contract_id) {
       const enrollmentStatus = getEnrollmentStatus(enrollment)

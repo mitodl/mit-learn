@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import { mergeOverrides } from "ol-test-utilities"
 import type { PartialFactory } from "ol-test-utilities"
 import type {
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollmentV3,
   CourseRunGrade,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -29,13 +29,13 @@ const grade: PartialFactory<CourseRunGrade> = (overrides = {}) => {
   return mergeOverrides<CourseRunGrade>(defaults, overrides)
 }
 
-const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
+const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
   overrides = {},
 ) => {
   const title =
     overrides.run?.title ?? overrides.run?.course?.title ?? faker.word.words(3)
 
-  const defaults: CourseRunEnrollmentRequestV2 = {
+  const defaults: CourseRunEnrollmentV3 = {
     id: uniqueEnrollmentId.enforce(() => faker.number.int()),
     b2b_contract_id: null, // Default to personal enrollment (not B2B)
     b2b_organization_id: null, // Default to personal enrollment (not B2B)
@@ -130,7 +130,7 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentRequestV2> = (
       },
     },
   }
-  return mergeOverrides<CourseRunEnrollmentRequestV2>(defaults, overrides)
+  return mergeOverrides<CourseRunEnrollmentV3>(defaults, overrides)
 }
 
 const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
@@ -152,7 +152,7 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
 }
 
 // Not paginated
-const courseEnrollments = (count: number): CourseRunEnrollmentRequestV2[] => {
+const courseEnrollments = (count: number): CourseRunEnrollmentV3[] => {
   return new Array(count).fill(null).map(() => courseEnrollment())
 }
 
