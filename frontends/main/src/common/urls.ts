@@ -222,7 +222,22 @@ export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"
 export const programPageView = (program: {
   readable_id: string
-  display_mode?: BaseProgramDisplayMode | null
+  /**
+   * If display_mode is "course", program should be rendered on a course page at
+   * /courses/p/[readable_id] instead of /programs/[readable_id].
+   *
+   * NOTE:
+   * Explicitly allow null/undefined since program.display_mode is required and
+   * (at least according to our OpenAPI spec) optional:
+   * ```ts
+   * programPageView({
+   *   readable_id: p.readable_id, display_mode: p.display_mode
+   * })
+   * ```
+   * But require it (arg is not optional here) to encourage callers to pass the
+   * value.
+   */
+  display_mode: BaseProgramDisplayMode | null | undefined
 }) => {
   const pattern =
     program.display_mode === DisplayModeEnum.Course
