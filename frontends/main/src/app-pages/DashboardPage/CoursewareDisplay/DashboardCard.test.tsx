@@ -335,81 +335,53 @@ describe.each([
 
   test.each([
     {
-      overrides: {
-        courseruns: [
-          mitxonline.factories.courses.courseRun({
-            is_upgradable: true,
-            upgrade_deadline: faker.date.future().toISOString(),
-            products: [
-              {
-                id: faker.number.int(),
-                price: faker.commerce.price(),
-                description: faker.lorem.sentence(),
-                is_active: true,
-              },
-            ],
-          }),
-        ],
-      },
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
+        run: {
+          is_upgradable: true,
+          upgrade_deadline: faker.date.future().toISOString(),
+          upgrade_product_id: faker.number.int(),
+          upgrade_product_price: faker.commerce.price(),
+          upgrade_product_is_active: true,
+        },
       }),
       expectation: { visible: true },
     },
     {
-      overrides: {
-        courseruns: [
-          mitxonline.factories.courses.courseRun({
-            is_upgradable: true,
-            upgrade_deadline: faker.date.future().toISOString(),
-            products: [
-              {
-                id: faker.number.int(),
-                price: faker.commerce.price(),
-                description: faker.lorem.sentence(),
-                is_active: true,
-              },
-            ],
-          }),
-        ],
-      },
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Verified,
+        run: {
+          is_upgradable: true,
+          upgrade_deadline: faker.date.future().toISOString(),
+          upgrade_product_id: faker.number.int(),
+          upgrade_product_price: faker.commerce.price(),
+          upgrade_product_is_active: true,
+        },
       }),
       expectation: { visible: false },
     },
     {
-      overrides: {
-        courseruns: [
-          mitxonline.factories.courses.courseRun({
-            is_upgradable: false,
-          }),
-        ],
-      },
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
+        run: {
+          is_upgradable: false,
+          upgrade_deadline: faker.date.future().toISOString(),
+          upgrade_product_id: faker.number.int(),
+          upgrade_product_price: faker.commerce.price(),
+          upgrade_product_is_active: true,
+        },
       }),
       expectation: { visible: false },
     },
   ])(
     "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.courseruns[0].is_upgradable)",
-    ({ overrides, enrollment, expectation }) => {
+    ({ enrollment, expectation }) => {
       setupUserApis()
-      const run = overrides.courseruns[0]
-      const course = dashboardCourse({
-        ...overrides,
-        next_run_id: run.id, // Ensure getBestRun uses this run
-      })
-      // Merge course into enrollment
-      const enrollmentWithCourse = {
-        ...enrollment,
-        run: { ...run, course },
-      }
       renderWithProviders(
         <DashboardCard
           resource={{
             type: DashboardType.CourseRunEnrollment,
-            data: enrollmentWithCourse,
+            data: enrollment,
           }}
         />,
       )
@@ -427,25 +399,15 @@ describe.each([
     "Never shows upgrade banner if `offerUpgrade` is false",
     ({ offerUpgrade, expected }) => {
       setupUserApis()
-      const run = mitxonline.factories.courses.courseRun({
-        is_upgradable: true,
-        upgrade_deadline: faker.date.future().toISOString(),
-        products: [
-          {
-            id: faker.number.int(),
-            price: faker.commerce.price(),
-            description: faker.lorem.sentence(),
-            is_active: true,
-          },
-        ],
-      })
-      const course = dashboardCourse({
-        courseruns: [run],
-        next_run_id: run.id, // Ensure getBestRun uses this run
-      })
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
-        run: { ...run, course },
+        run: {
+          is_upgradable: true,
+          upgrade_deadline: faker.date.future().toISOString(),
+          upgrade_product_id: faker.number.int(),
+          upgrade_product_price: faker.commerce.price(),
+          upgrade_product_is_active: true,
+        },
       })
 
       renderWithProviders(
@@ -473,25 +435,15 @@ describe.each([
       .add(3, "hours")
       .toISOString()
 
-    const run = mitxonline.factories.courses.courseRun({
-      is_upgradable: true,
-      upgrade_deadline: certificateUpgradeDeadline,
-      products: [
-        {
-          id: faker.number.int(),
-          price: certificateUpgradePrice,
-          description: faker.lorem.sentence(),
-          is_active: true,
-        },
-      ],
-    })
-    const course = dashboardCourse({
-      courseruns: [run],
-      next_run_id: run.id, // Ensure getBestRun uses this run
-    })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
-      run: { ...run, course },
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: certificateUpgradeDeadline,
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: certificateUpgradePrice,
+        upgrade_product_is_active: true,
+      },
     })
 
     renderWithProviders(
@@ -517,25 +469,15 @@ describe.each([
     const certificateUpgradePrice = faker.commerce.price()
     const certificateUpgradeDeadline = faker.date.future().toISOString()
 
-    const run = mitxonline.factories.courses.courseRun({
-      is_upgradable: true,
-      upgrade_deadline: certificateUpgradeDeadline,
-      products: [
-        {
-          id: productId,
-          price: certificateUpgradePrice,
-          description: faker.lorem.sentence(),
-          is_active: true,
-        },
-      ],
-    })
-    const course = dashboardCourse({
-      courseruns: [run],
-      next_run_id: run.id,
-    })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
-      run: { ...run, course },
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: certificateUpgradeDeadline,
+        upgrade_product_id: productId,
+        upgrade_product_price: certificateUpgradePrice,
+        upgrade_product_is_active: true,
+      },
     })
 
     // Mock basket APIs
@@ -585,25 +527,15 @@ describe.each([
     setupUserApis()
 
     const productId = faker.number.int()
-    const run = mitxonline.factories.courses.courseRun({
-      is_upgradable: true,
-      upgrade_deadline: faker.date.future().toISOString(),
-      products: [
-        {
-          id: productId,
-          price: faker.commerce.price(),
-          description: faker.lorem.sentence(),
-          is_active: true,
-        },
-      ],
-    })
-    const course = dashboardCourse({
-      courseruns: [run],
-      next_run_id: run.id,
-    })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
-      run: { ...run, course },
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: productId,
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
     })
 
     // Mock basket APIs - clear succeeds but create fails
@@ -640,25 +572,15 @@ describe.each([
     setupUserApis()
 
     const productId = faker.number.int()
-    const run = mitxonline.factories.courses.courseRun({
-      is_upgradable: true,
-      upgrade_deadline: faker.date.future().toISOString(),
-      products: [
-        {
-          id: productId,
-          price: faker.commerce.price(),
-          description: faker.lorem.sentence(),
-          is_active: true,
-        },
-      ],
-    })
-    const course = dashboardCourse({
-      courseruns: [run],
-      next_run_id: run.id,
-    })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
-      run: { ...run, course },
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: productId,
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
     })
 
     // Mock basket APIs - clear succeeds but create fails
@@ -865,7 +787,7 @@ describe.each([
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
       setupUserApis()
-      const course = dashboardCourse({ include_in_learn_catalog: true })
+      const course = dashboardCourse()
       const run = course.courseruns[0]
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
@@ -896,7 +818,6 @@ describe.each([
             data: enrollment,
           },
           false, // useProductPages
-          true, // includeInLearnCatalog
         ),
       ]
       const menuItems = screen.getAllByRole("menuitem")
@@ -1649,12 +1570,12 @@ describe.each([
       },
     )
 
-    test("Context menu does not show View Details for courses not in learn catalog", async () => {
+    test("Context menu shows View Details regardless of learn catalog flag", async () => {
       setupUserApis()
-      mockedUseFeatureFlagEnabled.mockReturnValue(true) // Even with flag enabled
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
       const course = dashboardCourse({
-        include_in_learn_catalog: false, // Key: not in catalog
+        include_in_learn_catalog: false,
         page: { page_url: faker.internet.url() },
       })
       const run = course.courseruns[0]
@@ -1682,12 +1603,9 @@ describe.each([
       })
       await user.click(contextMenuButton)
 
-      // Should NOT have View Course Details when not in learn catalog
       expect(
-        screen.queryByRole("menuitem", { name: "View Course Details" }),
-      ).not.toBeInTheDocument()
-
-      // Should still have Email Settings and Unenroll
+        screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
       expect(
         screen.getByRole("menuitem", { name: "Email Settings" }),
       ).toBeInTheDocument()
