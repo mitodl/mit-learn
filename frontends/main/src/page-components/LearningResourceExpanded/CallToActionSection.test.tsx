@@ -100,9 +100,10 @@ describe("CallToActionSection", () => {
       },
     ])(
       "renders link with correct text for $resourceType and platform $platform",
-      ({ resourceType, expectedText, platform }) => {
+      ({ resourceType, expectedText, platform, resourceCategory }) => {
         const resource = factories.learningResources.resource({
           resource_type: resourceType,
+          resource_category: resourceCategory,
           platform: { code: platform },
           url: "https://example.com/resource",
         })

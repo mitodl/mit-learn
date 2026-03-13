@@ -345,8 +345,6 @@ const learningResource: PartialFactory<LearningResource> = (overrides = {}) => {
       return videoPlaylist(overrides)
     case ResourceTypeEnum.Video:
       return video(overrides)
-    case ResourceTypeEnum.Article:
-      return article(overrides)
     case ResourceTypeEnum.Document:
       return document(overrides)
 
@@ -659,8 +657,6 @@ export {
   programs,
   course,
   courses,
-  article,
-  articles,
   podcast,
   podcasts,
   podcastEpisode,
