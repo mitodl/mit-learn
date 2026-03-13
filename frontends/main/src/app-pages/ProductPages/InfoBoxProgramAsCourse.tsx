@@ -5,7 +5,7 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
-import ProgramAsCourseSummary from "./ProgramAsCourseSummary"
+import { ProgramAsCourseSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { InfoBoxCard, InfoBoxContent, InfoBoxEnrollArea } from "./InfoBoxParts"
 

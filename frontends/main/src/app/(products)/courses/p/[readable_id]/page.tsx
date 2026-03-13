@@ -64,7 +64,12 @@ const Page: React.FC<Props> = async (props) => {
 
   // Redirect to program page if display_mode is not "course"
   if (program.display_mode !== DisplayModeEnum.Course) {
-    redirect(programPageView({ readable_id: readableId, display_mode: null }))
+    redirect(
+      programPageView({
+        readable_id: readableId,
+        display_mode: program.display_mode,
+      }),
+    )
   }
 
   return (

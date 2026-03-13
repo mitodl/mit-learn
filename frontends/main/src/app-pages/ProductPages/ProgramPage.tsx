@@ -19,13 +19,17 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
-import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  V2ProgramDetail,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import { keyBy } from "lodash"
 
 type ProgramPageProps = {
   readableId: string
@@ -54,10 +58,6 @@ const RequirementsListing = styled(PlainList)({
   marginTop: "24px",
 })
 
-const keyBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T> => {
-  return Object.fromEntries(array.map((item) => [String(item[key]), item]))
-}
-
 const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h5,
   fontSize: theme.typography.pxToRem(20), // boosted size
@@ -70,6 +70,8 @@ const ReqTitleNote = styled("span")(({ theme }) => ({
 
 type RequirementsSectionProps = {
   program: V2ProgramDetail
+  courses?: CourseWithCourseRunsSerializerV2[]
+  isLoading?: boolean
 }
 
 const getCompletionText = (parsedReqs: RequirementData[]) => {
@@ -103,9 +105,10 @@ const getRequirementSectionSubtitle = (reqData: RequirementData) => {
 
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
+  courses,
+  isLoading,
 }) => {
-  const courses = useQuery(coursesQueries.coursesForProgram(program))
-  const coursesById = keyBy(courses.data?.results ?? [], "id")
+  const coursesById = keyBy(courses ?? [], "id")
   const parsedReqs = parseReqTree(program.req_tree)
 
   return (
@@ -140,8 +143,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
               <RequirementsListing>
                 {req.courseIds.map((courseId) => {
                   const course = coursesById[courseId]
-                  const isCourseLoading = courses.isLoading || !courses.data
-                  if (!isCourseLoading && !course) {
+                  if (!isLoading && !course) {
                     return null
                   }
                   return (
@@ -150,7 +152,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                         course={course}
                         href={`/courses/${encodeURIComponent(course?.readable_id)}`}
                         size="small"
-                        isLoading={isCourseLoading}
+                        isLoading={isLoading}
                         list
                       />
                     </li>
@@ -217,7 +219,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       {page.about ? (
         <AboutSection productNoun="Program" aboutHtml={page.about} />
       ) : null}
-      <RequirementsSection program={program} />
+      <RequirementsSection
+        program={program}
+        courses={courses.data?.results}
+        isLoading={courses.isLoading}
+      />
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}

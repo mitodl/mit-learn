@@ -266,7 +266,7 @@ describe("ProgramAsCoursePage", () => {
       },
     })
     const page = makePage({ program_details: program })
-    setupApis({ program, page })
+    const { courses } = setupApis({ program, page })
 
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
@@ -277,5 +277,12 @@ describe("ProgramAsCoursePage", () => {
     // Subsection h3 headings from req titles
     await screen.findByRole("heading", { name: "Core Modules" })
     await screen.findByRole("heading", { name: "Advanced Modules" })
+
+    // Course titles should be shown within subsections
+    await waitFor(() => {
+      courses.forEach((course) => {
+        expect(screen.getByText(course.title)).toBeInTheDocument()
+      })
+    })
   })
 })
