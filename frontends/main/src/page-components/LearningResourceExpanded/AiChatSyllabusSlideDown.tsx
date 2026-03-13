@@ -198,7 +198,7 @@ const AiChatSyllabusSlideDown = ({
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
           csrfCookieName:
-            process.env.NEXT_PUBLIC_CSRF_COOKIE_NAME || "csrftoken",
+            process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
           csrfHeaderName: "X-CSRFToken",
           fetchOpts: {
             credentials: "include",
