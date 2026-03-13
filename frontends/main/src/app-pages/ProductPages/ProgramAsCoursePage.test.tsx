@@ -126,7 +126,7 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: "Who can take this Course?" })
   })
 
-  test("Does not show program_type tag", async () => {
+  test("Does not show program_type or platform tags", async () => {
     const program = makeProgram({
       display_mode: DisplayModeEnum.Course,
       program_type: "Series",
@@ -137,7 +137,7 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
     const banner = await screen.findByTestId("banner-container")
-    expect(within(banner).getByText("MITx")).toBeVisible()
+    expect(within(banner).queryByText("MITx")).not.toBeInTheDocument()
     expect(within(banner).queryByText("Series")).not.toBeInTheDocument()
   })
 
@@ -153,8 +153,8 @@ describe("ProgramAsCoursePage", () => {
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
-    const button = await screen.findByRole("button", { name: /enroll/i })
-    expect(button).toBeInTheDocument()
+    const buttons = await screen.findAllByRole("button", { name: /enroll/i })
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
   test("Renders Course Information in info box, not Program Information", async () => {

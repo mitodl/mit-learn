@@ -21,6 +21,7 @@ import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
+import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -54,6 +55,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ title, isLoading }) => {
   if (!title) return null
   return (
     <ModuleCardContainer>
+      {/* TODO: Convert to heading as module cards are expanded with more content */}
       <Typography variant="subtitle1">{title}</Typography>
     </ModuleCardContainer>
   )
@@ -169,6 +171,12 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({ program }) => {
   )
 }
 
+const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+  }),
+)
+
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -190,6 +198,8 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
+  const courses = useQuery(coursesQueries.coursesForProgram(program))
+
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
@@ -206,13 +216,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
     return null
   }
 
-  const imageSrc = page.feature_image
-    ? page.program_details.page.feature_image_src
-    : DEFAULT_RESOURCE_IMG
+  const imageSrc =
+    page.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
   return (
     <ProductPageTemplate
-      tags={["MITx"]}
       currentBreadcrumbLabel="Course"
       title={page.title}
       shortDescription={
@@ -223,7 +231,15 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       }
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      infoBox={<ProgramAsCourseInfoBox program={program} />}
+      enrollmentAction={
+        <StyledProgramEnrollmentButton program={program} variant="bordered" />
+      }
+      infoBox={
+        <ProgramAsCourseInfoBox
+          program={program}
+          courses={courses.data?.results}
+        />
+      }
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
