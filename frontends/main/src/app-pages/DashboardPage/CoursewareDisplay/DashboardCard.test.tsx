@@ -855,17 +855,13 @@ describe.each([
     ({ enrollment, expectedVisible }) => {
       setupUserApis()
       const course = dashboardCourse()
-      const run = course.courseruns[0]
-      const enrollmentWithCourse = enrollment
-        ? { ...enrollment, run: { ...run, course } }
-        : null
       renderWithProviders(
         <DashboardCard
           resource={
-            enrollmentWithCourse
+            enrollment
               ? {
                   type: DashboardType.CourseRunEnrollment,
-                  data: enrollmentWithCourse,
+                  data: enrollment,
                 }
               : { type: DashboardType.Course, data: course }
           }
