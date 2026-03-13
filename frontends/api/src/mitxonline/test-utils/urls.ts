@@ -22,6 +22,7 @@ const enrollment = {
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
   enrollmentsListV1: () => `${API_BASE_URL}/api/v1/enrollments/`,
   enrollmentsListV2: () => `${API_BASE_URL}/api/v2/enrollments/`,
+  enrollmentsListV3: () => `${API_BASE_URL}/api/v3/enrollments/`,
 }
 
 const programEnrollments = {

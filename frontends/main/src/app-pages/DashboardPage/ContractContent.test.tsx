@@ -24,7 +24,7 @@ const makeGrade = factories.enrollment.grade
 
 describe("ContractContent", () => {
   beforeEach(() => {
-    setMockResponse.get(urls.enrollment.enrollmentsListV2(), [])
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
     setMockResponse.get(urls.contracts.contractsList(), [])
   })
@@ -224,7 +224,7 @@ describe("ContractContent", () => {
       }),
     ]
     // Override the default empty enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
 
     renderWithProviders(
       <ContractContent
@@ -1069,7 +1069,7 @@ describe("ContractContent", () => {
       }),
     ]
     // Override enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsListV2(), enrollments)
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
 
     setupOrgDashboardMocks(
       orgX,
@@ -1350,7 +1350,7 @@ describe("ContractContent", () => {
       contracts,
     )
 
-    setMockResponse.get(urls.enrollment.enrollmentsListV2(), [enrollment])
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), [enrollment])
 
     renderWithProviders(
       <ContractContent
