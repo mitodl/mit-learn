@@ -176,7 +176,6 @@ const getContextMenuItems = (
   title: string,
   resource: DashboardResource,
   useProductPages: boolean,
-  includeInLearnCatalog: boolean,
   additionalItems: SimpleMenuItem[] = [],
 ) => {
   const menuItems = []
@@ -189,7 +188,7 @@ const getContextMenuItems = (
         })
       : mitxonlineUrl(`/programs/${program.readable_id}`)
 
-    if (detailsUrl && includeInLearnCatalog) {
+    if (detailsUrl) {
       menuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-program-details",
@@ -205,7 +204,7 @@ const getContextMenuItems = (
 
     const courseMenuItems = []
 
-    if (detailsUrl && includeInLearnCatalog) {
+    if (detailsUrl) {
       courseMenuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-course-details",
@@ -249,19 +248,6 @@ const getTitle = (resource: DashboardResource): string => {
     return resource.data.run.course.title
   }
   return resource.data.program.title
-}
-
-const getRun = (
-  resource: DashboardResource,
-  contractId?: number,
-): CourseRunV2 | undefined => {
-  if (resource.type === DashboardType.Course) {
-    return getBestRun(resource.data, contractId)
-  }
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run
-  }
-  return undefined
 }
 
 const getDashboardEnrollmentStatus = (
@@ -644,7 +630,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   )
 
   const title = getTitle(resource)
-  const run = getRun(resource, contractId)
+  const courseRun =
+    resource.type === DashboardType.Course
+      ? getBestRun(resource.data, contractId)
+      : undefined
+  const enrollmentRun =
+    resource.type === DashboardType.CourseRunEnrollment
+      ? resource.data.run
+      : undefined
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
   const certificateLink = getCertificateLink(resource)
   const displayNoun = noun ?? getDefaultNoun(resource)
@@ -655,8 +648,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const isProgramEnrollment = resource.type === DashboardType.ProgramEnrollment
   const isAnyCourse = isCourse || isCourseRunEnrollment
 
-  const coursewareUrl = run?.courseware_url
-  const b2bContractId = run?.b2b_contract ?? contractId
+  const coursewareUrl = isCourse
+    ? courseRun?.courseware_url
+    : enrollmentRun?.courseware_url
+  const b2bContractId = courseRun?.b2b_contract ?? contractId
 
   const hasEnrollableRuns = isCourse
     ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
@@ -665,23 +660,18 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const disableEnrollment = isCourse && !hasEnrollableRuns
 
   const readableId = isCourse
-    ? run?.courseware_id
+    ? courseRun?.courseware_id
     : isCourseRunEnrollment
       ? resource.data.run.courseware_id
       : isProgramEnrollment
         ? resource.data.program.readable_id
         : undefined
 
-  const includeInLearnCatalog = isCourse
-    ? resource.data.include_in_learn_catalog
-    : isCourseRunEnrollment
-      ? resource.data.run.course.include_in_learn_catalog
-      : true
-
   const canUpgrade =
     isCourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-    (run?.is_upgradable ?? false)
+    (enrollmentRun?.is_upgradable ?? false) &&
+    (enrollmentRun?.upgrade_product_is_active ?? true)
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
@@ -695,7 +685,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
-        programCourseRunId: isVerifiedProgramEnrollment ? run?.id : undefined,
+        programCourseRunId: isVerifiedProgramEnrollment
+          ? courseRun?.id
+          : undefined,
       })
     }
   }, [
@@ -704,7 +696,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     readableId,
     coursewareUrl,
     b2bContractId,
-    run?.id,
+    courseRun?.id,
     buttonHref,
     enrollment,
     programEnrollment?.enrollment_mode,
@@ -766,9 +758,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         <UpgradeBanner
           data-testid="upgrade-root"
           canUpgrade={canUpgrade}
-          certificateUpgradeDeadline={run?.upgrade_deadline}
-          certificateUpgradePrice={run?.products?.[0]?.price}
-          productId={run?.products?.[0]?.id}
+          certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
+          certificateUpgradePrice={enrollmentRun?.upgrade_product_price}
+          productId={enrollmentRun?.upgrade_product_id}
           onError={() => {
             onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
@@ -790,10 +782,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       />
       <CoursewareButton
         data-testid="courseware-button"
-        startDate={run?.start_date}
+        startDate={isCourse ? courseRun?.start_date : enrollmentRun?.start_date}
         enrollmentStatus={enrollmentStatus}
         href={buttonHref ?? coursewareUrl}
-        endDate={run?.end_date}
+        endDate={isCourse ? courseRun?.end_date : enrollmentRun?.end_date}
         noun={displayNoun}
         isProgram={false}
         disabled={disableEnrollment}
@@ -814,8 +806,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   // Build start date section
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : isAnyCourse && run?.start_date ? (
-    <CourseStartCountdown startDate={run.start_date} />
+  ) : isAnyCourse &&
+    (isCourse ? courseRun?.start_date : enrollmentRun?.start_date) ? (
+    <CourseStartCountdown
+      startDate={
+        isCourse
+          ? (courseRun?.start_date as string)
+          : (enrollmentRun?.start_date as string)
+      }
+    />
   ) : null
 
   // Build context menu
@@ -823,7 +822,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     title,
     resource,
     useProductPages ?? false,
-    includeInLearnCatalog,
     contextMenuItems,
   )
 
