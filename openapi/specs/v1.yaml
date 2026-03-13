@@ -270,6 +270,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -292,6 +293,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -300,7 +302,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: q
         schema:
@@ -444,6 +447,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -475,6 +479,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -827,6 +832,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -858,6 +864,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -1094,6 +1101,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -1125,6 +1133,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -1476,6 +1485,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -1507,6 +1517,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -1901,6 +1912,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -1932,6 +1944,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -2326,6 +2339,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -2357,6 +2371,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -2755,6 +2770,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -2786,6 +2802,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -3165,6 +3182,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -3196,6 +3214,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -3413,6 +3432,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -3444,6 +3464,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -3895,6 +3916,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -3926,6 +3948,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -4390,6 +4413,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -4412,6 +4436,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -4420,7 +4445,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -4917,6 +4943,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -4939,6 +4966,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -4947,7 +4975,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -5469,6 +5498,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -5491,6 +5521,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -5499,7 +5530,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -6012,6 +6044,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -6034,6 +6067,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -6042,7 +6076,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -6473,6 +6508,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -6504,6 +6540,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -7238,6 +7275,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -7269,6 +7307,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -7663,6 +7702,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -7694,6 +7734,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -8175,6 +8216,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -8206,6 +8248,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -9032,6 +9075,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -9063,6 +9107,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -9523,6 +9568,7 @@ paths:
             - mitxonline
             - ocw
             - oll
+            - ovs
             - podcast
             - scc
             - see
@@ -9554,6 +9600,7 @@ paths:
           * `youtube` - YouTube
           * `canvas` - Canvas
           * `climate` - MIT Climate
+          * `ovs` - ODL Video Service
         explode: true
         style: form
       - in: query
@@ -9735,6 +9782,7 @@ paths:
           - xpro
           - youtube
           - canvas
+          - ovs
           type: string
           minLength: 1
         description: |-
@@ -9750,6 +9798,7 @@ paths:
           * `xpro` - xpro
           * `youtube` - youtube
           * `canvas` - canvas
+          * `ovs` - ovs
         required: true
       tags:
       - webhooks
@@ -13815,7 +13864,7 @@ components:
             * `whu` - WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n\
             * `simplilearn` - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` -\
             \ Podcast\n* `youtube` - YouTube\n* `canvas` - Canvas\n* `climate` - MIT\
-            \ Climate"
+            \ Climate\n* `ovs` - ODL Video Service"
         topic:
           type: array
           items:
@@ -14055,6 +14104,7 @@ components:
       - youtube
       - canvas
       - climate
+      - ovs
       type: string
       description: |-
         * `edx` - edX
@@ -14077,6 +14127,7 @@ components:
         * `youtube` - YouTube
         * `canvas` - Canvas
         * `climate` - MIT Climate
+        * `ovs` - ODL Video Service
       x-enum-descriptions:
       - edX
       - MIT OpenCourseWare
@@ -14098,6 +14149,7 @@ components:
       - YouTube
       - Canvas
       - MIT Climate
+      - ODL Video Service
     Podcast:
       type: object
       description: Serializer for Podcasts
@@ -15745,6 +15797,7 @@ components:
       - xpro
       - youtube
       - canvas
+      - ovs
       type: string
       description: |-
         * `micromasters` - micromasters
@@ -15759,6 +15812,7 @@ components:
         * `xpro` - xpro
         * `youtube` - youtube
         * `canvas` - canvas
+        * `ovs` - ovs
       x-enum-descriptions:
       - micromasters
       - mit_edx
@@ -15772,6 +15826,7 @@ components:
       - xpro
       - youtube
       - canvas
+      - ovs
     SourceTypeEnum:
       enum:
       - search_subscription_type
@@ -15906,6 +15961,11 @@ components:
           maxLength: 11
         transcript:
           type: string
+        caption_urls: {}
+        cover_image_url:
+          type: string
+          format: uri
+          maxLength: 2048
       required:
       - duration
       - id
@@ -16357,6 +16417,11 @@ components:
           maxLength: 11
         transcript:
           type: string
+        caption_urls: {}
+        cover_image_url:
+          type: string
+          format: uri
+          maxLength: 2048
       required:
       - duration
     VideoResource:

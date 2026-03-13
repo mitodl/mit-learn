@@ -226,5 +226,17 @@
       "created_on": "2025-07-10T00:00:00+00:00",
       "updated_on": "2025-07-10T00:00:00+00:00"
     }
+  },
+  {
+    "model": "learning_resources.LearningResourcePlatform",
+    "fields": {
+      "code": "ovs",
+      "name": "ODL Video Service",
+      "is_edx": false,
+      "has_content_files": false,
+      "url": "https://video.odl.mit.edu/",
+      "created_on": "2026-03-11T00:00:00+00:00",
+      "updated_on": "2026-03-11T00:00:00+00:00"
+    }
   }
 ]

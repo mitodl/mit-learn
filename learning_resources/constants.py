@@ -92,6 +92,7 @@ class PlatformType(ExtendedEnum):
     youtube = "YouTube"
     canvas = "Canvas"
     climate = "MIT Climate"
+    ovs = "ODL Video Service"
 
 
 class PrivacyLevel(ExtendedEnum):

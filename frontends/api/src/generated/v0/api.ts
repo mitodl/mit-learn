@@ -6320,6 +6320,18 @@ export interface Video {
    * @memberof Video
    */
   transcript?: string
+  /**
+   *
+   * @type {any}
+   * @memberof Video
+   */
+  caption_urls?: any
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
+  cover_image_url?: string
 }
 /**
  * Serializer for the VideoChannel model
@@ -12304,7 +12316,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<string>} [ocw_topic] The ocw topic name.
      * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
@@ -12476,7 +12488,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<string>} [ocw_topic] The ocw topic name.
      * @param {Array<VectorLearningResourcesSearchRetrieveOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {number} [offset] The initial index from which to return the results
-     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
+     * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
@@ -12691,8 +12703,8 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly offset?: number
 
   /**
-   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate
-   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube' | 'canvas' | 'climate'>}
+   * The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
+   * @type {Array<'edx' | 'ocw' | 'oll' | 'mitxonline' | 'bootcamps' | 'xpro' | 'csail' | 'mitpe' | 'see' | 'scc' | 'ctl' | 'whu' | 'susskind' | 'globalalumni' | 'simplilearn' | 'emeritus' | 'podcast' | 'youtube' | 'canvas' | 'climate' | 'ovs'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>
@@ -12919,6 +12931,7 @@ export const VectorLearningResourcesSearchRetrievePlatformEnum = {
   Youtube: "youtube",
   Canvas: "canvas",
   Climate: "climate",
+  Ovs: "ovs",
 } as const
 export type VectorLearningResourcesSearchRetrievePlatformEnum =
   (typeof VectorLearningResourcesSearchRetrievePlatformEnum)[keyof typeof VectorLearningResourcesSearchRetrievePlatformEnum]
