@@ -69,21 +69,27 @@ test.each([
   },
 )
 
-test("programPageView returns /programs/ path for program with no display_mode", () => {
-  expect(
-    programPageView({
-      readable_id: "program-v1:MITxT+10.50x",
-      display_mode: null,
-    }),
-  ).toBe("/programs/program-v1:MITxT+10.50x")
-})
-
 test("programPageView returns /programs/ path for program with empty display_mode", () => {
+  expect(
+    programPageView({ readable_id: "some-plain-slug", display_mode: null }),
+  ).toBe("/programs/some-plain-slug")
   expect(
     programPageView({
       readable_id: "some-plain-slug",
-      display_mode: "" as DisplayModeEnum,
+      display_mode: "",
     }),
+  ).toBe("/programs/some-plain-slug")
+  expect(
+    programPageView({
+      readable_id: "some-plain-slug",
+      display_mode: undefined,
+    }),
+  ).toBe("/programs/some-plain-slug")
+  expect(
+    programPageView(
+      // @ts-expect-error Force callers to pass display_mode explicitly
+      { readable_id: "some-plain-slug" },
+    ),
   ).toBe("/programs/some-plain-slug")
 })
 
@@ -94,13 +100,4 @@ test("programPageView returns /courses/p/ path when display_mode is course", () 
       display_mode: DisplayModeEnum.Course,
     }),
   ).toBe("/courses/p/program-v1:MITxT+18.01x")
-})
-
-test("programPageView does not encode RFC 3986 pchar characters", () => {
-  expect(
-    programPageView({
-      readable_id: "program-v1:MITxT+10.50x",
-      display_mode: null,
-    }),
-  ).toBe("/programs/program-v1:MITxT+10.50x")
 })

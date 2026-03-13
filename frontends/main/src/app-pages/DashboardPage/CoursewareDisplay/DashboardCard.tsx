@@ -181,9 +181,13 @@ const getContextMenuItems = (
 ) => {
   const menuItems = []
   if (resource.type === DashboardType.ProgramEnrollment) {
+    const { program } = resource.data
     const detailsUrl = useProductPages
-      ? programPageView(resource.data.program)
-      : mitxonlineUrl(`/programs/${resource.data.program.readable_id}`)
+      ? programPageView({
+          readable_id: program.readable_id,
+          display_mode: program.display_mode,
+        })
+      : mitxonlineUrl(`/programs/${program.readable_id}`)
 
     if (detailsUrl && includeInLearnCatalog) {
       menuItems.push({
