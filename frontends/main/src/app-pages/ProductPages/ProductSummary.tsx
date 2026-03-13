@@ -9,7 +9,6 @@ import {
   RiPriceTag3Line,
   RiTimeLine,
   RiFileCopy2Line,
-  RiMenuAddLine,
   RiInformation2Line,
 } from "@remixicon/react"
 import { formatDate, isInPast, LocalDate, NoSSR, pluralize } from "ol-utilities"
@@ -27,7 +26,6 @@ import {
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
-import { programPageView } from "@/common/urls"
 
 const ResponsiveLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2, // override default for "black" color is subtitle2
@@ -399,7 +397,7 @@ const StrickenText = styled.span(({ theme }) => ({
   },
 }))
 
-const CourseCertificateBox: React.FC<CourseInfoRowProps & {}> = ({
+const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
   nextRun,
   course,
 }) => {
@@ -557,35 +555,6 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   )
 }
 
-const CourseInProgramsRow: React.FC<CourseInfoRowProps> = ({
-  course,
-  ...others
-}) => {
-  if (!course.programs || course.programs.length === 0) return null
-  const label = `Part of the following ${pluralize("program", course.programs.length)}`
-  return (
-    <InfoRow {...others}>
-      <InfoRowIcon>
-        <RiMenuAddLine aria-hidden="true" />
-      </InfoRowIcon>
-      <InfoRowInner>
-        <Stack gap="4px">
-          <InfoLabel>{label}</InfoLabel>
-          {course.programs.map((p) => (
-            <UnderlinedLink
-              color="black"
-              key={p.readable_id}
-              href={programPageView(p.readable_id)}
-            >
-              {p.title}
-            </UnderlinedLink>
-          ))}
-        </Stack>
-      </InfoRowInner>
-    </InfoRow>
-  )
-}
-
 enum TestIds {
   DatesRow = "dates-row",
   PaceRow = "pace-row",
@@ -593,7 +562,6 @@ enum TestIds {
   PriceRow = "price-row",
   RequirementsRow = "requirements-row",
   CertificateTrackRow = "certificate-track-row",
-  CourseInProgramsRow = "course-in-programs-row",
 }
 
 const ArchivedAlert: React.FC = () => {
@@ -611,13 +579,39 @@ const ArchivedAlert: React.FC = () => {
   )
 }
 
+/**
+ * Flex column by default; on tablet switches to CSS multi-column so
+ * metadata rows flow top-to-bottom then wrap to the next column.
+ */
+const SummaryRows = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  [theme.breakpoints.up("md")]: {
+    gap: "32px",
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    display: "block",
+    columnCount: 2,
+    columnGap: "48px",
+    columnRule: `1px solid ${theme.custom.colors.lightGray2}`,
+    "> *": {
+      breakInside: "avoid",
+      marginBottom: "24px",
+      "&:last-child": {
+        marginBottom: 0,
+      },
+    },
+  },
+}))
+
 const CourseSummary: React.FC<{
   course: CourseWithCourseRunsSerializerV2
 }> = ({ course }) => {
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   return (
-    <Stack gap={{ xs: "24px", md: "32px" }}>
+    <SummaryRows>
       {!nextRun ? (
         <Alert severity="warning">
           No sessions of this course are currently open for enrollment. More
@@ -649,12 +643,7 @@ const CourseSummary: React.FC<{
         nextRun={nextRun}
         data-testid={TestIds.PriceRow}
       />
-      <CourseInProgramsRow
-        course={course}
-        nextRun={nextRun}
-        data-testid={TestIds.CourseInProgramsRow}
-      />
-    </Stack>
+    </SummaryRows>
   )
 }
 
@@ -841,7 +830,7 @@ const ProgramSummary: React.FC<{
   courses?: CourseWithCourseRunsSerializerV2[]
 }> = ({ program, courses }) => {
   return (
-    <Stack gap={{ xs: "24px", md: "32px" }}>
+    <SummaryRows>
       <RequirementsRow
         program={program}
         data-testid={TestIds.RequirementsRow}
@@ -849,7 +838,7 @@ const ProgramSummary: React.FC<{
       <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
       <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
       <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
-    </Stack>
+    </SummaryRows>
   )
 }
 

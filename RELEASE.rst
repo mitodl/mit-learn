@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.57.3
+--------------
+
+- Fix AI ratings csrf issue (#3047)
+- fix: remove media max-width (#3045)
+- fix: change articles mobile design (#3037)
+- Fix webhook parameters (#3041)
+- chore: update mitxonline api with null default image changes (#3044)
+- Fix child assignment for mitxonline programs w/out courses (#3039)
+- fix: change the banner design (#3032)
+- Advertise parent programs on course product pages (#3029)
+- Make sure x-csrf headers are sent for AI response feedback requests (#3035)
+- handle null values coming back on feature_img_src from mitxonline (#3015)
+- Increase page size to 30 for contract programs (#3036)
+
 Version 0.57.0 (Released March 10, 2026)
 --------------
 

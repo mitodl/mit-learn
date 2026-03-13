@@ -3,7 +3,6 @@ import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import { getCsrfToken } from "@/common/client-utils"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
 const CloseButtonContainer = styled("div")({
@@ -72,10 +71,10 @@ const DrawerContent: React.FC<{
         scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT!,
+          csrfCookieName:
+            process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
+          csrfHeaderName: "X-CSRFToken",
           fetchOpts: {
-            headers: {
-              "X-CSRFToken": getCsrfToken(),
-            },
             credentials: "include",
           },
           transformBody: (messages) => ({

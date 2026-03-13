@@ -541,54 +541,6 @@ def test_run_for_edx_archive_no_match(etl_source):
     "etl_source",
     [ETLSource.mitxonline.name, ETLSource.xpro.name],
 )
-def test_run_for_edx_archive_with_id_filter(etl_source):
-    """Test run_for_edx_archive filters by ids when provided"""
-    from learning_resources.etl.edx_shared import run_for_edx_archive
-
-    platform = (
-        PlatformType.mitxonline.name
-        if etl_source == ETLSource.mitxonline.name
-        else PlatformType.xpro.name
-    )
-
-    # Create two courses with runs
-    course1 = LearningResourceFactory.create(
-        platform=LearningResourcePlatformFactory.create(code=platform),
-        etl_source=etl_source,
-        published=True,
-        create_runs=False,
-    )
-    run1 = LearningResourceRunFactory.create(
-        learning_resource=course1,
-        published=True,
-        run_id="course-v1:Test+Course1+R1",
-    )
-
-    course2 = LearningResourceFactory.create(
-        platform=LearningResourcePlatformFactory.create(code=platform),
-        etl_source=etl_source,
-        published=True,
-        create_runs=False,
-    )
-    LearningResourceRunFactory.create(
-        learning_resource=course2,
-        published=True,
-        run_id="course-v1:Test+Course2+R1",
-    )
-
-    # Only search for course1's id
-    result = run_for_edx_archive(
-        etl_source,
-        f"{etl_source}/courses/course-v1:Test+Course1+R1/abcdefghijklmnop.tar.gz",
-        course_id=course1.readable_id,
-    )
-    assert result == run1
-
-
-@pytest.mark.parametrize(
-    "etl_source",
-    [ETLSource.mitxonline.name, ETLSource.xpro.name],
-)
 def test_run_for_edx_archive_unpublished_course(etl_source):
     """Test run_for_edx_archive doesn't return runs for unpublished courses (unless test_mode)"""
     from learning_resources.etl.edx_shared import run_for_edx_archive

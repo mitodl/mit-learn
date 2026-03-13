@@ -5,7 +5,6 @@ import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import { getCsrfToken } from "@/common/client-utils"
 
 export enum ChatTransitionState {
   Closed = "Closed",
@@ -198,10 +197,10 @@ const AiChatSyllabusSlideDown = ({
         scrollElement={scrollElement}
         requestOpts={{
           apiUrl: process.env.NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT!,
+          csrfCookieName:
+            process.env.NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME || "csrftoken",
+          csrfHeaderName: "X-CSRFToken",
           fetchOpts: {
-            headers: {
-              "X-CSRFToken": getCsrfToken(),
-            },
             credentials: "include",
           },
           transformBody: (messages) => {

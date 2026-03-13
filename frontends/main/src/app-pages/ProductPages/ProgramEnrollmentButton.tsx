@@ -1,5 +1,5 @@
 import React from "react"
-import { styled, LoadingSpinner, Stack } from "ol-components"
+import { LoadingSpinner, Stack } from "ol-components"
 import {
   enrollmentQueries,
   useCreateProgramEnrollment,
@@ -7,7 +7,13 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { RiCheckLine } from "@remixicon/react"
-import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  styled,
+  ButtonProps,
+} from "@mitodl/smoot-design"
 import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/ProgramEnrollmentDialog"
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
@@ -19,10 +25,7 @@ import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 
-const WideButtonLink = styled(ButtonLink)(({ href }) => [
-  {
-    width: "100%",
-  },
+const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
   !href && {
     pointerEvents: "none",
     cursor: "default",
@@ -31,9 +34,13 @@ const WideButtonLink = styled(ButtonLink)(({ href }) => [
 
 type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
+  variant?: ButtonProps["variant"]
+  className?: string
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
+  variant = "primary",
+  className,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -87,37 +94,37 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
       setAnchor(e.currentTarget)
     }
   }
-  if (enrollment) {
-    const href = programDashboardEnabled ? programView(program.id) : undefined
+  const href = programDashboardEnabled ? programView(program.id) : undefined
 
-    return (
-      <WideButtonLink href={href}>
-        Enrolled
-        <RiCheckLine aria-hidden="true" />
-      </WideButtonLink>
-    )
-  }
   return (
     <>
-      <Stack width="100%" gap="12px">
-        <Button
-          onClick={handleClick}
-          variant="primary"
-          size="large"
-          disabled={
-            enrollmentType === "none" ||
-            isPaidWithoutPrice ||
-            isPending ||
-            isLoading
-          }
-          endIcon={
-            isLoading || isPending ? (
-              <LoadingSpinner size="16px" loading={true} color="inherit" />
-            ) : undefined
-          }
-        >
-          {isLoading ? null : getEnrollButtonText()}
-        </Button>
+      <Stack gap="12px">
+        {enrollment ? (
+          <ButtonLinkWithDisabled href={href} className={className}>
+            Enrolled
+            <RiCheckLine aria-hidden="true" />
+          </ButtonLinkWithDisabled>
+        ) : (
+          <Button
+            onClick={handleClick}
+            variant={variant}
+            size="large"
+            className={className}
+            disabled={
+              enrollmentType === "none" ||
+              isPaidWithoutPrice ||
+              isPending ||
+              isLoading
+            }
+            endIcon={
+              isLoading || isPending ? (
+                <LoadingSpinner size="16px" loading={true} color="inherit" />
+              ) : undefined
+            }
+          >
+            {isLoading ? null : getEnrollButtonText()}
+          </Button>
+        )}
         {isError && (
           <Alert severity="error">
             There was a problem processing your enrollment. Please try again.

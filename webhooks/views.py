@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from learning_resources.etl.constants import ETLSource
 from learning_resources.models import LearningResource
-from learning_resources.tasks import ingest_canvas_course, ingest_edx_course
+from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
     resource_delete_actions,
 )
@@ -166,9 +166,9 @@ def process_create_content_file_request(data):
     if etl_source == ETLSource.canvas.name:
         ingest_canvas_course.apply_async([content_path, False])
     else:
-        ingest_edx_course.apply_async(
+        ingest_edx_run_archive.apply_async(
             [etl_source, content_path],
-            kwargs={"course_id": readable_id, "overwrite": False},
+            kwargs={"run_id": readable_id, "overwrite": False},
         )
 
 

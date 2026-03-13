@@ -7,7 +7,6 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { CourseSummary } from "./ProductSummary"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
@@ -16,60 +15,29 @@ import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
-import ProductNavbar, { HeadingData } from "./ProductNavbar"
 import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
-import { CoursePageItem } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
 
 type CoursePageProps = {
   readableId: string
 }
 
+const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+  }),
+)
+
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
 })
-
-const getNavLinks = (page: CoursePageItem): HeadingData[] => {
-  const all = [
-    {
-      id: HeadingIds.About,
-      label: "About",
-      variant: "primary",
-      content: page.about,
-    },
-    {
-      id: HeadingIds.What,
-      label: "What you'll learn",
-      variant: "secondary",
-      content: page.what_you_learn,
-    },
-    {
-      id: HeadingIds.How,
-      label: "How you'll learn",
-      variant: "secondary",
-      content: true,
-    },
-    {
-      id: HeadingIds.Prereqs,
-      label: "Prerequisites",
-      variant: "secondary",
-      content: page.prerequisites,
-    },
-    {
-      id: HeadingIds.Instructors,
-      label: "Instructors",
-      variant: "secondary",
-      content: page.faculty.length ? "x" : undefined,
-    },
-  ] as const
-  return all.filter((item) => item.content)
-}
 
 const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
@@ -95,24 +63,20 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     }
   }
 
-  const navLinks = getNavLinks(page)
-
-  const imageSrc = page.feature_image
-    ? page.course_details.page.feature_image_src
-    : DEFAULT_RESOURCE_IMG
+  const imageSrc =
+    page.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
   return (
     <ProductPageTemplate
-      tags={["MITx"]}
-      currentBreadcrumbLabel="Course"
+      currentBreadcrumbLabel="Learning Path"
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}
-      summaryTitle="Course summary"
-      sidebarSummary={<CourseSummary course={course} />}
-      enrollButton={<CourseEnrollmentButton course={course} />}
-      navbar={<ProductNavbar navLinks={navLinks} productNoun="Course" />}
+      infoBox={<CourseInfoBox course={course} />}
+      enrollmentAction={
+        <StyledCourseEnrollmentButton course={course} variant="bordered" />
+      }
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
