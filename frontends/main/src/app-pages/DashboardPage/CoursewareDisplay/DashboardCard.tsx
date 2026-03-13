@@ -647,7 +647,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const coursewareUrl = isCourse
     ? courseRun?.courseware_url
     : enrollmentRun?.courseware_url
-  const b2bContractId = courseRun?.b2b_contract ?? contractId
+  const b2bContractId =
+    courseRun?.b2b_contract ??
+    (resource.type === DashboardType.CourseRunEnrollment
+      ? (resource.data.b2b_contract_id ?? undefined)
+      : undefined) ??
+    contractId
 
   const hasEnrollableRuns = isCourse
     ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
