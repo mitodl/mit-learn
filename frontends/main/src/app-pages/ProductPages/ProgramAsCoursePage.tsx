@@ -254,7 +254,8 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       <ModulesSection
         program={program}
         courses={courses.data?.results}
-        isLoading={courses.isLoading}
+        // Use skeleton as fallback for loading OR error
+        isLoading={!courses.isSuccess}
       />
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
