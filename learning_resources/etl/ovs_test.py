@@ -164,8 +164,8 @@ class TestExtract:
         assert results[0]["key"] == "video1"
         assert results[1]["key"] == "video2"
 
-    def test_extract_adds_exclude_resource_param(self, mocker):
-        """Extract should add exclude_resource=youtube to the URL"""
+    def test_extract_adds_exclude_source_param(self, mocker):
+        """Extract should add exclude_source=youtube to the URL"""
         api_data = {"count": 0, "next": None, "results": []}
         mock_response = Mock()
         mock_response.json.return_value = api_data
@@ -176,10 +176,10 @@ class TestExtract:
         )
         list(extract(url="https://video.odl.mit.edu/api/v0/public/videos/"))
         called_url = mock_get.call_args[0][0]
-        assert "exclude_resource=youtube" in called_url
+        assert "exclude_source=youtube" in called_url
 
     def test_extract_preserves_existing_exclude_param(self, mocker):
-        """Extract should not duplicate exclude_resource if already present"""
+        """Extract should not duplicate exclude_source if already present"""
         api_data = {"count": 0, "next": None, "results": []}
         mock_response = Mock()
         mock_response.json.return_value = api_data
@@ -188,10 +188,38 @@ class TestExtract:
             "learning_resources.etl.ovs.requests.get",
             return_value=mock_response,
         )
-        url = "https://video.odl.mit.edu/api/v0/public/videos/?exclude_resource=youtube"
+        url = "https://video.odl.mit.edu/api/v0/public/videos/?exclude_source=youtube"
         list(extract(url=url))
         called_url = mock_get.call_args[0][0]
-        assert called_url.count("exclude_resource") == 1
+        assert called_url.count("exclude_source") == 1
+
+    def test_extract_adds_exclude_source_to_next_urls(self, mocker):
+        """Extract should add exclude_source=youtube to paginated next URLs"""
+        page1 = {
+            "count": 2,
+            "next": "https://video.odl.mit.edu/api/v0/public/videos/?page=2",
+            "results": [{"key": "video1", "is_public": True, "status": "Complete"}],
+        }
+        page2 = {
+            "count": 2,
+            "next": None,
+            "results": [{"key": "video2", "is_public": True, "status": "Complete"}],
+        }
+        mock_resp1 = Mock()
+        mock_resp1.json.return_value = page1
+        mock_resp1.raise_for_status.return_value = None
+        mock_resp2 = Mock()
+        mock_resp2.json.return_value = page2
+        mock_resp2.raise_for_status.return_value = None
+
+        mock_get = mocker.patch(
+            "learning_resources.etl.ovs.requests.get",
+            side_effect=[mock_resp1, mock_resp2],
+        )
+        list(extract())
+        # Both calls should include exclude_source=youtube
+        for call in mock_get.call_args_list:
+            assert "exclude_source=youtube" in call[0][0]
 
 
 class TestHelpers:
@@ -324,7 +352,7 @@ class TestTransform:
                 "video": {
                     "duration": "PT0S",
                     "caption_urls": [],
-                    "cover_image_url": None,
+                    "cover_image_url": "",
                 },
             },
         )

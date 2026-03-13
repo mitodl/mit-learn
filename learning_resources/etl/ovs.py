@@ -171,17 +171,17 @@ def extract(*, url=None):
         return
     api_url = url or f"{settings.OVS_API_BASE_URL.rstrip('/')}{OVS_API_PATH}"
 
-    # Add exclude_resource=youtube param
-    parsed = urlparse(api_url)
-    if "exclude_resource" not in parsed.query:
-        separator = "&" if parsed.query else ""
-        new_query = (
-            f"{parsed.query}{separator}{urlencode({'exclude_resource': 'youtube'})}"
-        )
-        api_url = urlunparse(parsed._replace(query=new_query))
-
     next_url = api_url
     while next_url:
+        # Ensure exclude_source=youtube is on every paginated URL
+        parsed = urlparse(next_url)
+        if "exclude_source" not in parsed.query:
+            separator = "&" if parsed.query else ""
+            new_query = (
+                f"{parsed.query}{separator}{urlencode({'exclude_source': 'youtube'})}"
+            )
+            next_url = urlunparse(parsed._replace(query=new_query))
+
         log.info("Fetching OVS videos from %s", next_url)
         response = requests.get(next_url, timeout=settings.REQUESTS_TIMEOUT)
         response.raise_for_status()
@@ -222,7 +222,7 @@ def _transform_video(video_data: dict) -> dict:
         "video": {
             "duration": _duration_to_iso8601(video_data.get("duration", 0)),
             "caption_urls": _build_caption_urls(video_data),
-            "cover_image_url": cover_image_url,
+            "cover_image_url": cover_image_url or "",
         },
     }
 
