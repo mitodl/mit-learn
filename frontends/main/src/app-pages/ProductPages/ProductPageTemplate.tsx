@@ -165,7 +165,6 @@ const SidebarVideo = styled.iframe(({ theme }) => ({
   borderRadius: "16px",
   border: "none",
   boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
-  maxWidth: "410px",
   width: "100%",
   aspectRatio: "16 / 9",
   [theme.breakpoints.up("md")]: {
