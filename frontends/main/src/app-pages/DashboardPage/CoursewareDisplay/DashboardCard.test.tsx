@@ -373,6 +373,19 @@ describe.each([
       }),
       expectation: { visible: false },
     },
+    {
+      enrollment: mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Audit,
+        run: {
+          is_upgradable: true,
+          upgrade_deadline: faker.date.future().toISOString(),
+          upgrade_product_id: faker.number.int(),
+          upgrade_product_price: faker.commerce.price(),
+          upgrade_product_is_active: false,
+        },
+      }),
+      expectation: { visible: false },
+    },
   ])(
     "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.courseruns[0].is_upgradable)",
     ({ enrollment, expectation }) => {
@@ -391,6 +404,39 @@ describe.each([
       expect(!!upgradeRoot).toBe(expectation.visible)
     },
   )
+
+  test("Does not show upgrade banner when upgrade product active flag is missing", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+    const enrollmentWithMissingActiveFlag = {
+      ...enrollment,
+      run: {
+        ...enrollment.run,
+        upgrade_product_is_active: undefined,
+      },
+    } as unknown as typeof enrollment
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.CourseRunEnrollment,
+          data: enrollmentWithMissingActiveFlag,
+        }}
+      />,
+    )
+
+    const card = getCard()
+    expect(within(card).queryByTestId("upgrade-root")).toBeNull()
+  })
 
   test.each([
     { offerUpgrade: true, expected: { visible: true } },

@@ -676,7 +676,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     isCourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
     (enrollmentRun?.is_upgradable ?? false) &&
-    (enrollmentRun?.upgrade_product_is_active ?? true)
+    enrollmentRun?.upgrade_product_is_active === true
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
