@@ -230,7 +230,7 @@ describe("ProgramAsCoursePage", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("Renders Modules subsections when multiple roots", async () => {
+  test("Renders Modules subsections as fallback when multiple roots", async () => {
     jest.spyOn(console, "warn").mockImplementation()
     const reqTree = new RequirementTreeBuilder()
     const op1 = reqTree.addOperator({
