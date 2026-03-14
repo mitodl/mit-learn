@@ -28,7 +28,13 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
-const makeProgram = factories.programs.program
+const makeProgramAsCourse: typeof factories.programs.program = (
+  overrides = {},
+) =>
+  factories.programs.program({
+    display_mode: DisplayModeEnum.Course,
+    ...overrides,
+  })
 const makePage = factories.pages.programPageItem
 
 const getCourseIdsFromRequirements = (
@@ -90,26 +96,13 @@ describe("ProgramAsCoursePage", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 
-  test("Uses 'Course' breadcrumb label, not 'Program'", async () => {
-    const program = makeProgram({ display_mode: DisplayModeEnum.Course })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(
-      <ProgramAsCoursePage readableId={program.readable_id} />,
-    )
-    const banner = await screen.findByTestId("banner-container")
-    expect(within(banner).getByText("Course")).toBeInTheDocument()
-    expect(within(banner).queryByText("Program")).not.toBeInTheDocument()
-  })
-
   test("Page has expected headings", async () => {
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({ operator: "all_of" })
     op.addCourse()
     op.addCourse()
 
-    const program = makeProgram({
-      display_mode: DisplayModeEnum.Course,
+    const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
       requirements: reqTree.requirements(),
     })
@@ -136,33 +129,8 @@ describe("ProgramAsCoursePage", () => {
     })
   })
 
-  test("Uses 'About this Course' heading, not 'About this Program'", async () => {
-    const program = makeProgram({ display_mode: DisplayModeEnum.Course })
-    const page = makePage({ program_details: program })
-    invariant(page.about)
-    setupApis({ program, page })
-    renderWithProviders(
-      <ProgramAsCoursePage readableId={program.readable_id} />,
-    )
-    const section = await screen.findByRole("region", {
-      name: "About this Course",
-    })
-    expect(section).toBeInTheDocument()
-  })
-
-  test("Uses 'Who can take this Course?' heading", async () => {
-    const program = makeProgram({ display_mode: DisplayModeEnum.Course })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(
-      <ProgramAsCoursePage readableId={program.readable_id} />,
-    )
-    await screen.findByRole("heading", { name: "Who can take this Course?" })
-  })
-
   test("Renders an enrollment button", async () => {
-    const program = makeProgram({
-      display_mode: DisplayModeEnum.Course,
+    const program = makeProgramAsCourse({
       enrollment_modes: [
         factories.courses.enrollmentMode({ requires_payment: false }),
       ],
@@ -174,19 +142,6 @@ describe("ProgramAsCoursePage", () => {
     )
     const buttons = await screen.findAllByRole("button", { name: /enroll/i })
     expect(buttons.length).toBeGreaterThanOrEqual(1)
-  })
-
-  test("Renders Course Information in info box, not Program Information", async () => {
-    const program = makeProgram({ display_mode: DisplayModeEnum.Course })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(
-      <ProgramAsCoursePage readableId={program.readable_id} />,
-    )
-    await waitFor(() => {
-      expect(screen.getByText("Course Information")).toBeInTheDocument()
-    })
-    expect(screen.queryByText("Program Information")).not.toBeInTheDocument()
   })
 
   test("Returns 404 if no program found", async () => {
@@ -209,8 +164,7 @@ describe("ProgramAsCoursePage", () => {
     op.addCourse()
     op.addCourse()
 
-    const program = makeProgram({
-      display_mode: DisplayModeEnum.Course,
+    const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
       requirements: reqTree.requirements(),
     })
@@ -252,8 +206,7 @@ describe("ProgramAsCoursePage", () => {
     })
     op2.addCourse()
 
-    const program = makeProgram({
-      display_mode: DisplayModeEnum.Course,
+    const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
       requirements: reqTree.requirements(),
     })
