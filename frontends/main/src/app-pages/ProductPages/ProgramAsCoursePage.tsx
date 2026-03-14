@@ -28,6 +28,7 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { keyBy } from "lodash"
+import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 
 type ProgramAsCoursePageProps = {
   readableId: string
@@ -205,7 +206,14 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const courses = useQuery(coursesQueries.coursesForProgram(program))
+  const courseIds = program ? getCourseIdsFromReqTree(program.req_tree) : []
+  const courses = useQuery({
+    ...coursesQueries.coursesList({
+      id: courseIds,
+      page_size: courseIds.length,
+    }),
+    enabled: courseIds.length > 0,
+  })
 
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()

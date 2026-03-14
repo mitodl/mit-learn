@@ -30,6 +30,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { keyBy } from "lodash"
+import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 
 type ProgramPageProps = {
   readableId: string
@@ -176,7 +177,14 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const courses = useQuery(coursesQueries.coursesForProgram(program))
+  const courseIds = program ? getCourseIdsFromReqTree(program.req_tree) : []
+  const courses = useQuery({
+    ...coursesQueries.coursesList({
+      id: courseIds,
+      page_size: courseIds.length,
+    }),
+    enabled: courseIds.length > 0,
+  })
 
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
