@@ -22,6 +22,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -36,20 +37,6 @@ const makeProgramAsCourse: typeof factories.programs.program = (
     ...overrides,
   })
 const makePage = factories.pages.programPageItem
-
-const getCourseIdsFromRequirements = (
-  requirements: V2ProgramDetail["requirements"],
-): number[] => {
-  const required =
-    requirements?.courses?.required
-      ?.map((c) => c.id)
-      .filter((id): id is number => id !== undefined) ?? []
-  const electives =
-    requirements?.courses?.electives
-      ?.map((c) => c.id)
-      .filter((id): id is number => id !== undefined) ?? []
-  return [...required, ...electives]
-}
 
 const setupApis = ({
   program,
@@ -66,7 +53,7 @@ const setupApis = ({
     items: [page],
   })
 
-  const courseIds = getCourseIdsFromRequirements(program.requirements)
+  const courseIds = getCourseIdsFromReqTree(program.req_tree)
   const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
     factories.courses.course({ id }),
   )
@@ -104,7 +91,6 @@ describe("ProgramAsCoursePage", () => {
 
     const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
-      requirements: reqTree.requirements(),
     })
     const page = makePage({ program_details: program })
     invariant(page.faculty.length > 0)
@@ -166,7 +152,6 @@ describe("ProgramAsCoursePage", () => {
 
     const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
-      requirements: reqTree.requirements(),
     })
     const page = makePage({ program_details: program })
     const { courses } = setupApis({ program, page })
@@ -208,7 +193,6 @@ describe("ProgramAsCoursePage", () => {
 
     const program = makeProgramAsCourse({
       req_tree: reqTree.serialize(),
-      requirements: reqTree.requirements(),
     })
     const page = makePage({ program_details: program })
     const { courses } = setupApis({ program, page })
