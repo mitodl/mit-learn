@@ -69,22 +69,23 @@ test.each([
   },
 )
 
-test("programPageView returns /programs/ path for program with empty display_mode", () => {
-  expect(
-    programPageView({ readable_id: "some-plain-slug", display_mode: null }),
-  ).toBe("/programs/some-plain-slug")
-  expect(
-    programPageView({
-      readable_id: "some-plain-slug",
-      display_mode: "",
-    }),
-  ).toBe("/programs/some-plain-slug")
-  expect(
-    programPageView({
-      readable_id: "some-plain-slug",
-      display_mode: undefined,
-    }),
-  ).toBe("/programs/some-plain-slug")
+test.each([
+  { displayMode: null, label: "null" },
+  { displayMode: "", label: "empty string" },
+  { displayMode: undefined, label: "undefined" },
+])(
+  "programPageView returns /programs/ path when display_mode is $label",
+  ({ displayMode }) => {
+    expect(
+      programPageView({
+        readable_id: "some-plain-slug",
+        display_mode: displayMode,
+      }),
+    ).toBe("/programs/some-plain-slug")
+  },
+)
+
+test("programPageView returns /programs/ path when display_mode is omitted", () => {
   expect(
     programPageView(
       // @ts-expect-error Force callers to pass display_mode explicitly

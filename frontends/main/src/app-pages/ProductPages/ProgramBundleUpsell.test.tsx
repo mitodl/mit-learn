@@ -40,7 +40,6 @@ describe("ProgramBundleUpsell", () => {
     const programDetail = factories.programs.program({
       id: baseProgram.id,
       readable_id: baseProgram.readable_id,
-      title: "Data Science",
       req_tree: requirements.serialize(),
       products: [factories.courses.product({ price: "750" })],
     })
@@ -52,7 +51,7 @@ describe("ProgramBundleUpsell", () => {
     const upsell = await screen.findByTestId("program-bundle-upsell-item")
     // 3 required + 2 electives = 5 total courses
     expect(upsell).toHaveTextContent(
-      "Get all 5 Data Science Courses + Certificates",
+      `Get all 5 ${programDetail.title} Courses + Certificates`,
     )
     expect(upsell).toHaveTextContent("$750")
     expect(upsell).toHaveTextContent("(19% off)")

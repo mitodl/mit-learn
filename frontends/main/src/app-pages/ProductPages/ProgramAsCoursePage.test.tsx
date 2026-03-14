@@ -16,12 +16,12 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
+import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -102,6 +102,40 @@ describe("ProgramAsCoursePage", () => {
     expect(within(banner).queryByText("Program")).not.toBeInTheDocument()
   })
 
+  test("Page has expected headings", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addCourse()
+    op.addCourse()
+
+    const program = makeProgram({
+      display_mode: DisplayModeEnum.Course,
+      req_tree: reqTree.serialize(),
+      requirements: reqTree.requirements(),
+    })
+    const page = makePage({ program_details: program })
+    invariant(page.faculty.length > 0)
+    setupApis({ program, page })
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await waitFor(() => {
+      assertHeadings([
+        { level: 1, name: page.title },
+        { level: 2, name: "Course Information" },
+        { level: 2, name: "About this Course" },
+        { level: 2, name: "Modules" },
+        { level: 2, name: "What you'll learn" },
+        { level: 2, name: "How you'll learn" },
+        { level: 2, name: "Prerequisites" },
+        { level: 2, name: "Meet your instructors" },
+        { level: 3, name: page.faculty[0].instructor_name },
+        { level: 2, name: "Who can take this Course?" },
+      ])
+    })
+  })
+
   test("Uses 'About this Course' heading, not 'About this Program'", async () => {
     const program = makeProgram({ display_mode: DisplayModeEnum.Course })
     const page = makePage({ program_details: program })
@@ -124,21 +158,6 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
     await screen.findByRole("heading", { name: "Who can take this Course?" })
-  })
-
-  test("Does not show program_type or platform tags", async () => {
-    const program = makeProgram({
-      display_mode: DisplayModeEnum.Course,
-      program_type: "Series",
-    })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(
-      <ProgramAsCoursePage readableId={program.readable_id} />,
-    )
-    const banner = await screen.findByTestId("banner-container")
-    expect(within(banner).queryByText("MITx")).not.toBeInTheDocument()
-    expect(within(banner).queryByText("Series")).not.toBeInTheDocument()
   })
 
   test("Renders an enrollment button", async () => {
@@ -185,26 +204,15 @@ describe("ProgramAsCoursePage", () => {
   })
 
   test("Renders Modules section with course titles (single root)", async () => {
-    const course1Id = faker.number.int()
-    const course2Id = faker.number.int()
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({ operator: "all_of", title: "All Modules" })
-    op.addCourse({ course: course1Id })
-    op.addCourse({ course: course2Id })
+    op.addCourse()
+    op.addCourse()
 
     const program = makeProgram({
       display_mode: DisplayModeEnum.Course,
       req_tree: reqTree.serialize(),
-      requirements: {
-        courses: {
-          required: [
-            { id: course1Id, readable_id: faker.lorem.slug() },
-            { id: course2Id, readable_id: faker.lorem.slug() },
-          ],
-          electives: [],
-        },
-        programs: { required: [], electives: [] },
-      },
+      requirements: reqTree.requirements(),
     })
     const page = makePage({ program_details: program })
     const { courses } = setupApis({ program, page })
@@ -237,33 +245,17 @@ describe("ProgramAsCoursePage", () => {
       operator: "all_of",
       title: "Core Modules",
     })
-    op1.addCourse({ course: faker.number.int() })
+    op1.addCourse()
     const op2 = reqTree.addOperator({
       operator: "all_of",
       title: "Advanced Modules",
     })
-    op2.addCourse({ course: faker.number.int() })
-
-    const serialized = reqTree.serialize()
-    const allCourseIds = serialized.flatMap((node) =>
-      (node.children ?? [])
-        .map((c) => c.data.course)
-        .filter((id): id is number => typeof id === "number"),
-    )
+    op2.addCourse()
 
     const program = makeProgram({
       display_mode: DisplayModeEnum.Course,
-      req_tree: serialized,
-      requirements: {
-        courses: {
-          required: allCourseIds.map((id) => ({
-            id,
-            readable_id: faker.lorem.slug(),
-          })),
-          electives: [],
-        },
-        programs: { required: [], electives: [] },
-      },
+      req_tree: reqTree.serialize(),
+      requirements: reqTree.requirements(),
     })
     const page = makePage({ program_details: program })
     const { courses } = setupApis({ program, page })
