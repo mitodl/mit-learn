@@ -7,18 +7,7 @@ const makeProgram = factories.programs.program
 
 describe("ProgramAsCourseSummary", () => {
   test("Renders duration and price rows", () => {
-    const program = makeProgram({
-      page: {
-        length: "6 weeks",
-        effort: "5 hours/week",
-        feature_image_src: "",
-        page_url: "",
-        financial_assistance_form_url: "",
-        description: "",
-        live: true,
-        price: "100",
-      },
-    })
+    const program = makeProgram()
     renderWithProviders(<ProgramAsCourseSummary program={program} />)
     expect(screen.getByTestId(TestIds.DurationRow)).toBeInTheDocument()
     expect(screen.getByTestId(TestIds.PriceRow)).toBeInTheDocument()

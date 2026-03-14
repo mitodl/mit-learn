@@ -1,4 +1,5 @@
 import type {
+  V2ProgramDetail,
   V2ProgramRequirement,
   V2ProgramRequirementData,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -128,6 +129,37 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     const programNode = new RequirementTreeBuilder({ data })
     this.addChild(programNode)
     return programNode
+  }
+
+  /**
+   * Derive a `requirements` object from the tree so that `req_tree` and
+   * `requirements` stay in sync. Useful because the `coursesForProgram`
+   * query reads `requirements` to determine which course IDs to fetch.
+   */
+  requirements(): V2ProgramDetail["requirements"] {
+    invariant(
+      this.#root === this,
+      "requirements can only be called on the root node",
+    )
+    const courseIds: number[] = []
+    const visit = (nodes: RequirementTreeBuilder[]) => {
+      for (const node of nodes) {
+        if (node.data.course !== null && node.data.course !== undefined)
+          courseIds.push(node.data.course)
+        if (node.children) visit(node.children)
+      }
+    }
+    if (this.children) visit(this.children)
+    return {
+      courses: {
+        required: courseIds.map((id) => ({
+          id,
+          readable_id: faker.lorem.slug(),
+        })),
+        electives: [],
+      },
+      programs: { required: [], electives: [] },
+    }
   }
 
   #serialize(): V2ProgramRequirement {
