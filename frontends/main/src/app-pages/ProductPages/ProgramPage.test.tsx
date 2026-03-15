@@ -22,6 +22,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
@@ -118,13 +119,6 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
   expect(htmlString.length).toBeGreaterThan(0)
   expect(raw.innerHTML).toBe(htmlString)
 }
-
-const getCourseIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] =>
-  reqTree.flatMap((node) =>
-    (node.children ?? [])
-      .map((child) => child.data.course)
-      .filter((course): course is number => typeof course === "number"),
-  )
 
 const setupApis = ({
   program,

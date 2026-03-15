@@ -1,18 +1,18 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
-import ProgramPage from "@/app-pages/ProductPages/ProgramPage"
+import ProgramAsCoursePage from "@/app-pages/ProductPages/ProgramAsCoursePage"
 import { notFound, redirect } from "next/navigation"
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { programPageView } from "@/common/urls"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getQueryClient } from "@/app/getQueryClient"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { programPageView } from "@/common/urls"
 
-export const generateMetadata = async (
-  props: PageProps<"/programs/[readable_id]">,
-) => {
+type Props = { params: Promise<{ readable_id: string }> }
+
+export const generateMetadata = async (props: Props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 
@@ -39,7 +39,7 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
+const Page: React.FC<Props> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 
@@ -61,7 +61,9 @@ const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
   }
 
   const program = programs.results[0]
-  if (program.display_mode === DisplayModeEnum.Course) {
+
+  // Redirect to program page if display_mode is not "course"
+  if (program.display_mode !== DisplayModeEnum.Course) {
     redirect(
       programPageView({
         readable_id: readableId,
@@ -72,7 +74,7 @@ const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <ProgramPage readableId={readableId} />
+      <ProgramAsCoursePage readableId={readableId} />
     </HydrationBoundary>
   )
 }

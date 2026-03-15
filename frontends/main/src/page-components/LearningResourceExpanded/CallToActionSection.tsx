@@ -320,10 +320,22 @@ const getResourceUrl = (
     mitxonlineProductPages &&
     resource.platform?.code === PlatformEnum.Mitxonline
   ) {
+    /**
+     * TODO:
+     * Some MITxOnline programs have display_mode="course".
+     * When we have finalized ETL ingestion for these programs, we should ensure
+     * that they link to. their appropriate pages.
+     *
+     * Ideally this would be handled on the backend via resource.url after
+     * the product page feature flags are removed.
+     */
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return coursePageView(resource.readable_id)
     } else if (resource.resource_type === ResourceTypeEnum.Program) {
-      return programPageView(resource.readable_id)
+      return programPageView({
+        readable_id: resource.readable_id,
+        display_mode: null,
+      })
     }
   }
   return resource.url
