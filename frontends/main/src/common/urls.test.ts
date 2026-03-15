@@ -73,7 +73,7 @@ test.each([
   { displayMode: null, label: "null" },
   { displayMode: "", label: "empty string" },
   { displayMode: undefined, label: "undefined" },
-])(
+] as const)(
   "programPageView returns /programs/ path when display_mode is $label",
   ({ displayMode }) => {
     expect(
