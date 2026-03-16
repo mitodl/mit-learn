@@ -30,7 +30,7 @@ services:
   redis:
     profiles:
       - backend
-    image: redis:8.2.2
+    image: redis:8.6.1
     healthcheck:
       test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
       interval: 3s
