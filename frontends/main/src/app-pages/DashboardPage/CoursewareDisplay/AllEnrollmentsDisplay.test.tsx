@@ -8,7 +8,8 @@ import {
   user,
   within,
 } from "@/test-utils"
-import { EnrollmentDisplay } from "./EnrollmentDisplay"
+import { AllEnrollmentsDisplay } from "./AllEnrollmentsDisplay"
+import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mockAxiosInstance } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -20,7 +21,7 @@ const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
 
-describe("EnrollmentDisplay", () => {
+describe("MyLearning", () => {
   setupLocationMock()
 
   const setupApis = (includeExpired: boolean = true) => {
@@ -45,7 +46,7 @@ describe("EnrollmentDisplay", () => {
 
   test("Renders the expected cards", async () => {
     const { completed, started, notStarted } = setupApis()
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -61,7 +62,7 @@ describe("EnrollmentDisplay", () => {
 
   test("Renders the proper amount of unenroll and email settings buttons in the context menus", async () => {
     const { enrollments } = setupApis()
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     expect(cards.length).toBe(enrollments.length)
@@ -83,7 +84,7 @@ describe("EnrollmentDisplay", () => {
 
   test("Clicking show all reveals ended courses", async () => {
     const { completed, expired, started, notStarted } = setupApis()
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     const showAllButton = await screen.findByText("Show all")
     await user.click(showAllButton)
@@ -105,7 +106,7 @@ describe("EnrollmentDisplay", () => {
 
   test("If there are no extra enrollments to display, there should be no show all", async () => {
     setupApis(false)
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -132,7 +133,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -173,7 +174,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -199,7 +200,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     // Wait a moment for queries to complete
     await act(async () => {
@@ -234,7 +235,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect((await screen.findAllByText("Solo Program")).length).toBeGreaterThan(
@@ -265,7 +266,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect(
@@ -308,7 +309,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
     expect(
@@ -371,7 +372,7 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -428,7 +429,7 @@ describe("EnrollmentDisplay", () => {
     })
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [contract])
 
-    renderWithProviders(<EnrollmentDisplay />)
+    renderWithProviders(<AllEnrollmentsDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
@@ -476,7 +477,7 @@ describe("EnrollmentDisplay", () => {
         results: [],
       })
 
-      renderWithProviders(<EnrollmentDisplay programId={123} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={123} />)
 
       await screen.findByText("Target Program")
       expect(screen.getByText("Target Program")).toBeInTheDocument()
@@ -538,7 +539,7 @@ describe("EnrollmentDisplay", () => {
         results: [],
       })
 
-      renderWithProviders(<EnrollmentDisplay programId={456} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={456} />)
 
       // Wait for program data to load
       await screen.findByText(/for this program/)
@@ -613,7 +614,7 @@ describe("EnrollmentDisplay", () => {
         results: [],
       })
 
-      renderWithProviders(<EnrollmentDisplay programId={789} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={789} />)
 
       // Wait for the section header to load
       await screen.findByText("Requirements")
@@ -635,7 +636,7 @@ describe("EnrollmentDisplay", () => {
       expect(titles.length).toBeGreaterThanOrEqual(1)
     })
 
-    test("Shows 'Continue' button for enrolled courses and 'Start Course' for unenrolled", async () => {
+    test("Shows 'Continue' button for enrolled courses and 'Start' for unenrolled", async () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -715,7 +716,7 @@ describe("EnrollmentDisplay", () => {
         courses,
       )
 
-      renderWithProviders(<EnrollmentDisplay programId={777} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={777} />)
 
       await screen.findByText("Requirements")
 
@@ -747,11 +748,11 @@ describe("EnrollmentDisplay", () => {
       expect(continueButton).toHaveTextContent("Continue")
       expect(continueButton.tagName).toBe("A") // Should be a link
 
-      // Unenrolled course should show "Start Course" button
+      // Unenrolled course should show "Start" button
       const startButton = within(unenrolledCard!).getByTestId(
         "courseware-button",
       )
-      expect(startButton).toHaveTextContent("Start Course")
+      expect(startButton).toHaveTextContent("Start")
       expect(startButton.tagName).toBe("BUTTON") // Should be a button
     })
 
@@ -814,7 +815,7 @@ describe("EnrollmentDisplay", () => {
         courses,
       )
 
-      renderWithProviders(<EnrollmentDisplay programId={666} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={666} />)
 
       await screen.findByText("Requirements")
 
@@ -904,7 +905,7 @@ describe("EnrollmentDisplay", () => {
         courses,
       )
 
-      renderWithProviders(<EnrollmentDisplay programId={999} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={999} />)
 
       // Should show "0 of 1" not "0 of 2" since operator_value is "1"
       await screen.findByText(/Completed 0 of 1/)
@@ -940,7 +941,7 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)
 
-      renderWithProviders(<EnrollmentDisplay programId={888} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={888} />)
 
       // Should show 404 page instead of program content
       await screen.findByText(
@@ -1014,7 +1015,7 @@ describe("EnrollmentDisplay", () => {
       // Mock the enrollment endpoint
       setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
 
-      renderWithProviders(<EnrollmentDisplay programId={888} />)
+      renderWithProviders(<ProgramEnrollmentDisplay programId={888} />)
 
       await screen.findByText("Program Requirements")
 
