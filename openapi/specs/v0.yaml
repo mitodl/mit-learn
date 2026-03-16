@@ -2190,7 +2190,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2273,8 +2278,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -2630,7 +2647,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2716,8 +2738,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -3131,7 +3165,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -3181,7 +3220,19 @@ components:
           default: learning_path
           readOnly: true
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
           readOnly: true
           default: Learning Path
         learning_path:
@@ -4455,7 +4506,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -4538,8 +4594,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -4739,7 +4807,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -4822,8 +4895,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -5301,7 +5386,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -5384,8 +5474,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -5499,6 +5601,35 @@ components:
       - Podcast Episodes
       - Playlist Videos
       - Course Learning Materials
+    ResourceCategoryEnum:
+      enum:
+      - Course
+      - Program
+      - Learning Path
+      - Podcast
+      - Podcast Episode
+      - Video
+      - Video Playlist
+      - Document
+      type: string
+      description: |-
+        * `Course` - Course
+        * `Program` - Program
+        * `Learning Path` - Learning Path
+        * `Podcast` - Podcast
+        * `Podcast Episode` - Podcast Episode
+        * `Video` - Video
+        * `Video Playlist` - Video Playlist
+        * `Document` - Document
+      x-enum-descriptions:
+      - Course
+      - Program
+      - Learning Path
+      - Podcast
+      - Podcast Episode
+      - Video
+      - Video Playlist
+      - Document
     ResourceTypeEnum:
       enum:
       - news
@@ -6026,7 +6157,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6109,8 +6245,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:
@@ -6310,7 +6458,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6406,8 +6559,20 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceCategoryEnum'
           readOnly: true
+          description: |-
+            The display category for this resource.
+
+            * `Course` - Course
+            * `Program` - Program
+            * `Learning Path` - Learning Path
+            * `Podcast` - Podcast
+            * `Podcast Episode` - Podcast Episode
+            * `Video` - Video
+            * `Video Playlist` - Video Playlist
+            * `Document` - Document
         ocw_topics:
           type: array
           items:

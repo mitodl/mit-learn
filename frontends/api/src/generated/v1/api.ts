@@ -759,7 +759,7 @@ export interface CourseResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof CourseResource
    */
@@ -850,10 +850,10 @@ export interface CourseResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof CourseResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -1568,7 +1568,7 @@ export interface DocumentResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof DocumentResource
    */
@@ -1659,10 +1659,10 @@ export interface DocumentResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof DocumentResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -2102,7 +2102,7 @@ export interface LearningPathResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof LearningPathResource
    */
@@ -2139,10 +2139,10 @@ export interface LearningPathResource {
   resource_type: LearningPathResourceResourceTypeEnum
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof LearningPathResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {LearningPath}
@@ -5551,7 +5551,7 @@ export interface PodcastEpisodeResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof PodcastEpisodeResource
    */
@@ -5642,10 +5642,10 @@ export interface PodcastEpisodeResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof PodcastEpisodeResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -6041,7 +6041,7 @@ export interface PodcastResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof PodcastResource
    */
@@ -6132,10 +6132,10 @@ export interface PodcastResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof PodcastResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -6763,7 +6763,7 @@ export interface ProgramResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof ProgramResource
    */
@@ -6854,10 +6854,10 @@ export interface ProgramResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof ProgramResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -7158,6 +7158,61 @@ export const RelationTypeEnum = {
 
 export type RelationTypeEnum =
   (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
+
+/**
+ * * `Course` - Course * `Program` - Program * `Learning Path` - Learning Path * `Podcast` - Podcast * `Podcast Episode` - Podcast Episode * `Video` - Video * `Video Playlist` - Video Playlist * `Document` - Document
+ * @export
+ * @enum {string}
+ */
+
+export const ResourceCategoryEnumDescriptions = {
+  Course: "Course",
+  Program: "Program",
+  "Learning Path": "Learning Path",
+  Podcast: "Podcast",
+  "Podcast Episode": "Podcast Episode",
+  Video: "Video",
+  "Video Playlist": "Video Playlist",
+  Document: "Document",
+} as const
+
+export const ResourceCategoryEnum = {
+  /**
+   * Course
+   */
+  Course: "Course",
+  /**
+   * Program
+   */
+  Program: "Program",
+  /**
+   * Learning Path
+   */
+  LearningPath: "Learning Path",
+  /**
+   * Podcast
+   */
+  Podcast: "Podcast",
+  /**
+   * Podcast Episode
+   */
+  PodcastEpisode: "Podcast Episode",
+  /**
+   * Video
+   */
+  Video: "Video",
+  /**
+   * Video Playlist
+   */
+  VideoPlaylist: "Video Playlist",
+  /**
+   * Document
+   */
+  Document: "Document",
+} as const
+
+export type ResourceCategoryEnum =
+  (typeof ResourceCategoryEnum)[keyof typeof ResourceCategoryEnum]
 
 /**
  * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
@@ -7963,7 +8018,7 @@ export interface VideoPlaylistResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof VideoPlaylistResource
    */
@@ -8054,10 +8109,10 @@ export interface VideoPlaylistResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof VideoPlaylistResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
@@ -8441,7 +8496,7 @@ export interface VideoResource {
    */
   free: boolean
   /**
-   * Return the resource category of the resource
+   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
    * @type {string}
    * @memberof VideoResource
    */
@@ -8544,10 +8599,10 @@ export interface VideoResource {
   url?: string | null
   /**
    *
-   * @type {string}
+   * @type {ResourceCategoryEnum}
    * @memberof VideoResource
    */
-  resource_category: string
+  resource_category: ResourceCategoryEnum
   /**
    *
    * @type {Array<string>}
