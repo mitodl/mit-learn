@@ -208,4 +208,4 @@ def mit_climate_etl() -> list[dict]:
     from learning_resources.etl.mit_climate import extract_articles
 
     articles_data = extract_articles()
-    return loaders.load_articles(articles_data)
+    return loaders.load_documents(ETLSource.mit_climate.name, articles_data)

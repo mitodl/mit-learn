@@ -352,14 +352,6 @@ class CourseSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class ArticleSerializer(serializers.ModelSerializer):
-    """Serializer for the Article model"""
-
-    class Meta:
-        model = models.Article
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
-
-
 class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
     """Serializer for the LearningPath model"""
 
@@ -1007,16 +999,6 @@ class CourseResourceSerializer(LearningResourceBaseSerializer):
     course = CourseSerializer(read_only=True)
 
 
-class ArticleResourceSerializer(LearningResourceBaseSerializer):
-    """Serializer for Article resources"""
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.article.name
-    )
-
-    article = ArticleSerializer(read_only=True)
-
-
 class LearningPathResourceSerializer(LearningResourceBaseSerializer):
     """CRUD serializer for LearningPath resources"""
 
@@ -1358,7 +1340,6 @@ class LearningResourceSerializer(serializers.Serializer):
             PodcastEpisodeResourceSerializer,
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
-            ArticleResourceSerializer,
             DocumentResourceSerializer,
         )
     }
