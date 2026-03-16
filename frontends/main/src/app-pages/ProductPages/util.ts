@@ -1,5 +1,5 @@
 import type { V2Program } from "@mitodl/mitxonline-api-axios/v2"
-import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 enum HeadingIds {
   About = "about",
@@ -13,12 +13,16 @@ enum HeadingIds {
   Modules = "modules",
 }
 
+type RequirementItem =
+  | { type: "course"; id: number }
+  | { type: "program"; id: number }
+
 type RequirementData = {
   id?: number | null // In practice this should always be defined. TODO: Why doesn't OpenAPI know this?
   elective: boolean
   title: string
-  courseIds: number[]
-  requiredCourseCount: number
+  items: RequirementItem[]
+  requiredCount: number
 }
 
 const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
@@ -35,32 +39,66 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
       const title =
         node.data.title || (elective ? "Elective Courses" : "Core Courses")
 
-      const children = node.children ?? []
-      if (!children.every((c) => c.data.node_type === NodeTypeEnum.Course)) {
-        console.error(
-          "UI Display expects program requirements operator nodes to only have course children",
-        )
-      }
+      const items: RequirementItem[] = (node.children ?? []).flatMap(
+        (child): RequirementItem[] => {
+          if (
+            child.data.node_type === NodeTypeEnum.Course &&
+            typeof child.data.course === "number"
+          ) {
+            return [{ type: "course", id: child.data.course }]
+          }
+          if (
+            child.data.node_type === NodeTypeEnum.Program &&
+            typeof child.data.required_program === "number"
+          ) {
+            return [{ type: "program", id: child.data.required_program }]
+          }
+          return []
+        },
+      )
 
-      const courseIds =
-        node.children
-          ?.map((child) => child.data.course)
-          .filter((id) => typeof id === "number") || []
-      const requiredCourseCount =
+      const requiredCount =
         node.data.operator === "min_number_of"
-          ? Number(node.data.operator_value) || courseIds.length
-          : courseIds.length
+          ? Number(node.data.operator_value) || items.length
+          : items.length
       return {
         id: node.id,
         elective,
         title,
-        courseIds,
-        requiredCourseCount,
+        items,
+        requiredCount,
       }
     })
 }
 
+/**
+ * Determine the noun to use for requirement items.
+ * Programs with display_mode="course" count as courses.
+ */
+const getItemNoun = (
+  items: RequirementItem[],
+  programsById: Record<number, { display_mode?: string | null }>,
+): string => {
+  let hasCourse = false
+  let hasProgram = false
+  for (const item of items) {
+    if (item.type === "course") {
+      hasCourse = true
+    } else {
+      const prog = programsById[item.id]
+      if (prog?.display_mode === DisplayModeEnum.Course) {
+        hasCourse = true
+      } else {
+        hasProgram = true
+      }
+    }
+  }
+  if (hasCourse && hasProgram) return "course/program"
+  if (hasProgram) return "program"
+  return "course"
+}
+
 type ProductNoun = "Course" | "Program"
 
-export { HeadingIds, parseReqTree }
-export type { ProductNoun, RequirementData }
+export { HeadingIds, parseReqTree, getItemNoun }
+export type { ProductNoun, RequirementData, RequirementItem }

@@ -14,7 +14,7 @@ import type {
   ProgramPageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
@@ -22,7 +22,6 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -38,13 +37,60 @@ const makeProgramAsCourse: typeof factories.programs.program = (
   })
 const makePage = factories.pages.programPageItem
 
+/**
+ * Extract course IDs from a req_tree by looking for Course nodes.
+ */
+const getCourseIdsFromReqTree = (
+  reqTree: V2ProgramDetail["req_tree"],
+): number[] => {
+  const ids: number[] = []
+  const walk = (nodes: V2ProgramDetail["req_tree"]) => {
+    for (const node of nodes) {
+      if (
+        node.data.node_type === NodeTypeEnum.Course &&
+        typeof node.data.course === "number"
+      ) {
+        ids.push(node.data.course)
+      }
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(reqTree)
+  return ids
+}
+
+/**
+ * Extract program IDs from a req_tree by looking for Program nodes.
+ */
+const getProgramIdsFromReqTree = (
+  reqTree: V2ProgramDetail["req_tree"],
+): number[] => {
+  const ids: number[] = []
+  const walk = (nodes: V2ProgramDetail["req_tree"]) => {
+    for (const node of nodes) {
+      if (
+        node.data.node_type === NodeTypeEnum.Program &&
+        typeof node.data.required_program === "number"
+      ) {
+        ids.push(node.data.required_program)
+      }
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(reqTree)
+  return ids
+}
+
 const setupApis = ({
   program,
   page,
 }: {
   program: V2ProgramDetail
   page: ProgramPageItem
-}): { courses: CourseWithCourseRunsSerializerV2[] } => {
+}): {
+  courses: CourseWithCourseRunsSerializerV2[]
+  childPrograms: V2ProgramDetail[]
+} => {
   setMockResponse.get(
     urls.programs.programsList({ readable_id: program.readable_id }),
     { results: [program] },
@@ -58,7 +104,7 @@ const setupApis = ({
     factories.courses.course({ id }),
   )
 
-  if (courses.length > 0) {
+  if (courseIds.length > 0) {
     setMockResponse.get(
       urls.courses.coursesList({
         id: courses.map((c) => c.id),
@@ -68,13 +114,28 @@ const setupApis = ({
     )
   }
 
+  const programIds = getProgramIdsFromReqTree(program.req_tree)
+  const childPrograms: V2ProgramDetail[] = programIds.map((id) =>
+    factories.programs.program({ id }),
+  )
+
+  if (programIds.length > 0) {
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: programIds,
+        page_size: programIds.length,
+      }),
+      { results: childPrograms },
+    )
+  }
+
   setMockResponse.get(
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
   setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
-  return { courses }
+  return { courses, childPrograms }
 }
 
 describe("ProgramAsCoursePage", () => {
@@ -211,6 +272,34 @@ describe("ProgramAsCoursePage", () => {
     await waitFor(() => {
       courses.forEach((course) => {
         expect(screen.getByText(course.title)).toBeInTheDocument()
+      })
+    })
+  })
+
+  test("Renders Modules section with mixed courses and programs (single root)", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addCourse()
+    op.addProgram()
+    op.addCourse()
+
+    const program = makeProgramAsCourse({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { courses, childPrograms } = setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: "Modules" })
+    expect(screen.getByText("This course has 3 modules")).toBeInTheDocument()
+
+    await waitFor(() => {
+      courses.forEach((course) => {
+        expect(screen.getByText(course.title)).toBeInTheDocument()
+      })
+      childPrograms.forEach((prog) => {
+        expect(screen.getByText(prog.title)).toBeInTheDocument()
       })
     })
   })

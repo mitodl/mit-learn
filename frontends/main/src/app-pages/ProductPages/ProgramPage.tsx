@@ -10,7 +10,8 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds, parseReqTree, RequirementData } from "./util"
+import { HeadingIds, parseReqTree, getItemNoun, RequirementData } from "./util"
+import type { RequirementItem } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -28,9 +29,10 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
+import MitxOnlineProgramCard from "./MitxOnlineProgramCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { keyBy } from "lodash"
-import { getCourseIdsFromReqTree } from "@/common/mitxonline"
+import { programPageView } from "@/common/urls"
 
 type ProgramPageProps = {
   readableId: string
@@ -72,34 +74,40 @@ const ReqTitleNote = styled("span")(({ theme }) => ({
 type RequirementsSectionProps = {
   program: V2ProgramDetail
   courses?: CourseWithCourseRunsSerializerV2[]
+  childPrograms?: V2ProgramDetail[]
   isLoading?: boolean
 }
 
-const getCompletionText = (parsedReqs: RequirementData[]) => {
+const getCompletionText = (
+  parsedReqs: RequirementData[],
+  programsById: Record<number, V2ProgramDetail>,
+) => {
   let requiredCount = 0
   let electiveCount = 0
   parsedReqs.forEach((req) => {
     if (req.elective) {
-      electiveCount += req.requiredCourseCount
+      electiveCount += req.requiredCount
     } else {
-      requiredCount += req.requiredCourseCount
+      requiredCount += req.requiredCount
     }
   })
+  const allItems = parsedReqs.flatMap((req) => req.items)
+  const noun = getItemNoun(allItems, programsById)
   if (requiredCount && electiveCount) {
-    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${pluralize(noun, requiredCount)} and ${electiveCount} elective ${pluralize(noun, electiveCount)}.`
   }
   if (requiredCount) {
-    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${pluralize(noun, requiredCount)}.`
   }
   if (electiveCount) {
-    return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
+    return `To complete this program, you must take ${electiveCount} ${pluralize(noun, electiveCount)}.`
   }
   return ""
 }
 
 const getRequirementSectionSubtitle = (reqData: RequirementData) => {
-  if (reqData.requiredCourseCount < reqData.courseIds.length) {
-    return `Complete ${reqData.requiredCourseCount} out of ${reqData.courseIds.length}`
+  if (reqData.requiredCount < reqData.items.length) {
+    return `Complete ${reqData.requiredCount} out of ${reqData.items.length}`
   }
   return null
 }
@@ -107,9 +115,11 @@ const getRequirementSectionSubtitle = (reqData: RequirementData) => {
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   program,
   courses,
+  childPrograms,
   isLoading,
 }) => {
   const coursesById = keyBy(courses ?? [], "id")
+  const programsById = keyBy(childPrograms ?? [], "id")
   const parsedReqs = parseReqTree(program.req_tree)
 
   return (
@@ -128,7 +138,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           Courses
         </Typography>
         <Typography variant="body1" component="p">
-          {getCompletionText(parsedReqs)}
+          {getCompletionText(parsedReqs, programsById)}
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>
@@ -142,16 +152,40 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                 {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
               </ReqSubsectionTitle>
               <RequirementsListing>
-                {req.courseIds.map((courseId) => {
-                  const course = coursesById[courseId]
-                  if (!isLoading && !course) {
+                {req.items.map((item) => {
+                  if (item.type === "course") {
+                    const course = coursesById[item.id]
+                    if (!isLoading && !course) {
+                      return null
+                    }
+                    return (
+                      <li key={`course-${item.id}`}>
+                        <MitxOnlineCourseCard
+                          course={course}
+                          href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                          size="small"
+                          isLoading={isLoading}
+                          list
+                        />
+                      </li>
+                    )
+                  }
+                  const prog = programsById[item.id]
+                  if (!isLoading && !prog) {
                     return null
                   }
                   return (
-                    <li key={courseId}>
-                      <MitxOnlineCourseCard
-                        course={course}
-                        href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                    <li key={`program-${item.id}`}>
+                      <MitxOnlineProgramCard
+                        program={prog}
+                        href={
+                          prog
+                            ? programPageView({
+                                readable_id: prog.readable_id,
+                                display_mode: prog.display_mode,
+                              })
+                            : ""
+                        }
                         size="small"
                         isLoading={isLoading}
                         list
@@ -177,13 +211,35 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const courseIds = program ? getCourseIdsFromReqTree(program.req_tree) : []
+  const parsedReqs = program ? parseReqTree(program.req_tree) : []
+  const allItems = parsedReqs.flatMap((req) => req.items)
+  const courseIds = allItems
+    .filter(
+      (item): item is Extract<RequirementItem, { type: "course" }> =>
+        item.type === "course",
+    )
+    .map((item) => item.id)
+  const programIds = allItems
+    .filter(
+      (item): item is Extract<RequirementItem, { type: "program" }> =>
+        item.type === "program",
+    )
+    .map((item) => item.id)
+
   const courses = useQuery({
     ...coursesQueries.coursesList({
       id: courseIds,
       page_size: courseIds.length,
     }),
     enabled: courseIds.length > 0,
+  })
+
+  const childPrograms = useQuery({
+    ...programsQueries.programsList({
+      id: programIds,
+      page_size: programIds.length,
+    }),
+    enabled: programIds.length > 0,
   })
 
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
@@ -204,6 +260,10 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   const imageSrc =
     page.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+
+  const dataLoading =
+    (courseIds.length > 0 && !courses.isSuccess) ||
+    (programIds.length > 0 && !childPrograms.isSuccess)
 
   return (
     <ProductPageTemplate
@@ -230,8 +290,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       <RequirementsSection
         program={program}
         courses={courses.data?.results}
+        childPrograms={childPrograms.data?.results}
         // Use skeleton as fallback for loading OR error
-        isLoading={!courses.isSuccess}
+        isLoading={dataLoading}
       />
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />

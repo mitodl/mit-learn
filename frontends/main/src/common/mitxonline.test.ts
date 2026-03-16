@@ -1,8 +1,7 @@
-import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
+import { factories } from "api/mitxonline-test-utils"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   formatPrice,
-  getCourseIdsFromReqTree,
   getFlexiblePriceForProduct,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -139,29 +138,6 @@ describe("getFlexiblePriceForProduct", () => {
     const result = getFlexiblePriceForProduct(product)
 
     expect(result).toBe(100)
-  })
-})
-
-describe("getCourseIdsFromReqTree", () => {
-  test("extracts course IDs recursively from nested req_tree", () => {
-    const root = new RequirementTreeBuilder()
-    const required = root.addOperator({ operator: "all_of" })
-    required.addCourse({ course: 10 })
-    required.addCourse({ course: 20 })
-
-    const electives = root.addOperator({
-      operator: "min_number_of",
-      operator_value: "1",
-    })
-    electives.addCourse({ course: 30 })
-    electives.addCourse({ course: 40 })
-
-    // Nest an operator inside the electives section
-    const nested = electives.addOperator({ operator: "all_of" })
-    nested.addCourse({ course: 50 })
-
-    const ids = getCourseIdsFromReqTree(root.serialize())
-    expect(ids).toEqual([10, 20, 30, 40, 50])
   })
 })
 

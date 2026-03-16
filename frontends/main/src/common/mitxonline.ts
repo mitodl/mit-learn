@@ -3,9 +3,8 @@ import type {
   CourseRunV2,
   EnrollmentMode,
   ProductFlexiblePrice,
-  V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DiscountTypeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
@@ -124,21 +123,6 @@ const getEnrollmentType = (
   return "paid"
 }
 
-/**
- * Extract all course IDs from a program's req_tree.
- * This is the single source of truth for which courses belong to a program.
- */
-const getCourseIdsFromReqTree = (nodes: V2ProgramRequirement[]): number[] =>
-  nodes.flatMap((node) => {
-    if (
-      node.data.node_type === NodeTypeEnum.Course &&
-      typeof node.data.course === "number"
-    ) {
-      return [node.data.course]
-    }
-    return getCourseIdsFromReqTree(node.children ?? [])
-  })
-
 export {
   formatPrice,
   priceWithDiscount,
@@ -146,6 +130,5 @@ export {
   upgradeRunUrl,
   mitxonlineUrl,
   getEnrollmentType,
-  getCourseIdsFromReqTree,
 }
 export type { PriceWithDiscount, EnrollmentType }

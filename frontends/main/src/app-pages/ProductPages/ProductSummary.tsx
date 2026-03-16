@@ -657,7 +657,7 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 }) => {
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCourseCount,
+    (sum, req) => sum + req.requiredCount,
     0,
   )
   if (totalRequired === 0) return null
