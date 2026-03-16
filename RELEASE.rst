@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.57.3
+Version 0.57.3 (Released March 16, 2026)
 --------------
 
 - Fix AI ratings csrf issue (#3047)
