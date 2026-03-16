@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.57.4
+--------------
+
+- articles are documnets (#3040)
+- fix ocw youtube video search (#3050)
+
 Version 0.57.3 (Released March 16, 2026)
 --------------
 
