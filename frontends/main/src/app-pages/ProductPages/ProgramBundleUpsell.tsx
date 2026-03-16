@@ -187,9 +187,7 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
       /**
        * Exclude programs with display_mode="course" from bundle upsell.
        * These programs are presented as courses and should not appear as
-       * bundleable programs. If this filter is triggered, it likely indicates
-       * unexpected data — a course (enrolled in via the course page) should
-       * not be associated with a program bundle.
+       * bundleable programs.
        */
       d.display_mode !== DisplayModeEnum.Course && !!d.products[0]?.price,
   )

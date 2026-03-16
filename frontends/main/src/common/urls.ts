@@ -234,8 +234,8 @@ export const programPageView = (program: {
    *   readable_id: p.readable_id, display_mode: p.display_mode
    * })
    * ```
-   * But require it (arg is not optional here) to encourage callers to pass the
-   * value.
+   * But require it (arg is not optional, i.e., not `display_mode?`) to
+   * encourage callers to pass the value.
    */
   display_mode: BaseProgramDisplayMode | null | undefined
 }) => {
