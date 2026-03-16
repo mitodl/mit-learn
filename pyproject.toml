@@ -16,7 +16,7 @@ dependencies = [
     "base36>=0.1.1,<0.2",
     "beautifulsoup4>=4.8.2,<5",
     "boto3>=1.26.155,<2",
-    "cairosvg==2.8.2",
+    "cairosvg==2.9.0",
     "celery>=5.3.1,<6",
     "celery-redbeat>=2.3.2,<3",
     "cffi>=2.0.0,<3",
