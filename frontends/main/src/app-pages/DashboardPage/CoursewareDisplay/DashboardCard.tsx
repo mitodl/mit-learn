@@ -26,6 +26,7 @@ import {
   JustInTimeDialog,
   UnenrollDialog,
 } from "./DashboardDialogs"
+import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
@@ -42,6 +43,7 @@ import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
   CourseRunV2,
+  DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 
@@ -953,6 +955,13 @@ const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
   variant = "default",
   useProductPages,
 }) => {
+  const isCourseDisplayMode =
+    resource.data.program.display_mode === DisplayModeEnum.Course
+
+  if (isCourseDisplayMode) {
+    return <ProgramEnrollmentDisplay programId={resource.data.program.id} />
+  }
+
   const title = getTitle(resource)
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
   const certificateLink = getCertificateLink(resource)

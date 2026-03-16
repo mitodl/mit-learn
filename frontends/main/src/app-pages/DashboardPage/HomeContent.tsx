@@ -13,7 +13,7 @@ import {
   FREE_COURSES_CAROUSEL,
 } from "@/common/carousels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
-import { EnrollmentDisplay } from "./CoursewareDisplay/EnrollmentDisplay"
+import { AllEnrollmentsDisplay } from "./CoursewareDisplay/AllEnrollmentsDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useUserMe } from "api/hooks/user"
@@ -127,7 +127,7 @@ const HomeContent: React.FC = () => {
         </AlertBanner>
       )}
       <OrganizationCards />
-      {showEnrollments ? <EnrollmentDisplay /> : null}
+      {showEnrollments ? <AllEnrollmentsDisplay title="My Learning" /> : null}
       <Suspense>
         <StyledResourceCarousel
           titleComponent="h2"
