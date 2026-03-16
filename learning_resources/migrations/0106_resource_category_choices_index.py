@@ -13,16 +13,6 @@ class Migration(migrations.Migration):
             model_name="learningresource",
             name="resource_category",
             field=models.CharField(
-                choices=[
-                    ("Course", "Course"),
-                    ("Program", "Program"),
-                    ("Learning Path", "Learning Path"),
-                    ("Podcast", "Podcast"),
-                    ("Podcast Episode", "Podcast Episode"),
-                    ("Video", "Video"),
-                    ("Video Playlist", "Video Playlist"),
-                    ("Document", "Document"),
-                ],
                 db_index=True,
                 help_text="The display category for this resource.",
                 max_length=256,

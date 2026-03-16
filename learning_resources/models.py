@@ -487,7 +487,6 @@ class LearningResource(TimestampedModel):
     resource_category = models.CharField(
         max_length=256,
         db_index=True,
-        choices=((member.value, member.value) for member in LearningResourceType),
         help_text="The display category for this resource.",
     )
     topics = models.ManyToManyField(LearningResourceTopic)

@@ -849,11 +849,11 @@ export interface CourseResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof CourseResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -1658,11 +1658,11 @@ export interface DocumentResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof DocumentResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -2138,11 +2138,11 @@ export interface LearningPathResource {
    */
   resource_type: LearningPathResourceResourceTypeEnum
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof LearningPathResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {LearningPath}
@@ -5641,11 +5641,11 @@ export interface PodcastEpisodeResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof PodcastEpisodeResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -6131,11 +6131,11 @@ export interface PodcastResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof PodcastResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -6853,11 +6853,11 @@ export interface ProgramResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof ProgramResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -7158,61 +7158,6 @@ export const RelationTypeEnum = {
 
 export type RelationTypeEnum =
   (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
-
-/**
- * * `Course` - Course * `Program` - Program * `Learning Path` - Learning Path * `Podcast` - Podcast * `Podcast Episode` - Podcast Episode * `Video` - Video * `Video Playlist` - Video Playlist * `Document` - Document
- * @export
- * @enum {string}
- */
-
-export const ResourceCategoryEnumDescriptions = {
-  Course: "Course",
-  Program: "Program",
-  "Learning Path": "Learning Path",
-  Podcast: "Podcast",
-  "Podcast Episode": "Podcast Episode",
-  Video: "Video",
-  "Video Playlist": "Video Playlist",
-  Document: "Document",
-} as const
-
-export const ResourceCategoryEnum = {
-  /**
-   * Course
-   */
-  Course: "Course",
-  /**
-   * Program
-   */
-  Program: "Program",
-  /**
-   * Learning Path
-   */
-  LearningPath: "Learning Path",
-  /**
-   * Podcast
-   */
-  Podcast: "Podcast",
-  /**
-   * Podcast Episode
-   */
-  PodcastEpisode: "Podcast Episode",
-  /**
-   * Video
-   */
-  Video: "Video",
-  /**
-   * Video Playlist
-   */
-  VideoPlaylist: "Video Playlist",
-  /**
-   * Document
-   */
-  Document: "Document",
-} as const
-
-export type ResourceCategoryEnum =
-  (typeof ResourceCategoryEnum)[keyof typeof ResourceCategoryEnum]
 
 /**
  * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
@@ -8108,11 +8053,11 @@ export interface VideoPlaylistResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof VideoPlaylistResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}
@@ -8598,11 +8543,11 @@ export interface VideoResource {
    */
   url?: string | null
   /**
-   *
-   * @type {ResourceCategoryEnum}
+   * The display category for this resource.
+   * @type {string}
    * @memberof VideoResource
    */
-  resource_category: ResourceCategoryEnum
+  resource_category: string
   /**
    *
    * @type {Array<string>}

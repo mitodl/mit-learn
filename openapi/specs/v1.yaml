@@ -10362,20 +10362,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -10899,20 +10888,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -11318,19 +11296,8 @@ components:
           default: learning_path
           readOnly: true
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          type: string
+          description: The display category for this resource.
           readOnly: true
           default: Learning Path
         learning_path:
@@ -14010,20 +13977,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -14437,20 +14393,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -15002,20 +14947,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -15229,35 +15163,6 @@ components:
       - Podcast Episodes
       - Playlist Videos
       - Course Learning Materials
-    ResourceCategoryEnum:
-      enum:
-      - Course
-      - Program
-      - Learning Path
-      - Podcast
-      - Podcast Episode
-      - Video
-      - Video Playlist
-      - Document
-      type: string
-      description: |-
-        * `Course` - Course
-        * `Program` - Program
-        * `Learning Path` - Learning Path
-        * `Podcast` - Podcast
-        * `Podcast Episode` - Podcast Episode
-        * `Video` - Video
-        * `Video Playlist` - Video Playlist
-        * `Document` - Document
-      x-enum-descriptions:
-      - Course
-      - Program
-      - Learning Path
-      - Podcast
-      - Podcast Episode
-      - Video
-      - Video Playlist
-      - Document
     ResourceTypeEnum:
       enum:
       - course
@@ -15864,20 +15769,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -16290,20 +16184,9 @@ components:
           nullable: true
           maxLength: 2048
         resource_category:
-          allOf:
-          - $ref: '#/components/schemas/ResourceCategoryEnum'
+          type: string
           readOnly: true
-          description: |-
-            The display category for this resource.
-
-            * `Course` - Course
-            * `Program` - Program
-            * `Learning Path` - Learning Path
-            * `Podcast` - Podcast
-            * `Podcast Episode` - Podcast Episode
-            * `Video` - Video
-            * `Video Playlist` - Video Playlist
-            * `Document` - Document
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
