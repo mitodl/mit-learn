@@ -530,23 +530,32 @@ const UpgradeBanner: React.FC<
     }
   }
 
-  if (!canUpgrade || !certificateUpgradeDeadline || !certificateUpgradePrice) {
+  if (!canUpgrade || !certificateUpgradePrice) {
     return null
   }
-  if (isInPast(certificateUpgradeDeadline)) return null
-  const calendarDays = calendarDaysUntil(certificateUpgradeDeadline)
-  if (calendarDays === null) return null
+
+  // If deadline is provided, check it hasn't passed
+  if (certificateUpgradeDeadline && isInPast(certificateUpgradeDeadline)) {
+    return null
+  }
+
   const formattedPrice = `$${certificateUpgradePrice}`
+  const calendarDays = certificateUpgradeDeadline
+    ? calendarDaysUntil(certificateUpgradeDeadline)
+    : null
+
   return (
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
         Add a certificate for {formattedPrice}
       </SubtitleLink>
-      <NoSSR>
-        {/* This uses local time. */}
-        {formatUpgradeTime(calendarDays)}
-      </NoSSR>
+      {calendarDays !== null && (
+        <NoSSR>
+          {/* This uses local time. */}
+          {formatUpgradeTime(calendarDays)}
+        </NoSSR>
+      )}
     </SubtitleLinkRoot>
   )
 }

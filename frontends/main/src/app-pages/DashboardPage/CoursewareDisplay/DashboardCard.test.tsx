@@ -507,6 +507,37 @@ describe.each([
     )
   })
 
+  test("Upgrade banner shows price without deadline when deadline is null", () => {
+    setupUserApis()
+    const certificateUpgradePrice = faker.commerce.price()
+
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: null,
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: certificateUpgradePrice,
+        upgrade_product_is_active: true,
+      },
+    })
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
+    )
+    const card = getCard()
+    const upgradeRoot = within(card).getByTestId("upgrade-root")
+
+    expect(upgradeRoot).toBeVisible()
+    expect(upgradeRoot).toHaveTextContent(
+      `Add a certificate for $${certificateUpgradePrice}`,
+    )
+    // Should not show deadline countdown
+    expect(upgradeRoot).not.toHaveTextContent(/days? remaining/)
+  })
+
   test("Clicking upgrade link adds product to basket and redirects to cart", async () => {
     const assign = jest.mocked(window.location.assign)
     setupUserApis()
