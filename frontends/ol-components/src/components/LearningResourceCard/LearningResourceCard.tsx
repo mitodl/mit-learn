@@ -34,6 +34,7 @@ interface LearningResourceCardProps {
   inLearningPath?: boolean
   onClick?: React.MouseEventHandler
   headingLevel?: number
+  footerLabel?: string
   list?: boolean
   condensed?: boolean
 }
@@ -51,6 +52,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   inUserList,
   onClick,
   headingLevel = 6,
+  footerLabel,
   list = false,
   condensed = false,
 }) => {
@@ -78,6 +80,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         resource={resource}
         className={className}
         href={href}
+        footerLabel={footerLabel}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
         inUserList={inUserList}
@@ -155,6 +158,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       coursePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
+      footerLabel={footerLabel}
       startLabel={startLabel}
       startDate={formattedDate}
       actions={actions}

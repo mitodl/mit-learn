@@ -105,6 +105,7 @@ interface BaseLearningResourceCardProps {
   list?: boolean
   condensed?: boolean
   footerContent?: React.ReactNode
+  footerLabel?: string
   draggable?: boolean
   editMenu?: React.ReactNode | null
   parentCourseName?: string | null
@@ -294,6 +295,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   list = false,
   condensed = false,
   footerContent,
+  footerLabel,
   draggable = false,
   editMenu = null,
   parentCourseName = null,
@@ -461,6 +463,8 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         <ListCardCondensed.Footer>
           {footerContent ? (
             footerContent
+          ) : footerLabel ? (
+            footerLabel
           ) : startDate ? (
             <BorderSeparator>
               <div>
@@ -549,6 +553,8 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         <ListCard.Footer>
           {footerContent ? (
             footerContent
+          ) : footerLabel ? (
+            footerLabel
           ) : startDate ? (
             <BorderSeparator>
               <div>
@@ -627,7 +633,9 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         ))}
       </Card.Actions>
       <Card.Footer>
-        {startDate ? (
+        {footerLabel ? (
+          footerLabel
+        ) : startDate ? (
           <>
             {startLabel && <Label>{startLabel}</Label>}
             <Value size={size}>{startDate}</Value>

@@ -40,12 +40,14 @@ type SearchSubscriptionToggleProps = {
   itemName: string
   searchParams: URLSearchParams
   sourceType: SourceTypeEnum
+  subscribeLabel?: string
 }
 
 const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   itemName,
   searchParams,
   sourceType,
+  subscribeLabel = "Follow",
 }) => {
   const [buttonEl, setButtonEl] = useState<null | HTMLElement>(null)
 
@@ -95,7 +97,7 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
         startIcon={<RiMailLine />}
         onClick={onFollowClick}
       >
-        Follow
+        {subscribeLabel}
       </StyledButton>
       <FollowPopover
         searchParams={searchParams}
