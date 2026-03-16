@@ -927,7 +927,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             LearningResourceType.course.name,
             LearningResourceType.program.name,
         ]:
-            return instance.resource_type
+            return LearningResourceType(instance.resource_category).name
         else:
             return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 

@@ -454,6 +454,9 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "offered_by": OFFERED_BY,
             "etl_source": ETLSource.mitxonline.name,
             "resource_type": LearningResourceType.program.name,
+            "resource_category": LearningResourceType.course.value
+            if program.get("display_mode") == "course"
+            else LearningResourceType.program.value,
             "departments": parse_departments(program.get("departments", [])),
             "platform": PlatformType.mitxonline.name,
             "professional": False,

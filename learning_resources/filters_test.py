@@ -286,9 +286,13 @@ def test_learning_resource_filter_free(client):
 
 
 def test_learning_resource_filter_resource_category(client):
-    """Test that the resource type filter works"""
+    """Test that the resource type group filter uses resource_category"""
     program = ProgramFactory.create().learning_resource
     CourseFactory.create()
+    # A program with resource_category overridden to "Course" (e.g. display_mode)
+    program_as_course = ProgramFactory.create(
+        learning_resource__resource_category=LearningResourceType.course.value,
+    ).learning_resource
 
     podcast = PodcastEpisodeFactory.create().learning_resource
     video = VideoFactory.create().learning_resource
@@ -297,17 +301,36 @@ def test_learning_resource_filter_resource_category(client):
         f"{RESOURCE_API_URL}?resource_type_group={LEARNING_MATERIAL_RESOURCE_TYPE_GROUP}"
     ).json()["results"]
     assert len(results) == 2
-    ids = (res["id"] for res in results)
+    ids = [res["id"] for res in results]
     assert podcast.id in ids
     assert video.id in ids
 
+    # Filtering by "course" should include resources with resource_category="Course",
+    # including programs that have been overridden to display as courses
+    results = client.get(
+        f"{RESOURCE_API_URL}?resource_type_group={LearningResourceType.course.name}"
+    ).json()["results"]
+    ids = [res["id"] for res in results]
+    assert program_as_course.id in ids
+    assert program.id not in ids
+    assert podcast.id not in ids
+    assert video.id not in ids
+
+    # Filtering by "program" should not include the program with course category
+    results = client.get(
+        f"{RESOURCE_API_URL}?resource_type_group={LearningResourceType.program.name}"
+    ).json()["results"]
+    ids = [res["id"] for res in results]
+    assert program.id in ids
+    assert program_as_course.id not in ids
+
     resource_filter = f"resource_type_group={LearningResourceType.program.name}&resource_type_group={LEARNING_MATERIAL_RESOURCE_TYPE_GROUP}"
     results = client.get(f"{RESOURCE_API_URL}?{resource_filter}").json()["results"]
-    assert len(results) == 3
-    ids = (res["id"] for res in results)
+    ids = [res["id"] for res in results]
     assert program.id in ids
     assert podcast.id in ids
     assert video.id in ids
+    assert program_as_course.id not in ids
 
 
 def test_learning_resource_filter_readable_id(client):

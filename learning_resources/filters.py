@@ -154,12 +154,12 @@ class LearningResourceFilter(FilterSet):
                 LearningResourceType.course.name,
                 LearningResourceType.program.name,
             ]:
-                query_or_filters |= Q(resource_type=val)
+                query_or_filters |= Q(resource_category=LearningResourceType[val].value)
             else:
                 query_or_filters |= ~Q(
-                    resource_type__in=[
-                        LearningResourceType.course.name,
-                        LearningResourceType.program.name,
+                    resource_category__in=[
+                        LearningResourceType.course.value,
+                        LearningResourceType.program.value,
                     ]
                 )
         return queryset.filter(query_or_filters)
