@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.57.4
+Version 0.57.4 (Released March 16, 2026)
 --------------
 
 - articles are documnets (#3040)
