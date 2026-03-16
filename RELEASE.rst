@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.58.0
+Version 0.58.0 (Released March 16, 2026)
 --------------
 
 - Modify mitxonline ETL to ingest designated programs as courses (#3013)
