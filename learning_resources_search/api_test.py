@@ -2297,11 +2297,9 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opens
                                         "must_not": [
                                             {
                                                 "nested": {
-                                                    "path": "offered_by",
+                                                    "path": "platform",
                                                     "query": {
-                                                        "term": {
-                                                            "offered_by.code": "ocw"
-                                                        }
+                                                        "term": {"platform.code": "ocw"}
                                                     },
                                                 }
                                             }
