@@ -329,9 +329,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       .filter((node) => node.data.node_type === "operator")
       .map((node) => {
         const courseIds = extractCoursesFromNode(node)
-        const sectionCourses = (programCourses?.results || []).filter(
-          (course) => courseIds.includes(course.id),
-        )
+        const coursesById = programCourses?.results || []
+        const sectionCourses = courseIds
+          .map((id) => coursesById.find((course) => course.id === id))
+          .filter((c) => c !== undefined)
 
         return {
           key: node.id,
