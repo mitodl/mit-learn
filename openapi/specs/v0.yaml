@@ -2190,7 +2190,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2275,6 +2280,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -2630,7 +2636,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2718,6 +2729,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -3131,7 +3143,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -3182,6 +3199,7 @@ components:
           readOnly: true
         resource_category:
           type: string
+          description: The display category for this resource.
           readOnly: true
           default: Learning Path
         learning_path:
@@ -4455,7 +4473,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -4540,6 +4563,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -4739,7 +4763,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -4824,6 +4853,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -5301,7 +5331,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -5386,6 +5421,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -6026,7 +6062,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6111,6 +6152,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -6310,7 +6352,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6408,6 +6455,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:

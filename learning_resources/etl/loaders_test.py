@@ -318,6 +318,77 @@ def test_load_program(  # noqa: PLR0913
 
 
 @pytest.mark.django_db
+def test_load_program_preserves_preset_resource_category(mock_upsert_tasks):
+    """Test that load_program preserves a pre-set resource_category
+    rather than overwriting it with the default.
+    """
+    platform = LearningResourcePlatformFactory.create()
+    program = ProgramFactory.build(courses=[], platform=platform.code)
+
+    run_data = {
+        "run_id": program.learning_resource.readable_id,
+        "enrollment_start": "2017-01-01T00:00:00Z",
+        "start_date": "2017-01-20T00:00:00Z",
+        "end_date": "2017-06-20T00:00:00Z",
+    }
+
+    result = load_program(
+        {
+            "platform": platform.code,
+            "readable_id": program.learning_resource.readable_id,
+            "professional": False,
+            "title": program.learning_resource.title,
+            "url": program.learning_resource.url,
+            "image": {"url": program.learning_resource.image.url},
+            "published": True,
+            "runs": [run_data],
+            "courses": [],
+            "resource_category": LearningResourceType.course.value,
+        },
+        [],
+        [],
+    )
+
+    assert result.resource_category == LearningResourceType.course.value
+    assert result.resource_type == LearningResourceType.program.name
+
+
+@pytest.mark.django_db
+def test_load_program_defaults_resource_category(mock_upsert_tasks):
+    """Test that load_program sets resource_category to the default
+    when it is not pre-set in the input data.
+    """
+    platform = LearningResourcePlatformFactory.create()
+    program = ProgramFactory.build(courses=[], platform=platform.code)
+
+    run_data = {
+        "run_id": program.learning_resource.readable_id,
+        "enrollment_start": "2017-01-01T00:00:00Z",
+        "start_date": "2017-01-20T00:00:00Z",
+        "end_date": "2017-06-20T00:00:00Z",
+    }
+
+    result = load_program(
+        {
+            "platform": platform.code,
+            "readable_id": program.learning_resource.readable_id,
+            "professional": False,
+            "title": program.learning_resource.title,
+            "url": program.learning_resource.url,
+            "image": {"url": program.learning_resource.image.url},
+            "published": True,
+            "runs": [run_data],
+            "courses": [],
+        },
+        [],
+        [],
+    )
+
+    assert result.resource_category == LearningResourceType.program.value
+    assert result.resource_type == LearningResourceType.program.name
+
+
+@pytest.mark.django_db
 def test_load_run_sets_test_resource_run_to_published(mocker):
     """
     Test that load_run sets the test_mode run to published

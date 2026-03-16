@@ -484,7 +484,11 @@ class LearningResource(TimestampedModel):
         db_index=True,
         choices=((member.name, member.value) for member in LearningResourceType),
     )
-    resource_category = models.CharField(max_length=256)
+    resource_category = models.CharField(
+        max_length=256,
+        db_index=True,
+        help_text="The display category for this resource.",
+    )
     topics = models.ManyToManyField(LearningResourceTopic)
     ocw_topics = ArrayField(models.CharField(max_length=128), default=list, blank=True)
     offered_by = models.ForeignKey(
