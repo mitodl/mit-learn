@@ -426,11 +426,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
 
-    if resource_type == LearningResourceType.course.name:
-        resource_category = LearningResourceType.course.value
-    else:
-        resource_category = LearningResourceType.program.value
-    resource_data["resource_category"] = resource_category
+    if not resource_data.get("resource_category"):
+        if resource_type == LearningResourceType.course.name:
+            resource_category = LearningResourceType.course.value
+        else:
+            resource_category = LearningResourceType.program.value
+        resource_data["resource_category"] = resource_category
     deduplicated_course_id = next(
         (
             record["course_id"]
