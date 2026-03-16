@@ -11,7 +11,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree, getItemNoun, RequirementData } from "./util"
-import type { RequirementItem } from "./util"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -211,20 +211,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const parsedReqs = program ? parseReqTree(program.req_tree) : []
-  const allItems = parsedReqs.flatMap((req) => req.items)
-  const courseIds = allItems
-    .filter(
-      (item): item is Extract<RequirementItem, { type: "course" }> =>
-        item.type === "course",
-    )
-    .map((item) => item.id)
-  const programIds = allItems
-    .filter(
-      (item): item is Extract<RequirementItem, { type: "program" }> =>
-        item.type === "program",
-    )
-    .map((item) => item.id)
+  const { courseIds, programIds } = program
+    ? getIdsFromReqTree(program.req_tree)
+    : { courseIds: [], programIds: [] }
 
   const courses = useQuery({
     ...coursesQueries.coursesList({

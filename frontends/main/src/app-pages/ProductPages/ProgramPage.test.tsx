@@ -15,7 +15,7 @@ import type {
   ProgramPageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DisplayModeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
 import { assertHeadings } from "ol-test-utilities"
@@ -24,6 +24,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
@@ -132,46 +133,6 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
   expect(raw.innerHTML).toBe(htmlString)
 }
 
-/**
- * Extract program IDs from a req_tree by looking for Program nodes.
- */
-const getProgramIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] => {
-  const ids: number[] = []
-  const walk = (nodes: V2Program["req_tree"]) => {
-    for (const node of nodes) {
-      if (
-        node.data.node_type === NodeTypeEnum.Program &&
-        typeof node.data.required_program === "number"
-      ) {
-        ids.push(node.data.required_program)
-      }
-      if (node.children) walk(node.children)
-    }
-  }
-  walk(reqTree)
-  return ids
-}
-
-/**
- * Extract course IDs from a req_tree by looking for Course nodes.
- */
-const getCourseIdsFromReqTree = (reqTree: V2Program["req_tree"]): number[] => {
-  const ids: number[] = []
-  const walk = (nodes: V2Program["req_tree"]) => {
-    for (const node of nodes) {
-      if (
-        node.data.node_type === NodeTypeEnum.Course &&
-        typeof node.data.course === "number"
-      ) {
-        ids.push(node.data.course)
-      }
-      if (node.children) walk(node.children)
-    }
-  }
-  walk(reqTree)
-  return ids
-}
-
 const setupApis = ({
   program,
   page,
@@ -193,7 +154,7 @@ const setupApis = ({
     items: [page],
   })
 
-  const courseIds = getCourseIdsFromReqTree(program.req_tree)
+  const { courseIds, programIds } = getIdsFromReqTree(program.req_tree)
   const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
     factories.courses.course({ id }),
   )
@@ -208,7 +169,6 @@ const setupApis = ({
     )
   }
 
-  const programIds = getProgramIdsFromReqTree(program.req_tree)
   const childPrograms: V2ProgramDetail[] = programIds.map((id) =>
     factories.programs.program({ id, ...childProgramOverrides }),
   )
@@ -244,7 +204,7 @@ describe("ProgramPage", () => {
     { flagsLoaded: false, isEnabled: true, shouldNotFound: false },
     { flagsLoaded: false, isEnabled: false, shouldNotFound: false },
   ])(
-    "Calls noFound if and only the feature flag is disabled",
+    "Calls notFound if and only if the feature flag is disabled",
     async ({ flagsLoaded, isEnabled, shouldNotFound }) => {
       mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
       mockedUseFeatureFlagsLoaded.mockReturnValue(flagsLoaded)
@@ -300,7 +260,7 @@ describe("ProgramPage", () => {
     )
   })
 
-  // Collasping sections tested in AboutSection.test.tsx
+  // Collapsing sections tested in AboutSection.test.tsx
   test("About section has expected content", async () => {
     const program = makeProgram({ ...makeReqs() })
     const page = makePage({ program_details: program })
@@ -374,7 +334,7 @@ describe("ProgramPage", () => {
       }),
     })
     const page = makePage({ program_details: program })
-    const { courses } = setupApis({ program, page })
+    setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const section = await screen.findByRole("region", { name: "Courses" })
@@ -396,14 +356,11 @@ describe("ProgramPage", () => {
       )
     })
 
-    const courseIds = getCourseIdsFromReqTree(program.req_tree)
     const allLists = within(section).getAllByRole("list")
     allLists.forEach((list) => {
       within(list)
         .getAllByRole("listitem")
         .forEach((item) => {
-          const course = courses.find((c) => courseIds.includes(c.id))
-          invariant(course)
           const links = within(item).getAllByRole("link")
           expect(links.length).toBeGreaterThanOrEqual(1)
         })

@@ -14,7 +14,7 @@ import type {
   ProgramPageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DisplayModeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
@@ -22,6 +22,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -36,50 +37,6 @@ const makeProgramAsCourse: typeof factories.programs.program = (
     ...overrides,
   })
 const makePage = factories.pages.programPageItem
-
-/**
- * Extract course IDs from a req_tree by looking for Course nodes.
- */
-const getCourseIdsFromReqTree = (
-  reqTree: V2ProgramDetail["req_tree"],
-): number[] => {
-  const ids: number[] = []
-  const walk = (nodes: V2ProgramDetail["req_tree"]) => {
-    for (const node of nodes) {
-      if (
-        node.data.node_type === NodeTypeEnum.Course &&
-        typeof node.data.course === "number"
-      ) {
-        ids.push(node.data.course)
-      }
-      if (node.children) walk(node.children)
-    }
-  }
-  walk(reqTree)
-  return ids
-}
-
-/**
- * Extract program IDs from a req_tree by looking for Program nodes.
- */
-const getProgramIdsFromReqTree = (
-  reqTree: V2ProgramDetail["req_tree"],
-): number[] => {
-  const ids: number[] = []
-  const walk = (nodes: V2ProgramDetail["req_tree"]) => {
-    for (const node of nodes) {
-      if (
-        node.data.node_type === NodeTypeEnum.Program &&
-        typeof node.data.required_program === "number"
-      ) {
-        ids.push(node.data.required_program)
-      }
-      if (node.children) walk(node.children)
-    }
-  }
-  walk(reqTree)
-  return ids
-}
 
 const setupApis = ({
   program,
@@ -99,7 +56,7 @@ const setupApis = ({
     items: [page],
   })
 
-  const courseIds = getCourseIdsFromReqTree(program.req_tree)
+  const { courseIds, programIds } = getIdsFromReqTree(program.req_tree)
   const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
     factories.courses.course({ id }),
   )
@@ -114,7 +71,6 @@ const setupApis = ({
     )
   }
 
-  const programIds = getProgramIdsFromReqTree(program.req_tree)
   const childPrograms: V2ProgramDetail[] = programIds.map((id) =>
     factories.programs.program({ id }),
   )
