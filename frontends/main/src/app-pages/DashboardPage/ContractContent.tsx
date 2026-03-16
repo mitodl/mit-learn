@@ -335,7 +335,6 @@ const OrgProgramCollectionDisplay: React.FC<{
                     }
                   : { type: DashboardType.Course, data: course }
               }
-              noun="Module"
               offerUpgrade={false}
               buttonHref={bestEnrollment?.run.courseware_url}
               contractId={contract.id}
@@ -432,7 +431,6 @@ const OrgProgramDisplay: React.FC<{
                         }
                       : { type: DashboardType.Course, data: course }
                   }
-                  noun="Module"
                   offerUpgrade={false}
                   buttonHref={bestEnrollment?.run.courseware_url}
                   contractId={contract?.id}
