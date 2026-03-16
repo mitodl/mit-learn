@@ -922,12 +922,20 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         return None
 
     def get_resource_type_group(self, instance) -> str:
-        """Return the resource category of the resource"""
+        """Return the resource type group for UI grouping.
+
+        For courses/programs, this is derived from resource_category
+        (which may differ from resource_type, e.g. a program displayed
+        as a course). For all other types, returns "learning_material".
+        """
         if instance.resource_type in [
             LearningResourceType.course.name,
             LearningResourceType.program.name,
         ]:
-            return LearningResourceType(instance.resource_category).name
+            try:
+                return LearningResourceType(instance.resource_category).name
+            except ValueError:
+                return instance.resource_type
         else:
             return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
