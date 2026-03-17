@@ -9,7 +9,7 @@ import dateutil
 import requests
 from django.conf import settings
 
-from learning_resources.constants import OfferedBy
+from learning_resources.constants import OfferedBy, PlatformType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.utils import transform_topics
 
@@ -60,6 +60,8 @@ def transform_article(article_data: dict):
         "offered_by": {
             "code": OfferedBy.climate.name,
         },
+        "resource_category": "Article",
+        "platform": PlatformType.climate.name,
     }
 
 

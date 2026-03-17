@@ -28,7 +28,6 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
-    Article,
     ContentFile,
     Course,
     LearningResource,
@@ -427,11 +426,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
 
-    if resource_type == LearningResourceType.course.name:
-        resource_category = LearningResourceType.course.value
-    else:
-        resource_category = LearningResourceType.program.value
-    resource_data["resource_category"] = resource_category
+    if not resource_data.get("resource_category"):
+        if resource_type == LearningResourceType.course.name:
+            resource_category = LearningResourceType.course.value
+        else:
+            resource_category = LearningResourceType.program.value
+        resource_data["resource_category"] = resource_category
     deduplicated_course_id = next(
         (
             record["course_id"]
@@ -1228,35 +1228,31 @@ def load_videos(videos_data: iter) -> list[LearningResource]:
     return [load_video(video_data) for video_data in videos_data]
 
 
-def load_article(article_data: dict) -> LearningResource:
+def load_document(document_data: dict) -> LearningResource:
     """
-    Load a single article into the database
+    Load a single document into the database
 
     Args:
-        article_data (dict): the article data
+        document_data (dict): the document data
 
     Returns:
-        LearningResource: the created or updated article resource
+        LearningResource: the created or updated document resource
     """
-    readable_id = article_data.get("readable_id")
-    topics_data = article_data.pop("topics")
-    offered_by_data = article_data.pop("offered_by", None)
-    image_url = article_data.pop("image")
-    article_data["resource_category"] = LearningResourceType.article.value
+    readable_id = document_data.get("readable_id")
+    topics_data = document_data.pop("topics")
+    offered_by_data = document_data.pop("offered_by", None)
+    image_url = document_data.pop("image")
+    platform_code = document_data.pop("platform")
+    platform = LearningResourcePlatform.objects.get(code=platform_code)
     with transaction.atomic():
         (
             learning_resource,
             created,
         ) = LearningResource.objects.update_or_create(
-            platform=LearningResourcePlatform.objects.get(
-                code=PlatformType.climate.name
-            ),
+            platform=platform,
             readable_id=readable_id,
-            resource_type=LearningResourceType.article.name,
-            defaults=article_data,
-        )
-        Article.objects.update_or_create(
-            learning_resource=learning_resource,
+            resource_type=LearningResourceType.document.name,
+            defaults=document_data,
         )
         load_image(learning_resource, image_url)
         if not topics_data:
@@ -1267,38 +1263,42 @@ def load_article(article_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_articles(articles_data: iter) -> list[LearningResource]:
+def load_documents(
+    etl_source: ETLSource, documents_data: iter
+) -> list[LearningResource]:
     """
-    Load a list of articles into the database
+    Load a list of documents into the database
 
     Args:
-        articles_data (iter of dict): iterable of the article data
+            etl_source (ETLSource): the ETL source of the document data
+        documents_data (iter of dict): iterable of the document data
 
     Returns:
         list of LearningResource:
-            the list of loaded articles
+            the list of loaded documents
     """
 
-    article_resources = []
-    for article_data in articles_data:
+    document_resources = []
+    for document_data in documents_data:
         try:
-            article_resource = load_article(article_data)
+            document_resource = load_document(document_data)
         except ExtractException:
             log.exception(
-                "Error with extracted article: article_id=%s",
-                article_data.get("readable_id"),
+                "Error with extracted document: document_id=%s",
+                document_data.get("readable_id"),
             )
         else:
-            article_resources.append(article_resource)
-    unpublished_articles = Article.objects.exclude(
-        learning_resource__id__in=[resource.id for resource in article_resources]
-    )
-    # remove articles that no longer exist
+            document_resources.append(document_resource)
+    unpublished_documents = LearningResource.objects.filter(
+        resource_type=LearningResourceType.document.name,
+        etl_source=etl_source,
+    ).exclude(id__in=[resource.id for resource in document_resources])
+    # remove documents that no longer exist
     bulk_resources_unpublished_actions(
-        unpublished_articles.values_list("learning_resource__id", flat=True),
-        LearningResourceType.article.name,
+        unpublished_documents.values_list("id", flat=True),
+        LearningResourceType.document.name,
     )
-    return article_resources
+    return document_resources
 
 
 def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningResource:

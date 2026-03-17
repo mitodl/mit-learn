@@ -67,6 +67,9 @@ const Container = styled.div<{
 
   ".tiptap.ProseMirror.simple-editor, .tiptap-viewer": {
     padding: "0 24px",
+    [theme.breakpoints.down("sm")]: {
+      padding: "0 16px",
+    },
   },
   ...(readOnly
     ? {
@@ -107,6 +110,10 @@ const Container = styled.div<{
       fontSize: pxToRem(18),
       lineHeight: pxToRem(32),
       marginBottom: "40px",
+      [theme.breakpoints.down("sm")]: {
+        fontSize: pxToRem(16),
+        lineHeight: pxToRem(26),
+      },
     },
     a: {
       color: theme.custom.colors.darkGray2,

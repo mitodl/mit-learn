@@ -206,7 +206,7 @@ def test_content_file_webhook_view_edx_success(  # noqa: PLR0913
     Test ContentFileWebhookView processes edX create webhooks successfully
     """
     url = reverse("webhooks:v1:content_file_webhook")
-    mock_ingest = mocker.patch("webhooks.views.ingest_edx_course.apply_async")
+    mock_ingest = mocker.patch("webhooks.views.ingest_edx_run_archive.apply_async")
 
     data = {
         "source": etl_source,
@@ -223,7 +223,7 @@ def test_content_file_webhook_view_edx_success(  # noqa: PLR0913
     assert response.status_code == 200
     mock_ingest.assert_called_once_with(
         [etl_source, content_path],
-        kwargs={"course_id": readable_id, "overwrite": False},
+        kwargs={"run_id": readable_id, "overwrite": False},
     )
 
 

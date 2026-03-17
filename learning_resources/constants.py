@@ -36,7 +36,6 @@ class LearningResourceType(ExtendedEnum):
     podcast_episode = "Podcast Episode"
     video = "Video"
     video_playlist = "Video Playlist"
-    article = "Article"
     document = "Document"
 
 

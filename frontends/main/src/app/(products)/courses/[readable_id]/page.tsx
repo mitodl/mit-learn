@@ -26,9 +26,8 @@ export const generateMetadata = async (
     }
     const [course] = coursePages.items
 
-    const image = course.feature_image
-      ? course.course_details.page.feature_image_src
-      : DEFAULT_RESOURCE_IMG
+    const image =
+      course.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
 
     return standardizeMetadata({
       title: course.title,

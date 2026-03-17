@@ -9,6 +9,7 @@ import { CarouselV2 } from "ol-components/CarouselV2"
 import type { Faculty } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
 import RawHTML from "./RawHTML"
+import { RiAccountCircleFill } from "@remixicon/react"
 
 const InstructorsSectionRoot = styled.section(({ theme }) => ({
   display: "flex",
@@ -56,6 +57,7 @@ const InstructorButton = styled.button(({ theme }) => ({
   flexDirection: "column",
   gap: "8px",
   alignItems: "center",
+  overflow: "hidden",
   width: "100%",
   border: 0,
   padding: 0,
@@ -86,6 +88,9 @@ const InstructorAvatar = styled.div(({ theme }) => ({
     borderColor: "transparent",
     boxShadow: `inset 0 0 0 2px ${theme.custom.colors.red}`,
   },
+}))
+const DefaultInstructorImage = styled(RiAccountCircleFill)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
 }))
 const InstructorImage = styled(Image)({
   height: "84px",
@@ -182,12 +187,16 @@ const InstructorsSection: React.FC<{ instructors: Faculty[] }> = ({
                 onClick={() => setActiveInstructorId(instructor.id)}
               >
                 <InstructorAvatar>
-                  <InstructorImage
-                    width={84}
-                    height={84}
-                    src={instructor.feature_image_src}
-                    alt=""
-                  />
+                  {instructor.feature_image_src ? (
+                    <InstructorImage
+                      width={84}
+                      height={84}
+                      src={instructor.feature_image_src}
+                      alt=""
+                    />
+                  ) : (
+                    <DefaultInstructorImage size={84} aria-hidden="true" />
+                  )}
                 </InstructorAvatar>
                 <InstructorName>{instructor.instructor_name}</InstructorName>
               </InstructorButton>

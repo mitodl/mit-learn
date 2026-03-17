@@ -7,34 +7,49 @@ import {
   Breadcrumbs,
   BannerBackground,
   Typography,
+  HEADER_HEIGHT,
+  Grid2,
 } from "ol-components"
 import { convertToEmbedUrl } from "@/common/utils"
-import { backgroundSrcSetCSS } from "ol-utilities"
 import { HOME } from "@/common/urls"
-import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { styled, VisuallyHidden } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
 import Image from "next/image"
-import { HeadingIds } from "./util"
 import type { Breakpoint } from "@mui/system"
 
-const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
-  paddingBottom: "24px",
-  [theme.breakpoints.down("md")]: {
-    paddingBottom: "16px",
+const GradientBanner = styled(BannerBackground)(({ theme }) => ({
+  background:
+    "radial-gradient(53.28% 106.57% at 50% 14.6%, #1D7B83 0%, #1E1E54 100%)",
+  padding: 0,
+  [theme.breakpoints.down("sm")]: {
+    padding: 0,
+  },
+}))
+
+const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
+  "& > span": {
+    paddingBottom: 0,
   },
 }))
 
 const TitleBox = styled(Stack)(({ theme }) => ({
   color: theme.custom.colors.white,
 }))
-const ProductTag = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.darkGray1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "4px 12px",
-  borderRadius: "4px",
-  ...theme.typography.subtitle2,
+
+const ContentStack = styled(Stack)(({ theme }) => ({
+  gap: "32px",
+  marginTop: "16px",
+  [theme.breakpoints.down("md")]: {
+    gap: "16px",
+    marginTop: 0,
+  },
+}))
+
+const EnrollButton = styled.div(({ theme }) => ({
+  width: "240px",
+
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }))
 
 const Page = styled.div(({ theme }) => ({
@@ -46,21 +61,29 @@ const Page = styled.div(({ theme }) => ({
   height: "100%",
 }))
 
-const TopContainer = styled(Container)({
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "56px",
-})
+const TopContainer = styled(Container)(({ theme }) => ({
+  padding: "104px 0",
+
+  [theme.breakpoints.down("md")]: {
+    padding: "64px 40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 24px",
+  },
+}))
 const BottomContainer = styled(Container)(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   gap: "56px",
   flexDirection: "row-reverse",
-
+  paddingTop: "72px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    alignItems: "center",
-    gap: "0px",
+    gap: "32px",
+    paddingTop: "40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "40px",
     paddingTop: "24px",
   },
 }))
@@ -88,7 +111,6 @@ const Show = styled("div", {
 
 const MainCol = styled.div({
   width: "100%",
-  flex: 1,
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
@@ -98,10 +120,11 @@ const SectionsWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "56px",
-  marginTop: "40px",
   [theme.breakpoints.down("md")]: {
     gap: "40px",
-    marginTop: "36px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "32px",
   },
 }))
 
@@ -111,33 +134,67 @@ const SidebarCol = styled(Show, {
   alignSelf?: React.CSSProperties["alignSelf"]
 }>(({ alignSelf }) => ({
   width: "100%",
-  maxWidth: "410px",
   alignSelf,
 }))
 
-const SidebarVideo = styled.iframe(({ theme }) => ({
-  borderRadius: "4px",
-  border: "none",
+/**
+ * Pixel distance below header at which the summary box should begin when
+ * scrolling.
+ */
+const OFFSET_FROM_HEADER = 72
+/**
+ * Column for the summary info box. Unlike SidebarCol, this is always visible.
+ * On desktop it acts as a fixed-width sidebar; below md it goes full-width.
+ */
+const SummaryCol = styled.div(({ theme }) => ({
   width: "100%",
   maxWidth: "410px",
-  aspectRatio: "410 / 230",
-  display: "block",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    // Without this, the flex child stretches to the main column's height
+    // and sticky has no room to scroll.
+    alignSelf: "flex-start",
+    top: `${HEADER_HEIGHT + OFFSET_FROM_HEADER}px`,
+  },
   [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px 4px 0 0",
+    maxWidth: "none",
+  },
+}))
+
+const SidebarVideo = styled.iframe(({ theme }) => ({
+  borderRadius: "16px",
+  border: "none",
+  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
+  width: "100%",
+  aspectRatio: "16 / 9",
+  [theme.breakpoints.up("md")]: {
+    position: "sticky",
+    // Without this, the flex child stretches to the main column's height
+    // and sticky has no room to scroll.
+    alignSelf: "flex-start",
+    top: `${HEADER_HEIGHT + OFFSET_FROM_HEADER}px`,
+  },
+  [theme.breakpoints.down("md")]: {
+    maxWidth: "none",
   },
 }))
 
 const SidebarImage = styled(Image)(({ theme }) => ({
-  borderRadius: "4px",
+  borderRadius: "16px",
+  boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
   width: "100%",
-  maxWidth: "410px",
-  aspectRatio: "410 / 230",
+  aspectRatio: "16/9",
   height: "auto",
   display: "block",
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px 4px 0 0",
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "100%",
+  },
+}))
+
+const ShortDescription = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body1,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
   },
 }))
 
@@ -158,141 +215,86 @@ const SidebarMedia: React.FC<{
   return (
     <SidebarImage
       priority={priority}
-      width={410}
-      height={230}
+      width={540}
+      height={306}
       src={imageSrc}
       alt=""
     />
   )
 }
 
-const SummaryRoot = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  borderRadius: "4px",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.10)",
-  padding: "24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "32px",
-  [theme.breakpoints.up("md")]: {
-    position: "sticky",
-    marginTop: "-54px",
-    top: "calc(40px + 32px + 24px)",
-    borderRadius: "4px",
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    flexDirection: "row",
-    gap: "48px",
-  },
-  [theme.breakpoints.down("md")]: {
-    marginTop: "24px",
-  },
-}))
-
 type ProductPageTemplateProps = {
-  tags: string[]
   currentBreadcrumbLabel: string
   title: string
   shortDescription: React.ReactNode
   imageSrc: string
   videoUrl?: string | null
-  sidebarSummary: React.ReactNode
-  summaryTitle: string
+  infoBox: React.ReactNode
+  enrollmentAction: React.ReactNode
   children: React.ReactNode
-  navbar: React.ReactNode
-  enrollButton?: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
-  tags,
   currentBreadcrumbLabel,
   title,
   shortDescription,
   imageSrc,
   videoUrl,
-  sidebarSummary,
-  summaryTitle,
+  infoBox,
   children,
-  enrollButton,
-  navbar,
+  enrollmentAction,
 }) => {
   return (
     <Page>
-      <BannerBackground backgroundUrl={backgroundSrcSetCSS(backgroundSteps)}>
+      <GradientBanner>
         <TopContainer data-testid="banner-container">
-          <MainCol>
-            <StyledBreadcrumbs
-              variant="dark"
-              ancestors={[{ href: HOME, label: "Home" }]}
-              current={currentBreadcrumbLabel}
-            />
-            <TitleBox alignItems="flex-start" gap="4px">
-              <Stack direction="row" gap="8px">
-                {tags.map((tag) => {
-                  return <ProductTag key={tag}>{tag}</ProductTag>
-                })}
-              </Stack>
-              <Stack alignItems="flex-start" gap="16px">
-                <Typography component="h1" typography={{ xs: "h3", sm: "h2" }}>
-                  {title}
-                </Typography>
-                <Typography typography={{ xs: "body2", sm: "body1" }}>
-                  {shortDescription}
-                </Typography>
-              </Stack>
-            </TitleBox>
-          </MainCol>
-          <SidebarCol showAbove="md" alignSelf="flex-end">
-            <SidebarMedia
-              videoUrl={videoUrl}
-              imageSrc={imageSrc}
-              title={title}
-              priority
-            />
-          </SidebarCol>
-        </TopContainer>
-      </BannerBackground>
-      <BottomContainer>
-        {/*
-         * The summary section is rendered 3 times (desktop, tablet, mobile)
-         * with different layouts, but only one is visible at a time via CSS.
-         * A single visually-hidden heading serves all three.
-         */}
-        <VisuallyHidden>
-          <h2 id={HeadingIds.Summary}>{summaryTitle}</h2>
-        </VisuallyHidden>
-        <SidebarCol showAbove="md">
-          <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-            {enrollButton}
-            {sidebarSummary}
-          </SummaryRoot>
-        </SidebarCol>
-        <MainCol>
-          {navbar}
-          <Show showBetween={["sm", "md"]}>
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              {sidebarSummary}
-              <Stack gap="16px">
+          <Grid2 container spacing={{ xs: 2, sm: 2, md: 8 }}>
+            <Grid2 size={{ xs: 12, sm: 6, md: 7 }}>
+              <MainCol>
+                <StyledBreadcrumbs
+                  variant="dark"
+                  ancestors={[{ href: HOME, label: "Home" }]}
+                  current={currentBreadcrumbLabel}
+                />
+                <TitleBox alignItems="flex-start" gap="4px">
+                  <ContentStack alignItems="flex-start">
+                    <SidebarCol showBelow="sm" alignSelf="flex-end">
+                      <SidebarMedia
+                        videoUrl={videoUrl}
+                        imageSrc={imageSrc}
+                        title={title}
+                      />
+                    </SidebarCol>
+                    <Typography
+                      component="h1"
+                      typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                    >
+                      {title}
+                    </Typography>
+                    <ShortDescription>{shortDescription}</ShortDescription>
+                    <EnrollButton>{enrollmentAction}</EnrollButton>
+                  </ContentStack>
+                </TitleBox>
+              </MainCol>
+            </Grid2>
+            <Grid2
+              size={{ xs: 12, sm: 6, md: 5 }}
+              style={{ display: "flex", alignSelf: "center" }}
+            >
+              <SidebarCol showAbove="sm" alignSelf="flex-end">
                 <SidebarMedia
                   videoUrl={videoUrl}
                   imageSrc={imageSrc}
                   title={title}
+                  priority
                 />
-                {enrollButton}
-              </Stack>
-            </SummaryRoot>
-          </Show>
-          <SidebarCol showBelow="sm" alignSelf="center">
-            <SummaryRoot as="section" aria-labelledby={HeadingIds.Summary}>
-              <SidebarMedia
-                videoUrl={videoUrl}
-                imageSrc={imageSrc}
-                title={title}
-              />
-              {enrollButton}
-              {sidebarSummary}
-            </SummaryRoot>
-          </SidebarCol>
+              </SidebarCol>
+            </Grid2>
+          </Grid2>
+        </TopContainer>
+      </GradientBanner>
+      <BottomContainer>
+        <SummaryCol>{infoBox}</SummaryCol>
+        <MainCol>
           <SectionsWrapper>{children}</SectionsWrapper>
         </MainCol>
       </BottomContainer>

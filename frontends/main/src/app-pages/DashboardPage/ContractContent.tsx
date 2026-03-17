@@ -207,6 +207,7 @@ const useProgramCollectionCourses = (
     ...programsQueries.programsList({
       id: programIds,
       contract_id: contractId,
+      page_size: programIds.length,
     }),
     enabled: programIds.length > 0,
   })
@@ -465,7 +466,11 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     enrollmentQueries.programEnrollmentsList(),
   )
   const programsQuery = useQuery(
-    programsQueries.programsList({ org_id: orgId, contract_id: contract.id }),
+    programsQueries.programsList({
+      org_id: orgId,
+      contract_id: contract.id,
+      page_size: 30,
+    }),
   )
   const programCollectionsQuery = useQuery(
     programCollectionQueries.programCollectionsList({}),

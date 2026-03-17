@@ -372,6 +372,8 @@ def transform_courses(courses):
 
 
 def _fetch_courses_by_ids(course_ids):
+    if not course_ids:
+        return []
     if settings.MITX_ONLINE_COURSES_API_URL:
         return list(
             _fetch_data(
@@ -452,6 +454,12 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "offered_by": OFFERED_BY,
             "etl_source": ETLSource.mitxonline.name,
             "resource_type": LearningResourceType.program.name,
+            # MITx Online programs with display_mode="course" are shown as
+            # courses in the UI (single-course programs wrapped as programs
+            # upstream but presented as standalone courses to learners).
+            "resource_category": LearningResourceType.course.value
+            if program.get("display_mode") == "course"
+            else LearningResourceType.program.value,
             "departments": parse_departments(program.get("departments", [])),
             "platform": PlatformType.mitxonline.name,
             "professional": False,

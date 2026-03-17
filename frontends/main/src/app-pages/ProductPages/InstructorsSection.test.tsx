@@ -29,7 +29,7 @@ test("Renders each instructor", async () => {
     const button = within(section).getByRole("button", {
       name: instructor.instructor_name,
     })
-    getByImageSrc(button, instructor.feature_image_src)
+    getByImageSrc(button, instructor.feature_image_src || "")
   })
 
   const defaultInstructor = instructors[0]
@@ -58,4 +58,19 @@ test("Changes active instructor content on portrait click", async () => {
   expectRawContent(section, instructor.instructor_bio_long)
 
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+})
+
+test("Shows default icon when instructor has no image", async () => {
+  const instructors = [makeFaculty({ feature_image_src: null })]
+  renderWithProviders(<InstructorsSection instructors={instructors} />)
+
+  const section = await screen.findByRole("region", {
+    name: "Meet your instructors",
+  })
+  const button = within(section).getByRole("button", {
+    name: instructors[0].instructor_name,
+  })
+
+  expect(button.querySelector("img")).not.toBeInTheDocument()
+  expect(button.querySelector("svg")).toBeInTheDocument()
 })

@@ -236,11 +236,11 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     ).data
     expected = specific_serializer_cls(instance=resource, context=context).data
 
-    if resource.resource_type in [
-        LearningResourceType.course.name,
-        LearningResourceType.program.name,
+    if resource.resource_category in [
+        LearningResourceType.course.value,
+        LearningResourceType.program.value,
     ]:
-        resource_type_group = resource.resource_type
+        resource_type_group = LearningResourceType(resource.resource_category).name
     else:
         resource_type_group = LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
     assert result == expected
