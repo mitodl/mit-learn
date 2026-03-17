@@ -880,6 +880,7 @@ def load_content_files(
                 resource = file.direct_learning_resource
                 resource.published = False
                 resource.save()
+                update_index(resource, newly_created=False)
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
@@ -907,6 +908,13 @@ def load_learning_materials(
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)
             )
+        elif content_file.direct_learning_resource:
+            direct_resource = content_file.direct_learning_resource
+            direct_resource.published = False
+            direct_resource.save()
+            content_file.direct_learning_resource = None
+            content_file.save()
+            update_index(direct_resource, newly_created=False)
 
     course_run.learning_resource.resources.set(
         LearningResource.objects.filter(id__in=material_ids).only("id"),
@@ -936,7 +944,7 @@ def load_learning_material(
             resource_type = LearningResourceType.video.name
         else:
             resource_type = LearningResourceType.document.name
-        learning_resource, _ = LearningResource.objects.update_or_create(
+        learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             platform=course_run.learning_resource.platform,
             defaults={
@@ -955,7 +963,10 @@ def load_learning_material(
 
         content_file.direct_learning_resource = learning_resource
         content_file.save()
-        return learning_resource.id
+
+    update_index(learning_resource, created)
+
+    return learning_resource.id
 
 
 def load_problem_file(

@@ -15,6 +15,7 @@ from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
+    ContentFileFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
 )
@@ -28,6 +29,7 @@ from learning_resources.tasks import (
     scrape_marketing_pages,
     sync_canvas_courses,
     update_next_start_date_and_prices,
+    update_ocw_learning_material_resources,
 )
 from main.utils import now_in_utc
 
@@ -775,3 +777,31 @@ def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
     mock_sync.assert_called_once_with(
         etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )
+
+
+def test_update_ocw_learning_material_resources(mocker):
+    """
+    Test that update_ocw_learning_material_resources calls the correct loader method
+    """
+
+    ocw_resource = LearningResourceFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        published=True,
+    )
+    run = ocw_resource.runs.first()
+
+    ContentFileFactory.create_batch(2, run=run)
+
+    content_file_ids = set(run.content_files.values_list("id", flat=True))
+
+    mock_load_learning_materials = mocker.patch(
+        "learning_resources.tasks.load_learning_materials", autospec=True
+    )
+
+    update_ocw_learning_material_resources()
+
+    mock_load_learning_materials.assert_called_once()
+    call_args = mock_load_learning_materials.call_args[0]
+    assert call_args[0].id == run.id
+    assert set(call_args[1]) == content_file_ids

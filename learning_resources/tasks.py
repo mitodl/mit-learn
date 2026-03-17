@@ -22,7 +22,10 @@ from learning_resources.etl.edx_shared import (
     sync_edx_archive,
     sync_edx_course_files,
 )
-from learning_resources.etl.loaders import load_run_dependent_values
+from learning_resources.etl.loaders import (
+    load_learning_materials,
+    load_run_dependent_values,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -359,6 +362,30 @@ def get_ocw_courses(
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
     )
+    clear_views_cache()
+
+
+@app.task(bind=True, acks_late=True)
+def update_ocw_learning_material_resources(self):  # noqa: ARG001
+    """
+    Task to update OCW learning materials resources without updating
+    ocw courses or content files
+    """
+
+    for course in LearningResource.objects.filter(
+        published=True, etl_source=ETLSource.ocw.name, resource_type="course"
+    ):
+        course_run = course.runs.filter(published=True).first()
+        content_file_ids = course_run.content_files.filter(published=True).values_list(
+            "id", flat=True
+        )
+        try:
+            load_learning_materials(course_run, content_file_ids)
+        except Exception as e:
+            error = (
+                f"Error loading learning materials for course run {course_run.id}: {e}"
+            )
+            log.exception(error)
     clear_views_cache()
 
 
