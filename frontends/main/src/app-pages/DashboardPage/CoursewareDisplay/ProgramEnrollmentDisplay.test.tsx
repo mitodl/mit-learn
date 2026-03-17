@@ -663,4 +663,260 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(cards[1]).toHaveTextContent(courseA.title)
     expect(cards[2]).toHaveTextContent(courseB.title)
   })
+
+  test("Displays required programs with display_mode=course and excludes true programs", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const parentCourse = mitxonline.factories.courses.course({
+      id: 5001,
+      title: "Parent Section Course",
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+
+    const programAsCourse = mitxonline.factories.programs.program({
+      id: 6001,
+      title: "Embedded Program As Course",
+      display_mode: "course",
+      courses: [],
+      req_tree: [],
+    })
+    const trueProgram = mitxonline.factories.programs.program({
+      id: 6002,
+      title: "True Program",
+      display_mode: null,
+      courses: [],
+      req_tree: [],
+    })
+
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const section = reqTree.addOperator({
+      operator: "all_of",
+      title: "Mixed Requirements",
+    })
+    section.addCourse({ course: parentCourse.id })
+    section.addProgram({ program: programAsCourse.id })
+    section.addProgram({ program: trueProgram.id })
+
+    const parentProgram = mitxonline.factories.programs.program({
+      id: 7001,
+      title: "Parent Program",
+      courses: [parentCourse.id],
+      req_tree: reqTree.serialize(),
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: parentProgram.id,
+            title: parentProgram.title,
+            live: parentProgram.live,
+            program_type: parentProgram.program_type,
+            readable_id: parentProgram.readable_id,
+          },
+        }),
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: programAsCourse.id,
+            title: programAsCourse.title,
+            live: programAsCourse.live,
+            program_type: programAsCourse.program_type,
+            readable_id: programAsCourse.readable_id,
+            display_mode: "course",
+          },
+        }),
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: trueProgram.id,
+            title: trueProgram.title,
+            live: trueProgram.live,
+            program_type: trueProgram.program_type,
+            readable_id: trueProgram.readable_id,
+            display_mode: null,
+          },
+        }),
+      ],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(parentProgram.id),
+      parentProgram,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(programAsCourse.id),
+      programAsCourse,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: parentProgram.courses }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [parentCourse],
+      },
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: programAsCourse.courses }),
+      {
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      },
+    )
+    setMockResponse.get(mitxonline.urls.courses.coursesList({}), {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
+
+    renderWithProviders(
+      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
+    )
+
+    await screen.findByText("Mixed Requirements")
+    expect(screen.getAllByText("Parent Section Course").length).toBeGreaterThan(
+      0,
+    )
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("Embedded Program As Course"),
+        ).toBeInTheDocument()
+      },
+      { timeout: 4000 },
+    )
+    expect(screen.queryByText("True Program")).not.toBeInTheDocument()
+  })
+
+  test("Displays mixed course/program items in requirement-tree order", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const courseOne = mitxonline.factories.courses.course({
+      id: 8001,
+      title: "Ordered Course One",
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+    const courseTwo = mitxonline.factories.courses.course({
+      id: 8002,
+      title: "Ordered Course Two",
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+    const programAsCourse = mitxonline.factories.programs.program({
+      id: 8003,
+      title: "Ordered Program As Course",
+      display_mode: "course",
+      courses: [],
+      req_tree: [],
+    })
+
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const section = reqTree.addOperator({
+      operator: "all_of",
+      title: "Order Test",
+    })
+    section.addProgram({ program: programAsCourse.id })
+    section.addCourse({ course: courseOne.id })
+    section.addCourse({ course: courseTwo.id })
+
+    const parentProgram = mitxonline.factories.programs.program({
+      id: 8004,
+      title: "Order Parent Program",
+      courses: [courseOne.id, courseTwo.id],
+      req_tree: reqTree.serialize(),
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: parentProgram.id,
+            title: parentProgram.title,
+            live: parentProgram.live,
+            program_type: parentProgram.program_type,
+            readable_id: parentProgram.readable_id,
+          },
+        }),
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: programAsCourse.id,
+            title: programAsCourse.title,
+            live: programAsCourse.live,
+            program_type: programAsCourse.program_type,
+            readable_id: programAsCourse.readable_id,
+            display_mode: "course",
+          },
+        }),
+      ],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(parentProgram.id),
+      parentProgram,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(programAsCourse.id),
+      programAsCourse,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: parentProgram.courses }),
+      {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [courseOne, courseTwo],
+      },
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: programAsCourse.courses }),
+      {
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      },
+    )
+    setMockResponse.get(mitxonline.urls.courses.coursesList({}), {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
+
+    renderWithProviders(
+      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
+    )
+
+    await screen.findByText("Order Test")
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("Ordered Program As Course"),
+        ).toBeInTheDocument()
+      },
+      { timeout: 4000 },
+    )
+
+    const programTitle = screen.getByText("Ordered Program As Course")
+    const courseOneTitle = screen.getAllByText("Ordered Course One")[0]
+    const courseTwoTitle = screen.getAllByText("Ordered Course Two")[0]
+
+    expect(
+      programTitle.compareDocumentPosition(courseOneTitle) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      courseOneTitle.compareDocumentPosition(courseTwoTitle) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
 })

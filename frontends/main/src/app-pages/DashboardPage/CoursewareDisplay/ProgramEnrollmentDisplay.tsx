@@ -12,7 +12,10 @@ import { DashboardCard, DashboardType } from "./DashboardCard"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  V2ProgramRequirement,
+  DisplayModeEnum,
+} from "@mitodl/mitxonline-api-axios/v2"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 
 const StackedCardContainer = styled.div(({ theme }) => ({
@@ -27,20 +30,29 @@ const StackedCardContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const extractCoursesFromNode = (node: V2ProgramRequirement): number[] => {
-  const courses: number[] = []
+interface ResourceItem {
+  id: number
+  type: "course" | "program"
+}
+
+const extractResourcesFromNode = (
+  node: V2ProgramRequirement,
+): ResourceItem[] => {
+  const resources: ResourceItem[] = []
 
   if (node.data.node_type === "course" && node.data.course) {
-    courses.push(node.data.course)
+    resources.push({ id: node.data.course, type: "course" })
+  } else if (node.data.node_type === "program" && node.data.required_program) {
+    resources.push({ id: node.data.required_program, type: "program" })
   }
 
   if (node.children) {
     node.children.forEach((child) => {
-      courses.push(...extractCoursesFromNode(child))
+      resources.push(...extractResourcesFromNode(child))
     })
   }
 
-  return courses
+  return resources
 }
 
 const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
@@ -80,7 +92,21 @@ export const ProgramEnrollmentDisplay: React.FC<
     (enrollment) => enrollment.program.id === program?.id,
   )
 
-  // Only fetch courses if we have a program with course IDs
+  // Extract all required program IDs from the requirement tree
+  const requiredProgramIds = React.useMemo(() => {
+    if (!program?.req_tree) return []
+    const ids: number[] = []
+    const walk = (node: V2ProgramRequirement) => {
+      if (node.data.node_type === "program" && node.data.required_program) {
+        ids.push(node.data.required_program)
+      }
+      node.children?.forEach(walk)
+    }
+    program.req_tree.forEach(walk)
+    return ids
+  }, [program?.req_tree])
+
+  // Only fetch "program as course" modules if we have a program with course IDs
   const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
     ...coursesQueries.coursesList({ id: program?.courses || [] }),
     enabled: !!program && program.courses.length > 0 && enrolledInProgram,
@@ -106,38 +132,73 @@ export const ProgramEnrollmentDisplay: React.FC<
   )
 
   // Build sections from requirement tree
-  const requirementSections =
-    program?.req_tree
+  const requirementSections = React.useMemo(() => {
+    if (!program?.req_tree) return []
+
+    const coursesById = new Map(
+      (programCourses?.results ?? []).map((c) => [c.id, c]),
+    )
+
+    // Map program enrollments for required programs with display_mode = course
+    const courseModeProgramEnrollmentsById = new Map(
+      (programEnrollments ?? [])
+        .filter(
+          (pe) =>
+            requiredProgramIds.includes(pe.program.id) &&
+            pe.program.display_mode === DisplayModeEnum.Course,
+        )
+        .map((pe) => [pe.program.id, pe]),
+    )
+
+    return program.req_tree
       .filter((node) => node.data.node_type === "operator")
       .map((node) => {
-        const courseIds = extractCoursesFromNode(node)
-        const coursesById = new Map(
-          (programCourses?.results ?? []).map((c) => [c.id, c]),
-        )
-        const sectionCourses = courseIds
-          .map((id) => coursesById.get(id))
-          .filter((c) => c !== undefined)
+        const resources = extractResourcesFromNode(node)
+
+        const sectionItems = resources
+          .map((resource) => {
+            if (resource.type === "course") {
+              const course = coursesById.get(resource.id)
+              return course
+                ? { resourceType: "course" as const, data: course }
+                : null
+            } else {
+              const progEnrollment = courseModeProgramEnrollmentsById.get(
+                resource.id,
+              )
+              return progEnrollment
+                ? { resourceType: "program" as const, data: progEnrollment }
+                : null
+            }
+          })
+          .filter((item) => item !== null)
+
         return {
           key: node.id,
           title: getRequirementSectionTitle(node),
-          courses: sectionCourses,
+          items: sectionItems,
           node,
         }
       })
-      .filter((section) => section.courses.length > 0) || []
+      .filter((section) => section.items.length > 0)
+  }, [program, programCourses, programEnrollments, requiredProgramIds])
 
-  const allProgramCourses = requirementSections.flatMap(
-    (section) => section.courses,
+  const allSectionItems = requirementSections.flatMap(
+    (section) => section.items,
   )
-  const completedCount = allProgramCourses.filter((course) => {
-    const bestEnrollment = selectBestEnrollment(
-      course,
-      enrollmentsByCourseId[course.id] || [],
-    )
-    return (
-      getCourseRunEnrollmentStatus(bestEnrollment) ===
-      EnrollmentStatus.Completed
-    )
+  const completedCount = allSectionItems.filter((item) => {
+    if (item.resourceType === "course") {
+      const bestEnrollment = selectBestEnrollment(
+        item.data,
+        enrollmentsByCourseId[item.data.id] || [],
+      )
+      return (
+        getCourseRunEnrollmentStatus(bestEnrollment) ===
+        EnrollmentStatus.Completed
+      )
+    } else {
+      return false
+    }
   }).length
 
   // Calculate total required courses, respecting operator_value if operator is specified
@@ -148,7 +209,7 @@ export const ProgramEnrollmentDisplay: React.FC<
     ) {
       return sum + parseInt(section.node.data.operator_value, 10)
     }
-    return sum + section.courses.length
+    return sum + section.items.length
   }, 0)
 
   if (isLoading) {
@@ -189,22 +250,26 @@ export const ProgramEnrollmentDisplay: React.FC<
         </Typography>
       </Stack>
       {requirementSections.map((section, index) => {
-        const sectionCompletedCount = section.courses.filter((course) => {
-          const bestEnrollment = selectBestEnrollment(
-            course,
-            enrollmentsByCourseId[course.id] || [],
-          )
-          return (
-            getCourseRunEnrollmentStatus(bestEnrollment) ===
-            EnrollmentStatus.Completed
-          )
+        const sectionCompletedCount = section.items.filter((item) => {
+          if (item.resourceType === "course") {
+            const bestEnrollment = selectBestEnrollment(
+              item.data,
+              enrollmentsByCourseId[item.data.id] || [],
+            )
+            return (
+              getCourseRunEnrollmentStatus(bestEnrollment) ===
+              EnrollmentStatus.Completed
+            )
+          } else {
+            return false
+          }
         }).length
 
         const sectionRequiredCount =
           section.node.data.operator === "min_number_of" &&
           section.node.data.operator_value
             ? parseInt(section.node.data.operator_value, 10)
-            : section.courses.length
+            : section.items.length
 
         return (
           <React.Fragment key={section.key}>
@@ -229,34 +294,55 @@ export const ProgramEnrollmentDisplay: React.FC<
               </Typography>
             </Stack>
             <StackedCardContainer>
-              {section.courses.map((course) => {
-                // Check if user has an enrollment for this course
-                const bestEnrollment = selectBestEnrollment(
-                  course,
-                  enrollmentsByCourseId[course.id] || [],
-                )
+              {section.items.map((item) => {
+                if (item.resourceType === "course") {
+                  const course = item.data
+                  // Check if user has an enrollment for this course
+                  const bestEnrollment = selectBestEnrollment(
+                    course,
+                    enrollmentsByCourseId[course.id] || [],
+                  )
 
-                // If enrolled, show enrollment card with status, otherwise show course card
-                const resource = bestEnrollment
-                  ? {
-                      type: DashboardType.CourseRunEnrollment,
-                      data: bestEnrollment,
-                    }
-                  : { type: DashboardType.Course, data: course }
+                  // If enrolled, show enrollment card with status, otherwise show course card
+                  const resource = bestEnrollment
+                    ? {
+                        type: DashboardType.CourseRunEnrollment,
+                        data: bestEnrollment,
+                      }
+                    : { type: DashboardType.Course, data: course }
 
-                return (
-                  <DashboardCard
-                    key={getKey({
-                      resourceType: ResourceType.Course,
-                      id: course.id,
-                      runId: bestEnrollment?.run.id,
-                    })}
-                    resource={resource}
-                    programEnrollment={programEnrollment}
-                    showNotComplete={false}
-                    variant="stacked"
-                  />
-                )
+                  return (
+                    <DashboardCard
+                      key={getKey({
+                        resourceType: ResourceType.Course,
+                        id: course.id,
+                        runId: bestEnrollment?.run.id,
+                      })}
+                      resource={resource}
+                      programEnrollment={programEnrollment}
+                      showNotComplete={false}
+                      variant="stacked"
+                    />
+                  )
+                } else {
+                  const programEnroll = item.data
+                  const resource = {
+                    type: DashboardType.ProgramEnrollment,
+                    data: programEnroll,
+                  }
+
+                  return (
+                    <DashboardCard
+                      key={getKey({
+                        resourceType: ResourceType.Program,
+                        id: programEnroll.program.id,
+                      })}
+                      resource={resource}
+                      showNotComplete={false}
+                      variant="stacked"
+                    />
+                  )
+                }
               })}
             </StackedCardContainer>
           </React.Fragment>
