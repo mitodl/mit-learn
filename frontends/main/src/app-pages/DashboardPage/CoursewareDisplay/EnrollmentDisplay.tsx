@@ -330,7 +330,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       .map((node) => {
         const courseIds = extractCoursesFromNode(node)
         const coursesById = new Map(
-          (programCourses?.results || []).map((c) => [c.id, c]),
+          (programCourses?.results ?? []).map((c) => [c.id, c]),
         )
         const sectionCourses = courseIds
           .map((id) => coursesById.get(id))
