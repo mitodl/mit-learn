@@ -135,6 +135,116 @@ const getTimezone = (dateString: string): string => {
   return tz
 }
 
+const MS_IN_DAY = 1000 * 60 * 60 * 24
+
+const formatDayCount = (days: number): string => {
+  return `${days} day${days === 1 ? "" : "s"}`
+}
+
+interface RelativeDateContent {
+  anchorLabel: string
+  startVerb: "starts" | "started"
+  startSuffix: string
+  endVerb?: "ends" | "ended"
+  endSuffix?: string
+}
+
+const getRelativeDateContent = (
+  startDateString?: string | null,
+  endDateString?: string | null,
+  startDateDisplay?: string | null,
+  endDateDisplay?: string | null,
+): RelativeDateContent | null => {
+  if (!startDateString) {
+    return null
+  }
+
+  const now = Date.now()
+  const startDate = new Date(startDateString)
+  if (Number.isNaN(startDate.getTime())) {
+    return null
+  }
+
+  const hasEndDate = Boolean(endDateString)
+  const endDate = hasEndDate ? new Date(endDateString as string) : null
+  const hasValidEndDate = Boolean(endDate) && !Number.isNaN(endDate!.getTime())
+
+  if (!hasValidEndDate) {
+    if (now < startDate.getTime()) {
+      const daysUntilStart = Math.max(
+        0,
+        Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
+      )
+      const dayCount = formatDayCount(daysUntilStart)
+      return {
+        anchorLabel: `${dayCount} until this course starts.`,
+        startVerb: "starts",
+        startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      }
+    }
+
+    const daysSinceStart = Math.max(
+      0,
+      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+    )
+    const dayCount = formatDayCount(daysSinceStart)
+    return {
+      anchorLabel: `this course started ${dayCount} ago.`,
+      startVerb: "started",
+      startSuffix: `${dayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+    }
+  }
+
+  const endTime = endDate!.getTime()
+
+  if (now < startDate.getTime()) {
+    const daysUntilStart = Math.max(
+      0,
+      Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
+    )
+    const dayCount = formatDayCount(daysUntilStart)
+    return {
+      anchorLabel: `${dayCount} until this course starts.`,
+      startVerb: "starts",
+      startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      endVerb: endDateDisplay ? "ends" : undefined,
+      endSuffix: endDateDisplay ? `on ${endDateDisplay}.` : undefined,
+    }
+  }
+
+  if (now <= endTime) {
+    const daysUntilEnd = Math.max(0, Math.ceil((endTime - now) / MS_IN_DAY))
+    const daysUntilStart = Math.max(
+      0,
+      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+    )
+    const endDayCount = formatDayCount(daysUntilEnd)
+    const startDayCount = formatDayCount(daysUntilStart)
+    return {
+      anchorLabel: `${endDayCount} until this course ends.`,
+      startVerb: "started",
+      startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      endVerb: "ends",
+      endSuffix: `in ${endDayCount}${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
+    }
+  }
+
+  const daysSinceEnd = Math.max(0, Math.floor((now - endTime) / MS_IN_DAY))
+  const daysSinceStart = Math.max(
+    0,
+    Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+  )
+  const endDayCount = formatDayCount(daysSinceEnd)
+  const startDayCount = formatDayCount(daysSinceStart)
+  return {
+    anchorLabel: `this course ended ${endDayCount} ago.`,
+    startVerb: "started",
+    startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+    endVerb: "ended",
+    endSuffix: `${endDayCount} ago${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
+  }
+}
+
 interface ProgramAsCourseCardProps {
   programId: number
   Component?: React.ElementType
@@ -269,15 +379,13 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const endDatePopoverString = program?.end_date
     ? `${formatDate(program.end_date, "MMMM D, YYYY h:mm A")} ${getTimezone(program.end_date)}`
     : null
-  const linkButtonEndDate = program?.end_date
-    ? formatDate(program.end_date, "MMMM Do YYYY")
-    : null
-  const daysTillEnd = program?.end_date
-    ? Math.ceil(
-        (new Date(program.end_date).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24),
-      )
-    : null
+  const datePopoverContent = getRelativeDateContent(
+    program?.start_date,
+    program?.end_date,
+    startDatePopoverString,
+    endDatePopoverString,
+  )
+  const showDatePopoverLink = Boolean(datePopoverContent)
 
   if (isLoading) {
     return (
@@ -303,7 +411,7 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
         <ProgramCardHeaderInner>
           <StatusContainer>
             <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
-            {startDatePopoverString && endDatePopoverString && daysTillEnd && (
+            {showDatePopoverLink && datePopoverContent && (
               <>
                 <HorizontalSeparator />
                 <Popover
@@ -325,21 +433,24 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                       >
                         This course{" "}
                         <Typography variant="subtitle3" component="span">
-                          started
+                          {datePopoverContent.startVerb}
                         </Typography>{" "}
-                        on {startDatePopoverString}
+                        {datePopoverContent.startSuffix}
                       </Typography>
                     </Stack>
-                    <Typography
-                      variant="body3"
-                      color={theme.custom.colors.black}
-                    >
-                      This course will{" "}
-                      <Typography variant="subtitle3" component="span">
-                        end
-                      </Typography>{" "}
-                      in {daysTillEnd} days on {endDatePopoverString}
-                    </Typography>
+                    {datePopoverContent.endVerb &&
+                      datePopoverContent.endSuffix && (
+                        <Typography
+                          variant="body3"
+                          color={theme.custom.colors.black}
+                        >
+                          This course{" "}
+                          <Typography variant="subtitle3" component="span">
+                            {datePopoverContent.endVerb}
+                          </Typography>{" "}
+                          {datePopoverContent.endSuffix}
+                        </Typography>
+                      )}
                   </DatePopoverContent>
                 </Popover>
                 <LinkButton
@@ -352,7 +463,7 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                     variant="body2"
                     color={theme.custom.colors.silverGrayDark}
                   >
-                    Ends {linkButtonEndDate}
+                    {datePopoverContent.anchorLabel}
                   </Typography>
                 </LinkButton>
               </>
