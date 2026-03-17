@@ -28,8 +28,7 @@ import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramInfoBox from "./InfoBoxProgram"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
-import MitxOnlineCourseCard from "./MitxOnlineCourseCard"
-import MitxOnlineProgramCard from "./MitxOnlineProgramCard"
+import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { keyBy } from "lodash"
 import { programPageView } from "@/common/urls"
@@ -155,13 +154,12 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                 {req.items.map((item) => {
                   if (item.type === "course") {
                     const course = coursesById[item.id]
-                    if (!isLoading && !course) {
-                      return null
-                    }
+                    if (!isLoading && !course) return null
                     return (
                       <li key={`course-${item.id}`}>
-                        <MitxOnlineCourseCard
-                          course={course}
+                        <MitxOnlineResourceCard
+                          resource={course}
+                          resourceType="course"
                           href={`/courses/${encodeURIComponent(course?.readable_id)}`}
                           size="small"
                           isLoading={isLoading}
@@ -171,13 +169,12 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                     )
                   }
                   const prog = programsById[item.id]
-                  if (!isLoading && !prog) {
-                    return null
-                  }
+                  if (!isLoading && !prog) return null
                   return (
                     <li key={`program-${item.id}`}>
-                      <MitxOnlineProgramCard
-                        program={prog}
+                      <MitxOnlineResourceCard
+                        resource={prog}
+                        resourceType="program"
                         href={
                           prog
                             ? programPageView({
