@@ -90,8 +90,8 @@ const ProgramCardSubHeader = styled.div(({ theme }) => ({
   alignItems: "center",
   alignSelf: "stretch",
   gap: "10px",
-  borderTop: "1px solid var(--Gray-200---Light-Gray-2, #DDE1E6)",
-  background: "var(--Gray-100---Light-Gray-1, #F3F4F8)",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: `${theme.custom.colors.lightGray1}`,
   [theme.breakpoints.down("md")]: {
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
