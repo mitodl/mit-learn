@@ -247,7 +247,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton program={program} variant="bordered" />
+        <StyledProgramEnrollmentButton
+          program={program}
+          variant="bordered"
+          displayAsCourse
+        />
       }
       infoBox={
         <ProgramAsCourseInfoBox

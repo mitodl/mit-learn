@@ -27,7 +27,7 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
         <ProgramAsCourseSummary program={program} courses={courses} />
       </InfoBoxContent>
       <InfoBoxEnrollArea>
-        <ProgramEnrollmentButton program={program} />
+        <ProgramEnrollmentButton program={program} displayAsCourse />
       </InfoBoxEnrollArea>
     </InfoBoxCard>
   )
