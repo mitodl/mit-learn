@@ -46,6 +46,14 @@ RESOURCE_TYPE_GROUP_VALUES = [
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
 ]
 
+"""
+Choices+Descriptions for resource_type_group field, which is a higher level grouping
+than resource_type. The _CHOICES version is for DRF field choices.
+"""
+RESOURCE_TYPE_GROUP_CHOICES = [
+    (value, value.replace("_", " ").title()) for value in RESOURCE_TYPE_GROUP_VALUES
+]
+
 
 class OfferedBy(ExtendedEnum):
     """
