@@ -36,6 +36,14 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   borderBottom: "none",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
+  [theme.breakpoints.down("md")]: {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    flexDirection: "column",
+    gap: "16px",
+  },
 }))
 
 const ProgramCardHeaderOuter = styled.div({
@@ -76,7 +84,7 @@ const HorizontalSeparator = styled.div({
   backgroundColor: theme.custom.colors.lightGray2,
 })
 
-const ProgramCardSubHeader = styled.div({
+const ProgramCardSubHeader = styled.div(({ theme }) => ({
   display: "flex",
   padding: "8px 16px",
   alignItems: "center",
@@ -84,7 +92,11 @@ const ProgramCardSubHeader = styled.div({
   gap: "10px",
   borderTop: "1px solid var(--Gray-200---Light-Gray-2, #DDE1E6)",
   background: "var(--Gray-100---Light-Gray-1, #F3F4F8)",
-})
+  [theme.breakpoints.down("md")]: {
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
+}))
 
 const ProgramCardBody = styled.div({
   display: "flex",
@@ -94,11 +106,6 @@ const ProgramCardBody = styled.div({
   alignSelf: "stretch",
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "8px !important",
-    borderBottom: `1px solid ${theme.custom.colors.red}`,
-  },
 })
 
 const extractCoursesFromNode = (node: V2ProgramRequirement): number[] => {
