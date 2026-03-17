@@ -100,7 +100,11 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     <>
       <Stack gap="12px">
         {enrollment ? (
-          <ButtonLinkWithDisabled href={href} className={className}>
+          <ButtonLinkWithDisabled
+            variant={variant}
+            href={href}
+            className={className}
+          >
             Enrolled
             <RiCheckLine aria-hidden="true" />
           </ButtonLinkWithDisabled>
