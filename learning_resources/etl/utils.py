@@ -647,7 +647,9 @@ def _extract_content(  # noqa: PLR0913
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
-        return _extract_content_with_ocr(file_path, is_tutor_problem)
+        content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
+        if content_dict:
+            return content_dict
 
     content_dict = _extract_content_with_tika(
         document, metadata.get("mime_type"), file_extension, key
