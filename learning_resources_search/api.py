@@ -470,8 +470,8 @@ def generate_filter_clauses(search_params):
                             "must_not": [
                                 {
                                     "nested": {
-                                        "path": "offered_by",
-                                        "query": {"term": {"offered_by.code": "ocw"}},
+                                        "path": "platform",
+                                        "query": {"term": {"platform.code": "ocw"}},
                                     }
                                 }
                             ]

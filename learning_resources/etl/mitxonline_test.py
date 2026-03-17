@@ -215,6 +215,9 @@ def test_mitxonline_transform_programs(
                 "etl_source": ETLSource.mitxonline.name,
                 "platform": PlatformType.mitxonline.name,
                 "resource_type": LearningResourceType.program.name,
+                "resource_category": LearningResourceType.course.value
+                if program_data.get("display_mode") == "course"
+                else LearningResourceType.program.value,
                 "departments": [
                     get_department_id_by_name(program_data["departments"][0]["name"])
                 ]

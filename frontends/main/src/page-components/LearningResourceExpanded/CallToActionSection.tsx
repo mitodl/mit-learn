@@ -265,7 +265,6 @@ const getCallToActionText = (resource: LearningResource): string => {
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
-    [ResourceTypeEnum.Article]: viewArticle,
     [ResourceTypeEnum.LearningPath]: learnMore,
     [ResourceTypeEnum.Video]: learnMore,
     [ResourceTypeEnum.VideoPlaylist]: learnMore,
@@ -277,6 +276,10 @@ const getCallToActionText = (resource: LearningResource): string => {
   if (resource?.platform?.code === PlatformEnum.Youtube) {
     // YouTube resources should always show "Watch on YouTube" as the CTA
     return watchOnYouTube
+  }
+
+  if (resource?.resource_category === "Article") {
+    return viewArticle
   }
 
   if (resource?.platform?.code === PlatformEnum.Ocw) {
