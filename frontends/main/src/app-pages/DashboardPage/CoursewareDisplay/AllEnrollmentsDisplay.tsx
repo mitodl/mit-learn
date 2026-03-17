@@ -65,8 +65,11 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   ({ theme }) => ({
     [theme.breakpoints.down("md")]: {
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-      ">li+li": {
+      "> li+li": {
         marginTop: "0",
+      },
+      "> li:nth-child(n+3)": {
+        marginTop: "16px",
       },
     },
   }),
