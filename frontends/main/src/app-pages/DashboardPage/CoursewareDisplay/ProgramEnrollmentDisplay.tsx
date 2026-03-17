@@ -1,6 +1,6 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
+import { Skeleton, Stack, Typography, theme } from "ol-components"
 import {
   EnrollmentStatus,
   getCourseRunEnrollmentStatus,
@@ -17,18 +17,6 @@ import {
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
-
-const StackedCardContainer = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-  overflow: "hidden",
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "8px !important",
-    borderBottom: `1px solid ${theme.custom.colors.red}`,
-  },
-}))
 
 interface ResourceItem {
   id: number
@@ -293,7 +281,7 @@ export const ProgramEnrollmentDisplay: React.FC<
                 Completed {sectionCompletedCount} of {sectionRequiredCount}
               </Typography>
             </Stack>
-            <StackedCardContainer>
+            <Stack direction="column" gap="16px">
               {section.items.map((item) => {
                 if (item.resourceType === "course") {
                   const course = item.data
@@ -321,7 +309,6 @@ export const ProgramEnrollmentDisplay: React.FC<
                       resource={resource}
                       programEnrollment={programEnrollment}
                       showNotComplete={false}
-                      variant="stacked"
                     />
                   )
                 } else {
@@ -339,12 +326,11 @@ export const ProgramEnrollmentDisplay: React.FC<
                       })}
                       resource={resource}
                       showNotComplete={false}
-                      variant="stacked"
                     />
                   )
                 }
               })}
-            </StackedCardContainer>
+            </Stack>
           </React.Fragment>
         )
       })}
