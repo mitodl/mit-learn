@@ -50,8 +50,7 @@ describe("MitxOnlineProgramCard", () => {
   test("shows certificate price in list mode when certificate_type is set", () => {
     const program = factories.programs.program({
       certificate_type: "program_certificate",
-      min_price: 500,
-      max_price: 500,
+      products: [factories.courses.product({ price: 500 })],
     })
     const { container } = renderCard({ program, href: "/test", list: true })
     expect(container.textContent).toContain("$500.00")
@@ -61,20 +60,9 @@ describe("MitxOnlineProgramCard", () => {
   test("shows price when no certificate_type", () => {
     const program = factories.programs.program({
       certificate_type: "",
-      min_price: 100,
-      max_price: 100,
+      products: [factories.courses.product({ price: 100 })],
     })
     const { container } = renderCard({ program, href: "/test", list: true })
     expect(container.textContent).toContain("$100.00")
-  })
-
-  test("shows price range when min and max differ", () => {
-    const program = factories.programs.program({
-      certificate_type: "",
-      min_price: 100,
-      max_price: 500,
-    })
-    const { container } = renderCard({ program, href: "/test", list: true })
-    expect(container.textContent).toContain("$100.00 - $500.00")
   })
 })

@@ -24,23 +24,10 @@ const formatCurrency = (amount: number): string => {
 }
 
 const formatProgramPrice = (program: V2ProgramDetail): string | null => {
-  const { min_price: minPrice, max_price: maxPrice } = program
-
-  if (
-    minPrice !== null &&
-    minPrice !== undefined &&
-    maxPrice !== null &&
-    maxPrice !== undefined &&
-    minPrice !== maxPrice
-  ) {
-    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+  const price = program.products[0]?.price
+  if (price !== undefined && price !== null) {
+    return formatCurrency(Number(price))
   }
-
-  const single = minPrice ?? maxPrice
-  if (single !== null && single !== undefined) {
-    return formatCurrency(single)
-  }
-
   return null
 }
 

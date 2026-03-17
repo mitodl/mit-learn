@@ -28,6 +28,13 @@ const formatCurrency = (amount: number): string => {
 const formatCoursePrice = (
   course: CourseWithCourseRunsSerializerV2,
 ): string | null => {
+  if (
+    course.page?.current_price !== undefined &&
+    course.page?.current_price !== null
+  ) {
+    return formatCurrency(course.page.current_price)
+  }
+
   const { min_price: minPrice, max_price: maxPrice } = course
 
   if (
@@ -38,13 +45,6 @@ const formatCoursePrice = (
     minPrice !== maxPrice
   ) {
     return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
-  }
-
-  if (
-    course.page?.current_price !== undefined &&
-    course.page?.current_price !== null
-  ) {
-    return formatCurrency(course.page.current_price)
   }
 
   const single = minPrice ?? maxPrice
