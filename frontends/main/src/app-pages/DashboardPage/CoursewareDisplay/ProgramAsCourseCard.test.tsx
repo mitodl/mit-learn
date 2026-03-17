@@ -54,6 +54,7 @@ describe("ProgramAsCourseCard", () => {
 
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
+        certificate: null,
         program: {
           id: program.id,
           title: program.title,
