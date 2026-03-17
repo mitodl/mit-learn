@@ -26,7 +26,7 @@ import {
   JustInTimeDialog,
   UnenrollDialog,
 } from "./DashboardDialogs"
-import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
+import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
@@ -37,7 +37,11 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import { mitxonlineUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  EnrollmentStatus,
+  getBestRun,
+  getCourseRunEnrollmentStatus,
+} from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -281,7 +285,7 @@ const getDashboardEnrollmentStatus = (
   if (resource.type === DashboardType.CourseRunEnrollment) {
     return hasValidCertificate
       ? EnrollmentStatus.Completed
-      : getEnrollmentStatus(resource.data)
+      : getCourseRunEnrollmentStatus(resource.data)
   }
 
   return hasValidCertificate
@@ -959,7 +963,13 @@ const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
     resource.data.program.display_mode === DisplayModeEnum.Course
 
   if (isCourseDisplayMode) {
-    return <ProgramEnrollmentDisplay programId={resource.data.program.id} />
+    return (
+      <ProgramAsCourseCard
+        programId={resource.data.program.id}
+        Component={Component}
+        className={className}
+      />
+    )
   }
 
   const title = getTitle(resource)
@@ -1075,5 +1085,6 @@ export {
   DashboardCourseCard,
   DashboardProgramCard,
   CardRoot as DashboardCardRoot,
+  MenuButton as DashboardCardMenuButton,
   getContextMenuItems,
 }

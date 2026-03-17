@@ -14,7 +14,7 @@ import { Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
-  getEnrollmentStatus,
+  getCourseRunEnrollmentStatus,
   getKey,
   ResourceType,
 } from "./helpers"
@@ -23,7 +23,7 @@ import {
   DashboardResource,
   DashboardType,
 } from "./DashboardCard"
-import { CourseRunEnrollmentRequestV2 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 
 const Wrapper = styled.div(({ theme }) => ({
@@ -90,13 +90,13 @@ const ShowAllContainer = styled.div(({ theme }) => ({
 }))
 
 const alphabeticalSort = (
-  a: CourseRunEnrollmentRequestV2,
-  b: CourseRunEnrollmentRequestV2,
+  a: CourseRunEnrollmentV3,
+  b: CourseRunEnrollmentV3,
 ) => a.run.course.title.localeCompare(b.run.course.title)
 
 const startsSooner = (
-  a: CourseRunEnrollmentRequestV2,
-  b: CourseRunEnrollmentRequestV2,
+  a: CourseRunEnrollmentV3,
+  b: CourseRunEnrollmentV3,
 ) => {
   if (!a.run.start_date && !b.run.start_date) return 0
   if (!a.run.start_date) return 1
@@ -106,14 +106,14 @@ const startsSooner = (
   return x.getTime() - y.getTime()
 }
 
-const sortEnrollments = (enrollments: CourseRunEnrollmentRequestV2[]) => {
-  const expired: CourseRunEnrollmentRequestV2[] = []
-  const completed: CourseRunEnrollmentRequestV2[] = []
-  const started: CourseRunEnrollmentRequestV2[] = []
-  const notStarted: CourseRunEnrollmentRequestV2[] = []
+const sortEnrollments = (enrollments: CourseRunEnrollmentV3[]) => {
+  const expired: CourseRunEnrollmentV3[] = []
+  const completed: CourseRunEnrollmentV3[] = []
+  const started: CourseRunEnrollmentV3[] = []
+  const notStarted: CourseRunEnrollmentV3[] = []
   enrollments.forEach((enrollment) => {
     if (!enrollment?.b2b_contract_id) {
-      const enrollmentStatus = getEnrollmentStatus(enrollment)
+      const enrollmentStatus = getCourseRunEnrollmentStatus(enrollment)
       if (enrollmentStatus === EnrollmentStatus.Completed) {
         completed.push(enrollment)
       } else if (

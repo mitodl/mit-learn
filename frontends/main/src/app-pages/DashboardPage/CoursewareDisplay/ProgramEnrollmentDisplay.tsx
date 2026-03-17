@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import {
   EnrollmentStatus,
-  getEnrollmentStatus,
+  getCourseRunEnrollmentStatus,
   getKey,
   ResourceType,
   selectBestEnrollment,
@@ -132,7 +132,10 @@ export const ProgramEnrollmentDisplay: React.FC<
       course,
       enrollmentsByCourseId[course.id] || [],
     )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+    return (
+      getCourseRunEnrollmentStatus(bestEnrollment) ===
+      EnrollmentStatus.Completed
+    )
   }).length
 
   // Calculate total required courses, respecting operator_value if operator is specified
@@ -190,7 +193,8 @@ export const ProgramEnrollmentDisplay: React.FC<
             enrollmentsByCourseId[course.id] || [],
           )
           return (
-            getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+            getCourseRunEnrollmentStatus(bestEnrollment) ===
+            EnrollmentStatus.Completed
           )
         }).length
 

@@ -4,7 +4,7 @@ import {
   filterEnrollmentsByOrganization,
   getBestRun,
   selectBestEnrollment,
-  getEnrollmentStatus,
+  getCourseRunEnrollmentStatus,
   getKey,
   ResourceType,
 } from "./helpers"
@@ -368,9 +368,9 @@ describe("helpers", () => {
     })
   })
 
-  describe("getEnrollmentStatus", () => {
+  describe("getCourseRunEnrollmentStatus", () => {
     test("returns NotEnrolled for null enrollment", () => {
-      const status = getEnrollmentStatus(null)
+      const status = getCourseRunEnrollmentStatus(null)
       expect(status).toBe(EnrollmentStatus.NotEnrolled)
     })
 
@@ -378,7 +378,7 @@ describe("helpers", () => {
       const enrollment = factories.enrollment.courseEnrollment({
         grades: [factories.enrollment.grade({ passed: true })],
       })
-      const status = getEnrollmentStatus(enrollment)
+      const status = getCourseRunEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Completed)
     })
 
@@ -386,7 +386,7 @@ describe("helpers", () => {
       const enrollment = factories.enrollment.courseEnrollment({
         grades: [factories.enrollment.grade({ passed: false })],
       })
-      const status = getEnrollmentStatus(enrollment)
+      const status = getCourseRunEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Enrolled)
     })
 
@@ -394,7 +394,7 @@ describe("helpers", () => {
       const enrollment = factories.enrollment.courseEnrollment({
         grades: [],
       })
-      const status = getEnrollmentStatus(enrollment)
+      const status = getCourseRunEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Enrolled)
     })
 
@@ -405,7 +405,7 @@ describe("helpers", () => {
           factories.enrollment.grade({ passed: true }),
         ],
       })
-      const status = getEnrollmentStatus(enrollment)
+      const status = getCourseRunEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Completed)
     })
   })
