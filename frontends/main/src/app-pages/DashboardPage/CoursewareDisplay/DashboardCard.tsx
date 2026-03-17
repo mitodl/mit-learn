@@ -530,7 +530,7 @@ const UpgradeBanner: React.FC<
     }
   }
 
-  if (!canUpgrade || !certificateUpgradePrice) {
+  if (!canUpgrade || !certificateUpgradePrice || !productId) {
     return null
   }
 
