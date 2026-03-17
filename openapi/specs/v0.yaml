@@ -2219,14 +2219,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -2665,14 +2670,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -3172,14 +3182,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -4502,14 +4517,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -4792,14 +4812,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -5364,14 +5389,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -5583,6 +5613,20 @@ components:
       x-enum-descriptions:
       - news
       - events
+    ResourceTypeGroupEnum:
+      enum:
+      - course
+      - program
+      - learning_material
+      type: string
+      description: |-
+        * `course` - Course
+        * `program` - Program
+        * `learning_material` - Learning Material
+      x-enum-descriptions:
+      - Course
+      - Program
+      - Learning Material
     RetrieveProblemResponse:
       type: object
       properties:
@@ -6114,14 +6158,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
@@ -6404,14 +6453,19 @@ components:
           description: Return true if the resource is free/has a free option
           readOnly: true
         resource_type_group:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/ResourceTypeGroupEnum'
+          readOnly: true
           description: |-
-            Return the resource type group for UI grouping.
+            The resource type group for UI grouping.
 
             For courses/programs, this is derived from resource_category
-            (which may differ from resource_type, e.g. a program displayed
-            as a course). For all other types, returns "learning_material".
-          readOnly: true
+            (which may differ from resource_type).
+            For all other types, returns "learning_material".
+
+            * `course` - Course
+            * `program` - Program
+            * `learning_material` - Learning Material
         format:
           type: array
           items:
