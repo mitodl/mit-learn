@@ -17,6 +17,7 @@ import {
   RiComputerLine,
   RiMapPinLine,
   RiCalendarScheduleLine,
+  RiBookLine,
 } from "@remixicon/react"
 import {
   CertificationTypeEnum,
@@ -31,6 +32,7 @@ import {
   getLearningResourcePrices,
   showStartAnytime,
   NoSSR,
+  formattedParentCourseName,
 } from "ol-utilities"
 import { theme, Link } from "ol-components"
 import DifferingRunsTable from "./DifferingRunsTable"
@@ -493,7 +495,7 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Duration:",
     Icon: RiTimeLine,
     selector: (resource: LearningResource) => {
-      if (resource.resource_type === ResourceTypeEnum.Video) {
+      if (resource.resource_type === ResourceTypeEnum.Video && resource.video) {
         return resource.video.duration
           ? formatDurationClockTime(resource.video.duration)
           : null
@@ -514,7 +516,13 @@ const INFO_ITEMS: InfoItemConfig = [
       return resource.offered_by?.name || null
     },
   },
-
+  {
+    label: "Parent Course:",
+    Icon: RiBookLine,
+    selector: (resource: LearningResource) => {
+      return formattedParentCourseName(resource)
+    },
+  },
   {
     label: "Date Posted:",
     Icon: RiCalendarLine,

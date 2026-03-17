@@ -11,13 +11,13 @@ from learning_resources.constants import LEARNING_RESOURCE_SORTBY_OPTIONS
 ALIAS_ALL_INDICES = "all"
 COURSE_TYPE = "course"
 PROGRAM_TYPE = "program"
-ARTICLE_TYPE = "article"
 CONTENT_FILE_TYPE = "content_file"
 PODCAST_TYPE = "podcast"
 PODCAST_EPISODE_TYPE = "podcast_episode"
 LEARNING_PATH_TYPE = "learning_path"
 VIDEO_TYPE = "video"
 VIDEO_PLAYLIST_TYPE = "video_playlist"
+DOCUMENT_TYPE = "document"
 PERCOLATE_INDEX_TYPE = "percolator"
 CURRENT_INDEX = "current_index"
 REINDEXING_INDEX = "reindexing_index"
@@ -60,7 +60,7 @@ LEARNING_RESOURCE_TYPES = (
     PODCAST_EPISODE_TYPE,
     VIDEO_TYPE,
     VIDEO_PLAYLIST_TYPE,
-    ARTICLE_TYPE,
+    DOCUMENT_TYPE,
 )
 
 
@@ -97,6 +97,7 @@ SEARCH_FILTERS = {
     "offered_by": FilterConfig("offered_by.code"),
     "delivery": FilterConfig("delivery.code"),
     "resource_type_group": FilterConfig("resource_type_group"),
+    "resource_category": FilterConfig("resource_category"),
 }
 
 SEARCH_NESTED_FILTERS = {
@@ -447,18 +448,24 @@ RESOURCEFILE_QUERY_FIELDS = [
     "content_feature_type",
 ]
 
+LEARNING_MATERIAL_MAP = {
+    "content_files": {"type": "nested", "properties": CONTENT_FILE_MAP},
+    **LEARNING_RESOURCE_MAP,
+}
+
+
 MAPPING = {
     COURSE_TYPE: {**LEARNING_RESOURCE_MAP, **CONTENT_FILE_MAP},
+    DOCUMENT_TYPE: LEARNING_MATERIAL_MAP,
     PROGRAM_TYPE: LEARNING_RESOURCE_MAP,
     PODCAST_TYPE: LEARNING_RESOURCE_MAP,
-    ARTICLE_TYPE: LEARNING_RESOURCE_MAP,
     PODCAST_EPISODE_TYPE: LEARNING_RESOURCE_MAP,
     LEARNING_PATH_TYPE: LEARNING_RESOURCE_MAP,
-    VIDEO_TYPE: LEARNING_RESOURCE_MAP,
+    VIDEO_TYPE: LEARNING_MATERIAL_MAP,
     VIDEO_PLAYLIST_TYPE: LEARNING_RESOURCE_MAP,
     PERCOLATE_INDEX_TYPE: {
         **PERCOLATE_INDEX_MAP,
-        **LEARNING_RESOURCE_MAP,
+        **LEARNING_MATERIAL_MAP,
         **CONTENT_FILE_MAP,
     },
 }

@@ -90,7 +90,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev)
           if (prev.get("resource_type_group") === "learning_material") {
-            next.delete("resource_type")
+            next.delete("resource_category")
           }
           if (tab?.resource_type_group) {
             next.set("resource_type_group", tab.resource_type_group)

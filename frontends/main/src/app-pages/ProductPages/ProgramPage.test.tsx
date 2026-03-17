@@ -16,7 +16,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
-import { HeadingIds } from "./util"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
 
@@ -197,20 +196,6 @@ describe("ProgramPage", () => {
     },
   )
 
-  test("Includes program type in banner area", async () => {
-    const program = makeProgram({
-      ...makeReqs(),
-      program_type: "AwesomeProgramz",
-    })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-    const banner = await screen.findByTestId("banner-container")
-    expect(within(banner).getByText("MITx")).toBeVisible()
-    expect(within(banner).getByText("AwesomeProgramz")).toBeVisible()
-  })
-
   test("Page has expected headings", async () => {
     const program = makeProgram({
       ...makeReqs({
@@ -228,7 +213,7 @@ describe("ProgramPage", () => {
         assertHeadings(
           [
             { level: 1, name: page.title },
-            { level: 2, name: "Program summary" },
+            { level: 2, name: "Program Information" },
             { level: 2, name: "About this Program" },
             { level: 2, name: "Courses" },
             { level: 3, name: "Core Dog Courses" },
@@ -245,34 +230,6 @@ describe("ProgramPage", () => {
       },
       { timeout: 3000 },
     )
-  })
-
-  test("Page Navigation", async () => {
-    const program = makeProgram({ ...makeReqs() })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-    const nav = await screen.findByRole("navigation", {
-      name: "Program Details",
-    })
-    const links = within(nav).getAllByRole("link")
-
-    expect(links[0]).toHaveTextContent("About")
-    expect(links[0]).toHaveAttribute("href", `#${HeadingIds.About}`)
-    expect(document.getElementById(HeadingIds.About)).toBeVisible()
-    expect(links[1]).toHaveTextContent("What you'll learn")
-    expect(links[1]).toHaveAttribute("href", `#${HeadingIds.What}`)
-    expect(document.getElementById(HeadingIds.What)).toBeVisible()
-    expect(links[2]).toHaveTextContent("How you'll learn")
-    expect(links[2]).toHaveAttribute("href", `#${HeadingIds.How}`)
-    expect(document.getElementById(HeadingIds.How)).toBeVisible()
-    expect(links[3]).toHaveTextContent("Prerequisites")
-    expect(links[3]).toHaveAttribute("href", `#${HeadingIds.Prereqs}`)
-    expect(document.getElementById(HeadingIds.Prereqs)).toBeVisible()
-    expect(links[4]).toHaveTextContent("Instructors")
-    expect(links[4]).toHaveAttribute("href", `#${HeadingIds.Instructors}`)
-    expect(document.getElementById(HeadingIds.Instructors)).toBeVisible()
   })
 
   // Collasping sections tested in AboutSection.test.tsx
@@ -456,7 +413,7 @@ describe("ProgramPage", () => {
     const buttons = await screen.findAllByRole("button", {
       name: /enroll/i,
     })
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    expect(buttons.length).toBeGreaterThan(0)
   })
 
   test("Shows a YouTube video in the sidebar when video_url is a YouTube URL", async () => {
@@ -489,16 +446,32 @@ describe("ProgramPage", () => {
     expect(document.querySelector("img")).toBeInTheDocument()
   })
 
+  test("Uses DEFAULT_RESOURCE_IMG when feature_image_src is falsy", async () => {
+    const program = makeProgram({
+      ...makeReqs(),
+      page: { feature_image_src: "" },
+    })
+    const page = makePage({ program_details: program, video_url: null })
+    setupApis({ program, page })
+    const { view } = renderWithProviders(
+      <ProgramPage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("heading", { name: page.title })
+    const imgs = Array.from(view.container.querySelectorAll("img"))
+    expect(imgs.some((img) => img.src.includes("default_resource"))).toBe(true)
+  })
+
   test.each([
-    { courses: [], pages: [makePage()] },
+    { programs: [], pages: [makePage()] },
     {
-      courses: [makeProgram({ ...makeReqs() })],
+      programs: [makeProgram({ ...makeReqs() })],
       pages: [],
     },
-  ])("Returns 404 if no program found", async ({ courses, pages }) => {
+  ])("Returns 404 if no program found", async ({ programs, pages }) => {
     setMockResponse.get(
       urls.programs.programsList({ readable_id: "readable_id" }),
-      { results: courses },
+      { results: programs },
     )
     setMockResponse.get(urls.pages.programPages("readable_id"), {
       items: pages,

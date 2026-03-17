@@ -232,7 +232,7 @@ def trigger_resource_etl(etl_source):
 
 
 def sync_edx_archive(
-    etl_source, s3_key: str, *, course_id: str | None = None, overwrite: bool = False
+    etl_source, s3_key: str, *, run_id: str | None = None, overwrite: bool = False
 ):
     """
     Sync an edx course archive
@@ -240,9 +240,17 @@ def sync_edx_archive(
     Args:
         etl_source(str): The edx ETL source
         s3_key(str): S3 path of the content archive
+        run_id(str or None): Optional run_id to process.
         overwrite(bool): Whether to overwrite existing content files
     """
-    run = run_for_edx_archive(etl_source, s3_key, course_id=course_id)
+    run = (
+        LearningResourceRun.objects.filter(
+            learning_resource__etl_source=etl_source,
+            run_id=run_id,
+        ).first()
+        if run_id
+        else run_for_edx_archive(etl_source, s3_key)
+    )
     if not run:
         trigger_resource_etl(etl_source)
         return
@@ -257,16 +265,13 @@ def sync_edx_archive(
     process_course_archive(bucket, s3_key, run, overwrite=overwrite)
 
 
-def run_for_edx_archive(
-    etl_source: str, archive_filename: str, course_id: str | None = None
-):
+def run_for_edx_archive(etl_source: str, archive_filename: str):
     """
     Generate and return a LearningResourceRun for an edx course archive
 
     Args:
         etl_source(str): The edx ETL source
         archive_filename(str): The S3 key path of the course archive
-        course_id(str): Optional course id to filter by
 
     Returns:
         LearningResourceRun or None: The matching run, or None if not found
@@ -281,8 +286,6 @@ def run_for_edx_archive(
             Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
         )
     )
-    if course_id:
-        runs = runs.filter(learning_resource__readable_id=course_id)
     if etl_source in (ETLSource.mit_edx.name, ETLSource.oll.name):
         runs = runs.filter(run_id__iregex=normalized_run_id)
     else:

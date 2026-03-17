@@ -1048,5 +1048,64 @@ describe("EnrollmentDisplay", () => {
       // Dialog should NOT appear
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
+
+    test("Displays courses in the order defined by the requirement tree, not API order", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const courses = mitxonline.factories.courses.courses({ count: 3 })
+      const [courseA, courseB, courseC] = courses.results
+
+      // Requirement tree defines courses in order: C, A, B
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const core = reqTree.addOperator({
+        operator: "all_of",
+        title: "Core Courses",
+      })
+      core.addCourse({ course: courseC.id })
+      core.addCourse({ course: courseA.id })
+      core.addCourse({ course: courseB.id })
+
+      const program = mitxonline.factories.programs.program({
+        courses: [courseA.id, courseB.id, courseC.id],
+        req_tree: reqTree.serialize(),
+      })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(program.id),
+        program,
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={program.id} />)
+
+      await screen.findByText("Core Courses")
+
+      // Cards should appear in req_tree order: C, A, B
+      const cards = await screen.findAllByTestId("enrollment-card-desktop")
+      expect(cards[0]).toHaveTextContent(courseC.title)
+      expect(cards[1]).toHaveTextContent(courseA.title)
+      expect(cards[2]).toHaveTextContent(courseB.title)
+    })
   })
 })

@@ -26,6 +26,7 @@ from learning_resources.etl.utils import (
     get_department_id_by_name,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
     transform_price,
     transform_topics,
 )
@@ -314,6 +315,7 @@ def _transform_course(course):
         if course_run
     ]
     has_certification = parse_certification(OFFERED_BY["code"], runs)
+    strip_enrollment_modes(runs)
     return {
         "readable_id": course["readable_id"],
         "platform": PlatformType.mitxonline.name,
@@ -370,6 +372,8 @@ def transform_courses(courses):
 
 
 def _fetch_courses_by_ids(course_ids):
+    if not course_ids:
+        return []
     if settings.MITX_ONLINE_COURSES_API_URL:
         return list(
             _fetch_data(
@@ -443,12 +447,19 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
         has_certification = parse_certification(OFFERED_BY["code"], [run])
+        strip_enrollment_modes([run])
         yield {
             "readable_id": program["readable_id"],
             "title": program["title"],
             "offered_by": OFFERED_BY,
             "etl_source": ETLSource.mitxonline.name,
             "resource_type": LearningResourceType.program.name,
+            # MITx Online programs with display_mode="course" are shown as
+            # courses in the UI (single-course programs wrapped as programs
+            # upstream but presented as standalone courses to learners).
+            "resource_category": LearningResourceType.course.value
+            if program.get("display_mode") == "course"
+            else LearningResourceType.program.value,
             "departments": parse_departments(program.get("departments", [])),
             "platform": PlatformType.mitxonline.name,
             "professional": False,

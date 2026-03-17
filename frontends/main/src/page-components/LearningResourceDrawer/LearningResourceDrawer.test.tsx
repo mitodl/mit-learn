@@ -128,6 +128,7 @@ describe("LearningResourceDrawer", () => {
     const { resource } = setupApis({
       resource: {
         resource_type: ResourceTypeEnum.Course,
+        resource_category: "Course",
       },
     })
     renderWithProviders(<LearningResourceDrawer />, {

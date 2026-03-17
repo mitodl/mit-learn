@@ -765,12 +765,13 @@ def test_remove_duplicate_resources(mocker, mocked_celery):
 )
 def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
     """Test ingest_edx_course task calls sync_edx_archive with correct parameters"""
-    from learning_resources.tasks import ingest_edx_course
+    from learning_resources.tasks import ingest_edx_run_archive
 
+    run_id = "course-v1:Test+Course+R1"
     mock_sync = mocker.patch("learning_resources.tasks.sync_edx_archive")
 
-    ingest_edx_course(etl_source, archive_path, overwrite=overwrite)
+    ingest_edx_run_archive(etl_source, archive_path, run_id=run_id, overwrite=overwrite)
 
     mock_sync.assert_called_once_with(
-        etl_source, archive_path, course_id=None, overwrite=overwrite
+        etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )

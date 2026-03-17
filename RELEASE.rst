@@ -1,6 +1,53 @@
 Release Notes
 =============
 
+Version 0.58.0 (Released March 16, 2026)
+--------------
+
+- Modify mitxonline ETL to ingest designated programs as courses (#3013)
+
+Version 0.57.4 (Released March 16, 2026)
+--------------
+
+- articles are documnets (#3040)
+- fix ocw youtube video search (#3050)
+
+Version 0.57.3 (Released March 16, 2026)
+--------------
+
+- Fix AI ratings csrf issue (#3047)
+- fix: remove media max-width (#3045)
+- fix: change articles mobile design (#3037)
+- Fix webhook parameters (#3041)
+- chore: update mitxonline api with null default image changes (#3044)
+- Fix child assignment for mitxonline programs w/out courses (#3039)
+- fix: change the banner design (#3032)
+- Advertise parent programs on course product pages (#3029)
+- Make sure x-csrf headers are sent for AI response feedback requests (#3035)
+- handle null values coming back on feature_img_src from mitxonline (#3015)
+- Increase page size to 30 for contract programs (#3036)
+
+Version 0.57.0 (Released March 10, 2026)
+--------------
+
+- Make sure enrollment_modes are always removed from mitxonline run dicts (#3033)
+- fix: change mit log link to home and termsof services (#3021)
+
+Version 0.56.10 (Released March 10, 2026)
+---------------
+
+- Avoid unnecessary task calls for contentfiles if none exist (#3017)
+- add ocw learning materials to search (#3018)
+
+Version 0.56.9 (Released March 09, 2026)
+--------------
+
+- Complex filters for Vector endpoint (title and url fields) (#3012)
+- Conditional audit/cert availability for mitxonline resources (#3007)
+- update mitxonline client (#3020)
+- Set the posthog UI host (#3011)
+- fix: remove feature flag on detail and listing page (#3003)
+
 Version 0.56.6 (Released March 05, 2026)
 --------------
 

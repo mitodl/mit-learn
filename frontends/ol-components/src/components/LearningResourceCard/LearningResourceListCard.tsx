@@ -4,13 +4,15 @@ import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
 import {
   LocalDate,
-  getReadableResourceType,
   DEFAULT_RESOURCE_IMG,
   pluralize,
   getLearningResourcePrices,
   getBestResourceStartDate,
   showStartAnytime,
   getResourceLanguage,
+  formattedParentCourseName,
+  resourceContentFilesImageSrc,
+  getReadableResourceType,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -207,10 +209,15 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
+      imageSrc={
+        resource.image?.url ||
+        resourceContentFilesImageSrc(resource) ||
+        DEFAULT_RESOURCE_IMG
+      }
       imageAlt={resource.image?.alt ?? ""}
       title={resource.title}
-      resourceType={readableType}
+      parentCourseName={formattedParentCourseName(resource)}
+      resourceType={resource.resource_category}
       coursePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
@@ -219,7 +226,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       startDate={formattedDate}
       actions={actions}
       lang={getResourceLanguage(resource)}
-      ariaLabel={`${readableType}: ${resource.title}`}
+      ariaLabel={`${resource.resource_category}: ${resource.title}`}
       footerContent={footerContent}
       draggable={draggable}
       editMenu={editMenu}

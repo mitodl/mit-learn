@@ -57,7 +57,7 @@ def os_topic(topic_name) -> Mock:
                 "testindex_podcast_episode_default",
                 "testindex_video_default",
                 "testindex_video_playlist_default",
-                "testindex_article_default",
+                "testindex_document_default",
             ],
         ),
         (CONTENT_FILE_TYPE, ["content_file"], [], ["testindex_course_default"]),
@@ -1825,6 +1825,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
         "max_incompleteness_penalty": 0,
         "min_score": 0,
         "search_mode": "best_fields",
+        "show_ocw_files": True,
     }
 
     query = {
@@ -2254,6 +2255,95 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
     )
 
 
+def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opensearch):
+    """
+    Test that when show_ocw_files is False, non-course ocw resources are
+    filtered out in the search query
+    """
+    opensearch.conn.search.return_value = {
+        "hits": {"total": {"value": 10, "relation": "eq"}}
+    }
+    search_params = {
+        "endpoint": LEARNING_RESOURCE,
+        "show_ocw_files": False,
+        "resource_type": ["video"],
+    }
+
+    query = {
+        "query": {"exists": {"field": "resource_type"}},
+        "post_filter": {
+            "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "term": {
+                                        "resource_type": {
+                                            "value": "video",
+                                            "case_insensitive": True,
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "bool": {
+                                        "must_not": [
+                                            {
+                                                "nested": {
+                                                    "path": "platform",
+                                                    "query": {
+                                                        "term": {"platform.code": "ocw"}
+                                                    },
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {"term": {"resource_type": "course"}},
+                            ],
+                            "minimum_should_match": 1,
+                        }
+                    },
+                ]
+            }
+        },
+        "sort": [
+            "featured_rank",
+            "is_learning_material",
+            "is_incomplete_or_stale",
+            {"created_on": {"order": "desc"}},
+        ],
+        "_source": {
+            "excludes": [
+                "created_on",
+                "course.course_numbers.sort_coursenum",
+                "course.course_numbers.primary",
+                "resource_relations",
+                "is_learning_material",
+                "resource_age_date",
+                "featured_rank",
+                "is_incomplete_or_stale",
+                "content",
+                "summary",
+                "flashcards",
+                "vector_embedding",
+            ]
+        },
+    }
+    assert execute_learn_search(search_params) == opensearch.conn.search.return_value
+
+    opensearch.conn.search.assert_called_once_with(
+        body=query,
+        index=["testindex_video_default"],
+    )
+
+
 @freeze_time("2024-07-20")
 @pytest.mark.parametrize(
     ("yearly_decay_percent", "max_incompleteness_penalty"),
@@ -2319,6 +2409,7 @@ def test_execute_learn_search_with_script_score(
         "endpoint": LEARNING_RESOURCE,
         "yearly_decay_percent": yearly_decay_percent,
         "max_incompleteness_penalty": max_incompleteness_penalty,
+        "show_ocw_files": True,
     }
 
     query = {
@@ -2788,6 +2879,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
         "sortby": "-readable_id",
         "endpoint": LEARNING_RESOURCE,
         "search_mode": "hybrid",
+        "show_ocw_files": True,
     }
 
     query = {
@@ -3254,6 +3346,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
         "sortby": "-readable_id",
         "endpoint": LEARNING_RESOURCE,
         "min_score": 5,
+        "show_ocw_files": True,
     }
 
     query = {

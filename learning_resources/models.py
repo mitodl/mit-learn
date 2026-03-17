@@ -484,7 +484,11 @@ class LearningResource(TimestampedModel):
         db_index=True,
         choices=((member.name, member.value) for member in LearningResourceType),
     )
-    resource_category = models.CharField(max_length=256)
+    resource_category = models.CharField(
+        max_length=256,
+        db_index=True,
+        help_text="The display category for this resource.",
+    )
     topics = models.ManyToManyField(LearningResourceTopic)
     ocw_topics = ArrayField(models.CharField(max_length=128), default=list, blank=True)
     offered_by = models.ForeignKey(
@@ -841,26 +845,6 @@ class Course(LearningResourceDetailModel):
     def runs(self):
         """Get the parent LearningResource runs"""
         return self.learning_resource.runs
-
-
-class ArticleQuerySet(LearningResourceDetailQuerySet):
-    """QuerySet for Article"""
-
-    def for_serialization(self):
-        """Prefetch for serialization"""
-        return self
-
-
-class Article(LearningResourceDetailModel):
-    """Model for representing a article"""
-
-    objects = ArticleQuerySet.as_manager()
-    learning_resource = models.OneToOneField(
-        LearningResource,
-        related_name="article",
-        on_delete=models.deletion.CASCADE,
-        primary_key=True,
-    )
 
 
 class ProgramQuerySet(LearningResourceDetailQuerySet):

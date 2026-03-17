@@ -21,6 +21,7 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.mitxonline import (
     OFFERED_BY,
+    _fetch_courses_by_ids,
     _fetch_data,
     _parse_datetime,
     _transform_image,
@@ -39,6 +40,7 @@ from learning_resources.etl.utils import (
     get_department_id_by_name,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
 )
 from learning_resources.test_utils import set_up_topics
 from main.test_utils import any_instance_of
@@ -145,6 +147,7 @@ def test_mitxonline_transform_programs(
                 for course_run in course_data["courseruns"]
             ]
             has_certification = parse_certification(OFFERED_BY["code"], runs)
+            strip_enrollment_modes(runs)
             expected_courses.append(
                 {
                     "readable_id": course_data["readable_id"],
@@ -212,6 +215,9 @@ def test_mitxonline_transform_programs(
                 "etl_source": ETLSource.mitxonline.name,
                 "platform": PlatformType.mitxonline.name,
                 "resource_type": LearningResourceType.program.name,
+                "resource_category": LearningResourceType.course.value
+                if program_data.get("display_mode") == "course"
+                else LearningResourceType.program.value,
                 "departments": [
                     get_department_id_by_name(program_data["departments"][0]["name"])
                 ]
@@ -303,6 +309,7 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
             for course_run in course_data["courseruns"]
         ]
         has_certification = parse_certification(OFFERED_BY["code"], runs)
+        strip_enrollment_modes(runs)
         expected.append(
             {
                 "readable_id": course_data["readable_id"],
@@ -858,3 +865,12 @@ def test_transform_program_certification_by_enrollment_modes(
 
     assert result["certification"] is expected["certification"]
     assert result["certification_type"] == expected["certification_type"]
+
+
+def test_fetch_courses_by_ids_empty_list(mocker, settings):
+    """Test that _fetch_courses_by_ids returns [] for empty input"""
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    mock_fetch = mocker.patch("learning_resources.etl.mitxonline._fetch_data")
+    result = _fetch_courses_by_ids([])
+    assert result == []
+    mock_fetch.assert_not_called()

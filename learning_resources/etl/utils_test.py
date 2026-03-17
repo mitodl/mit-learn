@@ -23,6 +23,7 @@ from learning_resources.etl.utils import (
     get_s3_prefix_for_source,
     parse_certification,
     parse_string_to_int,
+    strip_enrollment_modes,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -487,6 +488,30 @@ def test_parse_certification(offered_by, status, enrollment_modes, has_cert):
         for run in resource.runs.all().values()
     ]
     assert parse_certification(offered_by_obj.code, runs) == has_cert
+
+
+def test_parse_certification_handles_explicit_none_enrollment_modes():
+    """A run with enrollment_modes=None should not error and should be treated as cert-eligible for MITx."""
+    runs = [
+        {
+            "published": True,
+            "status": RunStatus.current.value,
+            "enrollment_modes": None,
+        }
+    ]
+
+    assert parse_certification(OfferedBy.mitx.name, runs) is True
+
+
+def test_strip_enrollment_modes():
+    """strip_enrollment_modes should remove enrollment_modes from all run dicts."""
+    runs = [
+        {"status": "current", "enrollment_modes": [{"mode_slug": "verified"}]},
+        {"status": "current"},
+        {"status": "current", "enrollment_modes": None},
+    ]
+    strip_enrollment_modes(runs)
+    assert all("enrollment_modes" not in run for run in runs)
 
 
 @pytest.mark.parametrize(

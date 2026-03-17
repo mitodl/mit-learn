@@ -1306,7 +1306,6 @@ paths:
             - podcast_episode
             - video
             - video_playlist
-            - article
             - document
             type: string
             description: |-
@@ -1317,12 +1316,11 @@ paths:
               * `podcast_episode` - podcast episode
               * `video` - video
               * `video_playlist` - video playlist
-              * `article` - article
               * `document` - document
         description: "The type of learning resource             \n\n* `course` - course\n\
           * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
           \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
-          \ - video playlist\n* `article` - article\n* `document` - document"
+          \ - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
@@ -1537,285 +1535,6 @@ paths:
           description: ''
 components:
   schemas:
-    ArticleResource:
-      type: object
-      description: Serializer for Article resources
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        topics:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceTopic'
-        position:
-          type: integer
-          readOnly: true
-          nullable: true
-        offered_by:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceOfferor'
-          readOnly: true
-          nullable: true
-        platform:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourcePlatform'
-          readOnly: true
-          nullable: true
-        course_feature:
-          type: array
-          items:
-            type: string
-          readOnly: true
-          nullable: true
-        departments:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceDepartment'
-          readOnly: true
-          nullable: true
-        certification:
-          type: boolean
-          readOnly: true
-        certification_type:
-          type: object
-          title: CourseResourceCertificationType
-          properties:
-            code:
-              enum:
-              - micromasters
-              - professional
-              - completion
-              - none
-            name:
-              type: string
-          required:
-          - code
-          - name
-          readOnly: true
-        prices:
-          type: array
-          items:
-            type: string
-            format: decimal
-            pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        resource_prices:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourcePrice'
-          readOnly: true
-        runs:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResourceRun'
-          readOnly: true
-          nullable: true
-        image:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceImage'
-          nullable: true
-          readOnly: true
-        views:
-          type: integer
-          readOnly: true
-        delivery:
-          type: array
-          items:
-            type: object
-            title: CourseResourceDeliveryInner
-            properties:
-              code:
-                enum:
-                - online
-                - hybrid
-                - in_person
-                - offline
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        free:
-          type: boolean
-          description: Return true if the resource is free/has a free option
-          readOnly: true
-        resource_type_group:
-          type: string
-          description: Return the resource category of the resource
-          readOnly: true
-        format:
-          type: array
-          items:
-            type: object
-            title: CourseResourceFormatInner
-            properties:
-              code:
-                enum:
-                - synchronous
-                - asynchronous
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        pace:
-          type: array
-          items:
-            type: object
-            title: CourseResourcePaceInner
-            properties:
-              code:
-                enum:
-                - self_paced
-                - instructor_paced
-              name:
-                type: string
-            required:
-            - code
-            - name
-          readOnly: true
-        children:
-          allOf:
-          - $ref: '#/components/schemas/LearningResourceRelationshipChildField'
-          nullable: true
-          readOnly: true
-        best_run_id:
-          type: integer
-          nullable: true
-          description: Return the best run id for the resource, if it has runs
-          readOnly: true
-        resource_type:
-          allOf:
-          - $ref: '#/components/schemas/ArticleResourceResourceTypeEnum'
-          default: article
-          readOnly: true
-        readable_id:
-          type: string
-          maxLength: 512
-        title:
-          type: string
-          maxLength: 256
-        description:
-          type: string
-          nullable: true
-        full_description:
-          type: string
-          nullable: true
-        last_modified:
-          type: string
-          format: date-time
-          nullable: true
-        published:
-          type: boolean
-        languages:
-          type: array
-          items:
-            type: string
-            maxLength: 24
-          nullable: true
-        url:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 2048
-        resource_category:
-          type: string
-          readOnly: true
-        ocw_topics:
-          type: array
-          items:
-            type: string
-            maxLength: 128
-        professional:
-          type: boolean
-          readOnly: true
-        next_start_date:
-          type: string
-          format: date-time
-          nullable: true
-        availability:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/AvailabilityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        completeness:
-          type: number
-          format: double
-        license_cc:
-          type: boolean
-        test_mode:
-          type: boolean
-        continuing_ed_credits:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        location:
-          type: string
-          maxLength: 256
-        duration:
-          type: string
-          maxLength: 256
-        min_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weeks:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        time_commitment:
-          type: string
-          maxLength: 256
-        min_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        max_weekly_hours:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        require_summaries:
-          type: boolean
-          readOnly: true
-      required:
-      - best_run_id
-      - certification
-      - certification_type
-      - children
-      - course_feature
-      - delivery
-      - departments
-      - format
-      - free
-      - id
-      - image
-      - offered_by
-      - pace
-      - platform
-      - position
-      - prices
-      - professional
-      - readable_id
-      - require_summaries
-      - resource_category
-      - resource_prices
-      - resource_type
-      - resource_type_group
-      - runs
-      - title
-      - views
-    ArticleResourceResourceTypeEnum:
-      type: string
-      enum:
-      - article
     Attestation:
       type: object
       description: Serializer for attestations.
@@ -2141,6 +1860,9 @@ components:
           readOnly: true
         run_id:
           type: integer
+        direct_learning_resource_id:
+          type: integer
+          nullable: true
         run_title:
           type: string
         run_slug:
@@ -2468,7 +2190,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2553,6 +2280,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -2908,7 +2636,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -2963,15 +2696,16 @@ components:
             $ref: '#/components/schemas/ContentFile'
           nullable: true
           readOnly: true
+        description:
+          type: string
+          nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
         title:
           type: string
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true
@@ -2995,6 +2729,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -3065,6 +2800,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - description
       - format
       - free
       - id
@@ -3407,7 +3143,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -3458,6 +3199,7 @@ components:
           readOnly: true
         resource_category:
           type: string
+          description: The display category for this resource.
           readOnly: true
           default: Learning Path
         learning_path:
@@ -3586,7 +3328,6 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ProgramResource'
       - $ref: '#/components/schemas/CourseResource'
-      - $ref: '#/components/schemas/ArticleResource'
       - $ref: '#/components/schemas/LearningPathResource'
       - $ref: '#/components/schemas/PodcastResource'
       - $ref: '#/components/schemas/PodcastEpisodeResource'
@@ -3598,7 +3339,6 @@ components:
         mapping:
           program: '#/components/schemas/ProgramResource'
           course: '#/components/schemas/CourseResource'
-          article: '#/components/schemas/ArticleResource'
           learning_path: '#/components/schemas/LearningPathResource'
           podcast: '#/components/schemas/PodcastResource'
           podcast_episode: '#/components/schemas/PodcastEpisodeResource'
@@ -4733,7 +4473,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -4818,6 +4563,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -5017,7 +4763,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -5102,6 +4853,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -5579,7 +5331,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -5664,6 +5421,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -6304,7 +6062,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6389,6 +6152,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -6588,7 +6352,12 @@ components:
           readOnly: true
         resource_type_group:
           type: string
-          description: Return the resource category of the resource
+          description: |-
+            Return the resource type group for UI grouping.
+
+            For courses/programs, this is derived from resource_category
+            (which may differ from resource_type, e.g. a program displayed
+            as a course). For all other types, returns "learning_material".
           readOnly: true
         format:
           type: array
@@ -6653,15 +6422,16 @@ components:
             $ref: '#/components/schemas/ContentFile'
           nullable: true
           readOnly: true
+        description:
+          type: string
+          nullable: true
+          readOnly: true
         readable_id:
           type: string
           maxLength: 512
         title:
           type: string
           maxLength: 256
-        description:
-          type: string
-          nullable: true
         full_description:
           type: string
           nullable: true
@@ -6685,6 +6455,7 @@ components:
         resource_category:
           type: string
           readOnly: true
+          description: The display category for this resource.
         ocw_topics:
           type: array
           items:
@@ -6755,6 +6526,7 @@ components:
       - course_feature
       - delivery
       - departments
+      - description
       - format
       - free
       - id

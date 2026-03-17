@@ -103,9 +103,10 @@ describe("Learning Resource Expanded", () => {
     },
   )
 
-  test(`Renders card and title for resource type "${ResourceTypeEnum.Video}"`, () => {
+  test("Renders card and title for youtube videos", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Video,
+      platform: { code: "youtube" },
     })
 
     setup({ resource })
