@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.58.1
+--------------
+
+- New Product Page route for "MITxOnline Program displayed as Course" (#3051)
+- remove articles index (#3055)
+- fix: preserve requirement tree ordering for program courses (#3053)
+
 Version 0.58.0 (Released March 16, 2026)
 --------------
 
