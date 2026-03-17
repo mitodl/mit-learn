@@ -76,12 +76,14 @@ test.each([
 ] as const)(
   "programPageView returns /programs/ path when display_mode is $label",
   ({ displayMode }) => {
+    // Use a realistic readable_id with pchar characters (: and +) to verify
+    // they are not percent-encoded in the URL path.
     expect(
       programPageView({
-        readable_id: "some-plain-slug",
+        readable_id: "program-v1:MITxT+10.50x",
         display_mode: displayMode,
       }),
-    ).toBe("/programs/some-plain-slug")
+    ).toBe("/programs/program-v1:MITxT+10.50x")
   },
 )
 

@@ -10,9 +10,9 @@ import { getQueryClient } from "@/app/getQueryClient"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { programPageView } from "@/common/urls"
 
-type Props = { params: Promise<{ readable_id: string }> }
-
-export const generateMetadata = async (props: Props) => {
+export const generateMetadata = async (
+  props: PageProps<"/courses/p/[readable_id]">,
+) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 
@@ -39,7 +39,7 @@ export const generateMetadata = async (props: Props) => {
   })
 }
 
-const Page: React.FC<Props> = async (props) => {
+const Page: React.FC<PageProps<"/courses/p/[readable_id]">> = async (props) => {
   const params = await props.params
   const readableId = decodeURIComponent(params.readable_id)
 
