@@ -4,6 +4,7 @@ from qdrant_client import models
 RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
 TOPICS_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
+POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH = "hybrid_vector_search"
 
 QDRANT_CONTENT_FILE_PARAM_MAP = {
     "key": "key",

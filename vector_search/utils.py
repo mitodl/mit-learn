@@ -28,9 +28,11 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
+from main.features import is_enabled as posthog_feature_enabled
 from main.utils import checksum_for_content
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
+    POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -896,11 +898,22 @@ def vector_search(
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    hybrid_search_enabled = posthog_feature_enabled(
+        POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH
+    )
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     if query_string:
         search_params = {
             "collection_name": search_collection,
-            "prefetch": [
+            "query_filter": search_filter,
+            "with_vectors": False,
+            "with_payload": True,
+            "search_params": models.SearchParams(indexed_only=True, exact=False),
+            "limit": limit,
+        }
+
+        if hybrid_search_enabled:
+            search_params["prefetch"] = [
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),
                     using=encoder_sparse.model_short_name(),
@@ -911,14 +924,13 @@ def vector_search(
                     using=encoder_dense.model_short_name(),
                     limit=limit * 100,
                 ),
-            ],
-            "query": models.FusionQuery(fusion=models.Fusion.RRF),
-            "query_filter": search_filter,
-            "with_vectors": False,
-            "with_payload": True,
-            "search_params": models.SearchParams(indexed_only=True, exact=False),
-            "limit": limit,
-        }
+            ]
+            search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
+        else:
+            # fallback to dense only search
+            search_params["using"] = encoder_dense.model_short_name()
+            search_params["query"] = encoder_dense.embed_query(query_string)
+
         if "group_by" in params:
             search_params["group_by"] = params.get("group_by")
             search_params["group_size"] = params.get("group_size", 1)
