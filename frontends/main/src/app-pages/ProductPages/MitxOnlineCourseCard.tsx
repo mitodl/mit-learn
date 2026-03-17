@@ -115,8 +115,6 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   const startDisplay = getStartDisplay(course)
   const priceText = formatCoursePrice(course)
   const hasCertificate = Boolean(course.certificate_type)
-  // feature_image_src will be nullable in a future MITx Online API update.
-  // Use || so a falsy value (null, empty string) falls back to the default.
   const imageSrc = course.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
   const startLabel =
