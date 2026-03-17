@@ -326,8 +326,7 @@ const getResourceUrl = (
     /**
      * TODO:
      * Some MITxOnline programs have display_mode="course".
-     * When we have finalized ETL ingestion for these programs, we should ensure
-     * that they link to. their appropriate pages.
+     * When we have finalized ETL ingestion for these programs, we should ensure that they link to their appropriate pages.
      *
      * Ideally this would be handled on the backend via resource.url after
      * the product page feature flags are removed.
