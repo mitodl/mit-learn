@@ -842,4 +842,27 @@ const ProgramSummary: React.FC<{
   )
 }
 
-export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }
+const ProgramAsCourseSummary: React.FC<{
+  program: V2ProgramDetail
+  courses?: CourseWithCourseRunsSerializerV2[]
+}> = ({ program, courses }) => {
+  return (
+    <SummaryRows>
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+    </SummaryRows>
+  )
+}
+
+export {
+  CourseSummary,
+  ProgramSummary,
+  ProgramAsCourseSummary,
+  ProgramDurationRow,
+  ProgramPaceRow,
+  ProgramPriceRow,
+  SummaryRows,
+  UnderlinedLink,
+  TestIds,
+}
