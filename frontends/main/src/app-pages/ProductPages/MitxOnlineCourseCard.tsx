@@ -7,6 +7,7 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
+import { getEnrollmentType } from "@/common/mitxonline"
 
 type MitxOnlineCourseCardProps = {
   course?: CourseWithCourseRunsSerializerV2
@@ -43,10 +44,10 @@ const getBestRunForCourse = (
 }
 
 /**
- * Get the price for a course from the next run's product.
+ * Get the product price for a course from the next run's product.
  * page.current_price is equivalent (it's the price of the run matching next_run_id).
  */
-const formatCoursePrice = (
+const getProductPrice = (
   course: CourseWithCourseRunsSerializerV2,
 ): string | null => {
   const bestRun = getBestRunForCourse(course)
@@ -98,17 +99,31 @@ const MitxOnlineCourseCard: React.FC<MitxOnlineCourseCardProps> = ({
   }
 
   const startDisplay = getStartDisplay(course)
-  const priceText = formatCoursePrice(course)
   const hasCertificate = Boolean(course.certificate_type)
-  // feature_image_src will be nullable in a future MITx Online API update.
-  // Use || so a falsy value (null, empty string) falls back to the default.
   const imageSrc = course.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
   const startLabel =
     course.availability === "anytime" || !startDisplay ? "Starts: " : undefined
 
-  const coursePrice = hasCertificate ? null : priceText
-  const certificatePrice = hasCertificate ? priceText : null
+  const bestRun = getBestRunForCourse(course)
+  const enrollmentType = getEnrollmentType(bestRun?.enrollment_modes)
+  const productPrice = getProductPrice(course)
+
+  let coursePrice: string | null = null
+  let certificatePrice: string | null = null
+
+  switch (enrollmentType) {
+    case "free":
+      coursePrice = "Free"
+      break
+    case "paid":
+      coursePrice = productPrice
+      break
+    case "both":
+      coursePrice = "Free"
+      certificatePrice = productPrice
+      break
+  }
 
   return (
     <BaseLearningResourceCard

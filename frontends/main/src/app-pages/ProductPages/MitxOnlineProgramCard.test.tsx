@@ -14,10 +14,12 @@ const renderCard = (
     </ThemeProvider>,
   )
 
+const freeMode = factories.courses.enrollmentMode({ requires_payment: false })
+const paidMode = factories.courses.enrollmentMode({ requires_payment: true })
+
 describe("MitxOnlineProgramCard", () => {
   test("renders loading state when isLoading", () => {
     renderCard({ href: "/test", isLoading: true })
-    // Should not render a link when loading
     expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 
@@ -47,22 +49,41 @@ describe("MitxOnlineProgramCard", () => {
     expect(screen.getByText("Program")).toBeInTheDocument()
   })
 
-  test("shows certificate price in list mode when certificate_type is set", () => {
+  test("shows 'Free' when enrollment is free-only", () => {
     const program = factories.programs.program({
-      certificate_type: "program_certificate",
-      products: [factories.courses.product({ price: 500 })],
+      enrollment_modes: [freeMode],
+    })
+    const { container } = renderCard({ program, href: "/test", list: true })
+    expect(container.textContent).toContain("Free")
+    expect(container.textContent).not.toContain("$")
+  })
+
+  test("shows product price as course price when paid-only", () => {
+    const program = factories.programs.program({
+      enrollment_modes: [paidMode],
+      products: [factories.courses.product({ price: "500.00" })],
     })
     const { container } = renderCard({ program, href: "/test", list: true })
     expect(container.textContent).toContain("$500.00")
-    expect(container.textContent).toContain("Certificate")
   })
 
-  test("shows price when no certificate_type", () => {
+  test("shows 'Free' and certificate price when both free and paid", () => {
     const program = factories.programs.program({
-      certificate_type: "",
-      products: [factories.courses.product({ price: 100 })],
+      enrollment_modes: [freeMode, paidMode],
+      products: [factories.courses.product({ price: "500.00" })],
     })
     const { container } = renderCard({ program, href: "/test", list: true })
-    expect(container.textContent).toContain("$100.00")
+    expect(container.textContent).toContain("Free")
+    expect(container.textContent).toContain("$500.00")
+  })
+
+  test("shows no price when no enrollment modes", () => {
+    const program = factories.programs.program({
+      enrollment_modes: [],
+      products: [factories.courses.product({ price: "500.00" })],
+    })
+    const { container } = renderCard({ program, href: "/test", list: true })
+    expect(container.textContent).not.toContain("$")
+    expect(container.textContent).not.toContain("Free")
   })
 })

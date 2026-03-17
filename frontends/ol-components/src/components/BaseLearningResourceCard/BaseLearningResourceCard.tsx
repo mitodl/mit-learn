@@ -93,7 +93,19 @@ interface BaseLearningResourceCardProps {
   imageAlt?: string
   title?: string
   resourceType?: string
+  /**
+   * The price to take the course/program. May be "Free" if there is a free
+   * enrollment mode. Mutually exclusive with certificatePrice in practice:
+   * - free-only → coursePrice="Free", certificatePrice=null
+   * - paid-only → coursePrice=productPrice, certificatePrice=null
+   * - both free and paid → coursePrice="Free", certificatePrice=productPrice
+   * - neither → both null
+   */
   coursePrice?: string | null
+  /**
+   * The price of the certificate, shown when the course/program can be taken
+   * for free but a paid certificate is also available.
+   */
   certificatePrice?: string | null
   hasCertificate?: boolean
   certificateTypeName?: string

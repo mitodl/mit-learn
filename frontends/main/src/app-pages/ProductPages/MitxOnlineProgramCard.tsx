@@ -5,6 +5,7 @@ import { BaseLearningResourceCard } from "ol-components"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { getEnrollmentType } from "@/common/mitxonline"
 
 type MitxOnlineProgramCardProps = {
   program?: V2ProgramDetail
@@ -23,7 +24,7 @@ const formatCurrency = (amount: number): string => {
   })
 }
 
-const formatProgramPrice = (program: V2ProgramDetail): string | null => {
+const getProductPrice = (program: V2ProgramDetail): string | null => {
   const price = program.products[0]?.price
   if (price !== undefined && price !== null) {
     return formatCurrency(Number(price))
@@ -59,11 +60,26 @@ const MitxOnlineProgramCard: React.FC<MitxOnlineProgramCardProps> = ({
   const isCourseDisplay = program.display_mode === DisplayModeEnum.Course
   const resourceType = isCourseDisplay ? "Course" : "Program"
   const imageSrc = program.page?.feature_image_src || DEFAULT_RESOURCE_IMG
-  const priceText = formatProgramPrice(program)
   const hasCertificate = Boolean(program.certificate_type)
 
-  const coursePrice = hasCertificate ? null : priceText
-  const certificatePrice = hasCertificate ? priceText : null
+  const enrollmentType = getEnrollmentType(program.enrollment_modes)
+  const productPrice = getProductPrice(program)
+
+  let coursePrice: string | null = null
+  let certificatePrice: string | null = null
+
+  switch (enrollmentType) {
+    case "free":
+      coursePrice = "Free"
+      break
+    case "paid":
+      coursePrice = productPrice
+      break
+    case "both":
+      coursePrice = "Free"
+      certificatePrice = productPrice
+      break
+  }
 
   return (
     <BaseLearningResourceCard
