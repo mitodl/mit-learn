@@ -375,7 +375,11 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Program,
-      resource_type_group: ResourceTypeGroupEnum.Program,
+      resource_type_group: faker.helpers.arrayElement([
+        ResourceTypeGroupEnum.Program,
+        // some programs ingested from mitxonline have resource_type_group: course
+        ResourceTypeGroupEnum.Course,
+      ]),
     },
     {
       offered_by: learningResourceOfferor(),
