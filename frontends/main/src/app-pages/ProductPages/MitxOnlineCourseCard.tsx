@@ -25,36 +25,6 @@ const formatCurrency = (amount: number): string => {
   })
 }
 
-const formatCoursePrice = (
-  course: CourseWithCourseRunsSerializerV2,
-): string | null => {
-  if (
-    course.page?.current_price !== undefined &&
-    course.page?.current_price !== null
-  ) {
-    return formatCurrency(course.page.current_price)
-  }
-
-  const { min_price: minPrice, max_price: maxPrice } = course
-
-  if (
-    minPrice !== null &&
-    minPrice !== undefined &&
-    maxPrice !== null &&
-    maxPrice !== undefined &&
-    minPrice !== maxPrice
-  ) {
-    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
-  }
-
-  const single = minPrice ?? maxPrice
-  if (single !== null && single !== undefined) {
-    return formatCurrency(single)
-  }
-
-  return null
-}
-
 const getBestRunForCourse = (
   course: CourseWithCourseRunsSerializerV2,
 ): CourseRunV2 | undefined => {
@@ -70,6 +40,21 @@ const getBestRunForCourse = (
     }
   }
   return courseruns[0]
+}
+
+/**
+ * Get the price for a course from the next run's product.
+ * page.current_price is equivalent (it's the price of the run matching next_run_id).
+ */
+const formatCoursePrice = (
+  course: CourseWithCourseRunsSerializerV2,
+): string | null => {
+  const bestRun = getBestRunForCourse(course)
+  const runPrice = bestRun?.products[0]?.price
+  if (runPrice !== undefined && runPrice !== null) {
+    return formatCurrency(Number(runPrice))
+  }
+  return null
 }
 
 const getStartDisplay = (
