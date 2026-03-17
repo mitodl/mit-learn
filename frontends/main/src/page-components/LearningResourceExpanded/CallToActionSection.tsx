@@ -15,7 +15,7 @@ import {
   DEFAULT_RESOURCE_IMG,
   resourceContentFilesImageSrc,
 } from "ol-utilities"
-import { ResourceTypeEnum, PlatformEnum } from "api"
+import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
 import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
 import type { LearningResource } from "api"
 import {
@@ -40,6 +40,7 @@ import {
   coursePageView,
   programPageView,
 } from "@/common/urls"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
 import invariant from "tiny-invariant"
 
@@ -324,19 +325,18 @@ const getResourceUrl = (
     resource.platform?.code === PlatformEnum.Mitxonline
   ) {
     /**
-     * TODO:
-     * Some MITxOnline programs have display_mode="course".
-     * When we have finalized ETL ingestion for these programs, we should ensure that they link to their appropriate pages.
-     *
-     * Ideally this would be handled on the backend via resource.url after
-     * the product page feature flags are removed.
+     * TODO: After mitxonlineProductPages feature flag is fully rolled out,
+     * this logic should be handled during ETL
      */
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return coursePageView(resource.readable_id)
     } else if (resource.resource_type === ResourceTypeEnum.Program) {
       return programPageView({
         readable_id: resource.readable_id,
-        display_mode: null,
+        display_mode:
+          resource.resource_type_group === ResourceTypeGroupEnum.Course
+            ? DisplayModeEnum.Course
+            : undefined,
       })
     }
   }

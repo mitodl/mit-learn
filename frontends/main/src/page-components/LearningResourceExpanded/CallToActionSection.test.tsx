@@ -2,7 +2,7 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import { renderWithProviders } from "@/test-utils"
 import { factories } from "api/test-utils"
-import { PlatformEnum, ResourceTypeEnum } from "api"
+import { PlatformEnum, ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -272,6 +272,31 @@ describe("CallToActionSection", () => {
       expect(href).toContain("mitxonline.mit.edu")
       expect(href).toContain("utm_source=mit-learn")
       expect(href).toContain("utm_medium=referral")
+    })
+
+    it("routes MITxOnline program-as-course to /courses/p/ when flag is ON", () => {
+      mockUseFeatureFlagEnabled.mockImplementation(
+        (flag) => flag === FeatureFlags.MitxOnlineProductPages,
+      )
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Program,
+        resource_type_group: ResourceTypeGroupEnum.Course,
+        readable_id: "test-readable-id",
+        platform: { code: PlatformEnum.Mitxonline },
+        url: "https://mitxonline.mit.edu/external-url",
+      })
+
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+      const link = screen.getByRole("link", { name: "Learn More" })
+      expect(link).toHaveAttribute("href", "/courses/p/test-readable-id")
+      expect(link.getAttribute("href")).not.toContain("utm_")
     })
 
     it("uses external URL with UTM params for non-MITx Online course even when flag is ON", () => {

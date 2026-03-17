@@ -42,6 +42,7 @@ import {
   PlatformEnum,
   CourseResourceCertificationTypeCodeEnum,
   ContentTypeEnum,
+  ResourceTypeGroupEnum,
 } from "api"
 
 const uniqueEnforcerId = new UniqueEnforcer()
@@ -372,7 +373,10 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
   )
   return mergeOverrides<ProgramResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.Program },
+    {
+      resource_type: ResourceTypeEnum.Program,
+      resource_type_group: ResourceTypeGroupEnum.Program,
+    },
     {
       offered_by: learningResourceOfferor(),
       platform: learningResourcePlatform(),
@@ -404,7 +408,10 @@ const course: LearningResourceFactory<CourseResource> = (overrides = {}) => {
   )
   return mergeOverrides<CourseResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.Course },
+    {
+      resource_type: ResourceTypeEnum.Course,
+      resource_type_group: ResourceTypeGroupEnum.Course,
+    },
     {
       offered_by: learningResourceOfferor(),
       platform: learningResourcePlatform(),
@@ -437,7 +444,10 @@ const learningPath: LearningResourceFactory<LearningPathResource> = (
 ) => {
   return mergeOverrides<LearningPathResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.LearningPath },
+    {
+      resource_type: ResourceTypeEnum.LearningPath,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {
       learning_path: {
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
@@ -550,7 +560,10 @@ const learningPathRelationships = ({
 const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {
   return mergeOverrides<PodcastResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.Podcast },
+    {
+      resource_type: ResourceTypeEnum.Podcast,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {
       podcast: {
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
@@ -567,7 +580,10 @@ const document: LearningResourceFactory<DocumentResource> = (
 ) => {
   return mergeOverrides<DocumentResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.Document },
+    {
+      resource_type: ResourceTypeEnum.Document,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {},
     overrides,
   )
@@ -578,7 +594,10 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
 ): PodcastEpisodeResource => {
   return mergeOverrides<PodcastEpisodeResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.PodcastEpisode },
+    {
+      resource_type: ResourceTypeEnum.PodcastEpisode,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {
       podcast_episode: {
         id: uniqueEnforcerId.enforce(() => faker.number.int()),
@@ -596,7 +615,10 @@ const podcastEpisodes = makePaginatedFactory(podcastEpisode)
 const video: LearningResourceFactory<VideoResource> = (overrides = {}) => {
   return mergeOverrides<VideoResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.Video },
+    {
+      resource_type: ResourceTypeEnum.Video,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {
       video: {
         duration: faker.number.int({ min: 1, max: 70 }).toString(),
@@ -612,7 +634,10 @@ const videoPlaylist: LearningResourceFactory<VideoPlaylistResource> = (
 ): VideoPlaylistResource => {
   return mergeOverrides<VideoPlaylistResource>(
     _learningResourceShared(),
-    { resource_type: ResourceTypeEnum.VideoPlaylist },
+    {
+      resource_type: ResourceTypeEnum.VideoPlaylist,
+      resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
+    },
     {
       video_playlist: {
         video_count: faker.number.int({ min: 1, max: 100 }),
