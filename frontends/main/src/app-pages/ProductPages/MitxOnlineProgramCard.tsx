@@ -16,6 +16,34 @@ type MitxOnlineProgramCardProps = {
   list?: boolean
 }
 
+const formatCurrency = (amount: number): string => {
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  })
+}
+
+const formatProgramPrice = (program: V2ProgramDetail): string | null => {
+  const { min_price: minPrice, max_price: maxPrice } = program
+
+  if (
+    minPrice !== null &&
+    minPrice !== undefined &&
+    maxPrice !== null &&
+    maxPrice !== undefined &&
+    minPrice !== maxPrice
+  ) {
+    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+  }
+
+  const single = minPrice ?? maxPrice
+  if (single !== null && single !== undefined) {
+    return formatCurrency(single)
+  }
+
+  return null
+}
+
 const MitxOnlineProgramCard: React.FC<MitxOnlineProgramCardProps> = ({
   program,
   href,
@@ -44,6 +72,11 @@ const MitxOnlineProgramCard: React.FC<MitxOnlineProgramCardProps> = ({
   const isCourseDisplay = program.display_mode === DisplayModeEnum.Course
   const resourceType = isCourseDisplay ? "Course" : "Program"
   const imageSrc = program.page?.feature_image_src || DEFAULT_RESOURCE_IMG
+  const priceText = formatProgramPrice(program)
+  const hasCertificate = Boolean(program.certificate_type)
+
+  const coursePrice = hasCertificate ? null : priceText
+  const certificatePrice = hasCertificate ? priceText : null
 
   return (
     <BaseLearningResourceCard
@@ -55,6 +88,9 @@ const MitxOnlineProgramCard: React.FC<MitxOnlineProgramCardProps> = ({
       imageAlt=""
       title={program.title}
       resourceType={resourceType}
+      coursePrice={coursePrice}
+      certificatePrice={certificatePrice}
+      hasCertificate={hasCertificate}
       ariaLabel={`${resourceType}: ${program.title}`}
       list={list}
     />
