@@ -1073,7 +1073,7 @@ describe("EnrollmentDisplay", () => {
       })
 
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
-      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
         [
