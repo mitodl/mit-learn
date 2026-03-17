@@ -25,30 +25,35 @@ interface ProgramEnrollmentDialogProps {
    * By default, redirects to dashboard home.
    */
   onProgramEnroll?: () => void
+  /**
+   * When true, uses "course" language instead of "program".
+   */
+  displayAsCourse?: boolean
 }
 
-const CERT_REASONS = [
+const getCertReasons = (resourceType: string) => [
   "Certificate is signed by MIT faculty",
   "Highlight on your resume/CV",
-  "Demonstrates knowledge and skills taught in this program",
+  `Demonstrates knowledge and skills taught in this ${resourceType}`,
   "Share on your social channels & LinkedIn",
   "Enhance your college & earn a promotion",
   "Enhance your college application with an earned certificate from MIT",
 ]
 
-const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
-  program,
-}) => {
+const ProgramCertificateUpsell: React.FC<{
+  program: V2ProgramDetail
+  resourceType: string
+}> = ({ program, resourceType }) => {
   const product = program.products[0]
   const replaceBasketItem = useReplaceBasketItem()
 
   return (
     <Stack gap="32px" alignItems="flex-start">
       <Typography variant="subtitle1">
-        Would you like to get a certificate for this program?
+        Would you like to get a certificate for this {resourceType}?
       </Typography>
       <CertificateReasonsList>
-        {CERT_REASONS.map((reason, index) => (
+        {getCertReasons(resourceType).map((reason, index) => (
           <CertificateReasonItem key={index}>
             <RiCheckLine aria-hidden="true" />
             {reason}
@@ -87,11 +92,13 @@ const ProgramCertificateUpsell: React.FC<{ program: V2ProgramDetail }> = ({
 const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
   program,
   onProgramEnroll,
+  displayAsCourse,
 }) => {
   const modal = NiceModal.useModal()
   const createProgramEnrollment = useCreateProgramEnrollment()
   const router = useRouter()
   const showUpsell = getEnrollmentType(program.enrollment_modes) === "both"
+  const resourceType = displayAsCourse ? "course" : "program"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,12 +133,17 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
         })}
         gap="24px"
       >
-        {showUpsell && <ProgramCertificateUpsell program={program} />}
+        {showUpsell && (
+          <ProgramCertificateUpsell
+            program={program}
+            resourceType={resourceType}
+          />
+        )}
         {createProgramEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
-              There was a problem enrolling you in this program. Please try
-              again later.
+              There was a problem enrolling you in this {resourceType}. Please
+              try again later.
             </Alert>
           </div>
         )}

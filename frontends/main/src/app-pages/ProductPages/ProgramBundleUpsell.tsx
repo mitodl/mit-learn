@@ -6,6 +6,7 @@ import type {
   BaseProgram,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { parseReqTree } from "./util"
 import { formatPrice } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
@@ -160,7 +161,10 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
         <WideButtonLink
           variant="bordered"
           size="large"
-          href={programPageView(program.readable_id)}
+          href={programPageView({
+            readable_id: program.readable_id,
+            display_mode: program.display_mode,
+          })}
         >
           View Program
         </WideButtonLink>
@@ -179,7 +183,13 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
   })
 
   const pricedPrograms = (data?.results ?? []).filter(
-    (d): d is V2ProgramDetail => !!d.products[0]?.price,
+    (d): d is V2ProgramDetail =>
+      /**
+       * Exclude programs with display_mode="course" from bundle upsell.
+       * These programs are presented as courses and should not appear as
+       * bundleable programs.
+       */
+      d.display_mode !== DisplayModeEnum.Course && !!d.products[0]?.price,
   )
 
   if (!isLoading && pricedPrograms.length === 0) {

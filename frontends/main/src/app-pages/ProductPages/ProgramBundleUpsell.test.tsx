@@ -3,6 +3,7 @@ import { factories, urls } from "api/mitxonline-test-utils"
 import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within } from "@/test-utils"
 import { waitForElementToBeRemoved } from "@testing-library/react"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import { allowConsoleErrors } from "ol-test-utilities"
 
@@ -39,7 +40,6 @@ describe("ProgramBundleUpsell", () => {
     const programDetail = factories.programs.program({
       id: baseProgram.id,
       readable_id: baseProgram.readable_id,
-      title: "Data Science",
       req_tree: requirements.serialize(),
       products: [factories.courses.product({ price: "750" })],
     })
@@ -51,7 +51,7 @@ describe("ProgramBundleUpsell", () => {
     const upsell = await screen.findByTestId("program-bundle-upsell-item")
     // 3 required + 2 electives = 5 total courses
     expect(upsell).toHaveTextContent(
-      "Get all 5 Data Science Courses + Certificates",
+      `Get all 5 ${programDetail.title} Courses + Certificates`,
     )
     expect(upsell).toHaveTextContent("$750")
     expect(upsell).toHaveTextContent("(19% off)")
@@ -95,6 +95,26 @@ describe("ProgramBundleUpsell", () => {
     const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
 
     reject(new Error("Network error"))
+    await waitForElementToBeRemoved(upsell)
+  })
+
+  test("Excludes programs with display_mode=course from bundle upsell", async () => {
+    const baseProgram = factories.programs.baseProgram()
+    const programDetail = factories.programs.program({
+      id: baseProgram.id,
+      readable_id: baseProgram.readable_id,
+      display_mode: DisplayModeEnum.Course,
+      products: [factories.courses.product({ price: "750" })],
+    })
+    const { promise, resolve } = Promise.withResolvers()
+    setMockResponse.get(
+      urls.programs.programsList({ id: [baseProgram.id] }),
+      promise,
+    )
+    renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
+
+    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
+    resolve({ results: [programDetail] })
     await waitForElementToBeRemoved(upsell)
   })
 

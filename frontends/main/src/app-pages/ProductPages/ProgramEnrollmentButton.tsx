@@ -36,11 +36,13 @@ type ProgramEnrollmentButtonProps = {
   program: V2ProgramDetail
   variant?: ButtonProps["variant"]
   className?: string
+  displayAsCourse?: boolean
 }
 const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   program,
   variant = "primary",
   className,
+  displayAsCourse,
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
   const me = useQuery(userQueries.me())
@@ -88,7 +90,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           { onSuccess: () => router.push(DASHBOARD_HOME) },
         )
       } else {
-        NiceModal.show(ProgramEnrollmentDialog, { program })
+        NiceModal.show(ProgramEnrollmentDialog, { program, displayAsCourse })
       }
     } else {
       setAnchor(e.currentTarget)
@@ -100,7 +102,11 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     <>
       <Stack gap="12px">
         {enrollment ? (
-          <ButtonLinkWithDisabled href={href} className={className}>
+          <ButtonLinkWithDisabled
+            variant={variant}
+            href={href}
+            className={className}
+          >
             Enrolled
             <RiCheckLine aria-hidden="true" />
           </ButtonLinkWithDisabled>

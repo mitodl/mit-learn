@@ -10,6 +10,7 @@ enum HeadingIds {
   WhoCanTake = "who-can-take",
   Requirements = "requirements",
   Summary = "summary",
+  Modules = "modules",
 }
 
 type RequirementData = {
