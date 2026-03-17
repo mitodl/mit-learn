@@ -902,6 +902,8 @@ def vector_search(
         POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH
     )
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
+    prefetch_multiplier = 20
+    prefetch_limit = (offset + limit) * prefetch_multiplier
     if query_string:
         search_params = {
             "collection_name": search_collection,
@@ -917,12 +919,12 @@ def vector_search(
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),
                     using=encoder_sparse.model_short_name(),
-                    limit=limit * 100,
+                    limit=prefetch_limit,
                 ),
                 models.Prefetch(
                     query=encoder_dense.embed_query(query_string),  # <-- dense vector
                     using=encoder_dense.model_short_name(),
-                    limit=limit * 100,
+                    limit=prefetch_limit,
                 ),
             ]
             search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
