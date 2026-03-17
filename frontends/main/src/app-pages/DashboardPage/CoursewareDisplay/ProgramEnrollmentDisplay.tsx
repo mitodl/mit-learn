@@ -1,6 +1,6 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Skeleton, Stack, Typography, theme } from "ol-components"
+import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
 import {
   EnrollmentStatus,
   getCourseRunEnrollmentStatus,
@@ -17,6 +17,11 @@ import {
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
+
+const DashboardCardStyled = styled(DashboardCard)({
+  borderRadius: "8px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+})
 
 interface ResourceItem {
   id: number
@@ -300,7 +305,7 @@ export const ProgramEnrollmentDisplay: React.FC<
                     : { type: DashboardType.Course, data: course }
 
                   return (
-                    <DashboardCard
+                    <DashboardCardStyled
                       key={getKey({
                         resourceType: ResourceType.Course,
                         id: course.id,
@@ -319,7 +324,7 @@ export const ProgramEnrollmentDisplay: React.FC<
                   }
 
                   return (
-                    <DashboardCard
+                    <DashboardCardStyled
                       key={getKey({
                         resourceType: ResourceType.Program,
                         id: programEnroll.program.id,
