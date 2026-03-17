@@ -295,7 +295,8 @@ class ResourceTypeGroupChoiceField(serializers.ChoiceField):
     The resource type group for UI grouping.
     """
 
-    # Note: This serializer exists primarily for OpenAPI generation and subclass
+    # Note: This serializer centralizes the OpenAPI schema/help text for this field
+    # and is intended to be subclassed (for example, by ComputedResourceTypeGroupField).
 
     DEFAULT_HELP_TEXT = (
         "The resource type group for UI grouping.\n\n"
@@ -318,7 +319,14 @@ class ComputedResourceTypeGroupField(ResourceTypeGroupChoiceField):
         super().__init__(**kwargs)
 
     def to_representation(self, instance):
-        """Compute value based on resource_type."""
+        """
+        Compute the resource type group for UI grouping.
+
+        For courses and programs, this is derived from the instance's
+        resource_category (falling back to resource_type if the category
+        is not a valid LearningResourceType). For all other resource types,
+        this returns the learning material resource type group.
+        """
         if instance.resource_type in [
             LearningResourceType.course.name,
             LearningResourceType.program.name,
