@@ -2,7 +2,6 @@ import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   Popover,
-  SimpleMenu,
   Skeleton,
   Stack,
   Typography,
@@ -21,16 +20,8 @@ import {
   ResourceType,
   selectBestEnrollment,
 } from "./helpers"
-import {
-  DashboardCard,
-  DashboardCardMenuButton,
-  DashboardType,
-  getContextMenuItems,
-} from "./DashboardCard"
+import { DashboardCard, DashboardType } from "./DashboardCard"
 import { ProgressBadge } from "./ProgressBadge"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
-import { RiMore2Line } from "@remixicon/react"
 import { LinkButton } from "@/page-components/TiptapEditor/vendor/components/tiptap-ui/link-popover"
 import { formatDate } from "ol-utilities"
 
@@ -256,10 +247,6 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   Component,
   className,
 }) => {
-  const useProductPages = useFeatureFlagEnabled(
-    FeatureFlags.MitxOnlineProductPages,
-  )
-
   const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
     enrollmentQueries.courseRunEnrollmentsList(),
   )
@@ -339,35 +326,6 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const programEnrollmentStatus = getProgramEnrollmentStatus(
     programEnrollment,
     enrolledCount,
-  )
-
-  const menuItems = programEnrollment
-    ? getContextMenuItems(
-        programEnrollment.program.title || "Program",
-        { type: "program-enrollment", data: programEnrollment },
-        useProductPages ?? false,
-        [],
-        true,
-      )
-    : []
-
-  const contextMenu = isLoading ? (
-    <Skeleton variant="rectangular" width={12} height={24} />
-  ) : (
-    <SimpleMenu
-      items={menuItems}
-      trigger={
-        <DashboardCardMenuButton
-          size="small"
-          variant="text"
-          aria-label="More options"
-          status={programEnrollmentStatus}
-          hidden={menuItems.length === 0}
-        >
-          <RiMore2Line />
-        </DashboardCardMenuButton>
-      }
-    />
   )
 
   const [popoverAnchorEl, setPopoverAnchorEl] =
@@ -471,7 +429,6 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           </StatusContainer>
           <Typography variant="subtitle2">{program?.title}</Typography>
         </ProgramCardHeaderInner>
-        {contextMenu}
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
         <Typography
