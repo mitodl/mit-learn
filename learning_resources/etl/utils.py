@@ -581,7 +581,8 @@ def pdf_is_valid(pdf_path: Path) -> bool:
     """Check if a PDF is valid."""
     try:
         reader = PdfReader(pdf_path)
-        if len(reader.pages) > 0 and reader.pages[0].extract_text():
+        if len(reader.pages) > 0:
+            reader.pages[0].extract_text()
             return True
     except Exception as e:  # noqa: BLE001
         log.warning("PDF validation error for %s: %s", pdf_path, e)
