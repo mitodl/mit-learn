@@ -1110,6 +1110,7 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     source_rel_path = "static/test.pdf"
     file_path = olx_path / source_rel_path
     file_path.parent.mkdir(parents=True, exist_ok=True)
+
     file_path.write_bytes(b"fake pdf content")
 
     metadata = {
@@ -1120,8 +1121,9 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
         "source_path": source_rel_path,
         "title": "Tika Title",
     }
-    document = b"fake pdf content"
 
+    document = b"fake pdf content"
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
     mock_should_use_ocr = mocker.patch(
         "learning_resources.etl.utils._should_use_ocr", return_value=True
     )
