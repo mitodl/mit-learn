@@ -77,12 +77,7 @@ const formatResourcePrice = (
   return null
 }
 
-/**
- * Extract display-relevant fields from a course or program in a uniform shape.
- */
-const extractCardData = (
-  props: MitxOnlineCourseCardProps | MitxOnlineProgramCardProps,
-): {
+type CardData = {
   title: string
   displayType: string
   imageSrc: string
@@ -92,7 +87,14 @@ const extractCardData = (
   certificateTypeName: string | undefined
   startDate: React.ReactNode
   startLabel: string | undefined
-} | null => {
+}
+
+/**
+ * Extract display-relevant fields from a course or program in a uniform shape.
+ */
+const extractCardData = (
+  props: MitxOnlineCourseCardProps | MitxOnlineProgramCardProps,
+): CardData | null => {
   if (props.resourceType === "course") {
     const course = props.resource
     if (!course) return null

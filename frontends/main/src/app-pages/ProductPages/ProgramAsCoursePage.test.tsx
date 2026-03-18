@@ -180,11 +180,11 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: "Modules" })
     expect(screen.getByText("This course has 2 modules")).toBeInTheDocument()
 
-    // Course titles should be shown
-    await waitFor(() => {
-      courses.forEach((course) => {
-        expect(screen.getByText(course.title)).toBeInTheDocument()
-      })
+    // Course titles should be shown (findBy first, then getBy for the rest since
+    // all items render together when dataLoading transitions to false)
+    await screen.findByText(courses[0].title)
+    courses.slice(1).forEach((course) => {
+      expect(screen.getByText(course.title)).toBeInTheDocument()
     })
 
     // No h3 subsection headings within Modules section (flat list, single root)
@@ -225,10 +225,9 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: "Advanced Modules" })
 
     // Course titles should be shown within subsections
-    await waitFor(() => {
-      courses.forEach((course) => {
-        expect(screen.getByText(course.title)).toBeInTheDocument()
-      })
+    await screen.findByText(courses[0].title)
+    courses.slice(1).forEach((course) => {
+      expect(screen.getByText(course.title)).toBeInTheDocument()
     })
   })
 
@@ -254,15 +253,12 @@ describe("ProgramAsCoursePage", () => {
       within(modulesSection).getByText("This course has 3 modules"),
     ).toBeInTheDocument()
 
-    await waitFor(() => {
-      courses.forEach((course) => {
-        expect(
-          within(modulesSection).getByText(course.title),
-        ).toBeInTheDocument()
-      })
-      childPrograms.forEach((prog) => {
-        expect(within(modulesSection).getByText(prog.title)).toBeInTheDocument()
-      })
-    })
+    // Verify interleaved order: c1, p1, c2 (matches tree insertion order)
+    await within(modulesSection).findByText(courses[0].title)
+    const listItems = within(modulesSection).getAllByRole("listitem")
+    expect(listItems).toHaveLength(3)
+    expect(listItems[0]).toHaveTextContent(courses[0].title)
+    expect(listItems[1]).toHaveTextContent(childPrograms[0].title)
+    expect(listItems[2]).toHaveTextContent(courses[1].title)
   })
 })
