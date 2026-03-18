@@ -339,8 +339,8 @@ const CertificateDoc = ({
                 }}
               >
                 {programName}
-              </Text>{" "}
-              {shortDisplayType}:
+              </Text>
+              {shortDisplayType ? ` ${shortDisplayType}` : ""}:
             </Text>
             <Text
               style={{
