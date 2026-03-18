@@ -440,13 +440,20 @@ RUN_INSTRUCTORS_QUERY_FIELDS = [
 RUN_LEVEL_QUERY_FIELDS = ["runs.level.name^5"]
 
 
-RESOURCEFILE_QUERY_FIELDS = [
+CONTENT_FILE_QUERY_FIELDS = [
     "content.english",
     "title.english",
     "content_title.english",
     "description.english",
     "content_feature_type",
 ]
+
+LEARNING_MATERIAL_CONTENT_FILE_QUERY_FIELDS = [
+    "content_files.content.english",
+    "content_files.course_number^5",
+    "content_files.run_title.english^5",
+]
+
 
 LEARNING_MATERIAL_MAP = {
     "content_files": {"type": "nested", "properties": CONTENT_FILE_MAP},

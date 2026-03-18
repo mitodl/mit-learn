@@ -319,6 +319,23 @@ def test_generate_learning_resources_text_clause(
                                             },
                                         },
                                     },
+                                    {
+                                        "nested": {
+                                            "path": "content_files",
+                                            "query": {
+                                                "multi_match": {
+                                                    "query": "math",
+                                                    "fields": [
+                                                        "content_files.content.english",
+                                                        "content_files.course_number^5",
+                                                        "content_files.run_title.english^5",
+                                                    ],
+                                                    **extra_params,
+                                                }
+                                            },
+                                            "ignore_unmapped": True,
+                                        }
+                                    },
                                 ]
                             }
                         }
@@ -446,6 +463,23 @@ def test_generate_learning_resources_text_clause(
                                 },
                             },
                         },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "content_files",
+                        "query": {
+                            "multi_match": {
+                                "query": "math",
+                                "fields": [
+                                    "content_files.content.english",
+                                    "content_files.course_number^5",
+                                    "content_files.run_title.english^5",
+                                ],
+                                **extra_params,
+                            }
+                        },
+                        "ignore_unmapped": True,
                     }
                 },
             ],
@@ -596,6 +630,22 @@ def test_generate_learning_resources_text_clause(
                                             },
                                         }
                                     },
+                                    {
+                                        "nested": {
+                                            "path": "content_files",
+                                            "query": {
+                                                "query_string": {
+                                                    "query": '"math"',
+                                                    "fields": [
+                                                        "content_files.content.english",
+                                                        "content_files.course_number^5",
+                                                        "content_files.run_title.english^5",
+                                                    ],
+                                                }
+                                            },
+                                            "ignore_unmapped": True,
+                                        }
+                                    },
                                 ]
                             }
                         }
@@ -716,6 +766,22 @@ def test_generate_learning_resources_text_clause(
                             },
                         },
                     },
+                },
+                {
+                    "nested": {
+                        "path": "content_files",
+                        "query": {
+                            "query_string": {
+                                "query": '"math"',
+                                "fields": [
+                                    "content_files.content.english",
+                                    "content_files.course_number^5",
+                                    "content_files.run_title.english^5",
+                                ],
+                            }
+                        },
+                        "ignore_unmapped": True,
+                    }
                 },
             ],
         }
@@ -903,6 +969,24 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                 }
                                             },
                                             {
+                                                "nested": {
+                                                    "path": "content_files",
+                                                    "query": {
+                                                        "multi_match": {
+                                                            "query": "math",
+                                                            "fields": [
+                                                                "content_files.content.english",
+                                                                "content_files.course_number^5",
+                                                                "content_files.run_title.english^5",
+                                                            ],
+                                                            "type": "phrase",
+                                                            "slop": 2,
+                                                        }
+                                                    },
+                                                    "ignore_unmapped": True,
+                                                }
+                                            },
+                                            {
                                                 "has_child": {
                                                     "type": "content_file",
                                                     "query": {
@@ -1057,6 +1141,24 @@ def test_generate_learning_resources_text_clause_with_min_score():
                     }
                 },
                 {
+                    "nested": {
+                        "path": "content_files",
+                        "query": {
+                            "multi_match": {
+                                "query": "math",
+                                "fields": [
+                                    "content_files.content.english",
+                                    "content_files.course_number^5",
+                                    "content_files.run_title.english^5",
+                                ],
+                                "type": "phrase",
+                                "slop": 2,
+                            }
+                        },
+                        "ignore_unmapped": True,
+                    }
+                },
+                {
                     "has_child": {
                         "type": "content_file",
                         "query": {
@@ -1207,6 +1309,22 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                 }
                                             },
                                             {
+                                                "nested": {
+                                                    "path": "content_files",
+                                                    "query": {
+                                                        "query_string": {
+                                                            "query": '"math"',
+                                                            "fields": [
+                                                                "content_files.content.english",
+                                                                "content_files.course_number^5",
+                                                                "content_files.run_title.english^5",
+                                                            ],
+                                                        }
+                                                    },
+                                                    "ignore_unmapped": True,
+                                                }
+                                            },
+                                            {
                                                 "has_child": {
                                                     "type": "content_file",
                                                     "query": {
@@ -1340,6 +1458,22 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                 },
                             }
                         },
+                    }
+                },
+                {
+                    "nested": {
+                        "path": "content_files",
+                        "query": {
+                            "query_string": {
+                                "query": '"math"',
+                                "fields": [
+                                    "content_files.content.english",
+                                    "content_files.course_number^5",
+                                    "content_files.run_title.english^5",
+                                ],
+                            }
+                        },
+                        "ignore_unmapped": True,
                     }
                 },
                 {
@@ -1969,6 +2103,23 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                             }
                                                         },
                                                         {
+                                                            "nested": {
+                                                                "path": "content_files",
+                                                                "query": {
+                                                                    "multi_match": {
+                                                                        "query": "math",
+                                                                        "fields": [
+                                                                            "content_files.content.english",
+                                                                            "content_files.course_number^5",
+                                                                            "content_files.run_title.english^5",
+                                                                        ],
+                                                                        "type": "best_fields",
+                                                                    }
+                                                                },
+                                                                "ignore_unmapped": True,
+                                                            }
+                                                        },
+                                                        {
                                                             "has_child": {
                                                                 "type": "content_file",
                                                                 "query": {
@@ -2116,6 +2267,23 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                 },
                                             }
                                         },
+                                    }
+                                },
+                                {
+                                    "nested": {
+                                        "path": "content_files",
+                                        "query": {
+                                            "multi_match": {
+                                                "query": "math",
+                                                "fields": [
+                                                    "content_files.content.english",
+                                                    "content_files.course_number^5",
+                                                    "content_files.run_title.english^5",
+                                                ],
+                                                "type": "best_fields",
+                                            }
+                                        },
+                                        "ignore_unmapped": True,
                                     }
                                 },
                                 {
@@ -2555,6 +2723,23 @@ def test_execute_learn_search_with_script_score(
                                                                     }
                                                                 },
                                                                 {
+                                                                    "nested": {
+                                                                        "path": "content_files",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "content_files.content.english",
+                                                                                    "content_files.course_number^5",
+                                                                                    "content_files.run_title.english^5",
+                                                                                ],
+                                                                                "type": "phrase",
+                                                                            }
+                                                                        },
+                                                                        "ignore_unmapped": True,
+                                                                    }
+                                                                },
+                                                                {
                                                                     "has_child": {
                                                                         "type": "content_file",
                                                                         "query": {
@@ -2704,6 +2889,23 @@ def test_execute_learn_search_with_script_score(
                                                         },
                                                     }
                                                 },
+                                            }
+                                        },
+                                        {
+                                            "nested": {
+                                                "path": "content_files",
+                                                "query": {
+                                                    "multi_match": {
+                                                        "query": "math",
+                                                        "fields": [
+                                                            "content_files.content.english",
+                                                            "content_files.course_number^5",
+                                                            "content_files.run_title.english^5",
+                                                        ],
+                                                        "type": "phrase",
+                                                    }
+                                                },
+                                                "ignore_unmapped": True,
                                             }
                                         },
                                         {
@@ -3063,6 +3265,23 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                     }
                                                                 },
                                                                 {
+                                                                    "nested": {
+                                                                        "path": "content_files",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "content_files.content.english",
+                                                                                    "content_files.course_number^5",
+                                                                                    "content_files.run_title.english^5",
+                                                                                ],
+                                                                                "type": "best_fields",
+                                                                            }
+                                                                        },
+                                                                        "ignore_unmapped": True,
+                                                                    }
+                                                                },
+                                                                {
                                                                     "has_child": {
                                                                         "type": "content_file",
                                                                         "query": {
@@ -3211,6 +3430,23 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                             },
                                                         }
                                                     },
+                                                }
+                                            },
+                                            {
+                                                "nested": {
+                                                    "path": "content_files",
+                                                    "query": {
+                                                        "multi_match": {
+                                                            "query": "math",
+                                                            "fields": [
+                                                                "content_files.content.english",
+                                                                "content_files.course_number^5",
+                                                                "content_files.run_title.english^5",
+                                                            ],
+                                                            "type": "best_fields",
+                                                        }
+                                                    },
+                                                    "ignore_unmapped": True,
                                                 }
                                             },
                                             {
@@ -3492,6 +3728,23 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                     }
                                                                 },
                                                                 {
+                                                                    "nested": {
+                                                                        "path": "content_files",
+                                                                        "query": {
+                                                                            "multi_match": {
+                                                                                "query": "math",
+                                                                                "fields": [
+                                                                                    "content_files.content.english",
+                                                                                    "content_files.course_number^5",
+                                                                                    "content_files.run_title.english^5",
+                                                                                ],
+                                                                                "type": "best_fields",
+                                                                            }
+                                                                        },
+                                                                        "ignore_unmapped": True,
+                                                                    }
+                                                                },
+                                                                {
                                                                     "has_child": {
                                                                         "type": "content_file",
                                                                         "query": {
@@ -3642,6 +3895,23 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                 },
                                             }
                                         },
+                                    }
+                                },
+                                {
+                                    "nested": {
+                                        "path": "content_files",
+                                        "query": {
+                                            "multi_match": {
+                                                "query": "math",
+                                                "fields": [
+                                                    "content_files.content.english",
+                                                    "content_files.course_number^5",
+                                                    "content_files.run_title.english^5",
+                                                ],
+                                                "type": "best_fields",
+                                            }
+                                        },
+                                        "ignore_unmapped": True,
                                     }
                                 },
                                 {
