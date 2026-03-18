@@ -29,7 +29,6 @@ import {
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
-  useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
@@ -282,7 +281,6 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
-  const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
 
   const enroll = React.useCallback(
@@ -361,7 +359,9 @@ const useEnrollmentHandler = () => {
 
   return {
     enroll,
-    isPending: createB2bEnrollment.isPending || createEnrollment.isPending,
+    isPending:
+      createB2bEnrollment.isPending ||
+      createVerifiedProgramEnrollment.isPending,
   }
 }
 
