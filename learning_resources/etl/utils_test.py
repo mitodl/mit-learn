@@ -7,6 +7,7 @@ from random import randrange
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
+import pypdf
 import pytest
 
 from learning_resources.constants import (
@@ -996,7 +997,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     # Mock PdfReader to raise FileNotDecryptedError
     mocker.patch(
         "learning_resources.etl.utils.PdfReader",
-        side_effect=utils.FileNotDecryptedError,
+        side_effect=pypdf.errors.FileNotDecryptedError,
     )
 
     results = list(
@@ -1009,7 +1010,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     )
 
     assert len(results) == 0
-    mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
+    mock_log.exception.assert_called_with("Skipping invalid pdf %s", full_path)
     tika_from_buffer_mock.assert_not_called()
 
 
