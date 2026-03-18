@@ -10,7 +10,12 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds, parseReqTree, getItemNoun, RequirementData } from "./util"
+import {
+  HeadingIds,
+  parseReqTree,
+  getRequirementItemNoun,
+  RequirementData,
+} from "./util"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
@@ -91,7 +96,7 @@ const getCompletionText = (
     }
   })
   const allItems = parsedReqs.flatMap((req) => req.items)
-  const noun = getItemNoun(allItems, programsById)
+  const noun = getRequirementItemNoun(allItems, programsById)
   const p = (count: number) => pluralize(noun.singular, count, noun.plural)
   if (requiredCount && electiveCount) {
     return `To complete this program, you must take ${requiredCount} required ${p(requiredCount)} and ${electiveCount} elective ${p(electiveCount)}.`

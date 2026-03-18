@@ -17,7 +17,7 @@ import type {
   CourseRunV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { HeadingIds, parseReqTree } from "./util"
+import { HeadingIds, parseReqTree, getRequirementItemNoun } from "./util"
 import {
   canPurchaseRun,
   formatPrice,
@@ -662,6 +662,14 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   )
   if (totalRequired === 0) return null
 
+  const allItems = parsedReqs.flatMap((req) => req.items)
+  const rawNoun = getRequirementItemNoun(allItems, {})
+  const capitalize = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
+  const noun = {
+    singular: capitalize(rawNoun.singular),
+    plural: capitalize(rawNoun.plural),
+  }
+
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
@@ -671,7 +679,7 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
       <InfoRowInner>
         <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
           <InfoLabel underline>
-            {`${totalRequired} ${pluralize("Course", totalRequired)}`}
+            {`${totalRequired} ${pluralize(noun.singular, totalRequired, noun.plural)}`}
           </InfoLabel>{" "}
           to complete program
         </ResponsiveLink>

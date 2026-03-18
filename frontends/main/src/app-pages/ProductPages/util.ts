@@ -75,7 +75,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
  * Determine the noun to use for requirement items.
  * Programs with display_mode="course" count as courses.
  */
-const getItemNoun = (
+const getRequirementItemNoun = (
   items: RequirementItem[],
   programsById: Record<number, { display_mode?: string | null }>,
 ): { singular: string; plural: string } => {
@@ -101,5 +101,5 @@ const getItemNoun = (
 
 type ProductNoun = "Course" | "Program"
 
-export { HeadingIds, parseReqTree, getItemNoun }
+export { HeadingIds, parseReqTree, getRequirementItemNoun }
 export type { ProductNoun, RequirementData, RequirementItem }

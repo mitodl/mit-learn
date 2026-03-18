@@ -1,4 +1,4 @@
-import { parseReqTree, getItemNoun } from "./util"
+import { parseReqTree, getRequirementItemNoun } from "./util"
 import type { RequirementItem } from "./util"
 import { RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -61,13 +61,13 @@ describe("parseReqTree", () => {
   })
 })
 
-describe("getItemNoun", () => {
+describe("getRequirementItemNoun", () => {
   test("returns course singular/plural when all items are courses", () => {
     const items: RequirementItem[] = [
       { type: "course", id: 1 },
       { type: "course", id: 2 },
     ]
-    expect(getItemNoun(items, {})).toEqual({
+    expect(getRequirementItemNoun(items, {})).toEqual({
       singular: "course",
       plural: "courses",
     })
@@ -75,7 +75,9 @@ describe("getItemNoun", () => {
 
   test("returns program singular/plural when all items are non-course-display programs", () => {
     const items: RequirementItem[] = [{ type: "program", id: 10 }]
-    expect(getItemNoun(items, { 10: { display_mode: null } })).toEqual({
+    expect(
+      getRequirementItemNoun(items, { 10: { display_mode: null } }),
+    ).toEqual({
       singular: "program",
       plural: "programs",
     })
@@ -84,7 +86,9 @@ describe("getItemNoun", () => {
   test("returns course singular/plural when program has display_mode=course", () => {
     const items: RequirementItem[] = [{ type: "program", id: 10 }]
     expect(
-      getItemNoun(items, { 10: { display_mode: DisplayModeEnum.Course } }),
+      getRequirementItemNoun(items, {
+        10: { display_mode: DisplayModeEnum.Course },
+      }),
     ).toEqual({ singular: "course", plural: "courses" })
   })
 
@@ -93,7 +97,9 @@ describe("getItemNoun", () => {
       { type: "course", id: 1 },
       { type: "program", id: 10 },
     ]
-    expect(getItemNoun(items, { 10: { display_mode: null } })).toEqual({
+    expect(
+      getRequirementItemNoun(items, { 10: { display_mode: null } }),
+    ).toEqual({
       singular: "course/program",
       plural: "courses/programs",
     })
