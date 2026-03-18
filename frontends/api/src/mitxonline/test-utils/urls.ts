@@ -95,6 +95,10 @@ const baskets = {
   clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
 }
 
+const verifiedProgramEnrollments = {
+  create: (programId: string, courserunId: string) => `${API_BASE_URL}/api/v2/verified_program_enrollments/${programId}/${courserunId}/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -111,4 +115,5 @@ export {
   certificates,
   products,
   baskets,
+  verifiedProgramEnrollments,
 }
