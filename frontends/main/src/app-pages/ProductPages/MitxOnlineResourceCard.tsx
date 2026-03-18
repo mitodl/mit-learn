@@ -113,7 +113,8 @@ const extractCardData = (
       certificateTypeName: course.certificate_type || undefined,
       startDate,
       startLabel:
-        course.availability === "anytime" || !startDate
+        course.availability === "anytime" ||
+        (props.size === "medium" && startDate)
           ? "Starts: "
           : undefined,
     }
@@ -122,6 +123,12 @@ const extractCardData = (
   const program = props.resource
   if (!program) return null
   const isCourseDisplay = program.display_mode === DisplayModeEnum.Course
+  const programStartDate =
+    program.availability === "anytime" ? (
+      "Anytime"
+    ) : program.start_date ? (
+      <LocalDate date={program.start_date} format="MMM DD, YYYY" />
+    ) : null
   return {
     title: program.title,
     displayType: isCourseDisplay ? "Course" : "Program",
@@ -130,8 +137,12 @@ const extractCardData = (
     enrollmentModes: program.enrollment_modes,
     hasCertificate: Boolean(program.certificate_type),
     certificateTypeName: program.certificate_type || undefined,
-    startDate: null,
-    startLabel: undefined,
+    startDate: programStartDate,
+    startLabel:
+      program.availability === "anytime" ||
+      (props.size === "medium" && programStartDate)
+        ? "Starts: "
+        : undefined,
   }
 }
 

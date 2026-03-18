@@ -82,6 +82,45 @@ describe("MitxOnlineResourceCard", () => {
       renderCard({ resource: program, resourceType: "program", href: "/test" })
       expect(screen.getByText("Program")).toBeInTheDocument()
     })
+
+    test("shows 'Anytime' for anytime availability", () => {
+      const program = factories.programs.program({ availability: "anytime" })
+      const {
+        view: { container },
+      } = renderCard({
+        resource: program,
+        resourceType: "program",
+        href: "/test",
+      })
+      expect(container.textContent).toContain("Anytime")
+    })
+
+    test("shows 'Starts:' label on medium cards but not small cards", () => {
+      const program = factories.programs.program({
+        availability: "dated",
+        start_date: "2025-09-01T00:00:00Z",
+      })
+      const {
+        view: { container: mediumContainer },
+      } = renderCard({
+        resource: program,
+        resourceType: "program",
+        href: "/test",
+        size: "medium",
+      })
+      expect(mediumContainer.textContent).toContain("Starts:")
+      expect(mediumContainer.textContent).toContain("Sep 01, 2025")
+
+      const {
+        view: { container: smallContainer },
+      } = renderCard({
+        resource: program,
+        resourceType: "program",
+        href: "/test",
+        size: "small",
+      })
+      expect(smallContainer.textContent).not.toContain("Starts:")
+    })
   })
 
   describe("enrollment-based pricing", () => {
