@@ -99,7 +99,7 @@ def points_generator(
                 sparse_vector_name: sparse_vector,
             }
             point_data["vector"] = point_vector
-            yield models.PointStruct(**point_data)
+        yield models.PointStruct(**point_data)
 
 
 def create_qdrant_collections(force_recreate):
