@@ -932,6 +932,7 @@ def vector_search(  # noqa: PLR0913
             search_params["query"] = encoder_dense.embed_query(query_string)
 
         if "group_by" in params:
+            search_params.pop("search_params", None)
             search_params["group_by"] = params.get("group_by")
             search_params["group_size"] = params.get("group_size", 1)
             group_result = client.query_points_groups(**search_params)
