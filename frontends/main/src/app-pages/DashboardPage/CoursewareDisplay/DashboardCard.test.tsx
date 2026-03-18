@@ -1211,7 +1211,11 @@ describe.each([
           })
 
         // Mock the enrollment endpoint
-        const programEnrollmentEndpoint = mitxonline.urls.verifiedProgramEnrollments.create(programEnrollment.program.readable_id, run.courseware_id)
+        const programEnrollmentEndpoint =
+          mitxonline.urls.verifiedProgramEnrollments.create(
+            programEnrollment.program.readable_id,
+            run.courseware_id,
+          )
         setMockResponse.post(programEnrollmentEndpoint, {})
 
         renderWithProviders(

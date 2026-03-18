@@ -69,7 +69,11 @@ const pagesApi = new PagesApi(undefined, BASE_PATH, axiosInstance)
 
 const productsApi = new ProductsApi(undefined, BASE_PATH, axiosInstance)
 
-const verifiedProgramEnrollmentsApi = new VerifiedProgramEnrollmentsApi(undefined, BASE_PATH, axiosInstance)
+const verifiedProgramEnrollmentsApi = new VerifiedProgramEnrollmentsApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 
 export {
   usersApi,

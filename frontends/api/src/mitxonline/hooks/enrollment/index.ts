@@ -89,8 +89,9 @@ const useCreateProgramEnrollment = () => {
 const useCreateVerifiedProgramEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (opts: VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest) =>
-      verifiedProgramEnrollmentsApi.verifiedProgramEnrollmentsCreate(opts),
+    mutationFn: (
+      opts: VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
+    ) => verifiedProgramEnrollmentsApi.verifiedProgramEnrollmentsCreate(opts),
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),

@@ -96,7 +96,8 @@ const baskets = {
 }
 
 const verifiedProgramEnrollments = {
-  create: (programId: string, courserunId: string) => `${API_BASE_URL}/api/v2/verified_program_enrollments/${programId}/${courserunId}/`,
+  create: (programId: string, courserunId: string) =>
+    `${API_BASE_URL}/api/v2/verified_program_enrollments/${programId}/${courserunId}/`,
 }
 
 export {
