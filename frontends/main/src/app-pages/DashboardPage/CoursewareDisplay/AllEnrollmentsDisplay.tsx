@@ -92,15 +92,10 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const alphabeticalSort = (
-  a: CourseRunEnrollmentV3,
-  b: CourseRunEnrollmentV3,
-) => a.run.course.title.localeCompare(b.run.course.title)
+const alphabeticalSort = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
+  a.run.course.title.localeCompare(b.run.course.title)
 
-const startsSooner = (
-  a: CourseRunEnrollmentV3,
-  b: CourseRunEnrollmentV3,
-) => {
+const startsSooner = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) => {
   if (!a.run.start_date && !b.run.start_date) return 0
   if (!a.run.start_date) return 1
   if (!b.run.start_date) return -1
