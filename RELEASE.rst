@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.58.2
+--------------
+
+- use v3 enrollments endpoint on the dashboard (#3049)
+
 Version 0.58.1 (Released March 18, 2026)
 --------------
 
