@@ -85,6 +85,7 @@ const extractCardData = (
   productPrice: string | null
   enrollmentModes: EnrollmentMode[] | undefined
   hasCertificate: boolean
+  certificateTypeName: string | undefined
   startDate: React.ReactNode
   startLabel: string | undefined
 } | null => {
@@ -105,6 +106,7 @@ const extractCardData = (
       productPrice: formatResourcePrice(course),
       enrollmentModes: bestRun?.enrollment_modes,
       hasCertificate: Boolean(course.certificate_type),
+      certificateTypeName: course.certificate_type || undefined,
       startDate,
       startLabel:
         course.availability === "anytime" || !startDate
@@ -123,6 +125,7 @@ const extractCardData = (
     productPrice: formatResourcePrice(program),
     enrollmentModes: program.enrollment_modes,
     hasCertificate: Boolean(program.certificate_type),
+    certificateTypeName: program.certificate_type || undefined,
     startDate: null,
     startLabel: undefined,
   }
@@ -186,6 +189,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       coursePrice={coursePrice}
       certificatePrice={certificatePrice}
       hasCertificate={data.hasCertificate}
+      certificateTypeName={data.certificateTypeName}
       startLabel={data.startLabel}
       startDate={data.startDate}
       ariaLabel={`${data.displayType}: ${data.title}`}
