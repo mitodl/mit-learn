@@ -3,14 +3,13 @@
 import React from "react"
 import { BaseLearningResourceCard } from "ol-components"
 import type {
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   EnrollmentMode,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
-import { formatPrice, getEnrollmentType } from "@/common/mitxonline"
+import { formatPrice, getBestRun, getEnrollmentType } from "@/common/mitxonline"
 
 type CommonCardProps = {
   href: string
@@ -34,20 +33,6 @@ type MitxOnlineProgramCardProps = CommonCardProps & {
 type MitxOnlineResourceCardProps =
   | MitxOnlineCourseCardProps
   | MitxOnlineProgramCardProps
-
-const getBestRunForCourse = (
-  course: CourseWithCourseRunsSerializerV2,
-): CourseRunV2 | undefined => {
-  const { courseruns } = course
-  if (!courseruns || courseruns.length === 0) {
-    return undefined
-  }
-  if (course.next_run_id) {
-    const nextRun = courseruns.find((run) => run.id === course.next_run_id)
-    if (nextRun) return nextRun
-  }
-  return courseruns[0]
-}
 
 const formatResourcePrice = (
   resource: { min_price?: number | null; max_price?: number | null },
@@ -98,7 +83,7 @@ const extractCardData = (
   if (props.resourceType === "course") {
     const course = props.resource
     if (!course) return null
-    const bestRun = getBestRunForCourse(course)
+    const bestRun = getBestRun(course)
     const startDate =
       course.availability === "anytime" ? (
         "Anytime"

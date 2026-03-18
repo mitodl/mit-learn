@@ -1,6 +1,7 @@
 import type {
   BaseProduct,
   CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
   EnrollmentMode,
   ProductFlexiblePrice,
   V2ProgramRequirement,
@@ -153,6 +154,27 @@ const getIdsFromReqTree = (
   return { courseIds, programIds }
 }
 
+/**
+ * Returns the best run for a course.
+ *
+ * Prefers the run matching `next_run_id` among candidates; falls back to the
+ * first candidate.
+ *
+ * @param opts.enrollableOnly - only consider runs where `is_enrollable` is true
+ *   (use this on the dashboard where enrollment is the goal)
+ * @param opts.contractId - only consider runs matching this B2B contract
+ */
+const getBestRun = (
+  course: CourseWithCourseRunsSerializerV2,
+  opts?: { contractId?: number; enrollableOnly?: boolean },
+): CourseRunV2 | undefined => {
+  const { contractId, enrollableOnly = false } = opts ?? {}
+  let runs = course.courseruns ?? []
+  if (enrollableOnly) runs = runs.filter((run) => run.is_enrollable)
+  if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
+  return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
+}
+
 export {
   formatPrice,
   priceWithDiscount,
@@ -161,5 +183,6 @@ export {
   mitxonlineUrl,
   getEnrollmentType,
   getIdsFromReqTree,
+  getBestRun,
 }
 export type { PriceWithDiscount, EnrollmentType }

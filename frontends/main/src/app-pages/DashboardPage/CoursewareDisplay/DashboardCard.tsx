@@ -644,7 +644,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const title = getTitle(resource)
   const courseRun =
     resource.type === DashboardType.Course
-      ? getBestRun(resource.data, contractId)
+      ? getBestRun(resource.data, { enrollableOnly: true, contractId })
       : undefined
   const enrollmentRun =
     resource.type === DashboardType.CourseRunEnrollment

@@ -171,7 +171,7 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course, contractId)
+      const result = getBestRun(course, { contractId })
       expect(result).toEqual(run2)
     })
 
@@ -192,7 +192,7 @@ describe("helpers", () => {
         next_run_id: 2,
       })
 
-      const result = getBestRun(course, contractId)
+      const result = getBestRun(course, { contractId })
       expect(result).toEqual(run2)
     })
 
@@ -207,11 +207,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course, 100)
+      const result = getBestRun(course, { contractId: 100 })
       expect(result).toBeUndefined()
     })
 
-    test("returns undefined when no runs are enrollable", () => {
+    test("returns undefined when no runs are enrollable (enrollableOnly)", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: false,
@@ -229,11 +229,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toBeUndefined()
     })
 
-    test("skips unenrollable runs when selecting default", () => {
+    test("skips unenrollable runs when enrollableOnly", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: false,
@@ -247,11 +247,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toEqual(run2)
     })
 
-    test("prefers enrollable runs when others are not", () => {
+    test("prefers enrollable runs when enrollableOnly", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: true,
@@ -265,7 +265,7 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toEqual(run1)
     })
   })
