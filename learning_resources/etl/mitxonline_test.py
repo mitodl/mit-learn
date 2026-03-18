@@ -28,6 +28,7 @@ from learning_resources.etl.mitxonline import (
     _transform_run,
     extract_courses,
     extract_programs,
+    get_course_ids_from_req_tree,
     is_fully_enrollable,
     parse_certificate_type,
     parse_page_attribute,
@@ -113,6 +114,152 @@ def test_mitxonline_extract_courses_disabled(settings):
     """Verify an empty list is returned if the API URL isn't set"""
     settings.MITX_ONLINE_COURSES_API_URL = None
     assert extract_courses() == []
+
+
+@pytest.mark.parametrize(
+    ("req_tree", "expected_ids"),
+    [
+        ([], []),
+        (
+            [
+                {
+                    "data": {"node_type": "program_root", "course": None},
+                    "id": 1,
+                    "children": [
+                        {
+                            "data": {
+                                "node_type": "operator",
+                                "operator": "all_of",
+                                "course": None,
+                                "elective_flag": False,
+                            },
+                            "id": 2,
+                            "children": [
+                                {
+                                    "data": {"node_type": "course", "course": 10},
+                                    "id": 3,
+                                },
+                                {
+                                    "data": {"node_type": "course", "course": 20},
+                                    "id": 4,
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+            [10, 20],
+        ),
+        (
+            [
+                {
+                    "data": {"node_type": "program_root", "course": None},
+                    "id": 1,
+                    "children": [
+                        {
+                            "data": {
+                                "node_type": "operator",
+                                "operator": "all_of",
+                                "course": None,
+                                "elective_flag": False,
+                                "title": "Required Courses",
+                            },
+                            "id": 2,
+                            "children": [
+                                {
+                                    "data": {"node_type": "course", "course": 10},
+                                    "id": 3,
+                                },
+                            ],
+                        },
+                        {
+                            "data": {
+                                "node_type": "operator",
+                                "operator": "min_number_of",
+                                "operator_value": "2",
+                                "course": None,
+                                "elective_flag": True,
+                                "title": "Elective Courses",
+                            },
+                            "id": 4,
+                            "children": [
+                                {
+                                    "data": {"node_type": "course", "course": 30},
+                                    "id": 5,
+                                },
+                                {
+                                    "data": {"node_type": "course", "course": 40},
+                                    "id": 6,
+                                },
+                                {
+                                    "data": {"node_type": "course", "course": 50},
+                                    "id": 7,
+                                },
+                            ],
+                        },
+                    ],
+                }
+            ],
+            [10, 30, 40, 50],
+        ),
+    ],
+    ids=["empty_tree", "required_only", "required_and_electives"],
+)
+def test_get_course_ids_from_req_tree(req_tree, expected_ids):
+    """Test that course IDs are correctly extracted from a req_tree"""
+    assert get_course_ids_from_req_tree(req_tree) == expected_ids
+
+
+def test_get_course_ids_from_req_tree_with_required_program():
+    """Test that required_program nodes are resolved via programs_by_id"""
+    programs_by_id = {
+        99: {
+            "id": 99,
+            "req_tree": [
+                {
+                    "data": {"node_type": "operator", "operator": "all_of"},
+                    "id": 200,
+                    "children": [
+                        {"data": {"node_type": "course", "course": 70}, "id": 201},
+                        {"data": {"node_type": "course", "course": 80}, "id": 202},
+                    ],
+                }
+            ],
+        }
+    }
+    req_tree = [
+        {
+            "data": {"node_type": "operator", "operator": "all_of"},
+            "id": 1,
+            "children": [
+                {"data": {"node_type": "course", "course": 10}, "id": 2},
+                {
+                    "data": {
+                        "node_type": "program",
+                        "required_program": 99,
+                        "course": None,
+                    },
+                    "id": 3,
+                },
+            ],
+        }
+    ]
+    assert get_course_ids_from_req_tree(req_tree, programs_by_id) == [10, 70, 80]
+
+
+def test_get_course_ids_from_req_tree_missing_program():
+    """Test that missing required_program references are gracefully skipped"""
+    req_tree = [
+        {
+            "data": {
+                "node_type": "program",
+                "required_program": 999,
+                "course": None,
+            },
+            "id": 1,
+        }
+    ]
+    assert get_course_ids_from_req_tree(req_tree, programs_by_id={}) == []
 
 
 def test_mitxonline_transform_programs(

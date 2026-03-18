@@ -371,6 +371,51 @@ def transform_courses(courses):
     ]
 
 
+def get_course_ids_from_req_tree(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None = None,
+) -> list[int]:
+    """
+    Extract all course IDs from a program's req_tree.
+
+    Handles both course nodes (node_type="course") and program nodes
+    (node_type="program" with required_program set). For program nodes,
+    the referenced program's own req_tree is recursed into using the
+    programs_by_id lookup.
+
+    Args:
+        nodes: list of req_tree node dicts
+        programs_by_id: optional mapping of program ID to program data,
+            used to resolve required_program references
+
+    Returns:
+        list of int: course IDs found in the tree
+    """
+    course_ids = []
+    for node in nodes:
+        data = node.get("data", {})
+        node_type = data.get("node_type")
+        if node_type == "course":
+            course_id = data.get("course")
+            if isinstance(course_id, int):
+                course_ids.append(course_id)
+        elif node_type == "program" and programs_by_id:
+            required_program_id = data.get("required_program")
+            if isinstance(required_program_id, int):
+                child_program = programs_by_id.get(required_program_id)
+                if child_program:
+                    course_ids.extend(
+                        get_course_ids_from_req_tree(
+                            child_program.get("req_tree", []),
+                            programs_by_id,
+                        )
+                    )
+        course_ids.extend(
+            get_course_ids_from_req_tree(node.get("children", []), programs_by_id)
+        )
+    return course_ids
+
+
 def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
@@ -401,11 +446,16 @@ def transform_programs(programs: list[dict]) -> list[dict]:
 
     """
     # normalize the MITx Online data
+    programs_by_id = {p["id"]: p for p in programs}
     for program in programs:
         courses = transform_courses(
             [
                 course
-                for course in _fetch_courses_by_ids(program["courses"])
+                for course in _fetch_courses_by_ids(
+                    get_course_ids_from_req_tree(
+                        program.get("req_tree", []), programs_by_id
+                    )
+                )
                 if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
             ]
         )
