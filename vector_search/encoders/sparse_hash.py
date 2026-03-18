@@ -9,7 +9,7 @@ class SparseHashEncoder(BaseEncoder):
     Sparse Hash Encoder
     """
 
-    def __init__(self, model_name=None):
+    def __init__(self, model_name="sklearn/hashing_vectorizer_sparse_model"):
         self.model_name = model_name
         self.vectorizer = HashingVectorizer(stop_words=["english"])
 
