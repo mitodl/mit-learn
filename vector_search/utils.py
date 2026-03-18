@@ -28,11 +28,9 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.features import is_enabled as posthog_feature_enabled
 from main.utils import checksum_for_content
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
-    POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -873,12 +871,14 @@ def vector_point_key(
         raise ValueError(msg)
 
 
-def vector_search(
+def vector_search(  # noqa: PLR0913
     query_string: str,
     params: dict,
     limit: int = 10,
     offset: int = 10,
     search_collection=RESOURCES_COLLECTION_NAME,
+    *,
+    hybrid_search: bool = False,
 ):
     """
     Perform a vector search given a query string
@@ -898,9 +898,7 @@ def vector_search(
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
-    hybrid_search_enabled = posthog_feature_enabled(
-        POSTHOG_FEATURE_HYBRID_VECTOR_SEARCH
-    )
+
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     prefetch_multiplier = 20
     prefetch_limit = (offset + limit) * prefetch_multiplier
@@ -914,7 +912,7 @@ def vector_search(
             "limit": limit,
         }
 
-        if hybrid_search_enabled:
+        if hybrid_search:
             search_params["prefetch"] = [
                 models.Prefetch(
                     query=models.SparseVector(**encoder_sparse.embed(query_string)),

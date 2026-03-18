@@ -160,6 +160,11 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Filter to learning resources where title is null/not null",
     )
+    hybrid_search = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Whether to use a hybrid search",
+    )
 
 
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
@@ -282,6 +287,11 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         default=None,
         allow_null=True,
         help_text="Filter to content files where title is null/not null",
+    )
+    hybrid_search = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Whether to use a hybrid search",
     )
 
 
