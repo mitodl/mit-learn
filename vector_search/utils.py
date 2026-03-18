@@ -915,7 +915,7 @@ def vector_search(  # noqa: PLR0913
         if hybrid_search:
             search_params["prefetch"] = [
                 models.Prefetch(
-                    query=models.SparseVector(**encoder_sparse.embed(query_string)),
+                    query=encoder_sparse.embed(query_string),
                     using=encoder_sparse.model_short_name(),
                     limit=prefetch_limit,
                 ),

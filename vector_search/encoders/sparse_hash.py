@@ -22,13 +22,15 @@ class SparseHashEncoder(BaseEncoder):
         }
 
     def embed_documents(self, documents):
-        return [models.SparseVector(**self.embed(doc)) for doc in documents]
+        return [self.embed(doc) for doc in documents]
 
     def embed(self, text):
         tfidf_matrix = self.vectorizer.transform([text])
         indices = tfidf_matrix.indices.tolist()
         values = tfidf_matrix.data.tolist()
-        return self.prune_sparse_vector({"indices": indices, "values": values})
+        return models.SparseVector(
+            **self.prune_sparse_vector({"indices": indices, "values": values})
+        )
 
     def dim(self):
         """
