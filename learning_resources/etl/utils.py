@@ -32,7 +32,6 @@ from django.utils.text import slugify
 from PIL import Image
 from pycountry import currencies
 from pypdf import PdfReader
-from pypdf.errors import FileNotDecryptedError
 from tika import parser as tika_parser
 
 from learning_resources.constants import (
@@ -578,12 +577,14 @@ def _should_use_ocr(file_extension: str, file_path: Path, use_ocr) -> bool:
     )
 
 
-def pdf_is_encrypted(pdf_path: Path) -> bool:
-    """Check if a PDF is encrypted."""
+def pdf_is_valid(pdf_path: Path) -> bool:
+    """Check if a PDF is valid."""
     try:
-        len(PdfReader(pdf_path).pages)
-    except FileNotDecryptedError:
-        return True
+        reader = PdfReader(pdf_path)
+        if len(reader.pages) > 0 and reader.pages[0].extract_text():
+            return True
+    except Exception as e:  # noqa: BLE001
+        log.warning("PDF validation error for %s: %s", pdf_path, e)
     return False
 
 
@@ -649,13 +650,8 @@ def _extract_content(  # noqa: PLR0913
     source_path = metadata.get("source_path")
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
-    if (
-        file_extension == ".pdf"
-        and file_path.exists()
-        and file_path.is_file()
-        and pdf_is_encrypted(file_path)
-    ):
-        log.exception("Skipping encrypted pdf %s", file_path)
+    if file_extension == ".pdf" and not pdf_is_valid(file_path):
+        log.exception("Skipping invalid pdf %s", file_path)
         return None
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
