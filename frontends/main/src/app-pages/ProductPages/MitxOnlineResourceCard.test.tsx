@@ -1,17 +1,13 @@
 import React from "react"
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import { factories } from "api/mitxonline-test-utils"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { ThemeProvider } from "ol-components"
+import { renderWithProviders } from "@/test-utils"
 import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
 
 const renderCard = (props: MitxOnlineResourceCardProps) =>
-  render(
-    <ThemeProvider>
-      <MitxOnlineResourceCard {...props} />
-    </ThemeProvider>,
-  )
+  renderWithProviders(<MitxOnlineResourceCard {...props} />)
 
 const freeMode = factories.courses.enrollmentMode({ requires_payment: false })
 const paidMode = factories.courses.enrollmentMode({ requires_payment: true })
@@ -93,7 +89,9 @@ describe("MitxOnlineResourceCard", () => {
       const program = factories.programs.program({
         enrollment_modes: [freeMode],
       })
-      const { container } = renderCard({
+      const {
+        view: { container },
+      } = renderCard({
         resource: program,
         resourceType: "program",
         href: "/test",
@@ -108,7 +106,9 @@ describe("MitxOnlineResourceCard", () => {
         enrollment_modes: [paidMode],
         products: [factories.courses.product({ price: "500.00" })],
       })
-      const { container } = renderCard({
+      const {
+        view: { container },
+      } = renderCard({
         resource: program,
         resourceType: "program",
         href: "/test",
@@ -122,7 +122,9 @@ describe("MitxOnlineResourceCard", () => {
         enrollment_modes: [freeMode, paidMode],
         products: [factories.courses.product({ price: "500.00" })],
       })
-      const { container } = renderCard({
+      const {
+        view: { container },
+      } = renderCard({
         resource: program,
         resourceType: "program",
         href: "/test",
@@ -137,7 +139,9 @@ describe("MitxOnlineResourceCard", () => {
         enrollment_modes: [],
         products: [factories.courses.product({ price: "500.00" })],
       })
-      const { container } = renderCard({
+      const {
+        view: { container },
+      } = renderCard({
         resource: program,
         resourceType: "program",
         href: "/test",
