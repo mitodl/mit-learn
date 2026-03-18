@@ -1,4 +1,4 @@
-import React from "react"
+import React, { ComponentProps } from "react"
 import {
   styled,
   Link,
@@ -50,8 +50,6 @@ import {
   DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-
-type ButtonVariant = React.ComponentProps<typeof Button>["variant"]
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -259,19 +257,6 @@ const getTitle = (resource: DashboardResource): string => {
   return resource.data.program.title
 }
 
-const getRun = (
-  resource: DashboardResource,
-  contractId?: number,
-): CourseRunV2 | CourseRunEnrollmentV3["run"] | undefined => {
-  if (resource.type === DashboardType.Course) {
-    return getBestRun(resource.data, contractId)
-  }
-  if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run
-  }
-  return undefined
-}
-
 const getDashboardEnrollmentStatus = (
   resource: DashboardResource,
 ): EnrollmentStatus => {
@@ -393,13 +378,13 @@ type CoursewareButtonProps = {
   onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
 
-type CoursewareText = {
+type CoursewareButtonStyleProps = {
   text: string
   endIcon: React.ReactNode
-  variant: ButtonVariant
+  variant: ComponentProps<typeof Button>["variant"]
 }
 
-const getCoursewareTextAndIcon = ({
+const getCoursewareButtonStyle = ({
   endDate,
   enrollmentStatus,
   isProgram,
@@ -407,26 +392,21 @@ const getCoursewareTextAndIcon = ({
   endDate?: string | null
   enrollmentStatus: EnrollmentStatus
   isProgram?: boolean
-}): CoursewareText => {
+}): CoursewareButtonStyleProps => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: "Start", endIcon: null, variant: "primary" }
+    return { text: "Start", endIcon: null, variant: "secondary" }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: "View", endIcon: null, variant: "primary" }
+    return { text: "View", endIcon: null, variant: "text" }
   }
   // Programs show "View" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: "View", endIcon: null, variant: "primary" }
+    return { text: "View", endIcon: null, variant: "text" }
   }
-
-  return {
-    text: "Continue",
-    endIcon: <RiArrowRightLine />,
-    variant: "primary",
-  }
+  return { text: "Continue", endIcon: <RiArrowRightLine />, variant: "primary" }
 }
 
 const CoursewareButton = styled(
@@ -442,7 +422,7 @@ const CoursewareButton = styled(
     isPending,
     ...others
   }: CoursewareButtonProps) => {
-    const coursewareText = getCoursewareTextAndIcon({
+    const coursewareText = getCoursewareButtonStyle({
       endDate,
       enrollmentStatus,
       isProgram,
@@ -760,7 +740,8 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   const courseRun = isCourse ? getBestRun(resource.data, contractId) : undefined
   const enrollmentRun = isCourseRunEnrollment ? resource.data.run : undefined
 
-  const coursewareUrl = courseRun?.courseware_url ?? enrollmentRun?.courseware_url
+  const coursewareUrl =
+    courseRun?.courseware_url ?? enrollmentRun?.courseware_url
   const b2bContractId =
     courseRun?.b2b_contract ??
     (isCourseRunEnrollment ? resource.data.b2b_contract_id : undefined) ??
@@ -785,7 +766,12 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   const canUpgrade =
     isCourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-    (enrollmentRun?.is_upgradable ?? false)
+    (enrollmentRun?.is_upgradable ?? false) &&
+    (enrollmentRun?.upgrade_product_is_active ?? false)
+
+  const upgradeProductPrice = enrollmentRun?.upgrade_product_price
+
+  const upgradeProductId = enrollmentRun?.upgrade_product_id
 
   const handleEnrollmentClick = React.useCallback(() => {
     if (!isCourse) return
@@ -862,8 +848,8 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
           data-testid="upgrade-root"
           canUpgrade={canUpgrade}
           certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
-          certificateUpgradePrice={undefined}
-          productId={undefined}
+          certificateUpgradePrice={upgradeProductPrice}
+          productId={upgradeProductId}
           onError={() => {
             onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
@@ -898,7 +884,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
 
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : courseRun?.start_date ?? enrollmentRun?.start_date ? (
+  ) : (courseRun?.start_date ?? enrollmentRun?.start_date) ? (
     <CourseStartCountdown
       startDate={(courseRun?.start_date ?? enrollmentRun?.start_date) as string}
     />
@@ -1018,7 +1004,6 @@ const DashboardProgramCard: React.FC<DashboardProgramCardProps> = ({
     resource,
     useProductPages,
     contextMenuItems,
-    true,
   )
 
   const contextMenu = isLoading ? (
