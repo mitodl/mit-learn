@@ -154,6 +154,17 @@ const TitleText = styled.div<{ clickable?: boolean }>(
   }),
 )
 
+const HorizontalSeparator = styled.div(({ theme }) => ({
+  width: "1px",
+  height: "12px",
+  backgroundColor: theme.custom.colors.lightGray2,
+}))
+
+const CoursewareActionColumn = styled(Stack)({
+  width: "124px",
+  flexShrink: 0,
+})
+
 const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
 }>(({ theme, status }) => [
@@ -475,12 +486,13 @@ const SubtitleLinkRoot = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: "8px",
   flex: 1,
-  color: theme.custom.colors.darkGray2,
+  color: theme.custom.colors.silverGrayDark,
   ...theme.typography.subtitle3,
 }))
+
 const SubtitleLink = styled(NextLink)(({ theme }) => ({
   ...theme.typography.subtitle3,
-  color: theme.custom.colors.mitRed,
+  color: theme.custom.colors.silverGrayDark,
   display: "flex",
   alignItems: "center",
   gap: "4px",
@@ -548,17 +560,13 @@ const UpgradeBanner: React.FC<
   )
 }
 
-const CountdownRoot = styled.div(({ theme }) => ({
-  width: "100%",
-  paddingRight: "32px",
+const CountdownRoot = styled.div({
+  width: "124px",
   display: "flex",
   justifyContent: "center",
-  alignSelf: "end",
-  [theme.breakpoints.down("md")]: {
-    marginRight: "0px",
-    justifyContent: "flex-start",
-  },
-}))
+  whiteSpace: "nowrap",
+})
+
 const CourseStartCountdown: React.FC<{
   startDate: string
   className?: string
@@ -817,55 +825,70 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
           {title}
         </TitleText>
       )}
-      {certificateLink ? (
-        <SubtitleLink href={certificateLink}>
-          <RiAwardLine size="16px" />
-          View Certificate
-        </SubtitleLink>
-      ) : null}
-      {isCourseRunEnrollment &&
-      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
-      offerUpgrade ? (
-        <UpgradeBanner
-          data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
-          certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
-          certificateUpgradePrice={upgradeProductPrice}
-          productId={upgradeProductId}
-          onError={() => {
-            onUpgradeError?.(
-              "There was a problem adding the certificate to your cart.",
-            )
-          }}
-        />
-      ) : null}
     </>
   )
+
+  const showUpgradeLink =
+    isCourseRunEnrollment &&
+    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    offerUpgrade
+  const showCertificateSection = certificateLink || showUpgradeLink
+  const startDate = courseRun?.start_date ?? enrollmentRun?.start_date
 
   const buttonSection = isLoading ? (
     <Skeleton variant="rectangular" width={120} height={32} />
   ) : (
-    <>
-      <CoursewareButton
-        data-testid="courseware-button"
-        startDate={courseRun?.start_date ?? enrollmentRun?.start_date}
-        enrollmentStatus={enrollmentStatus}
-        href={buttonHref ?? coursewareUrl}
-        endDate={courseRun?.end_date ?? enrollmentRun?.end_date}
-        isProgram={false}
-        disabled={disableEnrollment}
-        isPending={enrollment.isPending}
-        onClick={coursewareButtonClick}
-      />
-    </>
+    <Stack direction="column" gap="4px" alignItems="stretch">
+      <Stack direction="row" gap="8px" alignItems="center">
+        {certificateLink ? (
+          <SubtitleLink href={certificateLink}>
+            <RiAwardLine size="16px" />
+            Certificate
+          </SubtitleLink>
+        ) : null}
+        {showUpgradeLink ? (
+          <UpgradeBanner
+            data-testid="upgrade-root"
+            canUpgrade={canUpgrade}
+            certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
+            certificateUpgradePrice={upgradeProductPrice}
+            productId={upgradeProductId}
+            onError={() => {
+              onUpgradeError?.(
+                "There was a problem adding the certificate to your cart.",
+              )
+            }}
+          />
+        ) : null}
+        {showCertificateSection ? <HorizontalSeparator /> : null}
+        <CoursewareActionColumn direction="row" justifyContent="center">
+          <CoursewareButton
+            data-testid="courseware-button"
+            startDate={startDate}
+            enrollmentStatus={enrollmentStatus}
+            href={buttonHref ?? coursewareUrl}
+            endDate={courseRun?.end_date ?? enrollmentRun?.end_date}
+            isProgram={false}
+            disabled={disableEnrollment}
+            isPending={enrollment.isPending}
+            onClick={coursewareButtonClick}
+          />
+        </CoursewareActionColumn>
+      </Stack>
+      {startDate ? (
+        <CoursewareActionColumn
+          direction="row"
+          justifyContent="center"
+          alignSelf="flex-end"
+        >
+          <CourseStartCountdown startDate={startDate} />
+        </CoursewareActionColumn>
+      ) : null}
+    </Stack>
   )
 
   const startDateSection = isLoading ? (
     <Skeleton variant="text" width={100} height={24} />
-  ) : (courseRun?.start_date ?? enrollmentRun?.start_date) ? (
-    <CourseStartCountdown
-      startDate={(courseRun?.start_date ?? enrollmentRun?.start_date) as string}
-    />
   ) : null
 
   const menuItems = getContextMenuItems(
