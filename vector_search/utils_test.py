@@ -1112,7 +1112,7 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     settings.QDRANT_SPARSE_ENCODER = (
         "vector_search.encoders.sparse_hash.SparseHashEncoder"
     )
-    settings.QDRANT_ENCODER = "vector_search.encoders.sparse_hash.SparseHashEncoder"
+
     vector_qdrant_client.cache_clear()
     sparse_encoder.cache_clear()
     dense_encoder.cache_clear()
