@@ -32,7 +32,7 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
-from vector_search.encoders.utils import dense_encoder
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
     _embed_course_metadata_as_contentfile,
@@ -1104,7 +1104,8 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     settings.QDRANT_SPARSE_ENCODER = (
         "vector_search.encoders.qdrant_cloud.QdrantCloudEncoder"
     )
-
+    sparse_encoder.cache_clear()
+    dense_encoder.cache_clear()
     vector_qdrant_client.cache_clear()
     client = vector_qdrant_client()
     assert client.cloud_inference is True
@@ -1113,5 +1114,7 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     )
     settings.QDRANT_ENCODER = "vector_search.encoders.sparse_hash.SparseHashEncoder"
     vector_qdrant_client.cache_clear()
+    sparse_encoder.cache_clear()
+    dense_encoder.cache_clear()
     client = vector_qdrant_client()
     assert getattr(client, "cloud_inference", None) is False
