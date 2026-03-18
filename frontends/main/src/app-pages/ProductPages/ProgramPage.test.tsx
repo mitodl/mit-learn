@@ -469,15 +469,13 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
     const section = await screen.findByRole("region", { name: "Courses" })
 
-    await waitFor(() => {
-      const link = within(section).getByRole("link", {
-        name: new RegExp(childPrograms[0].title),
-      })
-      expect(link).toHaveAttribute(
-        "href",
-        `/courses/p/${childPrograms[0].readable_id}`,
-      )
+    const link = await within(section).findByRole("link", {
+      name: new RegExp(childPrograms[0].title),
     })
+    expect(link).toHaveAttribute(
+      "href",
+      `/courses/p/${childPrograms[0].readable_id}`,
+    )
   })
 
   test("Links child program to /programs/ when display_mode is null", async () => {
@@ -495,15 +493,13 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
     const section = await screen.findByRole("region", { name: "Courses" })
 
-    await waitFor(() => {
-      const link = within(section).getByRole("link", {
-        name: new RegExp(childPrograms[0].title),
-      })
-      expect(link).toHaveAttribute(
-        "href",
-        `/programs/${childPrograms[0].readable_id}`,
-      )
+    const link = await within(section).findByRole("link", {
+      name: new RegExp(childPrograms[0].title),
     })
+    expect(link).toHaveAttribute(
+      "href",
+      `/programs/${childPrograms[0].readable_id}`,
+    )
   })
 
   // Interaction and active content are tested in InstructorsSection.test.tsx
