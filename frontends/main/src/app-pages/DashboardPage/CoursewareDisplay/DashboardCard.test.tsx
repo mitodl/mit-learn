@@ -15,7 +15,6 @@ import {
   DashboardType,
   getContextMenuItems,
 } from "./DashboardCard"
-import { dashboardCourse } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -30,12 +29,14 @@ const EnrollmentMode = {
 } as const
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
-const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
+const mitxOnlineCourse = mitxonline.factories.courses.course
+
+const pastDashboardCourse: typeof mitxOnlineCourse = (...overrides) => {
   const run = mitxonline.factories.courses.courseRun({
     start_date: moment().subtract(90, "days").toISOString(), // Started 90 days ago
     end_date: moment().subtract(30, "days").toISOString(), // Ended 30 days ago
   })
-  return dashboardCourse(
+  return mitxOnlineCourse(
     {
       courseruns: [run],
       next_run_id: run.id, // Ensure getBestRun uses this run
@@ -43,12 +44,12 @@ const pastDashboardCourse: typeof dashboardCourse = (...overrides) => {
     ...overrides,
   )
 }
-const currentDashboardCourse: typeof dashboardCourse = (...overrides) => {
+const currentDashboardCourse: typeof mitxOnlineCourse = (...overrides) => {
   const run = mitxonline.factories.courses.courseRun({
     start_date: moment().subtract(30, "days").toISOString(), // Started 30 days ago
     end_date: moment().add(30, "days").toISOString(), // Ends 30 days from now
   })
-  return dashboardCourse(
+  return mitxOnlineCourse(
     {
       courseruns: [run],
       next_run_id: run.id, // Ensure getBestRun uses this run
@@ -56,12 +57,12 @@ const currentDashboardCourse: typeof dashboardCourse = (...overrides) => {
     ...overrides,
   )
 }
-const futureDashboardCourse: typeof dashboardCourse = (...overrides) => {
+const futureDashboardCourse: typeof mitxOnlineCourse = (...overrides) => {
   const run = mitxonline.factories.courses.courseRun({
     start_date: moment().add(30, "days").toISOString(), // Starts 30 days from now
     end_date: moment().add(90, "days").toISOString(), // Ends 90 days from now
   })
-  return dashboardCourse(
+  return mitxOnlineCourse(
     {
       courseruns: [run],
       next_run_id: run.id, // Ensure getBestRun uses this run
@@ -96,7 +97,7 @@ describe.each([
     const courseRun = mitxonline.factories.courses.courseRun({
       courseware_url: coursewareUrl,
     })
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [courseRun],
       next_run_id: null, // Ensure getBestRun uses the single run
     })
@@ -123,7 +124,7 @@ describe.each([
 
   test("It shows course title as clickable text (not link) when not enrolled (non-B2B)", async () => {
     setupUserApis()
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [
         mitxonline.factories.courses.courseRun({
           b2b_contract: null,
@@ -150,7 +151,7 @@ describe.each([
     setupUserApis()
     const b2bContractId = faker.number.int()
     const coursewareUrl = faker.internet.url()
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [
         mitxonline.factories.courses.courseRun({
           b2b_contract: b2bContractId,
@@ -177,7 +178,7 @@ describe.each([
 
   test("Accepts a classname", () => {
     setupUserApis()
-    const course = dashboardCourse()
+    const course = mitxOnlineCourse()
     const TheComponent = faker.helpers.arrayElement([
       "li",
       "div",
@@ -246,7 +247,7 @@ describe.each([
 
   test("Courseware CTA is disabled when no enrollable runs exist", () => {
     setupUserApis()
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [
         mitxonline.factories.courses.courseRun({
           is_enrollable: false,
@@ -387,7 +388,7 @@ describe.each([
       expectation: { visible: false },
     },
   ])(
-    "Shows upgrade banner based on run.canUpgrade and not already upgraded (canUpgrade: $overrides.courseruns[0].is_upgradable)",
+    "Shows upgrade banner based on enrollment run upgradeability and active upgrade product",
     ({ enrollment, expectation }) => {
       setupUserApis()
       renderWithProviders(
@@ -719,7 +720,7 @@ describe.each([
       start_date: startDate,
       live: true,
     })
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [run],
       next_run_id: run.id, // Ensure getBestRun uses this run
     })
@@ -737,7 +738,7 @@ describe.each([
       setupUserApis()
       // Test with no enrollment, and with enrolled (no passing grade)
       const run = mitxonline.factories.courses.courseRun()
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id,
       })
@@ -810,7 +811,7 @@ describe.each([
     ({ enrollmentData, expectedLabel, hiddenImage }) => {
       setupUserApis()
       const run = mitxonline.factories.courses.courseRun()
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
@@ -864,7 +865,7 @@ describe.each([
     "getDefaultContextMenuItems returns correct items",
     async ({ contextMenuItems }) => {
       setupUserApis()
-      const course = dashboardCourse()
+      const course = mitxOnlineCourse()
       const run = course.courseruns[0]
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
@@ -931,7 +932,7 @@ describe.each([
     "Context menu button is not shown when enrollment status is not Completed or Enrolled",
     ({ enrollment, expectedVisible }) => {
       setupUserApis()
-      const course = dashboardCourse()
+      const course = mitxOnlineCourse()
       renderWithProviders(
         <DashboardCard
           resource={
@@ -978,7 +979,7 @@ describe.each([
         start_date: moment().subtract(30, "days").toISOString(),
         end_date: moment().add(30, "days").toISOString(),
       })
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
@@ -1014,7 +1015,7 @@ describe.each([
       start_date: faker.date.past().toISOString(),
       end_date: faker.date.past().toISOString(), // Course has ended
     })
-    const course = dashboardCourse({
+    const course = mitxOnlineCourse({
       courseruns: [run],
       next_run_id: run.id, // Ensure getBestRun uses this run
     })
@@ -1036,7 +1037,7 @@ describe.each([
 
   const setupEnrollmentApis = (opts: {
     user: ReturnType<typeof mitxUser>
-    course: ReturnType<typeof dashboardCourse>
+    course: ReturnType<typeof mitxOnlineCourse>
     run?: ReturnType<typeof mitxonline.factories.courses.courseRun>
   }) => {
     setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
@@ -1078,7 +1079,7 @@ describe.each([
         b2b_contract: b2bContractId,
         is_enrollable: true,
       })
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
@@ -1121,7 +1122,7 @@ describe.each([
         b2b_contract: b2bContractId,
         is_enrollable: true,
       })
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id, // Ensure getBestRun uses this run
       })
@@ -1159,7 +1160,7 @@ describe.each([
           b2b_contract: null, // Non-B2B course
           is_enrollable: true,
         })
-        const course = dashboardCourse({
+        const course = mitxOnlineCourse({
           courseruns: [run],
           next_run_id: run.id,
         })
@@ -1199,7 +1200,7 @@ describe.each([
           is_enrollable: true,
           courseware_url: faker.internet.url(),
         })
-        const course = dashboardCourse({
+        const course = mitxOnlineCourse({
           courseruns: [run],
           next_run_id: run.id,
         })
@@ -1254,7 +1255,7 @@ describe.each([
         b2b_contract: null,
         is_enrollable: true,
       })
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         courseruns: [run],
         next_run_id: run.id,
       })
@@ -1296,7 +1297,7 @@ describe.each([
         is_enrollable: true,
         title: "Spring 2026",
       })
-      const course = dashboardCourse({
+      const course = mitxOnlineCourse({
         title: "Test Course Title",
         courseruns: [run1, run2],
         next_run_id: run1.id,
@@ -1324,7 +1325,7 @@ describe.each([
   describe("Stacked Variant", () => {
     test("applies stacked variant styling", () => {
       setupUserApis()
-      const course = dashboardCourse()
+      const course = mitxOnlineCourse()
       renderWithProviders(
         <DashboardCard
           variant="stacked"
@@ -1343,17 +1344,17 @@ describe.each([
       const run2 = mitxonline.factories.courses.courseRun()
       const run3 = mitxonline.factories.courses.courseRun()
       const courses = [
-        dashboardCourse({
+        mitxOnlineCourse({
           title: "First Stacked Course",
           courseruns: [run1],
           next_run_id: run1.id,
         }),
-        dashboardCourse({
+        mitxOnlineCourse({
           title: "Second Stacked Course",
           courseruns: [run2],
           next_run_id: run2.id,
         }),
-        dashboardCourse({
+        mitxOnlineCourse({
           title: "Third Stacked Course",
           courseruns: [run3],
           next_run_id: run3.id,
@@ -1480,7 +1481,7 @@ describe.each([
         mockedUseFeatureFlagEnabled.mockReturnValue(useProductPages)
         setupUserApis()
 
-        const course = dashboardCourse({
+        const course = mitxOnlineCourse({
           include_in_learn_catalog: true,
         })
         const run = course.courseruns[0]
@@ -1643,18 +1644,19 @@ describe.each([
       },
     )
 
-    test("Context menu shows View Details regardless of learn catalog flag", async () => {
+    test("Context menu hides View Course Details for B2B contract enrollments", async () => {
       setupUserApis()
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
 
-      const course = dashboardCourse({
-        include_in_learn_catalog: false,
-        page: { page_url: faker.internet.url() },
+      const course = mitxOnlineCourse({
+        readable_id: "contract-course-readable-id",
       })
       const run = course.courseruns[0]
+      const b2bContractId = faker.number.int()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         grades: [mitxonline.factories.enrollment.grade({ passed: true })],
         enrollment_mode: EnrollmentMode.Verified,
+        b2b_contract_id: b2bContractId,
         run: {
           ...run,
           course: course,
@@ -1677,8 +1679,8 @@ describe.each([
       await user.click(contextMenuButton)
 
       expect(
-        screen.getByRole("menuitem", { name: "View Course Details" }),
-      ).toBeInTheDocument()
+        screen.queryByRole("menuitem", { name: "View Course Details" }),
+      ).not.toBeInTheDocument()
       expect(
         screen.getByRole("menuitem", { name: "Email Settings" }),
       ).toBeInTheDocument()

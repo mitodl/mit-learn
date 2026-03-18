@@ -177,6 +177,7 @@ const getContextMenuItems = (
   resource: DashboardResource,
   useProductPages: boolean,
   additionalItems: SimpleMenuItem[] = [],
+  hideDetailsUrl = false,
 ) => {
   const menuItems = []
   if (resource.type === DashboardType.ProgramEnrollment) {
@@ -188,7 +189,7 @@ const getContextMenuItems = (
         })
       : mitxonlineUrl(`/programs/${program.readable_id}`)
 
-    if (detailsUrl) {
+    if (!hideDetailsUrl && detailsUrl) {
       menuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-program-details",
@@ -204,7 +205,7 @@ const getContextMenuItems = (
 
     const courseMenuItems = []
 
-    if (detailsUrl) {
+    if (!hideDetailsUrl && detailsUrl) {
       courseMenuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-course-details",
@@ -663,9 +664,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const b2bContractId =
     courseRun?.b2b_contract ??
     (resource.type === DashboardType.CourseRunEnrollment
-      ? (resource.data.b2b_contract_id ?? undefined)
+      ? resource.data.b2b_contract_id
       : undefined) ??
     contractId
+  // TODO: Replace this inferred contract-page check once include_in_learn_catalog is available in v3.
+  const isContractPageResource = Boolean(b2bContractId)
 
   const hasEnrollableRuns = isCourse
     ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
@@ -685,7 +688,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     isCourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
     (enrollmentRun?.is_upgradable ?? false) &&
-    enrollmentRun?.upgrade_product_is_active === true
+    (enrollmentRun?.upgrade_product_is_active ?? false)
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
@@ -837,6 +840,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     resource,
     useProductPages ?? false,
     contextMenuItems,
+    isContractPageResource,
   )
 
   const contextMenu = isLoading ? (
