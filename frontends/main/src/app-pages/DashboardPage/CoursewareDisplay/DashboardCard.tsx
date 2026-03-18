@@ -6,16 +6,10 @@ import {
   SimpleMenuItem,
   Stack,
   Skeleton,
-  LoadingSpinner,
 } from "ol-components"
 import NextLink from "next/link"
 import { ActionButton, Button, ButtonLink } from "@mitodl/smoot-design"
-import {
-  RiArrowRightLine,
-  RiAddLine,
-  RiMore2Line,
-  RiAwardLine,
-} from "@remixicon/react"
+import { RiAddLine, RiMore2Line, RiAwardLine } from "@remixicon/react"
 import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -377,7 +371,6 @@ type CoursewareButtonProps = {
 
 type CoursewareButtonStyleProps = {
   text: string
-  endIcon: React.ReactNode
   variant: ComponentProps<typeof Button>["variant"]
 }
 
@@ -391,19 +384,19 @@ export const getCoursewareButtonStyle = ({
   isProgram?: boolean
 }): CoursewareButtonStyleProps => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: "Start", endIcon: null, variant: "secondary" }
+    return { text: "Start", variant: "secondary" }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: "View", endIcon: null, variant: "text" }
+    return { text: "View", variant: "text" }
   }
   // Programs show "View" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: "View", endIcon: null, variant: "text" }
+    return { text: "View", variant: "text" }
   }
-  return { text: "Continue", endIcon: <RiArrowRightLine />, variant: "primary" }
+  return { text: "Continue", variant: "primary" }
 }
 
 const CoursewareButton = styled(
@@ -433,7 +426,6 @@ const CoursewareButton = styled(
         <ButtonLink
           size="small"
           variant={coursewareText.variant}
-          endIcon={coursewareText.endIcon}
           href={href}
           className={className}
           {...others}
@@ -457,13 +449,6 @@ const CoursewareButton = styled(
         className={className}
         onClick={onClick}
         disabled={isDisabled}
-        endIcon={
-          isPending ? (
-            <LoadingSpinner color="inherit" loading={isPending} size={16} />
-          ) : (
-            coursewareText.endIcon
-          )
-        }
         {...others}
       >
         {coursewareText.text}
