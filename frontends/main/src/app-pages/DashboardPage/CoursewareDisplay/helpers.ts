@@ -1,5 +1,5 @@
 import {
-  CourseRunEnrollmentRequestV2,
+  CourseRunEnrollmentV3,
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -29,9 +29,9 @@ const getKey = ({ resourceType, id, runId }: KeyOpts) => {
 }
 
 const filterEnrollmentsByOrganization = (
-  enrollments: CourseRunEnrollmentRequestV2[],
+  enrollments: CourseRunEnrollmentV3[],
   organizationId: number,
-): CourseRunEnrollmentRequestV2[] => {
+): CourseRunEnrollmentV3[] => {
   return enrollments.filter(
     (enrollment) => enrollment.b2b_organization_id === organizationId,
   )
@@ -65,8 +65,8 @@ const getBestRun = (
  */
 const selectBestEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
-  enrollments: CourseRunEnrollmentRequestV2[],
-): CourseRunEnrollmentRequestV2 | null => {
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 | null => {
   const courseEnrollments = enrollments.filter((enrollment) =>
     course.courseruns.some((run) => run.id === enrollment.run.id),
   )
@@ -89,7 +89,7 @@ const selectBestEnrollment = (
 }
 
 const getEnrollmentStatus = (
-  enrollment: CourseRunEnrollmentRequestV2 | null,
+  enrollment: CourseRunEnrollmentV3 | null,
 ): EnrollmentStatus => {
   if (!enrollment) {
     return EnrollmentStatus.NotEnrolled
