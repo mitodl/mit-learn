@@ -33,6 +33,7 @@ def _use_test_qdrant_settings(settings, mocker):
     settings.LITELLM_API_BASE = "https://test/api/"
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 0
     settings.CONTENT_FILE_EMBEDDING_SEMANTIC_CHUNKING_ENABLED = False
+    settings.QDRANT_SPARSE_MODEL = "sklearn/hashing_vectorizer_sparse_model"
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch("vector_search.utils.SemanticChunker")
 
