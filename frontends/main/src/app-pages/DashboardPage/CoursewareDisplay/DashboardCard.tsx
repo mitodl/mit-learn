@@ -704,7 +704,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
-        programId: programEnrollment?.program.readable_id,
+        programCoursewareId: programEnrollment?.program.readable_id,
       })
     }
   }, [
