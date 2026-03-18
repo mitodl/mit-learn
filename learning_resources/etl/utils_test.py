@@ -964,10 +964,8 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     full_path = olx_path / source_rel_path
     full_path.parent.mkdir(parents=True, exist_ok=True)
     full_path.write_bytes(b"fake pdf content")
-    mock_response = None
-    mocker.patch(
+    tika_from_buffer_mock = mocker.patch(
         "learning_resources.etl.utils.tika_parser.from_buffer",
-        return_value=mock_response,
     )
 
     # Mock documents_from_olx to yield this file
@@ -1012,6 +1010,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
 
     assert len(results) == 0
     mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
+    tika_from_buffer_mock.assert_not_called()
 
 
 @pytest.mark.parametrize(
