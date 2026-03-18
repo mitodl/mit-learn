@@ -468,7 +468,6 @@ export const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               })}
               resource={resource}
               programEnrollment={programEnrollment}
-              showNotComplete={false}
               variant="stacked"
             />
           )

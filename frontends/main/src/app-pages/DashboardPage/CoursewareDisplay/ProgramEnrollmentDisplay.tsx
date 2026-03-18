@@ -313,7 +313,6 @@ export const ProgramEnrollmentDisplay: React.FC<
                       })}
                       resource={resource}
                       programEnrollment={programEnrollment}
-                      showNotComplete={false}
                     />
                   )
                 } else {
@@ -330,7 +329,6 @@ export const ProgramEnrollmentDisplay: React.FC<
                         id: programEnroll.program.id,
                       })}
                       resource={resource}
-                      showNotComplete={false}
                     />
                   )
                 }

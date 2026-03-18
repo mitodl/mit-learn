@@ -190,7 +190,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             key={getResourceKey(resource)}
             Component="li"
             resource={resource}
-            showNotComplete={false}
             isLoading={isLoading}
             onUpgradeError={onUpgradeError}
           />
@@ -205,7 +204,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
                   key={getResourceKey(resource)}
                   Component="li"
                   resource={resource}
-                  showNotComplete={false}
                   isLoading={isLoading}
                   onUpgradeError={onUpgradeError}
                 />
