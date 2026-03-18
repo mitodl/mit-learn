@@ -85,13 +85,14 @@ describe("MitxOnlineResourceCard", () => {
   })
 
   describe("enrollment-based pricing", () => {
-    test("shows course price from min_price when paid-only (course)", () => {
+    test("shows product price when paid-only (course)", () => {
       const course = factories.courses.course({
         min_price: 200,
         max_price: 200,
         courseruns: [
           factories.courses.courseRun({
             enrollment_modes: [paidMode],
+            products: [factories.courses.product({ price: "200.00" })],
           }),
         ],
       })
@@ -122,11 +123,12 @@ describe("MitxOnlineResourceCard", () => {
       expect(container.textContent).not.toContain("$")
     })
 
-    test("shows min/max price when paid-only", () => {
+    test("shows product price when paid-only (program)", () => {
       const program = factories.programs.program({
         enrollment_modes: [paidMode],
         min_price: 500,
         max_price: 500,
+        products: [factories.courses.product({ price: "500.00" })],
       })
       const {
         view: { container },
@@ -161,6 +163,7 @@ describe("MitxOnlineResourceCard", () => {
         enrollment_modes: [freeMode, paidMode],
         min_price: 500,
         max_price: 500,
+        products: [factories.courses.product({ price: "500.00" })],
       })
       const {
         view: { container },
