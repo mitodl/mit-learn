@@ -578,25 +578,19 @@ def _should_use_ocr(file_extension: str, file_path: Path, use_ocr) -> bool:
     )
 
 
-def pdf_is_encrypted(pdf_path: Path) -> bool:
-    """Check if a PDF is encrypted."""
-    try:
-        len(PdfReader(pdf_path).pages)
-    except FileNotDecryptedError:
-        return True
-    return False
-
-
 def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
     """Extract content from PDF using OCR. Returns None if skipped."""
-
-    page_count = len(PdfReader(file_path).pages)
-    if page_count > settings.OCR_PDF_MAX_PAGE_THRESHOLD and not is_tutor_problem:
+    try:
+        page_count = len(PdfReader(file_path).pages)
+        if page_count > settings.OCR_PDF_MAX_PAGE_THRESHOLD and not is_tutor_problem:
+            return None
+        return {
+            "content": _pdf_to_markdown(file_path),
+            "content_title": "",
+        }
+    except FileNotDecryptedError:
+        log.exception("Skipping encrypted pdf %s", file_path)
         return None
-    return {
-        "content": _pdf_to_markdown(file_path),
-        "content_title": "",
-    }
 
 
 def _extract_content_with_tika(
@@ -649,9 +643,7 @@ def _extract_content(  # noqa: PLR0913
     source_path = metadata.get("source_path")
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
-    if file_extension == ".pdf" and pdf_is_encrypted(file_path):
-        log.exception("Skipping encrypted pdf %s", file_path)
-        return None
+
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
