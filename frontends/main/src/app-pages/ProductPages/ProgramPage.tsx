@@ -10,12 +10,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import {
-  HeadingIds,
-  parseReqTree,
-  getRequirementItemNoun,
-  RequirementData,
-} from "./util"
+import { HeadingIds, parseReqTree, RequirementData } from "./util"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
@@ -82,10 +77,11 @@ type RequirementsSectionProps = {
   isLoading?: boolean
 }
 
-const getCompletionText = (
-  parsedReqs: RequirementData[],
-  programsById: Record<number, V2ProgramDetail>,
-) => {
+// Always say "courses" in completion text. Correctly classifying child programs
+// by display_mode would require the child programs query to have resolved, making
+// the text flicker. In practice, child programs with display_mode="course" should
+// count as courses anyway.
+const getCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
   let electiveCount = 0
   parsedReqs.forEach((req) => {
@@ -95,17 +91,14 @@ const getCompletionText = (
       requiredCount += req.requiredCount
     }
   })
-  const allItems = parsedReqs.flatMap((req) => req.items)
-  const noun = getRequirementItemNoun(allItems, programsById)
-  const p = (count: number) => pluralize(noun.singular, count, noun.plural)
   if (requiredCount && electiveCount) {
-    return `To complete this program, you must take ${requiredCount} required ${p(requiredCount)} and ${electiveCount} elective ${p(electiveCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
   }
   if (requiredCount) {
-    return `To complete this program, you must take ${requiredCount} required ${p(requiredCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)}.`
   }
   if (electiveCount) {
-    return `To complete this program, you must take ${electiveCount} ${p(electiveCount)}.`
+    return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
   }
   return ""
 }
@@ -143,7 +136,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           Courses
         </Typography>
         <Typography variant="body1" component="p">
-          {getCompletionText(parsedReqs, programsById)}
+          {getCompletionText(parsedReqs)}
         </Typography>
       </div>
       <Stack gap={{ xs: "32px", sm: "56px" }}>

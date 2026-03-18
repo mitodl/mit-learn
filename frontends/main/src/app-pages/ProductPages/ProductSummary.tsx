@@ -17,7 +17,7 @@ import type {
   CourseRunV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { HeadingIds, parseReqTree, getRequirementItemNoun } from "./util"
+import { HeadingIds, parseReqTree } from "./util"
 import {
   canPurchaseRun,
   formatPrice,
@@ -662,14 +662,10 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   )
   if (totalRequired === 0) return null
 
-  const allItems = parsedReqs.flatMap((req) => req.items)
-  const rawNoun = getRequirementItemNoun(allItems, {})
-  const capitalize = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
-  const noun = {
-    singular: capitalize(rawNoun.singular),
-    plural: capitalize(rawNoun.plural),
-  }
-
+  // Always say "Courses" here. Correctly classifying child programs by
+  // display_mode would require fetching child program details, which this
+  // component doesn't have access to. In practice, child programs with
+  // display_mode="course" should count as courses anyway.
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
@@ -679,7 +675,7 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
       <InfoRowInner>
         <ResponsiveLink color="black" href={`#${HeadingIds.Requirements}`}>
           <InfoLabel underline>
-            {`${totalRequired} ${pluralize(noun.singular, totalRequired, noun.plural)}`}
+            {`${totalRequired} ${pluralize("Course", totalRequired)}`}
           </InfoLabel>{" "}
           to complete program
         </ResponsiveLink>

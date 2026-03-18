@@ -503,46 +503,6 @@ describe("ProgramPage", () => {
     })
   })
 
-  test("Completion text uses 'programs' when only program children exist", async () => {
-    const reqTree = new RequirementTreeBuilder()
-    const op = reqTree.addOperator({
-      operator: "all_of",
-      title: "Requirements",
-    })
-    op.addProgram()
-    op.addProgram()
-
-    const program = makeProgram({ req_tree: reqTree.serialize() })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-
-    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-    const section = await screen.findByRole("region", { name: "Courses" })
-    await waitFor(() => {
-      within(section).getByText(/2 required programs/)
-    })
-  })
-
-  test("Completion text uses 'courses/programs' when mixed", async () => {
-    const reqTree = new RequirementTreeBuilder()
-    const op = reqTree.addOperator({
-      operator: "all_of",
-      title: "Requirements",
-    })
-    op.addCourse()
-    op.addProgram()
-
-    const program = makeProgram({ req_tree: reqTree.serialize() })
-    const page = makePage({ program_details: program })
-    setupApis({ program, page })
-
-    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-    const section = await screen.findByRole("region", { name: "Courses" })
-    await waitFor(() => {
-      within(section).getByText(/2 required courses\/programs/)
-    })
-  })
-
   // Interaction and active content are tested in InstructorsSection.test.tsx
   test("Instructors section has expected content", async () => {
     const program = makeProgram({ ...makeReqs() })

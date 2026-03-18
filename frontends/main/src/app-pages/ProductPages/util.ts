@@ -1,5 +1,5 @@
 import type { V2Program } from "@mitodl/mitxonline-api-axios/v2"
-import { DisplayModeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
 enum HeadingIds {
   About = "about",
@@ -71,35 +71,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
     })
 }
 
-/**
- * Determine the noun to use for requirement items.
- * Programs with display_mode="course" count as courses.
- */
-const getRequirementItemNoun = (
-  items: RequirementItem[],
-  programsById: Record<number, { display_mode?: string | null }>,
-): { singular: string; plural: string } => {
-  let hasCourse = false
-  let hasProgram = false
-  for (const item of items) {
-    if (item.type === "course") {
-      hasCourse = true
-    } else {
-      const prog = programsById[item.id]
-      if (prog?.display_mode === DisplayModeEnum.Course) {
-        hasCourse = true
-      } else {
-        hasProgram = true
-      }
-    }
-  }
-  if (hasCourse && hasProgram)
-    return { singular: "course/program", plural: "courses/programs" }
-  if (hasProgram) return { singular: "program", plural: "programs" }
-  return { singular: "course", plural: "courses" }
-}
-
 type ProductNoun = "Course" | "Program"
 
-export { HeadingIds, parseReqTree, getRequirementItemNoun }
+export { HeadingIds, parseReqTree }
 export type { ProductNoun, RequirementData, RequirementItem }
