@@ -15,7 +15,7 @@ import { Link } from "../Link/Link"
 import { default as NextImage, ImageProps as NextImageProps } from "next/image"
 import { truncateText } from "../TruncateText/TruncateText"
 
-export type Size = "small" | "medium"
+export type Size = "small" | "compact" | "medium"
 
 type LinkableProps = {
   href?: string
@@ -76,6 +76,7 @@ export const BaseContainer = styled.div<{ display?: CSSProperties["display"] }>(
 )
 const CONTAINER_WIDTHS: Record<Size, number> = {
   small: 192,
+  compact: 235,
   medium: 300,
 }
 const Container = styled(BaseContainer)<{ size?: Size }>(({ size }) => [

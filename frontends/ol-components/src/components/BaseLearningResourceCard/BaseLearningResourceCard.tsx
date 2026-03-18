@@ -36,6 +36,7 @@ const Value = styled.span<{ size?: Size }>(({ theme, size }) => [
 const getImageDimensions = (size: Size, isMedia: boolean) => {
   const dimensions = {
     small: { width: 190, height: isMedia ? 190 : 120 },
+    compact: { width: 235, height: isMedia ? 235 : 170 },
     medium: { width: 298, height: isMedia ? 298 : 170 },
   }
   return dimensions[size]
@@ -91,6 +92,7 @@ interface BaseLearningResourceCardProps {
   // Display data
   imageSrc?: string
   imageAlt?: string
+  imageHeight?: number
   title?: string
   resourceType?: string
   coursePrice?: string | null
@@ -281,6 +283,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   headingLevel = 6,
   imageSrc,
   imageAlt = "",
+  imageHeight,
   title,
   resourceType,
   coursePrice,
@@ -583,6 +586,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           src={imageSrc}
           alt={imageAlt}
           {...getImageDimensions(size, isMedia)}
+          {...(imageHeight !== undefined ? { height: imageHeight } : {})}
         />
       )}
       <Card.Info>

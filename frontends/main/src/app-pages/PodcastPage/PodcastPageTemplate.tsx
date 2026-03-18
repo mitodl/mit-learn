@@ -168,7 +168,7 @@ const MobilePodcastList = styled.div(({ theme }) => ({
 
 const PodcastsGrid = styled.div(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(6, 1fr)",
+  gridTemplateColumns: "repeat(5, 1fr)",
   gap: "24px",
   [theme.breakpoints.down("lg")]: {
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -283,13 +283,14 @@ const PodcastPageTemplate: React.FC<PodcastPageTemplateProps> = ({
                   <LearningResourceCard
                     key={resource.id}
                     resource={resource}
+                    imageHeight={223}
                     footerLabel={
                       resource.resource_type === ResourceTypeEnum.Podcast
                         ? `${resource.podcast?.episode_count} Episodes`
                         : undefined
                     }
                     parentHeadingEl="h4"
-                    size="small"
+                    size="compact"
                   />
                 ))}
               </PodcastsGrid>

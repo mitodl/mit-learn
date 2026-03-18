@@ -27,6 +27,7 @@ interface LearningResourceCardProps {
   className?: string
   size?: Size
   isMedia?: boolean
+  imageHeight?: number
   href?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
@@ -45,6 +46,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   className,
   size = "medium",
   isMedia = false,
+  imageHeight,
   href,
   onAddToLearningPathClick,
   onAddToUserListClick,
@@ -153,6 +155,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       headingLevel={headingLevel}
       imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
       imageAlt={resource.image?.alt ?? ""}
+      imageHeight={imageHeight}
       title={resource.title}
       resourceType={readableType}
       coursePrice={prices.course.display}
