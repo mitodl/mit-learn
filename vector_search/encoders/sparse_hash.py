@@ -16,9 +16,9 @@ class SparseHashEncoder(BaseEncoder):
     def prune_sparse_vector(self, vec, threshold=0.1):
         return {
             "indices": [
-                i for i, v in zip(vec["indices"], vec["values"]) if v > threshold
+                i for i, v in zip(vec["indices"], vec["values"]) if abs(v) > threshold
             ],
-            "values": [v for v in vec["values"] if v > threshold],
+            "values": [v for v in vec["values"] if abs(v) > threshold],
         }
 
     def embed_documents(self, documents):
