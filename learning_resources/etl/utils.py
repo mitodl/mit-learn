@@ -651,7 +651,7 @@ def _extract_content(  # noqa: PLR0913
     source_path = metadata.get("source_path")
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
-    if file_extension == ".pdf" and not pdf_is_valid(file_path):
+    if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
         log.exception("Skipping invalid pdf %s", file_path)
         return None
     if _should_use_ocr(
