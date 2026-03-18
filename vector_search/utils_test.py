@@ -1118,3 +1118,107 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     dense_encoder.cache_clear()
     client = vector_qdrant_client()
     assert getattr(client, "cloud_inference", None) is False
+
+
+def test_vector_search_hybrid(mocker):
+    """
+    Test that vector_search with hybrid_search=True searches using sparse and dense vectors
+    """
+    mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
+    mock_dense_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_sparse_encoder = mocker.patch("vector_search.utils.sparse_encoder")()
+
+    mock_dense_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_dense_encoder.model_short_name.return_value = "dense-test-encoder"
+
+    # Sparse encoder expects dict like {"indices": [...], "values": [...]} for SparseVector kwargs
+    mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
+    mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
+
+    mocker.patch("vector_search.utils._resource_vector_hits", return_value=[])
+
+    mock_search_result = mocker.MagicMock()
+    mock_search_result.points = []
+    mock_qdrant.query_points.return_value = mock_search_result
+    mock_qdrant.count.return_value = models.CountResult(count=0)
+
+    from vector_search.utils import RESOURCES_COLLECTION_NAME, vector_search
+
+    vector_search(
+        "test hybrid query",
+        {},
+        search_collection=RESOURCES_COLLECTION_NAME,
+        hybrid_search=True,
+    )
+
+    mock_qdrant.query_points.assert_called_once()
+    call_args = mock_qdrant.query_points.call_args.kwargs
+
+    assert isinstance(call_args["query"], models.FusionQuery)
+    assert call_args["query"].fusion == models.Fusion.RRF
+
+    prefetches = call_args["prefetch"]
+    assert len(prefetches) == 2
+
+    sparse_prefetch = prefetches[0]
+    dense_prefetch = prefetches[1]
+
+    assert sparse_prefetch.using == "sparse-test-encoder"
+    assert isinstance(sparse_prefetch.query, models.SparseVector)
+    assert sparse_prefetch.query.indices == [1, 2]
+    assert sparse_prefetch.query.values == [0.5, 0.6]
+
+    assert dense_prefetch.using == "dense-test-encoder"
+    assert dense_prefetch.query == [0.1, 0.2, 0.3]
+
+
+@pytest.mark.parametrize("use_group_by", [True, False])
+def test_vector_search_group_by_offset_behavior(mocker, use_group_by):
+    """
+    Test that vector_search passes 'offset' to query_points when no group_by is provided,
+    and drops 'offset' and calls query_points_groups when group_by is provided.
+    """
+    mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
+    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_encoder.model_short_name.return_value = "test-encoder"
+
+    mock_group_result = mocker.MagicMock()
+    mock_group_result.groups = []
+    mock_qdrant.query_points_groups.return_value = mock_group_result
+
+    mock_search_result = mocker.MagicMock()
+    mock_search_result.points = []
+    mock_qdrant.query_points.return_value = mock_search_result
+
+    mock_qdrant.count.return_value = models.CountResult(count=0)
+
+    mocker.patch("vector_search.utils._content_file_vector_hits", return_value=[])
+
+    from vector_search.utils import CONTENT_FILES_COLLECTION_NAME, vector_search
+
+    params = {}
+    if use_group_by:
+        params["group_by"] = "resource_readable_id"
+
+    vector_search(
+        "test query",
+        params,
+        offset=15,
+        search_collection=CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    if use_group_by:
+        mock_qdrant.query_points_groups.assert_called_once()
+        mock_qdrant.query_points.assert_not_called()
+        call_args = mock_qdrant.query_points_groups.call_args.kwargs
+        assert "offset" not in call_args
+        assert call_args.get("group_by") == "resource_readable_id"
+    else:
+        mock_qdrant.query_points.assert_called_once()
+        mock_qdrant.query_points_groups.assert_not_called()
+        call_args = mock_qdrant.query_points.call_args.kwargs
+        assert call_args.get("offset") == 15
+        assert "group_by" not in call_args
