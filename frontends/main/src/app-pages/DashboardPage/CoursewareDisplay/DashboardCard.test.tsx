@@ -13,8 +13,10 @@ import { mockAxiosInstance } from "api/test-utils"
 import {
   DashboardCard,
   DashboardType,
+  getCoursewareButtonStyle,
   getContextMenuItems,
 } from "./DashboardCard"
+import { EnrollmentStatus } from "./helpers"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -77,6 +79,45 @@ const setupUserApis = () => {
   const mitxUser = mitxonline.factories.user.user()
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
 }
+
+test.each([
+  {
+    case: "not enrolled courses",
+    props: { enrollmentStatus: EnrollmentStatus.NotEnrolled },
+    expected: { text: "Start", variant: "secondary" },
+  },
+  {
+    case: "active enrolled courses",
+    props: { enrollmentStatus: EnrollmentStatus.Enrolled },
+    expected: { text: "Continue", variant: "primary" },
+  },
+  {
+    case: "completed enrollments",
+    props: { enrollmentStatus: EnrollmentStatus.Completed },
+    expected: { text: "View", variant: "text" },
+  },
+  {
+    case: "ended enrollments",
+    props: {
+      enrollmentStatus: EnrollmentStatus.Enrolled,
+      endDate: moment().subtract(1, "day").toISOString(),
+    },
+    expected: { text: "View", variant: "text" },
+  },
+  {
+    case: "enrolled programs",
+    props: {
+      enrollmentStatus: EnrollmentStatus.Enrolled,
+      isProgram: true,
+    },
+    expected: { text: "View", variant: "text" },
+  },
+])(
+  "CTA style mapping matches enrollment state for $case",
+  ({ props, expected }) => {
+    expect(getCoursewareButtonStyle(props)).toMatchObject(expected)
+  },
+)
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
@@ -707,124 +748,6 @@ describe.each([
 
     expect(card).toHaveTextContent(/starts in 5 days/i)
   })
-
-  test.each([{ showNotComplete: true }, { showNotComplete: false }])(
-    "Shows incomplete status when showNotComplete is true",
-    ({ showNotComplete }) => {
-      setupUserApis()
-      // Test with no enrollment, and with enrolled (no passing grade)
-      const run = mitxonline.factories.courses.courseRun()
-      const course = mitxOnlineCourse({
-        courseruns: [run],
-        next_run_id: run.id,
-      })
-      const enrollmentOrNull = faker.helpers.arrayElement([
-        null,
-        mitxonline.factories.enrollment.courseEnrollment({
-          grades: [],
-          run: { ...run, course },
-          certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
-        }),
-      ])
-      const { view } = renderWithProviders(
-        <DashboardCard
-          resource={
-            enrollmentOrNull
-              ? {
-                  type: DashboardType.CourseRunEnrollment,
-                  data: enrollmentOrNull,
-                }
-              : { type: DashboardType.Course, data: course }
-          }
-          showNotComplete={showNotComplete}
-        />,
-      )
-      const card = getCard()
-
-      const indicator = within(card).queryByTestId("enrollment-status")
-      expect(!!indicator).toBe(showNotComplete)
-
-      // Now test with completed enrollment
-      const completedEnrollment =
-        mitxonline.factories.enrollment.courseEnrollment({
-          grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-          run: { ...run, course },
-        })
-      view.rerender(
-        <DashboardCard
-          resource={{
-            type: DashboardType.CourseRunEnrollment,
-            data: completedEnrollment,
-          }}
-          showNotComplete={showNotComplete}
-        />,
-      )
-      // Completed should always show the indicator
-      within(card).getByTestId("enrollment-status")
-    },
-  )
-
-  test.each([
-    {
-      enrollmentData: null,
-      expectedLabel: "Not Enrolled",
-      hiddenImage: true,
-    },
-    {
-      enrollmentData: { grades: [] },
-      expectedLabel: "Enrolled",
-      hiddenImage: true,
-    },
-    {
-      enrollmentData: {
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-      },
-      expectedLabel: "Completed",
-      hiddenImage: true,
-    },
-  ])(
-    "Enrollment indicator shows meaningful text",
-    ({ enrollmentData, expectedLabel, hiddenImage }) => {
-      setupUserApis()
-      const run = mitxonline.factories.courses.courseRun()
-      const course = mitxOnlineCourse({
-        courseruns: [run],
-        next_run_id: run.id, // Ensure getBestRun uses this run
-      })
-      const enrollment = enrollmentData
-        ? mitxonline.factories.enrollment.courseEnrollment({
-            grades: enrollmentData.grades,
-            run: { ...run, course }, // Include course in run
-            certificate: null, // Explicitly no certificate for enrolled-but-not-completed state
-          })
-        : null
-      renderWithProviders(
-        <DashboardCard
-          resource={
-            enrollment
-              ? {
-                  type: DashboardType.CourseRunEnrollment,
-                  data: enrollment,
-                }
-              : { type: DashboardType.Course, data: course }
-          }
-        />,
-      )
-      const card = getCard()
-      const indicator = within(card).getByTestId("enrollment-status")
-      expect(indicator).toHaveTextContent(expectedLabel)
-
-      // Double check the image is aria-hidden, since we're using
-      // VisuallyHidden text instead of alt
-      const img = indicator.querySelector("img")
-      if (hiddenImage) {
-        expect(img).toHaveAttribute("aria-hidden", "true")
-        expect(img).toHaveAttribute("alt", "")
-      } else {
-        expect(img).toBe(null)
-      }
-    },
-  )
 
   test.each([
     { contextMenuItems: [] },

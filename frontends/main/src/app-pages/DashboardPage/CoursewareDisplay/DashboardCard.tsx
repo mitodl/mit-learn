@@ -20,7 +20,6 @@ import { calendarDaysUntil, isInPast, NoSSR } from "ol-utilities"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
 import {
   EmailSettingsDialog,
   JustInTimeDialog,
@@ -382,7 +381,7 @@ type CoursewareButtonStyleProps = {
   variant: ComponentProps<typeof Button>["variant"]
 }
 
-const getCoursewareButtonStyle = ({
+export const getCoursewareButtonStyle = ({
   endDate,
   enrollmentStatus,
   isProgram,
@@ -604,7 +603,6 @@ const CourseStartCountdown: React.FC<{
 
 type DashboardCardProps = {
   resource: DashboardResource
-  showNotComplete?: boolean
   offerUpgrade?: boolean
   contextMenuItems?: SimpleMenuItem[]
   isLoading?: boolean
@@ -711,7 +709,6 @@ type DashboardCourseCardProps = DashboardCardSharedProps & {
 
 const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   resource,
-  showNotComplete = true,
   offerUpgrade = true,
   contextMenuItems = [],
   isLoading = false,
@@ -862,10 +859,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
     <Skeleton variant="rectangular" width={120} height={32} />
   ) : (
     <>
-      <EnrollmentStatusIndicator
-        status={enrollmentStatus}
-        showNotComplete={showNotComplete}
-      />
       <CoursewareButton
         data-testid="courseware-button"
         startDate={courseRun?.start_date ?? enrollmentRun?.start_date}
