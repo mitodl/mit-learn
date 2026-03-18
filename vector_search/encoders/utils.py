@@ -15,6 +15,7 @@ def dense_encoder():
     return Encoder()
 
 
+@cache
 def sparse_encoder():
     """
     Return the sparse encoder based on settings
