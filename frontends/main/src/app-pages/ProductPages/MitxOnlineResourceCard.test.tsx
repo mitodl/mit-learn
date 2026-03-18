@@ -85,6 +85,27 @@ describe("MitxOnlineResourceCard", () => {
   })
 
   describe("enrollment-based pricing", () => {
+    test("shows course price from min_price when paid-only (course)", () => {
+      const course = factories.courses.course({
+        min_price: 200,
+        max_price: 200,
+        courseruns: [
+          factories.courses.courseRun({
+            enrollment_modes: [paidMode],
+          }),
+        ],
+      })
+      const {
+        view: { container },
+      } = renderCard({
+        resource: course,
+        resourceType: "course",
+        href: "/test",
+        list: true,
+      })
+      expect(container.textContent).toContain("$200.00")
+    })
+
     test("shows 'Free' when enrollment is free-only", () => {
       const program = factories.programs.program({
         enrollment_modes: [freeMode],

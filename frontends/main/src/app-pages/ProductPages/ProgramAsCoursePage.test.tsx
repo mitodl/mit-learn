@@ -247,15 +247,21 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
 
-    await screen.findByRole("heading", { name: "Modules" })
-    expect(screen.getByText("This course has 3 modules")).toBeInTheDocument()
+    const modulesSection = await screen.findByRole("region", {
+      name: "Modules",
+    })
+    expect(
+      within(modulesSection).getByText("This course has 3 modules"),
+    ).toBeInTheDocument()
 
     await waitFor(() => {
       courses.forEach((course) => {
-        expect(screen.getByText(course.title)).toBeInTheDocument()
+        expect(
+          within(modulesSection).getByText(course.title),
+        ).toBeInTheDocument()
       })
       childPrograms.forEach((prog) => {
-        expect(screen.getByText(prog.title)).toBeInTheDocument()
+        expect(within(modulesSection).getByText(prog.title)).toBeInTheDocument()
       })
     })
   })

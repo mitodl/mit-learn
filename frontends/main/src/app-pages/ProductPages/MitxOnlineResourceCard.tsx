@@ -10,7 +10,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, LocalDate } from "ol-utilities"
-import { getEnrollmentType } from "@/common/mitxonline"
+import { formatPrice, getEnrollmentType } from "@/common/mitxonline"
 
 type CommonCardProps = {
   href: string
@@ -34,13 +34,6 @@ type MitxOnlineProgramCardProps = CommonCardProps & {
 type MitxOnlineResourceCardProps =
   | MitxOnlineCourseCardProps
   | MitxOnlineProgramCardProps
-
-const formatCurrency = (amount: number): string => {
-  return amount.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  })
-}
 
 const getBestRunForCourse = (
   course: CourseWithCourseRunsSerializerV2,
@@ -69,12 +62,12 @@ const formatResourcePrice = (resource: {
     maxPrice !== undefined &&
     minPrice !== maxPrice
   ) {
-    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+    return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
   }
 
   const single = minPrice ?? maxPrice
   if (single !== null && single !== undefined) {
-    return formatCurrency(single)
+    return formatPrice(single)
   }
 
   return null

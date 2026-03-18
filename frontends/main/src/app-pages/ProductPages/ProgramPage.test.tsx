@@ -443,7 +443,10 @@ describe("ProgramPage", () => {
     })
 
     childPrograms.forEach((prog) => {
-      within(list).getByRole("link", { name: new RegExp(prog.title) })
+      const link = within(list).getByRole("link", {
+        name: new RegExp(prog.title),
+      })
+      expect(link).toHaveAttribute("href", `/programs/${prog.readable_id}`)
     })
   })
 
