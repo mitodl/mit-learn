@@ -92,14 +92,15 @@ const getCompletionText = (
   })
   const allItems = parsedReqs.flatMap((req) => req.items)
   const noun = getItemNoun(allItems, programsById)
+  const p = (count: number) => pluralize(noun.singular, count, noun.plural)
   if (requiredCount && electiveCount) {
-    return `To complete this program, you must take ${requiredCount} required ${pluralize(noun, requiredCount)} and ${electiveCount} elective ${pluralize(noun, electiveCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${p(requiredCount)} and ${electiveCount} elective ${p(electiveCount)}.`
   }
   if (requiredCount) {
-    return `To complete this program, you must take ${requiredCount} required ${pluralize(noun, requiredCount)}.`
+    return `To complete this program, you must take ${requiredCount} required ${p(requiredCount)}.`
   }
   if (electiveCount) {
-    return `To complete this program, you must take ${electiveCount} ${pluralize(noun, electiveCount)}.`
+    return `To complete this program, you must take ${electiveCount} ${p(electiveCount)}.`
   }
   return ""
 }

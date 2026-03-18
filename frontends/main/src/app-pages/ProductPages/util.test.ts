@@ -62,33 +62,40 @@ describe("parseReqTree", () => {
 })
 
 describe("getItemNoun", () => {
-  test("returns 'course' when all items are courses", () => {
+  test("returns course singular/plural when all items are courses", () => {
     const items: RequirementItem[] = [
       { type: "course", id: 1 },
       { type: "course", id: 2 },
     ]
-    expect(getItemNoun(items, {})).toBe("course")
+    expect(getItemNoun(items, {})).toEqual({
+      singular: "course",
+      plural: "courses",
+    })
   })
 
-  test("returns 'program' when all items are non-course-display programs", () => {
+  test("returns program singular/plural when all items are non-course-display programs", () => {
     const items: RequirementItem[] = [{ type: "program", id: 10 }]
-    expect(getItemNoun(items, { 10: { display_mode: null } })).toBe("program")
+    expect(getItemNoun(items, { 10: { display_mode: null } })).toEqual({
+      singular: "program",
+      plural: "programs",
+    })
   })
 
-  test("returns 'course' when program has display_mode=course", () => {
+  test("returns course singular/plural when program has display_mode=course", () => {
     const items: RequirementItem[] = [{ type: "program", id: 10 }]
     expect(
       getItemNoun(items, { 10: { display_mode: DisplayModeEnum.Course } }),
-    ).toBe("course")
+    ).toEqual({ singular: "course", plural: "courses" })
   })
 
-  test("returns 'course/program' when mixed", () => {
+  test("returns courses/programs when mixed", () => {
     const items: RequirementItem[] = [
       { type: "course", id: 1 },
       { type: "program", id: 10 },
     ]
-    expect(getItemNoun(items, { 10: { display_mode: null } })).toBe(
-      "course/program",
-    )
+    expect(getItemNoun(items, { 10: { display_mode: null } })).toEqual({
+      singular: "course/program",
+      plural: "courses/programs",
+    })
   })
 })

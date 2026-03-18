@@ -78,7 +78,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
 const getItemNoun = (
   items: RequirementItem[],
   programsById: Record<number, { display_mode?: string | null }>,
-): string => {
+): { singular: string; plural: string } => {
   let hasCourse = false
   let hasProgram = false
   for (const item of items) {
@@ -93,9 +93,10 @@ const getItemNoun = (
       }
     }
   }
-  if (hasCourse && hasProgram) return "course/program"
-  if (hasProgram) return "program"
-  return "course"
+  if (hasCourse && hasProgram)
+    return { singular: "course/program", plural: "courses/programs" }
+  if (hasProgram) return { singular: "program", plural: "programs" }
+  return { singular: "course", plural: "courses" }
 }
 
 type ProductNoun = "Course" | "Program"
