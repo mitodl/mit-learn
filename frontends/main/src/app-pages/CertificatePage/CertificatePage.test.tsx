@@ -83,6 +83,38 @@ describe("CertificatePage", () => {
     await screen.findAllByText(certificate.uuid)
   })
 
+  it("renders a Walmart SPOC certificate with MIT CTL Supply Chain Education Program text", async () => {
+    const base = factories.mitxonline.courseCertificate()
+    const certificate = {
+      ...base,
+      course_run: {
+        ...base.course_run,
+        course: {
+          ...base.course_run.course,
+          readable_id: "course-v1:MITxT+CTL.SCx_WM",
+        },
+      },
+    }
+    setMockResponse.get(
+      mitxonline.urls.certificates.courseCertificatesRetrieve({
+        cert_uuid: certificate.uuid,
+      }),
+      certificate,
+    )
+    renderWithProviders(
+      <CertificatePage
+        certificateType={CertificateType.Course}
+        uuid={certificate.uuid}
+        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/course/${certificate.uuid}`}
+      />,
+    )
+
+    await screen.findByText("MIT CTL Supply Chain Education Program")
+    expect(
+      screen.queryByText("Universal Artificial Intelligence"),
+    ).not.toBeInTheDocument()
+  })
+
   it("renders a program certificate", async () => {
     const certificate = factories.mitxonline.programCertificate()
     setMockResponse.get(

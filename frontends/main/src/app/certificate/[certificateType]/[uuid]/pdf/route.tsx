@@ -24,6 +24,7 @@ import {
   pdf,
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
+import { getCourseSpocInfo } from "@/common/certificateUtils"
 import { pxToPt, getNameStyles } from "./utils"
 
 // https://use.typekit.net/lbk1xay.css
@@ -160,7 +161,13 @@ const OpenLearningLogo = () => (
   </Svg>
 )
 
-const Badge = ({ displayType }: { displayType: string }) => (
+const Badge = ({
+  displayType,
+  isSpoc,
+}: {
+  displayType: string
+  isSpoc?: boolean
+}) => (
   <View
     style={{
       position: "absolute",
@@ -207,7 +214,7 @@ const Badge = ({ displayType }: { displayType: string }) => (
       style={{
         color: colors.white,
         position: "absolute",
-        top: pxToPt(169),
+        top: pxToPt(isSpoc ? 185 : 169),
         right: pxToPt(26),
         width: pxToPt(175),
         textAlign: "center",
@@ -231,10 +238,12 @@ const CertificateDoc = ({
   displayType,
   userName,
   shortDisplayType,
+  programName = "Universal Artificial Intelligence",
   ceus,
   signatories,
   startDate,
   endDate,
+  isSpoc,
 }: {
   uuid: string
   title: string
@@ -245,6 +254,8 @@ const CertificateDoc = ({
   signatories: SignatoryItem[]
   startDate?: string | null
   endDate?: string | null
+  programName?: string
+  isSpoc?: boolean
 }) => {
   return (
     <Document
@@ -284,7 +295,7 @@ const CertificateDoc = ({
             }}
           >
             <OpenLearningLogo />
-            <Badge displayType={displayType} />
+            <Badge displayType={displayType} isSpoc={isSpoc} />
 
             <Text
               style={{
@@ -327,7 +338,7 @@ const CertificateDoc = ({
                   fontFamily: "Neue Haas Grotesk Text 700",
                 }}
               >
-                Universal Artificial Intelligence
+                {programName}
               </Text>{" "}
               {shortDisplayType}:
             </Text>
@@ -479,13 +490,11 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
+  const { isSpoc, programName, displayType, shortDisplayType } =
+    getCourseSpocInfo(certificate)
   const title = certificate?.course_run?.course?.title
 
-  const displayType = "Module Certificate"
-
   const userName = certificate?.user?.name
-
-  const shortDisplayType = "module"
 
   const ceus = null
 
@@ -500,6 +509,8 @@ const CourseCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName!}
+      isSpoc={isSpoc}
+      programName={programName}
       shortDisplayType={shortDisplayType}
       ceus={ceus}
       signatories={signatories}

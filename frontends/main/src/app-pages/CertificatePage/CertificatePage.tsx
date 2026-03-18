@@ -21,6 +21,7 @@ import type {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
+import { getCourseSpocInfo } from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -183,10 +184,12 @@ const Badge = styled.div(({ theme }) => ({
   },
 }))
 
-const BadgeText = styled(Typography)(({ theme }) => ({
+const BadgeText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "$isSpoc",
+})<{ $isSpoc?: boolean }>(({ theme, $isSpoc }) => ({
   color: theme.custom.colors.white,
   position: "absolute",
-  top: "169px",
+  top: $isSpoc ? "185px" : "169px",
   right: "26px",
   width: "175px",
   textAlign: "center",
@@ -501,6 +504,8 @@ const Certificate = ({
   displayType,
   userName,
   shortDisplayType,
+  programName = "Universal Artificial Intelligence",
+  isSpoc,
   ceus,
   signatories,
   startDate,
@@ -511,6 +516,8 @@ const Certificate = ({
   displayType: string
   userName?: string
   shortDisplayType: string
+  programName?: string
+  isSpoc?: boolean
   ceus?: string
   signatories: SignatoryItem[]
   startDate?: string | null
@@ -523,15 +530,17 @@ const Certificate = ({
         <Logo src={OpenLearningLogo} alt="MIT Open Learning" />
         <PrintLogo src={OpenLearningLogo.src} alt="MIT Open Learning" />
         <Badge>
-          <BadgeText variant="h4">{displayType}</BadgeText>
+          <BadgeText variant="h4" $isSpoc={isSpoc}>
+            {displayType}
+          </BadgeText>
         </Badge>
         <Certification>
           <Typography variant="h4">This is to certify that</Typography>
           <NameText variant="h1">{userName}</NameText>
           <AchievementText>
             has successfully completed all requirements of the <PrintBreak />
-            <strong>Universal Artificial Intelligence</strong>{" "}
-            {shortDisplayType}:
+            <strong>{programName}</strong>
+            {shortDisplayType ? <> {shortDisplayType}</> : ""}:
           </AchievementText>
         </Certification>
         <CourseInfo>
@@ -595,11 +604,14 @@ const CourseCertificate = ({
 }) => {
   const title = certificate.course_run.course.title
 
-  const displayType = "Module Certificate"
-
   const userName = certificate.user.name
 
-  const shortDisplayType = "module"
+  const {
+    isSpoc: isWalmartSPOC,
+    programName,
+    displayType,
+    shortDisplayType,
+  } = getCourseSpocInfo(certificate)
 
   const signatories = certificate.certificate_page.signatory_items
 
@@ -612,6 +624,8 @@ const CourseCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName}
+      programName={programName}
+      isSpoc={isWalmartSPOC}
       shortDisplayType={shortDisplayType}
       signatories={signatories}
       startDate={startDate}
