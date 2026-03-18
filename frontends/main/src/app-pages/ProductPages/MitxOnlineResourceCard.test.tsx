@@ -101,10 +101,11 @@ describe("MitxOnlineResourceCard", () => {
       expect(container.textContent).not.toContain("$")
     })
 
-    test("shows product price when paid-only", () => {
+    test("shows min/max price when paid-only", () => {
       const program = factories.programs.program({
         enrollment_modes: [paidMode],
-        products: [factories.courses.product({ price: "500.00" })],
+        min_price: 500,
+        max_price: 500,
       })
       const {
         view: { container },
@@ -117,10 +118,28 @@ describe("MitxOnlineResourceCard", () => {
       expect(container.textContent).toContain("$500.00")
     })
 
+    test("shows price range when min and max differ", () => {
+      const program = factories.programs.program({
+        enrollment_modes: [paidMode],
+        min_price: 100,
+        max_price: 500,
+      })
+      const {
+        view: { container },
+      } = renderCard({
+        resource: program,
+        resourceType: "program",
+        href: "/test",
+        list: true,
+      })
+      expect(container.textContent).toContain("$100.00 - $500.00")
+    })
+
     test("shows 'Free' and certificate price when both free and paid", () => {
       const program = factories.programs.program({
         enrollment_modes: [freeMode, paidMode],
-        products: [factories.courses.product({ price: "500.00" })],
+        min_price: 500,
+        max_price: 500,
       })
       const {
         view: { container },
@@ -137,7 +156,8 @@ describe("MitxOnlineResourceCard", () => {
     test("shows no price when no enrollment modes", () => {
       const program = factories.programs.program({
         enrollment_modes: [],
-        products: [factories.courses.product({ price: "500.00" })],
+        min_price: 500,
+        max_price: 500,
       })
       const {
         view: { container },

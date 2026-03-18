@@ -56,11 +56,28 @@ const getBestRunForCourse = (
   return courseruns[0]
 }
 
-const formatPrice = (
-  price: string | number | undefined | null,
-): string | null => {
-  if (price === undefined || price === null) return null
-  return formatCurrency(Number(price))
+const formatResourcePrice = (resource: {
+  min_price?: number | null
+  max_price?: number | null
+}): string | null => {
+  const { min_price: minPrice, max_price: maxPrice } = resource
+
+  if (
+    minPrice !== null &&
+    minPrice !== undefined &&
+    maxPrice !== null &&
+    maxPrice !== undefined &&
+    minPrice !== maxPrice
+  ) {
+    return `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+  }
+
+  const single = minPrice ?? maxPrice
+  if (single !== null && single !== undefined) {
+    return formatCurrency(single)
+  }
+
+  return null
 }
 
 /**
@@ -92,7 +109,7 @@ const extractCardData = (
       title: course.title,
       displayType: "Course",
       imageSrc: course.page?.feature_image_src || DEFAULT_RESOURCE_IMG,
-      productPrice: formatPrice(bestRun?.products[0]?.price),
+      productPrice: formatResourcePrice(course),
       enrollmentModes: bestRun?.enrollment_modes,
       hasCertificate: Boolean(course.certificate_type),
       startDate,
@@ -110,7 +127,7 @@ const extractCardData = (
     title: program.title,
     displayType: isCourseDisplay ? "Course" : "Program",
     imageSrc: program.page?.feature_image_src || DEFAULT_RESOURCE_IMG,
-    productPrice: formatPrice(program.products[0]?.price),
+    productPrice: formatResourcePrice(program),
     enrollmentModes: program.enrollment_modes,
     hasCertificate: Boolean(program.certificate_type),
     startDate: null,
