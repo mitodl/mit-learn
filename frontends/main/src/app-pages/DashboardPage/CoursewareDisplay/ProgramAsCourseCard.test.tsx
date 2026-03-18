@@ -68,10 +68,10 @@ describe("ProgramAsCourseCard", () => {
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
     )
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV2(), [])
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     if (rawEnrollments.length > 0) {
       setMockResponse.get(
-        mitxonline.urls.enrollment.enrollmentsListV2(),
+        mitxonline.urls.enrollment.enrollmentsListV3(),
         rawEnrollments,
       )
     }
