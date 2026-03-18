@@ -102,7 +102,6 @@ const CardRoot = styled.div<{
       borderRadius: "0px",
       boxShadow: "none",
       flexDirection: "column",
-      gap: "16px",
     },
   },
   // Stacked variant styles
@@ -160,8 +159,27 @@ const HorizontalSeparator = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
 }))
 
+// This override should not be necessary, small size buttons maybe need an update in smoot-design
+const COURSEWARE_BUTTON_WIDTH = "88px"
+
+const StyledCoursewareButton = styled(Button)(({ theme, variant }) => ({
+  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  ...(variant === "text" && {
+    color: theme.custom.colors.silverGrayDark,
+  }),
+}))
+
+const StyledCoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
+  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  ...(variant === "text" && {
+    color: theme.custom.colors.silverGrayDark,
+  }),
+}))
+
 const CoursewareActionColumn = styled(Stack)({
-  width: "124px",
+  width: COURSEWARE_BUTTON_WIDTH,
   flexShrink: 0,
 })
 
@@ -436,7 +454,7 @@ const CoursewareButton = styled(
     // Programs or enrolled courses with started runs: show link
     if ((isProgram || hasEnrolled) && (hasStarted || !startDate) && href) {
       return (
-        <ButtonLink
+        <StyledCoursewareButtonLink
           size="small"
           variant={coursewareText.variant}
           href={href}
@@ -444,7 +462,7 @@ const CoursewareButton = styled(
           {...others}
         >
           {coursewareText.text}
-        </ButtonLink>
+        </StyledCoursewareButtonLink>
       )
     }
 
@@ -456,7 +474,7 @@ const CoursewareButton = styled(
     )
 
     return (
-      <Button
+      <StyledCoursewareButton
         size="small"
         variant={coursewareText.variant}
         className={className}
@@ -465,10 +483,13 @@ const CoursewareButton = styled(
         {...others}
       >
         {coursewareText.text}
-      </Button>
+      </StyledCoursewareButton>
     )
   },
-)({ width: "124px" })
+)(() => ({
+  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+}))
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
@@ -561,7 +582,7 @@ const UpgradeBanner: React.FC<
 }
 
 const CountdownRoot = styled.div({
-  width: "124px",
+  width: COURSEWARE_BUTTON_WIDTH,
   display: "flex",
   justifyContent: "center",
   whiteSpace: "nowrap",
