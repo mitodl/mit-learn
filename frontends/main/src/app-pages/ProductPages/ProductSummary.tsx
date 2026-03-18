@@ -662,10 +662,10 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
   )
   if (totalRequired === 0) return null
 
-  // Always say "Courses" here. Correctly classifying child programs by
-  // display_mode would require fetching child program details, which this
-  // component doesn't have access to. In practice, child programs with
-  // display_mode="course" should count as courses anyway.
+  // Always say "Courses" here. Whether a child program should be labeled
+  // as a "course" or "program" depends on its display_mode, which can't be
+  // determined from the req_tree alone. The important use cases are course
+  // and course-like program (display_mode="Course") children only.
   return (
     <InfoRow {...others}>
       <InfoRowIcon>

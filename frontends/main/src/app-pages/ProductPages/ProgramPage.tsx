@@ -77,10 +77,15 @@ type RequirementsSectionProps = {
   isLoading?: boolean
 }
 
-// Always say "courses" in completion text. Correctly classifying child programs
-// by display_mode would require the child programs query to have resolved, making
-// the text flicker. In practice, child programs with display_mode="course" should
-// count as courses anyway.
+// Programs can have child courses and child programs. Child programs with
+// display_mode="Course" are shown as courses here and on their own product pages.
+//
+// This text always says "courses" even when some children are programs with
+// null display_mode. Correctly classifying child programs by display_mode would
+// require waiting for the child programs query to resolve, causing flicker. The
+// important use cases are course and course-like program children only; getting
+// text like "courses/programs" right across the requirements display, summary,
+// and bundle upsell would need nontrivial refactoring and design/product input.
 const getCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
   let electiveCount = 0
