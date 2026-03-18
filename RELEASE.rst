@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.58.1
+Version 0.58.1 (Released March 18, 2026)
 --------------
 
 - New Product Page route for "MITxOnline Program displayed as Course" (#3051)
