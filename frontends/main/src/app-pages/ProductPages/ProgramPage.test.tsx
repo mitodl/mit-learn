@@ -96,7 +96,7 @@ const makeReqsFromSections = (
       addCourses(op, section.courseCount)
       if (section.programCount) {
         Array.from({ length: section.programCount }).forEach(() => {
-          op.addProgram({ program: faker.number.int() })
+          op.addProgram()
         })
       }
     } else {
@@ -108,7 +108,7 @@ const makeReqsFromSections = (
       addCourses(op, section.outOf)
       if (section.programCount) {
         Array.from({ length: section.programCount }).forEach(() => {
-          op.addProgram({ program: faker.number.int() })
+          op.addProgram()
         })
       }
     }
@@ -439,10 +439,7 @@ describe("ProgramPage", () => {
       const link = within(list).getByRole("link", {
         name: new RegExp(course.title),
       })
-      expect(link).toHaveAttribute(
-        "href",
-        `/courses/${encodeURIComponent(course.readable_id)}`,
-      )
+      expect(link).toHaveAttribute("href", `/courses/${course.readable_id}`)
     })
 
     childPrograms.forEach((prog) => {

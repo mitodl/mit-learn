@@ -56,7 +56,9 @@ const getBestRunForCourse = (
   return courseruns[0]
 }
 
-const formatPrice = (price: unknown): string | null => {
+const formatPrice = (
+  price: string | number | undefined | null,
+): string | null => {
   if (price === undefined || price === null) return null
   return formatCurrency(Number(price))
 }

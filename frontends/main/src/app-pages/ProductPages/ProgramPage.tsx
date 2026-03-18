@@ -31,7 +31,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
 import { keyBy } from "lodash"
-import { programPageView } from "@/common/urls"
+import { coursePageView, programPageView } from "@/common/urls"
 
 type ProgramPageProps = {
   readableId: string
@@ -160,7 +160,9 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                         <MitxOnlineResourceCard
                           resource={course}
                           resourceType="course"
-                          href={`/courses/${encodeURIComponent(course?.readable_id)}`}
+                          href={
+                            course ? coursePageView(course.readable_id) : ""
+                          }
                           size="small"
                           isLoading={isLoading}
                           list
