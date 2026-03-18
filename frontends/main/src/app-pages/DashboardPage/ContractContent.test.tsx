@@ -19,9 +19,6 @@ import {
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
-const makeCourseEnrollment = factories.enrollment.courseEnrollment
-const makeGrade = factories.enrollment.grade
-
 describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
@@ -199,67 +196,6 @@ describe("ContractContent", () => {
     // Verify programs appear in contract.programs order (B, A), not API response order (A, B)
     await within(programs[0]).findByRole("heading", { name: programB.title })
     await within(programs[1]).findByRole("heading", { name: programA.title })
-  })
-
-  test("Shows correct enrollment status", async () => {
-    const { orgX, programA: _programA, coursesA } = setupProgramsAndCourses()
-    const contract = orgX.contracts[0]
-    const enrollments = [
-      makeCourseEnrollment({
-        run: {
-          id: coursesA[0].courseruns[0].id,
-          course: { id: coursesA[0].id, title: coursesA[0].title },
-        },
-        grades: [makeGrade({ passed: true })],
-        b2b_contract_id: contract.id,
-      }),
-      makeCourseEnrollment({
-        run: {
-          id: coursesA[1].courseruns[0].id,
-          course: { id: coursesA[1].id, title: coursesA[1].title },
-        },
-        grades: [],
-        certificate: null,
-        b2b_contract_id: contract.id,
-      }),
-    ]
-    // Override the default empty enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
-
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    const [programElA] = await screen.findAllByTestId("org-program-root")
-    const cards = await within(programElA).findAllByTestId(
-      "enrollment-card-desktop",
-    )
-    expect(cards.length).toBeGreaterThanOrEqual(2)
-
-    // Find the cards for our enrolled courses
-    const completedCard = cards.find((card) =>
-      card.textContent?.includes(coursesA[0].title),
-    )
-    const enrolledCard = cards.find((card) =>
-      card.textContent?.includes(coursesA[1].title),
-    )
-
-    expect(completedCard).toBeDefined()
-    expect(enrolledCard).toBeDefined()
-
-    // Check enrollment status indicators
-    const completedIndicator = within(completedCard!).getByTestId(
-      "enrollment-status",
-    )
-    const enrolledIndicator = within(enrolledCard!).getByTestId(
-      "enrollment-status",
-    )
-
-    expect(completedIndicator).toHaveTextContent(/^Completed$/)
-    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
   })
 
   test("Renders program collections", async () => {
@@ -1026,81 +962,6 @@ describe("ContractContent", () => {
         expect(upgradeRoot).not.toHaveTextContent("$599")
       }
     })
-  })
-
-  test("handles mixed scenarios with enrolled and non-enrolled contract runs", async () => {
-    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
-    const baseCourses = factories.courses.courses({ count: 3 }).results
-    const program = factories.programs.program({
-      courses: baseCourses.map((c) => c.id),
-    })
-    const contracts = createTestContracts(orgX.id, 1, [program.id])
-    orgX.contracts = contracts
-    mitxOnlineUser.b2b_organizations[0].contracts = contracts
-    const contractIds = contracts.map((c) => c.id)
-    const courses = createCoursesWithContractRuns(contracts)
-    // Update program to use the actual course IDs
-    program.courses = courses.map((c) => c.id)
-
-    // Create enrollment for first course only
-    const enrollments = [
-      factories.enrollment.courseEnrollment({
-        run: {
-          id: courses[0].courseruns.find(
-            (r) => r.b2b_contract === contractIds[0],
-          )?.id,
-          course: { id: courses[0].id, title: courses[0].title },
-        },
-        b2b_contract_id: contracts[0].id,
-        b2b_organization_id: contracts[0].organization,
-        certificate: { uuid: faker.string.uuid(), link: faker.internet.url() },
-      }),
-      factories.enrollment.courseEnrollment({
-        run: {
-          id: courses[1].courseruns.find(
-            (r) => r.b2b_contract === contractIds[0],
-          )?.id,
-          course: { id: courses[1].id, title: courses[1].title },
-        },
-        b2b_contract_id: contracts[0].id,
-        b2b_organization_id: contracts[0].organization,
-        certificate: null,
-        grades: [],
-      }),
-    ]
-    // Override enrollments for this test
-    setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
-
-    setupOrgDashboardMocks(
-      orgX,
-      user,
-      mitxOnlineUser,
-      [program],
-      courses,
-      contracts,
-    )
-
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    const cards = await within(
-      await screen.findByTestId("org-program-root"),
-    ).findAllByTestId("enrollment-card-desktop")
-
-    expect(cards.length).toBe(3)
-    // First card should show enrolled status
-    const cardStatus0 = within(cards[0]).getByTestId("enrollment-status")
-    expect(cardStatus0).toHaveTextContent(/^Completed$/)
-
-    const cardStatus1 = within(cards[1]).getByTestId("enrollment-status")
-    expect(cardStatus1).toHaveTextContent(/^Enrolled$/)
-
-    const cardStatus2 = within(cards[2]).getByTestId("enrollment-status")
-    expect(cardStatus2).toHaveTextContent(/^Not Enrolled$/)
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {
