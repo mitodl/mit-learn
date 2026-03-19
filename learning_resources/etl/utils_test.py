@@ -1010,7 +1010,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     )
 
     assert len(results) == 0
-    mock_log.exception.assert_called_with("Skipping invalid pdf %s", full_path)
+    mock_log.warning.assert_called_with("Skipping invalid pdf %s", full_path)
     tika_from_buffer_mock.assert_not_called()
 
 

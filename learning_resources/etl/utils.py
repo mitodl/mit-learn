@@ -584,8 +584,8 @@ def pdf_is_valid(pdf_path: Path) -> bool:
         if len(reader.pages) > 0:
             reader.pages[0].extract_text()
             return True
-    except Exception as e:  # noqa: BLE001
-        log.warning("PDF validation error for %s: %s", pdf_path, e)
+    except Exception:
+        log.exception("PDF validation error for %s", pdf_path)
     return False
 
 
@@ -652,7 +652,7 @@ def _extract_content(  # noqa: PLR0913
     file_extension = metadata.get("file_extension")
     file_path = Path(olx_path) / Path(source_path)
     if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
-        log.exception("Skipping invalid pdf %s", file_path)
+        log.warning("Skipping invalid pdf %s", file_path)
         return None
     if _should_use_ocr(
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
