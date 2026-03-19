@@ -7,7 +7,7 @@ import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { getQueryClient } from "@/app/getQueryClient"
-import { getCourseSpocInfo } from "@/common/certificateUtils"
+import { getCertificateInfo } from "@/common/certificateUtils"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
@@ -22,7 +22,8 @@ export async function generateMetadata({
   const { certificateType, uuid } = await params
 
   return safeGenerateMetadata(async () => {
-    let title, displayType, userName, programName
+    let title, userName
+    const { displayType } = getCertificateInfo()
 
     const queryClient = getQueryClient()
 
@@ -35,10 +36,7 @@ export async function generateMetadata({
 
       title = data.course_run.course.title
 
-      displayType = "Module Certificate"
-
       userName = data?.user?.name
-      ;({ programName, displayType } = getCourseSpocInfo(data))
     } else {
       const data = await queryClient.fetchQueryOr404(
         certificateQueries.programCertificatesRetrieve({
@@ -47,15 +45,13 @@ export async function generateMetadata({
       )
 
       title = data.program.title
-      programName = "Universal Artificial Intelligence"
-      displayType = `${data.program.program_type} Certificate`
 
       userName = data.user.name
     }
 
     return standardizeMetadata({
       title: `${userName}'s ${displayType}`,
-      description: `${userName} has successfully completed the ${programName} ${displayType}: ${title}`,
+      description: `${userName} has successfully completed: ${title}`,
     })
   })
 }
