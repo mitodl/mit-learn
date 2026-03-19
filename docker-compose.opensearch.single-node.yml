@@ -10,8 +10,8 @@ services:
     volumes:
       - opensearch-data1:/usr/share/opensearch/data
     ports:
-      - 9100:9200 # REST API
-      - 9500:9600 # Performance Analyzer
+      - "${HOST_PORT_OPENSEARCH:-9100}:9200" # REST API
+      - "${HOST_PORT_OPENSEARCH_PERF:-9500}:9600" # Performance Analyzer
 
 volumes:
   opensearch-data1:

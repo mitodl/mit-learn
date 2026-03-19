@@ -15,7 +15,7 @@ services:
     stdin_open: true
     tty: true
     ports:
-      - "8061:8061"
+      - "${HOST_PORT_WEB:-8061}:8061"
     depends_on:
       db:
         condition: service_healthy
@@ -46,9 +46,9 @@ services:
           yarn watch
         fi
     ports:
-      - "8062:8062"
-      - "6006:6006"
-      - "9229:9229"
+      - "${HOST_PORT_WATCH:-8062}:8062"
+      - "${HOST_PORT_STORYBOOK:-6006}:6006"
+      - "${HOST_PORT_WATCH_DEBUG:-9229}:9229"
     environment:
       - NEXT_SERVER_MITOL_API_BASE_URL=http://nginx:8063/
     volumes:

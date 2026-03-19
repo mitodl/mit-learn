@@ -11,8 +11,8 @@ services:
     volumes:
       - opensearch-cluster-data1:/usr/share/opensearch/data
     ports:
-      - 9100:9200 # REST API
-      - 9500:9600 # Performance Analyzer
+      - "${HOST_PORT_OPENSEARCH_1:-9100}:9200" # REST API
+      - "${HOST_PORT_OPENSEARCH_PERF_1:-9500}:9600" # Performance Analyzer
   opensearch-node-mitopen-2:
     extends:
       file: docker-compose.opensearch.base.yml
@@ -25,8 +25,8 @@ services:
     volumes:
       - opensearch-cluster-data2:/usr/share/opensearch/data
     ports:
-      - 9101:9200 # REST API
-      - 9501:9600 # Performance Analyzer
+      - "${HOST_PORT_OPENSEARCH_2:-9101}:9200" # REST API
+      - "${HOST_PORT_OPENSEARCH_PERF_2:-9501}:9600" # Performance Analyzer
   opensearch-node-mitopen-3:
     extends:
       file: docker-compose.opensearch.base.yml
@@ -39,8 +39,8 @@ services:
     volumes:
       - opensearch-cluster-data3:/usr/share/opensearch/data
     ports:
-      - 9102:9200 # REST API
-      - 9502:9600 # Performance Analyzer
+      - "${HOST_PORT_OPENSEARCH_3:-9102}:9200" # REST API
+      - "${HOST_PORT_OPENSEARCH_PERF_3:-9502}:9600" # Performance Analyzer
 
 volumes:
   opensearch-cluster-data1:
