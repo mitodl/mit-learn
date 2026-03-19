@@ -36,7 +36,7 @@ def _sorted_query_string(query_dict):
     return "&".join(items)
 
 
-def _cache_page_ignoring_cookies(
+def _cache_page_ignoring_cookies(  # noqa: C901
     timeout, cache="default", key_prefix="", *, only_anonymous=False
 ):
     """
@@ -54,7 +54,41 @@ def _cache_page_ignoring_cookies(
             users bypass the cache entirely.
     """
 
-    def inner_decorator(func):
+    def inner_decorator(func):  # noqa: C901
+        from asgiref.sync import iscoroutinefunction
+
+        if iscoroutinefunction(func):
+
+            @wraps(func)
+            async def inner_function(request, *args, **kwargs):
+                if timeout <= 0:
+                    return await func(request, *args, **kwargs)
+
+                if only_anonymous and request.user.is_authenticated:
+                    return await func(request, *args, **kwargs)
+
+                query_string = _sorted_query_string(request.GET)
+                raw_key = f"{key_prefix}:{request.path}:{query_string}"
+                url_hash = md5(raw_key.encode()).hexdigest()  # noqa: S324
+                cache_key = (
+                    f"views.decorators.cache.cache_page.{key_prefix}.GET.{url_hash}"
+                )
+
+                cache_backend = caches[cache]
+
+                cached_data = cache_backend.get(cache_key)
+                if cached_data is not None:
+                    return Response(cached_data)
+
+                response = await func(request, *args, **kwargs)
+
+                if response.status_code == 200:  # noqa: PLR2004
+                    cache_backend.set(cache_key, response.data, timeout)
+
+                return response
+
+            return inner_function
+
         @wraps(func)
         def inner_function(request, *args, **kwargs):
             # Skip caching entirely if timeout is 0 or negative
