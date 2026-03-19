@@ -203,6 +203,7 @@ def test_program_detail_endpoint(client, django_assert_num_queries, url):
         resp.data["program"]["course_count"]
         == program.learning_resource.children.count()
     )
+    assert resp.data["program"]["program_count"] == 0
 
 
 def test_list_resources_endpoint(client):

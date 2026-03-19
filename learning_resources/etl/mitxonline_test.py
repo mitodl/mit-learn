@@ -29,6 +29,7 @@ from learning_resources.etl.mitxonline import (
     extract_courses,
     extract_programs,
     get_course_ids_from_req_tree,
+    get_program_ids_from_req_tree,
     is_fully_enrollable,
     parse_certificate_type,
     parse_page_attribute,
@@ -262,6 +263,44 @@ def test_get_course_ids_from_req_tree_missing_program():
     assert get_course_ids_from_req_tree(req_tree, programs_by_id={}) == []
 
 
+@pytest.mark.parametrize(
+    ("req_tree", "expected_ids"),
+    [
+        ([], []),
+        (
+            [
+                {
+                    "data": {"node_type": "operator", "operator": "all_of"},
+                    "id": 1,
+                    "children": [
+                        {"data": {"node_type": "course", "course": 10}, "id": 2},
+                        {
+                            "data": {
+                                "node_type": "program",
+                                "required_program": 99,
+                            },
+                            "id": 3,
+                        },
+                        {
+                            "data": {
+                                "node_type": "program",
+                                "required_program": 100,
+                            },
+                            "id": 4,
+                        },
+                    ],
+                }
+            ],
+            [99, 100],
+        ),
+    ],
+    ids=["empty_tree", "programs_in_tree"],
+)
+def test_get_program_ids_from_req_tree(req_tree, expected_ids):
+    """Test that program IDs are correctly extracted from a req_tree"""
+    assert get_program_ids_from_req_tree(req_tree) == expected_ids
+
+
 def test_mitxonline_transform_programs(
     mock_mitxonline_programs_data, mock_mitxonline_courses_data, mocker, settings
 ):
@@ -431,6 +470,7 @@ def test_mitxonline_transform_programs(
                     }
                 ],
                 "courses": expected_courses,
+                "programs": [],
             }
         )
     result = sorted(result, key=lambda x: x["readable_id"])

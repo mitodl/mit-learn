@@ -416,6 +416,30 @@ def get_course_ids_from_req_tree(
     return course_ids
 
 
+def get_program_ids_from_req_tree(nodes: list[dict]) -> list[int]:
+    """
+    Extract program IDs from a program's req_tree.
+
+    Finds nodes with node_type="program" and returns their required_program IDs.
+    Recurses into children to find program nodes at any depth.
+
+    Args:
+        nodes: list of req_tree node dicts
+
+    Returns:
+        list of int: program IDs found in the tree
+    """
+    program_ids = []
+    for node in nodes:
+        data = node.get("data", {})
+        if data.get("node_type") == "program":
+            prog_id = data.get("required_program")
+            if isinstance(prog_id, int):
+                program_ids.append(prog_id)
+        program_ids.extend(get_program_ids_from_req_tree(node.get("children", [])))
+    return program_ids
+
+
 def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
@@ -496,6 +520,15 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "min_weekly_hours": parse_string_to_int(program.get("min_weekly_hours")),
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
+        child_program_ids = get_program_ids_from_req_tree(program.get("req_tree", []))
+        child_programs = [
+            {
+                "readable_id": programs_by_id[pid]["readable_id"],
+                "display_mode": programs_by_id[pid].get("display_mode"),
+            }
+            for pid in child_program_ids
+            if pid in programs_by_id
+        ]
         has_certification = parse_certification(OFFERED_BY["code"], [run])
         strip_enrollment_modes([run])
         yield {
@@ -532,4 +565,5 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "pace": pace,
             "runs": [run],
             "courses": courses,
+            "programs": child_programs,
         }

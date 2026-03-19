@@ -262,7 +262,7 @@ def test_load_program(  # noqa: PLR0913
     }
 
     delivery_data = {"delivery": [delivery]} if delivery else {}
-    result = load_program(
+    result, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -341,7 +341,7 @@ def test_load_program_preserves_preset_resource_category(mock_upsert_tasks):
         "end_date": "2017-06-20T00:00:00Z",
     }
 
-    result = load_program(
+    result, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -377,7 +377,7 @@ def test_load_program_defaults_resource_category(mock_upsert_tasks):
         "end_date": "2017-06-20T00:00:00Z",
     }
 
-    result = load_program(
+    result, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -449,7 +449,7 @@ def test_load_program_bad_platform(mocker):
         "published": True,
         "courses": [],
     }
-    result = load_program(props, [], [], config=ProgramLoaderConfig(prune=True))
+    result, _ = load_program(props, [], [], config=ProgramLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
