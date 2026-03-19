@@ -65,7 +65,7 @@ type CardData = {
   title: string
   displayType: string
   imageSrc: string
-  coursePrice: string | null
+  resourcePrice: string | null
   certificatePrice: string | null
   hasCertificate: boolean
   certificateTypeName: string | undefined
@@ -88,13 +88,13 @@ const extractCardData = (
     const price = formatResourcePrice(resource, productPrice)
     switch (getEnrollmentType(enrollmentModes)) {
       case "free":
-        return { coursePrice: "Free", certificatePrice: null }
+        return { resourcePrice: "Free", certificatePrice: null }
       case "paid":
-        return { coursePrice: price, certificatePrice: null }
+        return { resourcePrice: price, certificatePrice: null }
       case "both":
-        return { coursePrice: "Free", certificatePrice: price }
+        return { resourcePrice: "Free", certificatePrice: price }
       default:
-        return { coursePrice: null, certificatePrice: null }
+        return { resourcePrice: null, certificatePrice: null }
     }
   }
 
@@ -190,7 +190,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       imageAlt=""
       title={data.title}
       resourceType={data.displayType}
-      coursePrice={data.coursePrice}
+      resourcePrice={data.resourcePrice}
       certificatePrice={data.certificatePrice}
       hasCertificate={data.hasCertificate}
       certificateTypeName={data.certificateTypeName}
