@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0105_delete_article"),
+        ("learning_resources", "0106_resource_category_choices_index"),
     ]
 
     operations = [
