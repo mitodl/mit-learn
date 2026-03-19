@@ -47,14 +47,38 @@ const BackgroundVector = styled("img")(({ theme }) => ({
   position: "absolute",
   top: 0,
   right: 0,
-  width: 320,
+  width: 325,
   maxWidth: "45%",
   height: "auto",
   pointerEvents: "none",
-  zIndex: 0,
+  zIndex: -99,
+  transform: "translate(60%, -15%)",
   [theme.breakpoints.down("md")]: {
     width: 100,
     maxWidth: "55%",
+    transform: "none",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "200px",
+    top: "0px",
+    right: "100px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const BackgroundVectorMobile = styled("img")(({ theme }) => ({
+  position: "absolute",
+  top: -25,
+  right: 10,
+  width: "auto",
+  height: "auto",
+  pointerEvents: "none",
+  zIndex: -99,
+  display: "none",
+  [theme.breakpoints.down("sm")]: {
+    display: "block",
   },
 }))
 
@@ -71,7 +95,7 @@ const BackgroundCircles = styled("img")(({ theme }) => ({
   height: "auto",
   pointerEvents: "none",
   zIndex: 0,
-  transform: "translate(-50%, 50%)",
+  transform: "translate(-75%, 57%)",
   [theme.breakpoints.down("md")]: {
     width: 320,
   },
@@ -119,6 +143,7 @@ const LeftGrid = styled(Grid2)({
 })
 
 const ContentContainer = styled(Container)(({ theme }) => ({
+  position: "relative",
   [theme.breakpoints.down("md")]: {
     paddingLeft: "24px",
     paddingRight: "24px",
@@ -199,14 +224,23 @@ const PodcastPageTemplate: React.FC<PodcastPageTemplateProps> = ({
         backgroundUrl={DEFAULT_BACKGROUND_IMAGE_URL}
         backgroundDim={50}
       >
-        <BackgroundVector src="/images/Vector.svg" alt="" aria-hidden="true" />
-        <BackgroundCircles
-          src="/images/circles.svg"
-          alt=""
-          aria-hidden="true"
-        />
         <BannerForeground>
           <ContentContainer>
+            <BackgroundVector
+              src="/images/Vector.svg"
+              alt=""
+              aria-hidden="true"
+            />
+            <BackgroundVectorMobile
+              src="/images/rectangle_small.svg"
+              alt=""
+              aria-hidden="true"
+            />
+            <BackgroundCircles
+              src="/images/circles.svg"
+              alt=""
+              aria-hidden="true"
+            />
             <Breadcrumbs
               variant="dark"
               ancestors={[{ href: HOME_URL, label: "Home" }]}

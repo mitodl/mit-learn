@@ -11,11 +11,8 @@ const EpisodesCard = styled.div(({ theme }) => ({
   borderRadius: "12px",
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: "12px",
   width: "100%",
-  [theme.breakpoints.up("md")]: {
-    minWidth: "380px",
-  },
   [theme.breakpoints.down("sm")]: {
     padding: "16px 0",
     marginTop: "16px",
