@@ -20,7 +20,7 @@ from vector_search.serializers import (
     LearningResourcesVectorSearchRequestSerializer,
     LearningResourcesVectorSearchResponseSerializer,
 )
-from vector_search.utils import vector_search
+from vector_search.utils import async_vector_search
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +29,50 @@ class QdrantView(APIView):
     """
     Parent class for views that execute ES searches
     """
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+
+        from functools import wraps
+
+        @wraps(view)
+        async def async_view(*args, **kwargs):
+            return await view(*args, **kwargs)
+
+        async_view.view_is_async = True
+        return async_view
+
+    async def dispatch(self, request, *args, **kwargs):
+        from asgiref.sync import sync_to_async
+
+        self.args = args
+        self.kwargs = kwargs
+        request = self.initialize_request(request, *args, **kwargs)
+        self.request = request
+        self.headers = self.default_response_headers
+
+        try:
+            await sync_to_async(self.initial)(request, *args, **kwargs)
+
+            if request.method.lower() in self.http_method_names:
+                handler = getattr(
+                    self, request.method.lower(), self.http_method_not_allowed
+                )
+            else:
+                handler = self.http_method_not_allowed
+
+            response = handler(request, *args, **kwargs)
+            import asyncio
+
+            if asyncio.iscoroutine(response):
+                response = await response
+
+        except Exception as exc:  # noqa: BLE001
+            response = self.handle_exception(exc)
+
+        self.response = self.finalize_response(request, response, *args, **kwargs)
+        return self.response
 
     def handle_exception(self, exc):
         if isinstance(exc, UnexpectedResponse) and (
@@ -62,7 +106,7 @@ class LearningResourcesVectorSearchView(QdrantView):
         )
     )
     @extend_schema(summary="Vector Search")
-    def get(self, request):
+    async def get(self, request):
         request_data = LearningResourcesVectorSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
@@ -70,7 +114,7 @@ class LearningResourcesVectorSearchView(QdrantView):
             hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
-            response = vector_search(
+            response = await async_vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,
@@ -80,11 +124,16 @@ class LearningResourcesVectorSearchView(QdrantView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                response = LearningResourcesVectorSearchResponseSerializer(
-                    response, context={"request": request}
-                ).data
-                response["results"] = list(response["results"])
-                return Response(response)
+                from asgiref.sync import sync_to_async
+
+                def serialize():
+                    return LearningResourcesVectorSearchResponseSerializer(
+                        response, context={"request": request}
+                    ).data
+
+                response_data = await sync_to_async(serialize)()
+                response_data["results"] = list(response_data["results"])
+                return Response(response_data)
         else:
             errors = {}
             for key, errors_obj in request_data.errors.items():
@@ -127,7 +176,7 @@ class ContentFilesVectorSearchView(QdrantView):
         )
     )
     @extend_schema(summary="Content File Vector Search")
-    def get(self, request):
+    async def get(self, request):
         request_data = ContentFileVectorSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
@@ -142,7 +191,7 @@ class ContentFilesVectorSearchView(QdrantView):
                     f"{settings.QDRANT_BASE_COLLECTION_NAME}.{collection_name_override}"
                 )
 
-            response = vector_search(
+            response = await async_vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,
@@ -153,12 +202,16 @@ class ContentFilesVectorSearchView(QdrantView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                response = ContentFileVectorSearchResponseSerializer(
-                    response, context={"request": request}
-                ).data
+                from asgiref.sync import sync_to_async
 
-                response["results"] = list(response["results"])
-                return Response(response)
+                def serialize():
+                    return ContentFileVectorSearchResponseSerializer(
+                        response, context={"request": request}
+                    ).data
+
+                response_data = await sync_to_async(serialize)()
+                response_data["results"] = list(response_data["results"])
+                return Response(response_data)
         else:
             errors = {}
             for key, errors_obj in request_data.errors.items():
