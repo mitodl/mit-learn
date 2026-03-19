@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.58.3
+Version 0.58.3 (Released March 19, 2026)
 --------------
 
 - AskTim canvas ai contentfile ingestion issue (#3059)
