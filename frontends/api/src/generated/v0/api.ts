@@ -185,6 +185,31 @@ export interface CKEditorSettings {
   token: string | null
 }
 /**
+ * Serializer for caption URL entries
+ * @export
+ * @interface CaptionUrl
+ */
+export interface CaptionUrl {
+  /**
+   *
+   * @type {string}
+   * @memberof CaptionUrl
+   */
+  language: string
+  /**
+   *
+   * @type {string}
+   * @memberof CaptionUrl
+   */
+  language_name: string
+  /**
+   *
+   * @type {string}
+   * @memberof CaptionUrl
+   */
+  url: string
+}
+/**
  * * `yes` - Yes, I am looking for a certificate * `no` - No, I am not looking for a certificate * `not-sure-yet` - Not Sure
  * @export
  * @enum {string}
@@ -6002,6 +6027,18 @@ export interface Video {
   id: number
   /**
    *
+   * @type {Array<CaptionUrl>}
+   * @memberof Video
+   */
+  caption_urls: Array<CaptionUrl>
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
+  cover_image_url: string | null
+  /**
+   *
    * @type {string}
    * @memberof Video
    */
@@ -6012,18 +6049,6 @@ export interface Video {
    * @memberof Video
    */
   transcript?: string
-  /**
-   *
-   * @type {any}
-   * @memberof Video
-   */
-  caption_urls?: any
-  /**
-   *
-   * @type {string}
-   * @memberof Video
-   */
-  cover_image_url?: string
 }
 /**
  * Serializer for the VideoChannel model

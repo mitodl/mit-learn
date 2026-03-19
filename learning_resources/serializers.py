@@ -396,8 +396,28 @@ class VideoChannelSerializer(serializers.ModelSerializer):
         exclude = ["published", *COMMON_IGNORED_FIELDS]
 
 
+class CaptionUrlSerializer(serializers.Serializer):
+    """Serializer for caption URL entries"""
+
+    language = serializers.CharField()
+    language_name = serializers.CharField()
+    url = serializers.URLField()
+
+
+class NullableURLField(serializers.URLField):
+    """URLField that returns None for empty strings"""
+
+    def to_representation(self, value):
+        return super().to_representation(value) if value else None
+
+
 class VideoSerializer(serializers.ModelSerializer):
     """Serializer for the Video model"""
+
+    caption_urls = CaptionUrlSerializer(many=True, read_only=True)
+    cover_image_url = NullableURLField(
+        allow_blank=True, allow_null=True, read_only=True
+    )
 
     class Meta:
         model = models.Video

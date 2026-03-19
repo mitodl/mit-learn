@@ -1366,19 +1366,21 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
     )
 
     # Unpublish OVS videos not in any published OVS playlist
-    orphaned_video_ids = (
-        LearningResourceRelationship.objects.filter(
-            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-            parent__platform=ovs_platform,
-        )
-        .exclude(parent__published=True)
-        .values_list("child", flat=True)
-    )
+    videos_in_published_playlists = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        parent__platform=ovs_platform,
+        parent__published=True,
+    ).values_list("child", flat=True)
+
+    orphaned_videos = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video.name,
+        platform=ovs_platform,
+        published=True,
+    ).exclude(id__in=videos_in_published_playlists)
+
+    orphaned_video_ids = list(orphaned_videos.values_list("id", flat=True))
     if orphaned_video_ids:
-        LearningResource.objects.filter(
-            id__in=orphaned_video_ids,
-            platform=ovs_platform,
-        ).update(published=False)
+        orphaned_videos.update(published=False)
         bulk_resources_unpublished_actions(
             orphaned_video_ids, LearningResourceType.video.name
         )

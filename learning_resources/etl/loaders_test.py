@@ -2131,6 +2131,74 @@ def test_load_ovs_playlists_unpublish(mocker):
     assert stale_video.published is False
 
 
+@pytest.mark.django_db
+def test_load_ovs_playlists_shared_video_not_unpublished(
+    mocker, mock_get_similar_topics_qdrant
+):
+    """A video in both a kept and a stale playlist should stay published"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create two OVS playlists
+    kept_vp = VideoPlaylistFactory.create()
+    kept_vp.learning_resource.platform = ovs_platform
+    kept_vp.learning_resource.save()
+
+    stale_vp = VideoPlaylistFactory.create()
+    stale_vp.learning_resource.platform = ovs_platform
+    stale_vp.learning_resource.save()
+
+    # Create a video that belongs to BOTH playlists
+    shared_video = VideoFactory.create().learning_resource
+    shared_video.platform = ovs_platform
+    shared_video.save()
+
+    for vp in [kept_vp, stale_vp]:
+        vp.learning_resource.resources.add(
+            shared_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+                "position": 0,
+            },
+        )
+
+    # Include the kept playlist with the shared video in its videos list
+    playlists_data = [
+        {
+            "playlist_id": kept_vp.learning_resource.readable_id,
+            "platform": PlatformType.ovs.name,
+            "title": kept_vp.learning_resource.title,
+            "url": "https://video.odl.mit.edu/collections/test",
+            "published": True,
+            "videos": [
+                {
+                    "readable_id": shared_video.readable_id,
+                    "platform": PlatformType.ovs.name,
+                    "etl_source": "ovs",
+                    "resource_type": LearningResourceType.video.name,
+                    "title": shared_video.title,
+                    "url": "https://video.odl.mit.edu/videos/test",
+                    "published": True,
+                    "video": {"duration": "PT0S"},
+                },
+            ],
+        }
+    ]
+
+    load_ovs_playlists(playlists_data)
+
+    # Stale playlist should be unpublished
+    stale_vp.learning_resource.refresh_from_db()
+    assert stale_vp.learning_resource.published is False
+
+    # Shared video should remain published because it's still in the kept playlist
+    shared_video.refresh_from_db()
+    assert shared_video.published is True
+
+
 def test_load_ovs_playlists_empty_aborts(mocker):
     """Test load_ovs_playlists returns early when no playlists are provided"""
     mock_log = mocker.patch("learning_resources.etl.loaders.log")

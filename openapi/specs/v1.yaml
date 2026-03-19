@@ -9922,6 +9922,39 @@ components:
       x-enum-descriptions:
       - Dated
       - Anytime
+    CaptionUrl:
+      type: object
+      description: Serializer for caption URL entries
+      properties:
+        language:
+          type: string
+        language_name:
+          type: string
+        url:
+          type: string
+          format: uri
+      required:
+      - language
+      - language_name
+      - url
+    CaptionUrlRequest:
+      type: object
+      description: Serializer for caption URL entries
+      properties:
+        language:
+          type: string
+          minLength: 1
+        language_name:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          minLength: 1
+      required:
+      - language
+      - language_name
+      - url
     CertificationTypeEnum:
       enum:
       - micromasters
@@ -15568,17 +15601,24 @@ components:
         id:
           type: integer
           readOnly: true
+        caption_urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptionUrl'
+          readOnly: true
+        cover_image_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
         duration:
           type: string
           maxLength: 11
         transcript:
           type: string
-        caption_urls: {}
-        cover_image_url:
-          type: string
-          format: uri
-          maxLength: 2048
       required:
+      - caption_urls
+      - cover_image_url
       - duration
       - id
     VideoChannel:
@@ -16035,11 +16075,6 @@ components:
           maxLength: 11
         transcript:
           type: string
-        caption_urls: {}
-        cover_image_url:
-          type: string
-          format: uri
-          maxLength: 2048
       required:
       - duration
     VideoResource:

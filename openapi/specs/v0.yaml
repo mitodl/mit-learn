@@ -1640,6 +1640,21 @@ components:
           readOnly: true
       required:
       - token
+    CaptionUrl:
+      type: object
+      description: Serializer for caption URL entries
+      properties:
+        language:
+          type: string
+        language_name:
+          type: string
+        url:
+          type: string
+          format: uri
+      required:
+      - language
+      - language_name
+      - url
     CertificateDesiredEnum:
       enum:
       - 'yes'
@@ -5920,17 +5935,24 @@ components:
         id:
           type: integer
           readOnly: true
+        caption_urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptionUrl'
+          readOnly: true
+        cover_image_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
         duration:
           type: string
           maxLength: 11
         transcript:
           type: string
-        caption_urls: {}
-        cover_image_url:
-          type: string
-          format: uri
-          maxLength: 2048
       required:
+      - caption_urls
+      - cover_image_url
       - duration
       - id
     VideoChannel:
