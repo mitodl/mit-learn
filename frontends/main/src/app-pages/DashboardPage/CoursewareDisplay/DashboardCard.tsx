@@ -29,7 +29,7 @@ import {
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
-  useCreateEnrollment,
+  useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -281,7 +281,7 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
-  const createEnrollment = useCreateEnrollment()
+  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
 
   const enroll = React.useCallback(
     ({
@@ -290,14 +290,14 @@ const useEnrollmentHandler = () => {
       href,
       isB2B,
       isVerifiedProgram,
-      programCourseRunId,
+      programCoursewareId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
       href?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
-      programCourseRunId?: number
+      programCoursewareId?: string
     }) => {
       if (isB2B) {
         if (!readableId || !href) {
@@ -326,7 +326,7 @@ const useEnrollmentHandler = () => {
             },
           )
         }
-      } else if (isVerifiedProgram && programCourseRunId) {
+      } else if (isVerifiedProgram && programCoursewareId && readableId) {
         if (!href) {
           console.warn(
             "Cannot enroll in verified program course: missing href",
@@ -334,8 +334,8 @@ const useEnrollmentHandler = () => {
           )
           return
         }
-        createEnrollment.mutate(
-          { run_id: programCourseRunId },
+        createVerifiedProgramEnrollment.mutate(
+          { courserun_id: readableId, program_id: programCoursewareId },
           {
             onSuccess: () => {
               window.location.href = href
@@ -353,13 +353,15 @@ const useEnrollmentHandler = () => {
       mitxOnlineUser.data?.legal_address?.country,
       mitxOnlineUser.data?.user_profile?.year_of_birth,
       createB2bEnrollment,
-      createEnrollment,
+      createVerifiedProgramEnrollment,
     ],
   )
 
   return {
     enroll,
-    isPending: createB2bEnrollment.isPending || createEnrollment.isPending,
+    isPending:
+      createB2bEnrollment.isPending ||
+      createVerifiedProgramEnrollment.isPending,
   }
 }
 
@@ -702,9 +704,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
-        programCourseRunId: isVerifiedProgramEnrollment
-          ? courseRun?.id
-          : undefined,
+        programCoursewareId: programEnrollment?.program.readable_id,
       })
     }
   }, [
@@ -713,10 +713,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     readableId,
     coursewareUrl,
     b2bContractId,
-    courseRun?.id,
     buttonHref,
     enrollment,
     programEnrollment?.enrollment_mode,
+    programEnrollment?.program.readable_id,
   ])
 
   // Determine title behavior (link vs clickable text vs plain text)
