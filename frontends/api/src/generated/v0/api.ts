@@ -4938,6 +4938,12 @@ export interface Program {
    * @memberof Program
    */
   course_count: number
+  /**
+   *
+   * @type {number}
+   * @memberof Program
+   */
+  program_count: number
 }
 /**
  * Serializer for Program Certificates
@@ -5386,13 +5392,14 @@ export type ProgramResourceResourceTypeEnum =
   (typeof ProgramResourceResourceTypeEnum)[keyof typeof ProgramResourceResourceTypeEnum]
 
 /**
- * * `PROGRAM_COURSES` - Program Courses * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
+ * * `PROGRAM_COURSES` - Program Courses * `PROGRAM_PROGRAMS` - Program Programs * `LEARNING_PATH_ITEMS` - Learning Path Items * `PODCAST_EPISODES` - Podcast Episodes * `PLAYLIST_VIDEOS` - Playlist Videos * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
  * @export
  * @enum {string}
  */
 
 export const RelationTypeEnumDescriptions = {
   PROGRAM_COURSES: "Program Courses",
+  PROGRAM_PROGRAMS: "Program Programs",
   LEARNING_PATH_ITEMS: "Learning Path Items",
   PODCAST_EPISODES: "Podcast Episodes",
   PLAYLIST_VIDEOS: "Playlist Videos",
@@ -5404,6 +5411,10 @@ export const RelationTypeEnum = {
    * Program Courses
    */
   ProgramCourses: "PROGRAM_COURSES",
+  /**
+   * Program Programs
+   */
+  ProgramPrograms: "PROGRAM_PROGRAMS",
   /**
    * Learning Path Items
    */

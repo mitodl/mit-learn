@@ -301,6 +301,55 @@ def test_get_program_ids_from_req_tree(req_tree, expected_ids):
     assert get_program_ids_from_req_tree(req_tree) == expected_ids
 
 
+def test_transform_programs_logs_warning_for_missing_child_program(mocker, settings):
+    """transform_programs should warn when req_tree references unknown program ids."""
+    set_up_topics(is_mitx=True)
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+
+    programs = [
+        {
+            "id": 1,
+            "readable_id": "parent-program",
+            "title": "Parent Program",
+            "availability": "anytime",
+            "enrollment_modes": [],
+            "req_tree": [
+                {
+                    "id": 10,
+                    "data": {
+                        "node_type": "program",
+                        "required_program": 999,
+                    },
+                    "children": [],
+                }
+            ],
+            "page": {
+                "page_url": "/programs/parent-program",
+                "live": True,
+                "description": "Parent program description",
+            },
+            "topics": [],
+            "departments": [],
+            "certificate_type": None,
+        }
+    ]
+
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids", return_value=[]
+    )
+    mock_log_warning = mocker.patch("learning_resources.etl.mitxonline.log.warning")
+
+    transformed = list(transform_programs(programs))
+
+    assert len(transformed) == 1
+    assert transformed[0]["programs"] == []
+    mock_log_warning.assert_called_once_with(
+        "Program %s references missing child program id=%s in req_tree",
+        "parent-program",
+        999,
+    )
+
+
 def test_mitxonline_transform_programs(
     mock_mitxonline_programs_data, mock_mitxonline_courses_data, mocker, settings
 ):

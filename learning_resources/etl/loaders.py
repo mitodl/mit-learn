@@ -737,7 +737,16 @@ def load_program(
 def load_programs(
     etl_source: str, programs_data: list[dict], *, config=ProgramLoaderConfig()
 ) -> list[LearningResource]:
-    """Load a list of programs"""
+    """
+    Load a list of programs.
+
+    This uses a two-pass strategy:
+    1. Load each program and its direct course children.
+    2. Create deferred child-program relationships once all programs exist.
+
+    For MITx Online data, each deferred child program may map to either
+    PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
+    """
     blocklist = load_course_blocklist()
     duplicates = load_course_duplicates(etl_source)
 
@@ -752,17 +761,31 @@ def load_programs(
         if learning_resource and child_programs_data:
             deferred_child_programs.append((learning_resource, child_programs_data))
 
-    # Pass 2: create child program relationships now that all programs exist
+    # Pass 2: create child program relationships now that all programs exist.
+    # Use a local position counter per parent so sibling positions are stable
+    # and unique within this pass.
     for parent_resource, child_programs_data in deferred_child_programs:
+        next_position = parent_resource.children.count()
         for child_program_data in child_programs_data:
             readable_id = child_program_data.get("readable_id")
             if not readable_id:
+                log.warning(
+                    "Skipping child program relationship with missing readable_id: "
+                    "parent=%s",
+                    parent_resource.readable_id,
+                )
                 continue
             child_resource = LearningResource.objects.filter(
                 readable_id=readable_id,
                 resource_type=LearningResourceType.program.name,
             ).first()
             if not child_resource:
+                log.warning(
+                    "Skipping child program relationship for parent=%s; "
+                    "child readable_id=%s not found",
+                    parent_resource.readable_id,
+                    readable_id,
+                )
                 continue
             relation_type = (
                 LearningResourceRelationTypes.PROGRAM_COURSES
@@ -774,9 +797,10 @@ def load_programs(
                 child=child_resource,
                 defaults={
                     "relation_type": relation_type,
-                    "position": parent_resource.children.count(),
+                    "position": next_position,
                 },
             )
+            next_position += 1
 
     programs = [r for r in results if r is not None]
     if programs and config.prune:

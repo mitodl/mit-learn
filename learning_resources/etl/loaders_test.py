@@ -1,5 +1,6 @@
 """Tests for ETL loaders"""
 
+import json
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -55,6 +56,7 @@ from learning_resources.etl.loaders import (
     load_video_channels,
     load_videos,
 )
+from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -83,6 +85,7 @@ from learning_resources.models import (
     LearningResourceImage,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceRun,
     PodcastEpisode,
     Program,
@@ -91,6 +94,7 @@ from learning_resources.models import (
     VideoChannel,
     VideoPlaylist,
 )
+from learning_resources.test_utils import set_up_topics
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -1334,12 +1338,76 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     mock_load_program = mocker.patch(
         "learning_resources.etl.loaders.load_program",
         autospec=True,
-        return_value=ProgramFactory.create().learning_resource,
+        return_value=(ProgramFactory.create().learning_resource, []),
     )
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
     mock_duplicates.assert_called_once_with("mitx")
+
+
+def test_load_programs_with_child_program_relationships(mocker, settings):
+    """End-to-end loader test for mixed child course/program relationships."""
+    set_up_topics(is_mitx=True)
+    LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+
+    with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
+        fixture_data = json.load(f)
+
+    def _mock_fetch_courses_by_ids(course_ids):
+        return [
+            course
+            for course in fixture_data["courses"]
+            if course["id"] in set(course_ids)
+        ]
+
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=_mock_fetch_courses_by_ids,
+    )
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+
+    transformed_programs = list(transform_programs(fixture_data["programs"]))
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed_programs,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    child_program_resource = LearningResource.objects.get(
+        readable_id="mitx-child-program"
+    )
+    child_course_display_program_resource = LearningResource.objects.get(
+        readable_id="mitx-child-program-displayed-as-course"
+    )
+
+    child_program_rel = LearningResourceRelationship.objects.get(
+        parent=parent_resource,
+        child=child_program_resource,
+    )
+    child_course_display_rel = LearningResourceRelationship.objects.get(
+        parent=parent_resource,
+        child=child_course_display_program_resource,
+    )
+
+    assert (
+        child_program_rel.relation_type
+        == LearningResourceRelationTypes.PROGRAM_PROGRAMS
+    )
+    assert (
+        child_course_display_rel.relation_type
+        == LearningResourceRelationTypes.PROGRAM_COURSES
+    )
+
+    child_program_positions = list(
+        parent_resource.children.filter(
+            child__resource_type=LearningResourceType.program.name
+        )
+        .order_by("position")
+        .values_list("position", flat=True)
+    )
+    assert child_program_positions == sorted(set(child_program_positions))
 
 
 @pytest.mark.parametrize("is_published", [True, False])

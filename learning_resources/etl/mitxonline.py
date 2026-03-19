@@ -3,6 +3,7 @@
 import copy
 import logging
 import re
+from collections.abc import Generator
 from datetime import UTC
 from decimal import Decimal
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -185,7 +186,7 @@ def parse_prices(
     return prices or [free_price]
 
 
-def parse_departments(departments_data: list[dict or str]) -> list[str]:
+def parse_departments(departments_data: list[dict | str]) -> list[str]:
     """
     Return a list of department ids for a course/program
 
@@ -458,7 +459,7 @@ def _fetch_courses_by_ids(course_ids):
     return []
 
 
-def transform_programs(programs: list[dict]) -> list[dict]:
+def transform_programs(programs: list[dict]) -> Generator[dict, None, None]:
     """
     Transform the MITX Online catalog data
 
@@ -521,14 +522,21 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
         child_program_ids = get_program_ids_from_req_tree(program.get("req_tree", []))
-        child_programs = [
-            {
-                "readable_id": programs_by_id[pid]["readable_id"],
-                "display_mode": programs_by_id[pid].get("display_mode"),
-            }
-            for pid in child_program_ids
-            if pid in programs_by_id
-        ]
+        child_programs = []
+        for pid in child_program_ids:
+            if pid not in programs_by_id:
+                log.warning(
+                    "Program %s references missing child program id=%s in req_tree",
+                    program.get("readable_id"),
+                    pid,
+                )
+                continue
+            child_programs.append(
+                {
+                    "readable_id": programs_by_id[pid]["readable_id"],
+                    "display_mode": programs_by_id[pid].get("display_mode"),
+                }
+            )
         has_certification = parse_certification(OFFERED_BY["code"], [run])
         strip_enrollment_modes([run])
         yield {

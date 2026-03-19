@@ -11853,6 +11853,11 @@ components:
           readOnly: true
           nullable: true
           description: Number of Courses
+        number_of_programs:
+          type: number
+          readOnly: true
+          nullable: true
+          description: Number of Programs
         location:
           type: string
           readOnly: true
@@ -11902,6 +11907,7 @@ components:
       - levels
       - location
       - number_of_courses
+      - number_of_programs
       - offered_by
       - platform
       - price
@@ -14692,8 +14698,12 @@ components:
         course_count:
           type: integer
           readOnly: true
+        program_count:
+          type: integer
+          readOnly: true
       required:
       - course_count
+      - program_count
     ProgramCertificate:
       type: object
       description: Serializer for Program Certificates
@@ -15231,6 +15241,7 @@ components:
     RelationTypeEnum:
       enum:
       - PROGRAM_COURSES
+      - PROGRAM_PROGRAMS
       - LEARNING_PATH_ITEMS
       - PODCAST_EPISODES
       - PLAYLIST_VIDEOS
@@ -15238,12 +15249,14 @@ components:
       type: string
       description: |-
         * `PROGRAM_COURSES` - Program Courses
+        * `PROGRAM_PROGRAMS` - Program Programs
         * `LEARNING_PATH_ITEMS` - Learning Path Items
         * `PODCAST_EPISODES` - Podcast Episodes
         * `PLAYLIST_VIDEOS` - Playlist Videos
         * `COURSE_LEARNING_MATERIALS` - Course Learning Materials
       x-enum-descriptions:
       - Program Courses
+      - Program Programs
       - Learning Path Items
       - Podcast Episodes
       - Playlist Videos
