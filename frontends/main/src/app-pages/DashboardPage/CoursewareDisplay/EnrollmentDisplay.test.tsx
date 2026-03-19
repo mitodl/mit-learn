@@ -1012,7 +1012,12 @@ describe("EnrollmentDisplay", () => {
       )
 
       // Mock the enrollment endpoint
-      setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
+      const programEnrollmentEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(
+          programEnrollment.program.readable_id,
+          run.courseware_id,
+        )
+      setMockResponse.post(programEnrollmentEndpoint, {})
 
       renderWithProviders(<EnrollmentDisplay programId={888} />)
 
@@ -1040,7 +1045,7 @@ describe("EnrollmentDisplay", () => {
         expect(mockAxiosInstance.request).toHaveBeenCalledWith(
           expect.objectContaining({
             method: "POST",
-            url: mitxonline.urls.enrollment.enrollmentsListV1(),
+            url: programEnrollmentEndpoint,
           }),
         )
       })
