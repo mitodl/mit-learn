@@ -1245,6 +1245,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -1267,6 +1268,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -1275,7 +1277,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -5922,6 +5925,11 @@ components:
           maxLength: 11
         transcript:
           type: string
+        caption_urls: {}
+        cover_image_url:
+          type: string
+          format: uri
+          maxLength: 2048
       required:
       - duration
       - id

@@ -84,6 +84,14 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.get_youtube_data",
             "schedule": crontab(minute=30, hour=8),  # 4:30am EST
         },
+        "update-ovs-videos": {
+            "task": "learning_resources.tasks.get_ovs_data",
+            "schedule": crontab(minute=0, hour=9),  # 5:00am EST
+        },
+        "update-ovs-transcripts": {
+            "task": "learning_resources.tasks.get_ovs_transcripts",
+            "schedule": crontab(minute=30, hour=9),  # 5:30am EST
+        },
         "update_medium_mit_news": {
             "task": "news_events.tasks.get_medium_mit_news",
             "schedule": get_int(
