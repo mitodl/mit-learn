@@ -40,18 +40,24 @@ from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
-from vector_search.encoders.utils import dense_encoder
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
 
 
 @cache
 def qdrant_client():
+    enable_cloud_inference = (
+        dense_encoder().requires_cloud_inferencing
+        or sparse_encoder().requires_cloud_inferencing
+    )
+
     return QdrantClient(
         url=settings.QDRANT_HOST,
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
         prefer_grpc=True,
+        cloud_inference=enable_cloud_inference,
         timeout=settings.QDRANT_CLIENT_TIMEOUT,
     )
 
@@ -59,8 +65,8 @@ def qdrant_client():
 def points_generator(
     ids,
     metadata,
-    encoded_docs,
-    vector_name,
+    dense_encoded_docs,
+    sparse_encoded_docs,
 ):
     """
     Get a generator for embedding points to store in Qdrant
@@ -68,21 +74,28 @@ def points_generator(
     Args:
         ids (list): list of unique point ids
         metadata (list): list of metadata dictionaries
-        encoded_docs (list): list of vectorized documents
-        vector_name (str): name of the vector in qdrant
+        dense_encoded_docs (list): list of vectorized documents
+        sparse_encoded_docs
     Returns:
         generator:
             A generator of PointStruct objects
     """
+    dense_vector_name = dense_encoder().model_short_name()
+    sparse_vector_name = sparse_encoder().model_short_name()
     if ids is None:
         ids = iter(lambda: uuid.uuid4().hex, None)
     if metadata is None:
         metadata = iter(dict, None)
-    for idx, meta, vector in zip(ids, metadata, encoded_docs):
+    for idx, meta, dense_vector, sparse_vector in zip(
+        ids, metadata, dense_encoded_docs, sparse_encoded_docs
+    ):
         payload = meta
         point_data = {"id": idx, "payload": payload}
-        if any(vector):
-            point_vector: dict[str, models.Vector] = {vector_name: vector}
+        if any(dense_vector):
+            point_vector: dict[str, models.Vector] = {
+                dense_vector_name: dense_vector,
+                sparse_vector_name: sparse_vector,
+            }
             point_data["vector"] = point_vector
         yield models.PointStruct(**point_data)
 
@@ -112,7 +125,8 @@ def create_qdrant_collection(collection_name, force_recreate):
     Create or recreate a QDrant collection
     """
     client = qdrant_client()
-    encoder = dense_encoder()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
     # True if either of the collections were recreated
     if not client.collection_exists(collection_name=collection_name) or force_recreate:
         client.delete_collection(collection_name)
@@ -120,9 +134,14 @@ def create_qdrant_collection(collection_name, force_recreate):
             collection_name=collection_name,
             on_disk_payload=True,
             vectors_config={
-                encoder.model_short_name(): models.VectorParams(
-                    size=encoder.dim(), distance=models.Distance.COSINE
+                encoder_dense.model_short_name(): models.VectorParams(
+                    size=encoder_dense.dim(), distance=models.Distance.COSINE
                 ),
+            },
+            sparse_vectors_config={
+                encoder_sparse.model_short_name(): models.SparseVectorParams(
+                    index=models.SparseIndexParams(on_disk=True),
+                )
             },
             replication_factor=2,
             shard_number=6,
@@ -131,13 +150,15 @@ def create_qdrant_collection(collection_name, force_recreate):
                 unindexed_filtering_retrieve=False,
                 unindexed_filtering_update=False,
             ),
-            sparse_vectors_config=client.get_fastembed_sparse_vector_params(),
-            optimizers_config=models.OptimizersConfigDiff(default_segment_number=2),
+            optimizers_config=models.OptimizersConfigDiff(
+                default_segment_number=2, prevent_unoptimized=True
+            ),
             quantization_config=models.BinaryQuantization(
                 binary=models.BinaryQuantizationConfig(
                     always_ram=True,
                 ),
             ),
+            hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
 
 
@@ -228,10 +249,17 @@ def embed_topics():
         )
         ids.append(str(topic.topic_uuid))
     if len(docs) > 0:
-        encoder = dense_encoder()
-        embeddings = encoder.embed_documents(docs)
-        vector_name = encoder.model_short_name()
-        points = points_generator(ids, metadata, embeddings, vector_name)
+        encoder_dense = dense_encoder()
+        encoder_sparse = sparse_encoder()
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+
+        points = points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
         client.upload_points(TOPICS_COLLECTION_NAME, points=points, wait=False)
 
 
@@ -289,8 +317,9 @@ def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
     ids = []
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
+
     for doc in serialized_resources:
         if not should_generate_resource_embeddings(doc):
             update_learning_resource_payload(doc)
@@ -299,8 +328,14 @@ def _process_resource_embeddings(serialized_resources):
         ids.append(vector_point_id(vector_point_key(doc)))
         docs.append(_learning_resource_embedding_context(doc))
     if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        return points_generator(ids, metadata, embeddings, vector_name)
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        return points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
     return None
 
 
@@ -418,8 +453,8 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     Embed general course info as a document in the contentfile collection
     """
     client = qdrant_client()
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
     metadata = []
     ids = []
     docs = []
@@ -472,8 +507,14 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         docs.extend(split_texts)
         ids.extend(split_ids)
     if len(docs) > 0:
-        embeddings = encoder.embed_documents(docs)
-        points = points_generator(ids, metadata, embeddings, vector_name)
+        embeddings = encoder_dense.embed_documents(docs)
+        sparse_embeddings = encoder_sparse.embed_documents(docs)
+        points = points_generator(
+            ids,
+            metadata,
+            dense_encoded_docs=embeddings,
+            sparse_encoded_docs=sparse_embeddings,
+        )
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
@@ -481,8 +522,8 @@ def _generate_content_file_points(serialized_content):
     """
     Chunk and embed content file documents, yielding PointStructs
     """
-    encoder = dense_encoder()
-    vector_name = encoder.model_short_name()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
 
     """
     Break up requests according to chunk size to stay under openai limits
@@ -522,7 +563,7 @@ def _generate_content_file_points(serialized_content):
             remove_params, collection_name=CONTENT_FILES_COLLECTION_NAME
         )
 
-        split_docs = _chunk_documents(encoder, [embedding_context], [doc])
+        split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
@@ -535,9 +576,10 @@ def _generate_content_file_points(serialized_content):
 
         for i in range(0, len(split_texts), request_chunk_size):
             chunk_texts = split_texts[i : i + request_chunk_size]
-            chunk_embeddings = encoder.embed_documents(chunk_texts)
+            dense_chunk_embeddings = encoder_dense.embed_documents(chunk_texts)
+            sparse_chunk_embeddings = encoder_sparse.embed_documents(chunk_texts)
 
-            for j, embedding in enumerate(chunk_embeddings):
+            for j, dense_embedding in enumerate(dense_chunk_embeddings):
                 # Map back to the original valid_chunk index
                 relative_index = i + j
                 if relative_index >= len(valid_chunks):
@@ -562,11 +604,17 @@ def _generate_content_file_points(serialized_content):
                 )
 
                 yield models.PointStruct(
-                    id=point_id, payload=metadata, vector={vector_name: embedding}
+                    id=point_id,
+                    payload=metadata,
+                    vector={
+                        encoder_dense.model_short_name(): dense_embedding,
+                        encoder_sparse.model_short_name(): sparse_chunk_embeddings[j],
+                    },
                 )
             # Explicitly free memory for large chunks
             del chunk_texts
-            del chunk_embeddings
+            del dense_chunk_embeddings
+            del sparse_chunk_embeddings
             gc.collect()
 
 
@@ -823,12 +871,14 @@ def vector_point_key(
         raise ValueError(msg)
 
 
-def vector_search(
+def vector_search(  # noqa: PLR0913
     query_string: str,
     params: dict,
     limit: int = 10,
     offset: int = 10,
     search_collection=RESOURCES_COLLECTION_NAME,
+    *,
+    hybrid_search: bool = False,
 ):
     """
     Perform a vector search given a query string
@@ -846,18 +896,43 @@ def vector_search(
     """
 
     client = qdrant_client()
-    encoder = dense_encoder()
+    encoder_dense = dense_encoder()
+    encoder_sparse = sparse_encoder()
+
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
+    prefetch_multiplier = 20
+    prefetch_limit = (offset + limit) * prefetch_multiplier
     if query_string:
         search_params = {
             "collection_name": search_collection,
-            "using": encoder.model_short_name(),
-            "query": encoder.embed_query(query_string),
             "query_filter": search_filter,
-            "search_params": models.SearchParams(indexed_only=True),
+            "with_vectors": False,
+            "with_payload": True,
+            "search_params": models.SearchParams(indexed_only=True, exact=False),
             "limit": limit,
         }
+
+        if hybrid_search:
+            search_params["prefetch"] = [
+                models.Prefetch(
+                    query=encoder_sparse.embed(query_string),
+                    using=encoder_sparse.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+                models.Prefetch(
+                    query=encoder_dense.embed_query(query_string),  # <-- dense vector
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+            ]
+            search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
+        else:
+            # fallback to dense only search
+            search_params["using"] = encoder_dense.model_short_name()
+            search_params["query"] = encoder_dense.embed_query(query_string)
+
         if "group_by" in params:
+            search_params.pop("search_params", None)
             search_params["group_by"] = params.get("group_by")
             search_params["group_size"] = params.get("group_size", 1)
             group_result = client.query_points_groups(**search_params)
@@ -884,6 +959,7 @@ def vector_search(
             scroll_filter=search_filter,
             limit=limit,
             offset=offset,
+            with_vectors=False,
         )[0]
 
     if search_collection == RESOURCES_COLLECTION_NAME:
@@ -893,7 +969,7 @@ def vector_search(
     count_result = client.count(
         collection_name=search_collection,
         count_filter=search_filter,
-        exact=True,
+        exact=False,
     )
 
     return {
