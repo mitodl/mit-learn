@@ -375,46 +375,74 @@ def transform_courses(courses):
 def get_course_ids_from_req_tree(
     nodes: list[dict],
     programs_by_id: dict[int, dict] | None = None,
+    visited_programs: set[int] | None = None,
 ) -> list[int]:
     """
-    Extract all course IDs from a program's req_tree.
+    Extract unique course IDs from a program's req_tree.
 
     Handles both course nodes (node_type="course") and program nodes
     (node_type="program" with required_program set). For program nodes,
     the referenced program's own req_tree is recursed into using the
-    programs_by_id lookup.
+    programs_by_id lookup. A visited set prevents infinite recursion
+    from circular program references.
 
     Args:
         nodes: list of req_tree node dicts
         programs_by_id: optional mapping of program ID to program data,
             used to resolve required_program references
+        visited_programs: optional set tracking program IDs already
+            visited in this traversal to prevent cycles
 
     Returns:
-        list of int: course IDs found in the tree
+        list of int: unique course IDs found in the tree (order preserved)
     """
-    course_ids = []
+    if visited_programs is None:
+        visited_programs = set()
+    seen_ids: set[int] = set()
+    course_ids: list[int] = []
+    _collect_course_ids(nodes, programs_by_id, visited_programs, seen_ids, course_ids)
+    return course_ids
+
+
+def _collect_course_ids(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None,
+    visited_programs: set[int],
+    seen_ids: set[int],
+    course_ids: list[int],
+) -> None:
+    """Recursive helper for get_course_ids_from_req_tree."""
     for node in nodes:
         data = node.get("data", {})
         node_type = data.get("node_type")
         if node_type == "course":
             course_id = data.get("course")
-            if isinstance(course_id, int):
+            if isinstance(course_id, int) and course_id not in seen_ids:
+                seen_ids.add(course_id)
                 course_ids.append(course_id)
         elif node_type == "program" and programs_by_id:
             required_program_id = data.get("required_program")
-            if isinstance(required_program_id, int):
+            if (
+                isinstance(required_program_id, int)
+                and required_program_id not in visited_programs
+            ):
+                visited_programs.add(required_program_id)
                 child_program = programs_by_id.get(required_program_id)
                 if child_program:
-                    course_ids.extend(
-                        get_course_ids_from_req_tree(
-                            child_program.get("req_tree", []),
-                            programs_by_id,
-                        )
+                    _collect_course_ids(
+                        child_program.get("req_tree", []),
+                        programs_by_id,
+                        visited_programs,
+                        seen_ids,
+                        course_ids,
                     )
-        course_ids.extend(
-            get_course_ids_from_req_tree(node.get("children", []), programs_by_id)
+        _collect_course_ids(
+            node.get("children", []),
+            programs_by_id,
+            visited_programs,
+            seen_ids,
+            course_ids,
         )
-    return course_ids
 
 
 def get_program_ids_from_req_tree(nodes: list[dict]) -> list[int]:
@@ -573,5 +601,5 @@ def transform_programs(programs: list[dict]) -> Generator[dict, None, None]:
             "pace": pace,
             "runs": [run],
             "courses": courses,
-            "programs": child_programs,
+            "child_programs": child_programs,
         }

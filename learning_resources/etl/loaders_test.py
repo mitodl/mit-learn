@@ -30,6 +30,7 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
+    ProgramLoadResult,
     calculate_completeness,
     load_content_file,
     load_content_files,
@@ -318,16 +319,9 @@ def test_load_program(  # noqa: PLR0913
         assert isinstance(relationship.child, LearningResource)
         assert relationship.child.readable_id == data.learning_resource.readable_id
 
-    if program_exists and not is_published:
-        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
-            result.id, result.resource_type
-        )
-    elif is_published:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
-    else:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
+    # Note: update_index is called by load_programs (after pass 2),
+    # not by load_program directly, so indexing is not asserted here.
+    mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -1338,7 +1332,11 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     mock_load_program = mocker.patch(
         "learning_resources.etl.loaders.load_program",
         autospec=True,
-        return_value=(ProgramFactory.create().learning_resource, True, []),
+        return_value=ProgramLoadResult(
+            resource=ProgramFactory.create().learning_resource,
+            created=True,
+            child_programs_data=[],
+        ),
     )
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
@@ -1408,6 +1406,51 @@ def test_load_programs_with_child_program_relationships(mocker, settings):
         .values_list("position", flat=True)
     )
     assert child_program_positions == sorted(set(child_program_positions))
+
+
+def test_load_programs_idempotent_child_relationships(mocker, settings):
+    """Running load_programs twice should not duplicate child program relationships."""
+    set_up_topics(is_mitx=True)
+    LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+
+    with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
+        fixture_data = json.load(f)
+
+    def _mock_fetch_courses_by_ids(course_ids):
+        return [
+            course
+            for course in fixture_data["courses"]
+            if course["id"] in set(course_ids)
+        ]
+
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=_mock_fetch_courses_by_ids,
+    )
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+
+    transformed = list(transform_programs(fixture_data["programs"]))
+
+    # Run twice
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+    # Re-transform since transform_programs pops keys
+    transformed = list(transform_programs(fixture_data["programs"]))
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    # Should have exactly 2 child-program relationships, not 4
+    program_child_count = parent_resource.children.filter(
+        child__resource_type=LearningResourceType.program.name
+    ).count()
+    assert program_child_count == 2
 
 
 @pytest.mark.parametrize("is_published", [True, False])

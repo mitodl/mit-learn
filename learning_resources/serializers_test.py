@@ -85,7 +85,9 @@ def test_serialize_program_to_json():
         serializer.data,
         {
             "course_count": program.courses.filter(child__published=True).count(),
-            "program_count": program.programs.filter(child__published=True).count(),
+            "program_count": program.child_programs.filter(
+                child__published=True
+            ).count(),
         },
     )
 

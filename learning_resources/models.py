@@ -903,7 +903,7 @@ class Program(LearningResourceDetailModel):
         )
 
     @property
-    def programs(self):
+    def child_programs(self):
         """Get the associated child program resources"""
         return self.learning_resource.children.filter(
             relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,

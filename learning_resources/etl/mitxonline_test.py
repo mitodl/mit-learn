@@ -263,6 +263,61 @@ def test_get_course_ids_from_req_tree_missing_program():
     assert get_course_ids_from_req_tree(req_tree, programs_by_id={}) == []
 
 
+def test_get_course_ids_from_req_tree_circular_reference():
+    """Test that circular program references don't cause infinite recursion"""
+    programs_by_id = {
+        1: {
+            "id": 1,
+            "req_tree": [
+                {
+                    "data": {
+                        "node_type": "program",
+                        "required_program": 2,
+                    },
+                    "id": 10,
+                    "children": [],
+                },
+                {"data": {"node_type": "course", "course": 100}, "id": 11},
+            ],
+        },
+        2: {
+            "id": 2,
+            "req_tree": [
+                {
+                    "data": {
+                        "node_type": "program",
+                        "required_program": 1,
+                    },
+                    "id": 20,
+                    "children": [],
+                },
+                {"data": {"node_type": "course", "course": 200}, "id": 21},
+            ],
+        },
+    }
+    # Starting from program 1's req_tree
+    result = get_course_ids_from_req_tree(programs_by_id[1]["req_tree"], programs_by_id)
+    # Should get course 200 (from program 2) and course 100 (from program 1)
+    # but NOT recurse infinitely back into program 1 from program 2
+    assert set(result) == {100, 200}
+
+
+def test_get_course_ids_from_req_tree_deduplicates():
+    """Test that duplicate course IDs are deduplicated"""
+    req_tree = [
+        {
+            "data": {"node_type": "operator", "operator": "all_of"},
+            "id": 1,
+            "children": [
+                {"data": {"node_type": "course", "course": 10}, "id": 2},
+                {"data": {"node_type": "course", "course": 10}, "id": 3},
+                {"data": {"node_type": "course", "course": 20}, "id": 4},
+            ],
+        }
+    ]
+    assert get_course_ids_from_req_tree(req_tree) == [10, 20]
+
+
 @pytest.mark.parametrize(
     ("req_tree", "expected_ids"),
     [
@@ -342,7 +397,7 @@ def test_transform_programs_logs_warning_for_missing_child_program(mocker, setti
     transformed = list(transform_programs(programs))
 
     assert len(transformed) == 1
-    assert transformed[0]["programs"] == []
+    assert transformed[0]["child_programs"] == []
     mock_log_warning.assert_called_once_with(
         "Program %s references missing child program id=%s in req_tree",
         "parent-program",
@@ -519,7 +574,7 @@ def test_mitxonline_transform_programs(
                     }
                 ],
                 "courses": expected_courses,
-                "programs": [],
+                "child_programs": [],
             }
         )
     result = sorted(result, key=lambda x: x["readable_id"])
