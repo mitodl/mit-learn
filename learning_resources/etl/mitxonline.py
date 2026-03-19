@@ -466,8 +466,8 @@ def transform_programs(programs: list[dict]) -> Generator[dict, None, None]:
     Args:
         programs (list of dict): the MITX Online programs data
 
-    Returns:
-        list of dict: the transformed programs data
+    Yields:
+        dict: the transformed program data for each program
 
     """
     # normalize the MITx Online data

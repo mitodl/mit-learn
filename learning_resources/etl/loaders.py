@@ -687,7 +687,7 @@ def load_program(
             program_data, [], [], LearningResourceType.program.name
         )
         if not learning_resource:
-            return None, []
+            return None, False, []
 
         load_topics(learning_resource, topics_data)
         load_image(learning_resource, image_data)
@@ -729,41 +729,18 @@ def load_program(
             },
         )
 
-    update_index(learning_resource, created)
-
-    return learning_resource, child_programs_data
+    return learning_resource, created, child_programs_data
 
 
-def load_programs(
-    etl_source: str, programs_data: list[dict], *, config=ProgramLoaderConfig()
-) -> list[LearningResource]:
+def _create_child_program_relationships(
+    deferred_child_programs: list[tuple[LearningResource, list[dict]]],
+) -> None:
     """
-    Load a list of programs.
+    Create child-program relationships for programs loaded in pass 1.
 
-    This uses a two-pass strategy:
-    1. Load each program and its direct course children.
-    2. Create deferred child-program relationships once all programs exist.
-
-    For MITx Online data, each deferred child program may map to either
-    PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
+    Uses get_or_create so existing relationship positions are preserved.
+    New relationships are appended after existing children.
     """
-    blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
-
-    # Pass 1: load all programs and their course children
-    results = []
-    deferred_child_programs = []
-    for program_data in programs_data:
-        learning_resource, child_programs_data = load_program(
-            program_data, blocklist, duplicates, config=config
-        )
-        results.append(learning_resource)
-        if learning_resource and child_programs_data:
-            deferred_child_programs.append((learning_resource, child_programs_data))
-
-    # Pass 2: create child program relationships now that all programs exist.
-    # Use a local position counter per parent so sibling positions are stable
-    # and unique within this pass.
     for parent_resource, child_programs_data in deferred_child_programs:
         next_position = parent_resource.children.count()
         for child_program_data in child_programs_data:
@@ -792,7 +769,7 @@ def load_programs(
                 if child_program_data.get("display_mode") == "course"
                 else LearningResourceRelationTypes.PROGRAM_PROGRAMS
             )
-            LearningResourceRelationship.objects.update_or_create(
+            _, rel_created = LearningResourceRelationship.objects.get_or_create(
                 parent=parent_resource,
                 child=child_resource,
                 defaults={
@@ -800,9 +777,46 @@ def load_programs(
                     "position": next_position,
                 },
             )
-            next_position += 1
+            if rel_created:
+                next_position += 1
 
-    programs = [r for r in results if r is not None]
+
+def load_programs(
+    etl_source: str, programs_data: list[dict], *, config=ProgramLoaderConfig()
+) -> list[LearningResource]:
+    """
+    Load a list of programs.
+
+    This uses a two-pass strategy:
+    1. Load each program and its direct course children.
+    2. Create deferred child-program relationships once all programs exist.
+
+    For MITx Online data, each deferred child program may map to either
+    PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
+    """
+    blocklist = load_course_blocklist()
+    duplicates = load_course_duplicates(etl_source)
+
+    # Pass 1: load all programs and their course children
+    results = []
+    deferred_child_programs = []
+    for program_data in programs_data:
+        learning_resource, created, child_programs_data = load_program(
+            program_data, blocklist, duplicates, config=config
+        )
+        results.append((learning_resource, created))
+        if learning_resource and child_programs_data:
+            deferred_child_programs.append((learning_resource, child_programs_data))
+
+    # Pass 2: create child program relationships now that all programs exist
+    _create_child_program_relationships(deferred_child_programs)
+
+    # Update search index after all relationships (including pass 2) are created
+    for learning_resource, created in results:
+        if learning_resource:
+            update_index(learning_resource, created)
+
+    programs = [r for r, _ in results if r is not None]
     if programs and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.program.name
