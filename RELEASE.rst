@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.58.3
+--------------
+
+- AskTim canvas ai contentfile ingestion issue (#3059)
+- use v3 enrollments endpoint on the dashboard (#3049)
+
 Version 0.58.1 (Released March 18, 2026)
 --------------
 
