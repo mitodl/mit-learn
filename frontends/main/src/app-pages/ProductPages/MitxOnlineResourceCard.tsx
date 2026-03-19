@@ -4,7 +4,6 @@ import React from "react"
 import { BaseLearningResourceCard } from "ol-components"
 import type {
   CourseWithCourseRunsSerializerV2,
-  EnrollmentMode,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
@@ -66,8 +65,8 @@ type CardData = {
   title: string
   displayType: string
   imageSrc: string
-  productPrice: string | null
-  enrollmentModes: EnrollmentMode[] | undefined
+  coursePrice: string | null
+  certificatePrice: string | null
   hasCertificate: boolean
   certificateTypeName: string | undefined
   startDate: React.ReactNode
@@ -75,11 +74,30 @@ type CardData = {
 }
 
 /**
- * Extract display-relevant fields from a course or program in a uniform shape.
+ * Extract and derive all display-relevant fields from a course or program,
+ * including enrollment-based price display.
  */
 const extractCardData = (
   props: MitxOnlineCourseCardProps | MitxOnlineProgramCardProps,
 ): CardData | null => {
+  const getPrices = (
+    resource: { min_price?: number | null; max_price?: number | null },
+    productPrice: string | number | undefined | null,
+    enrollmentModes: Parameters<typeof getEnrollmentType>[0],
+  ) => {
+    const price = formatResourcePrice(resource, productPrice)
+    switch (getEnrollmentType(enrollmentModes)) {
+      case "free":
+        return { coursePrice: "Free", certificatePrice: null }
+      case "paid":
+        return { coursePrice: price, certificatePrice: null }
+      case "both":
+        return { coursePrice: "Free", certificatePrice: price }
+      default:
+        return { coursePrice: null, certificatePrice: null }
+    }
+  }
+
   if (props.resourceType === "course") {
     const course = props.resource
     if (!course) return null
@@ -94,8 +112,11 @@ const extractCardData = (
       title: course.title,
       displayType: "Course",
       imageSrc: course.page?.feature_image_src || DEFAULT_RESOURCE_IMG,
-      productPrice: formatResourcePrice(course, bestRun?.products[0]?.price),
-      enrollmentModes: bestRun?.enrollment_modes,
+      ...getPrices(
+        course,
+        bestRun?.products[0]?.price,
+        bestRun?.enrollment_modes,
+      ),
       hasCertificate: Boolean(course.certificate_type),
       certificateTypeName: course.certificate_type || undefined,
       startDate,
@@ -120,8 +141,7 @@ const extractCardData = (
     title: program.title,
     displayType: isCourseDisplay ? "Course" : "Program",
     imageSrc: program.page?.feature_image_src || DEFAULT_RESOURCE_IMG,
-    productPrice: formatResourcePrice(program, program.products[0]?.price),
-    enrollmentModes: program.enrollment_modes,
+    ...getPrices(program, program.products[0]?.price, program.enrollment_modes),
     hasCertificate: Boolean(program.certificate_type),
     certificateTypeName: program.certificate_type || undefined,
     startDate: programStartDate,
@@ -160,24 +180,6 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   const data = extractCardData(props)
   if (!data) return null
 
-  const enrollmentType = getEnrollmentType(data.enrollmentModes)
-
-  let coursePrice: string | null = null
-  let certificatePrice: string | null = null
-
-  switch (enrollmentType) {
-    case "free":
-      coursePrice = "Free"
-      break
-    case "paid":
-      coursePrice = data.productPrice
-      break
-    case "both":
-      coursePrice = "Free"
-      certificatePrice = data.productPrice
-      break
-  }
-
   return (
     <BaseLearningResourceCard
       className={className}
@@ -188,8 +190,8 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       imageAlt=""
       title={data.title}
       resourceType={data.displayType}
-      coursePrice={coursePrice}
-      certificatePrice={certificatePrice}
+      coursePrice={data.coursePrice}
+      certificatePrice={data.certificatePrice}
       hasCertificate={data.hasCertificate}
       certificateTypeName={data.certificateTypeName}
       startLabel={data.startLabel}
