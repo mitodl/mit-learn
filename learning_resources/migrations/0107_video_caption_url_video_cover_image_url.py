@@ -17,6 +17,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="video",
             name="cover_image_url",
-            field=models.URLField(blank=True, max_length=2048),
+            field=models.URLField(blank=True, default="", max_length=2048),
         ),
     ]
