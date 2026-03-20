@@ -1,17 +1,8 @@
 import React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { Popover, Stack, Typography, styled, theme } from "ol-components"
 import {
-  Popover,
-  Skeleton,
-  Stack,
-  Typography,
-  styled,
-  theme,
-} from "ol-components"
-import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
-import { programsQueries } from "api/mitxonline-hooks/programs"
-import {
+  CourseRunEnrollmentV3,
+  CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -247,62 +238,38 @@ const getRelativeDateContent = (
 }
 
 interface ProgramAsCourseCardProps {
-  programId: number
+  program: {
+    id: number
+    title?: string | null
+    start_date?: string | null
+    end_date?: string | null
+    courses?: number[]
+    req_tree?: V2ProgramRequirement[]
+  }
+  courses: CourseWithCourseRunsSerializerV2[]
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
   programEnrollment?: V3UserProgramEnrollment
   Component?: React.ElementType
   className?: string
 }
 
 const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
-  programId,
+  program,
+  courses,
+  enrollmentsByCourseId,
   programEnrollment,
   Component,
   className,
 }) => {
-  const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
-    enrollmentQueries.courseRunEnrollmentsList(),
-  )
-  const { data: program, isLoading: programLoading } = useQuery(
-    programsQueries.programDetail({ id: programId.toString() }),
-  )
-
-  const { data: allProgramEnrollments, isLoading: programEnrollmentsLoading } =
-    useQuery(enrollmentQueries.programEnrollmentsList())
-
-  const effectiveProgramEnrollment =
-    programEnrollment ??
-    allProgramEnrollments?.find(
-      (enrollment) => enrollment.program.id === program?.id,
-    )
-
-  const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
-    ...coursesQueries.coursesList({ id: program?.courses || [] }),
-    enabled: Boolean(program && program.courses.length > 0),
-  })
-
-  const enrollmentsByCourseId = (rawEnrollments || []).reduce(
-    (acc, enrollment) => {
-      const courseId = enrollment.run.course.id
-      if (!acc[courseId]) {
-        acc[courseId] = []
-      }
-      acc[courseId].push(enrollment)
-      return acc
-    },
-    {} as Record<number, typeof rawEnrollments>,
-  )
-
-  const firstRequirementSection = program?.req_tree.find(
+  const firstRequirementSection = program?.req_tree?.find(
     (node) => node.data.node_type === "operator",
   )
 
   const moduleIds = firstRequirementSection
     ? extractCoursesFromNode(firstRequirementSection)
-    : []
+    : (program?.courses ?? [])
 
-  const modules = (programCourses?.results || []).filter((course) =>
-    moduleIds.includes(course.id),
-  )
+  const modules = courses.filter((course) => moduleIds.includes(course.id))
 
   const enrolledCount = modules.filter((course) => {
     const bestEnrollment = selectBestEnrollment(
@@ -328,7 +295,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const totalCount = modules.length
 
   const programEnrollmentStatus = getProgramEnrollmentStatus(
-    effectiveProgramEnrollment,
+    programEnrollment,
     enrolledCount,
     completedCount,
   )
@@ -349,30 +316,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     endDatePopoverString,
   )
   const showDatePopoverLink = Boolean(datePopoverContent)
-
-  const isLoading =
-    userEnrollmentsLoading ||
-    programLoading ||
-    programEnrollmentsLoading ||
-    programCoursesLoading
-
-  if (isLoading) {
-    return (
-      <ProgramCardRoot as={Component} className={className}>
-        <ProgramCardHeaderOuter>
-          <Skeleton variant="text" width="50%" height={20} />
-          <Skeleton variant="text" width="70%" height={28} />
-        </ProgramCardHeaderOuter>
-        <ProgramCardBody>
-          <Skeleton variant="text" width="40%" height={24} />
-          <Stack direction="column" spacing={2} paddingTop="16px">
-            <Skeleton variant="rectangular" width="100%" height={64} />
-            <Skeleton variant="rectangular" width="100%" height={64} />
-          </Stack>
-        </ProgramCardBody>
-      </ProgramCardRoot>
-    )
-  }
 
   return (
     <ProgramCardRoot
@@ -474,7 +417,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: bestEnrollment?.run.id,
               })}
               resource={resource}
-              programEnrollment={effectiveProgramEnrollment}
+              programEnrollment={programEnrollment}
               variant="stacked"
             />
           )

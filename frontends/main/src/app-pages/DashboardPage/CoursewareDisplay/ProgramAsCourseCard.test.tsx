@@ -13,7 +13,7 @@ import moment from "moment"
 describe("ProgramAsCourseCard", () => {
   setupLocationMock()
 
-  const setupCardApis = ({
+  const setupCardData = ({
     programId,
     includeProgramEnrollment,
     startDate,
@@ -62,48 +62,47 @@ describe("ProgramAsCourseCard", () => {
       certificate: null,
     })
 
+    const programEnrollment = includeProgramEnrollment
+      ? mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+        })
+      : undefined
+
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
     )
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
-      moduleEnrollment,
-    ])
-    setMockResponse.get(
-      mitxonline.urls.programs.programDetail(programId),
+
+    return {
       program,
-    )
-    setMockResponse.get(mitxonline.urls.courses.coursesList({ id: [1, 2] }), {
-      count: 2,
-      next: null,
-      previous: null,
-      results: [moduleOne, moduleTwo],
-    })
-
-    const programEnrollments = includeProgramEnrollment
-      ? [
-          mitxonline.factories.enrollment.programEnrollmentV3({
-            program: {
-              id: program.id,
-              title: program.title,
-              live: program.live,
-              program_type: program.program_type,
-              readable_id: program.readable_id,
-            },
-          }),
-        ]
-      : []
-
-    setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV3(),
-      programEnrollments,
-    )
+      courses: [moduleOne, moduleTwo],
+      enrollmentsByCourseId: {
+        [moduleOne.id]: [moduleEnrollment],
+      },
+      programEnrollment,
+    }
   }
 
   test("renders modules and progress summary", async () => {
-    setupCardApis({ programId: 301, includeProgramEnrollment: true })
+    const cardData = setupCardData({
+      programId: 301,
+      includeProgramEnrollment: true,
+    })
 
-    renderWithProviders(<ProgramAsCourseCard programId={301} />)
+    renderWithProviders(
+      <ProgramAsCourseCard
+        program={cardData.program}
+        courses={cardData.courses}
+        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
+        programEnrollment={cardData.programEnrollment}
+      />,
+    )
 
     await screen.findByText("Micro Program")
     expect(screen.getByText("2 Modules (0 of 2 complete)")).toBeInTheDocument()
@@ -112,9 +111,19 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {
-    setupCardApis({ programId: 302, includeProgramEnrollment: false })
+    const cardData = setupCardData({
+      programId: 302,
+      includeProgramEnrollment: false,
+    })
 
-    renderWithProviders(<ProgramAsCourseCard programId={302} />)
+    renderWithProviders(
+      <ProgramAsCourseCard
+        program={cardData.program}
+        courses={cardData.courses}
+        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
+        programEnrollment={cardData.programEnrollment}
+      />,
+    )
 
     await screen.findByText("Micro Program")
     expect(
@@ -123,14 +132,21 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("shows date popover content when date summary is clicked", async () => {
-    setupCardApis({
+    const cardData = setupCardData({
       programId: 303,
       includeProgramEnrollment: true,
       startDate: moment().subtract(5, "days").toISOString(),
       endDate: moment().add(5, "days").toISOString(),
     })
 
-    renderWithProviders(<ProgramAsCourseCard programId={303} />)
+    renderWithProviders(
+      <ProgramAsCourseCard
+        program={cardData.program}
+        courses={cardData.courses}
+        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
+        programEnrollment={cardData.programEnrollment}
+      />,
+    )
 
     const dateSummary = await screen.findByText(/until this course ends\./i)
     await user.click(dateSummary)

@@ -200,8 +200,15 @@ describe("EnrollmentDisplay", () => {
     )
     setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
-      mitxonline.urls.programs.programDetail(programAsCourseProgram.id),
-      programAsCourseProgram,
+      mitxonline.urls.programs.programsList({
+        id: [programAsCourseProgram.id],
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [programAsCourseProgram],
+      },
     )
     setMockResponse.get(
       mitxonline.urls.courses.coursesList({
