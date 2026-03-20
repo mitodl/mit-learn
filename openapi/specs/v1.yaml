@@ -16141,6 +16141,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/Video'
           readOnly: true
+          nullable: true
         playlists:
           type: array
           items:

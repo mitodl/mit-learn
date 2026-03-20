@@ -8481,7 +8481,7 @@ export interface VideoResource {
    * @type {Video}
    * @memberof VideoResource
    */
-  video: Video
+  video: Video | null
   /**
    * Get the playlist id(s) the video belongs to
    * @type {Array<string>}

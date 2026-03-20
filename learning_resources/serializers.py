@@ -1272,7 +1272,7 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
         default=constants.LearningResourceType.video.name
     )
 
-    video = VideoSerializer(read_only=True)
+    video = VideoSerializer(read_only=True, allow_null=True)
 
     playlists = serializers.SerializerMethodField()
 

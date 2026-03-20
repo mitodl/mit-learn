@@ -160,6 +160,52 @@ def test_serialize_video_resource_playlists_to_json():
     assert serializer.data["playlists"] == [playlist.learning_resource.id]
 
 
+def test_serialize_video_resource_with_video_object():
+    """
+    Verify that VideoResourceSerializer correctly serializes a video with a Video object
+    """
+    video = factories.VideoFactory.create(
+        duration="PT10M30S",
+        transcript="This is the video transcript.",
+    )
+    resource = LearningResource.objects.for_serialization().get(
+        pk=video.learning_resource.pk
+    )
+    serializer = serializers.VideoResourceSerializer(instance=resource)
+
+    assert serializer.data["video"] == {
+        "id": video.id,
+        "duration": "PT10M30S",
+        "transcript": "This is the video transcript.",
+    }
+    assert serializer.data["content_files"] == []
+    assert serializer.data["description"] == resource.description
+
+
+def test_serialize_video_resource_with_content_files():
+    """
+    Verify that VideoResourceSerializer correctly serializes a video with content files
+    """
+    video_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.video.name,
+        description="",
+    )
+    content_file = factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=video_resource,
+        title="Video Content File",
+        description="Content file description",
+    )
+    resource = LearningResource.objects.for_serialization().get(pk=video_resource.pk)
+    serializer = serializers.VideoResourceSerializer(instance=resource)
+
+    assert len(serializer.data["content_files"]) == 1
+    assert serializer.data["content_files"][0]["id"] == content_file.id
+    assert serializer.data["content_files"][0]["title"] == "Video Content File"
+    # Description should fall back to content file's description when resource has none
+    assert serializer.data["description"] == "Content file description"
+
+
 def test_serialize_podcast_episode_playlists_to_json():
     """
     Verify that a serialized podcast episode resource has the correct podcast data
