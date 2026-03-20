@@ -3514,13 +3514,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:^2026.3.17":
-  version: 2026.3.17
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.3.17"
+"@mitodl/mitxonline-api-axios@npm:^2026.3.19":
+  version: 2026.3.19
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.3.19"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/2a2773935650eab259d61ce537854e15ce0b3cfa0553edea943d9d668770c640138729b8ad28fc06b15fe185939b7bb4ef5141f4252b33224ae48af8f9204dd9
+  checksum: 10/b402f0b041b6187f225be7ba28e4a4776298c94aaf66b683add60dd917ffafac042f9382d10aa968645a99ff9e8c85d33eb11d14651bf99b29074daf4e7b8310
   languageName: node
   linkType: hard
 
@@ -8863,7 +8863,7 @@ __metadata:
   resolution: "api@workspace:frontends/api"
   dependencies:
     "@faker-js/faker": "npm:^10.0.0"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.3.17"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.19"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -16058,7 +16058,7 @@ __metadata:
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.2"
-    "@mitodl/mitxonline-api-axios": "npm:^2026.3.17"
+    "@mitodl/mitxonline-api-axios": "npm:^2026.3.19"
     "@mitodl/smoot-design": "npm:^6.24.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
