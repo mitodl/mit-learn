@@ -202,6 +202,7 @@ describe("EnrollmentDisplay", () => {
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programAsCourseProgram.id],
+        page_size: 1,
       }),
       {
         count: 1,
@@ -213,6 +214,7 @@ describe("EnrollmentDisplay", () => {
     setMockResponse.get(
       mitxonline.urls.courses.coursesList({
         id: programAsCourseProgram.courses,
+        page_size: programAsCourseProgram.courses.length,
       }),
       programAsCourseCourses,
     )
@@ -558,7 +560,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(123), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
       // Also mock the undefined id case (when program data isn't loaded yet)
@@ -620,7 +625,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(456), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
       // Also mock the undefined id case (when program data isn't loaded yet)
@@ -732,11 +740,17 @@ describe("EnrollmentDisplay", () => {
         parentProgram,
       )
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: parentProgram.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: parentProgram.courses,
+          page_size: parentProgram.courses.length,
+        }),
         parentCourses,
       )
       setMockResponse.get(
-        mitxonline.urls.programs.programsList({ id: [900] }),
+        mitxonline.urls.programs.programsList({
+          id: [900],
+          page_size: 1,
+        }),
         {
           count: 1,
           next: null,
@@ -749,7 +763,10 @@ describe("EnrollmentDisplay", () => {
         programAsCourseProgram,
       )
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: [11, 12] }),
+        mitxonline.urls.courses.coursesList({
+          id: [11, 12],
+          page_size: 2,
+        }),
         programAsCourseCourses,
       )
 
@@ -813,7 +830,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(789), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
       // Also mock the undefined id case
@@ -919,7 +939,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(777), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
 
@@ -1018,7 +1041,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(666), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
 
@@ -1108,7 +1134,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(999), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
 
@@ -1215,7 +1244,10 @@ describe("EnrollmentDisplay", () => {
       )
       setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
 
@@ -1306,7 +1338,10 @@ describe("EnrollmentDisplay", () => {
         program,
       )
       setMockResponse.get(
-        mitxonline.urls.courses.coursesList({ id: program.courses }),
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
         courses,
       )
 

@@ -367,7 +367,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   )
 
   const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
-    ...coursesQueries.coursesList({ id: program?.courses || [] }),
+    ...coursesQueries.coursesList({
+      id: program?.courses || [],
+      page_size: program?.courses?.length || undefined,
+    }),
     enabled: !!program && program.courses.length > 0 && enrolledInProgram,
   })
 
@@ -379,7 +382,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
   const { data: requiredPrograms, isLoading: requiredProgramsLoading } =
     useQuery({
-      ...programsQueries.programsList({ id: requiredProgramIds }),
+      ...programsQueries.programsList({
+        id: requiredProgramIds,
+        page_size: requiredProgramIds.length || undefined,
+      }),
       enabled: Boolean(enrolledInProgram && requiredProgramIds.length > 0),
     })
 
@@ -404,7 +410,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     data: requiredProgramCourses,
     isLoading: requiredProgramCoursesLoading,
   } = useQuery({
-    ...coursesQueries.coursesList({ id: programAsCourseCourseIds }),
+    ...coursesQueries.coursesList({
+      id: programAsCourseCourseIds,
+      page_size: programAsCourseCourseIds.length || undefined,
+    }),
     enabled: Boolean(enrolledInProgram && programAsCourseCourseIds.length > 0),
   })
 
@@ -722,7 +731,10 @@ const AllEnrollmentsDisplay: React.FC = () => {
 
   const { data: homeCoursePrograms, isLoading: homeCourseProgramsLoading } =
     useQuery({
-      ...programsQueries.programsList({ id: programAsCourseProgramIds }),
+      ...programsQueries.programsList({
+        id: programAsCourseProgramIds,
+        page_size: programAsCourseProgramIds.length || undefined,
+      }),
       enabled: programAsCourseProgramIds.length > 0,
     })
 
@@ -740,7 +752,10 @@ const AllEnrollmentsDisplay: React.FC = () => {
     data: homeCourseProgramModuleCourses,
     isLoading: homeCourseProgramModuleCoursesLoading,
   } = useQuery({
-    ...coursesQueries.coursesList({ id: homeCourseProgramModuleIds }),
+    ...coursesQueries.coursesList({
+      id: homeCourseProgramModuleIds,
+      page_size: homeCourseProgramModuleIds.length || undefined,
+    }),
     enabled: homeCourseProgramModuleIds.length > 0,
   })
 
