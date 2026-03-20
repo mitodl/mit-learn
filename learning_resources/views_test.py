@@ -1256,6 +1256,7 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
             host="hidden_port_addr.com",
             port=None,
             prefix="custom",
+            check_compatibility=False,
         ),
     )
     mocker.patch(
@@ -1304,6 +1305,7 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
             host="hidden_port_addr.com",
             port=None,
             prefix="custom",
+            check_compatibility=False,
         ),
     )
 
