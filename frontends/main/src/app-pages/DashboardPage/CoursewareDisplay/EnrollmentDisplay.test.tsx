@@ -778,6 +778,129 @@ describe("EnrollmentDisplay", () => {
       expect((await screen.findAllByText("Module B")).length).toBeGreaterThan(0)
     })
 
+    test("Completion counts exclude program-as-course items (only courses counted)", async () => {
+      /**
+       * A section contains 1 course + 1 program-as-course.
+       * completedCount and totalCount should both treat only the course as
+       * countable, so the header shows "Completed 0 of 1" and the overall
+       * summary shows "0 of 1 courses", not "0 of 2".
+       */
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const parentReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const parentRequirements = parentReqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      parentRequirements.addCourse({ course: 1 })
+      parentRequirements.addProgram({ program: 900 })
+
+      const parentProgram = mitxonline.factories.programs.program({
+        id: 4321,
+        title: "Parent Program",
+        courses: [1],
+        req_tree: parentReqTree.serialize(),
+      })
+
+      const parentCourses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Core Course",
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      }
+
+      const programAsCourseReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const programAsCourseRequirements = programAsCourseReqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      programAsCourseRequirements.addCourse({ course: 11 })
+
+      const programAsCourseProgram = mitxonline.factories.programs.program({
+        id: 900,
+        title: "Program As Course",
+        display_mode: "course",
+        courses: [11],
+        req_tree: programAsCourseReqTree.serialize(),
+      })
+
+      const programAsCourseCourses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 11,
+            title: "Module A",
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      }
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: parentProgram.id,
+              title: parentProgram.title,
+              live: parentProgram.live,
+              program_type: parentProgram.program_type,
+              readable_id: parentProgram.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(parentProgram.id),
+        parentProgram,
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: parentProgram.courses,
+          page_size: parentProgram.courses.length,
+        }),
+        parentCourses,
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programsList({
+          id: [900],
+          page_size: 1,
+        }),
+        {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [programAsCourseProgram],
+        },
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: [11],
+          page_size: 1,
+        }),
+        programAsCourseCourses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={parentProgram.id} />)
+
+      // Section header: only the 1 course counts, not the program-as-course item
+      await screen.findByText(/Completed 0 of 1/)
+      // Overall summary: same — 1 course total, not 2
+      await screen.findByText(/0 of 1 courses/)
+    })
+
     test("Shows enrollment status for program courses", async () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
