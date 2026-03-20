@@ -114,6 +114,12 @@ const mitxonlineUrl = (relative: string) => {
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
+type ReqTreeResourceType = "course" | "program"
+type ReqTreeResourceItem = {
+  id: number
+  type: ReqTreeResourceType
+}
+
 const getEnrollmentType = (
   modes: EnrollmentMode[] | undefined,
 ): EnrollmentType => {
@@ -123,6 +129,46 @@ const getEnrollmentType = (
   if (hasFree && hasPaid) return "both"
   if (hasFree) return "free"
   return "paid"
+}
+
+const getReqTreeResources = (
+  nodes: V2ProgramRequirement[],
+): ReqTreeResourceItem[] =>
+  nodes.flatMap((node) => {
+    const resources: ReqTreeResourceItem[] = []
+
+    if (
+      node.data.node_type === NodeTypeEnum.Course &&
+      typeof node.data.course === "number"
+    ) {
+      resources.push({ id: node.data.course, type: "course" })
+    }
+
+    if (
+      node.data.node_type === NodeTypeEnum.Program &&
+      typeof node.data.required_program === "number"
+    ) {
+      resources.push({ id: node.data.required_program, type: "program" })
+    }
+
+    return [...resources, ...getReqTreeResources(node.children ?? [])]
+  })
+
+function getIdsFromReqTree(nodes: V2ProgramRequirement[]): ReqTreeResourceItem[]
+function getIdsFromReqTree(
+  nodes: V2ProgramRequirement[],
+  type: ReqTreeResourceType,
+): number[]
+function getIdsFromReqTree(
+  nodes: V2ProgramRequirement[],
+  type?: ReqTreeResourceType,
+): ReqTreeResourceItem[] | number[] {
+  const resources = getReqTreeResources(nodes)
+  if (!type) return resources
+
+  return resources
+    .filter((resource) => resource.type === type)
+    .map((resource) => resource.id)
 }
 
 /**
@@ -174,6 +220,8 @@ const getBestRun = (
   if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
   return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
 }
+const getCourseIdsFromReqTree = (nodes: V2ProgramRequirement[]): number[] =>
+  getIdsFromReqTree(nodes, "course")
 
 export {
   formatPrice,
@@ -184,5 +232,11 @@ export {
   getEnrollmentType,
   getIdsFromReqTree,
   getBestRun,
+  getCourseIdsFromReqTree,
 }
-export type { PriceWithDiscount, EnrollmentType }
+export type {
+  PriceWithDiscount,
+  EnrollmentType,
+  ReqTreeResourceType,
+  ReqTreeResourceItem,
+}

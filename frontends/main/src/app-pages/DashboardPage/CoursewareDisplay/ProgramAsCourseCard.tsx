@@ -21,6 +21,7 @@ import {
   DashboardType as ModuleCardType,
 } from "./ModuleCard"
 import { formatDate } from "ol-utilities"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -103,20 +104,6 @@ const ProgramCardBody = styled.div({
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
 })
-
-const extractCoursesFromNode = (node: V2ProgramRequirement): number[] => {
-  const courses: number[] = []
-
-  if (node.data.node_type === "course" && node.data.course) {
-    courses.push(node.data.course)
-  }
-
-  node.children?.forEach((child) => {
-    courses.push(...extractCoursesFromNode(child))
-  })
-
-  return courses
-}
 
 const getTimezone = (dateString: string): string => {
   const tz =
@@ -279,7 +266,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   )
 
   const moduleIds = moduleRequirementSection
-    ? extractCoursesFromNode(moduleRequirementSection)
+    ? getIdsFromReqTree([moduleRequirementSection], "course")
     : (courseProgram?.courses ?? [])
 
   const displayedModuleCourses = moduleCourses.filter((course) =>

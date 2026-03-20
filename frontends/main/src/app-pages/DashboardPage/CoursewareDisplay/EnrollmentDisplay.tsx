@@ -36,6 +36,7 @@ import {
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -328,31 +329,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   )
 }
 
-interface ResourceItem {
-  id: number
-  type: "course" | "program"
-}
-
-const extractResourcesFromNode = (
-  node: V2ProgramRequirement,
-): ResourceItem[] => {
-  const resources: ResourceItem[] = []
-
-  if (node.data.node_type === "course" && node.data.course) {
-    resources.push({ id: node.data.course, type: "course" })
-  } else if (node.data.node_type === "program" && node.data.required_program) {
-    resources.push({ id: node.data.required_program, type: "program" })
-  }
-
-  if (node.children) {
-    node.children.forEach((child) => {
-      resources.push(...extractResourcesFromNode(child))
-    })
-  }
-
-  return resources
-}
-
 const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
   if (node.data.title) {
     return node.data.title
@@ -398,16 +374,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const requiredProgramIds = React.useMemo(() => {
     if (!program?.req_tree) return []
 
-    const uniqueIds = new Set<number>()
-    const walk = (node: V2ProgramRequirement) => {
-      if (node.data.node_type === "program" && node.data.required_program) {
-        uniqueIds.add(node.data.required_program)
-      }
-      node.children?.forEach(walk)
-    }
-
-    program.req_tree.forEach(walk)
-    return [...uniqueIds]
+    return [...new Set(getIdsFromReqTree(program.req_tree, "program"))]
   }, [program?.req_tree])
 
   const { data: requiredPrograms, isLoading: requiredProgramsLoading } =
@@ -476,7 +443,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           ]),
         )
 
-        const sectionItems = extractResourcesFromNode(node)
+        const sectionItems = getIdsFromReqTree([node])
           .map((resource) => {
             if (resource.type === "course") {
               const course = coursesById.get(resource.id)
