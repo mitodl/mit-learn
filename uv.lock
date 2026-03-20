@@ -2523,6 +2523,7 @@ dependencies = [
     { name = "lxml" },
     { name = "markdown" },
     { name = "markdown2" },
+    { name = "mitol-django-observability" },
     { name = "mitol-django-scim" },
     { name = "named-enum" },
     { name = "nested-lookup" },
@@ -2534,14 +2535,11 @@ dependencies = [
     { name = "opendataloader-pdf" },
     { name = "opensearch-dsl" },
     { name = "opensearch-py" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-celery" },
     { name = "opentelemetry-instrumentation-django" },
     { name = "opentelemetry-instrumentation-psycopg" },
     { name = "opentelemetry-instrumentation-redis" },
     { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-sdk" },
     { name = "pdf2image" },
     { name = "pluggy" },
     { name = "posthog" },
@@ -2659,6 +2657,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.0.0,<7" },
     { name = "markdown", specifier = ">=3.7,<4" },
     { name = "markdown2", specifier = ">=2.4.8,<3" },
+    { name = "mitol-django-observability", specifier = ">=2026.1.0" },
     { name = "mitol-django-scim", specifier = ">=2025.3.31,<2026" },
     { name = "named-enum", specifier = ">=1.4.0,<2" },
     { name = "nested-lookup", specifier = ">=0.2.25,<0.3" },
@@ -2670,14 +2669,11 @@ requires-dist = [
     { name = "opendataloader-pdf", specifier = ">=1.3.0,<2" },
     { name = "opensearch-dsl", specifier = ">=2.0.0,<3" },
     { name = "opensearch-py", specifier = ">=2.0.0,<3" },
-    { name = "opentelemetry-api", specifier = ">=1.31.0" },
-    { name = "opentelemetry-exporter-otlp", specifier = ">=1.31.0" },
     { name = "opentelemetry-instrumentation-celery", specifier = ">=0.52b0" },
     { name = "opentelemetry-instrumentation-django", specifier = ">=0.52b0" },
     { name = "opentelemetry-instrumentation-psycopg", specifier = ">=0.52b0" },
     { name = "opentelemetry-instrumentation-redis", specifier = ">=0.52b0" },
     { name = "opentelemetry-instrumentation-requests", specifier = ">=0.52b0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.31.0" },
     { name = "pdf2image", specifier = ">=1.17.0,<2" },
     { name = "pluggy", specifier = ">=1.3.0,<2" },
     { name = "posthog", specifier = ">=5.0.0,<6" },
@@ -2757,6 +2753,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/0e/b4dda829f5119338da3f8c7bd63a2350131bd4f84bd2f0e373c34921f520/mitol_django_common-2025.6.20.tar.gz", hash = "sha256:5060a99537a571ec8e5b94a3972161a318ae60dc7df4154ebcc8cb5f29cfbdbb", size = 21695, upload-time = "2025-06-20T08:08:05.727Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/c2/d562e5e8721a1e4319f0ca78c7dc2fbe2fe796a58fda9aae44b4462a7a14/mitol_django_common-2025.6.20-py3-none-any.whl", hash = "sha256:a3a1d2ed1570cf905132651ab1338cf30924904c6f4d98af62e80cf9a25d4f54", size = 31511, upload-time = "2025-06-20T08:08:04.965Z" },
+]
+
+[[package]]
+name = "mitol-django-observability"
+version = "2026.3.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "mitol-django-common" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+    { name = "pyyaml" },
+    { name = "structlog" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/3b/8c07a0a0feda332656213a8af4f055fa83fb9e0d6d483d77f12d8e63b47e/mitol_django_observability-2026.3.11.tar.gz", hash = "sha256:4539eff6b7da18e500fb0f23c0abf6bdba67eb65e35e890b08c338318494a1e6", size = 10093, upload-time = "2026-03-13T20:21:41.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/76/3f730dec3ff4ff6c5ab044d7b1e027b6f3214cedb66a2532301b6eb4b285/mitol_django_observability-2026.3.11-py3-none-any.whl", hash = "sha256:7523782802c09cad3003cacecdb62cc055efdbd8a80a9ea27a12cb5aaf3f59bc", size = 16052, upload-time = "2026-03-13T20:21:40.216Z" },
 ]
 
 [[package]]
@@ -3119,19 +3134,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/97/b9/3161be15bb8e3ad01be8be5a968a9237c3027c5be504362ff800fca3e442/opentelemetry_api-1.39.1.tar.gz", hash = "sha256:fbde8c80e1b937a2c61f20347e91c0c18a1940cecf012d62e65a7caf08967c9c", size = 65767, upload-time = "2025-12-11T13:32:39.182Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/df/d3f1ddf4bb4cb50ed9b1139cc7b1c54c34a1e7ce8fd1b9a37c0d1551a6bd/opentelemetry_api-1.39.1-py3-none-any.whl", hash = "sha256:2edd8463432a7f8443edce90972169b195e7d6a05500cd29e6d13898187c9950", size = 66356, upload-time = "2025-12-11T13:32:17.304Z" },
-]
-
-[[package]]
-name = "opentelemetry-exporter-otlp"
-version = "1.39.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-exporter-otlp-proto-grpc" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/30/9c/3ab1db90f32da200dba332658f2bbe602369e3d19f6aba394031a42635be/opentelemetry_exporter_otlp-1.39.1.tar.gz", hash = "sha256:7cf7470e9fd0060c8a38a23e4f695ac686c06a48ad97f8d4867bc9b420180b9c", size = 6147, upload-time = "2025-12-11T13:32:40.309Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/6c/bdc82a066e6fb1dcf9e8cc8d4e026358fe0f8690700cc6369a6bf9bd17a7/opentelemetry_exporter_otlp-1.39.1-py3-none-any.whl", hash = "sha256:68ae69775291f04f000eb4b698ff16ff685fdebe5cb52871bc4e87938a7b00fe", size = 7019, upload-time = "2025-12-11T13:32:19.387Z" },
 ]
 
 [[package]]
@@ -4734,6 +4736,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/25/20/3d419008265346452d09e5dadfd5d045b64b40d8fc31af40588e6c76997a/striprtf-0.0.26.tar.gz", hash = "sha256:fdb2bba7ac440072d1c41eab50d8d74ae88f60a8b6575c6e2c7805dc462093aa", size = 6258, upload-time = "2023-07-20T14:30:36.29Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/cf/0fea4f4ba3fc2772ac2419278aa9f6964124d4302117d61bc055758e000c/striprtf-0.0.26-py3-none-any.whl", hash = "sha256:8c8f9d32083cdc2e8bfb149455aa1cc5a4e0a035893bedc75db8b73becb3a1bb", size = 6914, upload-time = "2023-07-20T14:30:35.338Z" },
+]
+
+[[package]]
+name = "structlog"
+version = "25.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/52/9ba0f43b686e7f3ddfeaa78ac3af750292662284b3661e91ad5494f21dbc/structlog-25.5.0.tar.gz", hash = "sha256:098522a3bebed9153d4570c6d0288abf80a031dfdb2048d59a49e9dc2190fc98", size = 1460830, upload-time = "2025-10-27T08:28:23.028Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/45/a132b9074aa18e799b891b91ad72133c98d8042c70f6240e4c5f9dabee2f/structlog-25.5.0-py3-none-any.whl", hash = "sha256:a8453e9b9e636ec59bd9e79bbd4a72f025981b3ba0f5837aebf48f02f37a7f9f", size = 72510, upload-time = "2025-10-27T08:28:21.535Z" },
 ]
 
 [[package]]
