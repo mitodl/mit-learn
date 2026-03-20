@@ -1,6 +1,5 @@
 import React from "react"
-import { Popover, Stack, Typography, styled, theme } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Link, Popover, Stack, Typography, styled, theme } from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -74,6 +73,14 @@ const DatePopoverContent = styled.div({
   gap: "28px",
   alignSelf: "stretch",
 })
+
+const DatePopoverTrigger = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  "&:hover": {
+    color: theme.custom.colors.silverGrayDark,
+  },
+}))
 
 const HorizontalSeparator = styled.div({
   width: "1px",
@@ -376,17 +383,11 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                       )}
                   </DatePopoverContent>
                 </Popover>
-                <Button
-                  variant="tertiary"
+                <DatePopoverTrigger
                   onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
                 >
-                  <Typography
-                    variant="body2"
-                    color={theme.custom.colors.silverGrayDark}
-                  >
-                    {datePopoverContent.anchorLabel}
-                  </Typography>
-                </Button>
+                  {datePopoverContent.anchorLabel}
+                </DatePopoverTrigger>
               </>
             )}
           </StatusContainer>
