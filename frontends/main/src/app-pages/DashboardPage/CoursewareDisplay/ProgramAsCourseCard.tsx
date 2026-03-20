@@ -1,5 +1,6 @@
 import React from "react"
 import { Popover, Stack, Typography, styled, theme } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -19,7 +20,6 @@ import {
   DashboardCard as ModuleCard,
   DashboardType as ModuleCardType,
 } from "./ModuleCard"
-import { LinkButton } from "@/page-components/TiptapEditor/vendor/components/tiptap-ui/link-popover"
 import { formatDate } from "ol-utilities"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
@@ -369,11 +369,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                       )}
                   </DatePopoverContent>
                 </Popover>
-                <LinkButton
+                <Button
+                  variant="tertiary"
                   onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
-                  title=""
-                  tooltip=""
-                  aria-label=""
                 >
                   <Typography
                     variant="body2"
@@ -381,7 +379,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                   >
                     {datePopoverContent.anchorLabel}
                   </Typography>
-                </LinkButton>
+                </Button>
               </>
             )}
           </StatusContainer>
