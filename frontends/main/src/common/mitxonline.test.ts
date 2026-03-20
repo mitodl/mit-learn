@@ -2,8 +2,8 @@ import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   formatPrice,
-  getCourseIdsFromReqTree,
   getFlexiblePriceForProduct,
+  getIdsFromReqTree,
   priceWithDiscount,
 } from "@/common/mitxonline"
 
@@ -142,29 +142,6 @@ describe("getFlexiblePriceForProduct", () => {
   })
 })
 
-describe("getCourseIdsFromReqTree", () => {
-  test("extracts course IDs recursively from nested req_tree", () => {
-    const root = new RequirementTreeBuilder()
-    const required = root.addOperator({ operator: "all_of" })
-    required.addCourse({ course: 10 })
-    required.addCourse({ course: 20 })
-
-    const electives = root.addOperator({
-      operator: "min_number_of",
-      operator_value: "1",
-    })
-    electives.addCourse({ course: 30 })
-    electives.addCourse({ course: 40 })
-
-    // Nest an operator inside the electives section
-    const nested = electives.addOperator({ operator: "all_of" })
-    nested.addCourse({ course: 50 })
-
-    const ids = getCourseIdsFromReqTree(root.serialize())
-    expect(ids).toEqual([10, 20, 30, 40, 50])
-  })
-})
-
 describe("priceWithDiscount", () => {
   test("Returns same price for original and final when no flexible price provided", () => {
     const product = makeFlexiblePrice({
@@ -241,5 +218,38 @@ describe("priceWithDiscount", () => {
     expect(result.finalPrice).toBe("$100.00")
     expect(result.isDiscounted).toBe(false)
     expect(result.approvedFinancialAid).toBe(true) // Has financial aid approval, just no discount
+  })
+})
+
+describe("getIdsFromReqTree", () => {
+  test("extracts course and program IDs from nested req_tree", () => {
+    const root = new RequirementTreeBuilder()
+    const required = root.addOperator({ operator: "all_of" })
+    required.addCourse({ course: 10 })
+    required.addProgram({ program: 99 })
+    required.addCourse({ course: 20 })
+
+    const electives = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    electives.addCourse({ course: 30 })
+    electives.addProgram({ program: 88 })
+
+    const nested = electives.addOperator({ operator: "all_of" })
+    nested.addCourse({ course: 50 })
+
+    const { courseIds, programIds } = getIdsFromReqTree(root.serialize())
+    expect(courseIds).toEqual([10, 20, 30, 50])
+    expect(programIds).toEqual([99, 88])
+  })
+
+  test("returns empty arrays for a tree with no courses or programs", () => {
+    const root = new RequirementTreeBuilder()
+    root.addOperator({ operator: "all_of" })
+
+    const { courseIds, programIds } = getIdsFromReqTree(root.serialize())
+    expect(courseIds).toEqual([])
+    expect(programIds).toEqual([])
   })
 })

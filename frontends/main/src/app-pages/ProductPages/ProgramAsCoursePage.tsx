@@ -10,6 +10,8 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
+import type { RequirementItem } from "./util"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -28,7 +30,6 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { keyBy } from "lodash"
-import { getCourseIdsFromReqTree } from "@/common/mitxonline"
 
 type ProgramAsCoursePageProps = {
   readableId: string
@@ -77,15 +78,18 @@ const ModuleTitleNote = styled("span")(({ theme }) => ({
 type ModulesSectionProps = {
   program: V2ProgramDetail
   courses?: CourseWithCourseRunsSerializerV2[]
+  childPrograms?: V2ProgramDetail[]
   isLoading?: boolean
 }
 
 const ModulesSection: React.FC<ModulesSectionProps> = ({
   program,
   courses,
+  childPrograms,
   isLoading,
 }) => {
   const coursesById = keyBy(courses ?? [], "id")
+  const programsById = keyBy(childPrograms ?? [], "id")
   const parsedReqs = parseReqTree(program.req_tree)
 
   if (parsedReqs.length === 0) return null
@@ -99,14 +103,23 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
     )
   }
 
-  const renderCourseList = (courseIds: number[]) => (
+  const renderItemList = (items: RequirementItem[]) => (
     <ModulesListing>
-      {courseIds.map((courseId) => {
-        const course = coursesById[courseId]
-        if (!isLoading && !course) return null
+      {items.map((item) => {
+        if (item.type === "course") {
+          const course = coursesById[item.id]
+          if (!isLoading && !course) return null
+          return (
+            <li key={`course-${item.id}`}>
+              <ModuleCard title={course?.title} isLoading={isLoading} />
+            </li>
+          )
+        }
+        const prog = programsById[item.id]
+        if (!isLoading && !prog) return null
         return (
-          <li key={courseId}>
-            <ModuleCard title={course?.title} isLoading={isLoading} />
+          <li key={`program-${item.id}`}>
+            <ModuleCard title={prog?.title} isLoading={isLoading} />
           </li>
         )
       })}
@@ -115,7 +128,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
 
   if (isSingleRoot) {
     const req = parsedReqs[0]
-    const moduleCount = req.courseIds.length
+    const moduleCount = req.items.length
     return (
       <Stack
         gap="16px"
@@ -135,7 +148,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
             {`This course has ${moduleCount} ${pluralize("module", moduleCount)}`}
           </Typography>
         </div>
-        {renderCourseList(req.courseIds)}
+        {renderItemList(req.items)}
       </Stack>
     )
   }
@@ -155,8 +168,8 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
         {parsedReqs.map((req) => {
           const headingId = `modules-subsection-${req.id}`
           const note =
-            req.requiredCourseCount < req.courseIds.length
-              ? `Complete ${req.requiredCourseCount} out of ${req.courseIds.length}`
+            req.requiredCount < req.items.length
+              ? `Complete ${req.requiredCount} out of ${req.items.length}`
               : null
           return (
             <section key={req.id} aria-labelledby={headingId}>
@@ -170,7 +183,7 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
                 {note ? ": " : ""}
                 {note ? <ModuleTitleNote>{note}</ModuleTitleNote> : null}
               </Typography>
-              {renderCourseList(req.courseIds)}
+              {renderItemList(req.items)}
             </section>
           )
         })}
@@ -206,13 +219,24 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const courseIds = program ? getCourseIdsFromReqTree(program.req_tree) : []
+  const { courseIds, programIds } = program
+    ? getIdsFromReqTree(program.req_tree)
+    : { courseIds: [], programIds: [] }
+
   const courses = useQuery({
     ...coursesQueries.coursesList({
       id: courseIds,
       page_size: courseIds.length,
     }),
     enabled: courseIds.length > 0,
+  })
+
+  const childPrograms = useQuery({
+    ...programsQueries.programsList({
+      id: programIds,
+      page_size: programIds.length,
+    }),
+    enabled: programIds.length > 0,
   })
 
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
@@ -233,6 +257,10 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
 
   const imageSrc =
     page.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+
+  const dataLoading =
+    (courseIds.length > 0 && !courses.isSuccess) ||
+    (programIds.length > 0 && !childPrograms.isSuccess)
 
   return (
     <ProductPageTemplate
@@ -266,8 +294,8 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       <ModulesSection
         program={program}
         courses={courses.data?.results}
-        // Use skeleton as fallback for loading OR error
-        isLoading={!courses.isSuccess}
+        childPrograms={childPrograms.data?.results}
+        isLoading={dataLoading}
       />
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />

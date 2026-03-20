@@ -22,7 +22,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { getCourseIdsFromReqTree } from "@/common/mitxonline"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -44,7 +44,10 @@ const setupApis = ({
 }: {
   program: V2ProgramDetail
   page: ProgramPageItem
-}): { courses: CourseWithCourseRunsSerializerV2[] } => {
+}): {
+  courses: CourseWithCourseRunsSerializerV2[]
+  childPrograms: V2ProgramDetail[]
+} => {
   setMockResponse.get(
     urls.programs.programsList({ readable_id: program.readable_id }),
     { results: [program] },
@@ -53,12 +56,12 @@ const setupApis = ({
     items: [page],
   })
 
-  const courseIds = getCourseIdsFromReqTree(program.req_tree)
+  const { courseIds, programIds } = getIdsFromReqTree(program.req_tree)
   const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
     factories.courses.course({ id }),
   )
 
-  if (courses.length > 0) {
+  if (courseIds.length > 0) {
     setMockResponse.get(
       urls.courses.coursesList({
         id: courses.map((c) => c.id),
@@ -68,13 +71,27 @@ const setupApis = ({
     )
   }
 
+  const childPrograms: V2ProgramDetail[] = programIds.map((id) =>
+    factories.programs.program({ id }),
+  )
+
+  if (programIds.length > 0) {
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: programIds,
+        page_size: programIds.length,
+      }),
+      { results: childPrograms },
+    )
+  }
+
   setMockResponse.get(
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
   setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
-  return { courses }
+  return { courses, childPrograms }
 }
 
 describe("ProgramAsCoursePage", () => {
@@ -163,11 +180,11 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: "Modules" })
     expect(screen.getByText("This course has 2 modules")).toBeInTheDocument()
 
-    // Course titles should be shown
-    await waitFor(() => {
-      courses.forEach((course) => {
-        expect(screen.getByText(course.title)).toBeInTheDocument()
-      })
+    // Course titles should be shown (findBy first, then getBy for the rest since
+    // all items render together when dataLoading transitions to false)
+    await screen.findByText(courses[0].title)
+    courses.slice(1).forEach((course) => {
+      expect(screen.getByText(course.title)).toBeInTheDocument()
     })
 
     // No h3 subsection headings within Modules section (flat list, single root)
@@ -208,10 +225,40 @@ describe("ProgramAsCoursePage", () => {
     await screen.findByRole("heading", { name: "Advanced Modules" })
 
     // Course titles should be shown within subsections
-    await waitFor(() => {
-      courses.forEach((course) => {
-        expect(screen.getByText(course.title)).toBeInTheDocument()
-      })
+    await screen.findByText(courses[0].title)
+    courses.slice(1).forEach((course) => {
+      expect(screen.getByText(course.title)).toBeInTheDocument()
     })
+  })
+
+  test("Renders Modules section with mixed courses and programs (single root)", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addCourse()
+    op.addProgram()
+    op.addCourse()
+
+    const program = makeProgramAsCourse({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { courses, childPrograms } = setupApis({ program, page })
+
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    const modulesSection = await screen.findByRole("region", {
+      name: "Modules",
+    })
+    expect(
+      within(modulesSection).getByText("This course has 3 modules"),
+    ).toBeInTheDocument()
+
+    // Verify interleaved order: c1, p1, c2 (matches tree insertion order)
+    await within(modulesSection).findByText(courses[0].title)
+    const listItems = within(modulesSection).getAllByRole("listitem")
+    expect(listItems).toHaveLength(3)
+    expect(listItems[0]).toHaveTextContent(courses[0].title)
+    expect(listItems[1]).toHaveTextContent(childPrograms[0].title)
+    expect(listItems[2]).toHaveTextContent(courses[1].title)
   })
 })

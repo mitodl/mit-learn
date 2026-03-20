@@ -143,15 +143,15 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
   if (!priceFormatted) return null
 
   const parsedReqs = parseReqTree(program.req_tree)
-  const totalCourses = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCourseCount,
+  const totalRequired = parsedReqs.reduce(
+    (sum, req) => sum + req.requiredCount,
     0,
   )
 
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
       <BundleUpsellTitle>
-        Get all {totalCourses} {program.title} Courses + Certificates
+        Get all {totalRequired} {program.title} Courses + Certificates
       </BundleUpsellTitle>
       <BundleUpsellActions>
         <BundlePriceRow>

@@ -1,8 +1,9 @@
 import {
   CourseRunEnrollmentV3,
-  CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { getBestRun } from "@/common/mitxonline"
+export { getBestRun }
 
 const ResourceType = {
   Contract: "contract",
@@ -35,25 +36,6 @@ const filterEnrollmentsByOrganization = (
   return enrollments.filter(
     (enrollment) => enrollment.b2b_organization_id === organizationId,
   )
-}
-
-/**
- * Helper to get the "best" run for a course (the next_run_id if available)
- * If contractId is provided, prefer runs matching that contract
- */
-const getBestRun = (
-  course: CourseWithCourseRunsSerializerV2,
-  contractId?: number,
-): CourseRunV2 | undefined => {
-  if (!course.courseruns || course.courseruns.length === 0) return undefined
-
-  const candidateRuns = course.courseruns
-    .filter((run) => run.is_enrollable)
-    .filter((run) => !contractId || run.b2b_contract === contractId)
-  if (candidateRuns.length === 0) return undefined
-  const nextRun = candidateRuns.find((run) => run.id === course.next_run_id)
-
-  return nextRun ?? candidateRuns[0]
 }
 
 /**
@@ -102,7 +84,6 @@ export {
   ResourceType,
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
-  getBestRun,
   selectBestEnrollment,
   getKey,
   getEnrollmentStatus,

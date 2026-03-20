@@ -11,9 +11,11 @@ import {
 } from "api/test-utils"
 import type {
   V2Program,
+  V2ProgramDetail,
   ProgramPageItem,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
 import { assertHeadings } from "ol-test-utilities"
@@ -22,7 +24,7 @@ import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { getCourseIdsFromReqTree } from "@/common/mitxonline"
+import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
@@ -36,8 +38,13 @@ const makePage = factories.pages.programPageItem
 type ReqSection = {
   title: string
 } & (
-  | { operator: "all_of"; courseCount: number }
-  | { operator: "min_number_of"; required: number; outOf: number }
+  | { operator: "all_of"; courseCount: number; programCount?: number }
+  | {
+      operator: "min_number_of"
+      required: number
+      outOf: number
+      programCount?: number
+    }
 )
 
 const makeReqs = ({
@@ -82,22 +89,28 @@ const makeReqsFromSections = (
 
   sections.forEach((section) => {
     if (section.operator === "all_of") {
-      addCourses(
-        reqTree.addOperator({
-          operator: "all_of",
-          title: section.title,
-        }),
-        section.courseCount,
-      )
+      const op = reqTree.addOperator({
+        operator: "all_of",
+        title: section.title,
+      })
+      addCourses(op, section.courseCount)
+      if (section.programCount) {
+        Array.from({ length: section.programCount }).forEach(() => {
+          op.addProgram()
+        })
+      }
     } else {
-      addCourses(
-        reqTree.addOperator({
-          operator: "min_number_of",
-          operator_value: String(section.required),
-          title: section.title,
-        }),
-        section.outOf,
-      )
+      const op = reqTree.addOperator({
+        operator: "min_number_of",
+        operator_value: String(section.required),
+        title: section.title,
+      })
+      addCourses(op, section.outOf)
+      if (section.programCount) {
+        Array.from({ length: section.programCount }).forEach(() => {
+          op.addProgram()
+        })
+      }
     }
   })
 
@@ -123,10 +136,15 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
 const setupApis = ({
   program,
   page,
+  childProgramOverrides,
 }: {
   program: V2Program
   page: ProgramPageItem
-}): { courses: CourseWithCourseRunsSerializerV2[] } => {
+  childProgramOverrides?: Partial<V2ProgramDetail>
+}): {
+  courses: CourseWithCourseRunsSerializerV2[]
+  childPrograms: V2ProgramDetail[]
+} => {
   setMockResponse.get(
     urls.programs.programsList({ readable_id: program.readable_id }),
     { results: [program] },
@@ -136,18 +154,34 @@ const setupApis = ({
     items: [page],
   })
 
-  const courseIds = getCourseIdsFromReqTree(program.req_tree)
+  const { courseIds, programIds } = getIdsFromReqTree(program.req_tree)
   const courses: CourseWithCourseRunsSerializerV2[] = courseIds.map((id) =>
     factories.courses.course({ id }),
   )
 
-  setMockResponse.get(
-    urls.courses.coursesList({
-      id: courses.map((course) => course.id),
-      page_size: courses.length,
-    }),
-    { results: courses },
+  if (courseIds.length > 0) {
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: courses.map((course) => course.id),
+        page_size: courses.length,
+      }),
+      { results: courses },
+    )
+  }
+
+  const childPrograms: V2ProgramDetail[] = programIds.map((id) =>
+    factories.programs.program({ id, ...childProgramOverrides }),
   )
+
+  if (programIds.length > 0) {
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: programIds,
+        page_size: programIds.length,
+      }),
+      { results: childPrograms },
+    )
+  }
 
   setMockResponse.get(
     learnUrls.userMe.get(),
@@ -156,7 +190,7 @@ const setupApis = ({
 
   setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
-  return { courses }
+  return { courses, childPrograms }
 }
 
 describe("ProgramPage", () => {
@@ -170,7 +204,7 @@ describe("ProgramPage", () => {
     { flagsLoaded: false, isEnabled: true, shouldNotFound: false },
     { flagsLoaded: false, isEnabled: false, shouldNotFound: false },
   ])(
-    "Calls noFound if and only the feature flag is disabled",
+    "Calls notFound if and only if the feature flag is disabled",
     async ({ flagsLoaded, isEnabled, shouldNotFound }) => {
       mockedUseFeatureFlagEnabled.mockReturnValue(isEnabled)
       mockedUseFeatureFlagsLoaded.mockReturnValue(flagsLoaded)
@@ -226,7 +260,7 @@ describe("ProgramPage", () => {
     )
   })
 
-  // Collasping sections tested in AboutSection.test.tsx
+  // Collapsing sections tested in AboutSection.test.tsx
   test("About section has expected content", async () => {
     const program = makeProgram({ ...makeReqs() })
     const page = makePage({ program_details: program })
@@ -300,7 +334,7 @@ describe("ProgramPage", () => {
       }),
     })
     const page = makePage({ program_details: program })
-    const { courses } = setupApis({ program, page })
+    setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     const section = await screen.findByRole("region", { name: "Courses" })
@@ -322,14 +356,11 @@ describe("ProgramPage", () => {
       )
     })
 
-    const courseIds = getCourseIdsFromReqTree(program.req_tree)
     const allLists = within(section).getAllByRole("list")
     allLists.forEach((list) => {
       within(list)
         .getAllByRole("listitem")
         .forEach((item) => {
-          const course = courses.find((c) => courseIds.includes(c.id))
-          invariant(course)
           const links = within(item).getAllByRole("link")
           expect(links.length).toBeGreaterThanOrEqual(1)
         })
@@ -379,6 +410,96 @@ describe("ProgramPage", () => {
     await waitFor(() => {
       expect(within(lists[2]).getAllByRole("listitem").length).toBe(4)
     })
+  })
+
+  test("Renders a mixed requirement section with courses and programs", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({
+      operator: "all_of",
+      title: "Requirements",
+    })
+    op.addCourse()
+    op.addProgram()
+    op.addCourse()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { courses, childPrograms } = setupApis({ program, page })
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Courses" })
+    const list = within(section).getByRole("list")
+
+    await waitFor(() => {
+      expect(within(list).getAllByRole("listitem")).toHaveLength(3)
+    })
+
+    courses.forEach((course) => {
+      const link = within(list).getByRole("link", {
+        name: new RegExp(course.title),
+      })
+      expect(link).toHaveAttribute("href", `/courses/${course.readable_id}`)
+    })
+
+    childPrograms.forEach((prog) => {
+      const link = within(list).getByRole("link", {
+        name: new RegExp(prog.title),
+      })
+      expect(link).toHaveAttribute("href", `/programs/${prog.readable_id}`)
+    })
+  })
+
+  test("Links child program to /courses/p/ when display_mode is course", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({
+      operator: "all_of",
+      title: "Requirements",
+    })
+    op.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { childPrograms } = setupApis({
+      program,
+      page,
+      childProgramOverrides: { display_mode: DisplayModeEnum.Course },
+    })
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+    const section = await screen.findByRole("region", { name: "Courses" })
+
+    const link = await within(section).findByRole("link", {
+      name: new RegExp(childPrograms[0].title),
+    })
+    expect(link).toHaveAttribute(
+      "href",
+      `/courses/p/${childPrograms[0].readable_id}`,
+    )
+  })
+
+  test("Links child program to /programs/ when display_mode is null", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({
+      operator: "all_of",
+      title: "Requirements",
+    })
+    op.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { childPrograms } = setupApis({ program, page })
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+    const section = await screen.findByRole("region", { name: "Courses" })
+
+    const link = await within(section).findByRole("link", {
+      name: new RegExp(childPrograms[0].title),
+    })
+    expect(link).toHaveAttribute(
+      "href",
+      `/programs/${childPrograms[0].readable_id}`,
+    )
   })
 
   // Interaction and active content are tested in InstructorsSection.test.tsx
