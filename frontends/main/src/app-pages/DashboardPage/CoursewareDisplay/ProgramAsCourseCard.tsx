@@ -316,7 +316,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   )
 
   const [popoverAnchorEl, setPopoverAnchorEl] =
-    React.useState<HTMLButtonElement | null>(null)
+    React.useState<HTMLAnchorElement | null>(null)
 
   const startDatePopoverString = courseProgram?.start_date
     ? `${formatDate(courseProgram.start_date, "MMMM D, YYYY h:mm A")} ${getTimezone(courseProgram.start_date)}`
@@ -385,6 +385,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                   </DatePopoverContent>
                 </Popover>
                 <DatePopoverTrigger
+                  color="black"
                   onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
                 >
                   {datePopoverContent.anchorLabel}
