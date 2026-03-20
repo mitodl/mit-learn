@@ -3,7 +3,7 @@
 import copy
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Iterator
 from datetime import UTC
 from decimal import Decimal
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -487,7 +487,7 @@ def _fetch_courses_by_ids(course_ids):
     return []
 
 
-def transform_programs(programs: list[dict]) -> Generator[dict, None, None]:
+def transform_programs(programs: list[dict]) -> Iterator[dict]:
     """
     Transform the MITX Online catalog data
 
@@ -495,7 +495,7 @@ def transform_programs(programs: list[dict]) -> Generator[dict, None, None]:
         programs (list of dict): the MITX Online programs data
 
     Yields:
-        Generator[dict, None, None]: transformed program data for each program
+        Iterator[dict]: transformed program data for each program
 
     """
     # normalize the MITx Online data
