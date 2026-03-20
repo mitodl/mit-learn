@@ -7,7 +7,7 @@ python3 manage.py collectstatic --noinput --clear
 # run initial django migrations
 python3 manage.py migrate --noinput
 
-granian --interface wsgi --host 0.0.0.0 --port "${PORT:-8061}" --workers "${GRANIAN_WORKERS:-3}" --blocking-threads "${GRANIAN_BLOCKING_THREADS:-2}" --reload --reload-ignore-dirs frontends --reload-ignore-dirs staticfiles --reload-ignore-dirs .git main.wsgi:application &
+granian --interface asginl --host 0.0.0.0 --port "${PORT:-8061}" --workers "${GRANIAN_WORKERS:-3}" --blocking-threads 1 --reload --reload-ignore-dirs frontends --reload-ignore-dirs staticfiles --reload-ignore-dirs .git main.asgi:application &
 GRANIAN_PID=$!
 echo "Application started with PID $GRANIAN_PID"
 
