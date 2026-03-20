@@ -823,17 +823,19 @@ QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
     name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
 )
 
-QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
-QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY_V2", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST_V2", default="http://qdrant:6333")
+
+
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
 QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
-    name="QDRANT_SPARSE_MODEL", default="sklearn/hashing_vectorizer_sparse_model"
+    name="QDRANT_SPARSE_MODEL_V2", default="sklearn/hashing_vectorizer_sparse_model"
 )
 QDRANT_SPARSE_ENCODER = get_string(
-    name="QDRANT_SPARSE_ENCODER",
+    name="QDRANT_SPARSE_ENCODER_V2",
     default="vector_search.encoders.sparse_hash.SparseHashEncoder",
 )
 
