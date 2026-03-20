@@ -238,7 +238,7 @@ const getRelativeDateContent = (
 }
 
 interface ProgramAsCourseCardProps {
-  program: {
+  courseProgram: {
     id: number
     title?: string | null
     start_date?: string | null
@@ -246,45 +246,60 @@ interface ProgramAsCourseCardProps {
     courses?: number[]
     req_tree?: V2ProgramRequirement[]
   }
-  courses: CourseWithCourseRunsSerializerV2[]
-  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
-  programEnrollment?: V3UserProgramEnrollment
+  moduleCourses: CourseWithCourseRunsSerializerV2[]
+  moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  courseProgramEnrollment?: V3UserProgramEnrollment
   Component?: React.ElementType
   className?: string
 }
 
+/**
+ * Renders a v3 program in the dashboard's course presentation mode.
+ *
+ * When a program enrollment is configured with `display_mode="course"`, the
+ * dashboard treats the program as a learner-facing "course" even though the
+ * backing data still comes from the v3 program / program enrollment models.
+ * In that presentation, the courses from the program's first requirement
+ * section are shown as the course's "modules".
+ *
+ * This component keeps the underlying program terminology in its data inputs,
+ * but translates that data into the course-and-modules UI used on the
+ * dashboard.
+ */
 const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
-  program,
-  courses,
-  enrollmentsByCourseId,
-  programEnrollment,
+  courseProgram,
+  moduleCourses,
+  moduleEnrollmentsByCourseId,
+  courseProgramEnrollment,
   Component,
   className,
 }) => {
-  const firstRequirementSection = program?.req_tree?.find(
+  const moduleRequirementSection = courseProgram?.req_tree?.find(
     (node) => node.data.node_type === "operator",
   )
 
-  const moduleIds = firstRequirementSection
-    ? extractCoursesFromNode(firstRequirementSection)
-    : (program?.courses ?? [])
+  const moduleIds = moduleRequirementSection
+    ? extractCoursesFromNode(moduleRequirementSection)
+    : (courseProgram?.courses ?? [])
 
-  const modules = courses.filter((course) => moduleIds.includes(course.id))
+  const displayedModuleCourses = moduleCourses.filter((course) =>
+    moduleIds.includes(course.id),
+  )
 
-  const enrolledCount = modules.filter((course) => {
+  const enrolledCount = displayedModuleCourses.filter((course) => {
     const bestEnrollment = selectBestEnrollment(
       course,
-      enrollmentsByCourseId[course.id] || [],
+      moduleEnrollmentsByCourseId[course.id] || [],
     )
     return (
       getCourseRunEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
     )
   }).length
 
-  const completedCount = modules.filter((course) => {
+  const completedCount = displayedModuleCourses.filter((course) => {
     const bestEnrollment = selectBestEnrollment(
       course,
-      enrollmentsByCourseId[course.id] || [],
+      moduleEnrollmentsByCourseId[course.id] || [],
     )
     return (
       getCourseRunEnrollmentStatus(bestEnrollment) ===
@@ -292,10 +307,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     )
   }).length
 
-  const totalCount = modules.length
+  const totalCount = displayedModuleCourses.length
 
   const programEnrollmentStatus = getProgramEnrollmentStatus(
-    programEnrollment,
+    courseProgramEnrollment,
     enrolledCount,
     completedCount,
   )
@@ -303,19 +318,19 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const [popoverAnchorEl, setPopoverAnchorEl] =
     React.useState<HTMLButtonElement | null>(null)
 
-  const startDatePopoverString = program?.start_date
-    ? `${formatDate(program.start_date, "MMMM D, YYYY h:mm A")} ${getTimezone(program.start_date)}`
+  const startDatePopoverString = courseProgram?.start_date
+    ? `${formatDate(courseProgram.start_date, "MMMM D, YYYY h:mm A")} ${getTimezone(courseProgram.start_date)}`
     : null
-  const endDatePopoverString = program?.end_date
-    ? `${formatDate(program.end_date, "MMMM D, YYYY h:mm A")} ${getTimezone(program.end_date)}`
+  const endDatePopoverString = courseProgram?.end_date
+    ? `${formatDate(courseProgram.end_date, "MMMM D, YYYY h:mm A")} ${getTimezone(courseProgram.end_date)}`
     : null
   const datePopoverContent = getRelativeDateContent(
-    program?.start_date,
-    program?.end_date,
+    courseProgram?.start_date,
+    courseProgram?.end_date,
     startDatePopoverString,
     endDatePopoverString,
   )
-  const showDatePopoverLink = Boolean(datePopoverContent)
+  const showDatePopoverTrigger = Boolean(datePopoverContent)
 
   return (
     <ProgramCardRoot
@@ -327,7 +342,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
         <ProgramCardHeaderInner>
           <StatusContainer>
             <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
-            {showDatePopoverLink && datePopoverContent && (
+            {showDatePopoverTrigger && datePopoverContent && (
               <>
                 <HorizontalSeparator />
                 <Popover
@@ -383,7 +398,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               </>
             )}
           </StatusContainer>
-          <Typography variant="subtitle2">{program?.title}</Typography>
+          <Typography variant="subtitle2">{courseProgram?.title}</Typography>
         </ProgramCardHeaderInner>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
@@ -395,10 +410,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
         </Typography>
       </ProgramCardSubHeader>
       <ProgramCardBody>
-        {modules.map((course) => {
+        {displayedModuleCourses.map((course) => {
           const bestEnrollment = selectBestEnrollment(
             course,
-            enrollmentsByCourseId[course.id] || [],
+            moduleEnrollmentsByCourseId[course.id] || [],
           )
           const resource = bestEnrollment
             ? {
@@ -415,7 +430,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: bestEnrollment?.run.id,
               })}
               resource={resource}
-              programEnrollment={programEnrollment}
+              programEnrollment={courseProgramEnrollment}
               variant="stacked"
             />
           )

@@ -80,12 +80,12 @@ describe("ProgramAsCourseCard", () => {
     )
 
     return {
-      program,
-      courses: [moduleOne, moduleTwo],
-      enrollmentsByCourseId: {
+      courseProgram: program,
+      moduleCourses: [moduleOne, moduleTwo],
+      moduleEnrollmentsByCourseId: {
         [moduleOne.id]: [moduleEnrollment],
       },
-      programEnrollment,
+      courseProgramEnrollment: programEnrollment,
     }
   }
 
@@ -97,10 +97,10 @@ describe("ProgramAsCourseCard", () => {
 
     renderWithProviders(
       <ProgramAsCourseCard
-        program={cardData.program}
-        courses={cardData.courses}
-        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
-        programEnrollment={cardData.programEnrollment}
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
       />,
     )
 
@@ -118,10 +118,10 @@ describe("ProgramAsCourseCard", () => {
 
     renderWithProviders(
       <ProgramAsCourseCard
-        program={cardData.program}
-        courses={cardData.courses}
-        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
-        programEnrollment={cardData.programEnrollment}
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
       />,
     )
 
@@ -141,10 +141,10 @@ describe("ProgramAsCourseCard", () => {
 
     renderWithProviders(
       <ProgramAsCourseCard
-        program={cardData.program}
-        courses={cardData.courses}
-        enrollmentsByCourseId={cardData.enrollmentsByCourseId}
-        programEnrollment={cardData.programEnrollment}
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
       />,
     )
 

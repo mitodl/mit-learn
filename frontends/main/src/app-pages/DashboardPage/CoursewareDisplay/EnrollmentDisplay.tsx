@@ -111,6 +111,7 @@ const startsSooner = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) => {
   const y = new Date(b.run.start_date)
   return x.getTime() - y.getTime()
 }
+
 const sortEnrollments = (enrollments: CourseRunEnrollmentV3[]) => {
   const expired: CourseRunEnrollmentV3[] = []
   const completed: CourseRunEnrollmentV3[] = []
@@ -190,18 +191,20 @@ interface EnrollmentExpandCollapseProps {
   maybeShown: DashboardResource[]
   isLoading?: boolean
   enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
-  programsById: Map<number, ProgramAsCourseProgramData>
-  coursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
+  courseProgramsById: Map<number, ProgramAsCourseProgramData>
+  moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
   onUpgradeError?: (error: string) => void
 }
+
+const MIN_VISIBLE = 3
 
 const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
   normallyShown,
   maybeShown,
   isLoading,
   enrollmentsByCourseId,
-  programsById,
-  coursesByProgramId,
+  courseProgramsById,
+  moduleCoursesByProgramId,
   onUpgradeError,
 }) => {
   const [shown, setShown] = React.useState(false)
@@ -223,8 +226,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       <EnrollmentsList itemSpacing={"16px"}>
         {shownResources.map((resource) => {
           if (isProgramAsCourseEnrollment(resource)) {
-            const program = programsById.get(resource.data.program.id)
-            if (!program) {
+            const courseProgram = courseProgramsById.get(
+              resource.data.program.id,
+            )
+            if (!courseProgram) {
               return (
                 <DashboardCardStyled
                   key={getResourceKey(resource)}
@@ -241,10 +246,12 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
               <ProgramAsCourseCard
                 key={getResourceKey(resource)}
                 Component="li"
-                program={program}
-                courses={coursesByProgramId[resource.data.program.id] ?? []}
-                enrollmentsByCourseId={enrollmentsByCourseId}
-                programEnrollment={resource.data}
+                courseProgram={courseProgram}
+                moduleCourses={
+                  moduleCoursesByProgramId[resource.data.program.id] ?? []
+                }
+                moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+                courseProgramEnrollment={resource.data}
               />
             )
           }
@@ -267,8 +274,10 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
             <HiddenEnrollmentsList itemSpacing={"16px"}>
               {hiddenResources.map((resource) => {
                 if (isProgramAsCourseEnrollment(resource)) {
-                  const program = programsById.get(resource.data.program.id)
-                  if (!program) {
+                  const courseProgram = courseProgramsById.get(
+                    resource.data.program.id,
+                  )
+                  if (!courseProgram) {
                     return (
                       <DashboardCardStyled
                         key={getResourceKey(resource)}
@@ -285,12 +294,12 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
                     <ProgramAsCourseCard
                       key={getResourceKey(resource)}
                       Component="li"
-                      program={program}
-                      courses={
-                        coursesByProgramId[resource.data.program.id] ?? []
+                      courseProgram={courseProgram}
+                      moduleCourses={
+                        moduleCoursesByProgramId[resource.data.program.id] ?? []
                       }
-                      enrollmentsByCourseId={enrollmentsByCourseId}
-                      programEnrollment={resource.data}
+                      moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+                      courseProgramEnrollment={resource.data}
                     />
                   )
                 }
@@ -381,7 +390,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     (enrollment) => enrollment.program.id === program?.id,
   )
 
-  // Only fetch courses if we have a program with course IDs
   const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
     ...coursesQueries.coursesList({ id: program?.courses || [] }),
     enabled: !!program && program.courses.length > 0 && enrolledInProgram,
@@ -441,7 +449,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     requiredProgramsLoading ||
     requiredProgramCoursesLoading
 
-  // Group enrollments by course ID for efficient lookup
   const enrollmentsByCourseId = (rawEnrollments || []).reduce(
     (acc, enrollment) => {
       const courseId = enrollment.run.course.id
@@ -454,7 +461,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     {} as Record<number, CourseRunEnrollmentV3[]>,
   )
 
-  // Build sections from requirement tree
   const requirementSections =
     program?.req_tree
       .filter((node) => node.data.node_type === "operator")
@@ -491,9 +497,11 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             if (isProgramAsCourse) {
               return {
                 resourceType: "program-as-course" as const,
-                programId: requiredProgram.id,
-                program: requiredProgram,
-                enrollment: programEnrollmentsById.get(requiredProgram.id),
+                courseProgramId: requiredProgram.id,
+                courseProgram: requiredProgram,
+                courseProgramEnrollment: programEnrollmentsById.get(
+                  requiredProgram.id,
+                ),
               }
             }
 
@@ -516,7 +524,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       })
       .filter((section) => section.items.length > 0) || []
 
-  const requiredProgramCoursesByProgramId = React.useMemo(() => {
+  const requiredProgramModuleCoursesByProgramId = React.useMemo(() => {
     const courses = requiredProgramCourses?.results ?? []
 
     return requiredProgramList.reduce<Record<number, typeof courses>>(
@@ -665,14 +673,16 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                     <ProgramAsCourseCard
                       key={getKey({
                         resourceType: ResourceType.Program,
-                        id: item.programId,
+                        id: item.courseProgramId,
                       })}
-                      program={item.program}
-                      courses={
-                        requiredProgramCoursesByProgramId[item.programId] ?? []
+                      courseProgram={item.courseProgram}
+                      moduleCourses={
+                        requiredProgramModuleCoursesByProgramId[
+                          item.courseProgramId
+                        ] ?? []
                       }
-                      enrollmentsByCourseId={enrollmentsByCourseId}
-                      programEnrollment={item.enrollment}
+                      moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+                      courseProgramEnrollment={item.courseProgramEnrollment}
                     />
                   )
                 }
@@ -698,8 +708,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     </Stack>
   )
 }
-
-const MIN_VISIBLE = 3
 
 /**
  * Renders the "My Learning" section for non-B2B enrollments.
@@ -745,55 +753,54 @@ const AllEnrollmentsDisplay: React.FC = () => {
     [filteredProgramEnrollments],
   )
 
-  const {
-    data: homeProgramAsCoursePrograms,
-    isLoading: homeProgramAsCourseProgramsLoading,
-  } = useQuery({
-    ...programsQueries.programsList({ id: programAsCourseProgramIds }),
-    enabled: programAsCourseProgramIds.length > 0,
-  })
+  const { data: homeCoursePrograms, isLoading: homeCourseProgramsLoading } =
+    useQuery({
+      ...programsQueries.programsList({ id: programAsCourseProgramIds }),
+      enabled: programAsCourseProgramIds.length > 0,
+    })
 
-  const homeProgramAsCourseCourseIds = React.useMemo(() => {
+  const homeCourseProgramModuleIds = React.useMemo(() => {
     const uniqueIds = new Set<number>()
-    ;(homeProgramAsCoursePrograms?.results ?? []).forEach((program) => {
-      ;(program.courses ?? []).forEach((courseId) => uniqueIds.add(courseId))
+    ;(homeCoursePrograms?.results ?? []).forEach((courseProgram) => {
+      ;(courseProgram.courses ?? []).forEach((courseId) =>
+        uniqueIds.add(courseId),
+      )
     })
     return [...uniqueIds]
-  }, [homeProgramAsCoursePrograms?.results])
+  }, [homeCoursePrograms?.results])
 
   const {
-    data: homeProgramAsCourseCourses,
-    isLoading: homeProgramAsCourseCoursesLoading,
+    data: homeCourseProgramModuleCourses,
+    isLoading: homeCourseProgramModuleCoursesLoading,
   } = useQuery({
-    ...coursesQueries.coursesList({ id: homeProgramAsCourseCourseIds }),
-    enabled: homeProgramAsCourseCourseIds.length > 0,
+    ...coursesQueries.coursesList({ id: homeCourseProgramModuleIds }),
+    enabled: homeCourseProgramModuleIds.length > 0,
   })
 
-  const homeProgramAsCourseById = React.useMemo(
+  const homeCourseProgramsById = React.useMemo(
     () =>
       new Map(
-        (homeProgramAsCoursePrograms?.results ?? []).map((program) => [
-          program.id,
-          program,
+        (homeCoursePrograms?.results ?? []).map((courseProgram) => [
+          courseProgram.id,
+          courseProgram,
         ]),
       ),
-    [homeProgramAsCoursePrograms?.results],
+    [homeCoursePrograms?.results],
   )
 
-  const homeProgramAsCourseCoursesByProgramId = React.useMemo(() => {
-    const allCourses = homeProgramAsCourseCourses?.results ?? []
+  const homeModuleCoursesByProgramId = React.useMemo(() => {
+    const allCourses = homeCourseProgramModuleCourses?.results ?? []
 
-    return (homeProgramAsCoursePrograms?.results ?? []).reduce<
+    return (homeCoursePrograms?.results ?? []).reduce<
       Record<number, CourseWithCourseRunsSerializerV2[]>
-    >((acc, program) => {
-      const courseIds = new Set(program.courses ?? [])
-      acc[program.id] = allCourses.filter((course) => courseIds.has(course.id))
+    >((acc, courseProgram) => {
+      const courseIds = new Set(courseProgram.courses ?? [])
+      acc[courseProgram.id] = allCourses.filter((course) =>
+        courseIds.has(course.id),
+      )
       return acc
     }, {})
-  }, [
-    homeProgramAsCoursePrograms?.results,
-    homeProgramAsCourseCourses?.results,
-  ])
+  }, [homeCoursePrograms?.results, homeCourseProgramModuleCourses?.results])
 
   const homeEnrollmentsByCourseId = (enrolledCourses || []).reduce(
     (acc, enrollment) => {
@@ -862,12 +869,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||
           contractsLoading ||
-          homeProgramAsCourseProgramsLoading ||
-          homeProgramAsCourseCoursesLoading
+          homeCourseProgramsLoading ||
+          homeCourseProgramModuleCoursesLoading
         }
         enrollmentsByCourseId={homeEnrollmentsByCourseId}
-        programsById={homeProgramAsCourseById}
-        coursesByProgramId={homeProgramAsCourseCoursesByProgramId}
+        courseProgramsById={homeCourseProgramsById}
+        moduleCoursesByProgramId={homeModuleCoursesByProgramId}
         onUpgradeError={setUpgradeError}
       />
     </Wrapper>
