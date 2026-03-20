@@ -6036,6 +6036,12 @@ export interface Video {
    * @type {string}
    * @memberof Video
    */
+  streaming_url: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof Video
+   */
   cover_image_url: string | null
   /**
    *

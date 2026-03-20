@@ -264,9 +264,57 @@ class TestHelpers:
         url = _get_source_url(ovs_video_with_subtitles)
         assert "video__index.m3u8" in url
 
-    def test_get_source_url_no_sources(self):
-        """Test source URL with no sources"""
-        assert _get_source_url({"sources": []}) is None
+    def test_get_source_url_skips_non_m3u8(self):
+        """Test source URL extraction picks the first m3u8 source"""
+        url = _get_source_url(
+            {
+                "sources": [
+                    {"src": "https://example.com/video.mp4"},
+                    {"src": "https://example.com/video__index.m3u8"},
+                ]
+            }
+        )
+        assert url == "https://example.com/video__index.m3u8"
+
+    def test_get_source_url_accepts_m3u8_with_query_params(self):
+        """Test source URL extraction allows m3u8 URLs with query params"""
+        url = _get_source_url(
+            {
+                "sources": [
+                    {"src": "https://example.com/video__index.m3u8?token=abc123"},
+                ]
+            }
+        )
+        assert url == "https://example.com/video__index.m3u8?token=abc123"
+
+    @pytest.mark.parametrize(
+        ("video_data", "expected"),
+        [
+            pytest.param({"sources": []}, None, id="empty_sources"),
+            pytest.param({}, None, id="missing_sources_key"),
+            pytest.param(
+                {"sources": [{"src": "https://example.com/video.mp4"}]},
+                None,
+                id="no_m3u8_sources",
+            ),
+        ],
+    )
+    def test_get_source_url_returns_none(self, video_data, expected):
+        """Test source URL returns None for missing/non-m3u8 sources"""
+        assert _get_source_url(video_data) == expected
+
+    def test_get_source_url_picks_first_m3u8(self):
+        """Test source URL picks the first m3u8 when multiple exist"""
+        url = _get_source_url(
+            {
+                "sources": [
+                    {"src": "https://example.com/video.mp4"},
+                    {"src": "https://example.com/first__index.m3u8"},
+                    {"src": "https://example.com/second__index.m3u8"},
+                ]
+            }
+        )
+        assert url == "https://example.com/first__index.m3u8"
 
     def test_get_resource_url_with_cta_link(self):
         """Test resource URL uses cta_link when available"""
@@ -321,6 +369,7 @@ class TestTransform:
                 "published": True,
                 "video": {
                     "duration": "PT1H1M1S",
+                    "streaming_url": "https://du3yhovcx8dht.cloudfront.net/transcoded/96fb932aa5644d8e8f6a5fafe42caa87/video__index.m3u8",
                     "caption_urls": [
                         {
                             "language": "en",
@@ -355,6 +404,7 @@ class TestTransform:
                 "published": True,
                 "video": {
                     "duration": "PT0S",
+                    "streaming_url": "https://du3yhovcx8dht.cloudfront.net/transcoded/abcdef1234567890abcdef1234567890/video__index.m3u8",
                     "caption_urls": [],
                     "cover_image_url": "",
                 },
@@ -433,7 +483,9 @@ class TestTransform:
                 "title": "Video 1",
                 "description": "",
                 "created_at": "2020-01-01T00:00:00Z",
-                "sources": [],
+                "sources": [
+                    {"src": "https://example.com/video1__index.m3u8"},
+                ],
                 "videothumbnail_set": [],
                 "videosubtitle_set": [],
                 "cta_link": None,
@@ -450,7 +502,9 @@ class TestTransform:
                 "title": "Video 2",
                 "description": "",
                 "created_at": "2020-01-02T00:00:00Z",
-                "sources": [],
+                "sources": [
+                    {"src": "https://example.com/video2__index.m3u8"},
+                ],
                 "videothumbnail_set": [],
                 "videosubtitle_set": [],
                 "cta_link": None,
@@ -467,6 +521,53 @@ class TestTransform:
         assert len(results) == 1
         assert results[0]["playlist_id"] == "collection1"
         assert len(results[0]["videos"]) == 2
+
+    def test_transform_skips_video_without_m3u8_source(self):
+        """Test that videos with no m3u8 source are skipped"""
+        videos = [
+            {
+                "key": "video_no_hls",
+                "title": "Video No HLS",
+                "description": "",
+                "created_at": "2020-01-01T00:00:00Z",
+                "sources": [{"src": "https://example.com/video.mp4"}],
+                "videothumbnail_set": [],
+                "videosubtitle_set": [],
+                "cta_link": None,
+                "duration": 0,
+                "collection": {
+                    "key": "collection1",
+                    "title": "Collection",
+                    "description": "",
+                    "is_public": True,
+                },
+            }
+        ]
+        results = list(transform(videos))
+        assert len(results) == 0
+
+    @pytest.mark.parametrize(
+        "sources",
+        [
+            pytest.param([{"src": "https://example.com/video.mp4"}], id="only_mp4"),
+            pytest.param([], id="empty_sources"),
+            pytest.param([{"src": ""}], id="empty_src"),
+        ],
+    )
+    def test_transform_video_returns_none_without_m3u8(self, sources):
+        """Test _transform_video returns None when no m3u8 source exists"""
+        video_data = {
+            "key": "test_key",
+            "title": "Test",
+            "description": "",
+            "created_at": "2020-01-01T00:00:00Z",
+            "sources": sources,
+            "videothumbnail_set": [],
+            "videosubtitle_set": [],
+            "cta_link": None,
+            "duration": 0,
+        }
+        assert _transform_video(video_data) is None
 
 
 @pytest.fixture

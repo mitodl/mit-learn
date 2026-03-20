@@ -415,6 +415,7 @@ class VideoSerializer(serializers.ModelSerializer):
     """Serializer for the Video model"""
 
     caption_urls = CaptionUrlSerializer(many=True, read_only=True)
+    streaming_url = NullableURLField(allow_blank=True, allow_null=True, read_only=True)
     cover_image_url = NullableURLField(
         allow_blank=True, allow_null=True, read_only=True
     )

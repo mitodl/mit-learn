@@ -106,9 +106,12 @@ def _get_source_url(video_data: dict) -> str | None:
     Returns:
         HLS streaming URL or None
     """
-    sources = video_data.get("sources", [])
-    if sources:
-        return sources[0].get("src")
+    for source in video_data.get("sources", []):
+        src = source.get("src", "")
+        if not src:
+            continue
+        if urlparse(src).path.endswith(".m3u8"):
+            return src
     return None
 
 
@@ -197,7 +200,7 @@ def extract(*, url=None) -> Generator[dict, None, None]:
         next_url = data.get("next")
 
 
-def _transform_video(video_data: dict) -> dict:
+def _transform_video(video_data: dict) -> dict | None:
     """
     Transform a single OVS video into LearningResource format.
 
@@ -207,6 +210,14 @@ def _transform_video(video_data: dict) -> dict:
     Returns:
         dict matching the load_video() expected format
     """
+    source_url = _get_source_url(video_data)
+    if not source_url:
+        log.warning(
+            "Skipping OVS video %s: no m3u8 source found",
+            video_data.get("key", "<unknown>"),
+        )
+        return None
+
     cover_image_url = _get_cover_image_url(video_data)
     image_data = {"url": cover_image_url} if cover_image_url else None
 
@@ -224,6 +235,7 @@ def _transform_video(video_data: dict) -> dict:
         "published": True,
         "video": {
             "duration": _duration_to_iso8601(video_data.get("duration", 0)),
+            "streaming_url": source_url,
             "caption_urls": _build_caption_urls(video_data),
             "cover_image_url": cover_image_url or "",
         },
@@ -269,12 +281,18 @@ def transform(extracted_videos) -> Generator[dict, None, None]:
         if not collection or not collection.get("key"):
             continue
         collection_key = collection["key"]
+        transformed_video = _transform_video(video_data)
+        if not transformed_video:
+            continue
         if collection_key not in collections:
             collections[collection_key] = _transform_collection(collection)
-        collection_videos[collection_key].append(_transform_video(video_data))
+        collection_videos[collection_key].append(transformed_video)
 
     for collection_key, playlist_data in collections.items():
-        playlist_data["videos"] = collection_videos[collection_key]
+        videos = collection_videos[collection_key]
+        if not videos:
+            continue
+        playlist_data["videos"] = videos
         yield playlist_data
 
 

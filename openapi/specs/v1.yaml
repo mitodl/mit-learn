@@ -15606,6 +15606,11 @@ components:
           items:
             $ref: '#/components/schemas/CaptionUrl'
           readOnly: true
+        streaming_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
         cover_image_url:
           type: string
           format: uri
@@ -15621,6 +15626,7 @@ components:
       - cover_image_url
       - duration
       - id
+      - streaming_url
     VideoChannel:
       type: object
       description: Serializer for the VideoChannel model

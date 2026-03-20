@@ -877,6 +877,7 @@ class VideoFactory(DjangoModelFactory):
         create_video=False,
     )
     duration = factory.Sequence(lambda n: f"PT{n:02d}M{n:02d}S")
+    streaming_url = ""
 
     class Meta:
         model = models.Video
