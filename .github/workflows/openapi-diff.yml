@@ -22,7 +22,7 @@ jobs:
             --workdir ${{ github.workspace }} \
             --volume ${{ github.workspace }}:${{ github.workspace }}:rw \
             -e GITHUB_WORKSPACE=${{ github.workspace }} \
-            tufin/oasdiff changelog --composed \
+            tufin/oasdiff changelog --composed --flatten-allof \
             'base/openapi/specs/*.yaml' \
             'head/openapi/specs/*.yaml' \
             >> $GITHUB_OUTPUT
@@ -72,6 +72,6 @@ jobs:
             tufin/oasdiff breaking \
             --fail-on ERR \
             --format githubactions \
-            --composed \
+            --composed --flatten-allof \
             'base/openapi/specs/*.yaml' \
             'head/openapi/specs/*.yaml'
