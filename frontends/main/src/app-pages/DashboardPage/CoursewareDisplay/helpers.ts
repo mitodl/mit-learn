@@ -1,6 +1,7 @@
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "@/common/mitxonline"
 export { getBestRun }
@@ -80,6 +81,30 @@ const getEnrollmentStatus = (
   return hasCompleted ? EnrollmentStatus.Completed : EnrollmentStatus.Enrolled
 }
 
+const getCourseRunEnrollmentStatus = (
+  enrollment: CourseRunEnrollmentV3 | null,
+): EnrollmentStatus => getEnrollmentStatus(enrollment)
+
+const getProgramEnrollmentStatus = (
+  programEnrollment: V3UserProgramEnrollment | undefined,
+  enrolledCourseCount: number,
+  completedCourseCount = 0,
+): EnrollmentStatus => {
+  if (!programEnrollment) {
+    return EnrollmentStatus.NotEnrolled
+  }
+
+  if (programEnrollment.certificate) {
+    return EnrollmentStatus.Completed
+  }
+
+  if (completedCourseCount > 0 || enrolledCourseCount > 0) {
+    return EnrollmentStatus.Enrolled
+  }
+
+  return EnrollmentStatus.NotEnrolled
+}
+
 export {
   ResourceType,
   EnrollmentStatus,
@@ -87,4 +112,6 @@ export {
   selectBestEnrollment,
   getKey,
   getEnrollmentStatus,
+  getCourseRunEnrollmentStatus,
+  getProgramEnrollmentStatus,
 }

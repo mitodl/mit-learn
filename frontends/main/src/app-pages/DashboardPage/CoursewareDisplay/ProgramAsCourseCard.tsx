@@ -1,0 +1,488 @@
+import React from "react"
+import { useQuery } from "@tanstack/react-query"
+import {
+  Popover,
+  Skeleton,
+  Stack,
+  Typography,
+  styled,
+  theme,
+} from "ol-components"
+import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
+import { coursesQueries } from "api/mitxonline-hooks/courses"
+import { programsQueries } from "api/mitxonline-hooks/programs"
+import {
+  V3UserProgramEnrollment,
+  V2ProgramRequirement,
+} from "@mitodl/mitxonline-api-axios/v2"
+import {
+  EnrollmentStatus,
+  getCourseRunEnrollmentStatus,
+  getKey,
+  getProgramEnrollmentStatus,
+  ResourceType,
+  selectBestEnrollment,
+} from "./helpers"
+import { ProgressBadge } from "./ProgressBadge"
+import {
+  DashboardCard as ModuleCard,
+  DashboardType as ModuleCardType,
+} from "./ModuleCard"
+import { LinkButton } from "@/page-components/TiptapEditor/vendor/components/tiptap-ui/link-popover"
+import { formatDate } from "ol-utilities"
+
+const ProgramCardRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "stretch",
+  borderRadius: "8px",
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  borderBottom: "none",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
+  [theme.breakpoints.down("md")]: {
+    border: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    flexDirection: "column",
+    gap: "16px",
+  },
+}))
+
+const ProgramCardHeaderOuter = styled.div({
+  display: "flex",
+  padding: "16px 24px",
+  alignItems: "center",
+  alignSelf: "stretch",
+  gap: "16px",
+})
+
+const ProgramCardHeaderInner = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "12px",
+  flex: "1 0 0",
+})
+
+const StatusContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+})
+
+const DatePopoverContent = styled.div({
+  maxWidth: "240px",
+  display: "flex",
+  padding: "8px",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "28px",
+  alignSelf: "stretch",
+})
+
+const HorizontalSeparator = styled.div({
+  width: "1px",
+  height: "13px",
+  backgroundColor: theme.custom.colors.lightGray2,
+})
+
+const ProgramCardSubHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  padding: "8px 16px",
+  alignItems: "center",
+  alignSelf: "stretch",
+  gap: "10px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  background: `${theme.custom.colors.lightGray1}`,
+  [theme.breakpoints.down("md")]: {
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
+}))
+
+const ProgramCardBody = styled.div({
+  display: "flex",
+  width: "100%",
+  flexDirection: "column",
+  alignItems: "stretch",
+  alignSelf: "stretch",
+  overflow: "hidden",
+  borderRadius: "0 0 8px 8px",
+})
+
+const extractCoursesFromNode = (node: V2ProgramRequirement): number[] => {
+  const courses: number[] = []
+
+  if (node.data.node_type === "course" && node.data.course) {
+    courses.push(node.data.course)
+  }
+
+  node.children?.forEach((child) => {
+    courses.push(...extractCoursesFromNode(child))
+  })
+
+  return courses
+}
+
+const getTimezone = (dateString: string): string => {
+  const tz =
+    new Date(dateString)
+      .toLocaleString("en-US", { timeZoneName: "short" })
+      .split(" ")
+      .pop() || ""
+  return tz
+}
+
+const MS_IN_DAY = 1000 * 60 * 60 * 24
+
+const formatDayCount = (days: number): string => {
+  return `${days} day${days === 1 ? "" : "s"}`
+}
+
+interface RelativeDateContent {
+  anchorLabel: string
+  startVerb: "starts" | "started"
+  startSuffix: string
+  endVerb?: "ends" | "ended"
+  endSuffix?: string
+}
+
+const getRelativeDateContent = (
+  startDateString?: string | null,
+  endDateString?: string | null,
+  startDateDisplay?: string | null,
+  endDateDisplay?: string | null,
+): RelativeDateContent | null => {
+  if (!startDateString) {
+    return null
+  }
+
+  const now = Date.now()
+  const startDate = new Date(startDateString)
+  if (Number.isNaN(startDate.getTime())) {
+    return null
+  }
+
+  const hasEndDate = Boolean(endDateString)
+  const endDate = hasEndDate ? new Date(endDateString as string) : null
+  const hasValidEndDate = Boolean(endDate) && !Number.isNaN(endDate!.getTime())
+
+  if (!hasValidEndDate) {
+    if (now < startDate.getTime()) {
+      const daysUntilStart = Math.max(
+        0,
+        Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
+      )
+      const dayCount = formatDayCount(daysUntilStart)
+      return {
+        anchorLabel: `${dayCount} until this course starts.`,
+        startVerb: "starts",
+        startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      }
+    }
+
+    const daysSinceStart = Math.max(
+      0,
+      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+    )
+    const dayCount = formatDayCount(daysSinceStart)
+    return {
+      anchorLabel: `this course started ${dayCount} ago.`,
+      startVerb: "started",
+      startSuffix: `${dayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+    }
+  }
+
+  const endTime = endDate!.getTime()
+
+  if (now < startDate.getTime()) {
+    const daysUntilStart = Math.max(
+      0,
+      Math.ceil((startDate.getTime() - now) / MS_IN_DAY),
+    )
+    const dayCount = formatDayCount(daysUntilStart)
+    return {
+      anchorLabel: `${dayCount} until this course starts.`,
+      startVerb: "starts",
+      startSuffix: `in ${dayCount}${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      endVerb: endDateDisplay ? "ends" : undefined,
+      endSuffix: endDateDisplay ? `on ${endDateDisplay}.` : undefined,
+    }
+  }
+
+  if (now <= endTime) {
+    const daysUntilEnd = Math.max(0, Math.ceil((endTime - now) / MS_IN_DAY))
+    const daysUntilStart = Math.max(
+      0,
+      Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+    )
+    const endDayCount = formatDayCount(daysUntilEnd)
+    const startDayCount = formatDayCount(daysUntilStart)
+    return {
+      anchorLabel: `${endDayCount} until this course ends.`,
+      startVerb: "started",
+      startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+      endVerb: "ends",
+      endSuffix: `in ${endDayCount}${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
+    }
+  }
+
+  const daysSinceEnd = Math.max(0, Math.floor((now - endTime) / MS_IN_DAY))
+  const daysSinceStart = Math.max(
+    0,
+    Math.floor((now - startDate.getTime()) / MS_IN_DAY),
+  )
+  const endDayCount = formatDayCount(daysSinceEnd)
+  const startDayCount = formatDayCount(daysSinceStart)
+  return {
+    anchorLabel: `this course ended ${endDayCount} ago.`,
+    startVerb: "started",
+    startSuffix: `${startDayCount} ago${startDateDisplay ? ` on ${startDateDisplay}` : ""}.`,
+    endVerb: "ended",
+    endSuffix: `${endDayCount} ago${endDateDisplay ? ` on ${endDateDisplay}` : ""}.`,
+  }
+}
+
+interface ProgramAsCourseCardProps {
+  programId: number
+  programEnrollment?: V3UserProgramEnrollment
+  Component?: React.ElementType
+  className?: string
+}
+
+const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
+  programId,
+  programEnrollment,
+  Component,
+  className,
+}) => {
+  const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
+    enrollmentQueries.courseRunEnrollmentsList(),
+  )
+  const { data: program, isLoading: programLoading } = useQuery(
+    programsQueries.programDetail({ id: programId.toString() }),
+  )
+
+  const { data: allProgramEnrollments, isLoading: programEnrollmentsLoading } =
+    useQuery(enrollmentQueries.programEnrollmentsList())
+
+  const effectiveProgramEnrollment =
+    programEnrollment ??
+    allProgramEnrollments?.find(
+      (enrollment) => enrollment.program.id === program?.id,
+    )
+
+  const { data: programCourses, isLoading: programCoursesLoading } = useQuery({
+    ...coursesQueries.coursesList({ id: program?.courses || [] }),
+    enabled: Boolean(program && program.courses.length > 0),
+  })
+
+  const enrollmentsByCourseId = (rawEnrollments || []).reduce(
+    (acc, enrollment) => {
+      const courseId = enrollment.run.course.id
+      if (!acc[courseId]) {
+        acc[courseId] = []
+      }
+      acc[courseId].push(enrollment)
+      return acc
+    },
+    {} as Record<number, typeof rawEnrollments>,
+  )
+
+  const firstRequirementSection = program?.req_tree.find(
+    (node) => node.data.node_type === "operator",
+  )
+
+  const moduleIds = firstRequirementSection
+    ? extractCoursesFromNode(firstRequirementSection)
+    : []
+
+  const modules = (programCourses?.results || []).filter((course) =>
+    moduleIds.includes(course.id),
+  )
+
+  const enrolledCount = modules.filter((course) => {
+    const bestEnrollment = selectBestEnrollment(
+      course,
+      enrollmentsByCourseId[course.id] || [],
+    )
+    return (
+      getCourseRunEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
+    )
+  }).length
+
+  const completedCount = modules.filter((course) => {
+    const bestEnrollment = selectBestEnrollment(
+      course,
+      enrollmentsByCourseId[course.id] || [],
+    )
+    return (
+      getCourseRunEnrollmentStatus(bestEnrollment) ===
+      EnrollmentStatus.Completed
+    )
+  }).length
+
+  const totalCount = modules.length
+
+  const programEnrollmentStatus = getProgramEnrollmentStatus(
+    effectiveProgramEnrollment,
+    enrolledCount,
+    completedCount,
+  )
+
+  const [popoverAnchorEl, setPopoverAnchorEl] =
+    React.useState<HTMLButtonElement | null>(null)
+
+  const startDatePopoverString = program?.start_date
+    ? `${formatDate(program.start_date, "MMMM D, YYYY h:mm A")} ${getTimezone(program.start_date)}`
+    : null
+  const endDatePopoverString = program?.end_date
+    ? `${formatDate(program.end_date, "MMMM D, YYYY h:mm A")} ${getTimezone(program.end_date)}`
+    : null
+  const datePopoverContent = getRelativeDateContent(
+    program?.start_date,
+    program?.end_date,
+    startDatePopoverString,
+    endDatePopoverString,
+  )
+  const showDatePopoverLink = Boolean(datePopoverContent)
+
+  const isLoading =
+    userEnrollmentsLoading ||
+    programLoading ||
+    programEnrollmentsLoading ||
+    programCoursesLoading
+
+  if (isLoading) {
+    return (
+      <ProgramCardRoot as={Component} className={className}>
+        <ProgramCardHeaderOuter>
+          <Skeleton variant="text" width="50%" height={20} />
+          <Skeleton variant="text" width="70%" height={28} />
+        </ProgramCardHeaderOuter>
+        <ProgramCardBody>
+          <Skeleton variant="text" width="40%" height={24} />
+          <Stack direction="column" spacing={2} paddingTop="16px">
+            <Skeleton variant="rectangular" width="100%" height={64} />
+            <Skeleton variant="rectangular" width="100%" height={64} />
+          </Stack>
+        </ProgramCardBody>
+      </ProgramCardRoot>
+    )
+  }
+
+  return (
+    <ProgramCardRoot
+      as={Component}
+      className={className}
+      data-testid="program-as-course-card"
+    >
+      <ProgramCardHeaderOuter>
+        <ProgramCardHeaderInner>
+          <StatusContainer>
+            <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
+            {showDatePopoverLink && datePopoverContent && (
+              <>
+                <HorizontalSeparator />
+                <Popover
+                  anchorEl={popoverAnchorEl}
+                  open={!!popoverAnchorEl}
+                  onClose={() => setPopoverAnchorEl(null)}
+                >
+                  <DatePopoverContent>
+                    <Stack direction="column" gap="4px">
+                      <Typography
+                        variant="subtitle3"
+                        color={theme.custom.colors.black}
+                      >
+                        Important Dates:
+                      </Typography>
+                      <Typography
+                        variant="body3"
+                        color={theme.custom.colors.black}
+                      >
+                        This course{" "}
+                        <Typography variant="subtitle3" component="span">
+                          {datePopoverContent.startVerb}
+                        </Typography>{" "}
+                        {datePopoverContent.startSuffix}
+                      </Typography>
+                    </Stack>
+                    {datePopoverContent.endVerb &&
+                      datePopoverContent.endSuffix && (
+                        <Typography
+                          variant="body3"
+                          color={theme.custom.colors.black}
+                        >
+                          This course{" "}
+                          <Typography variant="subtitle3" component="span">
+                            {datePopoverContent.endVerb}
+                          </Typography>{" "}
+                          {datePopoverContent.endSuffix}
+                        </Typography>
+                      )}
+                  </DatePopoverContent>
+                </Popover>
+                <LinkButton
+                  onClick={(event) => setPopoverAnchorEl(event.currentTarget)}
+                  title=""
+                  tooltip=""
+                  aria-label=""
+                >
+                  <Typography
+                    variant="body2"
+                    color={theme.custom.colors.silverGrayDark}
+                  >
+                    {datePopoverContent.anchorLabel}
+                  </Typography>
+                </LinkButton>
+              </>
+            )}
+          </StatusContainer>
+          <Typography variant="subtitle2">{program?.title}</Typography>
+        </ProgramCardHeaderInner>
+      </ProgramCardHeaderOuter>
+      <ProgramCardSubHeader>
+        <Typography
+          variant="subtitle3"
+          color={theme.custom.colors.silverGrayDark}
+        >
+          {totalCount} Modules ({completedCount} of {totalCount} complete)
+        </Typography>
+      </ProgramCardSubHeader>
+      <ProgramCardBody>
+        {modules.map((course) => {
+          const bestEnrollment = selectBestEnrollment(
+            course,
+            enrollmentsByCourseId[course.id] || [],
+          )
+          const resource = bestEnrollment
+            ? {
+                type: ModuleCardType.CourseRunEnrollment,
+                data: bestEnrollment,
+              }
+            : { type: ModuleCardType.Course, data: course }
+
+          return (
+            <ModuleCard
+              key={getKey({
+                resourceType: ResourceType.Course,
+                id: course.id,
+                runId: bestEnrollment?.run.id,
+              })}
+              resource={resource}
+              programEnrollment={effectiveProgramEnrollment}
+              variant="stacked"
+            />
+          )
+        })}
+      </ProgramCardBody>
+    </ProgramCardRoot>
+  )
+}
+
+export { ProgramAsCourseCard }
+export type { ProgramAsCourseCardProps }
