@@ -266,12 +266,17 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   )
 
   const moduleIds = moduleRequirementSection
-    ? getIdsFromReqTree([moduleRequirementSection], "course")
+    ? getIdsFromReqTree([moduleRequirementSection]).courseIds
     : (courseProgram?.courses ?? [])
 
-  const displayedModuleCourses = moduleCourses.filter((course) =>
-    moduleIds.includes(course.id),
+  const moduleCoursesById = new Map(
+    moduleCourses.map((course) => [course.id, course]),
   )
+  const displayedModuleCourses = moduleIds
+    .map((moduleId) => moduleCoursesById.get(moduleId))
+    .filter((course): course is CourseWithCourseRunsSerializerV2 =>
+      Boolean(course),
+    )
 
   const enrolledCount = displayedModuleCourses.filter((course) => {
     const bestEnrollment = selectBestEnrollment(

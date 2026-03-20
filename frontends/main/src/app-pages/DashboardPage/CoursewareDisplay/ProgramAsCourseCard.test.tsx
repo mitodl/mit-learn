@@ -153,4 +153,51 @@ describe("ProgramAsCourseCard", () => {
 
     expect(await screen.findByText("Important Dates:")).toBeInTheDocument()
   })
+
+  test("renders module rows in req_tree order, not API result order", async () => {
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const modules = reqTree.addOperator({
+      operator: "all_of",
+      title: "Modules",
+    })
+    modules.addCourse({ course: 2 })
+    modules.addCourse({ course: 1 })
+
+    const moduleOne = mitxonline.factories.courses.course({
+      id: 1,
+      title: "Module One",
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+    const moduleTwo = mitxonline.factories.courses.course({
+      id: 2,
+      title: "Module Two",
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+
+    const courseProgram = mitxonline.factories.programs.program({
+      id: 304,
+      title: "Micro Program",
+      courses: [1, 2],
+      req_tree: reqTree.serialize(),
+    })
+
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={courseProgram}
+        moduleCourses={[moduleOne, moduleTwo]}
+        moduleEnrollmentsByCourseId={{}}
+      />,
+    )
+
+    await screen.findByText("Micro Program")
+    const rows = await screen.findAllByTestId("enrollment-card-desktop")
+    expect(rows[0]).toHaveTextContent("Module Two")
+    expect(rows[1]).toHaveTextContent("Module One")
+  })
 })
