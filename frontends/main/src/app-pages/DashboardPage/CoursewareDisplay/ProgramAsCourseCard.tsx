@@ -254,7 +254,8 @@ interface ProgramAsCourseCardProps {
  * dashboard treats the program as a learner-facing "course" even though the
  * backing data still comes from the v3 program / program enrollment models.
  * In that presentation, the courses from the program's first requirement
- * section are shown as the course's "modules".
+ * section are shown as the course's "modules". It will only ever display
+ * actual child courses of the program, never nested child programs.
  *
  * This component keeps the underlying program terminology in its data inputs,
  * but translates that data into the course-and-modules UI used on the
