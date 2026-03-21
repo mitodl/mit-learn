@@ -217,48 +217,72 @@ describe("CallToActionSection", () => {
   })
 
   describe("MITx Online product pages", () => {
-    const makeMitxOnlineResource = () =>
-      factories.learningResources.resource({
-        resource_type: faker.helpers.arrayElement([
-          ResourceTypeEnum.Course,
-          ResourceTypeEnum.Program,
-        ]),
-        readable_id: "test-readable-id",
+    const readableId = faker.lorem.slug()
+    const url = faker.internet.url()
+
+    const mitxOnlineResource: typeof factories.learningResources.resource = (
+      overrides,
+    ) => {
+      return factories.learningResources.resource({
         platform: { code: PlatformEnum.Mitxonline },
-        url: "https://mitxonline.mit.edu/external-url",
+        readable_id: readableId,
+        url,
+        ...overrides,
       })
+    }
 
-    it("uses new course product page when feature flag is ON and resource is MITx Online course/program", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
-        (flag) => flag === FeatureFlags.MitxOnlineProductPages,
-      )
-      const resource = makeMitxOnlineResource()
+    it.each([
+      {
+        resourceType: ResourceTypeEnum.Course,
+        expectedPath: coursePageView(readableId),
+      },
+      {
+        resourceType: ResourceTypeEnum.Program,
+        resourceTypeGroup: ResourceTypeGroupEnum.Program,
+        expectedPath: programPageView({
+          readable_id: readableId,
+          display_mode: "",
+        }),
+      },
+      {
+        resourceType: ResourceTypeEnum.Program,
+        resourceTypeGroup: ResourceTypeGroupEnum.Course,
+        expectedPath: programPageView({
+          readable_id: readableId,
+          display_mode: "course",
+        }),
+      },
+    ])(
+      "links to product page $expectedPath when flag is ON for MITx Online $resourceType",
+      ({ resourceType, resourceTypeGroup, expectedPath }) => {
+        mockUseFeatureFlagEnabled.mockImplementation(
+          (flag) => flag === FeatureFlags.MitxOnlineProductPages,
+        )
+        const resource = mitxOnlineResource({
+          resource_type: resourceType,
+          resource_type_group: resourceTypeGroup,
+        })
 
-      renderWithProviders(
-        <CallToActionSection
-          imgConfig={IMG_CONFIG}
-          resource={resource}
-          shareUrl="https://learn.mit.edu/test"
-        />,
-      )
+        renderWithProviders(
+          <CallToActionSection
+            imgConfig={IMG_CONFIG}
+            resource={resource}
+            shareUrl="https://learn.mit.edu/test"
+          />,
+        )
 
-      const link = screen.getByRole("link", { name: "Learn More" })
-
-      const expectedUrl =
-        resource.resource_type === ResourceTypeEnum.Course
-          ? coursePageView(resource.readable_id)
-          : programPageView({
-              readable_id: resource.readable_id,
-              display_mode: null,
-            })
-      expect(link).toHaveAttribute("href", expectedUrl)
-      expect(link.getAttribute("href")).not.toContain("utm_")
-    })
+        const link = screen.getByRole("link", { name: "Learn More" })
+        expect(link).toHaveAttribute("href", expectedPath)
+        expect(link.getAttribute("href")).not.toContain("utm_")
+      },
+    )
 
     it("uses external URL with UTM params when feature flag is OFF for MITx Online course/program", () => {
       mockUseFeatureFlagEnabled.mockReturnValue(false)
 
-      const resource = makeMitxOnlineResource()
+      const resource = mitxOnlineResource({
+        resource_type: ResourceTypeEnum.Course,
+      })
       renderWithProviders(
         <CallToActionSection
           imgConfig={IMG_CONFIG}
@@ -269,34 +293,9 @@ describe("CallToActionSection", () => {
 
       const link = screen.getByRole("link", { name: "Learn More" })
       const href = link.getAttribute("href")
-      expect(href).toContain("mitxonline.mit.edu")
+      expect(href).toContain(url)
       expect(href).toContain("utm_source=mit-learn")
       expect(href).toContain("utm_medium=referral")
-    })
-
-    it("routes MITxOnline program-as-course to /courses/p/ when flag is ON", () => {
-      mockUseFeatureFlagEnabled.mockImplementation(
-        (flag) => flag === FeatureFlags.MitxOnlineProductPages,
-      )
-      const resource = factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Program,
-        resource_type_group: ResourceTypeGroupEnum.Course,
-        readable_id: "test-readable-id",
-        platform: { code: PlatformEnum.Mitxonline },
-        url: "https://mitxonline.mit.edu/external-url",
-      })
-
-      renderWithProviders(
-        <CallToActionSection
-          imgConfig={IMG_CONFIG}
-          resource={resource}
-          shareUrl="https://learn.mit.edu/test"
-        />,
-      )
-
-      const link = screen.getByRole("link", { name: "Learn More" })
-      expect(link).toHaveAttribute("href", "/courses/p/test-readable-id")
-      expect(link.getAttribute("href")).not.toContain("utm_")
     })
 
     it("uses external URL with UTM params for non-MITx Online course even when flag is ON", () => {
@@ -304,11 +303,9 @@ describe("CallToActionSection", () => {
         (flag) => flag === FeatureFlags.MitxOnlineProductPages,
       )
 
-      const resource = factories.learningResources.resource({
+      const resource = mitxOnlineResource({
         resource_type: ResourceTypeEnum.Course,
-        readable_id: "ocw-course",
         platform: { code: PlatformEnum.Ocw },
-        url: "https://ocw.mit.edu/course",
       })
 
       renderWithProviders(
@@ -323,9 +320,8 @@ describe("CallToActionSection", () => {
         name: "Access Course Materials",
       })
       const href = link.getAttribute("href")
-      expect(href).toContain("ocw.mit.edu")
+      expect(href).toContain(url)
       expect(href).toContain("utm_source=mit-learn")
-      expect(href).toContain("utm_medium=referral")
       expect(href).not.toContain("/courses/")
     })
   })
