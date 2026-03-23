@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.59.1
+--------------
+
+- "program as course" display on learner dashboard (#3073)
+- Ingest mitxonline child courses and programs from "req_tree" attribute (#3070)
+- OVS Video resources (#3042)
+- ocw learning materials task (#3061)
+- update openapi spec (#3074)
+- feat: migrate to mitol-django-observability plugin (#3001)
+
 Version 0.58.4 (Released March 23, 2026)
 --------------
 
