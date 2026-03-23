@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.59.0
+--------------
+
+- OVS Video resources (#3042)
+- ocw learning materials task (#3061)
+- update openapi spec (#3074)
+- feat: migrate to mitol-django-observability plugin (#3001)
+
 Version 0.58.4 (Released March 23, 2026)
 --------------
 
