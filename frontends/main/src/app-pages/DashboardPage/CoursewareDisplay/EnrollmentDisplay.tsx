@@ -31,6 +31,7 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  DisplayModeEnum,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
@@ -173,9 +174,7 @@ const isProgramAsCourseEnrollment = (
   resource: DashboardResource,
 ): resource is ProgramEnrollmentResource => {
   if (resource.type !== DashboardType.ProgramEnrollment) return false
-  return (
-    String(resource.data.program.display_mode ?? "").toLowerCase() === "course"
-  )
+  return resource.data.program.display_mode === DisplayModeEnum.Course
 }
 
 type ProgramAsCourseProgramData = {
@@ -422,7 +421,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     requiredProgramList
       .filter(
         (requiredProgram) =>
-          String(requiredProgram.display_mode ?? "").toLowerCase() === "course",
+          requiredProgram.display_mode === DisplayModeEnum.Course,
       )
       .forEach((requiredProgram) => {
         requiredProgram.courses?.forEach((courseId) => uniqueIds.add(courseId))
@@ -492,8 +491,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             if (!requiredProgram) return null
 
             const isProgramAsCourse =
-              String(requiredProgram.display_mode ?? "").toLowerCase() ===
-              "course"
+              requiredProgram.display_mode === DisplayModeEnum.Course
 
             if (isProgramAsCourse) {
               return {
@@ -760,8 +758,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
       filteredProgramEnrollments
         .filter(
           (enrollment) =>
-            String(enrollment.program.display_mode ?? "").toLowerCase() ===
-            "course",
+            enrollment.program.display_mode === DisplayModeEnum.Course,
         )
         .map((enrollment) => enrollment.program.id),
     [filteredProgramEnrollments],
