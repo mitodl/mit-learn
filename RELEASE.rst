@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.58.4
+Version 0.58.4 (Released March 23, 2026)
 --------------
 
 - feat: display child programs in program requirement sections (#3064)
