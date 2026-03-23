@@ -24,7 +24,7 @@ const useAddToBasket = () => {
       })
 
       const cartUrl = new URL(
-        "/cart/",
+        "/cart/?ecom-service=true",
         process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
       ).toString()
       window.location.assign(cartUrl)

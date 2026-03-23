@@ -108,8 +108,17 @@ const priceWithDiscount = ({
   }
 }
 
-const mitxonlineUrl = (relative: string) => {
-  return new URL(relative, NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL).toString()
+/**
+ * Appending `?ecom-service=true` hides the MITxOnline-branded header
+ * on the MITxOnline site.
+ */
+const ECOM_SERVICE_KEY = "ecom-service"
+const mitxonlineLegacyUrl = (relative: string) => {
+  const url = new URL(relative, NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL)
+  const search = new URLSearchParams(url.search)
+  search.set(ECOM_SERVICE_KEY, "true")
+  url.search = search.toString()
+  return url.toString()
 }
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
