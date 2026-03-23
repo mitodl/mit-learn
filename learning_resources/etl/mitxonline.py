@@ -428,7 +428,7 @@ def _collect_course_ids(
             ):
                 visited_programs.add(required_program_id)
                 child_program = programs_by_id.get(required_program_id)
-                if child_program:
+                if child_program and child_program.get("display_mode") != "course":
                     _collect_course_ids(
                         child_program.get("req_tree", []),
                         programs_by_id,
@@ -456,17 +456,28 @@ def get_program_ids_from_req_tree(nodes: list[dict]) -> list[int]:
         nodes: list of req_tree node dicts
 
     Returns:
-        list of int: program IDs found in the tree
+        list of int: unique program IDs found in the tree
     """
-    program_ids = []
+    seen_ids: set[int] = set()  # Fast duplicate checking
+    program_ids: list[int] = []  # Preserves req_tree insertion order
+    _collect_program_ids(nodes, seen_ids, program_ids)
+    return program_ids
+
+
+def _collect_program_ids(
+    nodes: list[dict],
+    seen_ids: set[int],
+    program_ids: list[int],
+) -> None:
+    """Recursive helper for get_program_ids_from_req_tree."""
     for node in nodes:
         data = node.get("data", {})
         if data.get("node_type") == "program":
             prog_id = data.get("required_program")
-            if isinstance(prog_id, int):
+            if isinstance(prog_id, int) and prog_id not in seen_ids:
+                seen_ids.add(prog_id)
                 program_ids.append(prog_id)
-        program_ids.extend(get_program_ids_from_req_tree(node.get("children", [])))
-    return program_ids
+        _collect_program_ids(node.get("children", []), seen_ids, program_ids)
 
 
 def _fetch_courses_by_ids(course_ids):

@@ -318,6 +318,55 @@ def test_get_course_ids_from_req_tree_deduplicates():
     assert get_course_ids_from_req_tree(req_tree) == [10, 20]
 
 
+def test_get_course_ids_from_req_tree_display_mode_course():
+    """Test that child programs with display_mode='course' are not recursed into."""
+    programs_by_id = {
+        50: {
+            "display_mode": "course",
+            "req_tree": [
+                {
+                    "data": {"node_type": "course", "course": 300},
+                    "id": 10,
+                },
+                {
+                    "data": {"node_type": "course", "course": 400},
+                    "id": 11,
+                },
+            ],
+        },
+        60: {
+            "display_mode": "program",
+            "req_tree": [
+                {
+                    "data": {"node_type": "course", "course": 500},
+                    "id": 12,
+                },
+            ],
+        },
+    }
+    req_tree = [
+        {
+            "data": {"node_type": "operator", "operator": "all_of"},
+            "id": 1,
+            "children": [
+                {"data": {"node_type": "course", "course": 10}, "id": 2},
+                {
+                    "data": {"node_type": "program", "required_program": 50},
+                    "id": 3,
+                },
+                {
+                    "data": {"node_type": "program", "required_program": 60},
+                    "id": 4,
+                },
+            ],
+        }
+    ]
+    result = get_course_ids_from_req_tree(req_tree, programs_by_id)
+    # Course 10 from direct child, course 500 from program 60 (normal program),
+    # but NOT courses 300/400 from program 50 (display_mode="course")
+    assert result == [10, 500]
+
+
 @pytest.mark.parametrize(
     ("req_tree", "expected_ids"),
     [
@@ -354,6 +403,63 @@ def test_get_course_ids_from_req_tree_deduplicates():
 def test_get_program_ids_from_req_tree(req_tree, expected_ids):
     """Test that program IDs are correctly extracted from a req_tree"""
     assert get_program_ids_from_req_tree(req_tree) == expected_ids
+
+
+def test_get_program_ids_from_req_tree_deduplicates():
+    """Test that duplicate program IDs are deduplicated across sections"""
+    req_tree = [
+        {
+            "data": {"node_type": "operator", "operator": "all_of"},
+            "id": 1,
+            "children": [
+                {
+                    "data": {"node_type": "program", "required_program": 99},
+                    "id": 2,
+                },
+                {
+                    "data": {"node_type": "program", "required_program": 100},
+                    "id": 3,
+                },
+            ],
+        },
+        {
+            "data": {"node_type": "operator", "operator": "min_number_of"},
+            "id": 4,
+            "children": [
+                {
+                    "data": {"node_type": "program", "required_program": 99},
+                    "id": 5,
+                },
+            ],
+        },
+    ]
+    assert get_program_ids_from_req_tree(req_tree) == [99, 100]
+
+
+def test_get_program_ids_from_req_tree_deduplicates_nested():
+    """Test that duplicate program IDs are deduplicated across nesting depths"""
+    req_tree = [
+        {
+            "data": {"node_type": "program", "required_program": 50},
+            "id": 1,
+            "children": [
+                {
+                    "data": {"node_type": "program", "required_program": 60},
+                    "id": 2,
+                    "children": [
+                        {
+                            "data": {
+                                "node_type": "program",
+                                "required_program": 50,
+                            },
+                            "id": 3,
+                        },
+                    ],
+                },
+            ],
+        },
+    ]
+    assert get_program_ids_from_req_tree(req_tree) == [50, 60]
 
 
 def test_transform_programs_logs_warning_for_missing_child_program(mocker, settings):
