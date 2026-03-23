@@ -83,7 +83,12 @@ def test_serialize_program_to_json():
     serializer = serializers.ProgramSerializer(instance=program)
     assert_json_equal(
         serializer.data,
-        {"course_count": program.courses.filter(child__published=True).count()},
+        {
+            "course_count": program.courses.filter(child__published=True).count(),
+            "program_count": program.child_programs.filter(
+                child__published=True
+            ).count(),
+        },
     )
 
 

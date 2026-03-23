@@ -335,10 +335,11 @@ class ProgramSerializer(serializers.ModelSerializer):
     """Serializer for the Program model"""
 
     course_count = serializers.IntegerField(read_only=True)
+    program_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.Program
-        include = ("course_count",)
+        include = ("course_count", "program_count")
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
@@ -507,6 +508,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     number_of_courses = serializers.SerializerMethodField(
         help_text="Number of Courses", allow_null=True
     )
+    number_of_programs = serializers.SerializerMethodField(
+        help_text="Number of Programs", allow_null=True
+    )
     location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
     starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
     format_type = serializers.SerializerMethodField(help_text="Format", allow_null=True)
@@ -629,6 +633,16 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             == LearningResourceType.program.name
         ):
             return serialized_resource["program"].get("course_count", 0)
+        return None
+
+    @extend_schema_field({"type": "number"})
+    def get_number_of_programs(self, serialized_resource):
+        """Return the number of child programs in a program"""
+        if (
+            serialized_resource.get("resource_type")
+            == LearningResourceType.program.name
+        ):
+            return serialized_resource["program"].get("program_count", 0)
         return None
 
     @extend_schema_field({"type": "string"})

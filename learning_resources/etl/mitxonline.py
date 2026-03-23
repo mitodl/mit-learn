@@ -3,6 +3,7 @@
 import copy
 import logging
 import re
+from collections.abc import Iterator
 from datetime import UTC
 from decimal import Decimal
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -185,7 +186,7 @@ def parse_prices(
     return prices or [free_price]
 
 
-def parse_departments(departments_data: list[dict or str]) -> list[str]:
+def parse_departments(departments_data: list[dict | str]) -> list[str]:
     """
     Return a list of department ids for a course/program
 
@@ -371,6 +372,114 @@ def transform_courses(courses):
     ]
 
 
+def get_course_ids_from_req_tree(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None = None,
+    visited_programs: set[int] | None = None,
+) -> list[int]:
+    """
+    Extract unique course IDs from a program's req_tree.
+
+    Handles both course nodes (node_type="course") and program nodes
+    (node_type="program" with required_program set). For program nodes,
+    the referenced program's own req_tree is recursed into using the
+    programs_by_id lookup. A visited set prevents infinite recursion
+    from circular program references.
+
+    Args:
+        nodes: list of req_tree node dicts
+        programs_by_id: optional mapping of program ID to program data,
+            used to resolve required_program references
+        visited_programs: optional set tracking program IDs already
+            visited in this traversal to prevent cycles
+
+    Returns:
+        list of int: unique course IDs found in the tree (order preserved)
+    """
+    if visited_programs is None:
+        visited_programs = set()
+    seen_ids: set[int] = set()
+    course_ids: list[int] = []
+    _collect_course_ids(nodes, programs_by_id, visited_programs, seen_ids, course_ids)
+    return course_ids
+
+
+def _collect_course_ids(
+    nodes: list[dict],
+    programs_by_id: dict[int, dict] | None,
+    visited_programs: set[int],
+    seen_ids: set[int],
+    course_ids: list[int],
+) -> None:
+    """Recursive helper for get_course_ids_from_req_tree."""
+    for node in nodes:
+        data = node.get("data", {})
+        node_type = data.get("node_type")
+        if node_type == "course":
+            course_id = data.get("course")
+            if isinstance(course_id, int) and course_id not in seen_ids:
+                seen_ids.add(course_id)
+                course_ids.append(course_id)
+        elif node_type == "program" and programs_by_id:
+            required_program_id = data.get("required_program")
+            if (
+                isinstance(required_program_id, int)
+                and required_program_id not in visited_programs
+            ):
+                visited_programs.add(required_program_id)
+                child_program = programs_by_id.get(required_program_id)
+                if child_program and child_program.get("display_mode") != "course":
+                    _collect_course_ids(
+                        child_program.get("req_tree", []),
+                        programs_by_id,
+                        visited_programs,
+                        seen_ids,
+                        course_ids,
+                    )
+        _collect_course_ids(
+            node.get("children", []),
+            programs_by_id,
+            visited_programs,
+            seen_ids,
+            course_ids,
+        )
+
+
+def get_program_ids_from_req_tree(nodes: list[dict]) -> list[int]:
+    """
+    Extract program IDs from a program's req_tree.
+
+    Finds nodes with node_type="program" and returns their required_program IDs.
+    Recurses into children to find program nodes at any depth.
+
+    Args:
+        nodes: list of req_tree node dicts
+
+    Returns:
+        list of int: unique program IDs found in the tree
+    """
+    seen_ids: set[int] = set()  # Fast duplicate checking
+    program_ids: list[int] = []  # Preserves req_tree insertion order
+    _collect_program_ids(nodes, seen_ids, program_ids)
+    return program_ids
+
+
+def _collect_program_ids(
+    nodes: list[dict],
+    seen_ids: set[int],
+    program_ids: list[int],
+) -> None:
+    """Recursive helper for get_program_ids_from_req_tree."""
+    for node in nodes:
+        data = node.get("data", {})
+        if data.get("node_type") == "program":
+            prog_id = data.get("required_program")
+            if isinstance(prog_id, int) and prog_id not in seen_ids:
+                seen_ids.add(prog_id)
+                program_ids.append(prog_id)
+        _collect_program_ids(node.get("children", []), seen_ids, program_ids)
+
+
 def _fetch_courses_by_ids(course_ids):
     if not course_ids:
         return []
@@ -389,23 +498,28 @@ def _fetch_courses_by_ids(course_ids):
     return []
 
 
-def transform_programs(programs: list[dict]) -> list[dict]:
+def transform_programs(programs: list[dict]) -> Iterator[dict]:
     """
     Transform the MITX Online catalog data
 
     Args:
         programs (list of dict): the MITX Online programs data
 
-    Returns:
-        list of dict: the transformed programs data
+    Yields:
+        Iterator[dict]: transformed program data for each program
 
     """
     # normalize the MITx Online data
+    programs_by_id = {p["id"]: p for p in programs}
     for program in programs:
         courses = transform_courses(
             [
                 course
-                for course in _fetch_courses_by_ids(program["courses"])
+                for course in _fetch_courses_by_ids(
+                    get_course_ids_from_req_tree(
+                        program.get("req_tree", []), programs_by_id
+                    )
+                )
                 if not re.search(EXCLUDE_REGEX, course["title"], re.IGNORECASE)
             ]
         )
@@ -446,6 +560,22 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "min_weekly_hours": parse_string_to_int(program.get("min_weekly_hours")),
             "max_weekly_hours": parse_string_to_int(program.get("max_weekly_hours")),
         }
+        child_program_ids = get_program_ids_from_req_tree(program.get("req_tree", []))
+        child_programs = []
+        for pid in child_program_ids:
+            if pid not in programs_by_id:
+                log.warning(
+                    "Program %s references missing child program id=%s in req_tree",
+                    program.get("readable_id"),
+                    pid,
+                )
+                continue
+            child_programs.append(
+                {
+                    "readable_id": programs_by_id[pid]["readable_id"],
+                    "display_mode": programs_by_id[pid].get("display_mode"),
+                }
+            )
         has_certification = parse_certification(OFFERED_BY["code"], [run])
         strip_enrollment_modes([run])
         yield {
@@ -482,4 +612,5 @@ def transform_programs(programs: list[dict]) -> list[dict]:
             "pace": pace,
             "runs": [run],
             "courses": courses,
+            "child_programs": child_programs,
         }

@@ -1,0 +1,199 @@
+{
+  "programs": [
+    {
+      "id": 1000,
+      "readable_id": "mitx-parent-program",
+      "title": "MITx Parent Program",
+      "display_mode": "program",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "page": {
+        "page_url": "/programs/mitx-parent-program",
+        "live": true,
+        "description": "Parent program"
+      },
+      "req_tree": [
+        {
+          "id": 1,
+          "data": {
+            "node_type": "operator",
+            "operator": "all_of"
+          },
+          "children": [
+            {
+              "id": 2,
+              "data": {
+                "node_type": "course",
+                "course": 10
+              },
+              "children": []
+            },
+            {
+              "id": 3,
+              "data": {
+                "node_type": "program",
+                "required_program": 1001
+              },
+              "children": []
+            },
+            {
+              "id": 4,
+              "data": {
+                "node_type": "program",
+                "required_program": 1002
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1001,
+      "readable_id": "mitx-child-program",
+      "title": "MITx Child Program",
+      "display_mode": "program",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "page": {
+        "page_url": "/programs/mitx-child-program",
+        "live": true,
+        "description": "Child program"
+      },
+      "req_tree": [
+        {
+          "id": 5,
+          "data": {
+            "node_type": "course",
+            "course": 70
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": 1002,
+      "readable_id": "mitx-child-program-displayed-as-course",
+      "title": "MITx Child Program Displayed As Course",
+      "display_mode": "course",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "page": {
+        "page_url": "/programs/mitx-child-program-displayed-as-course",
+        "live": true,
+        "description": "Child program displayed as course"
+      },
+      "req_tree": [
+        {
+          "id": 6,
+          "data": {
+            "node_type": "course",
+            "course": 80
+          },
+          "children": []
+        }
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "id": 10,
+      "readable_id": "course-10",
+      "title": "Course 10",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "include_in_learn_catalog": true,
+      "page": {
+        "page_url": "/courses/course-10",
+        "live": true,
+        "description": "Course 10 description",
+        "instructors": []
+      },
+      "courseruns": [
+        {
+          "title": "Course 10 Run",
+          "courseware_id": "course-10-run",
+          "start_date": "2024-01-01T00:00:00Z",
+          "end_date": "2024-03-01T00:00:00Z",
+          "enrollment_start": "2023-12-01T00:00:00Z",
+          "enrollment_end": "2024-01-15T00:00:00Z",
+          "is_enrollable": true,
+          "is_self_paced": false,
+          "enrollment_modes": []
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "readable_id": "course-70",
+      "title": "Course 70",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "include_in_learn_catalog": true,
+      "page": {
+        "page_url": "/courses/course-70",
+        "live": true,
+        "description": "Course 70 description",
+        "instructors": []
+      },
+      "courseruns": [
+        {
+          "title": "Course 70 Run",
+          "courseware_id": "course-70-run",
+          "start_date": "2024-01-01T00:00:00Z",
+          "end_date": "2024-03-01T00:00:00Z",
+          "enrollment_start": "2023-12-01T00:00:00Z",
+          "enrollment_end": "2024-01-15T00:00:00Z",
+          "is_enrollable": true,
+          "is_self_paced": false,
+          "enrollment_modes": []
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "readable_id": "course-80",
+      "title": "Course 80",
+      "topics": [],
+      "departments": [],
+      "availability": "anytime",
+      "certificate_type": null,
+      "enrollment_modes": [],
+      "include_in_learn_catalog": true,
+      "page": {
+        "page_url": "/courses/course-80",
+        "live": true,
+        "description": "Course 80 description",
+        "instructors": []
+      },
+      "courseruns": [
+        {
+          "title": "Course 80 Run",
+          "courseware_id": "course-80-run",
+          "start_date": "2024-01-01T00:00:00Z",
+          "end_date": "2024-03-01T00:00:00Z",
+          "enrollment_start": "2023-12-01T00:00:00Z",
+          "enrollment_end": "2024-01-15T00:00:00Z",
+          "is_enrollable": true,
+          "is_self_paced": false,
+          "enrollment_modes": []
+        }
+      ]
+    }
+  ]
+}
