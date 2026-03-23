@@ -3,7 +3,6 @@ import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
   getBestRun,
-  getCourseRunEnrollmentStatus,
   selectBestEnrollment,
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
@@ -409,18 +408,6 @@ describe("helpers", () => {
       })
       const status = getEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Completed)
-    })
-  })
-
-  describe("getCourseRunEnrollmentStatus", () => {
-    test("matches getEnrollmentStatus behavior", () => {
-      const enrollment = factories.enrollment.courseEnrollment({
-        grades: [factories.enrollment.grade({ passed: true })],
-      })
-
-      expect(getCourseRunEnrollmentStatus(enrollment)).toBe(
-        getEnrollmentStatus(enrollment),
-      )
     })
   })
 

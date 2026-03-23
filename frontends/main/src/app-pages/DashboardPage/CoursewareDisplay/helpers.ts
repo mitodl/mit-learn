@@ -81,10 +81,6 @@ const getEnrollmentStatus = (
   return hasCompleted ? EnrollmentStatus.Completed : EnrollmentStatus.Enrolled
 }
 
-const getCourseRunEnrollmentStatus = (
-  enrollment: CourseRunEnrollmentV3 | null,
-): EnrollmentStatus => getEnrollmentStatus(enrollment)
-
 const getProgramEnrollmentStatus = (
   programEnrollment: V3UserProgramEnrollment | undefined,
   enrolledCourseCount: number,
@@ -112,6 +108,5 @@ export {
   selectBestEnrollment,
   getKey,
   getEnrollmentStatus,
-  getCourseRunEnrollmentStatus,
   getProgramEnrollmentStatus,
 }

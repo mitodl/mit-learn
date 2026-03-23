@@ -8,7 +8,7 @@ import {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   EnrollmentStatus,
-  getCourseRunEnrollmentStatus,
+  getEnrollmentStatus,
   getKey,
   getProgramEnrollmentStatus,
   ResourceType,
@@ -291,9 +291,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       course,
       moduleEnrollmentsByCourseId[course.id] || [],
     )
-    return (
-      getCourseRunEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
-    )
+    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
   }).length
 
   const completedCount = displayedModuleCourses.filter((course) => {
@@ -301,10 +299,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       course,
       moduleEnrollmentsByCourseId[course.id] || [],
     )
-    return (
-      getCourseRunEnrollmentStatus(bestEnrollment) ===
-      EnrollmentStatus.Completed
-    )
+    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
   }).length
 
   const totalCount = displayedModuleCourses.length

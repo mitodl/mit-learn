@@ -26,11 +26,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import {
-  EnrollmentStatus,
-  getBestRun,
-  getCourseRunEnrollmentStatus,
-} from "./helpers"
+import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -257,7 +253,7 @@ const getDashboardEnrollmentStatus = (
   if (resource.type === DashboardType.CourseRunEnrollment) {
     return hasValidCertificate
       ? EnrollmentStatus.Completed
-      : getCourseRunEnrollmentStatus(resource.data)
+      : getEnrollmentStatus(resource.data)
   }
 
   return EnrollmentStatus.NotEnrolled
