@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0106_resource_category_choices_index"),
+        ("learning_resources", "0108_video_source"),
     ]
 
     operations = [
