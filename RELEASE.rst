@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.58.4 (Released March 23, 2026)
+--------------
+
+- feat: display child programs in program requirement sections (#3064)
+- update api client (#3071)
+- Swap out the API used for enrollments for program-related enrollments (#3066)
+
 Version 0.58.3 (Released March 19, 2026)
 --------------
 
