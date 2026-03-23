@@ -1312,6 +1312,82 @@ def load_documents(
     return document_resources
 
 
+def load_ovs_playlist(playlist_data: dict) -> LearningResource:
+    """
+    Load a single OVS playlist (collection) and its videos into the database.
+
+    Args:
+        playlist_data (dict): playlist data including nested videos list
+
+    Returns:
+        LearningResource: the created or updated playlist resource
+    """
+    channel, _ = VideoChannel.objects.get_or_create(
+        channel_id="ovs",
+        defaults={"title": "ODL Video Service"},
+    )
+    return load_playlist(channel, playlist_data)
+
+
+def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
+    """
+    Load OVS playlists and their videos, then unpublish any OVS playlists
+    that are no longer present and any orphaned OVS videos.
+
+    Args:
+        playlists_data (iter of dict): iterable of playlist dicts from OVS transform
+
+    Returns:
+        list of LearningResource: the loaded playlist resources
+    """
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
+
+    if not playlists:
+        log.warning(
+            "OVS ETL returned no playlists; aborting to avoid unpublishing all data"
+        )
+        return []
+
+    playlist_ids = [p.id for p in playlists]
+
+    # Unpublish OVS playlists that were not in this load
+    stale_playlists = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video_playlist.name,
+        platform=ovs_platform,
+        published=True,
+    ).exclude(id__in=playlist_ids)
+    stale_playlist_ids = list(stale_playlists.values_list("id", flat=True))
+    stale_playlists.update(published=False)
+    bulk_resources_unpublished_actions(
+        stale_playlist_ids,
+        LearningResourceType.video_playlist.name,
+    )
+
+    # Unpublish OVS videos not in any published OVS playlist
+    videos_in_published_playlists = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        parent__platform=ovs_platform,
+        parent__published=True,
+    ).values_list("child", flat=True)
+
+    orphaned_videos = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video.name,
+        platform=ovs_platform,
+        published=True,
+    ).exclude(id__in=videos_in_published_playlists)
+
+    orphaned_video_ids = list(orphaned_videos.values_list("id", flat=True))
+    if orphaned_video_ids:
+        orphaned_videos.update(published=False)
+        bulk_resources_unpublished_actions(
+            orphaned_video_ids, LearningResourceType.video.name
+        )
+
+    return playlists
+
+
 def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningResource:
     """
     Load a video playlist into the database
@@ -1330,11 +1406,12 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     offered_bys_data = playlist_data.pop("offered_by", None)
     playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
-        image, _ = LearningResourceImage.objects.update_or_create(
-            url=thumbnail_data.get("url"),
-            alt=thumbnail_data.get("alt"),
-        )
-        playlist_data["image"] = image
+        if thumbnail_data:
+            image, _ = LearningResourceImage.objects.update_or_create(
+                url=thumbnail_data.get("url"),
+                alt=thumbnail_data.get("alt"),
+            )
+            playlist_data["image"] = image
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,
@@ -1355,9 +1432,10 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         resource_type=LearningResourceType.video.name,
         published=True,
     ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
     unpublished_videos.update(published=False)
     bulk_resources_unpublished_actions(
-        unpublished_videos.values_list("id", flat=True),
+        unpublished_video_ids,
         LearningResourceType.video.name,
     )
 

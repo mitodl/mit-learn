@@ -491,6 +491,30 @@ def test_get_youtube_transcripts(mocker):
     )
 
 
+def test_get_ovs_data(mocker):
+    """Verify that get_ovs_data invokes the OVS ETL pipeline"""
+    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
+    mock_pipelines.ovs_etl.return_value = iter([])
+    tasks.get_ovs_data.delay()
+    mock_pipelines.ovs_etl.assert_called_once()
+
+
+def test_get_ovs_transcripts(mocker):
+    """Verify that get_ovs_transcripts invokes correct OVS ETL functions"""
+
+    mock_etl_ovs = mocker.patch("learning_resources.tasks.ovs")
+
+    tasks.get_ovs_transcripts(overwrite=True)
+
+    mock_etl_ovs.get_ovs_videos_for_transcripts_job.assert_called_once_with(
+        overwrite=True
+    )
+
+    mock_etl_ovs.get_ovs_transcripts.assert_called_once_with(
+        mock_etl_ovs.get_ovs_videos_for_transcripts_job.return_value
+    )
+
+
 @pytest.mark.parametrize("published", [True, False])
 def test_update_next_start_date(mocker, published):
     learning_resource = LearningResourceFactory.create(

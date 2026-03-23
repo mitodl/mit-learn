@@ -1245,6 +1245,7 @@ paths:
             - youtube
             - canvas
             - climate
+            - ovs
             type: string
             description: |-
               * `edx` - edX
@@ -1267,6 +1268,7 @@ paths:
               * `youtube` - YouTube
               * `canvas` - Canvas
               * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
         description: "The platform on which the learning resource is offered     \
           \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
           \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
@@ -1275,7 +1277,8 @@ paths:
           \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
           \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
           \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
-          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate"
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
@@ -1637,6 +1640,21 @@ components:
           readOnly: true
       required:
       - token
+    CaptionUrl:
+      type: object
+      description: Serializer for caption URL entries
+      properties:
+        language:
+          type: string
+        language_name:
+          type: string
+        url:
+          type: string
+          format: uri
+      required:
+      - language
+      - language_name
+      - url
     CertificateDesiredEnum:
       enum:
       - 'yes'
@@ -5917,14 +5935,32 @@ components:
         id:
           type: integer
           readOnly: true
+        caption_urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptionUrl'
+          readOnly: true
+        streaming_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        cover_image_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
         duration:
           type: string
           maxLength: 11
         transcript:
           type: string
       required:
+      - caption_urls
+      - cover_image_url
       - duration
       - id
+      - streaming_url
     VideoChannel:
       type: object
       description: Serializer for the VideoChannel model

@@ -37,6 +37,8 @@ from learning_resources.etl.loaders import (
     load_image,
     load_instructors,
     load_offered_by,
+    load_ovs_playlist,
+    load_ovs_playlists,
     load_playlist,
     load_playlists,
     load_podcast,
@@ -80,6 +82,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
+    LearningResourcePlatform,
     LearningResourceRun,
     PodcastEpisode,
     Program,
@@ -112,8 +115,14 @@ def youtube_video_platform():
 
 @pytest.fixture(autouse=True)
 def climate_platform():
-    """Fixture for a youtube video platform"""
+    """Fixture for a climate platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.climate.name)
+
+
+@pytest.fixture(autouse=True)
+def ovs_platform():
+    """Fixture for an OVS video platform"""
+    return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 
 @pytest.fixture(autouse=True)
@@ -1853,6 +1862,9 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
         "learning_resources.etl.loaders.most_common_topics",
         return_value=expected_topics,
     )
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
     if playlist_exists:
         playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
@@ -1903,11 +1915,23 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
     if playlist_exists:
         deleted_video.refresh_from_db()
         assert not deleted_video.published
+        mock_bulk_unpublish.assert_called_once_with(
+            [deleted_video.id],
+            LearningResourceType.video.name,
+        )
+    else:
+        mock_bulk_unpublish.assert_called_once_with(
+            [],
+            LearningResourceType.video.name,
+        )
 
 
 def test_load_playlists_unpublish(mocker):
     """Test load_playlists when a video/playlist gets unpublished"""
     mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
 
     playlists = sorted(
@@ -1944,6 +1968,255 @@ def test_load_playlists_unpublish(mocker):
             assert playlist.learning_resource.published is True
         else:
             assert playlist.learning_resource.published is False
+
+    expected_unpublished_ids = sorted(p.learning_resource.id for p in playlists[1:])
+    playlist_unpublish_call = next(
+        call
+        for call in mock_bulk_unpublish.call_args_list
+        if call[0][1] == LearningResourceType.video_playlist.name
+    )
+    actual_unpublished_ids = sorted(playlist_unpublish_call[0][0])
+    assert actual_unpublished_ids == expected_unpublished_ids
+
+
+@pytest.mark.parametrize("playlist_exists", [True, False])
+def test_load_ovs_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
+    """Test load_ovs_playlist creates/updates a playlist and its videos"""
+    expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
+    [
+        LearningResourceTopicFactory.create(name=topic["name"])
+        for topic in expected_topics
+    ]
+
+    mock_most_common_topics = mocker.patch(
+        "learning_resources.etl.loaders.most_common_topics",
+        return_value=expected_topics,
+    )
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+
+    if playlist_exists:
+        existing = VideoPlaylistFactory.create().learning_resource
+        existing.platform = LearningResourcePlatform.objects.get(
+            code=PlatformType.ovs.name
+        )
+        existing.save()
+        deleted_video = VideoFactory.create().learning_resource
+        existing.resources.add(
+            deleted_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS,
+                "position": 1,
+            },
+        )
+        playlist_readable_id = existing.readable_id
+    else:
+        playlist_readable_id = "ovs-test-playlist-key"
+
+    video_resources = [video.learning_resource for video in VideoFactory.build_batch(3)]
+    videos_data = [
+        {
+            **model_to_dict(video, exclude=non_transformable_attributes),
+            "platform": PlatformType.ovs.name,
+            "offered_by": {"code": LearningResourceOfferorFactory.create().code},
+        }
+        for video in video_resources
+    ]
+
+    props = {
+        "playlist_id": playlist_readable_id,
+        "platform": PlatformType.ovs.name,
+        "title": "Test OVS Collection",
+        "description": "A test collection",
+        "url": "https://video.odl.mit.edu/collections/test-key",
+        "published": True,
+        "videos": videos_data,
+    }
+
+    result = load_ovs_playlist(props)
+
+    assert isinstance(result, LearningResource)
+    assert result.platform.code == PlatformType.ovs.name
+    assert result.video_playlist.channel.channel_id == "ovs"
+    mock_most_common_topics.assert_called_once()
+    assert result.resources.count() == len(video_resources)
+
+    if playlist_exists:
+        deleted_video.refresh_from_db()
+        assert not deleted_video.published
+        mock_bulk_unpublish.assert_called_once_with(
+            [deleted_video.id],
+            LearningResourceType.video.name,
+        )
+    else:
+        mock_bulk_unpublish.assert_called_once_with(
+            [],
+            LearningResourceType.video.name,
+        )
+
+
+def test_load_ovs_playlists_unpublish(mocker):
+    """Test load_ovs_playlists unpublishes stale playlists and orphaned videos"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create 3 existing OVS playlists
+    playlists = []
+    for _ in range(3):
+        vp = VideoPlaylistFactory.create()
+        vp.learning_resource.platform = ovs_platform
+        vp.learning_resource.save()
+        playlists.append(vp)
+
+    playlists.sort(key=lambda p: p.id)
+
+    # Add a video to the playlist that will become stale
+    stale_video = VideoFactory.create().learning_resource
+    stale_video.platform = ovs_platform
+    stale_video.save()
+    playlists[1].learning_resource.resources.add(
+        stale_video,
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            "position": 0,
+        },
+    )
+
+    # Only include the first playlist in the new data
+    kept = playlists[0]
+    playlists_data = [
+        {
+            "playlist_id": kept.learning_resource.readable_id,
+            "platform": PlatformType.ovs.name,
+            "title": kept.learning_resource.title,
+            "url": "https://video.odl.mit.edu/collections/test",
+            "published": True,
+            "videos": [],
+        }
+    ]
+
+    load_ovs_playlists(playlists_data)
+
+    # Only the kept playlist should remain published
+    assert (
+        LearningResource.objects.filter(
+            resource_type="video_playlist",
+            platform=ovs_platform,
+            published=True,
+        ).count()
+        == 1
+    )
+
+    # Stale playlists should be unpublished
+    for playlist in playlists[1:]:
+        playlist.learning_resource.refresh_from_db()
+        assert playlist.learning_resource.published is False
+
+    # Check bulk_unpublish was called for stale playlists
+    expected_stale_ids = sorted(p.learning_resource.id for p in playlists[1:])
+    playlist_unpublish_call = next(
+        call
+        for call in mock_bulk_unpublish.call_args_list
+        if call[0][1] == LearningResourceType.video_playlist.name
+    )
+    assert sorted(playlist_unpublish_call[0][0]) == expected_stale_ids
+
+    # Orphaned video in stale playlist should be unpublished
+    stale_video.refresh_from_db()
+    assert stale_video.published is False
+
+
+@pytest.mark.django_db
+def test_load_ovs_playlists_shared_video_not_unpublished(
+    mocker, mock_get_similar_topics_qdrant
+):
+    """A video in both a kept and a stale playlist should stay published"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create two OVS playlists
+    kept_vp = VideoPlaylistFactory.create()
+    kept_vp.learning_resource.platform = ovs_platform
+    kept_vp.learning_resource.save()
+
+    stale_vp = VideoPlaylistFactory.create()
+    stale_vp.learning_resource.platform = ovs_platform
+    stale_vp.learning_resource.save()
+
+    # Create a video that belongs to BOTH playlists
+    shared_video = VideoFactory.create().learning_resource
+    shared_video.platform = ovs_platform
+    shared_video.save()
+
+    for vp in [kept_vp, stale_vp]:
+        vp.learning_resource.resources.add(
+            shared_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+                "position": 0,
+            },
+        )
+
+    # Include the kept playlist with the shared video in its videos list
+    playlists_data = [
+        {
+            "playlist_id": kept_vp.learning_resource.readable_id,
+            "platform": PlatformType.ovs.name,
+            "title": kept_vp.learning_resource.title,
+            "url": "https://video.odl.mit.edu/collections/test",
+            "published": True,
+            "videos": [
+                {
+                    "readable_id": shared_video.readable_id,
+                    "platform": PlatformType.ovs.name,
+                    "etl_source": "ovs",
+                    "resource_type": LearningResourceType.video.name,
+                    "title": shared_video.title,
+                    "url": "https://video.odl.mit.edu/videos/test",
+                    "published": True,
+                    "video": {"duration": "PT0S"},
+                },
+            ],
+        }
+    ]
+
+    load_ovs_playlists(playlists_data)
+
+    # Stale playlist should be unpublished
+    stale_vp.learning_resource.refresh_from_db()
+    assert stale_vp.learning_resource.published is False
+
+    # Shared video should remain published because it's still in the kept playlist
+    shared_video.refresh_from_db()
+    assert shared_video.published is True
+
+
+def test_load_ovs_playlists_empty_aborts(mocker):
+    """Test load_ovs_playlists returns early when no playlists are provided"""
+    mock_log = mocker.patch("learning_resources.etl.loaders.log")
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create an existing published OVS playlist
+    vp = VideoPlaylistFactory.create()
+    vp.learning_resource.platform = ovs_platform
+    vp.learning_resource.save()
+
+    result = load_ovs_playlists([])
+
+    assert result == []
+    mock_log.warning.assert_called_once()
+    # Existing playlist should NOT be unpublished
+    vp.learning_resource.refresh_from_db()
+    assert vp.learning_resource.published is True
 
 
 def test_load_video_channels():

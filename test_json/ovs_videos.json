@@ -1,0 +1,84 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "start_index": 1,
+  "end_index": 2,
+  "num_pages": 1,
+  "results": [
+    {
+      "key": "96fb932aa5644d8e8f6a5fafe42caa87",
+      "created_at": "2020-03-23T15:14:38.254631Z",
+      "title": "Introduction to Machine Learning",
+      "description": "An introductory lecture on machine learning concepts.",
+      "status": "Complete",
+      "is_public": true,
+      "youtube_id": null,
+      "sources": [
+        {
+          "src": "https://du3yhovcx8dht.cloudfront.net/transcoded/96fb932aa5644d8e8f6a5fafe42caa87/video__index.m3u8",
+          "label": "HLS",
+          "type": "application/x-mpegURL"
+        }
+      ],
+      "cta_link": null,
+      "duration": 3661.0,
+      "multiangle": false,
+      "videothumbnail_set": [
+        {
+          "id": 1315,
+          "created_at": "2020-03-23T15:24:08.364342Z",
+          "s3_object_key": "thumbnails/96fb932aa5644d8e8f6a5fafe42caa87/video_thumbnail_00001.jpg",
+          "bucket_name": "odl-video-service-thumbnails-rc",
+          "cloudfront_url": "https://d1rlgptj9v7p9j.cloudfront.net/thumbnails/96fb932aa5644d8e8f6a5fafe42caa87/video_thumbnail_00001.jpg"
+        }
+      ],
+      "videosubtitle_set": [
+        {
+          "id": 20,
+          "created_at": "2020-03-23T16:17:15.875835Z",
+          "filename": "subtitles_en.vtt",
+          "s3_object_key": "subtitles/96fb932aa5644d8e8f6a5fafe42caa87/subtitles_en.vtt",
+          "bucket_name": "odl-video-service-subtitles-rc",
+          "language": "en",
+          "language_name": "English"
+        }
+      ],
+      "collection": {
+        "key": "ab12cd34ef5678901234567890abcdef",
+        "title": "Test Collection",
+        "description": "",
+        "is_public": true,
+        "stream_source": null
+      }
+    },
+    {
+      "key": "abcdef1234567890abcdef1234567890",
+      "created_at": "2021-05-10T10:00:00.000000Z",
+      "title": "Advanced Data Structures",
+      "description": "",
+      "status": "Complete",
+      "is_public": true,
+      "youtube_id": null,
+      "sources": [
+        {
+          "src": "https://du3yhovcx8dht.cloudfront.net/transcoded/abcdef1234567890abcdef1234567890/video__index.m3u8",
+          "label": "HLS",
+          "type": "application/x-mpegURL"
+        }
+      ],
+      "cta_link": null,
+      "duration": 0.0,
+      "multiangle": false,
+      "videothumbnail_set": [],
+      "videosubtitle_set": [],
+      "collection": {
+        "key": "fedcba0987654321fedcba0987654321",
+        "title": "Another Collection",
+        "description": "A test collection",
+        "is_public": true,
+        "stream_source": null
+      }
+    }
+  ]
+}
