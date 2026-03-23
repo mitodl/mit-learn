@@ -3,6 +3,7 @@ import logging
 import tiktoken
 from django.conf import settings
 from qdrant_client import models
+import litellm
 
 from vector_search.encoders.base import BaseEncoder
 
@@ -19,7 +20,9 @@ class QdrantCloudEncoder(BaseEncoder):
     def __init__(self, model_name):
         self.model_name = model_name
         try:
-            self.token_encoding_name = tiktoken.encoding_name_for_model(model_name)
+            self.token_encoding_name = tiktoken.encoding_name_for_model(
+                self.model_short_name()
+            )
         except KeyError:
             msg = f"Model {model_name} not found in tiktoken. defaulting to None"
             log.warning(msg)
@@ -31,6 +34,7 @@ class QdrantCloudEncoder(BaseEncoder):
         """
         Return Documents with text and model name for qdrant cloud inferencing.
         """
+        print("embeddings generating ...")
         return [
             models.Document(
                 text=text,
@@ -42,3 +46,10 @@ class QdrantCloudEncoder(BaseEncoder):
             )
             for text in texts
         ]
+
+    def dim(self):
+        """
+        Return the dimension of the embeddings
+        """
+        info = litellm.get_model_info(self.model_short_name())
+        return info["output_vector_size"]
