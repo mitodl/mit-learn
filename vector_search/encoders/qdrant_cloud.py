@@ -1,9 +1,9 @@
 import logging
 
+import litellm
 import tiktoken
 from django.conf import settings
 from qdrant_client import models
-import litellm
 
 from vector_search.encoders.base import BaseEncoder
 
