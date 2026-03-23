@@ -9,6 +9,7 @@ import {
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { mockAxiosInstance } from "api/test-utils"
 import {
   DashboardCard,
@@ -594,11 +595,7 @@ describe.each([
     )
 
     // Verify redirect to cart page
-    const expectedCartUrl = new URL(
-      "/cart/",
-      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-    ).toString()
-    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 
   test("Calls error callback when basket API fails", async () => {
@@ -1473,7 +1470,7 @@ describe.each([
         description:
           "uses constructed legacy URL when feature flag is disabled",
         getExpectedHref: (readableId: string) =>
-          `http://mitxonline.odl.local:8065/courses/${readableId}`,
+          mitxonlineLegacyUrl(`/courses/${readableId}`),
       },
       {
         useProductPages: true,
@@ -1595,7 +1592,7 @@ describe.each([
       // Should have constructed marketing URL
       expect(viewDetailsItem).toHaveAttribute(
         "href",
-        "http://mitxonline.odl.local:8065/programs/test-program-123",
+        mitxonlineLegacyUrl("/programs/test-program-123"),
       )
     })
 
