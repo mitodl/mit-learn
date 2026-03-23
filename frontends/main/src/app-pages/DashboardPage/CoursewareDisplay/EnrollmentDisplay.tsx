@@ -561,7 +561,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     }
     return (
       sum +
-      section.items.filter((item) => item.resourceType === "course").length
+      section.items.filter((item) => {
+        return (
+          item.resourceType === "course" ||
+          item.resourceType === "program-as-course"
+        )
+      }).length
     )
   }, 0)
 
@@ -619,8 +624,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           section.node.data.operator === "min_number_of" &&
           section.node.data.operator_value
             ? parseInt(section.node.data.operator_value, 10)
-            : section.items.filter((item) => item.resourceType === "course")
-                .length
+            : section.items.filter((item) => {
+                return (
+                  item.resourceType === "course" ||
+                  item.resourceType === "program-as-course"
+                )
+              }).length
 
         return (
           <React.Fragment key={section.key}>

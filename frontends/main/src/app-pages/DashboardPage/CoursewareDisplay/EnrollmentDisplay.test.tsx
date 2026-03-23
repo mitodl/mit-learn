@@ -778,12 +778,12 @@ describe("EnrollmentDisplay", () => {
       expect((await screen.findAllByText("Module B")).length).toBeGreaterThan(0)
     })
 
-    test("Completion counts exclude program-as-course items (only courses counted)", async () => {
+    test("Completion counts include program-as-course items in required totals", async () => {
       /**
        * A section contains 1 course + 1 program-as-course.
-       * completedCount and totalCount should both treat only the course as
-       * countable, so the header shows "Completed 0 of 1" and the overall
-       * summary shows "0 of 1 courses", not "0 of 2".
+       * completedCount stays course-enrollment based, while required totals
+       * include program-as-course items. This should show "Completed 0 of 2"
+       * and "0 of 2 courses" for this scenario.
        */
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -895,10 +895,10 @@ describe("EnrollmentDisplay", () => {
 
       renderWithProviders(<EnrollmentDisplay programId={parentProgram.id} />)
 
-      // Section header: only the 1 course counts, not the program-as-course item
-      await screen.findByText(/Completed 0 of 1/)
-      // Overall summary: same — 1 course total, not 2
-      await screen.findByText(/0 of 1 courses/)
+      // Section header includes both the course and program-as-course item
+      await screen.findByText(/Completed 0 of 2/)
+      // Overall summary uses the same counting behavior
+      await screen.findByText(/0 of 2 courses/)
     })
 
     test("Shows enrollment status for program courses", async () => {
