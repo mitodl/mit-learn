@@ -40,7 +40,7 @@ const ProgressBadge: React.FC<ProgressBadgeProps> = ({ enrollmentStatus }) => {
         : "Not Started"
 
   return (
-    <BadgeContainer status={enrollmentStatus} role="status" aria-label={label}>
+    <BadgeContainer status={enrollmentStatus}>
       <Typography variant="body3">{label}</Typography>
     </BadgeContainer>
   )
