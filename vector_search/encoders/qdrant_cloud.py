@@ -34,7 +34,6 @@ class QdrantCloudEncoder(BaseEncoder):
         """
         Return Documents with text and model name for qdrant cloud inferencing.
         """
-        print("embeddings generating ...")
         return [
             models.Document(
                 text=text,
