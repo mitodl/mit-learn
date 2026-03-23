@@ -1,5 +1,5 @@
 import React from "react"
-import { Link, Popover, Stack, Typography, styled, theme } from "ol-components"
+import { Link, Popover, Stack, Typography, styled } from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -82,11 +82,23 @@ const DatePopoverTrigger = styled(Link)(({ theme }) => ({
   },
 }))
 
-const HorizontalSeparator = styled.div({
+const DatePopoverHeading = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const DatePopoverBody = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+}))
+
+const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
+}))
+
+const HorizontalSeparator = styled.div(({ theme }) => ({
   width: "1px",
   height: "13px",
   backgroundColor: theme.custom.colors.lightGray2,
-})
+}))
 
 const ProgramCardSubHeader = styled.div(({ theme }) => ({
   display: "flex",
@@ -347,35 +359,26 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 >
                   <DatePopoverContent>
                     <Stack direction="column" gap="4px">
-                      <Typography
-                        variant="subtitle3"
-                        color={theme.custom.colors.black}
-                      >
+                      <DatePopoverHeading variant="subtitle3">
                         Important Dates:
-                      </Typography>
-                      <Typography
-                        variant="body3"
-                        color={theme.custom.colors.black}
-                      >
+                      </DatePopoverHeading>
+                      <DatePopoverBody variant="body3">
                         This course{" "}
                         <Typography variant="subtitle3" component="span">
                           {datePopoverContent.startVerb}
                         </Typography>{" "}
                         {datePopoverContent.startSuffix}
-                      </Typography>
+                      </DatePopoverBody>
                     </Stack>
                     {datePopoverContent.endVerb &&
                       datePopoverContent.endSuffix && (
-                        <Typography
-                          variant="body3"
-                          color={theme.custom.colors.black}
-                        >
+                        <DatePopoverBody variant="body3">
                           This course{" "}
                           <Typography variant="subtitle3" component="span">
                             {datePopoverContent.endVerb}
                           </Typography>{" "}
                           {datePopoverContent.endSuffix}
-                        </Typography>
+                        </DatePopoverBody>
                       )}
                   </DatePopoverContent>
                 </Popover>
@@ -392,12 +395,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
         </ProgramCardHeaderInner>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
-        <Typography
-          variant="subtitle3"
-          color={theme.custom.colors.silverGrayDark}
-        >
+        <ProgramCardSubHeaderText variant="subtitle3">
           {totalCount} Modules ({completedCount} of {totalCount} complete)
-        </Typography>
+        </ProgramCardSubHeaderText>
       </ProgramCardSubHeader>
       <ProgramCardBody>
         {displayedModuleCourses.map((course) => {
