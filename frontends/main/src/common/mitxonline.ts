@@ -189,7 +189,7 @@ export {
   priceWithDiscount,
   canPurchaseRun,
   upgradeRunUrl,
-  mitxonlineUrl,
+  mitxonlineLegacyUrl,
   getEnrollmentType,
   getIdsFromReqTree,
   getBestRun,

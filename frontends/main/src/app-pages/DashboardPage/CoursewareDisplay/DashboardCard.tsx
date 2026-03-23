@@ -34,7 +34,7 @@ import {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
-import { mitxonlineUrl } from "@/common/mitxonline"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
@@ -187,7 +187,7 @@ const getContextMenuItems = (
           readable_id: program.readable_id,
           display_mode: program.display_mode,
         })
-      : mitxonlineUrl(`/programs/${program.readable_id}`)
+      : mitxonlineLegacyUrl(`/programs/${program.readable_id}`)
 
     if (!hideDetailsUrl && detailsUrl) {
       menuItems.push({
@@ -201,7 +201,7 @@ const getContextMenuItems = (
   if (resource.type === DashboardType.CourseRunEnrollment) {
     const detailsUrl = useProductPages
       ? coursePageView(resource.data.run.course.readable_id)
-      : mitxonlineUrl(`/courses/${resource.data.run.course.readable_id}`)
+      : mitxonlineLegacyUrl(`/courses/${resource.data.run.course.readable_id}`)
 
     const courseMenuItems = []
 
