@@ -2443,6 +2443,8 @@ def test_load_learning_materials(mocker):
     )
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
+    no_longer_relevant_resource = LearningResourceFactory.create()
+
     learning_material_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[relevant_content_tag],
@@ -2451,7 +2453,10 @@ def test_load_learning_materials(mocker):
     other_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[irrelevant_content_tag],
+        direct_learning_resource=no_longer_relevant_resource,
     )
+
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
 
     load_learning_materials_spy = mocker.spy(loaders, "load_learning_material")
 
@@ -2483,6 +2488,11 @@ def test_load_learning_materials(mocker):
         resource_relationships.first().relation_type
         == LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS.value
     )
+
+    assert mock_index.call_count == 2
+
+    no_longer_relevant_resource.refresh_from_db()
+    assert no_longer_relevant_resource.published is False
 
 
 @pytest.mark.django_db
