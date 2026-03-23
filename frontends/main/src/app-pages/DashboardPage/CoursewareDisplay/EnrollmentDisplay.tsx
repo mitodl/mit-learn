@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
   getEnrollmentStatus,
+  getProgramEnrollmentStatus,
   getKey,
   ResourceType,
   selectBestEnrollment,
@@ -541,13 +542,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   const completedCount = requirementSections
     .flatMap((section) => section.items)
     .filter((item) => {
-      if (item.resourceType !== "course") return false
-
-      const bestEnrollment = selectBestEnrollment(
-        item.course,
-        enrollmentsByCourseId[item.course.id] || [],
-      )
-      return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+      if (item.resourceType === "course") {
+        const bestEnrollment = selectBestEnrollment(
+          item.course,
+          enrollmentsByCourseId[item.course.id] || [],
+        )
+        return (
+          getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+        )
+      }
+      if (item.resourceType === "program-as-course") {
+        return (
+          getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
+          EnrollmentStatus.Completed
+        )
+      }
+      return false
     }).length
 
   const totalCount = requirementSections.reduce((sum, section) => {
@@ -607,15 +617,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       </Stack>
       {requirementSections.map((section, index) => {
         const sectionCompletedCount = section.items.filter((item) => {
-          if (item.resourceType !== "course") return false
-
-          const bestEnrollment = selectBestEnrollment(
-            item.course,
-            enrollmentsByCourseId[item.course.id] || [],
-          )
-          return (
-            getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-          )
+          if (item.resourceType === "course") {
+            const bestEnrollment = selectBestEnrollment(
+              item.course,
+              enrollmentsByCourseId[item.course.id] || [],
+            )
+            return (
+              getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+            )
+          }
+          if (item.resourceType === "program-as-course") {
+            return (
+              getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
+              EnrollmentStatus.Completed
+            )
+          }
+          return false
         }).length
 
         const sectionRequiredCount =

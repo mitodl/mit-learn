@@ -781,9 +781,8 @@ describe("EnrollmentDisplay", () => {
     test("Completion counts include program-as-course items in required totals", async () => {
       /**
        * A section contains 1 course + 1 program-as-course.
-       * completedCount stays course-enrollment based, while required totals
-       * include program-as-course items. This should show "Completed 0 of 2"
-       * and "0 of 2 courses" for this scenario.
+       * Neither item is completed, so the counter should show "Completed 0 of 2".
+       * The total includes program-as-course items.
        */
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -899,6 +898,139 @@ describe("EnrollmentDisplay", () => {
       await screen.findByText(/Completed 0 of 2/)
       // Overall summary uses the same counting behavior
       await screen.findByText(/0 of 2 courses/)
+    })
+
+    test("Completed program-as-course items count toward completion total", async () => {
+      /**
+       * A section contains 1 course (not completed) + 1 program-as-course (completed,
+       * has certificate). The counter should show "Completed 1 of 2".
+       */
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const parentReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const parentRequirements = parentReqTree.addOperator({
+        operator: "all_of",
+        title: "Requirements",
+      })
+      parentRequirements.addCourse({ course: 1 })
+      parentRequirements.addProgram({ program: 900 })
+
+      const parentProgram = mitxonline.factories.programs.program({
+        id: 4321,
+        title: "Parent Program",
+        courses: [1],
+        req_tree: parentReqTree.serialize(),
+      })
+
+      const parentCourses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Core Course",
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      }
+
+      const programAsCourseReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const programAsCourseRequirements = programAsCourseReqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      programAsCourseRequirements.addCourse({ course: 11 })
+
+      const programAsCourseProgram = mitxonline.factories.programs.program({
+        id: 900,
+        title: "Program As Course",
+        display_mode: "course",
+        courses: [11],
+        req_tree: programAsCourseReqTree.serialize(),
+      })
+
+      const programAsCourseCourses = {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 11,
+            title: "Module A",
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      }
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: parentProgram.id,
+              title: parentProgram.title,
+              live: parentProgram.live,
+              program_type: parentProgram.program_type,
+              readable_id: parentProgram.readable_id,
+            },
+          }),
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: programAsCourseProgram.id,
+              title: programAsCourseProgram.title,
+              live: programAsCourseProgram.live,
+              program_type: programAsCourseProgram.program_type,
+              readable_id: programAsCourseProgram.readable_id,
+            },
+            certificate: {
+              uuid: "test-uuid-900",
+              link: "/certificate/program/test-uuid-900/",
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(parentProgram.id),
+        parentProgram,
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: parentProgram.courses,
+          page_size: parentProgram.courses.length,
+        }),
+        parentCourses,
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programsList({
+          id: [900],
+          page_size: 1,
+        }),
+        {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [programAsCourseProgram],
+        },
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: [11],
+          page_size: 1,
+        }),
+        programAsCourseCourses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={parentProgram.id} />)
+
+      // program-as-course has certificate → counts as completed
+      await screen.findByText(/Completed 1 of 2/)
+      await screen.findByText(/1 of 2 courses/)
     })
 
     test("Shows enrollment status for program courses", async () => {
