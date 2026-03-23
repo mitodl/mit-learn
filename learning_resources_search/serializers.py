@@ -139,6 +139,12 @@ def serialize_learning_resource_for_update(
             for num in learning_resource_obj.course.course_numbers
         ]
 
+    if (
+        learning_resource_obj.resource_type == LearningResourceType.video.name
+        and hasattr(learning_resource_obj, "video")
+    ):
+        serialized_data["video"]["transcript"] = learning_resource_obj.video.transcript
+
     if learning_resource_obj.in_featured_lists > 0:
         featured_rank = (
             LearningResourceRelationship.objects.filter(

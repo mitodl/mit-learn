@@ -5972,8 +5972,6 @@ components:
         duration:
           type: string
           maxLength: 11
-        transcript:
-          type: string
       required:
       - caption_urls
       - cover_image_url

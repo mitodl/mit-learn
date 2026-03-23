@@ -181,7 +181,6 @@ def test_serialize_video_resource_with_video_object():
     assert serializer.data["video"] == {
         "id": video.id,
         "duration": "PT10M30S",
-        "transcript": "This is the video transcript.",
         "caption_urls": [],
         "cover_image_url": None,
         "streaming_url": None,
