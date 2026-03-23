@@ -5,6 +5,7 @@ import {
   getBestRun,
   selectBestEnrollment,
   getEnrollmentStatus,
+  getProgramEnrollmentStatus,
   getKey,
   ResourceType,
 } from "./helpers"
@@ -407,6 +408,46 @@ describe("helpers", () => {
       })
       const status = getEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Completed)
+    })
+  })
+
+  describe("getProgramEnrollmentStatus", () => {
+    test("returns NotEnrolled when user has no program enrollment", () => {
+      expect(getProgramEnrollmentStatus(undefined, 0, 0)).toBe(
+        EnrollmentStatus.NotEnrolled,
+      )
+    })
+
+    test("returns Completed when program certificate exists", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: {
+          uuid: "program-cert-1",
+        },
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 0, 0)).toBe(
+        EnrollmentStatus.Completed,
+      )
+    })
+
+    test("returns Enrolled when there are enrolled modules", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 1, 0)).toBe(
+        EnrollmentStatus.Enrolled,
+      )
+    })
+
+    test("returns Enrolled when there are only completed modules", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 0, 2)).toBe(
+        EnrollmentStatus.Enrolled,
+      )
     })
   })
 })

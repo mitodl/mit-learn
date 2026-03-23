@@ -174,7 +174,6 @@ const getBestRun = (
   if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
   return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
 }
-
 export {
   formatPrice,
   priceWithDiscount,
