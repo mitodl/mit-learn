@@ -638,7 +638,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               marginTop={index > 0 ? "32px" : "0"}
             >
               <Typography
-                component="h1"
+                component="h2"
                 variant="subtitle2"
                 color={theme.custom.colors.red}
               >
