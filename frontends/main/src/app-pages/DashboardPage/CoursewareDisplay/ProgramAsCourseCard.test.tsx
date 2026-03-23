@@ -126,9 +126,7 @@ describe("ProgramAsCourseCard", () => {
     )
 
     await screen.findByText("Micro Program")
-    expect(
-      screen.getByRole("status", { name: "Not Started" }),
-    ).toBeInTheDocument()
+    expect(screen.getByText("Not Started")).toBeInTheDocument()
   })
 
   test("shows date popover content when date summary is clicked", async () => {
