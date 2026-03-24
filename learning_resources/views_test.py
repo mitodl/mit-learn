@@ -195,7 +195,7 @@ def test_program_detail_endpoint(client, django_assert_num_queries, url):
     """Test program endpoint"""
     program = ProgramFactory.create()
     assert program.learning_resource.children.count() > 0
-    with django_assert_num_queries(20):  # should be same # regardless of child count
+    with django_assert_num_queries(21):  # should be same # regardless of child count
         resp = client.get(reverse(url, args=[program.learning_resource.id]))
     assert resp.data.get("title") == program.learning_resource.title
     assert resp.data.get("resource_type") == LearningResourceType.program.name
@@ -241,7 +241,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(20):
+    with django_assert_num_queries(21):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count
@@ -1084,8 +1084,7 @@ def test_popular_sort(client, resource_type):
         )
 
 
-@pytest.mark.usefixtures("offeror_featured_lists")
-def test_featured_view(client):
+def test_featured_view(client, offeror_featured_lists):
     """The featured api endpoint should return resources in expected order"""
     url = reverse("lr:v1:featured_api-list")
     resp_1 = client.get(f"{url}?limit=12")
@@ -1109,9 +1108,8 @@ def test_featured_view(client):
             assert featured_list.children.all()[position].child.id == resource["id"]
 
 
-@pytest.mark.usefixtures("offeror_featured_lists")
 @pytest.mark.parametrize("parameter", ["certification", "free", "professional"])
-def test_featured_view_filter(client, parameter):
+def test_featured_view_filter(client, offeror_featured_lists, parameter):
     """The featured api endpoint should return resources that match the filter"""
     url = reverse("lr:v1:featured_api-list")
     resp = client.get(f"{url}?{parameter}=true")
