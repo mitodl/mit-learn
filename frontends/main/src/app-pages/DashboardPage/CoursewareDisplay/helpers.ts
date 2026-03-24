@@ -1,8 +1,10 @@
 import {
-  CourseRunEnrollmentRequestV2,
-  CourseRunV2,
+  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { getBestRun } from "@/common/mitxonline"
+export { getBestRun }
 
 const ResourceType = {
   Contract: "contract",
@@ -29,31 +31,12 @@ const getKey = ({ resourceType, id, runId }: KeyOpts) => {
 }
 
 const filterEnrollmentsByOrganization = (
-  enrollments: CourseRunEnrollmentRequestV2[],
+  enrollments: CourseRunEnrollmentV3[],
   organizationId: number,
-): CourseRunEnrollmentRequestV2[] => {
+): CourseRunEnrollmentV3[] => {
   return enrollments.filter(
     (enrollment) => enrollment.b2b_organization_id === organizationId,
   )
-}
-
-/**
- * Helper to get the "best" run for a course (the next_run_id if available)
- * If contractId is provided, prefer runs matching that contract
- */
-const getBestRun = (
-  course: CourseWithCourseRunsSerializerV2,
-  contractId?: number,
-): CourseRunV2 | undefined => {
-  if (!course.courseruns || course.courseruns.length === 0) return undefined
-
-  const candidateRuns = course.courseruns
-    .filter((run) => run.is_enrollable)
-    .filter((run) => !contractId || run.b2b_contract === contractId)
-  if (candidateRuns.length === 0) return undefined
-  const nextRun = candidateRuns.find((run) => run.id === course.next_run_id)
-
-  return nextRun ?? candidateRuns[0]
 }
 
 /**
@@ -65,8 +48,8 @@ const getBestRun = (
  */
 const selectBestEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
-  enrollments: CourseRunEnrollmentRequestV2[],
-): CourseRunEnrollmentRequestV2 | null => {
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 | null => {
   const courseEnrollments = enrollments.filter((enrollment) =>
     course.courseruns.some((run) => run.id === enrollment.run.id),
   )
@@ -89,7 +72,7 @@ const selectBestEnrollment = (
 }
 
 const getEnrollmentStatus = (
-  enrollment: CourseRunEnrollmentRequestV2 | null,
+  enrollment: CourseRunEnrollmentV3 | null,
 ): EnrollmentStatus => {
   if (!enrollment) {
     return EnrollmentStatus.NotEnrolled
@@ -98,12 +81,32 @@ const getEnrollmentStatus = (
   return hasCompleted ? EnrollmentStatus.Completed : EnrollmentStatus.Enrolled
 }
 
+const getProgramEnrollmentStatus = (
+  programEnrollment: V3UserProgramEnrollment | undefined,
+  enrolledCourseCount: number,
+  completedCourseCount = 0,
+): EnrollmentStatus => {
+  if (!programEnrollment) {
+    return EnrollmentStatus.NotEnrolled
+  }
+
+  if (programEnrollment.certificate) {
+    return EnrollmentStatus.Completed
+  }
+
+  if (completedCourseCount > 0 || enrolledCourseCount > 0) {
+    return EnrollmentStatus.Enrolled
+  }
+
+  return EnrollmentStatus.NotEnrolled
+}
+
 export {
   ResourceType,
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
-  getBestRun,
   selectBestEnrollment,
   getKey,
   getEnrollmentStatus,
+  getProgramEnrollmentStatus,
 }

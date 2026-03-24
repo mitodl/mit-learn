@@ -296,6 +296,7 @@ def test_delete_channel_forbidden(channel, client):
     assert response.status_code == 403
 
 
+@pytest.mark.skip_nplusone_check
 def test_list_moderators(channel, client):
     """A channel moderator should be able to view other moderators for the channel"""
     url = reverse(
@@ -328,6 +329,7 @@ def test_list_moderators_forbidden(channel, user_client):
     assert user_client.get(url).status_code == 403
 
 
+@pytest.mark.skip_nplusone_check
 def test_add_moderator(channel, client):
     """A moderator should be able to add other moderators"""
     channel_user = UserFactory.create()

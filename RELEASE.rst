@@ -1,6 +1,26 @@
 Release Notes
 =============
 
+Version 0.58.4 (Released March 23, 2026)
+--------------
+
+- feat: display child programs in program requirement sections (#3064)
+- update api client (#3071)
+- Swap out the API used for enrollments for program-related enrollments (#3066)
+
+Version 0.58.3 (Released March 19, 2026)
+--------------
+
+- AskTim canvas ai contentfile ingestion issue (#3059)
+- use v3 enrollments endpoint on the dashboard (#3049)
+
+Version 0.58.1 (Released March 18, 2026)
+--------------
+
+- New Product Page route for "MITxOnline Program displayed as Course" (#3051)
+- remove articles index (#3055)
+- fix: preserve requirement tree ordering for program courses (#3053)
+
 Version 0.58.0 (Released March 16, 2026)
 --------------
 

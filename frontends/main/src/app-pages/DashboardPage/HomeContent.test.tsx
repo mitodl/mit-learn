@@ -229,7 +229,7 @@ describe("HomeContent", () => {
           }),
         )
         setMockResponse.get(
-          mitxonline.urls.enrollment.enrollmentsListV2(),
+          mitxonline.urls.enrollment.enrollmentsListV3(),
           enrollments,
         )
       }

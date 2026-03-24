@@ -2,7 +2,9 @@ import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import ProgramPage from "@/app-pages/ProductPages/ProgramPage"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { programPageView } from "@/common/urls"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
@@ -56,6 +58,16 @@ const Page: React.FC<PageProps<"/programs/[readable_id]">> = async (props) => {
 
   if (programPages.items.length === 0 || programs.results.length === 0) {
     notFound()
+  }
+
+  const program = programs.results[0]
+  if (program.display_mode === DisplayModeEnum.Course) {
+    redirect(
+      programPageView({
+        readable_id: readableId,
+        display_mode: program.display_mode,
+      }),
+    )
   }
 
   return (

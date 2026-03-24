@@ -25,7 +25,7 @@ describe("BaseLearningResourceCard", () => {
       imageAlt: "Course image",
       title: "Introduction to Programming",
       resourceType: "Course",
-      coursePrice: "$100",
+      resourcePrice: "$100",
       hasCertificate: true,
       certificatePrice: "$50",
       startLabel: "Starts: ",
@@ -74,7 +74,7 @@ describe("BaseLearningResourceCard", () => {
         list: true,
         title: "List Course",
         resourceType: "Course",
-        coursePrice: "$100",
+        resourcePrice: "$100",
         hasCertificate: true,
         certificatePrice: "$50",
         certificateTypeName: "Professional Certificate",
@@ -90,7 +90,7 @@ describe("BaseLearningResourceCard", () => {
         condensed: true,
         title: "Condensed Course",
         resourceType: "Course",
-        coursePrice: "$100",
+        resourcePrice: "$100",
       })
 
       expect(screen.getByText("Condensed Course")).toBeInTheDocument()
@@ -115,7 +115,7 @@ describe("BaseLearningResourceCard", () => {
         title: "Priced Course",
         hasCertificate: true,
         certificatePrice: "$99",
-        coursePrice: "$99",
+        resourcePrice: "$99",
       })
 
       const prices = screen.getAllByText("$99")
@@ -176,7 +176,7 @@ describe("BaseLearningResourceCard", () => {
         list: true,
         title: "No Certificate Course",
         hasCertificate: false,
-        coursePrice: "$100",
+        resourcePrice: "$100",
       })
 
       expect(screen.queryByText("Certificate")).not.toBeInTheDocument()

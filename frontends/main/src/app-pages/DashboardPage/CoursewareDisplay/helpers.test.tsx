@@ -5,6 +5,7 @@ import {
   getBestRun,
   selectBestEnrollment,
   getEnrollmentStatus,
+  getProgramEnrollmentStatus,
   getKey,
   ResourceType,
 } from "./helpers"
@@ -171,7 +172,7 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course, contractId)
+      const result = getBestRun(course, { contractId })
       expect(result).toEqual(run2)
     })
 
@@ -192,7 +193,7 @@ describe("helpers", () => {
         next_run_id: 2,
       })
 
-      const result = getBestRun(course, contractId)
+      const result = getBestRun(course, { contractId })
       expect(result).toEqual(run2)
     })
 
@@ -207,11 +208,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course, 100)
+      const result = getBestRun(course, { contractId: 100 })
       expect(result).toBeUndefined()
     })
 
-    test("returns undefined when no runs are enrollable", () => {
+    test("returns undefined when no runs are enrollable (enrollableOnly)", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: false,
@@ -229,11 +230,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toBeUndefined()
     })
 
-    test("skips unenrollable runs when selecting default", () => {
+    test("skips unenrollable runs when enrollableOnly", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: false,
@@ -247,11 +248,11 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toEqual(run2)
     })
 
-    test("prefers enrollable runs when others are not", () => {
+    test("prefers enrollable runs when enrollableOnly", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
         is_enrollable: true,
@@ -265,7 +266,7 @@ describe("helpers", () => {
         next_run_id: null,
       })
 
-      const result = getBestRun(course)
+      const result = getBestRun(course, { enrollableOnly: true })
       expect(result).toEqual(run1)
     })
   })
@@ -407,6 +408,46 @@ describe("helpers", () => {
       })
       const status = getEnrollmentStatus(enrollment)
       expect(status).toBe(EnrollmentStatus.Completed)
+    })
+  })
+
+  describe("getProgramEnrollmentStatus", () => {
+    test("returns NotEnrolled when user has no program enrollment", () => {
+      expect(getProgramEnrollmentStatus(undefined, 0, 0)).toBe(
+        EnrollmentStatus.NotEnrolled,
+      )
+    })
+
+    test("returns Completed when program certificate exists", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: {
+          uuid: "program-cert-1",
+        },
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 0, 0)).toBe(
+        EnrollmentStatus.Completed,
+      )
+    })
+
+    test("returns Enrolled when there are enrolled modules", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 1, 0)).toBe(
+        EnrollmentStatus.Enrolled,
+      )
+    })
+
+    test("returns Enrolled when there are only completed modules", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 0, 2)).toBe(
+        EnrollmentStatus.Enrolled,
+      )
     })
   })
 })

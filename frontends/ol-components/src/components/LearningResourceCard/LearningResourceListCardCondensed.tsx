@@ -99,7 +99,7 @@ const LearningResourceListCardCondensed: React.FC<
       headingLevel={headingLevel}
       title={resource.title}
       resourceType={readableType}
-      coursePrice={prices.course.display}
+      resourcePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
       certificateTypeName={resource.certification_type?.name}

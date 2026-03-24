@@ -10,14 +10,19 @@ enum HeadingIds {
   WhoCanTake = "who-can-take",
   Requirements = "requirements",
   Summary = "summary",
+  Modules = "modules",
 }
+
+type RequirementItem =
+  | { type: "course"; id: number }
+  | { type: "program"; id: number }
 
 type RequirementData = {
   id?: number | null // In practice this should always be defined. TODO: Why doesn't OpenAPI know this?
   elective: boolean
   title: string
-  courseIds: number[]
-  requiredCourseCount: number
+  items: RequirementItem[]
+  requiredCount: number
 }
 
 const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
@@ -34,27 +39,34 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
       const title =
         node.data.title || (elective ? "Elective Courses" : "Core Courses")
 
-      const children = node.children ?? []
-      if (!children.every((c) => c.data.node_type === NodeTypeEnum.Course)) {
-        console.error(
-          "UI Display expects program requirements operator nodes to only have course children",
-        )
-      }
+      const items: RequirementItem[] = (node.children ?? []).flatMap(
+        (child): RequirementItem[] => {
+          if (
+            child.data.node_type === NodeTypeEnum.Course &&
+            typeof child.data.course === "number"
+          ) {
+            return [{ type: "course", id: child.data.course }]
+          }
+          if (
+            child.data.node_type === NodeTypeEnum.Program &&
+            typeof child.data.required_program === "number"
+          ) {
+            return [{ type: "program", id: child.data.required_program }]
+          }
+          return []
+        },
+      )
 
-      const courseIds =
-        node.children
-          ?.map((child) => child.data.course)
-          .filter((id) => typeof id === "number") || []
-      const requiredCourseCount =
+      const requiredCount =
         node.data.operator === "min_number_of"
-          ? Number(node.data.operator_value) || courseIds.length
-          : courseIds.length
+          ? Number(node.data.operator_value) || items.length
+          : items.length
       return {
         id: node.id,
         elective,
         title,
-        courseIds,
-        requiredCourseCount,
+        items,
+        requiredCount,
       }
     })
 }
@@ -62,4 +74,4 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
 type ProductNoun = "Course" | "Program"
 
 export { HeadingIds, parseReqTree }
-export type { ProductNoun, RequirementData }
+export type { ProductNoun, RequirementData, RequirementItem }

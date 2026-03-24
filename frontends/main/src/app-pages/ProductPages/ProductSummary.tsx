@@ -657,11 +657,15 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 }) => {
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCourseCount,
+    (sum, req) => sum + req.requiredCount,
     0,
   )
   if (totalRequired === 0) return null
 
+  // Always say "Courses" here. Whether a child program should be labeled
+  // as a "course" or "program" depends on its display_mode, which can't be
+  // determined from the req_tree alone. The important use cases are course
+  // and course-like program (display_mode="Course") children only.
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
@@ -842,4 +846,27 @@ const ProgramSummary: React.FC<{
   )
 }
 
-export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }
+const ProgramAsCourseSummary: React.FC<{
+  program: V2ProgramDetail
+  courses?: CourseWithCourseRunsSerializerV2[]
+}> = ({ program, courses }) => {
+  return (
+    <SummaryRows>
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+    </SummaryRows>
+  )
+}
+
+export {
+  CourseSummary,
+  ProgramSummary,
+  ProgramAsCourseSummary,
+  ProgramDurationRow,
+  ProgramPaceRow,
+  ProgramPriceRow,
+  SummaryRows,
+  UnderlinedLink,
+  TestIds,
+}

@@ -1,10 +1,12 @@
 import type {
   BaseProduct,
   CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
   EnrollmentMode,
   ProductFlexiblePrice,
+  V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DiscountTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { DiscountTypeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
@@ -123,6 +125,55 @@ const getEnrollmentType = (
   return "paid"
 }
 
+/**
+ * Extract all course and program IDs from a program's req_tree.
+ * This is the single source of truth for which courses/programs belong to a program.
+ */
+const getIdsFromReqTree = (
+  nodes: V2ProgramRequirement[],
+): { courseIds: number[]; programIds: number[] } => {
+  const courseIds: number[] = []
+  const programIds: number[] = []
+  const walk = (children: V2ProgramRequirement[]) => {
+    for (const node of children) {
+      if (
+        node.data.node_type === NodeTypeEnum.Course &&
+        typeof node.data.course === "number"
+      ) {
+        courseIds.push(node.data.course)
+      } else if (
+        node.data.node_type === NodeTypeEnum.Program &&
+        typeof node.data.required_program === "number"
+      ) {
+        programIds.push(node.data.required_program)
+      }
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(nodes)
+  return { courseIds, programIds }
+}
+
+/**
+ * Returns the best run for a course.
+ *
+ * Prefers the run matching `next_run_id` among candidates; falls back to the
+ * first candidate.
+ *
+ * @param opts.enrollableOnly - only consider runs where `is_enrollable` is true
+ *   (use this on the dashboard where enrollment is the goal)
+ * @param opts.contractId - only consider runs matching this B2B contract
+ */
+const getBestRun = (
+  course: CourseWithCourseRunsSerializerV2,
+  opts?: { contractId?: number; enrollableOnly?: boolean },
+): CourseRunV2 | undefined => {
+  const { contractId, enrollableOnly = false } = opts ?? {}
+  let runs = course.courseruns ?? []
+  if (enrollableOnly) runs = runs.filter((run) => run.is_enrollable)
+  if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
+  return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
+}
 export {
   formatPrice,
   priceWithDiscount,
@@ -130,5 +181,7 @@ export {
   upgradeRunUrl,
   mitxonlineUrl,
   getEnrollmentType,
+  getIdsFromReqTree,
+  getBestRun,
 }
 export type { PriceWithDiscount, EnrollmentType }

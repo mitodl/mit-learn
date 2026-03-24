@@ -1,6 +1,8 @@
 """learning_resources data loaders"""
 
 import logging
+from collections.abc import Iterable
+from typing import NamedTuple
 
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
@@ -643,13 +645,21 @@ def load_courses(
     return courses
 
 
+class ProgramLoadResult(NamedTuple):
+    """Result of loading a single program."""
+
+    resource: LearningResource | None
+    created: bool
+    child_programs_data: list[dict]
+
+
 def load_program(
     program_data: dict,
     blocklist: list[str],
     duplicates: list[dict],
     *,
     config=ProgramLoaderConfig(),
-) -> LearningResource:
+) -> ProgramLoadResult:
     """
     Load the program into the database
 
@@ -664,12 +674,16 @@ def load_program(
             configuration on how to load this program
 
     Returns:
-        Program:
-            the created/updated program
+        ProgramLoadResult with the loaded resource (or None), whether it was
+        newly created, and child program data for deferred relationship
+        creation in load_programs().
     """
     # pylint: disable=too-many-locals
 
     courses_data = program_data.pop("courses")
+    # Child programs are popped here but handled in a second pass by
+    # load_programs(), since the child programs may not be loaded yet.
+    child_programs_data = program_data.pop("child_programs", [])
     topics_data = program_data.pop("topics", [])
     offered_by_data = program_data.pop("offered_by", None)
     departments_data = program_data.pop("departments", None)
@@ -683,14 +697,16 @@ def load_program(
             program_data, [], [], LearningResourceType.program.name
         )
         if not learning_resource:
-            return None
+            return ProgramLoadResult(
+                resource=None, created=False, child_programs_data=[]
+            )
 
         load_topics(learning_resource, topics_data)
         load_image(learning_resource, image_data)
         load_offered_by(learning_resource, offered_by_data)
         load_departments(learning_resource, departments_data)
 
-        program, _ = Program.objects.get_or_create(learning_resource=learning_resource)
+        Program.objects.get_or_create(learning_resource=learning_resource)
 
         run_ids_to_update_or_create = [run["run_id"] for run in runs_data]
 
@@ -718,43 +734,135 @@ def load_program(
             )
             if course_resource:
                 course_resources.append(course_resource)
-        program.learning_resource.resources.set(
+        # Note: .set() replaces ALL children (including any PROGRAM_PROGRAMS
+        # relationships from prior ETL runs). Pass 2 in load_programs() will
+        # re-create the child-program relationships after all programs exist.
+        learning_resource.resources.set(
             course_resources,
             through_defaults={
                 "relation_type": LearningResourceRelationTypes.PROGRAM_COURSES
             },
         )
 
-    update_index(learning_resource, created)
+    return ProgramLoadResult(learning_resource, created, child_programs_data)
 
-    return learning_resource
+
+def _create_child_program_relationships(
+    deferred_child_programs: list[tuple[LearningResource, list[dict]]],
+) -> None:
+    """
+    Create child-program relationships for programs loaded in pass 1.
+
+    For each parent, batch-fetches all referenced child resources, then
+    uses update_or_create to ensure relation_type stays current if
+    display_mode changes between ETL runs. Stale child-program
+    relationships (from children no longer in the req_tree) are removed.
+    """
+    for parent_resource, child_programs_data in deferred_child_programs:
+        # Collect valid readable_ids and batch-fetch child resources
+        readable_ids = [
+            cpd["readable_id"] for cpd in child_programs_data if cpd.get("readable_id")
+        ]
+        if not readable_ids:
+            continue
+
+        child_resources_by_id = {
+            lr.readable_id: lr
+            for lr in LearningResource.objects.filter(
+                readable_id__in=readable_ids,
+                resource_type=LearningResourceType.program.name,
+                platform__code=parent_resource.platform.code,
+            )
+        }
+
+        next_position = parent_resource.children.count()
+        kept_child_ids = set()
+        for child_program_data in child_programs_data:
+            readable_id = child_program_data.get("readable_id")
+            if not readable_id:
+                log.warning(
+                    "Skipping child program relationship with missing readable_id: "
+                    "parent=%s",
+                    parent_resource.readable_id,
+                )
+                continue
+            child_resource = child_resources_by_id.get(readable_id)
+            if not child_resource:
+                log.warning(
+                    "Skipping child program relationship for parent=%s; "
+                    "child readable_id=%s not found",
+                    parent_resource.readable_id,
+                    readable_id,
+                )
+                continue
+            relation_type = (
+                LearningResourceRelationTypes.PROGRAM_COURSES
+                if child_program_data.get("display_mode") == "course"
+                else LearningResourceRelationTypes.PROGRAM_PROGRAMS
+            )
+            _, _created = LearningResourceRelationship.objects.update_or_create(
+                parent=parent_resource,
+                child=child_resource,
+                defaults={
+                    "relation_type": relation_type,
+                    "position": next_position,
+                },
+            )
+            kept_child_ids.add(child_resource.id)
+            next_position += 1
+
+        # Remove stale child-program relationships no longer in req_tree.
+        # Only delete relationships whose child is a program resource;
+        # course relationships are managed by .set() in load_program.
+        parent_resource.children.filter(
+            child__resource_type=LearningResourceType.program.name,
+        ).exclude(child_id__in=kept_child_ids).delete()
 
 
 def load_programs(
-    etl_source: str, programs_data: list[dict], *, config=ProgramLoaderConfig()
+    etl_source: str, programs_data: Iterable[dict], *, config=ProgramLoaderConfig()
 ) -> list[LearningResource]:
-    """Load a list of programs"""
+    """
+    Load a list of programs.
+
+    This uses a two-pass strategy:
+    1. Load each program and its direct course children.
+    2. Create deferred child-program relationships once all programs exist.
+
+    For MITx Online data, each deferred child program may map to either
+    PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
+    """
     blocklist = load_course_blocklist()
     duplicates = load_course_duplicates(etl_source)
 
-    programs = [
-        load_program(program_data, blocklist, duplicates, config=config)
-        for program_data in programs_data
-    ]
+    # Pass 1: load all programs and their course children
+    results: list[ProgramLoadResult] = []
+    deferred_child_programs = []
+    for program_data in programs_data:
+        result = load_program(program_data, blocklist, duplicates, config=config)
+        results.append(result)
+        if result.resource and result.child_programs_data:
+            deferred_child_programs.append(
+                (result.resource, result.child_programs_data)
+            )
+
+    # Pass 2: create child program relationships now that all programs exist
+    _create_child_program_relationships(deferred_child_programs)
+
+    # Update search index after all relationships (including pass 2) are created
+    for result in results:
+        if result.resource:
+            update_index(result.resource, result.created)
+
+    programs = [r.resource for r in results if r.resource is not None]
     if programs and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.program.name
-        ).exclude(
-            id__in=[
-                learning_resource.id
-                for learning_resource in programs
-                if learning_resource is not None
-            ]
-        ):
+        ).exclude(id__in=[lr.id for lr in programs]):
             learning_resource.published = False
             learning_resource.save()
             resource_unpublished_actions(learning_resource)
-    return [program for program in programs if program is not None]
+    return programs
 
 
 def load_content_file(
@@ -880,6 +988,7 @@ def load_content_files(
                 resource = file.direct_learning_resource
                 resource.published = False
                 resource.save()
+                update_index(resource, newly_created=False)
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
@@ -907,6 +1016,13 @@ def load_learning_materials(
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)
             )
+        elif content_file.direct_learning_resource:
+            direct_resource = content_file.direct_learning_resource
+            direct_resource.published = False
+            direct_resource.save()
+            content_file.direct_learning_resource = None
+            content_file.save()
+            update_index(direct_resource, newly_created=False)
 
     course_run.learning_resource.resources.set(
         LearningResource.objects.filter(id__in=material_ids).only("id"),
@@ -936,7 +1052,7 @@ def load_learning_material(
             resource_type = LearningResourceType.video.name
         else:
             resource_type = LearningResourceType.document.name
-        learning_resource, _ = LearningResource.objects.update_or_create(
+        learning_resource, created = LearningResource.objects.update_or_create(
             readable_id=f"{course_run.run_id}-{content_file.key}",
             platform=course_run.learning_resource.platform,
             defaults={
@@ -955,7 +1071,10 @@ def load_learning_material(
 
         content_file.direct_learning_resource = learning_resource
         content_file.save()
-        return learning_resource.id
+
+    update_index(learning_resource, created)
+
+    return learning_resource.id
 
 
 def load_problem_file(
@@ -1301,6 +1420,82 @@ def load_documents(
     return document_resources
 
 
+def load_ovs_playlist(playlist_data: dict) -> LearningResource:
+    """
+    Load a single OVS playlist (collection) and its videos into the database.
+
+    Args:
+        playlist_data (dict): playlist data including nested videos list
+
+    Returns:
+        LearningResource: the created or updated playlist resource
+    """
+    channel, _ = VideoChannel.objects.get_or_create(
+        channel_id="ovs",
+        defaults={"title": "ODL Video Service"},
+    )
+    return load_playlist(channel, playlist_data)
+
+
+def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
+    """
+    Load OVS playlists and their videos, then unpublish any OVS playlists
+    that are no longer present and any orphaned OVS videos.
+
+    Args:
+        playlists_data (iter of dict): iterable of playlist dicts from OVS transform
+
+    Returns:
+        list of LearningResource: the loaded playlist resources
+    """
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
+
+    if not playlists:
+        log.warning(
+            "OVS ETL returned no playlists; aborting to avoid unpublishing all data"
+        )
+        return []
+
+    playlist_ids = [p.id for p in playlists]
+
+    # Unpublish OVS playlists that were not in this load
+    stale_playlists = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video_playlist.name,
+        platform=ovs_platform,
+        published=True,
+    ).exclude(id__in=playlist_ids)
+    stale_playlist_ids = list(stale_playlists.values_list("id", flat=True))
+    stale_playlists.update(published=False)
+    bulk_resources_unpublished_actions(
+        stale_playlist_ids,
+        LearningResourceType.video_playlist.name,
+    )
+
+    # Unpublish OVS videos not in any published OVS playlist
+    videos_in_published_playlists = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        parent__platform=ovs_platform,
+        parent__published=True,
+    ).values_list("child", flat=True)
+
+    orphaned_videos = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video.name,
+        platform=ovs_platform,
+        published=True,
+    ).exclude(id__in=videos_in_published_playlists)
+
+    orphaned_video_ids = list(orphaned_videos.values_list("id", flat=True))
+    if orphaned_video_ids:
+        orphaned_videos.update(published=False)
+        bulk_resources_unpublished_actions(
+            orphaned_video_ids, LearningResourceType.video.name
+        )
+
+    return playlists
+
+
 def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningResource:
     """
     Load a video playlist into the database
@@ -1319,11 +1514,12 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     offered_bys_data = playlist_data.pop("offered_by", None)
     playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
-        image, _ = LearningResourceImage.objects.update_or_create(
-            url=thumbnail_data.get("url"),
-            alt=thumbnail_data.get("alt"),
-        )
-        playlist_data["image"] = image
+        if thumbnail_data:
+            image, _ = LearningResourceImage.objects.update_or_create(
+                url=thumbnail_data.get("url"),
+                alt=thumbnail_data.get("alt"),
+            )
+            playlist_data["image"] = image
         playlist_resource, created = LearningResource.objects.update_or_create(
             readable_id=playlist_id,
             resource_type=LearningResourceType.video_playlist.name,
@@ -1344,9 +1540,10 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         resource_type=LearningResourceType.video.name,
         published=True,
     ).exclude(id__in=[video.id for video in video_resources])
+    unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
     unpublished_videos.update(published=False)
     bulk_resources_unpublished_actions(
-        unpublished_videos.values_list("id", flat=True),
+        unpublished_video_ids,
         LearningResourceType.video.name,
     )
 

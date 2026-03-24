@@ -93,7 +93,19 @@ interface BaseLearningResourceCardProps {
   imageAlt?: string
   title?: string
   resourceType?: string
-  coursePrice?: string | null
+  /**
+   * The price to take the course/program. May be "Free" if there is a free
+   * enrollment mode. Mutually exclusive with certificatePrice in practice:
+   * - free-only → resourcePrice="Free", certificatePrice=null
+   * - paid-only → resourcePrice=productPrice, certificatePrice=null
+   * - both free and paid → resourcePrice="Free", certificatePrice=productPrice
+   * - neither → both null
+   */
+  resourcePrice?: string | null
+  /**
+   * The price of the certificate, shown when the course/program can be taken
+   * for free but a paid certificate is also available.
+   */
   certificatePrice?: string | null
   hasCertificate?: boolean
   certificateTypeName?: string
@@ -282,7 +294,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   imageAlt = "",
   title,
   resourceType,
-  coursePrice,
+  resourcePrice,
   certificatePrice,
   hasCertificate,
   certificateTypeName,
@@ -385,7 +397,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   const getCertPriceAndLabel = () => {
     if (size === "small") {
       const label = ""
-      const hasRange = coursePrice?.includes("–")
+      const hasRange = resourcePrice?.includes("–")
       const certPrice = hasRange ? "" : certificatePrice
       return { certificatePrice: certPrice, label }
     }
@@ -425,7 +437,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
                 {certificatePrice}
               </ListCertificate>
             )}
-            {coursePrice && <ListPrice>{coursePrice}</ListPrice>}
+            {resourcePrice && <ListPrice>{resourcePrice}</ListPrice>}
           </>
         </ListCardCondensed.Info>
         {title && (
@@ -510,7 +522,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
                 </CertificatePriceText>
               </ListCertificate>
             )}
-            {coursePrice && <ListPrice>{coursePrice}</ListPrice>}
+            {resourcePrice && <ListPrice>{resourcePrice}</ListPrice>}
           </>
         </ListCard.Info>
         {title && (
@@ -600,7 +612,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
                 )}
               </Certificate>
             )}
-            {coursePrice && <Price>{coursePrice}</Price>}
+            {resourcePrice && <Price>{resourcePrice}</Price>}
           </PriceContainer>
         </>
       </Card.Info>

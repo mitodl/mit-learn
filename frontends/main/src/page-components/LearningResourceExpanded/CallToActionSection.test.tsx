@@ -247,7 +247,10 @@ describe("CallToActionSection", () => {
       const expectedUrl =
         resource.resource_type === ResourceTypeEnum.Course
           ? coursePageView(resource.readable_id)
-          : programPageView(resource.readable_id)
+          : programPageView({
+              readable_id: resource.readable_id,
+              display_mode: null,
+            })
       expect(link).toHaveAttribute("href", expectedUrl)
       expect(link.getAttribute("href")).not.toContain("utm_")
     })
