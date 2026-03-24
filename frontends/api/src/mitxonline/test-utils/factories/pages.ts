@@ -65,6 +65,7 @@ const v2Course: PartialFactory<V2Course> = (overrides = {}) => {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
     readable_id: faker.lorem.slug(),
+    certificate_available: faker.datatype.boolean(),
     page: {
       feature_image_src: faker.image.avatar(),
       page_url: faker.internet.url(),
