@@ -5,37 +5,21 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from django.conf import settings
 from django.urls import reverse
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    extend_schema,
-    inline_serializer,
-)
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from hubspot.marketing.forms.exceptions import ApiException
-from rest_framework import permissions, serializers, status
+from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from main.permissions import IsSuperuserPermission
 from ol_hubspot.api import get_form, list_forms
+from ol_hubspot.schema import serializer_for_hubspot_model
 
-hubspot_forms_list_response_schema = inline_serializer(
-    name="HubspotFormsListResponse",
-    fields={
-        "results": serializers.ListField(child=serializers.JSONField()),
-        "paging": inline_serializer(
-            name="HubspotFormsPaging",
-            fields={
-                "next": inline_serializer(
-                    name="HubspotFormsNextPage",
-                    fields={
-                        "after": serializers.CharField(required=False),
-                        "link": serializers.URLField(required=False),
-                    },
-                )
-            },
-            required=False,
-        ),
-    },
+hubspot_forms_list_response_schema = serializer_for_hubspot_model(
+    "CollectionResponseFormDefinitionBaseForwardPaging"
+)
+hubspot_form_detail_response_schema = serializer_for_hubspot_model(
+    "HubSpotFormDefinition"
 )
 
 
@@ -153,7 +137,7 @@ def hubspot_forms_list_view(request):
 
 @extend_schema(
     operation_id="hubspot_forms_detail_retrieve",
-    responses={200: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+    responses={200: hubspot_form_detail_response_schema, 503: OpenApiTypes.OBJECT},
     parameters=[OpenApiParameter(name="archived", type=bool, required=False)],
 )
 @api_view(["GET"])

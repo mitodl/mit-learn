@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 
 import type {
+  HubspotCollectionResponseFormDefinitionBaseForwardPaging as HubspotFormsListResponse,
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
-  HubspotFormsListResponse,
 } from "../../generated/v1"
+import type { HubspotFormDetailResponse } from "./queries"
 import { hubspotKeys, hubspotQueries } from "./queries"
 
 const useHubspotFormsList = (
@@ -38,4 +39,5 @@ export type {
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
   HubspotFormsListResponse,
+  HubspotFormDetailResponse,
 }

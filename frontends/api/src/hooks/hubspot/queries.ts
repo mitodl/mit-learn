@@ -2,8 +2,10 @@ import { queryOptions } from "@tanstack/react-query"
 
 import { hubspotApi } from "../../clients"
 import type {
+  HubspotCollectionResponseFormDefinitionBaseForwardPaging as HubspotFormsListResponse,
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
+  HubspotFormDefinition as HubspotFormDetailResponse,
 } from "../../generated/v1"
 
 const hubspotKeys = {
@@ -23,13 +25,13 @@ const hubspotKeys = {
 
 const hubspotQueries = {
   list: (params: HubspotApiHubspotFormsListRequest = {}) =>
-    queryOptions({
+    queryOptions<HubspotFormsListResponse>({
       queryKey: hubspotKeys.list(params),
       queryFn: () =>
         hubspotApi.hubspotFormsList(params).then((res) => res.data),
     }),
   detail: (params: HubspotApiHubspotFormsDetailRetrieveRequest) =>
-    queryOptions({
+    queryOptions<HubspotFormDetailResponse>({
       queryKey: hubspotKeys.detail(params),
       queryFn: () =>
         hubspotApi.hubspotFormsDetailRetrieve(params).then((res) => res.data),
@@ -37,3 +39,4 @@ const hubspotQueries = {
 }
 
 export { hubspotKeys, hubspotQueries }
+export type { HubspotFormDetailResponse }
