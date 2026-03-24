@@ -96,6 +96,7 @@ const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
     end_date: faker.helpers.maybe(() => faker.date.future().toISOString()),
     products: [courses.product()],
     display_mode: null,
+    programs: [],
   }
 
   return mergeOverrides<V2ProgramDetail>(defaults, overrides)
