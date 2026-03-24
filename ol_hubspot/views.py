@@ -1,6 +1,9 @@
 """HubSpot proxy views."""
 
+from urllib.parse import parse_qs, urlencode, urlparse
+
 from django.conf import settings
+from django.urls import reverse
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from hubspot.marketing.forms.exceptions import ApiException
 from rest_framework import permissions, status
@@ -24,6 +27,46 @@ def _parse_bool(value: str | None) -> bool | None:
 
 def _to_dict(result):
     return result.to_dict() if hasattr(result, "to_dict") else result
+
+
+def _normalize_forms_paging(request, payload: dict) -> dict:
+    """Rewrite HubSpot paging links to point at this proxy endpoint."""
+    paging = payload.get("paging")
+    if not isinstance(paging, dict):
+        return payload
+
+    next_page = paging.get("next")
+    if not isinstance(next_page, dict):
+        return payload
+
+    after = next_page.get("after")
+    if not after:
+        next_link = next_page.get("link")
+        if isinstance(next_link, str) and next_link:
+            parsed = urlparse(next_link)
+            parsed_query = parse_qs(parsed.query)
+            after = (parsed_query.get("after") or [None])[0]
+
+    if not after:
+        return payload
+
+    # Keep list options stable between pages while switching link host/path to this API.
+    next_query_params = {
+        "after": after,
+    }
+    for key in ("limit", "archived"):
+        value = request.query_params.get(key)
+        if value is not None:
+            next_query_params[key] = value
+    form_types = request.query_params.getlist("form_types")
+    if form_types:
+        next_query_params["form_types"] = form_types
+
+    base_path = reverse("hubspot-forms-list")
+    query_string = urlencode(next_query_params, doseq=True)
+    next_page["link"] = request.build_absolute_uri(f"{base_path}?{query_string}")
+
+    return payload
 
 
 def _missing_token_response() -> Response:
@@ -77,7 +120,7 @@ def hubspot_forms_list_view(request):
             archived=archived,
             form_types=form_types,
         )
-        return Response(_to_dict(result))
+        return Response(_normalize_forms_paging(request, _to_dict(result)))
     except ApiException as exc:
         status_code = exc.status if isinstance(exc.status, int) else 502
         return Response({"detail": "HubSpot request failed"}, status=status_code)

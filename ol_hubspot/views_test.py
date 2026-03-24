@@ -1,5 +1,6 @@
 """Tests for HubSpot proxy views."""
 
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 from django.urls import reverse
@@ -33,6 +34,37 @@ def test_list_forms(client, settings, mocker):
         archived=False,
         form_types=["hubspot"],
     )
+
+
+def test_list_forms_rewrites_next_paging_link(client, settings, mocker):
+    """List endpoint rewrites HubSpot paging links to local proxy links."""
+    mock_secret = _mock_hubspot_secret()
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    client.force_login(UserFactory.create(is_superuser=True))
+    list_url = reverse("hubspot-forms-list")
+    expected = {
+        "results": [{"id": "abc"}],
+        "paging": {
+            "next": {
+                "link": "https://api.hubapi.com/marketing/forms/v3/?after=MjA%3D",
+                "after": "MjA%3D",
+            }
+        },
+    }
+    get_stub = mocker.patch("ol_hubspot.views.list_forms")
+    get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
+
+    response = client.get(f"{list_url}?limit=10&archived=false&form_types=hubspot")
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    parsed = urlparse(payload["paging"]["next"]["link"])
+    query = parse_qs(parsed.query)
+    assert parsed.path == list_url
+    assert query["after"] == ["MjA%3D"]
+    assert query["limit"] == ["10"]
+    assert query["archived"] == ["false"]
+    assert query["form_types"] == ["hubspot"]
 
 
 def test_get_form_detail(client, settings, mocker):
