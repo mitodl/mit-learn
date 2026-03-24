@@ -137,6 +137,7 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "video_shorts",
+    "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
     "health_check.cache",
@@ -916,3 +917,6 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 # Video Shorts settings
 VIDEO_SHORTS_S3_PREFIX = get_string("VIDEO_SHORTS_S3_PREFIX", "shorts/")
 VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
+
+# Hubspot settings
+MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
