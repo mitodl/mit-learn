@@ -345,96 +345,95 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Return the list of prefetches"""
-        return (
-            self.prefetch_related(
-                Prefetch(
-                    "topics",
-                    queryset=LearningResourceTopic.objects.for_serialization(),
+        return self.prefetch_related(
+            Prefetch(
+                "topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch("resource_prices"),
+            Prefetch(
+                "offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "departments",
+                queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                    "school"
                 ),
-                Prefetch("resource_prices"),
-                Prefetch(
-                    "offered_by",
-                    queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            "resource_tags",
+            Prefetch(
+                "runs",
+                queryset=LearningResourceRun.objects.filter(published=True)
+                .order_by("start_date", "enrollment_start", "id")
+                .for_serialization(),
+                to_attr="_published_runs",
+            ),
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
                 ),
-                Prefetch(
-                    "departments",
-                    queryset=LearningResourceDepartment.objects.for_serialization().select_related(
-                        "school"
+                to_attr="_podcasts",
+            ),
+            Prefetch(
+                "parents",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+                ),
+                to_attr="_playlists",
+            ),
+            Prefetch(
+                "children",
+                queryset=LearningResourceRelationship.objects.select_related(
+                    "child"
+                ).order_by("position"),
+            ),
+            Prefetch(
+                "views",
+                queryset=LearningResourceViewEvent.objects.all(),
+                to_attr="_views",
+            ),
+            Prefetch(
+                "direct_content_files",
+                queryset=ContentFile.objects.prefetch_related(
+                    "learning_resource__course",
+                    "learning_resource__platform",
+                    "run__learning_resource__course",
+                    "run__learning_resource__platform",
+                    "content_tags",
+                    Prefetch(
+                        "learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
                     ),
-                ),
-                "resource_tags",
-                Prefetch(
-                    "runs",
-                    queryset=LearningResourceRun.objects.filter(published=True)
-                    .order_by("start_date", "enrollment_start", "id")
-                    .for_serialization(),
-                    to_attr="_published_runs",
-                ),
-                Prefetch(
-                    "parents",
-                    queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
+                    Prefetch(
+                        "learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
                     ),
-                    to_attr="_podcasts",
-                ),
-                Prefetch(
-                    "parents",
-                    queryset=LearningResourceRelationship.objects.filter(
-                        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-                    ),
-                    to_attr="_playlists",
-                ),
-                Prefetch(
-                    "children",
-                    queryset=LearningResourceRelationship.objects.select_related(
-                        "child"
-                    ).order_by("position"),
-                ),
-                Prefetch(
-                    "direct_content_files",
-                    queryset=ContentFile.objects.prefetch_related(
-                        "learning_resource__course",
-                        "learning_resource__platform",
-                        "run__learning_resource__course",
-                        "run__learning_resource__platform",
-                        "content_tags",
-                        Prefetch(
-                            "learning_resource__topics",
-                            queryset=LearningResourceTopic.objects.for_serialization(),
-                        ),
-                        Prefetch(
-                            "learning_resource__offered_by",
-                            queryset=LearningResourceOfferor.objects.for_serialization(),
-                        ),
-                        Prefetch(
-                            "learning_resource__departments",
-                            queryset=LearningResourceDepartment.objects.for_serialization().select_related(
-                                "school"
-                            ),
-                        ),
-                        Prefetch(
-                            "run__learning_resource__topics",
-                            queryset=LearningResourceTopic.objects.for_serialization(),
-                        ),
-                        Prefetch(
-                            "run__learning_resource__offered_by",
-                            queryset=LearningResourceOfferor.objects.for_serialization(),
-                        ),
-                        Prefetch(
-                            "run__learning_resource__departments",
-                            queryset=LearningResourceDepartment.objects.for_serialization().select_related(
-                                "school"
-                            ),
+                    Prefetch(
+                        "learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
                         ),
                     ),
+                    Prefetch(
+                        "run__learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "run__learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization().select_related(
+                            "school"
+                        ),
+                    ),
                 ),
-                *LearningResourceDetailModel.get_subclass_prefetches(),
-            )
-            .select_related("image", "platform")
-            .annotate(
-                _views_count=Count("views"),
-            )
-        )
+            ),
+            *LearningResourceDetailModel.get_subclass_prefetches(),
+        ).select_related("image", "platform")
 
     def for_search_serialization(self):
         return self.for_serialization().prefetch_related(
@@ -633,8 +632,8 @@ class LearningResource(TimestampedModel):
     @cached_property
     def views_count(self) -> int:
         """Return the number of views for the resource."""
-        if hasattr(self, "_views_count"):
-            return self._views_count
+        if hasattr(self, "_views"):
+            return len(self._views)
         return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
 
     @cached_property
