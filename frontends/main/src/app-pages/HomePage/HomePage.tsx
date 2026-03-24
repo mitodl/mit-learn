@@ -9,6 +9,7 @@ import TestimonialsSection from "./TestimonialsSection"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import PersonalizeSection from "./PersonalizeSection"
 import * as carousels from "./carousels"
+import UAIAnnouncementCard from "./UAIAnnouncementCard"
 import dynamic from "next/dynamic"
 
 const FullWidthBackground = styled.div({
@@ -49,6 +50,7 @@ const HomePage: React.FC<{ heroImageIndex: number }> = ({ heroImageIndex }) => {
       <FullWidthBackground>
         <StyledContainer>
           <HeroSearch imageIndex={heroImageIndex} />
+          <UAIAnnouncementCard />
           <section>
             <FeaturedCoursesCarousel
               titleComponent="h2"
