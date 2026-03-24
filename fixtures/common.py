@@ -18,6 +18,7 @@ from learning_resources.factories import (
     LearningPathFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
+    LearningResourceViewEventFactory,
 )
 from learning_resources.models import LearningResourceRun
 
@@ -115,6 +116,10 @@ def offeror_featured_lists():
                     run.resource_prices.set([])
                     run.prices = []
                     run.save()
+
+            LearningResourceViewEventFactory.create_batch(
+                20, learning_resource=resource
+            )
             featured_path.resources.add(
                 resource,
                 through_defaults={
