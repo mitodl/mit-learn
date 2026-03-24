@@ -901,6 +901,8 @@ def vector_search(  # noqa: PLR0913
 
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
     prefetch_multiplier = 20
+    prefetch_max = 10000
+    prefetch_limit = min((offset + limit) * prefetch_multiplier, prefetch_max)
     prefetch_limit = (offset + limit) * prefetch_multiplier
     if query_string:
         search_params = {
