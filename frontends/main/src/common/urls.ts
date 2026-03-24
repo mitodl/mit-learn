@@ -108,7 +108,7 @@ export const TERMS = "/terms"
 
 export const UNITS = "/units"
 
-export const CONTACT = "mailto:mitlearn-support@mit.edu"
+export const CONTACT = "https://support.learn.mit.edu/"
 
 export const RECOMMENDER_QUERY_PARAM = "recommender"
 
