@@ -231,6 +231,29 @@ describe("ProgramAsCoursePage", () => {
     })
   })
 
+  test("Renders program bundle upsell when program belongs to a parent program (content tested in ProgramBundleUpsell.test)", async () => {
+    const parentProgram = factories.programs.baseProgram()
+    const parentProgramDetail = factories.programs.program({
+      id: parentProgram.id,
+      readable_id: parentProgram.readable_id,
+      products: [factories.courses.product({ price: "500" })],
+    })
+    const program = makeProgramAsCourse({ programs: [parentProgram] })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    setMockResponse.get(
+      urls.programs.programsList({ id: [parentProgram.id] }),
+      { results: [parentProgramDetail] },
+    )
+    renderWithProviders(
+      <ProgramAsCoursePage readableId={program.readable_id} />,
+    )
+
+    expect(
+      await screen.findByTestId("program-bundle-upsell"),
+    ).toBeInTheDocument()
+  })
+
   test("Renders Modules section with mixed courses and programs (single root)", async () => {
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({ operator: "all_of" })

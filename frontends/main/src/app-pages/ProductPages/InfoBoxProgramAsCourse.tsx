@@ -7,6 +7,7 @@ import type {
 import { HeadingIds } from "./util"
 import { ProgramAsCourseSummary } from "./ProductSummary"
 import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
+import ProgramBundleUpsell from "./ProgramBundleUpsell"
 import { InfoBoxCard, InfoBoxContent, InfoBoxEnrollArea } from "./InfoBoxParts"
 
 type ProgramAsCourseInfoBoxProps = {
@@ -29,6 +30,9 @@ const ProgramAsCourseInfoBox: React.FC<ProgramAsCourseInfoBoxProps> = ({
       <InfoBoxEnrollArea>
         <ProgramEnrollmentButton program={program} displayAsCourse />
       </InfoBoxEnrollArea>
+      {program.programs?.length ? (
+        <ProgramBundleUpsell programs={program.programs} />
+      ) : null}
     </InfoBoxCard>
   )
 }
