@@ -24,7 +24,7 @@ import {
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { mitxonlineUrl } from "@/common/mitxonline"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
@@ -191,7 +191,7 @@ const getContextMenuItems = (
 ) => {
   const menuItems = []
   if (resource.type === DashboardType.CourseRunEnrollment) {
-    const detailsUrl = mitxonlineUrl(
+    const detailsUrl = mitxonlineLegacyUrl(
       `/courses/${resource.data.run.course.readable_id}`,
     )
 
