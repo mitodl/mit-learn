@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.59.2
+--------------
+
+- fix an import (#3089)
+- fix: Update Walmart SPOC certificate to display the correct program name (#3065)
+- feat: add universal announcement card (#3084)
+- update mitxonline client (#3088)
+- fix: hide header on cart redirection to mitxonline (#3081)
+- fix(frontend): update footer Contact Us link to support portal (#3083)
+
 Version 0.59.1 (Released March 24, 2026)
 --------------
 
