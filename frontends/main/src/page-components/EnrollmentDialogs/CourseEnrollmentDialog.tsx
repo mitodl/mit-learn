@@ -200,6 +200,7 @@ const CertificateUpsell: React.FC<{
   courseRun?: CourseRunV2
 }> = ({ course, courseRun }) => {
   const product = courseRun?.products[0]
+  const financialAidUrl = course?.page?.financial_assistance_form_url ?? ""
   const enrollmentType = getEnrollmentType(courseRun?.enrollment_modes)
   const enabled =
     (enrollmentType === "both" || enrollmentType === "paid") &&
@@ -209,12 +210,12 @@ const CertificateUpsell: React.FC<{
     ...productQueries.userFlexiblePriceDetail({
       productId: product?.id ?? 0,
     }),
-    enabled: enabled && !!course?.page.financial_assistance_form_url,
+    enabled: enabled && !!financialAidUrl,
   })
   const price = enabled
     ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
     : null
-  const hasFinancialAssistance = !!course?.page.financial_assistance_form_url
+  const hasFinancialAssistance = !!financialAidUrl
   const deadlineUI = courseRun?.upgrade_deadline ? (
     <>
       Payment due: <LocalDate date={courseRun.upgrade_deadline} />
@@ -244,9 +245,7 @@ const CertificateUpsell: React.FC<{
             {hasFinancialAssistance && price ? (
               <UnderlinedLink
                 color="black"
-                href={mitxonlineLegacyUrl(
-                  course.page.financial_assistance_form_url,
-                )}
+                href={mitxonlineLegacyUrl(financialAidUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
