@@ -77,6 +77,7 @@ export const courseCertificate: PartialFactory<V2CourseRunCertificate> = (
       course: {
         id: faker.number.int(),
         title: faker.lorem.words(),
+        readable_id: faker.lorem.slug(),
       },
       start_date: faker.date.past().toISOString(),
       end_date: faker.date.future().toISOString(),
