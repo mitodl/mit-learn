@@ -4,14 +4,39 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 from django.conf import settings
 from django.urls import reverse
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    inline_serializer,
+)
 from hubspot.marketing.forms.exceptions import ApiException
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from main.permissions import IsSuperuserPermission
 from ol_hubspot.api import get_form, list_forms
+
+hubspot_forms_list_response_schema = inline_serializer(
+    name="HubspotFormsListResponse",
+    fields={
+        "results": serializers.ListField(child=serializers.JSONField()),
+        "paging": inline_serializer(
+            name="HubspotFormsPaging",
+            fields={
+                "next": inline_serializer(
+                    name="HubspotFormsNextPage",
+                    fields={
+                        "after": serializers.CharField(required=False),
+                        "link": serializers.URLField(required=False),
+                    },
+                )
+            },
+            required=False,
+        ),
+    },
+)
 
 
 def _parse_bool(value: str | None) -> bool | None:
@@ -62,7 +87,7 @@ def _normalize_forms_paging(request, payload: dict) -> dict:
     if form_types:
         next_query_params["form_types"] = form_types
 
-    base_path = reverse("hubspot-forms-list")
+    base_path = reverse("ol_hubspot:v1:hubspot-forms-list")
     query_string = urlencode(next_query_params, doseq=True)
     next_page["link"] = request.build_absolute_uri(f"{base_path}?{query_string}")
 
@@ -73,15 +98,15 @@ def _missing_token_response() -> Response:
     return Response({}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
-@extend_schema_view(
-    get=extend_schema(
-        parameters=[
-            OpenApiParameter(name="after", type=str, required=False),
-            OpenApiParameter(name="limit", type=int, required=False),
-            OpenApiParameter(name="archived", type=bool, required=False),
-            OpenApiParameter(name="form_types", type=str, required=False),
-        ]
-    )
+@extend_schema(
+    operation_id="hubspot_forms_list",
+    responses={200: hubspot_forms_list_response_schema, 503: OpenApiTypes.OBJECT},
+    parameters=[
+        OpenApiParameter(name="after", type=str, required=False),
+        OpenApiParameter(name="limit", type=int, required=False),
+        OpenApiParameter(name="archived", type=bool, required=False),
+        OpenApiParameter(name="form_types", type=str, required=False),
+    ],
 )
 @api_view(["GET"])
 @permission_classes([IsSuperuserPermission])
@@ -126,10 +151,10 @@ def hubspot_forms_list_view(request):
         return Response({"detail": "HubSpot request failed"}, status=status_code)
 
 
-@extend_schema_view(
-    get=extend_schema(
-        parameters=[OpenApiParameter(name="archived", type=bool, required=False)]
-    )
+@extend_schema(
+    operation_id="hubspot_forms_detail_retrieve",
+    responses={200: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+    parameters=[OpenApiParameter(name="archived", type=bool, required=False)],
 )
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])

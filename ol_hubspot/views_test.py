@@ -18,7 +18,7 @@ def test_list_forms(client, settings, mocker):
     mock_secret = _mock_hubspot_secret()
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
     client.force_login(UserFactory.create(is_superuser=True))
-    list_url = reverse("hubspot-forms-list")
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
     expected = {"results": [{"id": "abc"}]}
     get_stub = mocker.patch("ol_hubspot.views.list_forms")
     get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
@@ -41,7 +41,7 @@ def test_list_forms_rewrites_next_paging_link(client, settings, mocker):
     mock_secret = _mock_hubspot_secret()
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
     client.force_login(UserFactory.create(is_superuser=True))
-    list_url = reverse("hubspot-forms-list")
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
     expected = {
         "results": [{"id": "abc"}],
         "paging": {
@@ -72,7 +72,9 @@ def test_get_form_detail(client, settings, mocker):
     mock_secret = _mock_hubspot_secret()
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
     client.force_login(UserFactory.create())
-    detail_url = reverse("hubspot-forms-detail", kwargs={"form_id": "abc"})
+    detail_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-detail", kwargs={"form_id": "abc"}
+    )
     expected = {"id": "abc", "name": "Test Form"}
     get_stub = mocker.patch("ol_hubspot.views.get_form")
     get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
@@ -93,11 +95,11 @@ def test_missing_token_returns_503(client, settings):
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = None
 
     client.force_login(UserFactory.create(is_superuser=True))
-    list_response = client.get(reverse("hubspot-forms-list"))
+    list_response = client.get(reverse("ol_hubspot:v1:hubspot-forms-list"))
 
     client.force_login(UserFactory.create())
     detail_response = client.get(
-        reverse("hubspot-forms-detail", kwargs={"form_id": "abc"})
+        reverse("ol_hubspot:v1:hubspot-forms-detail", kwargs={"form_id": "abc"})
     )
 
     assert list_response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
@@ -108,7 +110,7 @@ def test_invalid_limit_returns_400(client, settings):
     """List endpoint validates limit query param."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     client.force_login(UserFactory.create(is_superuser=True))
-    list_url = reverse("hubspot-forms-list")
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
 
     response = client.get(f"{list_url}?limit=abc")
 
@@ -119,7 +121,7 @@ def test_invalid_limit_returns_400(client, settings):
 def test_list_forms_requires_superuser(client, settings):
     """List endpoint is restricted to superusers."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
-    list_url = reverse("hubspot-forms-list")
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
 
     client.force_login(UserFactory.create())
     response = client.get(list_url)
@@ -130,7 +132,9 @@ def test_list_forms_requires_superuser(client, settings):
 def test_detail_requires_authenticated_user(client, settings):
     """Detail endpoint requires authentication."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
-    detail_url = reverse("hubspot-forms-detail", kwargs={"form_id": "abc"})
+    detail_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-detail", kwargs={"form_id": "abc"}
+    )
 
     response = client.get(detail_url)
 
