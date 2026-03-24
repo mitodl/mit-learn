@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.1
+Version 0.59.1 (Released March 24, 2026)
 --------------
 
 - "program as course" display on learner dashboard (#3073)
