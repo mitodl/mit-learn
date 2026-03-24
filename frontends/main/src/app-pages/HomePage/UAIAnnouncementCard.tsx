@@ -4,6 +4,9 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiCheckLine } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { programPageView } from "@/common/urls"
+
+const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
 
 const Card = styled.div(({ theme }) => ({
   display: "flex",
@@ -60,7 +63,7 @@ const Eyebrow = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
 }))
 
-const Title = styled(Typography)({
+const Title = styled("h2")({
   margin: 0,
 })
 
@@ -88,9 +91,8 @@ const CheckItem = styled.li(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "4px",
-  color: theme.custom.colors.darkGray1,
-  fontWeight: theme.typography.fontWeightMedium,
-  ...theme.typography.body3,
+  color: theme.custom.colors.black,
+  ...theme.typography.body1,
   padding: "4px 16px 4px 0",
 }))
 
@@ -114,7 +116,7 @@ const UAIAnnouncementCard: React.FC = () => {
       <ImageSection aria-hidden="true" />
       <ContentSection>
         <Eyebrow variant="body2">Introducing Universal AI</Eyebrow>
-        <Title variant="h2">Universal AI</Title>
+        <Title>Universal AI</Title>
         <Description variant="body1">
           A self-paced program covering foundational concepts in artificial
           intelligence and their application across domains. The curriculum
@@ -134,7 +136,10 @@ const UAIAnnouncementCard: React.FC = () => {
         <CTA>
           <CTAButtonWrapper
             variant="primary"
-            href="/programs/program-v1:UAI+B2C"
+            href={programPageView({
+              readable_id: UAI_PROGRAM_READABLE_ID,
+              display_mode: null,
+            })}
           >
             Learn about Universal AI
           </CTAButtonWrapper>

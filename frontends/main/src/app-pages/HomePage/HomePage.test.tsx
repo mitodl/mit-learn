@@ -114,7 +114,7 @@ describe("UAI Announcement Card", () => {
     renderWithProviders(<HomePage heroImageIndex={1} />)
     // Wait for the card's CTA link to appear, then verify title text is shown
     await screen.findByRole("link", { name: "Learn about Universal AI" })
-    screen.getByText("Universal AI")
+    screen.getByRole("heading", { name: "Universal AI" })
   })
 
   test("CTA link points to the UAI program page", async () => {
