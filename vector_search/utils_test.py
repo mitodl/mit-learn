@@ -1100,24 +1100,30 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     Test that cloud inferencing is enabled in the qdrant client
     if one of the encoders requires it
     """
-    mocker.patch("qdrant_client.QdrantClient")
+    # Patch the QdrantClient symbol used inside vector_search.utils
+    mock_qdrant_client_cls = mocker.patch("vector_search.utils.QdrantClient")
     settings.QDRANT_SPARSE_ENCODER = (
         "vector_search.encoders.qdrant_cloud.QdrantCloudEncoder"
     )
     sparse_encoder.cache_clear()
     dense_encoder.cache_clear()
     vector_qdrant_client.cache_clear()
-    client = vector_qdrant_client()
-    assert client.cloud_inference is True
+    vector_qdrant_client()
+    # Verify that cloud inference is enabled when using the cloud encoder
+    first_call_kwargs = mock_qdrant_client_cls.call_args.kwargs
+    assert first_call_kwargs.get("cloud_inference") is True
+
+    # Switch to a non-cloud encoder and verify cloud inference is disabled
     settings.QDRANT_SPARSE_ENCODER = (
         "vector_search.encoders.sparse_hash.SparseHashEncoder"
     )
-
+    mock_qdrant_client_cls.reset_mock()
     vector_qdrant_client.cache_clear()
     sparse_encoder.cache_clear()
     dense_encoder.cache_clear()
-    client = vector_qdrant_client()
-    assert getattr(client, "cloud_inference", None) is False
+    vector_qdrant_client()
+    second_call_kwargs = mock_qdrant_client_cls.call_args.kwargs
+    assert second_call_kwargs.get("cloud_inference", False) is False
 
 
 def test_vector_search_hybrid(mocker):
