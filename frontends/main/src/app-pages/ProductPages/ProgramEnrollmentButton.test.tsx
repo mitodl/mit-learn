@@ -15,6 +15,7 @@ import {
 } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { programView, DASHBOARD_HOME } from "@/common/urls"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -210,11 +211,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: "POST", url: basketUrl }),
     )
-    const expectedCartUrl = new URL(
-      "/cart/",
-      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-    ).toString()
-    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 
   test("Shows loading spinner while basket operations are in progress (paid)", async () => {

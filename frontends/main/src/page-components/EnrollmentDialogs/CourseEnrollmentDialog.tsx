@@ -20,7 +20,7 @@ import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canPurchaseRun,
   getEnrollmentType,
-  mitxonlineUrl,
+  mitxonlineLegacyUrl,
   PriceWithDiscount,
   priceWithDiscount,
 } from "@/common/mitxonline"
@@ -244,7 +244,9 @@ const CertificateUpsell: React.FC<{
             {hasFinancialAssistance && price ? (
               <UnderlinedLink
                 color="black"
-                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                href={mitxonlineLegacyUrl(
+                  course.page.financial_assistance_form_url,
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
               >

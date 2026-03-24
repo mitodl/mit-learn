@@ -16,6 +16,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
@@ -107,10 +108,7 @@ describe("ProgramEnrollmentDialog", () => {
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: "POST", url: basketUrl }),
     )
-    const expectedCartUrl = new URL(
-      "/cart/",
-      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-    ).toString()
+    const expectedCartUrl = mitxonlineLegacyUrl("/cart/")
     expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 

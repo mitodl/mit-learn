@@ -22,7 +22,7 @@ import {
   canPurchaseRun,
   formatPrice,
   getEnrollmentType,
-  mitxonlineUrl,
+  mitxonlineLegacyUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
@@ -446,7 +446,9 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
           {hasFinancialAid ? (
             <UnderlinedLink
               color="black"
-              href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+              href={mitxonlineLegacyUrl(
+                course.page.financial_assistance_form_url,
+              )}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -534,7 +536,9 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
             {canPurchase && hasFinancialAid ? (
               <UnderlinedLink
                 color="black"
-                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                href={mitxonlineLegacyUrl(
+                  course.page.financial_assistance_form_url,
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -777,7 +781,7 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
       {program.page.financial_assistance_form_url ? (
         <UnderlinedLink
           color="black"
-          href={mitxonlineUrl(program.page.financial_assistance_form_url)}
+          href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
           target="_blank"
           rel="noopener noreferrer"
           style={{ minWidth: "fit-content" }}

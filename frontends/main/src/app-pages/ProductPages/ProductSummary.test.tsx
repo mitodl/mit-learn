@@ -4,7 +4,7 @@ import { setMockResponse } from "api/test-utils"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { CourseSummary, ProgramSummary, TestIds } from "./ProductSummary"
 import { formatDate } from "ol-utilities"
-import { formatPrice } from "@/common/mitxonline"
+import { formatPrice, mitxonlineLegacyUrl } from "@/common/mitxonline"
 import invariant from "tiny-invariant"
 import { faker } from "@faker-js/faker/locale/en"
 
@@ -920,10 +920,7 @@ describe("CourseSummary", () => {
           const link = await within(priceRow).findByRole("link", {
             name: /financial assistance/i,
           })
-          const expectedUrl = new URL(
-            financialAidUrl,
-            process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-          ).toString()
+          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
           expect(link).toHaveAttribute("href", expectedUrl)
           expect(link).toHaveTextContent("Financial assistance available")
         } else {
@@ -1306,10 +1303,7 @@ describe("ProgramSummary", () => {
           const link = within(priceRow).getByRole("link", {
             name: /financial assistance/i,
           })
-          const expectedUrl = new URL(
-            financialAidUrl,
-            process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-          ).toString()
+          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
           expect(link).toHaveAttribute("href", expectedUrl)
           expect(link).toHaveTextContent("Financial assistance available")
         } else {
