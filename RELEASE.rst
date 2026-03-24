@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.2
+Version 0.59.2 (Released March 24, 2026)
 --------------
 
 - fix an import (#3089)
