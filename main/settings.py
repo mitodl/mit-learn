@@ -129,6 +129,7 @@ INSTALLED_APPS = (
     "widgets",
     "learning_resources",
     "learning_resources_search",
+    "mitol.api_versioning.apps.ApiVersioningApp",
     "openapi",
     "articles",
     "oauth2_provider",
