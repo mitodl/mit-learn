@@ -109,7 +109,7 @@ const priceWithDiscount = ({
 }
 
 /**
- * Appending `?ecom-service=true` hides the MITxOnline-branded header
+ * Adding the `ecom-service=true` query parameter hides the MITxOnline-branded header
  * on the MITxOnline site.
  */
 const ECOM_SERVICE_KEY = "ecom-service"
