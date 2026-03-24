@@ -16,6 +16,7 @@ import {
 } from "@/test-utils"
 import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
+import { FeatureFlags } from "@/common/feature_flags"
 import { assertHeadings } from "ol-test-utilities"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 
@@ -92,6 +93,42 @@ const setupAPIs = () => {
   mockedUseFeatureFlagEnabled.mockReturnValue(false)
   return { featured, media }
 }
+
+describe("UAI Announcement Card", () => {
+  test("card is not rendered when UniversalAI flag is off", () => {
+    setupAPIs() // mockedUseFeatureFlagEnabled returns false for all flags
+    renderWithProviders(<HomePage heroImageIndex={1} />)
+    expect(
+      screen.queryByRole("heading", { name: "Universal AI" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Learn about Universal AI" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("card is rendered when UniversalAI flag is on", async () => {
+    setupAPIs()
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.UniversalAI,
+    )
+    renderWithProviders(<HomePage heroImageIndex={1} />)
+    // Wait for the card's CTA link to appear, then verify title text is shown
+    await screen.findByRole("link", { name: "Learn about Universal AI" })
+    screen.getByText("Universal AI")
+  })
+
+  test("CTA link points to the UAI program page", async () => {
+    setupAPIs()
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.UniversalAI,
+    )
+    renderWithProviders(<HomePage heroImageIndex={1} />)
+    const cta = await screen.findByRole<HTMLAnchorElement>("link", {
+      name: "Learn about Universal AI",
+    })
+    assertLinksTo(cta, { pathname: "/programs/program-v1:UAI+B2C" })
+  })
+})
 
 describe("Home Page Hero", () => {
   test("Submitting search goes to search page", async () => {
