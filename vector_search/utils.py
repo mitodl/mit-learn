@@ -900,10 +900,10 @@ def vector_search(  # noqa: PLR0913
     encoder_sparse = sparse_encoder()
 
     search_filter = qdrant_query_conditions(params, collection_name=search_collection)
-    prefetch_multiplier = 20
-    prefetch_max = 10000
-    prefetch_limit = min((offset + limit) * prefetch_multiplier, prefetch_max)
-    prefetch_limit = (offset + limit) * prefetch_multiplier
+    prefetch_multiplier = settings.VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER
+    prefetch_max_limit = settings.VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT
+    prefetch_limit = min((offset + limit) * prefetch_multiplier, prefetch_max_limit)
+
     if query_string:
         search_params = {
             "collection_name": search_collection,
