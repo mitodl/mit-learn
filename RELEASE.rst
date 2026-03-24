@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.3
+Version 0.59.3 (Released March 24, 2026)
 --------------
 
 - Fix performance issue for LR view count (#3091)
