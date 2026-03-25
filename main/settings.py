@@ -782,14 +782,20 @@ QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
     name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
 )
 
-QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
-QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY_V2", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST_V2", default="http://qdrant:6333")
+
+
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
 QDRANT_DENSE_MODEL = get_string(name="QDRANT_DENSE_MODEL", default=None)
 QDRANT_SPARSE_MODEL = get_string(
-    name="QDRANT_SPARSE_MODEL", default="prithivida/Splade_PP_en_v1"
+    name="QDRANT_SPARSE_MODEL_V2", default="sklearn/hashing_vectorizer_sparse_model"
+)
+QDRANT_SPARSE_ENCODER = get_string(
+    name="QDRANT_SPARSE_ENCODER_V2",
+    default="vector_search.encoders.sparse_hash.SparseHashEncoder",
 )
 
 QDRANT_CHUNK_SIZE = get_int(
@@ -811,6 +817,12 @@ QDRANT_BATCH_SIZE_BYTES = get_int(
 
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 
+VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", default=20
+)
+VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=10000
+)
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False

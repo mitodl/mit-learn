@@ -13,3 +13,14 @@ def dense_encoder():
     if settings.QDRANT_DENSE_MODEL:
         return Encoder(model_name=settings.QDRANT_DENSE_MODEL)
     return Encoder()
+
+
+@cache
+def sparse_encoder():
+    """
+    Return the sparse encoder based on settings
+    """
+    Encoder = import_string(settings.QDRANT_SPARSE_ENCODER)
+    if settings.QDRANT_SPARSE_MODEL:
+        return Encoder(model_name=settings.QDRANT_SPARSE_MODEL)
+    return Encoder()

@@ -879,6 +879,12 @@ paths:
         description: The number of chunks in each group. Only relevant when group_by
           is used
       - in: query
+        name: hybrid_search
+        schema:
+          type: boolean
+          default: false
+        description: Whether to use a hybrid search
+      - in: query
         name: key
         schema:
           type: array
@@ -1153,6 +1159,12 @@ paths:
         schema:
           type: boolean
           nullable: true
+      - in: query
+        name: hybrid_search
+        schema:
+          type: boolean
+          default: false
+        description: Whether to use a hybrid search
       - in: query
         name: level
         schema:

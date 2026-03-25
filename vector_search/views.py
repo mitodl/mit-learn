@@ -67,10 +67,15 @@ class LearningResourcesVectorSearchView(QdrantView):
 
         if request_data.is_valid():
             query_text = request_data.data.get("q", "")
+            hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
             response = vector_search(
-                query_text, limit=limit, offset=offset, params=request_data.data
+                query_text,
+                limit=limit,
+                offset=offset,
+                params=request_data.data,
+                hybrid_search=hybrid_search,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)
@@ -127,6 +132,7 @@ class ContentFilesVectorSearchView(QdrantView):
 
         if request_data.is_valid():
             query_text = request_data.data.get("q", "")
+            hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
             collection_name_override = request_data.data.get("collection_name")
@@ -142,6 +148,7 @@ class ContentFilesVectorSearchView(QdrantView):
                 offset=offset,
                 params=request_data.data,
                 search_collection=collection_name,
+                hybrid_search=hybrid_search,
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)

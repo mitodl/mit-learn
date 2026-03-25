@@ -32,7 +32,7 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
-from vector_search.encoders.utils import dense_encoder
+from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
     _embed_course_metadata_as_contentfile,
@@ -50,6 +50,7 @@ from vector_search.utils import (
     vector_point_id,
     vector_search,
 )
+from vector_search.utils import qdrant_client as vector_qdrant_client
 
 pytestmark = pytest.mark.django_db
 
@@ -80,7 +81,10 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     )
 
     if content_type == "course":
-        point_ids = [vector_point_id(resource.readable_id) for resource in resources]
+        point_ids = [
+            vector_point_id(f"{resource.platform.code}.{resource.readable_id}")
+            for resource in resources
+        ]
         assert sorted(
             [
                 p.id
@@ -92,7 +96,7 @@ def test_vector_point_id_used_for_embed(mocker, content_type):
     else:
         point_ids = [
             vector_point_id(
-                f"{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
+                f"{resource['platform']['code']}.{resource['resource_readable_id']}.{resource['run_readable_id']}.{resource['key']}.0"
             )
             for resource in serialize_bulk_content_files([r.id for r in resources])
         ]
@@ -122,7 +126,10 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         # filter out 3 resources that are already embedded
         mocker.patch(
             "vector_search.utils.filter_existing_qdrant_points_by_ids",
-            return_value=[vector_point_id(r.readable_id) for r in resources[0:2]],
+            return_value=[
+                vector_point_id(f"{r.platform.code}.{r.readable_id}")
+                for r in resources[0:2]
+            ],
         )
     else:
         # all contentfiles exist in qdrant
@@ -130,7 +137,7 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
             "vector_search.utils.filter_existing_qdrant_points_by_ids",
             return_value=[
                 vector_point_id(
-                    f"{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
+                    f"{doc['platform']['code']}.{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
                 )
                 for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
             ],
@@ -621,7 +628,9 @@ def test_update_payload_learning_resource(mocker):
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == RESOURCES_COLLECTION_NAME
     assert call_args["points"] == [
-        vector_point_id(serialized_resources[0]["readable_id"])
+        vector_point_id(
+            f"{serialized_resources[0]['platform']['code']}.{serialized_resources[0]['readable_id']}"
+        )
     ]
     # Verify payload contains the mapped values
     for src_key, dest_key in QDRANT_RESOURCE_PARAM_MAP.items():
@@ -648,6 +657,7 @@ def test_update_payload_content_file(mocker):
     call_args = mock_qdrant.set_payload.call_args[1]
     assert call_args["collection_name"] == CONTENT_FILES_COLLECTION_NAME
     assert call_args["points"] == ["test-point-id"]
+
     # Verify payload contains the mapped values
     for src_key, dest_key in QDRANT_CONTENT_FILE_PARAM_MAP.items():
         if src_key in serialized_files[0]:
@@ -1083,3 +1093,138 @@ def test_set_payload_batched(mocker):
     # Check third batch
     call3_kwargs = mock_client.set_payload.mock_calls[2].kwargs
     assert call3_kwargs["points"] == ["point_4"]
+
+
+def test_qdrant_cloud_inference_client(mocker, settings):
+    """
+    Test that cloud inferencing is enabled in the qdrant client
+    if one of the encoders requires it
+    """
+    # Patch the QdrantClient symbol used inside vector_search.utils
+    mock_qdrant_client_cls = mocker.patch("vector_search.utils.QdrantClient")
+    settings.QDRANT_SPARSE_ENCODER = (
+        "vector_search.encoders.qdrant_cloud.QdrantCloudEncoder"
+    )
+    sparse_encoder.cache_clear()
+    dense_encoder.cache_clear()
+    vector_qdrant_client.cache_clear()
+    vector_qdrant_client()
+    # Verify that cloud inference is enabled when using the cloud encoder
+    first_call_kwargs = mock_qdrant_client_cls.call_args.kwargs
+    assert first_call_kwargs.get("cloud_inference") is True
+
+    # Switch to a non-cloud encoder and verify cloud inference is disabled
+    settings.QDRANT_SPARSE_ENCODER = (
+        "vector_search.encoders.sparse_hash.SparseHashEncoder"
+    )
+    mock_qdrant_client_cls.reset_mock()
+    vector_qdrant_client.cache_clear()
+    sparse_encoder.cache_clear()
+    dense_encoder.cache_clear()
+    vector_qdrant_client()
+    second_call_kwargs = mock_qdrant_client_cls.call_args.kwargs
+    assert second_call_kwargs.get("cloud_inference", False) is False
+
+
+def test_vector_search_hybrid(mocker):
+    """
+    Test that vector_search with hybrid_search=True searches using sparse and dense vectors
+    """
+    mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
+    mock_dense_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_sparse_encoder = mocker.patch("vector_search.utils.sparse_encoder")()
+
+    mock_dense_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_dense_encoder.model_short_name.return_value = "dense-test-encoder"
+
+    # Sparse encoder expects dict like {"indices": [...], "values": [...]} for SparseVector kwargs
+    mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
+    mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
+
+    mocker.patch("vector_search.utils._resource_vector_hits", return_value=[])
+
+    mock_search_result = mocker.MagicMock()
+    mock_search_result.points = []
+    mock_qdrant.query_points.return_value = mock_search_result
+    mock_qdrant.count.return_value = models.CountResult(count=0)
+
+    from vector_search.utils import RESOURCES_COLLECTION_NAME, vector_search
+
+    vector_search(
+        "test hybrid query",
+        {},
+        search_collection=RESOURCES_COLLECTION_NAME,
+        hybrid_search=True,
+    )
+
+    mock_qdrant.query_points.assert_called_once()
+    call_args = mock_qdrant.query_points.call_args.kwargs
+
+    assert isinstance(call_args["query"], models.FusionQuery)
+    assert call_args["query"].fusion == models.Fusion.RRF
+
+    prefetches = call_args["prefetch"]
+    assert len(prefetches) == 2
+
+    sparse_prefetch = prefetches[0]
+    dense_prefetch = prefetches[1]
+
+    assert sparse_prefetch.using == "sparse-test-encoder"
+    assert isinstance(sparse_prefetch.query, models.SparseVector)
+    assert sparse_prefetch.query.indices == [1, 2]
+    assert sparse_prefetch.query.values == [0.5, 0.6]
+
+    assert dense_prefetch.using == "dense-test-encoder"
+    assert dense_prefetch.query == [0.1, 0.2, 0.3]
+
+
+@pytest.mark.parametrize("use_group_by", [True, False])
+def test_vector_search_group_by_offset_behavior(mocker, use_group_by):
+    """
+    Test that vector_search passes 'offset' to query_points when no group_by is provided,
+    and drops 'offset' and calls query_points_groups when group_by is provided.
+    """
+    mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
+    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_encoder.model_short_name.return_value = "test-encoder"
+
+    mock_group_result = mocker.MagicMock()
+    mock_group_result.groups = []
+    mock_qdrant.query_points_groups.return_value = mock_group_result
+
+    mock_search_result = mocker.MagicMock()
+    mock_search_result.points = []
+    mock_qdrant.query_points.return_value = mock_search_result
+
+    mock_qdrant.count.return_value = models.CountResult(count=0)
+
+    mocker.patch("vector_search.utils._content_file_vector_hits", return_value=[])
+
+    from vector_search.utils import CONTENT_FILES_COLLECTION_NAME, vector_search
+
+    params = {}
+    if use_group_by:
+        params["group_by"] = "resource_readable_id"
+
+    vector_search(
+        "test query",
+        params,
+        offset=15,
+        search_collection=CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    if use_group_by:
+        mock_qdrant.query_points_groups.assert_called_once()
+        mock_qdrant.query_points.assert_not_called()
+        call_args = mock_qdrant.query_points_groups.call_args.kwargs
+        assert "offset" not in call_args
+        assert call_args.get("group_by") == "resource_readable_id"
+    else:
+        mock_qdrant.query_points.assert_called_once()
+        mock_qdrant.query_points_groups.assert_not_called()
+        call_args = mock_qdrant.query_points.call_args.kwargs
+        assert call_args.get("offset") == 15
+        assert "group_by" not in call_args

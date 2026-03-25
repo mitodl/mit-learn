@@ -114,6 +114,7 @@ dependencies = [
     "opencv-python>=4.12.0.88,<5",
     "django-removals>=1.1.6,<2",
     "langchain-litellm>=0.5.1",
+    "scikit-learn>=1.8.0",
 ]
 
 [dependency-groups]
