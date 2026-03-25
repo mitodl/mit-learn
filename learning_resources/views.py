@@ -23,7 +23,6 @@ from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_nested.viewsets import NestedViewSetMixin
@@ -104,6 +103,7 @@ from learning_resources_search.serializers import (
 )
 from main.constants import VALID_HTTP_METHODS
 from main.filters import MultipleOptionsFilterBackend
+from main.pagination import LargePagination
 from main.permissions import (
     AnonymousAccessReadonlyPermission,
     is_admin_user,
@@ -130,22 +130,6 @@ def show_content_file_content(user):
 log = logging.getLogger(__name__)
 
 
-class DefaultPagination(LimitOffsetPagination):
-    """
-    Pagination class for learning_resources viewsets which gets default_limit and max_limit from settings
-    """  # noqa: E501
-
-    default_limit = 10
-    max_limit = 100
-
-
-class LargePagination(DefaultPagination):
-    """Large pagination for small resources, e.g., topics."""
-
-    default_limit = 1000
-    max_limit = 1000
-
-
 @extend_schema_view(
     list=extend_schema(
         summary="List",
@@ -162,7 +146,6 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     permission_classes = (AnonymousAccessReadonlyPermission,)
-    pagination_class = DefaultPagination
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = LearningResourceFilter
     lookup_field = "id"
@@ -507,6 +490,7 @@ class LearningPathMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = MicroLearningPathRelationshipSerializer
     permission_classes = (permissions.HasLearningPathMembershipPermissions,)
+    pagination_class = None
     http_method_names = ["get"]
 
     def get_queryset(self):
@@ -552,7 +536,6 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     parent_lookup_kwargs = {"learning_resource_id": "parent_id"}
     permission_classes = (AnonymousAccessReadonlyPermission,)
     serializer_class = LearningResourceRelationshipSerializer
-    pagination_class = DefaultPagination
     queryset = (
         LearningResourceRelationship.objects.select_related("child")
         .prefetch_related(
@@ -603,6 +586,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
     """
 
     permission_classes = (AnonymousAccessReadonlyPermission,)
+    pagination_class = None
     filter_backends = [MultipleOptionsFilterBackend]
     queryset = LearningResourceRelationship.objects.select_related("parent", "child")
     http_method_names = ["patch"]
@@ -861,7 +845,6 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
         .filter(published=True)
         .order_by("-created_on")
     )
-    pagination_class = DefaultPagination
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
     private_fields = ["content"]
@@ -912,7 +895,6 @@ class UserListViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = UserListSerializer
-    pagination_class = DefaultPagination
     permission_classes = (HasUserListPermissions,)
     http_method_names = VALID_HTTP_METHODS
     lookup_url_kwarg = "id"
@@ -974,7 +956,6 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
         "position"
     )
     serializer_class = UserListRelationshipSerializer
-    pagination_class = DefaultPagination
     permission_classes = (HasUserListItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
@@ -1020,6 +1001,7 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = MicroUserListRelationshipSerializer
     permission_classes = (IsAuthenticated,)
+    pagination_class = None
     http_method_names = ["get"]
 
     def get_queryset(self):

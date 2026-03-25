@@ -9,7 +9,6 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,17 +22,6 @@ from main.utils import cache_page_per_user, clear_views_cache
 
 from .permissions import CanEditArticle, CanViewArticle, is_article_group_user
 from .serializers import ArticleImageUploadSerializer
-
-# Create your views here.
-
-
-class DefaultPagination(LimitOffsetPagination):
-    """
-    Pagination class for learning_resources viewsets which gets default_limit and max_limit from settings
-    """  # noqa: E501
-
-    default_limit = 10
-    max_limit = 100
 
 
 @extend_schema_view(
@@ -66,7 +54,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     serializer_class = RichTextArticleSerializer
     queryset = Article.objects.all()
-    pagination_class = DefaultPagination
 
     permission_classes = [CanViewArticle, CanEditArticle]
     http_method_names = VALID_HTTP_METHODS

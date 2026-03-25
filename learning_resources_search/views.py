@@ -111,6 +111,7 @@ class UserSearchSubscriptionViewSet(mixins.ListModelMixin, viewsets.GenericViewS
 
     permission_classes = (IsAuthenticated,)
     serializer_class = PercolateQuerySerializer
+    pagination_class = None
     http_method_names = ["get", "post", "delete"]
 
     def get_queryset(self):
