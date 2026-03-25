@@ -26,12 +26,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import {
-  EnrollmentStatus,
-  getBestRun,
-  getEnrollmentStatus,
-  type AncestorProgram,
-} from "./helpers"
+import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -268,12 +263,14 @@ const useEnrollmentHandler = () => {
       courseRun,
       course,
       isB2B,
-      ancestorPrograms,
+      useVerifiedEnrollment,
+      parentProgramIds,
     }: {
       courseRun: CourseRunV2
       course: CourseWithCourseRunsSerializerV2
       isB2B?: boolean
-      ancestorPrograms?: AncestorProgram[]
+      useVerifiedEnrollment?: boolean
+      parentProgramIds?: string[]
     }) => {
       const readableId = courseRun.courseware_id
       const href = courseRun.courseware_url
@@ -304,15 +301,11 @@ const useEnrollmentHandler = () => {
             },
           )
         }
-      } else if (
-        ancestorPrograms?.some(
-          (p) => p.enrollment_mode === EnrollmentModeEnum.Verified,
-        )
-      ) {
+      } else if (useVerifiedEnrollment && parentProgramIds?.length) {
         createVerifiedProgramEnrollment.mutate(
           {
             courserun_id: readableId,
-            request_body: ancestorPrograms.map((p) => p.readable_id),
+            request_body: parentProgramIds,
           },
           {
             onSuccess: () => {
@@ -567,7 +560,8 @@ type DashboardCardProps = {
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
-  ancestorPrograms?: AncestorProgram[]
+  useVerifiedEnrollment?: boolean
+  parentProgramIds?: string[]
   onUpgradeError?: (error: string) => void
 }
 
@@ -667,7 +661,8 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   className,
   variant = "default",
   contractId,
-  ancestorPrograms,
+  useVerifiedEnrollment,
+  parentProgramIds,
   onUpgradeError,
 }) => {
   const enrollment = useEnrollmentHandler()
@@ -719,13 +714,15 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
       courseRun,
       course: resource.data,
       isB2B: !!b2bContractId,
-      ancestorPrograms,
+      useVerifiedEnrollment,
+      parentProgramIds,
     })
   }, [
     b2bContractId,
     enrollment,
     isCourse,
-    ancestorPrograms,
+    useVerifiedEnrollment,
+    parentProgramIds,
     resource,
     courseRun,
   ])

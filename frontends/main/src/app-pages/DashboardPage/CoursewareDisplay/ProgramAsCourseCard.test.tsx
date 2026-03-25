@@ -202,7 +202,7 @@ describe("ProgramAsCourseCard", () => {
     expect(rows[1]).toHaveTextContent("Module One")
   })
 
-  test("clicking 'Start Course' on an unenrolled module uses verified enrollment when an ancestor has verified mode", async () => {
+  test("clicking 'Start Course' on an unenrolled module uses verified enrollment when ancestor has verified mode", async () => {
     const run = mitxonline.factories.courses.courseRun({
       is_enrollable: true,
       courseware_url: "https://courses.example.com/run1",
@@ -212,7 +212,6 @@ describe("ProgramAsCourseCard", () => {
       programId: 305,
       includeProgramEnrollment: false,
     })
-    // Override module courses so we control the run
     const moduleOne = mitxonline.factories.courses.course({
       id: 1,
       courseruns: [run],
@@ -228,10 +227,10 @@ describe("ProgramAsCourseCard", () => {
         courseProgram={cardData.courseProgram}
         moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
         moduleEnrollmentsByCourseId={{}}
-        ancestorPrograms={[
-          { readable_id: "parent-program", enrollment_mode: "audit" },
-          { readable_id: "grandparent-program", enrollment_mode: "verified" },
-        ]}
+        ancestorProgramEnrollment={{
+          readable_id: "grandparent-program",
+          enrollment_mode: "verified",
+        }}
       />,
     )
 
@@ -245,7 +244,10 @@ describe("ProgramAsCourseCard", () => {
         expect.objectContaining({
           method: "POST",
           url: enrollmentEndpoint,
-          data: JSON.stringify(["parent-program", "grandparent-program"]),
+          data: JSON.stringify([
+            cardData.courseProgram.readable_id,
+            "grandparent-program",
+          ]),
         }),
       )
     })
@@ -271,9 +273,6 @@ describe("ProgramAsCourseCard", () => {
         courseProgram={cardData.courseProgram}
         moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
         moduleEnrollmentsByCourseId={{}}
-        ancestorPrograms={[
-          { readable_id: "parent-program", enrollment_mode: "audit" },
-        ]}
       />,
     )
 

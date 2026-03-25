@@ -7,7 +7,6 @@ import {
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
-  type AncestorProgram,
   EnrollmentStatus,
   getEnrollmentStatus,
   getKey,
@@ -247,6 +246,7 @@ const getRelativeDateContent = (
 interface ProgramAsCourseCardProps {
   courseProgram: {
     id: number
+    readable_id: string
     title?: string | null
     start_date?: string | null
     end_date?: string | null
@@ -256,7 +256,10 @@ interface ProgramAsCourseCardProps {
   moduleCourses: CourseWithCourseRunsSerializerV2[]
   moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
   courseProgramEnrollment?: V3UserProgramEnrollment
-  ancestorPrograms?: AncestorProgram[]
+  ancestorProgramEnrollment?: {
+    readable_id: string
+    enrollment_mode?: string | null
+  }
   Component?: React.ElementType
   className?: string
 }
@@ -280,7 +283,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   moduleCourses,
   moduleEnrollmentsByCourseId,
   courseProgramEnrollment,
-  ancestorPrograms,
+  ancestorProgramEnrollment,
   Component,
   className,
 }) => {
@@ -341,6 +344,16 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     endDatePopoverString,
   )
   const showDatePopoverTrigger = Boolean(datePopoverContent)
+
+  const parentProgramIds = [
+    courseProgram.readable_id,
+    ...(ancestorProgramEnrollment
+      ? [ancestorProgramEnrollment.readable_id]
+      : []),
+  ]
+  const useVerifiedEnrollment =
+    courseProgramEnrollment?.enrollment_mode === "verified" ||
+    ancestorProgramEnrollment?.enrollment_mode === "verified"
 
   return (
     <ProgramCardRoot
@@ -423,7 +436,8 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: bestEnrollment?.run.id,
               })}
               resource={resource}
-              ancestorPrograms={ancestorPrograms}
+              useVerifiedEnrollment={useVerifiedEnrollment}
+              parentProgramIds={parentProgramIds}
               variant="stacked"
             />
           )

@@ -15,7 +15,6 @@ import {
 import { Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import {
-  type AncestorProgram,
   EnrollmentStatus,
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
@@ -181,6 +180,7 @@ const isProgramAsCourseEnrollment = (
 
 type ProgramAsCourseProgramData = {
   id: number
+  readable_id: string
   title?: string | null
   start_date?: string | null
   end_date?: string | null
@@ -249,12 +249,6 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
           }
           moduleEnrollmentsByCourseId={enrollmentsByCourseId}
           courseProgramEnrollment={resource.data}
-          ancestorPrograms={[
-            {
-              readable_id: resource.data.program.readable_id,
-              enrollment_mode: resource.data.enrollment_mode,
-            },
-          ]}
         />
       )
     }
@@ -663,22 +657,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 }
 
                 if (item.resourceType === "program-as-course") {
-                  const ancestors: AncestorProgram[] = []
-                  if (item.courseProgramEnrollment) {
-                    ancestors.push({
-                      readable_id:
-                        item.courseProgramEnrollment.program.readable_id,
-                      enrollment_mode:
-                        item.courseProgramEnrollment.enrollment_mode,
-                    })
-                  }
-                  if (programEnrollment) {
-                    ancestors.push({
-                      readable_id: programEnrollment.program.readable_id,
-                      enrollment_mode: programEnrollment.enrollment_mode,
-                    })
-                  }
-
                   return (
                     <ProgramAsCourseCard
                       key={getKey({
@@ -693,7 +671,16 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       }
                       moduleEnrollmentsByCourseId={enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
-                      ancestorPrograms={ancestors}
+                      ancestorProgramEnrollment={
+                        programEnrollment
+                          ? {
+                              readable_id:
+                                programEnrollment.program.readable_id,
+                              enrollment_mode:
+                                programEnrollment.enrollment_mode,
+                            }
+                          : undefined
+                      }
                     />
                   )
                 }
