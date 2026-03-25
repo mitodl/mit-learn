@@ -14,6 +14,7 @@ import { mockAxiosInstance } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { setupEnrollments } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
+import invariant from "tiny-invariant"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -1306,9 +1307,9 @@ describe("EnrollmentDisplay", () => {
 
       const cards = screen.getAllByTestId("enrollment-card-desktop")
       const card = cards.find((c) => within(c).queryByText("Clickable Course"))
-      expect(card).toBeDefined()
+      invariant(card, "Expected to find a card containing 'Clickable Course'")
 
-      const startButton = within(card!).getByTestId("courseware-button")
+      const startButton = within(card).getByTestId("courseware-button")
       await user.click(startButton)
 
       // Should open CourseEnrollmentDialog
@@ -1429,81 +1430,157 @@ describe("EnrollmentDisplay", () => {
       expect(screen.queryByText("Requirements")).not.toBeInTheDocument()
     })
 
-    test("Clicking 'Start Course' in verified program does one-click enrollment", async () => {
+    /**
+     * Sets up a verified program dashboard scenario with:
+     * - A parent program with a verified enrollment
+     * - A direct child course (regular requirement)
+     * - A child program-as-course with its own module course
+     *
+     * Mocks all API responses. Does not render — callers handle rendering
+     * and assertions.
+     */
+    const setupProgramDashboardVerifiedEnrollmentScenario = () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
-      const reqTree =
-        new mitxonline.factories.requirements.RequirementTreeBuilder()
-      const requirements = reqTree.addOperator({
-        operator: "all_of",
-        title: "Program Requirements",
-      })
-      requirements.addCourse({ course: 1 })
-
-      const program = mitxonline.factories.programs.program({
-        id: 888,
-        courses: [1],
-        req_tree: reqTree.serialize(),
-      })
-
-      const run = mitxonline.factories.courses.courseRun({
+      // Child course (direct requirement of the parent program)
+      const childCourseRun = mitxonline.factories.courses.courseRun({
         b2b_contract: null,
         is_enrollable: true,
         courseware_url: faker.internet.url(),
       })
+      const childCourse = mitxonline.factories.courses.course({
+        courseruns: [childCourseRun],
+        next_run_id: childCourseRun.id,
+      })
 
-      const courses = {
-        count: 1,
-        next: null,
-        previous: null,
-        results: [
-          mitxonline.factories.courses.course({
-            id: 1,
-            title: "Test Course",
-            courseruns: [run],
-            next_run_id: run.id,
-          }),
-        ],
-      }
+      // Module course (child of the program-as-course)
+      const moduleRun = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_url: faker.internet.url(),
+      })
+      const moduleCourse = mitxonline.factories.courses.course({
+        courseruns: [moduleRun],
+        next_run_id: moduleRun.id,
+      })
 
-      const programEnrollment =
+      // Program-as-course (child requirement of the parent program)
+      const programAsCourseReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const moduleSection = programAsCourseReqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      moduleSection.addCourse({ course: moduleCourse.id })
+
+      const programAsCourse = mitxonline.factories.programs.program({
+        display_mode: "course",
+        courses: [moduleCourse.id],
+        req_tree: programAsCourseReqTree.serialize(),
+      })
+
+      // Parent program with both a course and a program-as-course
+      const parentReqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const parentRequirements = parentReqTree.addOperator({
+        operator: "all_of",
+        title: "Program Requirements",
+      })
+      parentRequirements.addCourse({ course: childCourse.id })
+      parentRequirements.addProgram({ program: programAsCourse.id })
+
+      const parentProgram = mitxonline.factories.programs.program({
+        courses: [childCourse.id],
+        req_tree: parentReqTree.serialize(),
+      })
+
+      const parentProgramEnrollment =
         mitxonline.factories.enrollment.programEnrollmentV3({
-          enrollment_mode: "verified", // Verified program enrollment
+          enrollment_mode: "verified",
           program: {
-            id: program.id,
-            title: program.title,
-            live: program.live,
-            program_type: program.program_type,
-            readable_id: program.readable_id,
+            id: parentProgram.id,
+            title: parentProgram.title,
+            live: parentProgram.live,
+            program_type: parentProgram.program_type,
+            readable_id: parentProgram.readable_id,
           },
         })
 
       mockedUseFeatureFlagEnabled.mockReturnValue(true)
-      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), []) // No course enrollments yet
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
       setMockResponse.get(
         mitxonline.urls.programEnrollments.enrollmentsListV3(),
-        [programEnrollment],
+        [parentProgramEnrollment],
       )
-      setMockResponse.get(mitxonline.urls.programs.programDetail(888), program)
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(parentProgram.id),
+        parentProgram,
+      )
       setMockResponse.get(
         mitxonline.urls.courses.coursesList({
-          id: program.courses,
-          page_size: program.courses.length,
+          id: parentProgram.courses,
+          page_size: parentProgram.courses.length,
         }),
-        courses,
+        { count: 1, next: null, previous: null, results: [childCourse] },
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programsList({
+          id: [programAsCourse.id],
+          page_size: 1,
+        }),
+        {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [programAsCourse],
+        },
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: [moduleCourse.id],
+          page_size: 1,
+        }),
+        { count: 1, next: null, previous: null, results: [moduleCourse] },
       )
 
-      // Mock the enrollment endpoint
-      const programEnrollmentEndpoint =
-        mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
-      setMockResponse.post(programEnrollmentEndpoint, {})
+      // Mock verified enrollment endpoints for both course runs
+      const childCourseEnrollmentEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(
+          childCourseRun.courseware_id,
+        )
+      setMockResponse.post(childCourseEnrollmentEndpoint, {})
 
-      renderWithProviders(<EnrollmentDisplay programId={888} />)
+      const moduleCourseEnrollmentEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(
+          moduleRun.courseware_id,
+        )
+      setMockResponse.post(moduleCourseEnrollmentEndpoint, {})
+
+      return {
+        parentProgram,
+        parentProgramEnrollment,
+        childCourse,
+        childCourseRun,
+        childCourseEnrollmentEndpoint,
+        programAsCourse,
+        moduleCourse,
+        moduleRun,
+        moduleCourseEnrollmentEndpoint,
+      }
+    }
+
+    test("Clicking 'Start Course' on a regular course in a verified program does one-click enrollment", async () => {
+      const {
+        parentProgram,
+        parentProgramEnrollment,
+        childCourse,
+        childCourseEnrollmentEndpoint,
+      } = setupProgramDashboardVerifiedEnrollmentScenario()
+
+      renderWithProviders(<EnrollmentDisplay programId={parentProgram.id} />)
 
       await screen.findByText("Program Requirements")
-
-      // Wait for the card to load
       await waitFor(
         () => {
           const skeletons = screen.queryAllByTestId("skeleton")
@@ -1512,25 +1589,72 @@ describe("EnrollmentDisplay", () => {
         { timeout: 3000 },
       )
 
-      // Find the card and click the button
       const cards = screen.getAllByTestId("enrollment-card-desktop")
-      const card = cards.find((c) => within(c).queryByText("Test Course"))
-      expect(card).toBeDefined()
+      const card = cards.find((c) => within(c).queryByText(childCourse.title))
+      invariant(
+        card,
+        `Expected to find a card containing "${childCourse.title}"`,
+      )
 
-      const startButton = within(card!).getByTestId("courseware-button")
+      const startButton = within(card).getByTestId("courseware-button")
       await user.click(startButton)
 
-      // Should call enrollment endpoint (not open dialog)
       await waitFor(() => {
         expect(mockAxiosInstance.request).toHaveBeenCalledWith(
           expect.objectContaining({
             method: "POST",
-            url: programEnrollmentEndpoint,
+            url: childCourseEnrollmentEndpoint,
+            data: JSON.stringify([parentProgramEnrollment.program.readable_id]),
           }),
         )
       })
 
-      // Dialog should NOT appear
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    test("Clicking 'Start Course' on a module in a program-as-course sends both parent and grandparent program IDs", async () => {
+      const {
+        parentProgram,
+        parentProgramEnrollment,
+        programAsCourse,
+        moduleCourse,
+        moduleCourseEnrollmentEndpoint,
+      } = setupProgramDashboardVerifiedEnrollmentScenario()
+
+      renderWithProviders(<EnrollmentDisplay programId={parentProgram.id} />)
+
+      await screen.findByText("Program Requirements")
+      await waitFor(
+        () => {
+          const skeletons = screen.queryAllByTestId("skeleton")
+          expect(skeletons).toHaveLength(0)
+        },
+        { timeout: 3000 },
+      )
+
+      const cards = screen.getAllByTestId("enrollment-card-desktop")
+      const card = cards.find((c) => within(c).queryByText(moduleCourse.title))
+      invariant(
+        card,
+        `Expected to find a card containing "${moduleCourse.title}"`,
+      )
+
+      const startButton = within(card).getByTestId("courseware-button")
+      await user.click(startButton)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "POST",
+            url: moduleCourseEnrollmentEndpoint,
+            data: JSON.stringify([
+              programAsCourse.readable_id,
+              parentProgramEnrollment.program.readable_id,
+            ]),
+          }),
+        )
+      })
+
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 

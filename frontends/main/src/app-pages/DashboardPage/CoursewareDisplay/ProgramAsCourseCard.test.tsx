@@ -11,6 +11,7 @@ import { mockAxiosInstance } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
+import invariant from "tiny-invariant"
 import moment from "moment"
 
 describe("ProgramAsCourseCard", () => {
@@ -60,7 +61,6 @@ describe("ProgramAsCourseCard", () => {
         ...moduleOne.courseruns[0],
         course: moduleOne,
       },
-      grades: [],
       certificate: null,
     })
 
@@ -203,7 +203,11 @@ describe("ProgramAsCourseCard", () => {
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
-    const startButton = within(card!).getByTestId("courseware-button")
+    invariant(
+      card,
+      `Expected to find a card containing "${moduleWithRun.title}"`,
+    )
+    const startButton = within(card).getByTestId("courseware-button")
     await user.click(startButton)
 
     await waitFor(() => {
@@ -243,7 +247,11 @@ describe("ProgramAsCourseCard", () => {
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
     const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
-    const startButton = within(card!).getByTestId("courseware-button")
+    invariant(
+      card,
+      `Expected to find a card containing "${moduleWithRun.title}"`,
+    )
+    const startButton = within(card).getByTestId("courseware-button")
     await user.click(startButton)
 
     await screen.findByRole("dialog", { name: moduleWithRun.title })
