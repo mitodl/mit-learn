@@ -280,7 +280,7 @@ interface ProgramAsCourseCardProps {
    *  - Courselike Program P1a
    *    - Child Course C1, etc...
    *
-   * Initially, a user will have a verified enrollment in P1 but NOT P2.
+   * Initially, a user will have a verified enrollment in P1 but NOT P1a.
    * We pass P1's enrollment as an ancestorProgramEnrollment. This allows us to
    * request a verified enrollment in both C1 and P1a.
    */
