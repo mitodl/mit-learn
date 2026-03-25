@@ -34,7 +34,10 @@ import {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
-import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import {
+  mitxonlineLegacyUrl,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
@@ -44,12 +47,6 @@ import {
   CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-
-const EnrollmentMode = {
-  Audit: "audit",
-  Verified: "verified",
-} as const
-type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
 export const DashboardType = {
   Course: "course",
@@ -688,15 +685,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   const canUpgrade =
     isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    !isVerifiedEnrollmentMode(resource.data.enrollment_mode) &&
     (enrollmentRun?.is_upgradable ?? false) &&
     (enrollmentRun?.upgrade_product_is_active ?? false)
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
     if (isCourse) {
-      const isVerifiedProgramEnrollment =
-        programEnrollment?.enrollment_mode === EnrollmentMode.Verified
+      const isVerifiedProgramEnrollment = isVerifiedEnrollmentMode(
+        programEnrollment?.enrollment_mode,
+      )
 
       enrollment.enroll({
         course: resource.data,
@@ -770,7 +768,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         </SubtitleLink>
       ) : null}
       {isCourseRunEnrollment &&
-      resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+      !isVerifiedEnrollmentMode(resource.data.enrollment_mode) &&
       offerUpgrade ? (
         <UpgradeBanner
           data-testid="upgrade-root"
