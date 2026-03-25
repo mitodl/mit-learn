@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.59.4 (Released March 25, 2026)
+--------------
+
+- fix: address design updates (#3098)
+- Revert "Fix performance issue for LR view count (#3091)" (#3095)
+
 Version 0.59.3 (Released March 24, 2026)
 --------------
 
