@@ -315,7 +315,7 @@ class ComputedResourceTypeGroupField(ResourceTypeGroupChoiceField):
 
     def __init__(self, **kwargs):
         kwargs.setdefault("read_only", True)
-        kwargs.setdefault("source", "*")
+        kwargs.setdefault("source", "*")  # Pass all instance fields to the serializer
         super().__init__(**kwargs)
 
     def to_representation(self, instance):
