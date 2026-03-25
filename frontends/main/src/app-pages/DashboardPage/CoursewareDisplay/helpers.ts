@@ -1,6 +1,7 @@
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  EnrollmentModeEnum,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "@/common/mitxonline"
@@ -103,7 +104,7 @@ const getProgramEnrollmentStatus = (
 
 type AncestorProgram = {
   readable_id: string
-  enrollment_mode?: string | null
+  enrollment_mode?: EnrollmentModeEnum | null
 }
 
 export {

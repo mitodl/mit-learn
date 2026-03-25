@@ -36,14 +36,9 @@ import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
   CourseRunV2,
+  EnrollmentModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-
-const EnrollmentMode = {
-  Audit: "audit",
-  Verified: "verified",
-} as const
-type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
 export const DashboardType = {
   Course: "course",
@@ -311,7 +306,7 @@ const useEnrollmentHandler = () => {
         }
       } else if (
         ancestorPrograms?.some(
-          (p) => p.enrollment_mode === EnrollmentMode.Verified,
+          (p) => p.enrollment_mode === EnrollmentModeEnum.Verified,
         )
       ) {
         createVerifiedProgramEnrollment.mutate(
@@ -709,7 +704,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
 
   const canUpgrade =
     isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    resource.data.enrollment_mode !== EnrollmentModeEnum.Verified &&
     (enrollmentRun?.is_upgradable ?? false) &&
     (enrollmentRun?.upgrade_product_is_active ?? false)
 
@@ -774,7 +769,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
 
   const showUpgradeLink =
     isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentMode.Verified &&
+    resource.data.enrollment_mode !== EnrollmentModeEnum.Verified &&
     offerUpgrade
   const showCertificateSection = certificateLink || showUpgradeLink
   const startDate = courseRun?.start_date ?? enrollmentRun?.start_date
