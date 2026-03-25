@@ -274,7 +274,7 @@ interface ProgramAsCourseCardProps {
    *
    * This facilitates verified enrollments. For example:
    * - Ancestor Program P1
-   *  - Courslike Program P1a
+   *  - Courselike Program P1a
    *    - Child Course C1, etc...
    *
    * Initially, a user will have a verified enrollment in P1 but NOT P2.
