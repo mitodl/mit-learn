@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.59.5
+--------------
+
+- Fix verified enrollment for program-as-course hierarchy (#3100)
+- fix(deps): update dependency cairosvg to v2.9.0 [security] (#3052)
+- hide mitxonline logo and offered by (#3097)
+- Upgrade Qdrant (#3087)
+- feat: add ProgramBundleUpsell to ProgramAsCoursePage (#3092)
+- update the client again! (#3094)
+
 Version 0.59.4 (Released March 25, 2026)
 --------------
 
