@@ -239,21 +239,9 @@ describe("EnrollmentDisplay", () => {
 
     const courseEnrollment = mitxonline.factories.enrollment.courseEnrollment({
       b2b_contract_id: null,
-      run: {
-        ...mitxonline.factories.enrollment.courseEnrollment().run,
-        course: {
-          ...mitxonline.factories.enrollment.courseEnrollment().run.course,
-          title: "My Test Course",
-        },
-      },
     })
     const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          ...mitxonline.factories.programs.simpleProgram(),
-          title: "My Test Program",
-        },
-      })
+      mitxonline.factories.enrollment.programEnrollmentV3()
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
@@ -271,11 +259,11 @@ describe("EnrollmentDisplay", () => {
 
     // Course title appears in desktop + mobile cards
     expect(
-      (await screen.findAllByText("My Test Course")).length,
+      (await screen.findAllByText(courseEnrollment.run.course.title)).length,
     ).toBeGreaterThan(0)
     // Program title appears in desktop + mobile cards
     expect(
-      (await screen.findAllByText("My Test Program")).length,
+      (await screen.findAllByText(programEnrollment.program.title)).length,
     ).toBeGreaterThan(0)
   })
 
