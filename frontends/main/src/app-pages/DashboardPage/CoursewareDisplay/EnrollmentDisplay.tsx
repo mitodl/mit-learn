@@ -33,6 +33,7 @@ import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
+  V2ProgramDetail,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { contractQueries } from "api/mitxonline-hooks/contracts"
@@ -147,6 +148,17 @@ const sortEnrollments = (enrollments: CourseRunEnrollmentV3[]) => {
     started: started.sort(alphabeticalSort),
     notStarted: notStarted.sort(startsSooner),
   }
+}
+
+const dedupeEnrollments = (
+  enrollments: CourseRunEnrollmentV3[],
+  enrolledPrograms: V2ProgramDetail[],
+) => {
+  return enrollments.filter((enrollment) => {
+    return !enrolledPrograms.some((program) =>
+      program.courses?.includes(enrollment.run.course.id),
+    )
+  })
 }
 
 const getResourceKey = (resource: DashboardResource): string => {
@@ -738,26 +750,25 @@ const AllEnrollmentsDisplay: React.FC = () => {
         contract.programs.includes(enrollment.program.id),
       )
     }) ?? []
+  const enrolledProgramIds =
+    filteredProgramEnrollments?.map((enrollment) => enrollment.program.id) ?? []
 
-  const programAsCourseProgramIds = filteredProgramEnrollments
-    .filter(
-      (enrollment) =>
-        enrollment.program.display_mode === DisplayModeEnum.Course,
-    )
-    .map((enrollment) => enrollment.program.id)
-
-  const { data: homeCoursePrograms, isLoading: homeCourseProgramsLoading } =
+  const { data: enrolledPrograms, isLoading: enrolledProgramsLoading } =
     useQuery({
       ...programsQueries.programsList({
-        id: programAsCourseProgramIds,
-        page_size: programAsCourseProgramIds.length || undefined,
+        id: enrolledProgramIds,
+        page_size: enrolledProgramIds.length || undefined,
       }),
-      enabled: programAsCourseProgramIds.length > 0,
+      enabled: enrolledProgramIds.length > 0,
     })
+
+  const homeCoursePrograms = enrolledPrograms?.results.filter(
+    (program) => program.display_mode === DisplayModeEnum.Course,
+  )
 
   const homeCourseProgramModuleIds = [
     ...new Set(
-      homeCoursePrograms?.results.flatMap(
+      homeCoursePrograms?.flatMap(
         (courseProgram) => getIdsFromReqTree(courseProgram.req_tree).courseIds,
       ),
     ),
@@ -777,18 +788,18 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const homeCourseProgramsById = React.useMemo(
     () =>
       new Map(
-        (homeCoursePrograms?.results ?? []).map((courseProgram) => [
+        (homeCoursePrograms ?? []).map((courseProgram) => [
           courseProgram.id,
           courseProgram,
         ]),
       ),
-    [homeCoursePrograms?.results],
+    [homeCoursePrograms],
   )
 
   const homeModuleCoursesByProgramId = React.useMemo(() => {
     const allCourses = homeCourseProgramModuleCourses?.results ?? []
 
-    return (homeCoursePrograms?.results ?? []).reduce<
+    return (homeCoursePrograms ?? []).reduce<
       Record<number, CourseWithCourseRunsSerializerV2[]>
     >((acc, courseProgram) => {
       const courseIds = new Set(courseProgram.courses ?? [])
@@ -797,7 +808,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
       )
       return acc
     }, {})
-  }, [homeCoursePrograms?.results, homeCourseProgramModuleCourses?.results])
+  }, [homeCoursePrograms, homeCourseProgramModuleCourses?.results])
 
   const homeEnrollmentsByCourseId = (enrolledCourses || []).reduce(
     (acc, enrollment) => {
@@ -813,9 +824,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
 
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
-  const { completed, expired, started, notStarted } = sortEnrollments(
-    enrolledCourses || [],
-  )
+  const filteredEnrollments = React.useMemo(() => {
+    if (!enrolledCourses) return []
+    return dedupeEnrollments(enrolledCourses, enrolledPrograms?.results ?? [])
+  }, [enrolledCourses, enrolledPrograms?.results])
+  const { completed, expired, started, notStarted } =
+    sortEnrollments(filteredEnrollments)
 
   const normallyShown: DashboardResource[] = [
     ...started.map((data) => ({
@@ -866,7 +880,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
           courseEnrollmentsLoading ||
           programEnrollmentsLoading ||
           contractsLoading ||
-          homeCourseProgramsLoading ||
+          enrolledProgramsLoading ||
           homeCourseProgramModuleCoursesLoading
         }
         enrollmentsByCourseId={homeEnrollmentsByCourseId}
