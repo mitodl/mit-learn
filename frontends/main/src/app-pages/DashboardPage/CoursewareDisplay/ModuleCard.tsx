@@ -30,7 +30,6 @@ import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
-  V3UserProgramEnrollment,
   CourseRunV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
@@ -50,6 +49,11 @@ export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 export type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
+
+export type AncestorProgram = {
+  readable_id: string
+  enrollment_mode?: string | null
+}
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.
@@ -266,28 +270,26 @@ const useEnrollmentHandler = () => {
 
   const enroll = React.useCallback(
     ({
+      courseRun,
       course,
-      readableId,
-      href,
       isB2B,
-      isVerifiedProgram,
-      programCoursewareId,
+      ancestorPrograms,
     }: {
+      courseRun: CourseRunV2
       course: CourseWithCourseRunsSerializerV2
-      readableId?: string
-      href?: string
       isB2B?: boolean
-      isVerifiedProgram?: boolean
-      programCoursewareId?: string
+      ancestorPrograms?: AncestorProgram[]
     }) => {
+      const readableId = courseRun.courseware_id
+      const href = courseRun.courseware_url
+      if (!readableId || !href) {
+        console.warn("Cannot enroll: missing required data", {
+          readableId,
+          href,
+        })
+        return
+      }
       if (isB2B) {
-        if (!readableId || !href) {
-          console.warn("Cannot enroll in B2B course: missing required data", {
-            readableId,
-            href,
-          })
-          return
-        }
         const userCountry = mitxOnlineUser.data?.legal_address?.country
         const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
         const showJustInTimeDialog = !userCountry || !userYearOfBirth
@@ -307,16 +309,16 @@ const useEnrollmentHandler = () => {
             },
           )
         }
-      } else if (isVerifiedProgram && programCoursewareId && readableId) {
-        if (!href) {
-          console.warn(
-            "Cannot enroll in verified program course: missing href",
-            { href },
-          )
-          return
-        }
+      } else if (
+        ancestorPrograms?.some(
+          (p) => p.enrollment_mode === EnrollmentMode.Verified,
+        )
+      ) {
         createVerifiedProgramEnrollment.mutate(
-          { courserun_id: readableId, program_id: programCoursewareId },
+          {
+            courserun_id: readableId,
+            request_body: ancestorPrograms.map((p) => p.readable_id),
+          },
           {
             onSuccess: () => {
               window.location.href = href
@@ -570,7 +572,7 @@ type DashboardCardProps = {
   className?: string
   variant?: "default" | "stacked"
   contractId?: number
-  programEnrollment?: V3UserProgramEnrollment
+  ancestorPrograms?: AncestorProgram[]
   onUpgradeError?: (error: string) => void
 }
 
@@ -670,7 +672,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   className,
   variant = "default",
   contractId,
-  programEnrollment,
+  ancestorPrograms,
   onUpgradeError,
 }) => {
   const enrollment = useEnrollmentHandler()
@@ -705,12 +707,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
 
   const disableEnrollment = isCourse && !hasEnrollableRuns
 
-  const readableId = isCourse
-    ? courseRun?.courseware_id
-    : isCourseRunEnrollment
-      ? resource.data.run.courseware_id
-      : undefined
-
   const canUpgrade =
     isCourseRunEnrollment &&
     resource.data.enrollment_mode !== EnrollmentMode.Verified &&
@@ -722,31 +718,21 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   const upgradeProductId = enrollmentRun?.upgrade_product_id
 
   const handleEnrollmentClick = React.useCallback(() => {
-    if (!isCourse) return
-
-    const isVerifiedProgramEnrollment =
-      programEnrollment?.enrollment_mode === EnrollmentMode.Verified
+    if (!isCourse || !courseRun) return
 
     enrollment.enroll({
+      courseRun,
       course: resource.data,
-      readableId,
-      href: buttonHref ?? coursewareUrl ?? undefined,
       isB2B: !!b2bContractId,
-      isVerifiedProgram: isVerifiedProgramEnrollment,
-      programCoursewareId: isVerifiedProgramEnrollment
-        ? programEnrollment?.program.readable_id
-        : undefined,
+      ancestorPrograms,
     })
   }, [
     b2bContractId,
-    buttonHref,
-    coursewareUrl,
     enrollment,
     isCourse,
-    programEnrollment?.enrollment_mode,
-    programEnrollment?.program.readable_id,
-    readableId,
+    ancestorPrograms,
     resource,
+    courseRun,
   ])
 
   const titleHref = isCourseRunEnrollment ? (buttonHref ?? coursewareUrl) : null

@@ -5,9 +5,12 @@ import {
   setMockResponse,
   setupLocationMock,
   user,
+  within,
 } from "@/test-utils"
+import { mockAxiosInstance } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
+import { waitFor } from "@testing-library/react"
 import moment from "moment"
 
 describe("ProgramAsCourseCard", () => {
@@ -197,5 +200,88 @@ describe("ProgramAsCourseCard", () => {
     const rows = await screen.findAllByTestId("enrollment-card-desktop")
     expect(rows[0]).toHaveTextContent("Module Two")
     expect(rows[1]).toHaveTextContent("Module One")
+  })
+
+  test("clicking 'Start Course' on an unenrolled module uses verified enrollment when an ancestor has verified mode", async () => {
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      courseware_url: "https://courses.example.com/run1",
+    })
+
+    const cardData = setupCardData({
+      programId: 305,
+      includeProgramEnrollment: false,
+    })
+    // Override module courses so we control the run
+    const moduleOne = mitxonline.factories.courses.course({
+      id: 1,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+
+    const enrollmentEndpoint =
+      mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
+    setMockResponse.post(enrollmentEndpoint, {})
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
+        moduleEnrollmentsByCourseId={{}}
+        ancestorPrograms={[
+          { readable_id: "parent-program", enrollment_mode: "audit" },
+          { readable_id: "grandparent-program", enrollment_mode: "verified" },
+        ]}
+      />,
+    )
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find((c) => within(c).queryByText(moduleOne.title))
+    const startButton = within(card!).getByTestId("courseware-button")
+    await user.click(startButton)
+
+    await waitFor(() => {
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: enrollmentEndpoint,
+          data: JSON.stringify(["parent-program", "grandparent-program"]),
+        }),
+      )
+    })
+  })
+
+  test("clicking 'Start Course' on an unenrolled module opens enrollment dialog when no ancestor is verified", async () => {
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+    })
+
+    const cardData = setupCardData({
+      programId: 306,
+      includeProgramEnrollment: false,
+    })
+    const moduleOne = mitxonline.factories.courses.course({
+      id: 1,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
+        moduleEnrollmentsByCourseId={{}}
+        ancestorPrograms={[
+          { readable_id: "parent-program", enrollment_mode: "audit" },
+        ]}
+      />,
+    )
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find((c) => within(c).queryByText(moduleOne.title))
+    const startButton = within(card!).getByTestId("courseware-button")
+    await user.click(startButton)
+
+    await screen.findByRole("dialog", { name: moduleOne.title })
   })
 })

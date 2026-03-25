@@ -6,6 +6,7 @@ import {
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { AncestorProgram } from "./ModuleCard"
 import {
   EnrollmentStatus,
   getEnrollmentStatus,
@@ -255,6 +256,7 @@ interface ProgramAsCourseCardProps {
   moduleCourses: CourseWithCourseRunsSerializerV2[]
   moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
   courseProgramEnrollment?: V3UserProgramEnrollment
+  ancestorPrograms?: AncestorProgram[]
   Component?: React.ElementType
   className?: string
 }
@@ -278,6 +280,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   moduleCourses,
   moduleEnrollmentsByCourseId,
   courseProgramEnrollment,
+  ancestorPrograms,
   Component,
   className,
 }) => {
@@ -420,7 +423,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: bestEnrollment?.run.id,
               })}
               resource={resource}
-              programEnrollment={courseProgramEnrollment}
+              ancestorPrograms={ancestorPrograms}
               variant="stacked"
             />
           )
