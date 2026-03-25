@@ -16,44 +16,43 @@ import moment from "moment"
 describe("ProgramAsCourseCard", () => {
   setupLocationMock()
 
+  /**
+   * Creates a ProgramAsCourseCard data set with:
+   * - A program with two module courses linked via req_tree
+   * - An enrollment in the first module (no grades, no certificate)
+   * - Optionally, a program enrollment for the courselike program
+   * - Mock response for the user endpoint
+   */
   const setupCardData = ({
-    programId,
-    includeProgramEnrollment,
+    includeProgramEnrollment = false,
     startDate,
     endDate,
   }: {
-    programId: number
-    includeProgramEnrollment: boolean
+    includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
-  }) => {
+  } = {}) => {
+    const moduleOne = mitxonline.factories.courses.course({
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+    const moduleTwo = mitxonline.factories.courses.course({
+      courseruns: [mitxonline.factories.courses.courseRun()],
+    })
+
     const reqTree =
       new mitxonline.factories.requirements.RequirementTreeBuilder()
     const modules = reqTree.addOperator({
       operator: "all_of",
       title: "Modules",
     })
-    modules.addCourse({ course: 1 })
-    modules.addCourse({ course: 2 })
+    modules.addCourse({ course: moduleOne.id })
+    modules.addCourse({ course: moduleTwo.id })
 
     const program = mitxonline.factories.programs.program({
-      id: programId,
-      title: "Micro Program",
-      courses: [1, 2],
+      courses: [moduleOne.id, moduleTwo.id],
       req_tree: reqTree.serialize(),
       start_date: startDate ?? null,
       end_date: endDate ?? null,
-    })
-
-    const moduleOne = mitxonline.factories.courses.course({
-      id: 1,
-      title: "Module One",
-      courseruns: [mitxonline.factories.courses.courseRun()],
-    })
-    const moduleTwo = mitxonline.factories.courses.course({
-      id: 2,
-      title: "Module Two",
-      courseruns: [mitxonline.factories.courses.courseRun()],
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -93,10 +92,7 @@ describe("ProgramAsCourseCard", () => {
   }
 
   test("renders modules and progress summary", async () => {
-    const cardData = setupCardData({
-      programId: 301,
-      includeProgramEnrollment: true,
-    })
+    const cardData = setupCardData({ includeProgramEnrollment: true })
 
     renderWithProviders(
       <ProgramAsCourseCard
@@ -107,17 +103,18 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText("Micro Program")
+    await screen.findByText(cardData.courseProgram.title)
     expect(screen.getByText("2 Modules (0 of 2 complete)")).toBeInTheDocument()
-    expect(screen.getAllByText("Module One").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Module Two").length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(cardData.moduleCourses[0].title).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(cardData.moduleCourses[1].title).length,
+    ).toBeGreaterThan(0)
   })
 
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {
-    const cardData = setupCardData({
-      programId: 302,
-      includeProgramEnrollment: false,
-    })
+    const cardData = setupCardData()
 
     renderWithProviders(
       <ProgramAsCourseCard
@@ -128,13 +125,12 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText("Micro Program")
+    await screen.findByText(cardData.courseProgram.title)
     expect(screen.getByText("Not Started")).toBeInTheDocument()
   })
 
   test("shows date popover content when date summary is clicked", async () => {
     const cardData = setupCardData({
-      programId: 303,
       includeProgramEnrollment: true,
       startDate: moment().subtract(5, "days").toISOString(),
       endDate: moment().add(5, "days").toISOString(),
@@ -156,37 +152,23 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("renders module rows in req_tree order, not API result order", async () => {
+    const cardData = setupCardData()
+    const [moduleOne, moduleTwo] = cardData.moduleCourses
+
+    // Override req_tree to reverse the order: moduleTwo first, then moduleOne
     const reqTree =
       new mitxonline.factories.requirements.RequirementTreeBuilder()
     const modules = reqTree.addOperator({
       operator: "all_of",
       title: "Modules",
     })
-    modules.addCourse({ course: 2 })
-    modules.addCourse({ course: 1 })
+    modules.addCourse({ course: moduleTwo.id })
+    modules.addCourse({ course: moduleOne.id })
 
-    const moduleOne = mitxonline.factories.courses.course({
-      id: 1,
-      title: "Module One",
-      courseruns: [mitxonline.factories.courses.courseRun()],
-    })
-    const moduleTwo = mitxonline.factories.courses.course({
-      id: 2,
-      title: "Module Two",
-      courseruns: [mitxonline.factories.courses.courseRun()],
-    })
-
-    const courseProgram = mitxonline.factories.programs.program({
-      id: 304,
-      title: "Micro Program",
-      courses: [1, 2],
+    const courseProgram = {
+      ...cardData.courseProgram,
       req_tree: reqTree.serialize(),
-    })
-
-    setMockResponse.get(
-      mitxonline.urls.userMe.get(),
-      mitxonline.factories.user.user(),
-    )
+    }
 
     renderWithProviders(
       <ProgramAsCourseCard
@@ -196,24 +178,23 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText("Micro Program")
+    await screen.findByText(courseProgram.title)
     const rows = await screen.findAllByTestId("enrollment-card-desktop")
-    expect(rows[0]).toHaveTextContent("Module Two")
-    expect(rows[1]).toHaveTextContent("Module One")
+    expect(rows[0]).toHaveTextContent(moduleTwo.title)
+    expect(rows[1]).toHaveTextContent(moduleOne.title)
   })
 
   test("clicking 'Start Course' on an unenrolled module uses verified enrollment when ancestor has verified mode", async () => {
+    const cardData = setupCardData()
+    const [moduleOne] = cardData.moduleCourses
+
+    // Create a run we control for the first module
     const run = mitxonline.factories.courses.courseRun({
       is_enrollable: true,
       courseware_url: "https://courses.example.com/run1",
     })
-
-    const cardData = setupCardData({
-      programId: 305,
-      includeProgramEnrollment: false,
-    })
-    const moduleOne = mitxonline.factories.courses.course({
-      id: 1,
+    const moduleWithRun = mitxonline.factories.courses.course({
+      id: moduleOne.id,
       courseruns: [run],
       next_run_id: run.id,
     })
@@ -225,7 +206,7 @@ describe("ProgramAsCourseCard", () => {
     renderWithProviders(
       <ProgramAsCourseCard
         courseProgram={cardData.courseProgram}
-        moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
+        moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
         moduleEnrollmentsByCourseId={{}}
         ancestorProgramEnrollment={{
           readable_id: "grandparent-program",
@@ -235,7 +216,7 @@ describe("ProgramAsCourseCard", () => {
     )
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
-    const card = cards.find((c) => within(c).queryByText(moduleOne.title))
+    const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
     const startButton = within(card!).getByTestId("courseware-button")
     await user.click(startButton)
 
@@ -254,16 +235,14 @@ describe("ProgramAsCourseCard", () => {
   })
 
   test("clicking 'Start Course' on an unenrolled module opens enrollment dialog when no ancestor is verified", async () => {
+    const cardData = setupCardData()
+    const [moduleOne] = cardData.moduleCourses
+
     const run = mitxonline.factories.courses.courseRun({
       is_enrollable: true,
     })
-
-    const cardData = setupCardData({
-      programId: 306,
-      includeProgramEnrollment: false,
-    })
-    const moduleOne = mitxonline.factories.courses.course({
-      id: 1,
+    const moduleWithRun = mitxonline.factories.courses.course({
+      id: moduleOne.id,
       courseruns: [run],
       next_run_id: run.id,
     })
@@ -271,16 +250,16 @@ describe("ProgramAsCourseCard", () => {
     renderWithProviders(
       <ProgramAsCourseCard
         courseProgram={cardData.courseProgram}
-        moduleCourses={[moduleOne, cardData.moduleCourses[1]]}
+        moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
         moduleEnrollmentsByCourseId={{}}
       />,
     )
 
     const cards = await screen.findAllByTestId("enrollment-card-desktop")
-    const card = cards.find((c) => within(c).queryByText(moduleOne.title))
+    const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
     const startButton = within(card!).getByTestId("courseware-button")
     await user.click(startButton)
 
-    await screen.findByRole("dialog", { name: moduleOne.title })
+    await screen.findByRole("dialog", { name: moduleWithRun.title })
   })
 })
