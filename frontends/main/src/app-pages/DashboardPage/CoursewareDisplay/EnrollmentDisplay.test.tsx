@@ -39,7 +39,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -131,7 +130,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programEnrollment.program.id],
@@ -219,7 +217,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programAsCourseEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programAsCourseProgram.id],
@@ -309,7 +306,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [enrolledProgram.id],
@@ -416,7 +412,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [enrolledProgram.id],
@@ -465,7 +460,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programEnrollment.program.id],
@@ -511,7 +505,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -546,7 +539,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programEnrollment.program.id],
@@ -597,7 +589,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -640,7 +631,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -703,7 +693,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -731,24 +720,31 @@ describe("EnrollmentDisplay", () => {
   })
 
   test("Filters B2B program enrollments from display", async () => {
-    const mitxOnlineUser = mitxonline.factories.user.user()
-    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+    const b2bSimpleProgram = mitxonline.factories.programs.simpleProgram()
+    const nonB2BSimpleProgram = mitxonline.factories.programs.simpleProgram()
 
     const b2bProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          ...mitxonline.factories.programs.simpleProgram(),
-          title: "B2B Program",
-        },
+        program: b2bSimpleProgram,
       })
-
     const nonB2BProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          ...mitxonline.factories.programs.simpleProgram(),
-          title: "Personal Program",
-        },
+        program: nonB2BSimpleProgram,
       })
+
+    // Put the contract in the user's b2b_organizations so the code
+    // (which reads contracts from userMe, not contractsList) can filter it
+    const contract = mitxonline.factories.contracts.contract({
+      programs: [b2bSimpleProgram.id],
+    })
+    const mitxOnlineUser = mitxonline.factories.user.user({
+      b2b_organizations: [
+        mitxonline.factories.organizations.organization({
+          contracts: [contract],
+        }),
+      ],
+    })
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
@@ -756,44 +752,11 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
     )
-    // Mock contracts to filter out the B2B program
-    const contract = mitxonline.factories.contracts.contract({
-      programs: [b2bProgramEnrollment.program.id],
-    })
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [contract])
+    // After B2B filtering, only the non-B2B program remains, so programsList
+    // is called with just that one ID
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
-        id: [
-          b2bProgramEnrollment.program.id,
-          nonB2BProgramEnrollment.program.id,
-        ],
-        page_size: 2,
-      }),
-      {
-        count: 2,
-        next: null,
-        previous: null,
-        results: [
-          mitxonline.factories.programs.program({
-            id: b2bProgramEnrollment.program.id,
-            title: b2bProgramEnrollment.program.title,
-            readable_id: b2bProgramEnrollment.program.readable_id,
-            program_type: b2bProgramEnrollment.program.program_type,
-            display_mode: b2bProgramEnrollment.program.display_mode,
-          }),
-          mitxonline.factories.programs.program({
-            id: nonB2BProgramEnrollment.program.id,
-            title: nonB2BProgramEnrollment.program.title,
-            readable_id: nonB2BProgramEnrollment.program.readable_id,
-            program_type: nonB2BProgramEnrollment.program.program_type,
-            display_mode: nonB2BProgramEnrollment.program.display_mode,
-          }),
-        ],
-      },
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programsList({
-        id: [nonB2BProgramEnrollment.program.id],
+        id: [nonB2BSimpleProgram.id],
         page_size: 1,
       }),
       {
@@ -801,13 +764,7 @@ describe("EnrollmentDisplay", () => {
         next: null,
         previous: null,
         results: [
-          mitxonline.factories.programs.program({
-            id: nonB2BProgramEnrollment.program.id,
-            title: nonB2BProgramEnrollment.program.title,
-            readable_id: nonB2BProgramEnrollment.program.readable_id,
-            program_type: nonB2BProgramEnrollment.program.program_type,
-            display_mode: nonB2BProgramEnrollment.program.display_mode,
-          }),
+          mitxonline.factories.programs.program({ ...nonB2BSimpleProgram }),
         ],
       },
     )
@@ -817,9 +774,71 @@ describe("EnrollmentDisplay", () => {
     await screen.findByRole("heading", { name: "My Learning" })
 
     // Should only show the non-B2B program (appears in desktop + mobile cards)
-    const personalProgramCards = await screen.findAllByText("Personal Program")
+    const personalProgramCards = await screen.findAllByText(
+      nonB2BSimpleProgram.title,
+    )
     expect(personalProgramCards.length).toBeGreaterThan(0)
-    expect(screen.queryByText("B2B Program")).not.toBeInTheDocument()
+    expect(screen.queryByText(b2bSimpleProgram.title)).not.toBeInTheDocument()
+  })
+
+  test("Hides child program enrollments that are part of an enrolled parent program", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const childSimpleProgram = mitxonline.factories.programs.simpleProgram({
+      display_mode: "course",
+    })
+    const parentSimpleProgram = mitxonline.factories.programs.simpleProgram()
+
+    // Parent program has child program in its req_tree
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const section = reqTree.addOperator({ operator: "all_of" })
+    section.addProgram({ program: childSimpleProgram.id })
+
+    const parentProgramEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: parentSimpleProgram,
+      })
+    const childProgramEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: childSimpleProgram,
+      })
+
+    const parentProgramDetail = mitxonline.factories.programs.program({
+      ...parentSimpleProgram,
+      req_tree: reqTree.serialize(),
+    })
+    const childProgramDetail = mitxonline.factories.programs.program({
+      ...childSimpleProgram,
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [parentProgramEnrollment, childProgramEnrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [parentSimpleProgram.id, childSimpleProgram.id],
+        page_size: 2,
+      }),
+      {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [parentProgramDetail, childProgramDetail],
+      },
+    )
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const parentCards = await screen.findAllByText(parentSimpleProgram.title)
+    expect(parentCards.length).toBeGreaterThan(0)
+    expect(screen.queryByText(childSimpleProgram.title)).not.toBeInTheDocument()
   })
 
   describe("ProgramId Filtering", () => {
