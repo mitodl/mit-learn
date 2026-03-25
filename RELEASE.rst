@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.5
+Version 0.59.5 (Released March 25, 2026)
 --------------
 
 - Fix verified enrollment for program-as-course hierarchy (#3100)
