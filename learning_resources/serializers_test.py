@@ -184,7 +184,7 @@ def test_serialize_video_resource_with_video_object():
         "id": video.id,
         "duration": "PT10M30S",
         "caption_urls": [],
-        "cover_image_url": None,
+        "thumbnail_url": None,
         "streaming_url": None,
     }
     assert serializer.data["content_files"] == []
@@ -360,7 +360,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             {
                 "department_id": dept.department_id,
                 "name": dept.name,
-                "channel_url": frontend_absolute_url(
+                "url": frontend_absolute_url(
                     f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/",
                 ),
                 "school": {
@@ -555,7 +555,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 {
                     "name": dept.name,
                     "department_id": dept.department_id,
-                    "channel_url": frontend_absolute_url(
+                    "url": frontend_absolute_url(
                         f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/"
                     )
                     if has_channels

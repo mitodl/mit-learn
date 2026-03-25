@@ -668,7 +668,10 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
         hits = instance.get("hits", {}).get("hits", [])
         return (
             transform_dict_backwards(
-                hit.get("_source"), LearningResourceSerializer, request
+                hit.get("_source"),
+                LearningResourceSerializer,
+                request,
+                recursive=True,
             )
             for hit in hits
         )

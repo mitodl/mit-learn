@@ -2,6 +2,7 @@
 
 import random
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.conf import settings
@@ -771,7 +772,7 @@ def test_schools_list_endpoint(client):
                 {
                     "department_id": dept.department_id,
                     "name": dept.name,
-                    "channel_url": None,
+                    "url": None,
                 }
                 for dept in schools[i].departments.all().order_by("department_id")
             ],
@@ -891,10 +892,15 @@ def test_get_video_playlist_detail_endpoint(client, url):
 
 @pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
-    "url",
-    ["lr:v1:learning_resource_items_api-list", "lr:v1:video_playlist_items_api-list"],
+    ("url", "api_version"),
+    [
+        ("lr:v1:learning_resource_items_api-list", "v1"),
+        ("lr:v1:video_playlist_items_api-list", "v1"),
+        ("lr:v2:learning_resource_items_api-list", "v2"),
+        ("lr:v2:video_playlist_items_api-list", "v2"),
+    ],
 )
-def test_get_video_playlist_items_endpoint(client, url):
+def test_get_video_playlist_items_endpoint(client, url, api_version):
     """Test video playlist items endpoint"""
     playlist = VideoPlaylistFactory.create().learning_resource
     videos = VideoFactory.create_batch(2)
@@ -928,21 +934,25 @@ def test_get_video_playlist_items_endpoint(client, url):
         )
     ):
         assert resp.data.get("results")[idx]["id"] == resource_relationship.id
-        assert (
-            resp.data.get("results")[idx]["resource"]
-            == VideoResourceSerializer(instance=resource_relationship.child).data
-        )
+        mock_request = SimpleNamespace(version=api_version)
+        expected = VideoResourceSerializer(
+            instance=resource_relationship.child,
+            context={"request": mock_request},
+        ).data
+        assert resp.data.get("results")[idx]["resource"] == expected
 
 
 @pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
-    ("url", "params"),
+    ("url", "params", "api_version"),
     [
-        ("lr:v1:videos_api-list", ""),
-        ("lr:v1:learning_resources_api-list", "resource_type=video"),
+        ("lr:v1:videos_api-list", "", "v1"),
+        ("lr:v1:learning_resources_api-list", "resource_type=video", "v1"),
+        ("lr:v2:videos_api-list", "", "v2"),
+        ("lr:v2:learning_resources_api-list", "resource_type=video", "v2"),
     ],
 )
-def test_list_video_endpoint(client, url, params):
+def test_list_video_endpoint(client, url, params, api_version):
     """Test video endpoint"""
     videos = sorted(VideoFactory.create_batch(2), key=lambda resource: resource.id)
 
@@ -952,12 +962,13 @@ def test_list_video_endpoint(client, url, params):
     resp = client.get(f"{reverse(url)}?{params}")
     assert resp.data.get("count") == 2
 
+    mock_request = SimpleNamespace(version=api_version)
     for idx, video in enumerate(videos):
         assert resp.data.get("results")[idx]["id"] == video.learning_resource.id
-        assert (
-            resp.data.get("results")[idx]["video"]
-            == VideoSerializer(instance=video).data
-        )
+        expected = VideoSerializer(
+            instance=video, context={"request": mock_request}
+        ).data
+        assert resp.data.get("results")[idx]["video"] == expected
 
 
 @pytest.mark.skip_nplusone_check
@@ -985,16 +996,24 @@ def test_list_video_endpoint_returns_playlists(client, url, params):
 
 
 @pytest.mark.parametrize(
-    "url", ["lr:v1:videos_api-detail", "lr:v1:learning_resources_api-detail"]
+    ("url", "api_version"),
+    [
+        ("lr:v1:videos_api-detail", "v1"),
+        ("lr:v1:learning_resources_api-detail", "v1"),
+        ("lr:v2:videos_api-detail", "v2"),
+        ("lr:v2:learning_resources_api-detail", "v2"),
+    ],
 )
-def test_get_video_detail_endpoint(client, url):
+def test_get_video_detail_endpoint(client, url, api_version):
     """Test video detail endpoint"""
     video = VideoFactory.create()
 
     resp = client.get(reverse(url, args=[video.learning_resource.id]))
 
+    mock_request = SimpleNamespace(version=api_version)
+    expected = VideoSerializer(instance=video, context={"request": mock_request}).data
     assert resp.data.get("readable_id") == video.learning_resource.readable_id
-    assert resp.data.get("video") == VideoSerializer(instance=video).data
+    assert resp.data.get("video") == expected
 
 
 @pytest.mark.parametrize(
