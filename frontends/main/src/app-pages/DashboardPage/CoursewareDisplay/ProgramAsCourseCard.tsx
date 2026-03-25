@@ -20,7 +20,10 @@ import {
   DashboardType as ModuleCardType,
 } from "./ModuleCard"
 import { formatDate } from "ol-utilities"
-import { getIdsFromReqTree } from "@/common/mitxonline"
+import {
+  getIdsFromReqTree,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -376,9 +379,10 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       ? [ancestorProgramEnrollment.readable_id]
       : []),
   ]
-  const useVerifiedEnrollment =
-    courseProgramEnrollment?.enrollment_mode === "verified" ||
-    ancestorProgramEnrollment?.enrollment_mode === "verified"
+  const useVerifiedEnrollment = [
+    courseProgramEnrollment?.enrollment_mode,
+    ancestorProgramEnrollment?.enrollment_mode,
+  ].some(isVerifiedEnrollmentMode)
 
   return (
     <ProgramCardRoot
