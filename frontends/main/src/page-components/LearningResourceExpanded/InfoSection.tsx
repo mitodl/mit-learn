@@ -23,6 +23,7 @@ import {
   CertificationTypeEnum,
   DeliveryEnum,
   LearningResource,
+  PlatformEnum,
   ResourceTypeEnum,
 } from "api"
 import {
@@ -513,6 +514,14 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Offered By:",
     Icon: RiVerifiedBadgeLine,
     selector: (resource: LearningResource) => {
+      if (resource.platform?.code === PlatformEnum.Mitxonline) {
+        /**
+         * Resources hosted on the MITxOnline platform are now branded as Learn.
+         * Since we are within the Learn site itself, we don't show offered by.
+         */
+        return null
+      }
+
       return resource.offered_by?.name || null
     },
   },

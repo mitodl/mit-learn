@@ -62,7 +62,9 @@ export const PLATFORM_LOGOS: Record<PlatformEnum, LogoObject> = {
     image: "/images/platform_logos/edx.svg",
     aspect: 1.77,
   },
-  [PlatformEnum.Mitxonline]: UNIT_LOGOS[OfferedByEnum.Mitx],
+  [PlatformEnum.Mitxonline]: {
+    name: "MITx Online",
+  },
   [PlatformEnum.Bootcamps]: UNIT_LOGOS[OfferedByEnum.Bootcamps],
   [PlatformEnum.Xpro]: UNIT_LOGOS[OfferedByEnum.Xpro],
   [PlatformEnum.Podcast]: {
