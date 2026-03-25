@@ -335,7 +335,7 @@ const useEnrollmentHandler = () => {
           return
         }
         createVerifiedProgramEnrollment.mutate(
-          { courserun_id: readableId, program_id: programCoursewareId },
+          { courserun_id: readableId, request_body: [programCoursewareId] },
           {
             onSuccess: () => {
               window.location.href = href

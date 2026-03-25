@@ -1508,10 +1508,7 @@ describe("EnrollmentDisplay", () => {
 
       // Mock the enrollment endpoint
       const programEnrollmentEndpoint =
-        mitxonline.urls.verifiedProgramEnrollments.create(
-          programEnrollment.program.readable_id,
-          run.courseware_id,
-        )
+        mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
       setMockResponse.post(programEnrollmentEndpoint, {})
 
       renderWithProviders(<EnrollmentDisplay programId={888} />)
