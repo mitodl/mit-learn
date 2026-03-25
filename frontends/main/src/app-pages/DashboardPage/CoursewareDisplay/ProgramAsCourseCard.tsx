@@ -244,6 +244,9 @@ const getRelativeDateContent = (
 }
 
 interface ProgramAsCourseCardProps {
+  /**
+   * The courselike program to display.
+   */
   courseProgram: {
     id: number
     readable_id: string
@@ -253,9 +256,31 @@ interface ProgramAsCourseCardProps {
     courses?: number[]
     req_tree?: V2ProgramRequirement[]
   }
+  /**
+   * child courses of the program. These correspond to nodes in the req_tree.
+   */
   moduleCourses: CourseWithCourseRunsSerializerV2[]
+  /**
+   * Enrollments in the child courses. These may or may not exist, depending on
+   * whether the user has started that course.
+   */
   moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /**
+   * Enrollment in the courselike program, if user has an enrollment in it.
+   */
   courseProgramEnrollment?: V3UserProgramEnrollment
+  /**
+   * Additional ancestor program enrollments.
+   *
+   * This facilitates verified enrollments. For example:
+   * - Ancestor Program P1
+   *  - Courslike Program P1a
+   *    - Child Course C1, etc...
+   *
+   * Initially, a user will have a verified enrollment in P1 but NOT P2.
+   * We pass P1's enrollment as an ancestorProgramEnrollment. This allows us to
+   * request a verified enrollment in both C1 and P1a.
+   */
   ancestorProgramEnrollment?: {
     readable_id: string
     enrollment_mode?: string | null

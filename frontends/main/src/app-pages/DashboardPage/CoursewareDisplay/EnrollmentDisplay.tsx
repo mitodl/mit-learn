@@ -739,16 +739,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
       )
     }) ?? []
 
-  const programAsCourseProgramIds = React.useMemo(
-    () =>
-      filteredProgramEnrollments
-        .filter(
-          (enrollment) =>
-            enrollment.program.display_mode === DisplayModeEnum.Course,
-        )
-        .map((enrollment) => enrollment.program.id),
-    [filteredProgramEnrollments],
-  )
+  const programAsCourseProgramIds = filteredProgramEnrollments
+    .filter(
+      (enrollment) =>
+        enrollment.program.display_mode === DisplayModeEnum.Course,
+    )
+    .map((enrollment) => enrollment.program.id)
 
   const { data: homeCoursePrograms, isLoading: homeCourseProgramsLoading } =
     useQuery({
@@ -759,15 +755,13 @@ const AllEnrollmentsDisplay: React.FC = () => {
       enabled: programAsCourseProgramIds.length > 0,
     })
 
-  const homeCourseProgramModuleIds = React.useMemo(() => {
-    const uniqueIds = new Set<number>()
-    ;(homeCoursePrograms?.results ?? []).forEach((courseProgram) => {
-      ;(courseProgram.courses ?? []).forEach((courseId) =>
-        uniqueIds.add(courseId),
-      )
-    })
-    return [...uniqueIds]
-  }, [homeCoursePrograms?.results])
+  const homeCourseProgramModuleIds = [
+    ...new Set(
+      homeCoursePrograms?.results.flatMap(
+        (courseProgram) => getIdsFromReqTree(courseProgram.req_tree).courseIds,
+      ),
+    ),
+  ]
 
   const {
     data: homeCourseProgramModuleCourses,
