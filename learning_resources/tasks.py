@@ -386,6 +386,13 @@ def update_ocw_learning_material_resources(self):  # noqa: ARG001
     ocw courses or content files
     """
 
+    if not settings.CREATE_OCW_LEARNING_MATERIALS:
+        message = (
+            "CREATE_OCW_LEARNING_MATERIALS flag is set to False."
+            " update_ocw_learning_material_resources cannont run"
+        )
+        raise RuntimeError(message)
+
     for course in LearningResource.objects.filter(
         published=True, etl_source=ETLSource.ocw.name, resource_type="course"
     ):
@@ -393,6 +400,7 @@ def update_ocw_learning_material_resources(self):  # noqa: ARG001
         content_file_ids = course_run.content_files.filter(published=True).values_list(
             "id", flat=True
         )
+
         try:
             load_learning_materials(course_run, content_file_ids)
         except Exception as e:

@@ -145,3 +145,4 @@ CONTENT_BASE_URL_OLL = get_string(
     "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
 )
 CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
+CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
