@@ -180,6 +180,7 @@ const isProgramAsCourseEnrollment = (
 
 type ProgramAsCourseProgramData = {
   id: number
+  readable_id: string
   title?: string | null
   start_date?: string | null
   end_date?: string | null
@@ -222,100 +223,58 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
     ? maybeShown
     : maybeShown.slice(MIN_VISIBLE)
 
+  const renderResource = (resource: DashboardResource) => {
+    if (isProgramAsCourseEnrollment(resource)) {
+      const courseProgram = courseProgramsById.get(resource.data.program.id)
+      if (!courseProgram) {
+        return (
+          <DashboardCardStyled
+            key={getResourceKey(resource)}
+            Component="li"
+            resource={resource}
+            showNotComplete={false}
+            isLoading={isLoading}
+            onUpgradeError={onUpgradeError}
+          />
+        )
+      }
+
+      return (
+        <ProgramAsCourseCard
+          key={getResourceKey(resource)}
+          Component="li"
+          courseProgram={courseProgram}
+          moduleCourses={
+            moduleCoursesByProgramId[resource.data.program.id] ?? []
+          }
+          moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+          courseProgramEnrollment={resource.data}
+        />
+      )
+    }
+
+    return (
+      <DashboardCardStyled
+        key={getResourceKey(resource)}
+        Component="li"
+        resource={resource}
+        showNotComplete={false}
+        isLoading={isLoading}
+        onUpgradeError={onUpgradeError}
+      />
+    )
+  }
+
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownResources.map((resource) => {
-          if (isProgramAsCourseEnrollment(resource)) {
-            const courseProgram = courseProgramsById.get(
-              resource.data.program.id,
-            )
-            if (!courseProgram) {
-              return (
-                <DashboardCardStyled
-                  key={getResourceKey(resource)}
-                  Component="li"
-                  resource={resource}
-                  showNotComplete={false}
-                  isLoading={isLoading}
-                  onUpgradeError={onUpgradeError}
-                />
-              )
-            }
-
-            return (
-              <ProgramAsCourseCard
-                key={getResourceKey(resource)}
-                Component="li"
-                courseProgram={courseProgram}
-                moduleCourses={
-                  moduleCoursesByProgramId[resource.data.program.id] ?? []
-                }
-                moduleEnrollmentsByCourseId={enrollmentsByCourseId}
-                courseProgramEnrollment={resource.data}
-              />
-            )
-          }
-
-          return (
-            <DashboardCardStyled
-              key={getResourceKey(resource)}
-              Component="li"
-              resource={resource}
-              showNotComplete={false}
-              isLoading={isLoading}
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
+        {shownResources.map(renderResource)}
       </EnrollmentsList>
       {hiddenResources.length === 0 ? null : (
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenResources.map((resource) => {
-                if (isProgramAsCourseEnrollment(resource)) {
-                  const courseProgram = courseProgramsById.get(
-                    resource.data.program.id,
-                  )
-                  if (!courseProgram) {
-                    return (
-                      <DashboardCardStyled
-                        key={getResourceKey(resource)}
-                        Component="li"
-                        resource={resource}
-                        showNotComplete={false}
-                        isLoading={isLoading}
-                        onUpgradeError={onUpgradeError}
-                      />
-                    )
-                  }
-
-                  return (
-                    <ProgramAsCourseCard
-                      key={getResourceKey(resource)}
-                      Component="li"
-                      courseProgram={courseProgram}
-                      moduleCourses={
-                        moduleCoursesByProgramId[resource.data.program.id] ?? []
-                      }
-                      moduleEnrollmentsByCourseId={enrollmentsByCourseId}
-                      courseProgramEnrollment={resource.data}
-                    />
-                  )
-                }
-
-                return (
-                  <DashboardCardStyled
-                    key={getResourceKey(resource)}
-                    Component="li"
-                    resource={resource}
-                    showNotComplete={false}
-                    isLoading={isLoading}
-                    onUpgradeError={onUpgradeError}
-                  />
-                )
-              })}
+              {hiddenResources.map(renderResource)}
             </HiddenEnrollmentsList>
           </Collapse>
           <ShowAllContainer>
@@ -712,6 +671,16 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       }
                       moduleEnrollmentsByCourseId={enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
+                      ancestorProgramEnrollment={
+                        programEnrollment
+                          ? {
+                              readable_id:
+                                programEnrollment.program.readable_id,
+                              enrollment_mode:
+                                programEnrollment.enrollment_mode,
+                            }
+                          : undefined
+                      }
                     />
                   )
                 }
@@ -770,16 +739,12 @@ const AllEnrollmentsDisplay: React.FC = () => {
       )
     }) ?? []
 
-  const programAsCourseProgramIds = React.useMemo(
-    () =>
-      filteredProgramEnrollments
-        .filter(
-          (enrollment) =>
-            enrollment.program.display_mode === DisplayModeEnum.Course,
-        )
-        .map((enrollment) => enrollment.program.id),
-    [filteredProgramEnrollments],
-  )
+  const programAsCourseProgramIds = filteredProgramEnrollments
+    .filter(
+      (enrollment) =>
+        enrollment.program.display_mode === DisplayModeEnum.Course,
+    )
+    .map((enrollment) => enrollment.program.id)
 
   const { data: homeCoursePrograms, isLoading: homeCourseProgramsLoading } =
     useQuery({
@@ -790,15 +755,13 @@ const AllEnrollmentsDisplay: React.FC = () => {
       enabled: programAsCourseProgramIds.length > 0,
     })
 
-  const homeCourseProgramModuleIds = React.useMemo(() => {
-    const uniqueIds = new Set<number>()
-    ;(homeCoursePrograms?.results ?? []).forEach((courseProgram) => {
-      ;(courseProgram.courses ?? []).forEach((courseId) =>
-        uniqueIds.add(courseId),
-      )
-    })
-    return [...uniqueIds]
-  }, [homeCoursePrograms?.results])
+  const homeCourseProgramModuleIds = [
+    ...new Set(
+      homeCoursePrograms?.results.flatMap(
+        (courseProgram) => getIdsFromReqTree(courseProgram.req_tree).courseIds,
+      ),
+    ),
+  ]
 
   const {
     data: homeCourseProgramModuleCourses,

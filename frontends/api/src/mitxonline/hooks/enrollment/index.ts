@@ -96,6 +96,9 @@ const useCreateVerifiedProgramEnrollment = () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.courseRunEnrollmentsList(),
       })
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
     },
   })
 }

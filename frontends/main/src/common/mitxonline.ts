@@ -6,7 +6,11 @@ import type {
   ProductFlexiblePrice,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { DiscountTypeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  DiscountTypeEnum,
+  EnrollmentModeEnum,
+  NodeTypeEnum,
+} from "@mitodl/mitxonline-api-axios/v2"
 import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
@@ -183,6 +187,11 @@ const getBestRun = (
   if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
   return runs.find((run) => run.id === course.next_run_id) ?? runs[0]
 }
+
+const isVerifiedEnrollmentMode = (mode?: string | null) => {
+  return mode === EnrollmentModeEnum.Verified
+}
+
 export {
   formatPrice,
   priceWithDiscount,
@@ -192,5 +201,6 @@ export {
   getEnrollmentType,
   getIdsFromReqTree,
   getBestRun,
+  isVerifiedEnrollmentMode,
 }
 export type { PriceWithDiscount, EnrollmentType }

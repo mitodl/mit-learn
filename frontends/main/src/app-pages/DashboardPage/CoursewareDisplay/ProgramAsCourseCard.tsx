@@ -20,7 +20,10 @@ import {
   DashboardType as ModuleCardType,
 } from "./ModuleCard"
 import { formatDate } from "ol-utilities"
-import { getIdsFromReqTree } from "@/common/mitxonline"
+import {
+  getIdsFromReqTree,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -244,17 +247,47 @@ const getRelativeDateContent = (
 }
 
 interface ProgramAsCourseCardProps {
+  /**
+   * The courselike program to display.
+   */
   courseProgram: {
     id: number
+    readable_id: string
     title?: string | null
     start_date?: string | null
     end_date?: string | null
     courses?: number[]
     req_tree?: V2ProgramRequirement[]
   }
+  /**
+   * child courses of the program. These correspond to nodes in the req_tree.
+   */
   moduleCourses: CourseWithCourseRunsSerializerV2[]
+  /**
+   * Enrollments in the child courses. These may or may not exist, depending on
+   * whether the user has started that course.
+   */
   moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /**
+   * Enrollment in the courselike program, if user has an enrollment in it.
+   */
   courseProgramEnrollment?: V3UserProgramEnrollment
+  /**
+   * Additional ancestor program enrollments.
+   *
+   * This facilitates verified enrollments. For example:
+   * - Ancestor Program P1
+   *  - Courselike Program P1a
+   *    - Child Course C1, etc...
+   *
+   * Initially, a user will have a verified enrollment in P1 but NOT P1a.
+   * We pass P1's enrollment as an ancestorProgramEnrollment. This allows us to
+   * request a verified enrollment in both C1 and P1a.
+   */
+  ancestorProgramEnrollment?: {
+    readable_id: string
+    enrollment_mode?: string | null
+  }
   Component?: React.ElementType
   className?: string
 }
@@ -278,6 +311,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   moduleCourses,
   moduleEnrollmentsByCourseId,
   courseProgramEnrollment,
+  ancestorProgramEnrollment,
   Component,
   className,
 }) => {
@@ -338,6 +372,17 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     endDatePopoverString,
   )
   const showDatePopoverTrigger = Boolean(datePopoverContent)
+
+  const parentProgramIds = [
+    courseProgram.readable_id,
+    ...(ancestorProgramEnrollment
+      ? [ancestorProgramEnrollment.readable_id]
+      : []),
+  ]
+  const useVerifiedEnrollment = [
+    courseProgramEnrollment?.enrollment_mode,
+    ancestorProgramEnrollment?.enrollment_mode,
+  ].some(isVerifiedEnrollmentMode)
 
   return (
     <ProgramCardRoot
@@ -420,7 +465,8 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 runId: bestEnrollment?.run.id,
               })}
               resource={resource}
-              programEnrollment={courseProgramEnrollment}
+              useVerifiedEnrollment={useVerifiedEnrollment}
+              parentProgramIds={parentProgramIds}
               variant="stacked"
             />
           )
