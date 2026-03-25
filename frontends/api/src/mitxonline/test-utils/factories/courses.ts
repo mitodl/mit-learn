@@ -154,6 +154,7 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
         name: faker.company.name(),
       },
     ],
+    certificate_available: faker.datatype.boolean(),
     page: {
       feature_image_src: faker.image.avatar(),
       page_url: faker.internet.url(),
