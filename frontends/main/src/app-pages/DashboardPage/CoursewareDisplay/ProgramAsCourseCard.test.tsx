@@ -151,37 +151,23 @@ describe("ProgramAsCourseCard", () => {
     expect(await screen.findByText("Important Dates:")).toBeInTheDocument()
   })
 
-  test("renders module rows in req_tree order, not API result order", async () => {
+  test("displays module rows in req_tree order, irrespective of moduleCourses order", async () => {
     const cardData = setupCardData()
     const [moduleOne, moduleTwo] = cardData.moduleCourses
 
-    // Override req_tree to reverse the order: moduleTwo first, then moduleOne
-    const reqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const modules = reqTree.addOperator({
-      operator: "all_of",
-      title: "Modules",
-    })
-    modules.addCourse({ course: moduleTwo.id })
-    modules.addCourse({ course: moduleOne.id })
-
-    const courseProgram = {
-      ...cardData.courseProgram,
-      req_tree: reqTree.serialize(),
-    }
-
     renderWithProviders(
       <ProgramAsCourseCard
-        courseProgram={courseProgram}
-        moduleCourses={[moduleOne, moduleTwo]}
+        courseProgram={cardData.courseProgram}
+        moduleCourses={[moduleTwo, moduleOne]}
         moduleEnrollmentsByCourseId={{}}
       />,
     )
 
-    await screen.findByText(courseProgram.title)
+    await screen.findByText(cardData.courseProgram.title)
     const rows = await screen.findAllByTestId("enrollment-card-desktop")
-    expect(rows[0]).toHaveTextContent(moduleTwo.title)
-    expect(rows[1]).toHaveTextContent(moduleOne.title)
+    // req_tree has moduleOne first, moduleTwo second (from setupCardData)
+    expect(rows[0]).toHaveTextContent(moduleOne.title)
+    expect(rows[1]).toHaveTextContent(moduleTwo.title)
   })
 
   test("clicking 'Start Course' on an unenrolled module uses verified enrollment when ancestor has verified mode", async () => {
