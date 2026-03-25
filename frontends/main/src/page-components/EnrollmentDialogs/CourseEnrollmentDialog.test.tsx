@@ -624,8 +624,8 @@ describe("CourseEnrollmentDialog", () => {
       })
       const course = makeCourse({
         courseruns: [run],
-        page: null,
       })
+      ;(course as unknown as { page: null }).page = null
 
       renderWithProviders(null)
       await openDialog(course)
