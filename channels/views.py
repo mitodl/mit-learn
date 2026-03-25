@@ -25,7 +25,6 @@ from channels.serializers import (
     ChannelSerializer,
     ChannelWriteSerializer,
 )
-from learning_resources.views import DefaultPagination
 from main.constants import VALID_HTTP_METHODS
 from main.permissions import AnonymousAccessReadonlyPermission
 from main.utils import cache_page_for_all_users
@@ -68,7 +67,6 @@ class ChannelViewSet(
     or organizations at MIT and are a high-level categorization of content.
     """
 
-    pagination_class = DefaultPagination
     permission_classes = (HasChannelPermission,)
     http_method_names = VALID_HTTP_METHODS
     lookup_field = "id"
@@ -164,6 +162,7 @@ class ChannelModeratorListView(ListCreateAPIView):
 
     permission_classes = (ChannelModeratorPermissions,)
     serializer_class = ChannelModeratorSerializer
+    pagination_class = None
 
     def get_queryset(self):
         """
@@ -211,6 +210,7 @@ class ChannelCountsView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     serializer_class = ChannelCountsSerializer
     permission_classes = (AnonymousAccessReadonlyPermission,)
+    pagination_class = None
 
     def get_queryset(self):
         """

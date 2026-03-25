@@ -5,7 +5,6 @@ from django.db.models import Q
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
-from rest_framework.pagination import LimitOffsetPagination
 
 from main.filters import MultipleOptionsFilterBackend
 from main.permissions import AnonymousAccessReadonlyPermission
@@ -14,16 +13,6 @@ from news_events.constants import FeedType
 from news_events.filters import FeedItemFilter, FeedSourceFilter
 from news_events.models import FeedItem, FeedSource
 from news_events.serializers import FeedItemSerializer, FeedSourceSerializer
-
-
-class DefaultPagination(LimitOffsetPagination):
-    """
-    Pagination class for news/events viewsets which gets
-    default_limit and max_limit from settings
-    """
-
-    default_limit = 10
-    max_limit = 100
 
 
 @extend_schema_view(
@@ -42,7 +31,6 @@ class FeedItemViewSet(viewsets.ReadOnlyModelViewSet):
     resource_type_name_plural = "News and Events"
     serializer_class = FeedItemSerializer
     permission_classes = (AnonymousAccessReadonlyPermission,)
-    pagination_class = DefaultPagination
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = FeedItemFilter
     queryset = (
@@ -80,7 +68,6 @@ class FeedSourceViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     permission_classes = (AnonymousAccessReadonlyPermission,)
-    pagination_class = DefaultPagination
     resource_type_name_plural = "News & Events Sources"
     serializer_class = FeedSourceSerializer
     filter_backends = [MultipleOptionsFilterBackend]
