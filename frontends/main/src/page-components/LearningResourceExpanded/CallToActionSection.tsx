@@ -333,6 +333,9 @@ const getResourceUrl = (
     } else if (resource.resource_type === ResourceTypeEnum.Program) {
       return programPageView({
         readable_id: resource.readable_id,
+        // Learn program resources that have resource_type_group correspond to
+        // MITxOnline programs with display_mode="course"
+        // This can be moved into backend ETL after feature flags are removed.
         display_mode:
           resource.resource_type_group === ResourceTypeGroupEnum.Course
             ? DisplayModeEnum.Course
