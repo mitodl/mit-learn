@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.4
+Version 0.59.4 (Released March 25, 2026)
 --------------
 
 - fix: address design updates (#3098)
