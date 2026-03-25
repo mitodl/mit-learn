@@ -6,8 +6,14 @@ import { formatRunDate } from "ol-utilities"
 import invariant from "tiny-invariant"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
-import { AvailabilityEnum, ResourceTypeEnum } from "api"
+import {
+  AvailabilityEnum,
+  LearningResourcePlatform,
+  PlatformEnum,
+  ResourceTypeEnum,
+} from "api"
 import { factories } from "api/test-utils"
+import { faker } from "@faker-js/faker/locale/en"
 
 // This is a pipe followed by a zero-width space
 const SEPARATOR = "|​"
@@ -444,5 +450,53 @@ describe("Learning resource info section parent course", () => {
 
     const section = screen.getByTestId("drawer-info-items")
     expect(within(section).queryByText("Parent Course:")).toBeNull()
+  })
+})
+
+describe("Offered by section", () => {
+  const OFFERED_BY_LABEL = "Offered By:"
+  test("Shows offered by information when it exists", () => {
+    const platform: LearningResourcePlatform = {
+      code: faker.lorem.slug(),
+      name: faker.lorem.words(),
+    }
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      platform,
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    invariant(resource.offered_by)
+    const section = screen.getByTestId("drawer-info-items")
+    within(section).getByText(OFFERED_BY_LABEL)
+    within(section).getByText(resource.offered_by.name)
+  })
+
+  test("Does not show offered by information when it is missing", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      offered_by: null,
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    expect(within(section).queryByText(OFFERED_BY_LABEL)).toBeNull()
+  })
+
+  test("Does not show offered by information when platform is MITxOnline", () => {
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Course,
+      platform: {
+        code: PlatformEnum.Mitxonline,
+        name: "MITx Online",
+      },
+    })
+
+    renderWithTheme(<InfoSection resource={resource} />)
+
+    const section = screen.getByTestId("drawer-info-items")
+    expect(within(section).queryByText(OFFERED_BY_LABEL)).toBeNull()
   })
 })
