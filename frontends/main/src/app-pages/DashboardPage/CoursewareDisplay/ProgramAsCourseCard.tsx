@@ -6,8 +6,8 @@ import {
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import type { AncestorProgram } from "./ModuleCard"
 import {
+  type AncestorProgram,
   EnrollmentStatus,
   getEnrollmentStatus,
   getKey,

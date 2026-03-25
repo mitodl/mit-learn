@@ -15,6 +15,7 @@ import {
 import { Alert } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import {
+  type AncestorProgram,
   EnrollmentStatus,
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
@@ -38,7 +39,6 @@ import {
 import { contractQueries } from "api/mitxonline-hooks/contracts"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
-import type { AncestorProgram } from "./ModuleCard"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
 const Wrapper = styled.div(({ theme }) => ({
@@ -223,106 +223,64 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
     ? maybeShown
     : maybeShown.slice(MIN_VISIBLE)
 
+  const renderResource = (resource: DashboardResource) => {
+    if (isProgramAsCourseEnrollment(resource)) {
+      const courseProgram = courseProgramsById.get(resource.data.program.id)
+      if (!courseProgram) {
+        return (
+          <DashboardCardStyled
+            key={getResourceKey(resource)}
+            Component="li"
+            resource={resource}
+            showNotComplete={false}
+            isLoading={isLoading}
+            onUpgradeError={onUpgradeError}
+          />
+        )
+      }
+
+      return (
+        <ProgramAsCourseCard
+          key={getResourceKey(resource)}
+          Component="li"
+          courseProgram={courseProgram}
+          moduleCourses={
+            moduleCoursesByProgramId[resource.data.program.id] ?? []
+          }
+          moduleEnrollmentsByCourseId={enrollmentsByCourseId}
+          courseProgramEnrollment={resource.data}
+          ancestorPrograms={[
+            {
+              readable_id: resource.data.program.readable_id,
+              enrollment_mode: resource.data.enrollment_mode,
+            },
+          ]}
+        />
+      )
+    }
+
+    return (
+      <DashboardCardStyled
+        key={getResourceKey(resource)}
+        Component="li"
+        resource={resource}
+        showNotComplete={false}
+        isLoading={isLoading}
+        onUpgradeError={onUpgradeError}
+      />
+    )
+  }
+
   return (
     <>
       <EnrollmentsList itemSpacing={"16px"}>
-        {shownResources.map((resource) => {
-          if (isProgramAsCourseEnrollment(resource)) {
-            const courseProgram = courseProgramsById.get(
-              resource.data.program.id,
-            )
-            if (!courseProgram) {
-              return (
-                <DashboardCardStyled
-                  key={getResourceKey(resource)}
-                  Component="li"
-                  resource={resource}
-                  showNotComplete={false}
-                  isLoading={isLoading}
-                  onUpgradeError={onUpgradeError}
-                />
-              )
-            }
-
-            return (
-              <ProgramAsCourseCard
-                key={getResourceKey(resource)}
-                Component="li"
-                courseProgram={courseProgram}
-                moduleCourses={
-                  moduleCoursesByProgramId[resource.data.program.id] ?? []
-                }
-                moduleEnrollmentsByCourseId={enrollmentsByCourseId}
-                courseProgramEnrollment={resource.data}
-                ancestorPrograms={[
-                  {
-                    readable_id: resource.data.program.readable_id,
-                    enrollment_mode: resource.data.enrollment_mode,
-                  },
-                ]}
-              />
-            )
-          }
-
-          return (
-            <DashboardCardStyled
-              key={getResourceKey(resource)}
-              Component="li"
-              resource={resource}
-              showNotComplete={false}
-              isLoading={isLoading}
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
+        {shownResources.map(renderResource)}
       </EnrollmentsList>
       {hiddenResources.length === 0 ? null : (
         <>
           <Collapse orientation="vertical" in={shown}>
             <HiddenEnrollmentsList itemSpacing={"16px"}>
-              {hiddenResources.map((resource) => {
-                if (isProgramAsCourseEnrollment(resource)) {
-                  const courseProgram = courseProgramsById.get(
-                    resource.data.program.id,
-                  )
-                  if (!courseProgram) {
-                    return (
-                      <DashboardCardStyled
-                        key={getResourceKey(resource)}
-                        Component="li"
-                        resource={resource}
-                        showNotComplete={false}
-                        isLoading={isLoading}
-                        onUpgradeError={onUpgradeError}
-                      />
-                    )
-                  }
-
-                  return (
-                    <ProgramAsCourseCard
-                      key={getResourceKey(resource)}
-                      Component="li"
-                      courseProgram={courseProgram}
-                      moduleCourses={
-                        moduleCoursesByProgramId[resource.data.program.id] ?? []
-                      }
-                      moduleEnrollmentsByCourseId={enrollmentsByCourseId}
-                      courseProgramEnrollment={resource.data}
-                    />
-                  )
-                }
-
-                return (
-                  <DashboardCardStyled
-                    key={getResourceKey(resource)}
-                    Component="li"
-                    resource={resource}
-                    showNotComplete={false}
-                    isLoading={isLoading}
-                    onUpgradeError={onUpgradeError}
-                  />
-                )
-              })}
+              {hiddenResources.map(renderResource)}
             </HiddenEnrollmentsList>
           </Collapse>
           <ShowAllContainer>

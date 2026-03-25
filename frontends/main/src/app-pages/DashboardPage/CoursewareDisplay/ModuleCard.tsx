@@ -26,7 +26,12 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  EnrollmentStatus,
+  getBestRun,
+  getEnrollmentStatus,
+  type AncestorProgram,
+} from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -49,11 +54,6 @@ export type DashboardType = (typeof DashboardType)[keyof typeof DashboardType]
 export type DashboardResource =
   | { type: "course"; data: CourseWithCourseRunsSerializerV2 }
   | { type: "courserun-enrollment"; data: CourseRunEnrollmentV3 }
-
-export type AncestorProgram = {
-  readable_id: string
-  enrollment_mode?: string | null
-}
 
 /**
  * Gets the certificate link for a dashboard resource based on its type.

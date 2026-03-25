@@ -101,6 +101,11 @@ const getProgramEnrollmentStatus = (
   return EnrollmentStatus.NotEnrolled
 }
 
+type AncestorProgram = {
+  readable_id: string
+  enrollment_mode?: string | null
+}
+
 export {
   ResourceType,
   EnrollmentStatus,
@@ -110,3 +115,4 @@ export {
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
 }
+export type { AncestorProgram }
