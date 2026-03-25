@@ -16,6 +16,7 @@ const Card = styled.div(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   marginTop: "32px",
   marginBottom: "112px",
+  boxShadow: "2px 2px 50px 0 rgba(3, 21, 45, 0.05)",
   backgroundColor: theme.custom.colors.white,
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
@@ -23,28 +24,27 @@ const Card = styled.div(({ theme }) => ({
     marginBottom: "80px",
   },
   [theme.breakpoints.down("sm")]: {
-    marginTop: "16px",
-    marginBottom: "40px",
+    marginTop: 0,
+    marginBottom: "32px",
   },
 }))
 
 const ImageSection = styled.div(({ theme }) => ({
   flexShrink: 0,
-  width: "270px",
-  minHeight: "280px",
+  width: "328px",
+  minHeight: "350px",
   backgroundImage: "url('/images/uai-announcement.png')",
   backgroundSize: "cover",
   backgroundPosition: "center",
-  aspectRatio: "32/55",
   [theme.breakpoints.down("md")]: {
     width: "100%",
-    height: "200px",
+    height: "180px",
     minHeight: "unset",
   },
 }))
 
 const ContentSection = styled.div(({ theme }) => ({
-  padding: "0 80px 0 60px",
+  padding: "40px 48px 40px 48px",
   display: "flex",
   width: "100%",
   flexDirection: "column",
@@ -54,26 +54,39 @@ const ContentSection = styled.div(({ theme }) => ({
     padding: "24px",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "16px",
+    padding: "24px",
   },
 }))
 
 const Eyebrow = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
   ...theme.typography.body3,
+  fontWeight: theme.typography.fontWeightBold,
 }))
 
-const Title = styled("h2")({
+const Title = styled("h2")(({ theme }) => ({
   margin: 0,
-})
+  marginTop: "-12px",
+  ...theme.typography.h3,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h4,
+    marginTop: "-12px",
+  },
+}))
 
 const Description = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   ...theme.typography.body1,
-  marginTop: "16px",
+  marginTop: "8px",
+  lineHeight: "170%",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    lineHeight: "22px",
+    marginTop: "0px",
+  },
 }))
 
-const CheckList = styled.ul({
+const CheckList = styled.ul(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
@@ -81,24 +94,38 @@ const CheckList = styled.ul({
   listStyle: "none",
   padding: 0,
   margin: 0,
-})
+  marginTop: "8px",
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "0px",
+    width: "100%",
+  },
+}))
 
-const CTA = styled.div({
+const CTA = styled.div(({ theme }) => ({
   marginTop: "24px",
-})
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "8px",
+  },
+}))
 
 const CheckItem = styled.li(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "4px",
-  color: theme.custom.colors.black,
+  gap: "8px",
+  color: theme.custom.colors.darkGray2,
   ...theme.typography.body1,
-  padding: "4px 16px 4px 0",
+  padding: "4px 8px 4px 0",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+  },
 }))
 
 const CTAButtonWrapper = styled(ButtonLink)(({ theme }) => ({
   ...theme.typography.body1,
-  padding: "14px 24px",
+  padding: "14px 30px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }))
 
 const CheckIcon = styled(RiCheckLine)(({ theme }) => ({
@@ -115,7 +142,7 @@ const UAIAnnouncementCard: React.FC = () => {
     <Card>
       <ImageSection aria-hidden="true" />
       <ContentSection>
-        <Eyebrow variant="body2">Introducing Universal AI</Eyebrow>
+        <Eyebrow variant="body2">INTRODUCING UNIVERSAL AI</Eyebrow>
         <Title>Universal AI</Title>
         <Description variant="body1">
           A self-paced program covering foundational concepts in artificial
@@ -127,7 +154,7 @@ const UAIAnnouncementCard: React.FC = () => {
           {["AI Foundations", "Applied learning", "Industry pathways"].map(
             (item) => (
               <CheckItem key={item}>
-                <CheckIcon size={16} aria-hidden="true" focusable="false" />
+                <CheckIcon size={18} aria-hidden="true" focusable="false" />
                 {item}
               </CheckItem>
             ),
