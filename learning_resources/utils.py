@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from retry import retry
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -687,36 +687,50 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
     return encoding.decode(tokens[:max_tokens])
 
 
-def _collect_child_resources(learning_resource, max_depth=3, visited=None):
-    """Recursively collect child resources from a program's hierarchy.
+def _collect_child_resources(learning_resource):
+    """Collect child resources from a program's hierarchy (max 2 levels deep).
 
     Returns a list of dicts with resource info and any available
-    contentfile summaries, recursing into PROGRAM_PROGRAMS children.
+    contentfile summaries, recursing one level into PROGRAM_PROGRAMS children.
     Only follows PROGRAM_COURSES and PROGRAM_PROGRAMS relationships.
     """
-    if max_depth <= 0:
-        return []
-    if visited is None:
-        visited = set()
-    visited.add(learning_resource.id)
-
-    relationships = (
+    program_relation_types = [
+        LearningResourceRelationTypes.PROGRAM_COURSES,
+        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    ]
+    relationships = list(
         LearningResourceRelationship.objects.filter(
             parent=learning_resource,
-            relation_type__in=[
-                LearningResourceRelationTypes.PROGRAM_COURSES,
-                LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-            ],
+            relation_type__in=program_relation_types,
         )
         .select_related("child")
-        .prefetch_related("child__topics")
+        .prefetch_related(
+            "child__topics",
+            Prefetch(
+                "child__children",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types,
+                )
+                .select_related("child")
+                .prefetch_related("child__topics"),
+                to_attr="program_children",
+            ),
+        )
     )
 
+    # Batch-fetch summaries for all children and grandchildren in one query
     child_ids = [rel.child_id for rel in relationships]
+    grandchild_ids = [
+        gc.child_id
+        for rel in relationships
+        for gc in getattr(rel.child, "program_children", [])
+    ]
+    all_ids = set(child_ids + grandchild_ids) - {learning_resource.id}
+
     summaries_by_resource = {}
-    if child_ids:
+    if all_ids:
         summary_qs = (
-            ContentFile.objects.filter(run__learning_resource_id__in=child_ids)
+            ContentFile.objects.filter(run__learning_resource_id__in=all_ids)
             .exclude(summary="")
             .values_list("run__learning_resource_id", "summary")
         )
@@ -726,9 +740,6 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
     results = []
     for rel in relationships:
         child = rel.child
-        if child.id in visited:
-            continue
-
         entry = {
             "title": child.title,
             "description": child.description or "",
@@ -741,7 +752,20 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
             child.resource_type == LearningResourceType.program.name
             and rel.relation_type == LearningResourceRelationTypes.PROGRAM_PROGRAMS
         ):
-            entry["children"] = _collect_child_resources(child, max_depth - 1, visited)
+            sub_entries = []
+            for sub_rel in getattr(child, "program_children", []):
+                sub_child = sub_rel.child
+                sub_entries.append(
+                    {
+                        "title": sub_child.title,
+                        "description": sub_child.description or "",
+                        "resource_type": sub_child.resource_type,
+                        "topics": [t.name for t in sub_child.topics.all()],
+                        "summaries": summaries_by_resource.get(sub_child.id, []),
+                    }
+                )
+            if sub_entries:
+                entry["children"] = sub_entries
 
         results.append(entry)
 

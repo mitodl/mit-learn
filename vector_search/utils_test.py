@@ -517,7 +517,7 @@ def test_course_metadata_indexed_with_learning_resources(mocker):
 
 def test_course_metadata_document_contents(mocker):
     # test the contents of the metadata document
-    resource = LearningResourceFactory.create()
+    resource = LearningResourceFactory.create(resource_type="course")
 
     run = LearningResourceRunFactory.create(
         learning_resource=resource,

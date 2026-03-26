@@ -738,7 +738,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     def _collect_courses_from_children(
         self,
         children_data,
-        max_depth=3,
+        max_depth=2,
         visited=None,
         parent_program_title=None,
     ):
@@ -757,9 +757,22 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return []
         visited.update(child_ids)
 
+        program_relation_types = [
+            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
+            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        ]
         child_resources = models.LearningResource.objects.filter(
             id__in=child_ids
-        ).prefetch_related("topics", "children__child__topics")
+        ).prefetch_related(
+            "topics",
+            Prefetch(
+                "children",
+                queryset=models.LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types
+                ),
+                to_attr="program_children",
+            ),
+        )
         child_map = {r.id: r for r in child_resources}
 
         courses = []
@@ -786,15 +799,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             ):
                 # Include the sub-program itself for structural context
                 courses.append(entry)
-                # Recurse into its children
-                sub_children = list(
-                    child.children.filter(
-                        relation_type__in=[
-                            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
-                            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-                        ]
-                    ).values("child", "relation_type", "position")
-                )
+                # Recurse using prefetched children (no extra DB query)
+                sub_children = [
+                    {
+                        "child": rel.child_id,
+                        "relation_type": rel.relation_type,
+                        "position": rel.position,
+                    }
+                    for rel in child.program_children
+                ]
                 courses.extend(
                     self._collect_courses_from_children(
                         sub_children,

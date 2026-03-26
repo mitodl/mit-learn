@@ -1168,24 +1168,24 @@ def test_get_program_courses_programs_as_courses_not_recursed():
 
 
 def test_get_program_courses_depth_limit():
-    """Recursion stops at max depth"""
-    # Create a 4-level deep hierarchy (all programs, no auto-courses)
+    """Recursion stops at max depth of 2"""
+    # Create a 3-level deep hierarchy: Level 0 -> Level 1 -> Level 2 -> Deep Course
     resources = []
-    for i in range(5):
+    for i in range(3):
         lr = _make_program_lr(title=f"Level {i}")
         resources.append(lr)
 
-    for i in range(4):
+    for i in range(2):
         LearningResourceRelationship.objects.create(
             parent=resources[i],
             child=resources[i + 1],
             relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
         )
 
-    # Add a course at the deepest level
+    # Add a course at the deepest level (3rd level from root)
     deep_course = _make_course_lr(title="Deep Course")
     LearningResourceRelationship.objects.create(
-        parent=resources[4],
+        parent=resources[2],
         child=deep_course,
         relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
     )
@@ -1197,11 +1197,10 @@ def test_get_program_courses_depth_limit():
     result = metadata.data["program_courses"]
     titles = [r["title"] for r in result]
 
-    # Depth limit of 3: Level 0 -> Level 1 (depth 1) -> Level 2 (depth 2) -> Level 3 (depth 3)
-    # Level 4 and Deep Course should not be reached
+    # Depth limit of 2: Level 0 -> Level 1 (depth 1) -> Level 2 (depth 2)
+    # Level 2's children (Deep Course) should not be reached
     assert "Level 1" in titles
     assert "Level 2" in titles
-    assert "Level 3" in titles
     assert "Deep Course" not in titles
 
 

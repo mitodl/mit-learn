@@ -770,8 +770,8 @@ def test_build_program_children_content_ignores_non_program_relations():
     assert "Unrelated Item" not in result
 
 
-def test_build_program_children_content_deep_nesting():
-    """All levels of nested children are formatted, not just the first two"""
+def test_build_program_children_content_two_levels():
+    """Program -> child program -> courses are all included (2 levels)"""
     from learning_resources.models import LearningResourceRelationship
 
     top_lr = _make_program()
@@ -782,21 +782,13 @@ def test_build_program_children_content_deep_nesting():
         relation_type="PROGRAM_PROGRAMS",
     )
 
-    bottom_lr = _make_program(title="Bottom Program")
+    nested_course = _make_course(title="Nested Course")
     LearningResourceRelationship.objects.create(
         parent=mid_lr,
-        child=bottom_lr,
-        relation_type="PROGRAM_PROGRAMS",
-    )
-
-    deep_course = _make_course(title="Deep Course")
-    LearningResourceRelationship.objects.create(
-        parent=bottom_lr,
-        child=deep_course,
+        child=nested_course,
         relation_type="PROGRAM_COURSES",
     )
 
     result = build_program_children_content(top_lr)
     assert "Mid Program" in result
-    assert "Bottom Program" in result
-    assert "Deep Course" in result
+    assert "Nested Course" in result
