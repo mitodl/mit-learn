@@ -24,7 +24,10 @@ class QdrantCloudEncoder(BaseEncoder):
                 self.model_short_name()
             )
         except KeyError:
-            msg = f"Model {model_name} not found in tiktoken. defaulting to None"
+            msg = (
+                f"Model short name {self.model_short_name()!r} (from original model "
+                f"{model_name!r}) not found in tiktoken. defaulting to None"
+            )
             log.warning(msg)
 
     def embed_documents(self, documents):
