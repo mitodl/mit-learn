@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.7
+Version 0.59.7 (Released March 26, 2026)
 --------------
 
 - Make learning material resources searchable by course (#3105)
