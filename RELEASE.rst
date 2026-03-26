@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.59.6
+--------------
+
+- fix: change the mobile design for UAI card (#3107)
+- fix: Handle missing course page financial_assistance_form_url (#3086)
+
 Version 0.59.5 (Released March 25, 2026)
 --------------
 
