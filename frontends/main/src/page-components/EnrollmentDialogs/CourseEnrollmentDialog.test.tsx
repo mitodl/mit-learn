@@ -617,5 +617,23 @@ describe("CourseEnrollmentDialog", () => {
         screen.queryByRole("link", { name: /financial assistance/i }),
       ).toBeNull()
     })
+
+    test("Does not crash when course page is null", async () => {
+      const run = upgradeableRun({
+        products: [makeProduct({ price: "149.00" })],
+      })
+      const course = makeCourse({
+        courseruns: [run],
+      })
+      ;(course as unknown as { page: null }).page = null
+
+      renderWithProviders(null)
+      await openDialog(course)
+
+      expect(screen.getByText(/Get Certificate/i)).toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", { name: /financial assistance/i }),
+      ).toBeNull()
+    })
   })
 })
