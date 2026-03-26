@@ -160,7 +160,8 @@ def ocw_courses_etl(
                         calc_completeness=True,
                     )
 
-                    loaders.load_learning_materials(course_run, content_file_ids)
+                    if settings.CREATE_OCW_LEARNING_MATERIALS:
+                        loaders.load_learning_materials(course_run, content_file_ids)
             else:
                 log.info("No course data found for %s", url_path)
         except:  # noqa: E722
