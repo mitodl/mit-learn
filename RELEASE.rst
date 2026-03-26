@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.8
+Version 0.59.8 (Released March 26, 2026)
 --------------
 
 - hide duplicate course run enrollments in the learner dashboard (#3104)
