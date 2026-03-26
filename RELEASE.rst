@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.59.9
+--------------
+
+- fix: Handle image stretch on product page (#3108)
+
 Version 0.59.8 (Released March 26, 2026)
 --------------
 
