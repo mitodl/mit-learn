@@ -560,6 +560,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     number_of_programs = serializers.SerializerMethodField(
         help_text="Number of Programs", allow_null=True
     )
+    program_courses = serializers.SerializerMethodField(
+        help_text="Courses in this Program", allow_null=True
+    )
     location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
     starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
     format_type = serializers.SerializerMethodField(help_text="Format", allow_null=True)
@@ -693,6 +696,103 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         ):
             return serialized_resource["program"].get("program_count", 0)
         return None
+
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "readable_id": {"type": "string"},
+                    "description": {"type": "string"},
+                    "resource_type": {"type": "string"},
+                    "topics": {"type": "array", "items": {"type": "string"}},
+                    "parent_program": {"type": "string"},
+                },
+            },
+        }
+    )
+    def get_program_courses(self, serialized_resource):
+        """Return details about courses/programs in a program"""
+        if (
+            serialized_resource.get("resource_type")
+            != LearningResourceType.program.name
+        ):
+            return None
+        children = serialized_resource.get("children", [])
+        if not children:
+            return None
+        courses = self._collect_courses_from_children(children)
+        return courses if courses else None
+
+    def _collect_courses_from_children(
+        self,
+        children_data,
+        max_depth=3,
+        visited=None,
+        parent_program_title=None,
+    ):
+        """Recursively collect courses from program children.
+
+        For PROGRAM_PROGRAMS children, recurse into their children to find
+        actual courses. For PROGRAM_COURSES children, include directly.
+        """
+        if max_depth <= 0:
+            return []
+        if visited is None:
+            visited = set()
+
+        child_ids = [c["child"] for c in children_data if c["child"] not in visited]
+        if not child_ids:
+            return []
+        visited.update(child_ids)
+
+        child_resources = models.LearningResource.objects.filter(
+            id__in=child_ids
+        ).prefetch_related("topics", "children__child__topics")
+        child_map = {r.id: r for r in child_resources}
+
+        courses = []
+        for child_rel in children_data:
+            child = child_map.get(child_rel["child"])
+            if not child:
+                continue
+
+            entry = {
+                "title": child.title,
+                "readable_id": child.readable_id,
+                "description": child.description or "",
+                "resource_type": child.resource_type,
+                "topics": [t.name for t in child.topics.all()],
+            }
+            if parent_program_title:
+                entry["parent_program"] = parent_program_title
+
+            relation_type = child_rel.get("relation_type")
+            if (
+                child.resource_type == LearningResourceType.program.name
+                and relation_type
+                == constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS
+            ):
+                # Include the sub-program itself for structural context
+                courses.append(entry)
+                # Recurse into its children
+                sub_children = list(
+                    child.children.values("child", "relation_type", "position")
+                )
+                courses.extend(
+                    self._collect_courses_from_children(
+                        sub_children,
+                        max_depth - 1,
+                        visited,
+                        parent_program_title=child.title,
+                    )
+                )
+            else:
+                courses.append(entry)
+
+        return courses
 
     @extend_schema_field({"type": "string"})
     def get_duration(self, serialized_resource):
@@ -911,8 +1011,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return rendered_data
 
     def render_chunks(self):
-        """Convert course info to markdown chunks"""
+        """Convert resource info to markdown chunks"""
         rendered_doc = self.render_document()
+        resource_type = self.instance.get("resource_type", "course")
         """
         We cant use tiktoken for token size calculation so
         we use a rough calculation of 4*chunk_size characters:
@@ -925,7 +1026,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
         return [
             (
-                f"# Information about this course:\n\n"
+                f"# Information about this {resource_type}:\n\n"
                 f"{json_to_markdown(json.loads(json_fragment))}"
             )
             for json_fragment in RecursiveJsonSplitter(

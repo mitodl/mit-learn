@@ -465,14 +465,17 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     if config and config.fetch_only:
         # Do not upsert the course, it should already exist.
         # Just find it and return it.
-        resource = LearningResource.objects.filter(
-            readable_id=resource_id,
-            platform=platform,
-            resource_type=resource_type,
-            published=True,
-        ).first()
+        resource = (
+            LearningResource.objects.filter(
+                readable_id=resource_id,
+                platform=platform,
+                resource_type=resource_type,
+            )
+            .filter(Q(published=True) | Q(test_mode=True))
+            .first()
+        )
         if not resource:
-            log.warning("No published resource found for %s", resource_id)
+            log.warning("No published or test_mode resource found for %s", resource_id)
         return resource, False
 
     if unique_field_name != READABLE_ID_FIELD:

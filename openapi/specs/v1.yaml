@@ -11885,6 +11885,28 @@ components:
           readOnly: true
           nullable: true
           description: Number of Programs
+        program_courses:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              readable_id:
+                type: string
+              description:
+                type: string
+              resource_type:
+                type: string
+              topics:
+                type: array
+                items:
+                  type: string
+              parent_program:
+                type: string
+          readOnly: true
+          nullable: true
+          description: Courses in this Program
         location:
           type: string
           readOnly: true
@@ -11938,6 +11960,7 @@ components:
       - offered_by
       - platform
       - price
+      - program_courses
       - runs
       - starts
       - title

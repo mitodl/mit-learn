@@ -23,10 +23,12 @@ from selenium.webdriver.chrome.options import Options
 from learning_resources.constants import (
     GROUP_STAFF_LISTS_EDITORS,
     LearningResourceRelationTypes,
+    LearningResourceType,
     semester_mapping,
 )
 from learning_resources.hooks import get_plugin_manager
 from learning_resources.models import (
+    ContentFile,
     LearningResource,
     LearningResourceDepartment,
     LearningResourceOfferor,
@@ -683,3 +685,91 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
     if len(tokens) <= max_tokens:
         return text
     return encoding.decode(tokens[:max_tokens])
+
+
+def _collect_child_resources(learning_resource, max_depth=3, visited=None):
+    """Recursively collect child resources from a program's hierarchy.
+
+    Returns a list of dicts with resource info and any available
+    contentfile summaries, recursing into PROGRAM_PROGRAMS children.
+    """
+    if max_depth <= 0:
+        return []
+    if visited is None:
+        visited = set()
+    visited.add(learning_resource.id)
+
+    relationships = (
+        LearningResourceRelationship.objects.filter(parent=learning_resource)
+        .select_related("child")
+        .prefetch_related("child__topics")
+    )
+
+    results = []
+    for rel in relationships:
+        child = rel.child
+        if child.id in visited:
+            continue
+
+        entry = {
+            "title": child.title,
+            "description": child.description or "",
+            "resource_type": child.resource_type,
+            "topics": [t.name for t in child.topics.all()],
+            "summaries": list(
+                ContentFile.objects.filter(
+                    run__learning_resource=child,
+                )
+                .exclude(summary="")
+                .values_list("summary", flat=True)
+            ),
+        }
+
+        if (
+            child.resource_type == LearningResourceType.program.name
+            and rel.relation_type == LearningResourceRelationTypes.PROGRAM_PROGRAMS
+        ):
+            entry["children"] = _collect_child_resources(child, max_depth - 1, visited)
+
+        results.append(entry)
+
+    return results
+
+
+def _format_resource_entry(entry, heading_level=3):
+    """Format a single resource entry as markdown."""
+    prefix = "#" * heading_level
+    lines = [f"{prefix} {entry['title']}"]
+    if entry["description"]:
+        lines.append(entry["description"])
+    if entry["topics"]:
+        lines.append(f"Topics: {', '.join(entry['topics'])}")
+    if entry.get("summaries"):
+        lines.append("\n**Content summaries:**")
+        lines.extend(f"- {summary}" for summary in entry["summaries"])
+    return "\n".join(lines)
+
+
+def build_program_children_content(learning_resource):
+    """Build markdown content describing a program's children.
+
+    Recursively collects child courses/programs and their contentfile
+    summaries, formatted as markdown suitable for appending to a
+    program's marketing page contentfile.
+    """
+    if learning_resource.resource_type != LearningResourceType.program.name:
+        return ""
+
+    children = _collect_child_resources(learning_resource)
+    if not children:
+        return ""
+
+    sections = ["\n\n## Program Contents\n"]
+    for entry in children:
+        sections.append(_format_resource_entry(entry))
+        sections.extend(
+            _format_resource_entry(sub_entry, heading_level=4)
+            for sub_entry in entry.get("children", [])
+        )
+
+    return "\n\n".join(sections)

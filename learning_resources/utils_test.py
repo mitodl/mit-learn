@@ -38,6 +38,7 @@ from learning_resources.models import (
 )
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
+    build_program_children_content,
     transfer_list_resources,
     truncate_to_tokens,
 )
@@ -640,3 +641,105 @@ def test_truncate_to_tokens_util(mocker):
     max_tokens = random.randint(1, 50)  # noqa: S311
     truncated = truncate_to_tokens(content, max_tokens, model)
     assert len(mock_encoding.encode(truncated)) <= max_tokens
+
+
+def _make_program(**kwargs):
+    """Create a program LearningResource without auto-generated child courses."""
+    from learning_resources.models import Program
+
+    lr = LearningResourceFactory.create(
+        resource_type="program", create_program=False, **kwargs
+    )
+    Program.objects.get_or_create(learning_resource=lr)
+    return lr
+
+
+def _make_course(**kwargs):
+    """Create a course LearningResource without auto-generated runs."""
+    return LearningResourceFactory.create(
+        resource_type="course", create_course=False, **kwargs
+    )
+
+
+def test_build_program_children_content_no_children():
+    """Programs with no children should return empty string"""
+    program_lr = _make_program()
+    assert build_program_children_content(program_lr) == ""
+
+
+def test_build_program_children_content_non_program():
+    """Non-program resources should return empty string"""
+    course_lr = _make_course()
+    assert build_program_children_content(course_lr) == ""
+
+
+def test_build_program_children_content_direct_courses():
+    """Programs with direct course children should include them"""
+    program_lr = _make_program()
+    course_lr = _make_course(title="Test Course", description="A test course")
+    from learning_resources.models import LearningResourceRelationship
+
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=course_lr,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    result = build_program_children_content(program_lr)
+    assert "## Program Contents" in result
+    assert "Test Course" in result
+    assert "A test course" in result
+
+
+def test_build_program_children_content_child_programs_with_courses():
+    """Programs with child programs should recurse to find courses"""
+    from learning_resources.models import LearningResourceRelationship
+
+    parent_lr = _make_program()
+    child_program_lr = _make_program(title="Child Program")
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type="PROGRAM_PROGRAMS",
+    )
+
+    grandchild_course_lr = _make_course(title="Grandchild Course")
+    LearningResourceRelationship.objects.create(
+        parent=child_program_lr,
+        child=grandchild_course_lr,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    result = build_program_children_content(parent_lr)
+    assert "Child Program" in result
+    assert "Grandchild Course" in result
+
+
+def test_build_program_children_content_with_summaries():
+    """Child course contentfile summaries should be included"""
+    from learning_resources.models import (
+        ContentFile,
+        LearningResourceRelationship,
+        LearningResourceRun,
+    )
+
+    program_lr = _make_program()
+    course_lr = _make_course(title="Course With Summary")
+    run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="test-run",
+    )
+    ContentFile.objects.create(
+        run=run,
+        key="transcript.txt",
+        summary="This is a summary of the course content.",
+    )
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=course_lr,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    result = build_program_children_content(program_lr)
+    assert "This is a summary of the course content." in result
+    assert "Content summaries" in result

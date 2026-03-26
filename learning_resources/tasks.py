@@ -34,6 +34,7 @@ from learning_resources.etl.utils import (
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
+    build_program_children_content,
     html_to_markdown,
     load_course_blocklist,
     resource_unpublished_actions,
@@ -721,5 +722,9 @@ def marketing_page_for_resources(resource_ids):
             )
             content_file.key = marketing_page_url
             content_file.url = marketing_page_url
-            content_file.content = html_to_markdown(page_content)
+            content = html_to_markdown(page_content)
+            children_content = build_program_children_content(learning_resource)
+            if children_content:
+                content += children_content
+            content_file.content = content
             content_file.save()

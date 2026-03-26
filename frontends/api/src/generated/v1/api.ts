@@ -2781,6 +2781,12 @@ export interface LearningResourceDisplayInfoResponse {
    */
   number_of_programs: number | null
   /**
+   * Courses in this Program
+   * @type {Array<LearningResourceDisplayInfoResponseProgramCoursesInner>}
+   * @memberof LearningResourceDisplayInfoResponse
+   */
+  program_courses: Array<LearningResourceDisplayInfoResponseProgramCoursesInner> | null
+  /**
    * Location
    * @type {string}
    * @memberof LearningResourceDisplayInfoResponse
@@ -2816,6 +2822,49 @@ export interface LearningResourceDisplayInfoResponse {
    * @memberof LearningResourceDisplayInfoResponse
    */
   id: number
+}
+/**
+ *
+ * @export
+ * @interface LearningResourceDisplayInfoResponseProgramCoursesInner
+ */
+export interface LearningResourceDisplayInfoResponseProgramCoursesInner {
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  title?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  readable_id?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  description?: string
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  resource_type?: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  topics?: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
+   */
+  parent_program?: string
 }
 /**
  *

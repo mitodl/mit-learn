@@ -857,7 +857,8 @@ def test_load_course_fetch_only(mocker, course_exists):
     else:
         assert result is None
         mock_warn.assert_called_once_with(
-            "No published resource found for %s", resource.readable_id
+            "No published or test_mode resource found for %s",
+            resource.readable_id,
         )
     mock_next_runs_prices.assert_not_called()
 
