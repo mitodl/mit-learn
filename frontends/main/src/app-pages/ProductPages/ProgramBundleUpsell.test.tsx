@@ -22,7 +22,7 @@ describe("ProgramBundleUpsell", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("Renders upsell with program title, course count, price, and View Program link", async () => {
+  test("Renders upsell with program title, course count description, and View program details link", async () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -50,12 +50,13 @@ describe("ProgramBundleUpsell", () => {
 
     const upsell = await screen.findByTestId("program-bundle-upsell-item")
     // 3 required + 2 electives = 5 total courses
+    expect(upsell).toHaveTextContent(programDetail.title)
     expect(upsell).toHaveTextContent(
-      `Get all 5 ${programDetail.title} Courses + Certificates`,
+      "Enroll in all 5 courses and save vs. individual pricing.",
     )
-    expect(upsell).toHaveTextContent("$750")
-    expect(upsell).toHaveTextContent("(19% off)")
-    const link = within(upsell).getByRole("link", { name: "View Program" })
+    const link = within(upsell).getByRole("link", {
+      name: "View program details >",
+    })
     expect(link).toHaveAttribute(
       "href",
       `/programs/${programDetail.readable_id}`,
@@ -149,8 +150,12 @@ describe("ProgramBundleUpsell", () => {
     const items = await screen.findAllByTestId("program-bundle-upsell-item")
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent(programDetails[0].title)
-    expect(items[0]).toHaveTextContent("$500")
+    expect(items[0]).toHaveTextContent(
+      "Enroll in all 3 courses and save vs. individual pricing.",
+    )
     expect(items[1]).toHaveTextContent(programDetails[1].title)
-    expect(items[1]).toHaveTextContent("$900")
+    expect(items[1]).toHaveTextContent(
+      "Enroll in all 4 courses and save vs. individual pricing.",
+    )
   })
 })
