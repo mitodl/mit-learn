@@ -692,6 +692,7 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
 
     Returns a list of dicts with resource info and any available
     contentfile summaries, recursing into PROGRAM_PROGRAMS children.
+    Only follows PROGRAM_COURSES and PROGRAM_PROGRAMS relationships.
     """
     if max_depth <= 0:
         return []
@@ -700,10 +701,27 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
     visited.add(learning_resource.id)
 
     relationships = (
-        LearningResourceRelationship.objects.filter(parent=learning_resource)
+        LearningResourceRelationship.objects.filter(
+            parent=learning_resource,
+            relation_type__in=[
+                LearningResourceRelationTypes.PROGRAM_COURSES,
+                LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+            ],
+        )
         .select_related("child")
         .prefetch_related("child__topics")
     )
+
+    child_ids = [rel.child_id for rel in relationships]
+    summaries_by_resource = {}
+    if child_ids:
+        summary_qs = (
+            ContentFile.objects.filter(run__learning_resource_id__in=child_ids)
+            .exclude(summary="")
+            .values_list("run__learning_resource_id", "summary")
+        )
+        for resource_id, summary in summary_qs:
+            summaries_by_resource.setdefault(resource_id, []).append(summary)
 
     results = []
     for rel in relationships:
@@ -716,13 +734,7 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
             "description": child.description or "",
             "resource_type": child.resource_type,
             "topics": [t.name for t in child.topics.all()],
-            "summaries": list(
-                ContentFile.objects.filter(
-                    run__learning_resource=child,
-                )
-                .exclude(summary="")
-                .values_list("summary", flat=True)
-            ),
+            "summaries": summaries_by_resource.get(child.id, []),
         }
 
         if (
@@ -736,18 +748,25 @@ def _collect_child_resources(learning_resource, max_depth=3, visited=None):
     return results
 
 
-def _format_resource_entry(entry, heading_level=3):
-    """Format a single resource entry as markdown."""
-    prefix = "#" * heading_level
-    lines = [f"{prefix} {entry['title']}"]
-    if entry["description"]:
-        lines.append(entry["description"])
-    if entry["topics"]:
-        lines.append(f"Topics: {', '.join(entry['topics'])}")
-    if entry.get("summaries"):
-        lines.append("\n**Content summaries:**")
-        lines.extend(f"- {summary}" for summary in entry["summaries"])
-    return "\n".join(lines)
+def _format_resource_entries(entries, heading_level=3):
+    """Recursively format resource entries as markdown sections."""
+    sections = []
+    for entry in entries:
+        prefix = "#" * heading_level
+        lines = [f"{prefix} {entry['title']}"]
+        if entry["description"]:
+            lines.append(entry["description"])
+        if entry["topics"]:
+            lines.append(f"Topics: {', '.join(entry['topics'])}")
+        if entry.get("summaries"):
+            lines.append("\n**Content summaries:**")
+            lines.extend(f"- {summary}" for summary in entry["summaries"])
+        sections.append("\n".join(lines))
+        if entry.get("children"):
+            sections.extend(
+                _format_resource_entries(entry["children"], heading_level + 1)
+            )
+    return sections
 
 
 def build_program_children_content(learning_resource):
@@ -765,11 +784,6 @@ def build_program_children_content(learning_resource):
         return ""
 
     sections = ["\n\n## Program Contents\n"]
-    for entry in children:
-        sections.append(_format_resource_entry(entry))
-        sections.extend(
-            _format_resource_entry(sub_entry, heading_level=4)
-            for sub_entry in entry.get("children", [])
-        )
+    sections.extend(_format_resource_entries(children))
 
     return "\n\n".join(sections)

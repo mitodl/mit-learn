@@ -2781,7 +2781,7 @@ export interface LearningResourceDisplayInfoResponse {
    */
   number_of_programs: number | null
   /**
-   * Courses in this Program
+   * Child courses and programs included in this learning resource
    * @type {Array<LearningResourceDisplayInfoResponseProgramCoursesInner>}
    * @memberof LearningResourceDisplayInfoResponse
    */

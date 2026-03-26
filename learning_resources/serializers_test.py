@@ -1203,3 +1203,32 @@ def test_get_program_courses_depth_limit():
     assert "Level 2" in titles
     assert "Level 3" in titles
     assert "Deep Course" not in titles
+
+
+def test_get_program_courses_ignores_non_program_relations():
+    """Only PROGRAM_COURSES and PROGRAM_PROGRAMS relations appear in program_courses"""
+    program_lr = _make_program_lr()
+
+    course_lr = _make_course_lr(title="Program Course")
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=course_lr,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    # Add a non-program relation type
+    unrelated_lr = _make_course_lr(title="Learning Path Item")
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=unrelated_lr,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    assert len(result) == 1
+    assert result[0]["title"] == "Program Course"

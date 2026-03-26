@@ -743,3 +743,60 @@ def test_build_program_children_content_with_summaries():
     result = build_program_children_content(program_lr)
     assert "This is a summary of the course content." in result
     assert "Content summaries" in result
+
+
+def test_build_program_children_content_ignores_non_program_relations():
+    """Only PROGRAM_COURSES and PROGRAM_PROGRAMS relations are included"""
+    from learning_resources.models import LearningResourceRelationship
+
+    program_lr = _make_program()
+    course_lr = _make_course(title="Real Course")
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=course_lr,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    # Add a non-program relation (e.g. LEARNING_PATH_ITEMS)
+    unrelated_lr = _make_course(title="Unrelated Item")
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=unrelated_lr,
+        relation_type="LEARNING_PATH_ITEMS",
+    )
+
+    result = build_program_children_content(program_lr)
+    assert "Real Course" in result
+    assert "Unrelated Item" not in result
+
+
+def test_build_program_children_content_deep_nesting():
+    """All levels of nested children are formatted, not just the first two"""
+    from learning_resources.models import LearningResourceRelationship
+
+    top_lr = _make_program()
+    mid_lr = _make_program(title="Mid Program")
+    LearningResourceRelationship.objects.create(
+        parent=top_lr,
+        child=mid_lr,
+        relation_type="PROGRAM_PROGRAMS",
+    )
+
+    bottom_lr = _make_program(title="Bottom Program")
+    LearningResourceRelationship.objects.create(
+        parent=mid_lr,
+        child=bottom_lr,
+        relation_type="PROGRAM_PROGRAMS",
+    )
+
+    deep_course = _make_course(title="Deep Course")
+    LearningResourceRelationship.objects.create(
+        parent=bottom_lr,
+        child=deep_course,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    result = build_program_children_content(top_lr)
+    assert "Mid Program" in result
+    assert "Bottom Program" in result
+    assert "Deep Course" in result

@@ -561,7 +561,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         help_text="Number of Programs", allow_null=True
     )
     program_courses = serializers.SerializerMethodField(
-        help_text="Courses in this Program", allow_null=True
+        help_text="Child courses and programs included in this learning resource",
+        allow_null=True,
     )
     location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
     starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
@@ -720,7 +721,15 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             != LearningResourceType.program.name
         ):
             return None
-        children = serialized_resource.get("children", [])
+        program_relation_types = {
+            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
+            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        }
+        children = [
+            c
+            for c in serialized_resource.get("children", [])
+            if c.get("relation_type") in program_relation_types
+        ]
         if not children:
             return None
         courses = self._collect_courses_from_children(children)

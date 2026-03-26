@@ -11906,7 +11906,7 @@ components:
                 type: string
           readOnly: true
           nullable: true
-          description: Courses in this Program
+          description: Child courses and programs included in this learning resource
         location:
           type: string
           readOnly: true
