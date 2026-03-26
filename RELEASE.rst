@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.59.7
+--------------
+
+- Make learning material resources searchable by course (#3105)
+- CREATE_OCW_LEARNING_MATERIALS flag (#3103)
+
 Version 0.59.6 (Released March 26, 2026)
 --------------
 
