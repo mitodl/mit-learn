@@ -14,10 +14,7 @@ class DefaultPagination(LimitOffsetPagination):
     def get_count(self, queryset):
         """Get the count of objects in the queryset"""
         # we additionally filter this down to a subset of fields
-        try:
-            return queryset.only(*self.count_fields).count()
-        except (AttributeError, TypeError):
-            return len(queryset)
+        return queryset.only(*self.count_fields).count()
 
 
 class LargePagination(DefaultPagination):
