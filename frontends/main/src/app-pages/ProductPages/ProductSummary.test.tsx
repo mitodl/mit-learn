@@ -1058,7 +1058,7 @@ describe("CourseSummary", () => {
       const course = makeCourse({
         next_run_id: run.id,
         courseruns: [run],
-        page: null,
+        page: null as never,
       })
 
       renderWithProviders(<CourseSummary course={course} />)

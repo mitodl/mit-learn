@@ -131,7 +131,7 @@ describe("CourseEnrollmentButton", () => {
     const course = makeCourse({
       next_run_id: run.id,
       courseruns: [run],
-      page: null,
+      page: null as never,
     })
 
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
@@ -153,7 +153,7 @@ describe("CourseEnrollmentButton", () => {
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
 
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
-    const { promise } = Promise.withResolvers()
+    const promise = new Promise<void>(() => {})
     setMockResponse.delete(mitxUrls.baskets.clear(), promise)
 
     renderWithProviders(<CourseEnrollmentButton course={course} />)
