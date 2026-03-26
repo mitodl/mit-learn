@@ -54,4 +54,23 @@ class QdrantCloudEncoder(BaseEncoder):
         Return the dimension of the embeddings
         """
         info = litellm.get_model_info(self.model_short_name())
-        return info["output_vector_size"]
+        if not isinstance(info, dict):
+            raise ValueError(
+                f"Could not determine embedding dimension: litellm.get_model_info("
+                f"{self.model_short_name()!r}) returned {type(info).__name__}, "
+                "expected a dict with an 'output_vector_size' field."
+            )
+        if "output_vector_size" not in info:
+            raise ValueError(
+                "Could not determine embedding dimension: 'output_vector_size' "
+                f"missing from litellm.get_model_info({self.model_short_name()!r}) "
+                "response."
+            )
+        dim = info["output_vector_size"]
+        if not isinstance(dim, int):
+            raise ValueError(
+                "Could not determine embedding dimension: 'output_vector_size' "
+                f"from litellm.get_model_info({self.model_short_name()!r}) is of "
+                f"type {type(dim).__name__}, expected int."
+            )
+        return dim
