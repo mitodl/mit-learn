@@ -20,6 +20,7 @@ from learning_resources_search.connection import (
 )
 from learning_resources_search.constants import (
     CERTIFICATION_TYPE_QUERY_FIELDS,
+    CONTENT_FILE_QUERY_FIELDS,
     CONTENT_FILE_TYPE,
     COURSE_QUERY_FIELDS,
     COURSE_TYPE,
@@ -27,11 +28,11 @@ from learning_resources_search.constants import (
     HYBRID_COMBINED_INDEX,
     HYBRID_SEARCH_MODE,
     HYBRID_SEARCH_PIPELINE_NAME,
+    LEARNING_MATERIAL_CONTENT_FILE_QUERY_FIELDS,
     LEARNING_RESOURCE,
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
     LEARNING_RESOURCE_TYPES,
-    RESOURCEFILE_QUERY_FIELDS,
     RUN_INSTRUCTORS_QUERY_FIELDS,
     RUN_LEVEL_QUERY_FIELDS,
     RUNS_QUERY_FIELDS,
@@ -210,7 +211,7 @@ def generate_content_file_text_clause(text):
     if text:
         text_query = {
             "should": [
-                {query_type: {"query": text, "fields": RESOURCEFILE_QUERY_FIELDS}},
+                {query_type: {"query": text, "fields": CONTENT_FILE_QUERY_FIELDS}},
                 {
                     "nested": {
                         "path": "departments",
@@ -262,12 +263,12 @@ def generate_learning_resources_text_clause(
             extra_params["slop"] = slop
 
     if content_file_score_weight is not None:
-        resourcefile_fields = [
+        content_file_fields = [
             f"{field}^{content_file_score_weight}"
-            for field in RESOURCEFILE_QUERY_FIELDS
+            for field in CONTENT_FILE_QUERY_FIELDS
         ]
     else:
-        resourcefile_fields = RESOURCEFILE_QUERY_FIELDS
+        content_file_fields = CONTENT_FILE_QUERY_FIELDS
 
     if text:
         text_query = {
@@ -373,6 +374,19 @@ def generate_learning_resources_text_clause(
                         },
                     }
                 },
+                {
+                    "nested": {
+                        "path": "content_files",
+                        "query": {
+                            query_type: {
+                                "query": text,
+                                "fields": LEARNING_MATERIAL_CONTENT_FILE_QUERY_FIELDS,
+                                **extra_params,
+                            }
+                        },
+                        "ignore_unmapped": True,
+                    }
+                },
             ]
         }
         # Only include has_child query if content_file_score_weight > 0
@@ -385,7 +399,7 @@ def generate_learning_resources_text_clause(
                         "query": {
                             query_type: {
                                 "query": text,
-                                "fields": resourcefile_fields,
+                                "fields": content_file_fields,
                                 **extra_params,
                             }
                         },
