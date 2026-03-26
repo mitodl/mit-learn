@@ -200,8 +200,10 @@ const SidebarImage = styled(Image)(({ theme }) => ({
 
 const ShortDescription = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
+  lineHeight: "1.5rem",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body2,
+    lineHeight: "1.5rem",
   },
 }))
 
@@ -274,6 +276,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     <Typography
                       component="h1"
                       typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                      style={{ lineHeight: "2.25rem" }}
                     >
                       {title}
                     </Typography>
