@@ -22,6 +22,7 @@ const enrollment = {
     `${API_BASE_URL}/api/v1/enrollments/${id ? `${id}/` : ""}`,
   enrollmentsListV1: () => `${API_BASE_URL}/api/v1/enrollments/`,
   enrollmentsListV2: () => `${API_BASE_URL}/api/v2/enrollments/`,
+  enrollmentsListV3: () => `${API_BASE_URL}/api/v3/enrollments/`,
 }
 
 const programEnrollments = {
@@ -94,6 +95,11 @@ const baskets = {
   clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
 }
 
+const verifiedProgramEnrollments = {
+  create: (courserunId: string) =>
+    `${API_BASE_URL}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -110,4 +116,5 @@ export {
   certificates,
   products,
   baskets,
+  verifiedProgramEnrollments,
 }

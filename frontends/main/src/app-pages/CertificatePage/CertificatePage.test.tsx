@@ -34,7 +34,7 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.course_run.course.title)
-    await screen.findAllByText("Module Certificate")
+    await screen.findAllByText("Certificate")
     await screen.findAllByText(certificate.user.name!)
     await screen.findAllByText(
       `${moment(certificate.course_run.start_date).format("MMM D, YYYY")} - ${moment(certificate.course_run.end_date).format("MMM D, YYYY")}`,
@@ -100,9 +100,7 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.program.title)
-    await screen.findAllByText(
-      `${certificate.program.program_type} Certificate`,
-    )
+    await screen.findAllByText("Certificate")
     await screen.findAllByText(certificate.user.name!)
 
     await screen.findAllByText(

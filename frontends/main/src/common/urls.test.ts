@@ -1,3 +1,4 @@
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { auth, coursePageView, programPageView } from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
@@ -69,17 +70,46 @@ test.each([
 )
 
 test.each([
-  {
-    readableId: "program-v1:MITxT+10.50x",
-    expected: "/programs/program-v1:MITxT+10.50x",
-  },
-  {
-    readableId: "some-plain-slug",
-    expected: "/programs/some-plain-slug",
-  },
-])(
-  "programPageView does not encode RFC 3986 pchar characters",
-  ({ readableId, expected }) => {
-    expect(programPageView(readableId)).toBe(expected)
+  { displayMode: null, label: "null" },
+  { displayMode: "", label: "empty string" },
+  { displayMode: undefined, label: "undefined" },
+] as const)(
+  "programPageView returns /programs/ path when display_mode is $label",
+  ({ displayMode }) => {
+    // Use a realistic readable_id with pchar characters (: and +) to verify
+    // they are not percent-encoded in the URL path.
+    expect(
+      programPageView({
+        readable_id: "program-v1:MITxT+10.50x",
+        display_mode: displayMode,
+      }),
+    ).toBe("/programs/program-v1:MITxT+10.50x")
   },
 )
+
+test("programPageView returns /programs/ path when display_mode is omitted", () => {
+  expect(
+    programPageView(
+      // @ts-expect-error Force callers to pass display_mode explicitly
+      { readable_id: "some-plain-slug" },
+    ),
+  ).toBe("/programs/some-plain-slug")
+})
+
+test("programPageView returns /courses/p/ path when display_mode is course", () => {
+  expect(
+    programPageView({
+      readable_id: "program-v1:MITxT+18.01x",
+      display_mode: DisplayModeEnum.Course,
+    }),
+  ).toBe("/courses/p/program-v1:MITxT+18.01x")
+})
+
+test("programPageView falls back to /programs/ for unknown display_mode values", () => {
+  expect(
+    programPageView({
+      readable_id: "some-slug",
+      display_mode: "unknown-future-value" as never,
+    }),
+  ).toBe("/programs/some-slug")
+})

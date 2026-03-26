@@ -22,7 +22,7 @@ import {
   canPurchaseRun,
   formatPrice,
   getEnrollmentType,
-  mitxonlineUrl,
+  mitxonlineLegacyUrl,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
@@ -446,7 +446,9 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
           {hasFinancialAid ? (
             <UnderlinedLink
               color="black"
-              href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+              href={mitxonlineLegacyUrl(
+                course.page.financial_assistance_form_url,
+              )}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -534,7 +536,9 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
             {canPurchase && hasFinancialAid ? (
               <UnderlinedLink
                 color="black"
-                href={mitxonlineUrl(course.page.financial_assistance_form_url)}
+                href={mitxonlineLegacyUrl(
+                  course.page.financial_assistance_form_url,
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -657,11 +661,15 @@ const RequirementsRow: React.FC<ProgramInfoRowProps> = ({
 }) => {
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCourseCount,
+    (sum, req) => sum + req.requiredCount,
     0,
   )
   if (totalRequired === 0) return null
 
+  // Always say "Courses" here. Whether a child program should be labeled
+  // as a "course" or "program" depends on its display_mode, which can't be
+  // determined from the req_tree alone. The important use cases are course
+  // and course-like program (display_mode="Course") children only.
   return (
     <InfoRow {...others}>
       <InfoRowIcon>
@@ -773,7 +781,7 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
       {program.page.financial_assistance_form_url ? (
         <UnderlinedLink
           color="black"
-          href={mitxonlineUrl(program.page.financial_assistance_form_url)}
+          href={mitxonlineLegacyUrl(program.page.financial_assistance_form_url)}
           target="_blank"
           rel="noopener noreferrer"
           style={{ minWidth: "fit-content" }}
@@ -842,4 +850,27 @@ const ProgramSummary: React.FC<{
   )
 }
 
-export { CourseSummary, ProgramSummary, UnderlinedLink, TestIds }
+const ProgramAsCourseSummary: React.FC<{
+  program: V2ProgramDetail
+  courses?: CourseWithCourseRunsSerializerV2[]
+}> = ({ program, courses }) => {
+  return (
+    <SummaryRows>
+      <ProgramDurationRow program={program} data-testid={TestIds.DurationRow} />
+      <ProgramPaceRow courses={courses} data-testid={TestIds.PaceRow} />
+      <ProgramPriceRow data-testid={TestIds.PriceRow} program={program} />
+    </SummaryRows>
+  )
+}
+
+export {
+  CourseSummary,
+  ProgramSummary,
+  ProgramAsCourseSummary,
+  ProgramDurationRow,
+  ProgramPaceRow,
+  ProgramPriceRow,
+  SummaryRows,
+  UnderlinedLink,
+  TestIds,
+}

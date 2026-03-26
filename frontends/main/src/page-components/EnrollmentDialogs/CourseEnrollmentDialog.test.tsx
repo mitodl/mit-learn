@@ -18,6 +18,7 @@ import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -396,11 +397,7 @@ describe("CourseEnrollmentDialog", () => {
       )
 
       // Verify redirect to cart page
-      const expectedCartUrl = new URL(
-        "/cart/",
-        process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-      ).toString()
-      expect(assign).toHaveBeenCalledWith(expectedCartUrl)
+      expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
     })
 
     test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
@@ -523,10 +520,7 @@ describe("CourseEnrollmentDialog", () => {
           const link = await screen.findByRole("link", {
             name: /financial assistance/i,
           })
-          const expectedUrl = new URL(
-            financialAidUrl,
-            process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-          ).toString()
+          const expectedUrl = mitxonlineLegacyUrl(financialAidUrl)
           expect(link).toHaveAttribute("href", expectedUrl)
         } else {
           const link = screen.queryByRole("link", {
@@ -619,6 +613,24 @@ describe("CourseEnrollmentDialog", () => {
       expect(screen.getByText("Not available")).toBeInTheDocument()
 
       // Financial assistance link should NOT be present (because price is null)
+      expect(
+        screen.queryByRole("link", { name: /financial assistance/i }),
+      ).toBeNull()
+    })
+
+    test("Does not crash when course page is null", async () => {
+      const run = upgradeableRun({
+        products: [makeProduct({ price: "149.00" })],
+      })
+      const course = makeCourse({
+        courseruns: [run],
+      })
+      ;(course as unknown as { page: null }).page = null
+
+      renderWithProviders(null)
+      await openDialog(course)
+
+      expect(screen.getByText(/Get Certificate/i)).toBeInTheDocument()
       expect(
         screen.queryByRole("link", { name: /financial assistance/i }),
       ).toBeNull()

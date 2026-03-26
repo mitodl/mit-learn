@@ -21,6 +21,7 @@ import type {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
+import { getCertificateInfo } from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -186,7 +187,7 @@ const Badge = styled.div(({ theme }) => ({
 const BadgeText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.white,
   position: "absolute",
-  top: "169px",
+  top: "185px",
   right: "26px",
   width: "175px",
   textAlign: "center",
@@ -500,7 +501,6 @@ const Certificate = ({
   title,
   displayType,
   userName,
-  shortDisplayType,
   ceus,
   signatories,
   startDate,
@@ -510,7 +510,6 @@ const Certificate = ({
   title: string
   displayType: string
   userName?: string
-  shortDisplayType: string
   ceus?: string
   signatories: SignatoryItem[]
   startDate?: string | null
@@ -529,9 +528,7 @@ const Certificate = ({
           <Typography variant="h4">This is to certify that</Typography>
           <NameText variant="h1">{userName}</NameText>
           <AchievementText>
-            has successfully completed all requirements of the <PrintBreak />
-            <strong>Universal Artificial Intelligence</strong>{" "}
-            {shortDisplayType}:
+            has successfully completed all requirements of <PrintBreak />
           </AchievementText>
         </Certification>
         <CourseInfo>
@@ -595,12 +592,9 @@ const CourseCertificate = ({
 }) => {
   const title = certificate.course_run.course.title
 
-  const displayType = "Module Certificate"
-
   const userName = certificate.user.name
 
-  const shortDisplayType = "module"
-
+  const { displayType } = getCertificateInfo()
   const signatories = certificate.certificate_page.signatory_items
 
   const startDate = certificate.course_run.start_date
@@ -612,7 +606,6 @@ const CourseCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName}
-      shortDisplayType={shortDisplayType}
       signatories={signatories}
       startDate={startDate}
       endDate={endDate}
@@ -628,11 +621,9 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate.program.title
 
-  const displayType = `${certificate.program.program_type} Certificate`
+  const { displayType } = getCertificateInfo()
 
   const userName = certificate.user.name
-
-  const shortDisplayType = `${certificate.program.program_type} program`
 
   const ceus = certificate.certificate_page.CEUs
 
@@ -647,7 +638,6 @@ const ProgramCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName}
-      shortDisplayType={shortDisplayType}
       ceus={ceus}
       signatories={signatories}
       startDate={startDate}
@@ -755,10 +745,7 @@ const CertificatePage: React.FC<{
       ? courseCertificateData?.course_run.course.title
       : programCertificateData?.program.title
 
-  const displayType =
-    certificateType === CertificateType.Course
-      ? "Module Certificate"
-      : `${programCertificateData?.program.program_type} Certificate`
+  const { displayType } = getCertificateInfo()
 
   const certificateData =
     certificateType === CertificateType.Course

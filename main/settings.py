@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.58.0"
+VERSION = "0.59.8"
 
 log = logging.getLogger()
 
@@ -118,6 +118,7 @@ INSTALLED_APPS = (
     "django_json_widget",
     "django_filters",
     "drf_spectacular",
+    "mitol.observability.apps.ObservabilityConfig",
     # Put our apps after this point
     "main",
     "users.apps.UsersConfig",
@@ -454,50 +455,8 @@ HOSTNAME = platform.node().split(".")[0]
 NPLUSONE_LOGGER = logging.getLogger("nplusone")
 NPLUSONE_LOG_LEVEL = logging.ERROR
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "filters": {"require_debug_false": {"()": "django.utils.log.RequireDebugFalse"}},
-    "formatters": {
-        "verbose": {
-            "format": (
-                "[%(asctime)s] %(levelname)s %(process)d [%(name)s] "
-                "%(filename)s:%(lineno)d - "
-                f"[{HOSTNAME}] - %(message)s"
-            ),
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        }
-    },
-    "handlers": {
-        "console": {
-            "level": LOG_LEVEL,
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
-        "mail_admins": {
-            "level": "ERROR",
-            "filters": ["require_debug_false"],
-            "class": "django.utils.log.AdminEmailHandler",
-        },
-    },
-    "loggers": {
-        "django": {
-            "propagate": True,
-            "level": DJANGO_LOG_LEVEL,
-            "handlers": ["console"],
-        },
-        "django.request": {
-            "handlers": ["mail_admins"],
-            "level": DJANGO_LOG_LEVEL,
-            "propagate": True,
-        },
-        "opensearch": {"level": OS_LOG_LEVEL},
-        "nplusone": {"handlers": ["console"], "level": "ERROR"},
-        "boto3": {"handlers": ["console"], "level": "ERROR"},
-        "zeal": {"handlers": ["console"], "level": "ERROR"},
-    },
-    "root": {"handlers": ["console"], "level": LOG_LEVEL},
-}
+# LOGGING is provided by mitol-django-observability (structlog-based, JSON in prod)
+from mitol.observability.settings.logging import LOGGING  # noqa: E402, F401
 
 STATUS_TOKEN = get_string("STATUS_TOKEN", "")
 
@@ -858,6 +817,12 @@ QDRANT_BATCH_SIZE_BYTES = get_int(
 
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 
+VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", default=20
+)
+VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=10000
+)
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False

@@ -1,5 +1,6 @@
 """Tests for ETL loaders"""
 
+import json
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -29,6 +30,7 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.edx_shared import sync_edx_course_files
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
+    ProgramLoadResult,
     calculate_completeness,
     load_content_file,
     load_content_files,
@@ -37,6 +39,8 @@ from learning_resources.etl.loaders import (
     load_image,
     load_instructors,
     load_offered_by,
+    load_ovs_playlist,
+    load_ovs_playlists,
     load_playlist,
     load_playlists,
     load_podcast,
@@ -53,6 +57,7 @@ from learning_resources.etl.loaders import (
     load_video_channels,
     load_videos,
 )
+from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -80,6 +85,8 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
+    LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceRun,
     PodcastEpisode,
     Program,
@@ -88,6 +95,7 @@ from learning_resources.models import (
     VideoChannel,
     VideoPlaylist,
 )
+from learning_resources.test_utils import set_up_topics
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -112,8 +120,14 @@ def youtube_video_platform():
 
 @pytest.fixture(autouse=True)
 def climate_platform():
-    """Fixture for a youtube video platform"""
+    """Fixture for a climate platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.climate.name)
+
+
+@pytest.fixture(autouse=True)
+def ovs_platform():
+    """Fixture for an OVS video platform"""
+    return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 
 @pytest.fixture(autouse=True)
@@ -253,7 +267,7 @@ def test_load_program(  # noqa: PLR0913
     }
 
     delivery_data = {"delivery": [delivery]} if delivery else {}
-    result = load_program(
+    result, _, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -305,16 +319,9 @@ def test_load_program(  # noqa: PLR0913
         assert isinstance(relationship.child, LearningResource)
         assert relationship.child.readable_id == data.learning_resource.readable_id
 
-    if program_exists and not is_published:
-        mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
-            result.id, result.resource_type
-        )
-    elif is_published:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
-            result.id
-        )
-    else:
-        mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
+    # Note: update_index is called by load_programs (after pass 2),
+    # not by load_program directly, so indexing is not asserted here.
+    mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -332,7 +339,7 @@ def test_load_program_preserves_preset_resource_category(mock_upsert_tasks):
         "end_date": "2017-06-20T00:00:00Z",
     }
 
-    result = load_program(
+    result, _, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -368,7 +375,7 @@ def test_load_program_defaults_resource_category(mock_upsert_tasks):
         "end_date": "2017-06-20T00:00:00Z",
     }
 
-    result = load_program(
+    result, _, _ = load_program(
         {
             "platform": platform.code,
             "readable_id": program.learning_resource.readable_id,
@@ -440,7 +447,7 @@ def test_load_program_bad_platform(mocker):
         "published": True,
         "courses": [],
     }
-    result = load_program(props, [], [], config=ProgramLoaderConfig(prune=True))
+    result, _, _ = load_program(props, [], [], config=ProgramLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
@@ -1325,12 +1332,125 @@ def test_load_programs(mocker, mock_blocklist, mock_duplicates):
     mock_load_program = mocker.patch(
         "learning_resources.etl.loaders.load_program",
         autospec=True,
-        return_value=ProgramFactory.create().learning_resource,
+        return_value=ProgramLoadResult(
+            resource=ProgramFactory.create().learning_resource,
+            created=True,
+            child_programs_data=[],
+        ),
     )
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
     mock_duplicates.assert_called_once_with("mitx")
+
+
+def test_load_programs_with_child_program_relationships(mocker, settings):
+    """End-to-end loader test for mixed child course/program relationships."""
+    set_up_topics(is_mitx=True)
+    LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+
+    with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
+        fixture_data = json.load(f)
+
+    def _mock_fetch_courses_by_ids(course_ids):
+        return [
+            course
+            for course in fixture_data["courses"]
+            if course["id"] in set(course_ids)
+        ]
+
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=_mock_fetch_courses_by_ids,
+    )
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+
+    transformed_programs = list(transform_programs(fixture_data["programs"]))
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed_programs,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    child_program_resource = LearningResource.objects.get(
+        readable_id="mitx-child-program"
+    )
+    child_course_display_program_resource = LearningResource.objects.get(
+        readable_id="mitx-child-program-displayed-as-course"
+    )
+
+    child_program_rel = LearningResourceRelationship.objects.get(
+        parent=parent_resource,
+        child=child_program_resource,
+    )
+    child_course_display_rel = LearningResourceRelationship.objects.get(
+        parent=parent_resource,
+        child=child_course_display_program_resource,
+    )
+
+    assert (
+        child_program_rel.relation_type
+        == LearningResourceRelationTypes.PROGRAM_PROGRAMS
+    )
+    assert (
+        child_course_display_rel.relation_type
+        == LearningResourceRelationTypes.PROGRAM_COURSES
+    )
+
+    child_program_positions = list(
+        parent_resource.children.filter(
+            child__resource_type=LearningResourceType.program.name
+        )
+        .order_by("position")
+        .values_list("position", flat=True)
+    )
+    assert child_program_positions == sorted(set(child_program_positions))
+
+
+def test_load_programs_idempotent_child_relationships(mocker, settings):
+    """Running load_programs twice should not duplicate child program relationships."""
+    set_up_topics(is_mitx=True)
+    LearningResourcePlatformFactory.create(code=PlatformType.mitxonline.name)
+
+    with open("./test_json/mitxonline_program_children_loader.json") as f:  # noqa: PTH123
+        fixture_data = json.load(f)
+
+    def _mock_fetch_courses_by_ids(course_ids):
+        return [
+            course
+            for course in fixture_data["courses"]
+            if course["id"] in set(course_ids)
+        ]
+
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_courses_by_ids",
+        side_effect=_mock_fetch_courses_by_ids,
+    )
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.mit.edu"
+
+    transformed = list(transform_programs(fixture_data["programs"]))
+
+    # Run twice
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+    # Re-transform since transform_programs pops keys
+    transformed = list(transform_programs(fixture_data["programs"]))
+    load_programs(
+        ETLSource.mitxonline.name,
+        transformed,
+        config=ProgramLoaderConfig(prune=False),
+    )
+
+    parent_resource = LearningResource.objects.get(readable_id="mitx-parent-program")
+    # Should have exactly 2 child-program relationships, not 4
+    program_child_count = parent_resource.children.filter(
+        child__resource_type=LearningResourceType.program.name
+    ).count()
+    assert program_child_count == 2
 
 
 @pytest.mark.parametrize("is_published", [True, False])
@@ -1853,6 +1973,9 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
         "learning_resources.etl.loaders.most_common_topics",
         return_value=expected_topics,
     )
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
     if playlist_exists:
         playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
@@ -1903,11 +2026,23 @@ def test_load_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
     if playlist_exists:
         deleted_video.refresh_from_db()
         assert not deleted_video.published
+        mock_bulk_unpublish.assert_called_once_with(
+            [deleted_video.id],
+            LearningResourceType.video.name,
+        )
+    else:
+        mock_bulk_unpublish.assert_called_once_with(
+            [],
+            LearningResourceType.video.name,
+        )
 
 
 def test_load_playlists_unpublish(mocker):
     """Test load_playlists when a video/playlist gets unpublished"""
     mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
     channel = VideoChannelFactory.create()
 
     playlists = sorted(
@@ -1944,6 +2079,255 @@ def test_load_playlists_unpublish(mocker):
             assert playlist.learning_resource.published is True
         else:
             assert playlist.learning_resource.published is False
+
+    expected_unpublished_ids = sorted(p.learning_resource.id for p in playlists[1:])
+    playlist_unpublish_call = next(
+        call
+        for call in mock_bulk_unpublish.call_args_list
+        if call[0][1] == LearningResourceType.video_playlist.name
+    )
+    actual_unpublished_ids = sorted(playlist_unpublish_call[0][0])
+    assert actual_unpublished_ids == expected_unpublished_ids
+
+
+@pytest.mark.parametrize("playlist_exists", [True, False])
+def test_load_ovs_playlist(mocker, playlist_exists, mock_get_similar_topics_qdrant):
+    """Test load_ovs_playlist creates/updates a playlist and its videos"""
+    expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
+    [
+        LearningResourceTopicFactory.create(name=topic["name"])
+        for topic in expected_topics
+    ]
+
+    mock_most_common_topics = mocker.patch(
+        "learning_resources.etl.loaders.most_common_topics",
+        return_value=expected_topics,
+    )
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+
+    if playlist_exists:
+        existing = VideoPlaylistFactory.create().learning_resource
+        existing.platform = LearningResourcePlatform.objects.get(
+            code=PlatformType.ovs.name
+        )
+        existing.save()
+        deleted_video = VideoFactory.create().learning_resource
+        existing.resources.add(
+            deleted_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS,
+                "position": 1,
+            },
+        )
+        playlist_readable_id = existing.readable_id
+    else:
+        playlist_readable_id = "ovs-test-playlist-key"
+
+    video_resources = [video.learning_resource for video in VideoFactory.build_batch(3)]
+    videos_data = [
+        {
+            **model_to_dict(video, exclude=non_transformable_attributes),
+            "platform": PlatformType.ovs.name,
+            "offered_by": {"code": LearningResourceOfferorFactory.create().code},
+        }
+        for video in video_resources
+    ]
+
+    props = {
+        "playlist_id": playlist_readable_id,
+        "platform": PlatformType.ovs.name,
+        "title": "Test OVS Collection",
+        "description": "A test collection",
+        "url": "https://video.odl.mit.edu/collections/test-key",
+        "published": True,
+        "videos": videos_data,
+    }
+
+    result = load_ovs_playlist(props)
+
+    assert isinstance(result, LearningResource)
+    assert result.platform.code == PlatformType.ovs.name
+    assert result.video_playlist.channel.channel_id == "ovs"
+    mock_most_common_topics.assert_called_once()
+    assert result.resources.count() == len(video_resources)
+
+    if playlist_exists:
+        deleted_video.refresh_from_db()
+        assert not deleted_video.published
+        mock_bulk_unpublish.assert_called_once_with(
+            [deleted_video.id],
+            LearningResourceType.video.name,
+        )
+    else:
+        mock_bulk_unpublish.assert_called_once_with(
+            [],
+            LearningResourceType.video.name,
+        )
+
+
+def test_load_ovs_playlists_unpublish(mocker):
+    """Test load_ovs_playlists unpublishes stale playlists and orphaned videos"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mock_bulk_unpublish = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
+    )
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create 3 existing OVS playlists
+    playlists = []
+    for _ in range(3):
+        vp = VideoPlaylistFactory.create()
+        vp.learning_resource.platform = ovs_platform
+        vp.learning_resource.save()
+        playlists.append(vp)
+
+    playlists.sort(key=lambda p: p.id)
+
+    # Add a video to the playlist that will become stale
+    stale_video = VideoFactory.create().learning_resource
+    stale_video.platform = ovs_platform
+    stale_video.save()
+    playlists[1].learning_resource.resources.add(
+        stale_video,
+        through_defaults={
+            "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            "position": 0,
+        },
+    )
+
+    # Only include the first playlist in the new data
+    kept = playlists[0]
+    playlists_data = [
+        {
+            "playlist_id": kept.learning_resource.readable_id,
+            "platform": PlatformType.ovs.name,
+            "title": kept.learning_resource.title,
+            "url": "https://video.odl.mit.edu/collections/test",
+            "published": True,
+            "videos": [],
+        }
+    ]
+
+    load_ovs_playlists(playlists_data)
+
+    # Only the kept playlist should remain published
+    assert (
+        LearningResource.objects.filter(
+            resource_type="video_playlist",
+            platform=ovs_platform,
+            published=True,
+        ).count()
+        == 1
+    )
+
+    # Stale playlists should be unpublished
+    for playlist in playlists[1:]:
+        playlist.learning_resource.refresh_from_db()
+        assert playlist.learning_resource.published is False
+
+    # Check bulk_unpublish was called for stale playlists
+    expected_stale_ids = sorted(p.learning_resource.id for p in playlists[1:])
+    playlist_unpublish_call = next(
+        call
+        for call in mock_bulk_unpublish.call_args_list
+        if call[0][1] == LearningResourceType.video_playlist.name
+    )
+    assert sorted(playlist_unpublish_call[0][0]) == expected_stale_ids
+
+    # Orphaned video in stale playlist should be unpublished
+    stale_video.refresh_from_db()
+    assert stale_video.published is False
+
+
+@pytest.mark.django_db
+def test_load_ovs_playlists_shared_video_not_unpublished(
+    mocker, mock_get_similar_topics_qdrant
+):
+    """A video in both a kept and a stale playlist should stay published"""
+    mocker.patch("learning_resources_search.tasks.bulk_deindex_learning_resources.si")
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create two OVS playlists
+    kept_vp = VideoPlaylistFactory.create()
+    kept_vp.learning_resource.platform = ovs_platform
+    kept_vp.learning_resource.save()
+
+    stale_vp = VideoPlaylistFactory.create()
+    stale_vp.learning_resource.platform = ovs_platform
+    stale_vp.learning_resource.save()
+
+    # Create a video that belongs to BOTH playlists
+    shared_video = VideoFactory.create().learning_resource
+    shared_video.platform = ovs_platform
+    shared_video.save()
+
+    for vp in [kept_vp, stale_vp]:
+        vp.learning_resource.resources.add(
+            shared_video,
+            through_defaults={
+                "relation_type": LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+                "position": 0,
+            },
+        )
+
+    # Include the kept playlist with the shared video in its videos list
+    playlists_data = [
+        {
+            "playlist_id": kept_vp.learning_resource.readable_id,
+            "platform": PlatformType.ovs.name,
+            "title": kept_vp.learning_resource.title,
+            "url": "https://video.odl.mit.edu/collections/test",
+            "published": True,
+            "videos": [
+                {
+                    "readable_id": shared_video.readable_id,
+                    "platform": PlatformType.ovs.name,
+                    "etl_source": "ovs",
+                    "resource_type": LearningResourceType.video.name,
+                    "title": shared_video.title,
+                    "url": "https://video.odl.mit.edu/videos/test",
+                    "published": True,
+                    "video": {"duration": "PT0S"},
+                },
+            ],
+        }
+    ]
+
+    load_ovs_playlists(playlists_data)
+
+    # Stale playlist should be unpublished
+    stale_vp.learning_resource.refresh_from_db()
+    assert stale_vp.learning_resource.published is False
+
+    # Shared video should remain published because it's still in the kept playlist
+    shared_video.refresh_from_db()
+    assert shared_video.published is True
+
+
+def test_load_ovs_playlists_empty_aborts(mocker):
+    """Test load_ovs_playlists returns early when no playlists are provided"""
+    mock_log = mocker.patch("learning_resources.etl.loaders.log")
+
+    ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
+
+    # Create an existing published OVS playlist
+    vp = VideoPlaylistFactory.create()
+    vp.learning_resource.platform = ovs_platform
+    vp.learning_resource.save()
+
+    result = load_ovs_playlists([])
+
+    assert result == []
+    mock_log.warning.assert_called_once()
+    # Existing playlist should NOT be unpublished
+    vp.learning_resource.refresh_from_db()
+    assert vp.learning_resource.published is True
 
 
 def test_load_video_channels():
@@ -2443,6 +2827,8 @@ def test_load_learning_materials(mocker):
     )
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
+    no_longer_relevant_resource = LearningResourceFactory.create()
+
     learning_material_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[relevant_content_tag],
@@ -2451,7 +2837,10 @@ def test_load_learning_materials(mocker):
     other_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[irrelevant_content_tag],
+        direct_learning_resource=no_longer_relevant_resource,
     )
+
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
 
     load_learning_materials_spy = mocker.spy(loaders, "load_learning_material")
 
@@ -2483,6 +2872,11 @@ def test_load_learning_materials(mocker):
         resource_relationships.first().relation_type
         == LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS.value
     )
+
+    assert mock_index.call_count == 2
+
+    no_longer_relevant_resource.refresh_from_db()
+    assert no_longer_relevant_resource.published is False
 
 
 @pytest.mark.django_db

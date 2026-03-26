@@ -16,6 +16,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
@@ -28,9 +29,12 @@ describe("ProgramEnrollmentDialog", () => {
     mitxFactories.courses.enrollmentMode({ requires_payment: true }),
   ]
 
-  const openDialog = async (program: V2ProgramDetail) => {
+  const openDialog = async (
+    program: V2ProgramDetail,
+    { displayAsCourse }: { displayAsCourse?: boolean } = {},
+  ) => {
     await act(async () => {
-      NiceModal.show(ProgramEnrollmentDialog, { program })
+      NiceModal.show(ProgramEnrollmentDialog, { program, displayAsCourse })
     })
     return await screen.findByRole("dialog")
   }
@@ -104,10 +108,7 @@ describe("ProgramEnrollmentDialog", () => {
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: "POST", url: basketUrl }),
     )
-    const expectedCartUrl = new URL(
-      "/cart/",
-      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-    ).toString()
+    const expectedCartUrl = mitxonlineLegacyUrl("/cart/")
     expect(assign).toHaveBeenCalledWith(expectedCartUrl)
   })
 
@@ -207,6 +208,35 @@ describe("ProgramEnrollmentDialog", () => {
         ),
       ).toBeInTheDocument()
     })
+  })
+
+  test("Uses 'course' language when displayAsCourse is true", async () => {
+    const program = makeProgram({
+      enrollment_modes: bothEnrollmentModes(),
+    })
+    renderWithProviders(null)
+    await openDialog(program, { displayAsCourse: true })
+    expect(
+      screen.getByText(/Would you like to get a certificate for this course\?/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Demonstrates knowledge and skills taught in this course/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("Uses 'program' language by default", async () => {
+    const program = makeProgram({
+      enrollment_modes: bothEnrollmentModes(),
+    })
+    renderWithProviders(null)
+    await openDialog(program)
+    expect(
+      screen.getByText(
+        /Would you like to get a certificate for this program\?/,
+      ),
+    ).toBeInTheDocument()
   })
 
   test("Hides certificate upsell for free-only programs", async () => {

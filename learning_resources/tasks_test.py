@@ -15,6 +15,7 @@ from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
 from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
+    ContentFileFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
 )
@@ -28,6 +29,7 @@ from learning_resources.tasks import (
     scrape_marketing_pages,
     sync_canvas_courses,
     update_next_start_date_and_prices,
+    update_ocw_learning_material_resources,
 )
 from main.utils import now_in_utc
 
@@ -489,6 +491,30 @@ def test_get_youtube_transcripts(mocker):
     )
 
 
+def test_get_ovs_data(mocker):
+    """Verify that get_ovs_data invokes the OVS ETL pipeline"""
+    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
+    mock_pipelines.ovs_etl.return_value = iter([])
+    tasks.get_ovs_data.delay()
+    mock_pipelines.ovs_etl.assert_called_once()
+
+
+def test_get_ovs_transcripts(mocker):
+    """Verify that get_ovs_transcripts invokes correct OVS ETL functions"""
+
+    mock_etl_ovs = mocker.patch("learning_resources.tasks.ovs")
+
+    tasks.get_ovs_transcripts(overwrite=True)
+
+    mock_etl_ovs.get_ovs_videos_for_transcripts_job.assert_called_once_with(
+        overwrite=True
+    )
+
+    mock_etl_ovs.get_ovs_transcripts.assert_called_once_with(
+        mock_etl_ovs.get_ovs_videos_for_transcripts_job.return_value
+    )
+
+
 @pytest.mark.parametrize("published", [True, False])
 def test_update_next_start_date(mocker, published):
     learning_resource = LearningResourceFactory.create(
@@ -775,3 +801,44 @@ def test_ingest_edx_course(mocker, etl_source, archive_path, overwrite):
     mock_sync.assert_called_once_with(
         etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )
+
+
+@pytest.mark.parametrize("create_ocw_learning_materials", [True, False])
+def test_update_ocw_learning_material_resources(
+    mocker, settings, create_ocw_learning_materials
+):
+    """
+    Test that update_ocw_learning_material_resources calls the correct loader method
+    """
+    settings.CREATE_OCW_LEARNING_MATERIALS = create_ocw_learning_materials
+
+    ocw_resource = LearningResourceFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        published=True,
+    )
+
+    ContentFileFactory.create_batch(
+        2,
+        run=ocw_resource.runs.first(),
+    )
+
+    content_file_ids = set(
+        ocw_resource.runs.first().content_files.values_list("id", flat=True)
+    )
+
+    mock_load_learning_materials = mocker.patch(
+        "learning_resources.tasks.load_learning_materials", autospec=True
+    )
+
+    if create_ocw_learning_materials:
+        update_ocw_learning_material_resources()
+
+        mock_load_learning_materials.assert_called_once()
+        call_args = mock_load_learning_materials.call_args[0]
+        assert call_args[0] == ocw_resource.runs.first()
+        assert set(call_args[1]) == content_file_ids
+    else:
+        with pytest.raises(RuntimeError, match="CREATE_OCW_LEARNING_MATERIALS"):
+            update_ocw_learning_material_resources()
+        mock_load_learning_materials.assert_not_called()

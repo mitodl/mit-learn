@@ -508,6 +508,7 @@ def test_program_letter_api_view_returns_404_for_invalid_id(
     assert response.status_code == 404
 
 
+@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_list_user_program_certificates(mocker, client, user, is_anonymous):
     """

@@ -16,6 +16,7 @@ from learning_resources.etl import (
     mitxonline,
     ocw,
     oll,
+    ovs,
     podcast,
     posthog,
     sloan,
@@ -159,7 +160,8 @@ def ocw_courses_etl(
                         calc_completeness=True,
                     )
 
-                    loaders.load_learning_materials(course_run, content_file_ids)
+                    if settings.CREATE_OCW_LEARNING_MATERIALS:
+                        loaders.load_learning_materials(course_run, content_file_ids)
             else:
                 log.info("No course data found for %s", url_path)
         except:  # noqa: E722
@@ -173,6 +175,8 @@ def ocw_courses_etl(
 
 
 youtube_etl = compose(loaders.load_video_channels, youtube.transform, youtube.extract)
+
+ovs_etl = compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract)
 
 posthog_etl = compose(
     posthog.load_posthog_lrd_view_events,

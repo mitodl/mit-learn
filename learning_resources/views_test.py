@@ -203,6 +203,7 @@ def test_program_detail_endpoint(client, django_assert_num_queries, url):
         resp.data["program"]["course_count"]
         == program.learning_resource.children.count()
     )
+    assert resp.data["program"]["program_count"] == 0
 
 
 def test_list_resources_endpoint(client):
@@ -1256,6 +1257,7 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
             host="hidden_port_addr.com",
             port=None,
             prefix="custom",
+            check_compatibility=False,
         ),
     )
     mocker.patch(
@@ -1304,6 +1306,7 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
             host="hidden_port_addr.com",
             port=None,
             prefix="custom",
+            check_compatibility=False,
         ),
     )
 

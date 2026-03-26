@@ -335,10 +335,11 @@ class ProgramSerializer(serializers.ModelSerializer):
     """Serializer for the Program model"""
 
     course_count = serializers.IntegerField(read_only=True)
+    program_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = models.Program
-        include = ("course_count",)
+        include = ("course_count", "program_count")
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
@@ -396,8 +397,29 @@ class VideoChannelSerializer(serializers.ModelSerializer):
         exclude = ["published", *COMMON_IGNORED_FIELDS]
 
 
+class CaptionUrlSerializer(serializers.Serializer):
+    """Serializer for caption URL entries"""
+
+    language = serializers.CharField()
+    language_name = serializers.CharField()
+    url = serializers.URLField()
+
+
+class NullableURLField(serializers.URLField):
+    """URLField that returns None for empty strings"""
+
+    def to_representation(self, value):
+        return super().to_representation(value) if value else None
+
+
 class VideoSerializer(serializers.ModelSerializer):
     """Serializer for the Video model"""
+
+    caption_urls = CaptionUrlSerializer(many=True, read_only=True)
+    streaming_url = NullableURLField(allow_blank=True, allow_null=True, read_only=True)
+    cover_image_url = NullableURLField(
+        allow_blank=True, allow_null=True, read_only=True
+    )
 
     class Meta:
         model = models.Video
@@ -485,6 +507,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     platform = serializers.SerializerMethodField(help_text="Platform", allow_null=True)
     number_of_courses = serializers.SerializerMethodField(
         help_text="Number of Courses", allow_null=True
+    )
+    number_of_programs = serializers.SerializerMethodField(
+        help_text="Number of Programs", allow_null=True
     )
     location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
     starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
@@ -608,6 +633,16 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             == LearningResourceType.program.name
         ):
             return serialized_resource["program"].get("course_count", 0)
+        return None
+
+    @extend_schema_field({"type": "number"})
+    def get_number_of_programs(self, serialized_resource):
+        """Return the number of child programs in a program"""
+        if (
+            serialized_resource.get("resource_type")
+            == LearningResourceType.program.name
+        ):
+            return serialized_resource["program"].get("program_count", 0)
         return None
 
     @extend_schema_field({"type": "string"})
@@ -1272,7 +1307,7 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
         default=constants.LearningResourceType.video.name
     )
 
-    video = VideoSerializer(read_only=True)
+    video = VideoSerializer(read_only=True, allow_null=True)
 
     playlists = serializers.SerializerMethodField()
 

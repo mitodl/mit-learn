@@ -1,5 +1,4 @@
 import logging
-
 import litellm
 import tiktoken
 from django.conf import settings
@@ -46,9 +45,11 @@ class QdrantCloudEncoder(BaseEncoder):
             for text in texts
         ]
 
+
     def dim(self):
         """
         Return the dimension of the embeddings
         """
         info = litellm.get_model_info(self.model_short_name())
         return info["output_vector_size"]
+

@@ -91,6 +91,7 @@ class PlatformType(ExtendedEnum):
     youtube = "YouTube"
     canvas = "Canvas"
     climate = "MIT Climate"
+    ovs = "ODL Video Service"
 
 
 class PrivacyLevel(ExtendedEnum):
@@ -109,6 +110,7 @@ class LearningResourceRelationTypes(TextChoices):
     """Enum for LearningResourceRelationship relation_type values"""
 
     PROGRAM_COURSES = "PROGRAM_COURSES", "Program Courses"
+    PROGRAM_PROGRAMS = "PROGRAM_PROGRAMS", "Program Programs"
     LEARNING_PATH_ITEMS = "LEARNING_PATH_ITEMS", "Learning Path Items"
     PODCAST_EPISODES = "PODCAST_EPISODES", "Podcast Episodes"
     PLAYLIST_VIDEOS = "PLAYLIST_VIDEOS", "Playlist Videos"

@@ -14,6 +14,7 @@ import {
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
 import { DASHBOARD_HOME } from "@/common/urls"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -179,11 +180,7 @@ describe("CourseEnrollmentButton", () => {
     expect(mockAxiosInstance.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: "POST", url: basketUrl }),
     )
-    const expectedCartUrl = new URL(
-      "/cart/",
-      process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL,
-    ).toString()
-    expect(assign).toHaveBeenCalledWith(expectedCartUrl)
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
   })
 
   test("Shows error alert when basket operation fails (paid)", async () => {

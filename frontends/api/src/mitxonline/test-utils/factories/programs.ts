@@ -95,6 +95,8 @@ const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
     enrollment_modes: [courses.enrollmentMode()],
     end_date: faker.helpers.maybe(() => faker.date.future().toISOString()),
     products: [courses.product()],
+    display_mode: null,
+    programs: [],
   }
 
   return mergeOverrides<V2ProgramDetail>(defaults, overrides)
@@ -134,6 +136,7 @@ const simpleProgram: PartialFactory<V3SimpleProgram> = (overrides = {}) => {
       "diploma",
     ]),
     live: faker.datatype.boolean(),
+    display_mode: null,
   }
 
   return mergeOverrides<V3SimpleProgram>(defaults, overrides)

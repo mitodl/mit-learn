@@ -225,9 +225,14 @@ def test_podcast_etl():
 @mock_aws
 @pytest.mark.django_db
 @pytest.mark.parametrize("skip_content_files", [True, False])
-def test_ocw_courses_etl(settings, mocker, skip_content_files):
+@pytest.mark.parametrize("settings_create_ocw_learning_materials", [True, False])
+def test_ocw_courses_etl(
+    settings, mocker, skip_content_files, settings_create_ocw_learning_materials
+):
     """Test ocw_courses_etl"""
     setup_s3_ocw(settings)
+
+    settings.CREATE_OCW_LEARNING_MATERIALS = settings_create_ocw_learning_materials
 
     mocker.patch(
         "learning_resources.etl.ocw.extract_text_metadata",
@@ -276,9 +281,12 @@ def test_ocw_courses_etl(settings, mocker, skip_content_files):
         ]
     )
 
-    assert learning_materials.count() == (0 if skip_content_files else 1)
+    if skip_content_files or not settings.CREATE_OCW_LEARNING_MATERIALS:
+        assert learning_materials.count() == 0
+    else:
+        assert learning_materials.count() == 1
 
-    if not skip_content_files:
+    if not skip_content_files and settings.CREATE_OCW_LEARNING_MATERIALS:
         learning_material = learning_materials.first()
         assert (
             learning_material.readable_id

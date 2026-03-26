@@ -862,7 +862,14 @@ class ProgramQuerySet(LearningResourceDetailQuerySet):
                         learning_resource__children__relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
                         learning_resource__children__child__published=True,
                     ),
-                )
+                ),
+                program_count=Count(
+                    "learning_resource__children",
+                    filter=Q(
+                        learning_resource__children__relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS.value,
+                        learning_resource__children__child__published=True,
+                    ),
+                ),
             )
         )
 
@@ -890,14 +897,31 @@ class Program(LearningResourceDetailModel):
 
     @property
     def courses(self):
-        """Get the associated resources (should all be courses)"""
-        return self.learning_resource.children
+        """Get the associated course resources"""
+        return self.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+        )
+
+    @property
+    def child_programs(self):
+        """Get the associated child program resources"""
+        return self.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        )
 
     @cached_property
     def course_count(self):
         """Return the number of courses in the program"""
         return self.learning_resource.children.filter(
             relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+            child__published=True,
+        ).count()
+
+    @cached_property
+    def program_count(self):
+        """Return the number of child programs in the program"""
+        return self.learning_resource.children.filter(
+            relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
             child__published=True,
         ).count()
 
@@ -1257,6 +1281,14 @@ class Video(LearningResourceDetailModel):
     )
     duration = models.CharField(max_length=11)
     transcript = models.TextField(blank=True, default="")
+    streaming_url = models.URLField(
+        max_length=2048,
+        blank=True,
+        default="",
+        help_text="HLS streaming URL (.m3u8) from OVS",
+    )
+    caption_urls = models.JSONField(default=list, blank=True)
+    cover_image_url = models.URLField(max_length=2048, blank=True, default="")
 
     def __str__(self):
         return f"Video: {self.id} - {self.learning_resource.readable_id}"

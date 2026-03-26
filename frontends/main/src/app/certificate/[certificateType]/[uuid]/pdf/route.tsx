@@ -25,6 +25,7 @@ import {
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
 import { pxToPt, getNameStyles } from "./utils"
+import { getCertificateInfo } from "@/common/certificateUtils"
 
 // https://use.typekit.net/lbk1xay.css
 Font.register({
@@ -207,7 +208,7 @@ const Badge = ({ displayType }: { displayType: string }) => (
       style={{
         color: colors.white,
         position: "absolute",
-        top: pxToPt(169),
+        top: pxToPt(185),
         right: pxToPt(26),
         width: pxToPt(175),
         textAlign: "center",
@@ -230,7 +231,6 @@ const CertificateDoc = ({
   title,
   displayType,
   userName,
-  shortDisplayType,
   ceus,
   signatories,
   startDate,
@@ -240,7 +240,6 @@ const CertificateDoc = ({
   title: string
   displayType: string
   userName: string
-  shortDisplayType: string
   ceus?: string | null
   signatories: SignatoryItem[]
   startDate?: string | null
@@ -321,15 +320,7 @@ const CertificateDoc = ({
                 fontFamily: "Neue Haas Grotesk Text 400",
               }}
             >
-              has successfully completed all requirements of the{" "}
-              <Text
-                style={{
-                  fontFamily: "Neue Haas Grotesk Text 700",
-                }}
-              >
-                Universal Artificial Intelligence
-              </Text>{" "}
-              {shortDisplayType}:
+              has successfully completed all requirements of{" "}
             </Text>
             <Text
               style={{
@@ -479,13 +470,10 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
+  const { displayType } = getCertificateInfo()
   const title = certificate?.course_run?.course?.title
 
-  const displayType = "Module Certificate"
-
   const userName = certificate?.user?.name
-
-  const shortDisplayType = "module"
 
   const ceus = null
 
@@ -500,7 +488,6 @@ const CourseCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName!}
-      shortDisplayType={shortDisplayType}
       ceus={ceus}
       signatories={signatories}
       startDate={startDate}
@@ -517,14 +504,9 @@ const ProgramCertificate = ({
 }) => {
   const title = certificate?.program?.title
 
-  const displayType = `${certificate?.program?.program_type} Certificate`
+  const { displayType } = getCertificateInfo()
 
   const userName = certificate?.user?.name
-
-  const shortDisplayType =
-    certificate?.program?.program_type === "Series"
-      ? "series"
-      : `${certificate?.program?.program_type} program`
 
   const ceus = certificate?.certificate_page?.CEUs
 
@@ -540,7 +522,6 @@ const ProgramCertificate = ({
       title={title}
       displayType={displayType}
       userName={userName!}
-      shortDisplayType={shortDisplayType}
       ceus={ceus}
       signatories={signatories}
       startDate={startDate}

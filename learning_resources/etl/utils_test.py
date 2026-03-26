@@ -7,6 +7,7 @@ from random import randrange
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
+import pypdf
 import pytest
 
 from learning_resources.constants import (
@@ -964,6 +965,9 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     full_path = olx_path / source_rel_path
     full_path.parent.mkdir(parents=True, exist_ok=True)
     full_path.write_bytes(b"fake pdf content")
+    tika_from_buffer_mock = mocker.patch(
+        "learning_resources.etl.utils.tika_parser.from_buffer",
+    )
 
     # Mock documents_from_olx to yield this file
     mocker.patch(
@@ -993,7 +997,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     # Mock PdfReader to raise FileNotDecryptedError
     mocker.patch(
         "learning_resources.etl.utils.PdfReader",
-        side_effect=utils.FileNotDecryptedError,
+        side_effect=pypdf.errors.FileNotDecryptedError,
     )
 
     results = list(
@@ -1006,7 +1010,8 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
     )
 
     assert len(results) == 0
-    mock_log.exception.assert_called_with("Skipping encrypted pdf %s", full_path)
+    mock_log.warning.assert_called_with("Skipping invalid pdf %s", full_path)
+    tika_from_buffer_mock.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1090,3 +1095,60 @@ def test_get_title_for_content(  # noqa: PLR0913
     )
 
     assert title == expected_title
+
+
+def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
+    """
+    Test that _extract_content falls back to Tika if OCR extraction returns None.
+    """
+    settings.OCR_MODEL = "test_model"
+    settings.SKIP_TIKA = False
+
+    olx_path = tmp_path / "course"
+    olx_path.mkdir()
+
+    source_rel_path = "static/test.pdf"
+    file_path = olx_path / source_rel_path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    file_path.write_bytes(b"fake pdf content")
+
+    metadata = {
+        "content_type": CONTENT_TYPE_FILE,
+        "mime_type": "application/pdf",
+        "archive_checksum": "checksum",
+        "file_extension": ".pdf",
+        "source_path": source_rel_path,
+        "title": "Tika Title",
+    }
+
+    document = b"fake pdf content"
+    mocker.patch("learning_resources.etl.utils.pdf_is_valid", return_value=True)
+    mock_should_use_ocr = mocker.patch(
+        "learning_resources.etl.utils._should_use_ocr", return_value=True
+    )
+    mock_extract_ocr = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_ocr", return_value=None
+    )
+    mock_extract_tika = mocker.patch(
+        "learning_resources.etl.utils._extract_content_with_tika",
+        return_value={"content": "tika content", "content_title": "Tika Title"},
+    )
+
+    result = utils._extract_content(  # noqa: SLF001
+        document,
+        metadata,
+        str(olx_path),
+        "test_key",
+        use_ocr=True,
+    )
+
+    mock_should_use_ocr.assert_called_once_with(
+        file_extension=".pdf", file_path=file_path, use_ocr=True
+    )
+    mock_extract_ocr.assert_called_once_with(file_path, False)  # noqa: FBT003
+    mock_extract_tika.assert_called_once_with(
+        document, "application/pdf", ".pdf", "test_key"
+    )
+
+    assert result == {"content": "tika content", "content_title": "Tika Title"}

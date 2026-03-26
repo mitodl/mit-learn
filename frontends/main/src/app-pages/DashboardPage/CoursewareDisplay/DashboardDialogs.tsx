@@ -24,7 +24,7 @@ import {
   useUpdateUserMutation,
 } from "api/mitxonline-hooks/user"
 import * as Yup from "yup"
-import { CourseRunEnrollmentRequestV2 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -36,7 +36,7 @@ const SelectPlaceholder = styled("span")(({ theme }) => ({
 
 type DashboardDialogProps = {
   title: string
-  enrollment: CourseRunEnrollmentRequestV2
+  enrollment: CourseRunEnrollmentV3
 }
 const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   title,

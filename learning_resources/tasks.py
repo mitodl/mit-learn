@@ -12,7 +12,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from learning_resources.content_summarizer import ContentSummarizer
-from learning_resources.etl import pipelines, youtube
+from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -22,7 +22,10 @@ from learning_resources.etl.edx_shared import (
     sync_edx_archive,
     sync_edx_course_files,
 )
-from learning_resources.etl.loaders import load_run_dependent_values
+from learning_resources.etl.loaders import (
+    load_learning_materials,
+    load_run_dependent_values,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -337,6 +340,20 @@ def get_podcast_data():
 
 
 @app.task(acks_late=True)
+def get_ovs_data():
+    """
+    Execute the OVS ETL pipeline
+
+    Returns:
+        int:
+            The number of results that were fetched
+    """
+    results = pipelines.ovs_etl()
+    clear_views_cache()
+    return len(list(results))
+
+
+@app.task(acks_late=True)
 def get_ocw_courses(
     *,
     url_paths,
@@ -359,6 +376,38 @@ def get_ocw_courses(
         start_timestamp=utc_start_timestamp,
         skip_content_files=skip_content_files,
     )
+    clear_views_cache()
+
+
+@app.task(bind=True, acks_late=True)
+def update_ocw_learning_material_resources(self):  # noqa: ARG001
+    """
+    Task to update OCW learning materials resources without updating
+    ocw courses or content files
+    """
+
+    if not settings.CREATE_OCW_LEARNING_MATERIALS:
+        message = (
+            "CREATE_OCW_LEARNING_MATERIALS flag is set to False."
+            " update_ocw_learning_material_resources cannont run"
+        )
+        raise RuntimeError(message)
+
+    for course in LearningResource.objects.filter(
+        published=True, etl_source=ETLSource.ocw.name, resource_type="course"
+    ):
+        course_run = course.runs.filter(published=True).first()
+        content_file_ids = course_run.content_files.filter(published=True).values_list(
+            "id", flat=True
+        )
+
+        try:
+            load_learning_materials(course_run, content_file_ids)
+        except Exception as e:
+            error = (
+                f"Error loading learning materials for course run {course_run.id}: {e}"
+            )
+            log.exception(error)
     clear_views_cache()
 
 
@@ -469,6 +518,23 @@ def get_youtube_transcripts(
 
     log.info("Updating transcripts for %i videos", videos.count())
     youtube.get_youtube_transcripts(videos)
+    clear_views_cache()
+
+
+@app.task(acks_late=True)
+def get_ovs_transcripts(*, overwrite=False):
+    """
+    Fetch transcripts for OVS videos from their caption URLs.
+
+    Args:
+        overwrite (bool):
+            if true, transcripts are updated for videos that already have transcripts
+    """
+
+    videos = ovs.get_ovs_videos_for_transcripts_job(overwrite=overwrite)
+
+    log.info("Updating OVS transcripts for %i videos", videos.count())
+    ovs.get_ovs_transcripts(videos)
     clear_views_cache()
 
 

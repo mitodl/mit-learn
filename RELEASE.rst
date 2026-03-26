@@ -1,6 +1,84 @@
 Release Notes
 =============
 
+Version 0.59.8 (Released March 26, 2026)
+--------------
+
+- hide duplicate course run enrollments in the learner dashboard (#3104)
+
+Version 0.59.7 (Released March 26, 2026)
+--------------
+
+- Make learning material resources searchable by course (#3105)
+- CREATE_OCW_LEARNING_MATERIALS flag (#3103)
+
+Version 0.59.6 (Released March 26, 2026)
+--------------
+
+- fix: change the mobile design for UAI card (#3107)
+- fix: Handle missing course page financial_assistance_form_url (#3086)
+
+Version 0.59.5 (Released March 25, 2026)
+--------------
+
+- Fix verified enrollment for program-as-course hierarchy (#3100)
+- fix(deps): update dependency cairosvg to v2.9.0 [security] (#3052)
+- hide mitxonline logo and offered by (#3097)
+- Upgrade Qdrant (#3087)
+- feat: add ProgramBundleUpsell to ProgramAsCoursePage (#3092)
+- update the client again! (#3094)
+
+Version 0.59.4 (Released March 25, 2026)
+--------------
+
+- fix: address design updates (#3098)
+- Revert "Fix performance issue for LR view count (#3091)" (#3095)
+
+Version 0.59.3 (Released March 24, 2026)
+--------------
+
+- Fix performance issue for LR view count (#3091)
+
+Version 0.59.2 (Released March 24, 2026)
+--------------
+
+- fix an import (#3089)
+- fix: Update Walmart SPOC certificate to display the correct program name (#3065)
+- feat: add universal announcement card (#3084)
+- update mitxonline client (#3088)
+- fix: hide header on cart redirection to mitxonline (#3081)
+- fix(frontend): update footer Contact Us link to support portal (#3083)
+
+Version 0.59.1 (Released March 24, 2026)
+--------------
+
+- "program as course" display on learner dashboard (#3073)
+- Ingest mitxonline child courses and programs from "req_tree" attribute (#3070)
+- OVS Video resources (#3042)
+- ocw learning materials task (#3061)
+- update openapi spec (#3074)
+- feat: migrate to mitol-django-observability plugin (#3001)
+
+Version 0.58.4 (Released March 23, 2026)
+--------------
+
+- feat: display child programs in program requirement sections (#3064)
+- update api client (#3071)
+- Swap out the API used for enrollments for program-related enrollments (#3066)
+
+Version 0.58.3 (Released March 19, 2026)
+--------------
+
+- AskTim canvas ai contentfile ingestion issue (#3059)
+- use v3 enrollments endpoint on the dashboard (#3049)
+
+Version 0.58.1 (Released March 18, 2026)
+--------------
+
+- New Product Page route for "MITxOnline Program displayed as Course" (#3051)
+- remove articles index (#3055)
+- fix: preserve requirement tree ordering for program courses (#3053)
+
 Version 0.58.0 (Released March 16, 2026)
 --------------
 

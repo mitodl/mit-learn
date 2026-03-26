@@ -211,6 +211,7 @@ def test_learning_path_items_endpoint_create_item(client, user, is_editor):
         )
 
 
+@pytest.mark.skip_nplusone_check
 def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     """Test lr_learningpathitems_api endpoint for creating a LearningPath item w/bad data"""
     learning_path = factories.LearningPathFactory.create()
