@@ -68,9 +68,8 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
   const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const hasFinancialAid = !!(
-    course.page.financial_assistance_form_url && product
-  )
+  const financialAidUrl = course?.page?.financial_assistance_form_url
+  const hasFinancialAid = !!(financialAidUrl && product)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
     enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,

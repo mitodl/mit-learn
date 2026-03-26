@@ -122,6 +122,26 @@ describe("CourseEnrollmentButton", () => {
     expect(button).not.toBeDisabled()
   })
 
+  test("Does not crash when course page is null", async () => {
+    const run = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+    })
+    const course = makeCourse({
+      next_run_id: run.id,
+      courseruns: [run],
+      page: null,
+    })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", { name: ENROLL_FREE })
+    expect(button).toBeInTheDocument()
+  })
+
   test("Shows loading spinner while basket operations are in progress (paid)", async () => {
     const product = makeProduct({ price: "500" })
     const run = makeRun({

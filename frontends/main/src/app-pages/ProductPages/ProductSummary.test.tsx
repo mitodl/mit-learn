@@ -1047,6 +1047,28 @@ describe("CourseSummary", () => {
         within(priceRow).queryByRole("link", { name: /financial assistance/i }),
       ).toBeNull()
     })
+
+    test("Does not crash when course page is null", () => {
+      const run = makeRun({
+        is_archived: false,
+        is_enrollable: true,
+        is_upgradable: true,
+        enrollment_modes: bothModes(),
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        page: null,
+      })
+
+      renderWithProviders(<CourseSummary course={course} />)
+
+      const priceRow = screen.getByTestId(TestIds.PriceRow)
+      expect(priceRow).toBeInTheDocument()
+      expect(
+        within(priceRow).queryByRole("link", { name: /financial assistance/i }),
+      ).toBeNull()
+    })
   })
 })
 
