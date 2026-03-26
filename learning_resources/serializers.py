@@ -788,7 +788,12 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 courses.append(entry)
                 # Recurse into its children
                 sub_children = list(
-                    child.children.values("child", "relation_type", "position")
+                    child.children.filter(
+                        relation_type__in=[
+                            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
+                            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+                        ]
+                    ).values("child", "relation_type", "position")
                 )
                 courses.extend(
                     self._collect_courses_from_children(

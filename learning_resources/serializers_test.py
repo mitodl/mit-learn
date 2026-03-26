@@ -1232,3 +1232,42 @@ def test_get_program_courses_ignores_non_program_relations():
 
     assert len(result) == 1
     assert result[0]["title"] == "Program Course"
+
+
+def test_get_program_courses_recursive_ignores_non_program_relations():
+    """Non-program relations in sub-programs are also filtered out"""
+    parent_lr = _make_program_lr()
+
+    child_program_lr = _make_program_lr(title="Child Program")
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    )
+
+    # Valid course child of the sub-program
+    real_course = _make_course_lr(title="Real Course")
+    LearningResourceRelationship.objects.create(
+        parent=child_program_lr,
+        child=real_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    # Non-program relation on the sub-program — should be excluded
+    unrelated = _make_course_lr(title="Unrelated Item")
+    LearningResourceRelationship.objects.create(
+        parent=child_program_lr,
+        child=unrelated,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(parent_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Child Program" in titles
+    assert "Real Course" in titles
+    assert "Unrelated Item" not in titles
