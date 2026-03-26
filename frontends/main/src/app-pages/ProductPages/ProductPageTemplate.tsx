@@ -185,7 +185,14 @@ const SidebarImage = styled(Image)(({ theme }) => ({
   width: "100%",
   aspectRatio: "16/9",
   height: "auto",
+  objectFit: "cover",
+  objectPosition: "center",
+  maxHeight: "500px",
   display: "block",
+  "& img": {
+    objectFit: "cover",
+    objectPosition: "center",
+  },
   [theme.breakpoints.down("sm")]: {
     maxWidth: "100%",
   },
