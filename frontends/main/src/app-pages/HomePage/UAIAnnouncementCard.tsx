@@ -8,6 +8,12 @@ import { programPageView } from "@/common/urls"
 
 const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
 
+const UAI_ANNOUNCEMENT_BG: React.CSSProperties = {
+  backgroundImage: "url('/images/uai-announcement.png')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+}
+
 const Card = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
@@ -33,16 +39,43 @@ const ImageSection = styled.div(({ theme }) => ({
   flexShrink: 0,
   width: "328px",
   minHeight: "350px",
-  backgroundImage: "url('/images/uai-announcement.png')",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
+  ...UAI_ANNOUNCEMENT_BG,
   [theme.breakpoints.down("md")]: {
     width: "100%",
     height: "180px",
     minHeight: "unset",
   },
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
 }))
 
+const MobileImage = styled.div(({ theme }) => ({
+  flexShrink: 0,
+  width: "80px",
+  height: "80px",
+  ...UAI_ANNOUNCEMENT_BG,
+  borderRadius: "8px",
+  display: "none",
+  [theme.breakpoints.down("sm")]: {
+    display: "block",
+  },
+}))
+
+const MobileCardHeader = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "12px",
+  },
+}))
+
+const TitleGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
 const ContentSection = styled.div(({ theme }) => ({
   padding: "40px 48px 40px 48px",
   display: "flex",
@@ -62,15 +95,18 @@ const Eyebrow = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body4,
+    fontWeight: theme.typography.fontWeightBold,
+  },
 }))
 
 const Title = styled("h2")(({ theme }) => ({
   margin: 0,
-  marginTop: "-12px",
   ...theme.typography.h3,
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h4,
-    marginTop: "-12px",
+    ...theme.typography.h5,
+    marginTop: "-8px",
   },
 }))
 
@@ -80,8 +116,8 @@ const Description = styled(Typography)(({ theme }) => ({
   marginTop: "8px",
   lineHeight: "170%",
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body2,
-    lineHeight: "22px",
+    ...theme.typography.body3,
+    lineHeight: "18px",
     marginTop: "0px",
   },
 }))
@@ -117,6 +153,7 @@ const CheckItem = styled.li(({ theme }) => ({
   padding: "4px 8px 4px 0",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body2,
+    width: "100%",
   },
 }))
 
@@ -142,8 +179,13 @@ const UAIAnnouncementCard: React.FC = () => {
     <Card>
       <ImageSection aria-hidden="true" />
       <ContentSection>
-        <Eyebrow variant="body2">INTRODUCING UNIVERSAL AI</Eyebrow>
-        <Title>Universal AI</Title>
+        <MobileCardHeader>
+          <MobileImage aria-hidden="true" />
+          <TitleGroup>
+            <Eyebrow variant="body2">INTRODUCING UNIVERSAL AI</Eyebrow>
+            <Title>Universal AI</Title>
+          </TitleGroup>
+        </MobileCardHeader>
         <Description variant="body1">
           A self-paced program covering foundational concepts in artificial
           intelligence and their application across domains. The curriculum
