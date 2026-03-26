@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.6
+Version 0.59.6 (Released March 26, 2026)
 --------------
 
 - fix: change the mobile design for UAI card (#3107)
