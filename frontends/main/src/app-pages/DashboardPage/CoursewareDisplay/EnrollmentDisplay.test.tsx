@@ -39,7 +39,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -131,7 +130,26 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [programEnrollment.program.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.programs.program({
+            id: programEnrollment.program.id,
+            title: programEnrollment.program.title,
+            readable_id: programEnrollment.program.readable_id,
+            program_type: programEnrollment.program.program_type,
+            display_mode: programEnrollment.program.display_mode,
+          }),
+        ],
+      },
+    )
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -199,7 +217,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programAsCourseEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(
       mitxonline.urls.programs.programsList({
         id: [programAsCourseProgram.id],
@@ -234,6 +251,197 @@ describe("EnrollmentDisplay", () => {
     ).toBeGreaterThan(0)
   })
 
+  test("Hides top-level course cards already covered by enrolled programs", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const coveredEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Covered Course Run",
+        course: {
+          id: 101,
+          title: "Covered Course",
+          readable_id: "covered-course",
+        },
+        start_date: faker.date.past().toISOString(),
+      },
+    })
+
+    const uncoveredEnrollment =
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "Standalone Course Run",
+          course: {
+            id: 202,
+            title: "Standalone Course",
+            readable_id: "standalone-course",
+          },
+          start_date: faker.date.past().toISOString(),
+        },
+      })
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: {
+          ...mitxonline.factories.programs.simpleProgram(),
+          id: 999,
+          title: "My Program",
+        },
+      })
+
+    const enrolledProgram = mitxonline.factories.programs.program({
+      id: 999,
+      title: "My Program",
+      courses: [coveredEnrollment.run.course.id],
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      coveredEnrollment,
+      uncoveredEnrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [programEnrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [enrolledProgram.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [enrolledProgram],
+      },
+    )
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    expect((await screen.findAllByText("My Program")).length).toBeGreaterThan(0)
+    expect(screen.queryByText("Covered Course")).not.toBeInTheDocument()
+    expect(
+      (await screen.findAllByText("Standalone Course")).length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("Still shows expired courses when deduping reduces the visible dashboard set", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const coveredEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Covered Active Course",
+        course: {
+          id: 301,
+          title: "Covered Active Course",
+          readable_id: "covered-active-course",
+        },
+        start_date: faker.date.past().toISOString(),
+      },
+    })
+    const visibleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      run: {
+        title: "Visible Active Course",
+        course: {
+          id: 302,
+          title: "Visible Active Course",
+          readable_id: "visible-active-course",
+        },
+        start_date: faker.date.past().toISOString(),
+      },
+    })
+    const expiredEnrollments = [
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "Expired Course A",
+          course: {
+            id: 401,
+            title: "Expired Course A",
+            readable_id: "expired-course-a",
+          },
+          start_date: faker.date.past().toISOString(),
+          end_date: faker.date.past().toISOString(),
+        },
+      }),
+      mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: {
+          title: "Expired Course B",
+          course: {
+            id: 402,
+            title: "Expired Course B",
+            readable_id: "expired-course-b",
+          },
+          start_date: faker.date.past().toISOString(),
+          end_date: faker.date.past().toISOString(),
+        },
+      }),
+    ]
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: {
+          ...mitxonline.factories.programs.simpleProgram(),
+          id: 1999,
+          title: "Active Program",
+        },
+      })
+
+    const enrolledProgram = mitxonline.factories.programs.program({
+      id: 1999,
+      title: "Active Program",
+      courses: [coveredEnrollment.run.course.id],
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      coveredEnrollment,
+      visibleEnrollment,
+      ...expiredEnrollments,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [programEnrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [enrolledProgram.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [enrolledProgram],
+      },
+    )
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    expect(screen.queryByText("Covered Active Course")).not.toBeInTheDocument()
+    expect(
+      (await screen.findAllByText("Visible Active Course")).length,
+    ).toBeGreaterThan(0)
+    expect(
+      (await screen.findAllByText("Expired Course A")).length,
+    ).toBeGreaterThan(0)
+    expect(
+      (await screen.findAllByText("Expired Course B")).length,
+    ).toBeGreaterThan(0)
+    expect(await screen.findByText("Show all")).toBeInTheDocument()
+  })
+
   test("Renders both course and program enrollments together", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -252,7 +460,26 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [programEnrollment.program.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.programs.program({
+            id: programEnrollment.program.id,
+            title: programEnrollment.program.title,
+            readable_id: programEnrollment.program.readable_id,
+            program_type: programEnrollment.program.program_type,
+            display_mode: programEnrollment.program.display_mode,
+          }),
+        ],
+      },
+    )
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -278,7 +505,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -313,7 +539,26 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [programEnrollment.program.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.programs.program({
+            id: programEnrollment.program.id,
+            title: programEnrollment.program.title,
+            readable_id: programEnrollment.program.readable_id,
+            program_type: programEnrollment.program.program_type,
+            display_mode: programEnrollment.program.display_mode,
+          }),
+        ],
+      },
+    )
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -344,7 +589,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -387,7 +631,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -450,7 +693,6 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     renderWithProviders(<EnrollmentDisplay />)
 
@@ -478,24 +720,31 @@ describe("EnrollmentDisplay", () => {
   })
 
   test("Filters B2B program enrollments from display", async () => {
-    const mitxOnlineUser = mitxonline.factories.user.user()
-    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+    const b2bSimpleProgram = mitxonline.factories.programs.simpleProgram()
+    const nonB2BSimpleProgram = mitxonline.factories.programs.simpleProgram()
 
     const b2bProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          ...mitxonline.factories.programs.simpleProgram(),
-          title: "B2B Program",
-        },
+        program: b2bSimpleProgram,
       })
-
     const nonB2BProgramEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        program: {
-          ...mitxonline.factories.programs.simpleProgram(),
-          title: "Personal Program",
-        },
+        program: nonB2BSimpleProgram,
       })
+
+    // Put the contract in the user's b2b_organizations so the code
+    // (which reads contracts from userMe, not contractsList) can filter it
+    const contract = mitxonline.factories.contracts.contract({
+      programs: [b2bSimpleProgram.id],
+    })
+    const mitxOnlineUser = mitxonline.factories.user.user({
+      b2b_organizations: [
+        mitxonline.factories.organizations.organization({
+          contracts: [contract],
+        }),
+      ],
+    })
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
@@ -503,20 +752,93 @@ describe("EnrollmentDisplay", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
     )
-    // Mock contracts to filter out the B2B program
-    const contract = mitxonline.factories.contracts.contract({
-      programs: [b2bProgramEnrollment.program.id],
-    })
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [contract])
+    // After B2B filtering, only the non-B2B program remains, so programsList
+    // is called with just that one ID
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [nonB2BSimpleProgram.id],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.programs.program({ ...nonB2BSimpleProgram }),
+        ],
+      },
+    )
 
     renderWithProviders(<EnrollmentDisplay />)
 
     await screen.findByRole("heading", { name: "My Learning" })
 
     // Should only show the non-B2B program (appears in desktop + mobile cards)
-    const personalProgramCards = await screen.findAllByText("Personal Program")
+    const personalProgramCards = await screen.findAllByText(
+      nonB2BSimpleProgram.title,
+    )
     expect(personalProgramCards.length).toBeGreaterThan(0)
-    expect(screen.queryByText("B2B Program")).not.toBeInTheDocument()
+    expect(screen.queryByText(b2bSimpleProgram.title)).not.toBeInTheDocument()
+  })
+
+  test("Hides child program enrollments that are part of an enrolled parent program", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const childSimpleProgram = mitxonline.factories.programs.simpleProgram({
+      display_mode: "course",
+    })
+    const parentSimpleProgram = mitxonline.factories.programs.simpleProgram()
+
+    // Parent program has child program in its req_tree
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const section = reqTree.addOperator({ operator: "all_of" })
+    section.addProgram({ program: childSimpleProgram.id })
+
+    const parentProgramEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: parentSimpleProgram,
+      })
+    const childProgramEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: childSimpleProgram,
+      })
+
+    const parentProgramDetail = mitxonline.factories.programs.program({
+      ...parentSimpleProgram,
+      req_tree: reqTree.serialize(),
+    })
+    const childProgramDetail = mitxonline.factories.programs.program({
+      ...childSimpleProgram,
+    })
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [parentProgramEnrollment, childProgramEnrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [parentSimpleProgram.id, childSimpleProgram.id],
+        page_size: 2,
+      }),
+      {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [parentProgramDetail, childProgramDetail],
+      },
+    )
+
+    renderWithProviders(<EnrollmentDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const parentCards = await screen.findAllByText(parentSimpleProgram.title)
+    expect(parentCards.length).toBeGreaterThan(0)
+    expect(screen.queryByText(childSimpleProgram.title)).not.toBeInTheDocument()
   })
 
   describe("ProgramId Filtering", () => {

@@ -4,8 +4,8 @@ import type {
   User,
   LegalAddress,
   UserProfile,
-  OrganizationPage,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { organization } from "./organization"
 import { UniqueEnforcer } from "enforce-unique"
 
 const enforcerId = new UniqueEnforcer()
@@ -44,15 +44,6 @@ const userProfile = (): UserProfile => ({
   type_is_other: faker.datatype.boolean(),
 })
 
-const userOrganization = (): OrganizationPage => ({
-  id: faker.number.int(),
-  name: faker.company.name(),
-  description: faker.company.catchPhrase(),
-  logo: faker.image.url(),
-  slug: faker.helpers.slugify(faker.company.name()),
-  contracts: [],
-})
-
 const user: PartialFactory<User> = (overrides = {}): User => {
   return mergeOverrides(
     {
@@ -71,7 +62,7 @@ const user: PartialFactory<User> = (overrides = {}): User => {
       updated_on: faker.date.recent().toISOString(),
       grants: [],
       is_active: true,
-      b2b_organizations: [userOrganization()],
+      b2b_organizations: [organization({})],
     },
     overrides,
   ) as User
