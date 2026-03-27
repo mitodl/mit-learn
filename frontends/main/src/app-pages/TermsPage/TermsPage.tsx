@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-// Not currently linked to. See https://github.com/mitodl/hq/issues/4639
 import {
   Breadcrumbs,
   Container,
@@ -104,19 +103,20 @@ const TermsPage: React.FC = () => {
             </Link>{" "}
             prior to registering for a {SITE_NAME} account or using any portion
             of the {SITE_NAME} website ("Site"), including accessing any
-            Offering. Please be advised that certain Offerings may have other
-            terms associated with its service. To the extent those terms differ
-            from these TOS, the Offering-specific terms shall govern.
+            Offering, course material, discussion boards, or educational tools.
+            Please be advised that certain Offerings may have other terms
+            associated with its service. To the extent those terms differ from
+            these TOS, the Offering-specific terms shall govern.
           </BodyText>
           <BodyText variant="body1">
             These TOS, the Privacy Policy, and the Honor Code are agreements
             (the "Agreements") between you and MIT setting forth the terms under
             which you may access, and use the Site, and participate in any MIT
             Learn offering. By using the Site, you accept and agree to be
-            legally bound by the Agreements, whether or not you are a registered
-            user. If you do not understand or do not wish to be bound by the
-            terms of the Agreements, you should not use the Site. As used in
-            this Terms of Service, "we," "us," and "our" refer to {SITE_NAME}.
+            legally bound by the Agreements. If you do not understand or do not
+            wish to be bound by the terms of the Agreements, you should not use
+            the Site. As used in this Terms of Service, "we," "us," and "our"
+            refer to {SITE_NAME}.
           </BodyText>
           <BodyText variant="body1">
             We reserve the right to modify these TOS at any time without advance
@@ -154,7 +154,8 @@ const TermsPage: React.FC = () => {
             made available through the Site.
           </BodyText>
           <BodyText variant="body1">
-            Furthermore, you agree not to scrape, or otherwise download in bulk,
+            Furthermore, unless otherwise expressly permitted by a specific
+            Offering, you agree not to scrape, or otherwise download in bulk,
             any Site or Offering content, including but not limited to a list or
             directory of users on the system, on-line textbooks, user
             information, or videos. You agree not to misrepresent or attempt to
@@ -193,26 +194,44 @@ const TermsPage: React.FC = () => {
               is posted with the intent of misleading others.
             </li>
           </UnorderedList>
+          <BodyText variant="body1">
+            {SITE_NAME} has provided tools within the course platform for you to
+            connect with your classmates and course staff (e.g., discussion
+            forums). Should you want to communicate/collaborate/network with
+            others using their personal contact info (e.g., phone number, email,
+            or physical address), this is your individual decision. MIT bears no
+            responsibility for personal contact and/or communication between
+            learners outside of the learning platform.
+          </BodyText>
 
           <Header component="h1" variant="h3">
             User Accounts and Authority
           </Header>
           <BodyText variant="body1">
             In order to create a user account ("User Account") and to
-            participate fully in Site activities, you must provide certain
-            information about yourself. You agree that you will never share
-            access to or access information for your User Account with any third
-            party for any reason. In setting up your User Account, you may be
-            prompted to enter additional optional information. You represent
+            participate fully in Site activities, you may need to provide
+            certain information about yourself. You agree that you will never
+            share access to or access information for your User Account with any
+            third party for any reason. In setting up your User Account, you may
+            be prompted to enter additional optional information. You represent
             that all information provided by you is accurate and current. You
             agree to maintain and update your information to keep it accurate
-            and current.
+            and current. Furthermore, you agree not to misrepresent or attempt
+            to misrepresent your identity while using the Site.
+          </BodyText>
+          <BodyText variant="body1">
+            Please be advised that because of U.S. Office of Foreign Assets
+            Control (OFAC) restrictions and other U.S. federal regulations,
+            learners residing in one or more of the following countries or
+            regions will not be able to register for this program: Iran, Cuba,
+            North Korea and the Crimea, Donetsk People's Republic and Luhansk
+            People's Republic regions of Ukraine.
           </BodyText>
           <BodyText variant="body1">
             We care about the confidentiality and security of your personal
             information. Please see our Privacy Policy for more information
             about what information about you we collect and how we use that
-            information.
+            information
           </BodyText>
           <BodyText variant="body1">
             You understand and agree that MIT may, in its sole discretion and at
@@ -233,21 +252,25 @@ const TermsPage: React.FC = () => {
             Site, including but not limited to texts, exams, video, images, and
             other instructional materials provided in connection with the
             modules / courses offered on the Site, as well as outputs generated
-            by the Site’s AI tools and User Postings posted by other users.
+            by the Site's AI tools and User Postings posted by other users.
+            "User Postings" include all content submitted, posted, published, or
+            distributed on the Site by you or other users of the Site, including
+            but not limited to all forum posts, wiki edits, notes, questions,
+            comments, videos, and file uploads.
           </BodyText>
           <BodyText variant="body1">
-            Unless otherwise indicated or as provided for in a specific
-            Offering, all content on the Site and in the various Offerings is
-            protected by United States and foreign copyright laws, and you may
-            engage only in personal, noncommercial use of the Site Content. You
-            may not otherwise reproduce, retransmit, distribute, display,
-            publish, commercially exploit or otherwise make available any
-            content in print, electronic, or any other medium or use any Site
-            Content for developing, training, or improving artificial
-            intelligence systems or large language models. You may not record
-            any portion of any module / course. Any additional presentation of
-            any module / course or of materials derived from any module / course
-            is also strictly prohibited.
+            All content on the Site and in the various Offerings are protected
+            by United States and foreign copyright laws, and you may engage only
+            in personal, noncommercial use of the Site Content. Unless otherwise
+            indicated or as provided for in a specific Offering, you may not
+            otherwise reproduce, retransmit, distribute, display, publish,
+            commercially exploit or otherwise make available any content in
+            print, electronic, or any other medium or use any Site Content for
+            developing, training, or improving artificial intelligence systems
+            or large language models. You may not record any portion of any
+            module / course. Any additional presentation of any module / course
+            or of materials derived from any module / course is also strictly
+            prohibited.
           </BodyText>
           <BodyText variant="body1">
             Certain reference documents, digital textbooks, figures,
@@ -305,6 +328,22 @@ const TermsPage: React.FC = () => {
             User Postings in connection with their uses of the Site for their
             own personal, noncommercial purposes.
           </BodyText>
+          <Header component="h1" variant="h3">
+            Use of AI Technology
+          </Header>
+          <BodyText variant="body1">
+            This platform, and certain Offerings, contain artificial
+            intelligence technology which uses data from user interactions,
+            including conversations, queries and content you provide. By using
+            this platform, you acknowledge and consent to: (1) the use of AI
+            technology that may not be error-free or fully accurate; and (2) the
+            processing and analysis of your interactions for model training and
+            service improvement. You agree not to input any confidential,
+            sensitive, and / or personal information (name, contact details,
+            financial data, or other sensitive data) into this platform. We are
+            not responsible for unauthorized access or misuse of personal
+            information you voluntarily provide in violation of this policy.
+          </BodyText>
 
           <Header component="h1" variant="h3">
             Certificates of Completion
@@ -312,10 +351,11 @@ const TermsPage: React.FC = () => {
           <BodyText variant="body1">
             Generally, we may offer a micro-, macro-credential, or certificate
             for completion of certain learning material, including courses
-            and/or modules, to learners if, in our judgment, they have
-            satisfactorily demonstrated completion of the required content. More
-            information on certificates for particular Offerings is made
-            available on each Offering page.
+            and/or modules, to you if, in our judgment, you have satisfactorily
+            demonstrated completion of the required content. The decision
+            whether a Certificate will be awarded to you will be solely within
+            our discretion. We may choose not to offer a Certificate for some
+            courses.
           </BodyText>
 
           <Header component="h1" variant="h3">
@@ -376,10 +416,10 @@ const TermsPage: React.FC = () => {
             Registration process.
           </BodyText>
           <BodyText variant="body1">
-            In order to participate in a course / module, individual learners
-            must create (register) an account on the Site and also complete the
-            course enrollment process for the particular Offering. There is no
-            cost to register an account.
+            In order to participate in certain Offerings, you may be required to
+            create (register) an account on the Site and also complete the
+            enrollment process for the particular Offering. There is no cost to
+            register an account.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Entrance Survey.
@@ -387,6 +427,9 @@ const TermsPage: React.FC = () => {
           <BodyText variant="body1">
             We may request you to provide some personal information via a short
             voluntary module entrance survey.
+          </BodyText>
+          <BodyText variant="body1" style={{ textDecorationLine: "underline" }}>
+            REGISTRATION:
           </BodyText>
           <BodyText variant="body1" style={{ textDecorationLine: "underline" }}>
             REGISTRATION, ENROLLMENT, PAYMENT, AND REFUNDS:
@@ -429,29 +472,54 @@ const TermsPage: React.FC = () => {
             Refunds.
           </BodyText>
           <BodyText variant="body1">
-            You may be eligible for a refund for certain Offerings if you
-            request such a refund during the applicable refund period. For more
-            information, please visit the Offering page for details on our
-            refund process.
+            Refunds for specified Offerings on Learn may be issued, provided
+            that you submit a formal refund request no later than seven (7) days
+            after payment or seven (7) days after an Offering starts, whichever
+            occurs later (the "Refund Period"). In any case, the Refund Period
+            will not be longer than 170 days after the date of your payment.
+          </BodyText>
+          <BodyText variant="body1">
+            To submit your request, please email{" "}
+            <Link
+              href="mailto:mitlearn-support@mit.edu"
+              size="large"
+              color="black"
+            >
+              mitlearn-support@mit.edu
+            </Link>{" "}
+            and include your full name and order number.
+          </BodyText>
+          <BodyText variant="body1">
+            Refunds will be credited to the original payment method used at
+            checkout and may take up to two billing cycles to appear, depending
+            on your provider. You will receive a confirmation email once your
+            refund has been processed.
+          </BodyText>
+          <BodyText variant="body1">
+            You will not be eligible for a refund if you have completed the
+            Offering, meaning you have accessed all required modules, completed
+            or submitted required assessments, or have been awarded a
+            Certificate.
+          </BodyText>
+          <BodyText variant="body1">
+            After the Refund Period has ended, all payments are final and
+            non-refundable, and we are unable to make exceptions to this policy.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Enrollment code and Coupon Codes.
           </BodyText>
           <BodyText variant="body1">
             Any applicable enrollment code or coupon code must be entered at the
-            time of Certificate purchase in order to receive a discount. No
-            discounts can be applied after the purchase request has been
-            submitted. Offers cannot be combined for additional discounts.
+            time of purchase in order to receive a discount. No discounts can be
+            applied after the purchase request has been submitted. Offers cannot
+            be combined for additional discounts.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Transfers / Substitutions / Deferments.
           </BodyText>
           <BodyText variant="body1">
             Admission and fees paid may not generally be deferred to a
-            subsequent session, transferred to another course, or learner. If
-            you determine you are unable to participate in any particular
-            Offering, please review our Transfers / Substitutions / Deferments
-            policy associated with the Offering.
+            subsequent session, transferred to another course, or learner.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             No Other Enrollment.
@@ -474,12 +542,15 @@ const TermsPage: React.FC = () => {
           </Header>
           <BodyText variant="body1">
             The {SITE_NAME} names, logos and seals are trademarks ("Trademarks")
-            of MIT. You may not use any of these Trademarks, or any variations
-            thereof, without MIT's prior written consent. You may not use any of
-            these Trademarks, or any variations thereof, for promotional
-            purposes, or in any way that deliberately or inadvertently claims,
-            suggests or, in MIT's sole judgment, gives the appearance or
-            impression of a relationship with or endorsement by MIT.
+            of MIT. Except for purposes of attribution as may be required by any
+            applicable Creative Commons License (see Offering for more
+            information), you may not use any of these Trademarks, or any
+            variations thereof, without MIT's prior written consent. You may not
+            use any of these Trademarks, or any variations thereof, for
+            promotional purposes, or in any way that deliberately or
+            inadvertently claims, suggests or, in MIT's sole judgment, gives the
+            appearance or impression of a relationship with or endorsement by
+            MIT.
           </BodyText>
           <BodyText variant="body1">
             All trademarks not owned by MIT that appear on the Site or through
@@ -667,20 +738,18 @@ const TermsPage: React.FC = () => {
             Termination Rights:
           </BodyText>
           <BodyText variant="body1">
-            You agree that we may, at our own discretion, terminate your use of
-            the Site or your participation in any Offering for any reason or no
-            reason upon notice to you. You will not be entitled to a refund if
-            we terminate your use of or participation in the Site or Offering
-            for a material breach of any of these terms and you fail to cure
-            such breach within 30 days of receiving written notice from us about
-            the breach. We reserve the right at any time in our sole discretion
-            to cancel, postpone, reschedule, or alter the format of any Offering
-            provided offered through {SITE_NAME}, or to cease providing any part
-            or all of the Site content or related services. If you no longer
-            desire to participate in the Site, you may terminate your access at
-            any time. The rights granted to you hereunder will terminate upon
-            any termination of your access and right to use the Site, but the
-            other provisions of these Terms will survive any such termination.
+            You will not be entitled to a refund if we terminate your use of or
+            participation in the Site or Offering for a material breach of any
+            of these terms and you fail to cure such breach within 30 days of
+            receiving written notice from us about the breach. We reserve the
+            right at any time in our sole discretion to cancel, postpone,
+            reschedule, or alter the format of any Offering provided offered
+            through {SITE_NAME}, or to cease providing any part or all of the
+            Site content or related services. If you no longer desire to
+            participate in the Site, you may terminate your access at any time.
+            The rights granted to you hereunder will terminate upon any
+            termination of your access and right to use the Site, but the other
+            provisions of these Terms will survive any such termination.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Entire Agreement.
@@ -721,7 +790,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on March 9, 2026.
+            These terms of service were last updated on March 26, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>

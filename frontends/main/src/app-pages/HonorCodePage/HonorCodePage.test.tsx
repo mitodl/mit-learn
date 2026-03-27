@@ -13,7 +13,7 @@ describe("HonorCodePage", () => {
     renderWithProviders(<HonorCodePage />)
 
     screen.getByRole("heading", {
-      name: "Honor Code",
+      name: /Honor Code and Academic Integrity Statement/i,
     })
   })
 })

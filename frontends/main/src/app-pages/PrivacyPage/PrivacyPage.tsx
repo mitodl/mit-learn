@@ -121,10 +121,17 @@ const PrivacyPage: React.FC = () => {
             </li>
             <li>
               Contact information – home and business addresses, phone numbers,
-              email addresses, phone numbers, and social media information
+              email addresses and social media information
             </li>
             <li>IP addresses</li>
-            <li>Module / Course progress and performance</li>
+            <li>
+              Module / Course progress and performance and certificate
+              information
+            </li>
+            <li>
+              Marketing / sales data (price of courses purchased, number of
+              marketing emails opened, Offerings purchased, discount codes used)
+            </li>
             <li>
               Information that you provide such as submissions / prompts to AI
               tools
@@ -141,7 +148,9 @@ const PrivacyPage: React.FC = () => {
             intelligence tutors and guides, review application for financial
             assistance (if available), register/pay for a paid certificate, send
             us email messages, or complete an entrance or exit survey, and/or
-            participate in our public forums and social media.
+            participate in our public forums and social media. We may be
+            provided with your Personal Information by your employer if{" "}
+            {SITE_NAME} is being offered to you on behalf of your employer.
           </BodyText>
           <BodyText variant="body1">
             We also collect certain usage information about learner performance
@@ -173,15 +182,15 @@ const PrivacyPage: React.FC = () => {
             functions and conveniences of this Site may not work properly.
           </BodyText>
           <BodyText variant="body1">
-            We do not collect financial information from you. When you register
-            and pay for a course, you will be directed to our third-party
-            payment processor, CyberSource, and the submission of your payment
-            information will be subject to the terms of that third party
-            processor's privacy statement,{" "}
+            We currently collect financial information from individual
+            registrants; however, when you register and pay for a course, you
+            will be directed to our third-party payment processor, CyberSource,
+            and the submission of your payment information will be subject to
+            the terms of that third party processor's privacy statement,{" "}
             <a href="https://usa.visa.com/legal/privacy-policy.html">
               https://usa.visa.com/legal/privacy-policy.html
             </a>
-            .
+            . We do not collect or store your credit card information.
           </BodyText>
 
           <BodyText component="h2" variant="h4">
@@ -258,6 +267,7 @@ const PrivacyPage: React.FC = () => {
               course.
             </li>
             <li>To process refunds, as applicable.</li>
+            <li>To provide certificate administration</li>
           </UnorderedList>
           <BodyText variant="body1">
             If you have concerns about any of these purposes, or how we
@@ -452,7 +462,11 @@ const PrivacyPage: React.FC = () => {
             contacting you directly.
           </BodyText>
           <BodyText variant="body1">
-            <strong>This policy was last updated on June 13, 2025.</strong>
+            The controller for your personal information is MIT. We can be
+            contacted at dataprotection@mit.edu.
+          </BodyText>
+          <BodyText variant="body1">
+            <strong>This policy was last updated on March 26, 2026.</strong>
           </BodyText>
         </BodyContainer>
       </PageContainer>
