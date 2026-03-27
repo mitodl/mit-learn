@@ -279,6 +279,9 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       {page.about ? (
         <AboutSection productNoun="Program" aboutHtml={page.about} />
       ) : null}
+      {page.what_you_learn ? (
+        <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
       <RequirementsSection
         program={program}
         courses={courses.data?.results}
@@ -286,9 +289,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         // Use skeleton as fallback for loading OR error
         isLoading={dataLoading}
       />
-      {page.what_you_learn ? (
-        <WhatYoullLearnSection html={page.what_you_learn} />
-      ) : null}
       <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
