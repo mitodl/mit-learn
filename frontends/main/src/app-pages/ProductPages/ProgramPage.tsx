@@ -17,7 +17,6 @@ import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
-import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import type {
@@ -301,7 +300,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
       ) : null}
-      <WhoCanTakeSection productNoun="Program" />
     </ProductPageTemplate>
   )
 }
