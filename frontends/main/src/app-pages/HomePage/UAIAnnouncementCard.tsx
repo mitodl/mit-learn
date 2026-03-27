@@ -164,7 +164,7 @@ const FeatureItem = styled.li(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "8px",
-  justifyContent: "center",
+  justifyContent: "flex-start",
   padding: "30px 0px",
   "&:nth-of-type(odd)": {
     paddingRight: "32px",
@@ -217,9 +217,8 @@ const FeatureTitle = styled.span(({ theme }) => ({
 }))
 
 const FeatureDescription = styled.span(({ theme }) => ({
-  ...theme.typography.body2,
-  color: "#8B959E",
-  fontWeight: theme.typography.fontWeightMedium,
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.silverGray,
   display: "block",
 }))
 
@@ -247,7 +246,7 @@ const CTAButton = styled(ButtonLink)(({ theme }) => ({
 
 const UAIAnnouncementCard: React.FC = () => {
   const showUAICard = useFeatureFlagEnabled(FeatureFlags.UniversalAI)
-  if (showUAICard) {
+  if (!showUAICard) {
     return null
   }
 
@@ -261,7 +260,8 @@ const UAIAnnouncementCard: React.FC = () => {
       <CardHeader>
         <HeaderEyebrow>New on MIT Learn</HeaderEyebrow>
         <HeaderMeta>
-          Self-Paced <HeaderMetaDash>—</HeaderMetaDash> Certificate Available
+          Self-Paced <HeaderMetaDash aria-hidden>—</HeaderMetaDash> Certificate
+          Available
         </HeaderMeta>
       </CardHeader>
       <CardBody>
