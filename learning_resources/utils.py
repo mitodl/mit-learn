@@ -688,15 +688,26 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
     return encoding.decode(tokens[:max_tokens])
 
 
-def _build_entry(resource, summaries_by_resource):
-    """Build a resource entry dict for markdown rendering."""
+def build_resource_summary_dict(resource):
+    """Build a base summary dict for a learning resource.
+
+    Shared helper used by both utils and serializers to avoid duplicating
+    the field-extraction logic.
+    """
     return {
         "title": resource.title,
+        "readable_id": resource.readable_id,
         "description": resource.description or "",
         "resource_type": resource.resource_type,
         "topics": [t.name for t in resource.topics.all()],
-        "summaries": summaries_by_resource.get(resource.id, []),
     }
+
+
+def _build_entry(resource, summaries_by_resource):
+    """Build a resource entry dict for markdown rendering."""
+    entry = build_resource_summary_dict(resource)
+    entry["summaries"] = summaries_by_resource.get(resource.id, [])
+    return entry
 
 
 def _build_entries_from_relationships(relationships, summaries_by_resource):

@@ -31,7 +31,7 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.utils import json_to_markdown
+from learning_resources.utils import build_resource_summary_dict, json_to_markdown
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -803,13 +803,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             if not child:
                 continue
 
-            entry = {
-                "title": child.title,
-                "readable_id": child.readable_id,
-                "description": child.description or "",
-                "resource_type": child.resource_type,
-                "topics": [t.name for t in child.topics.all()],
-            }
+            entry = build_resource_summary_dict(child)
             if parent_program_title:
                 entry["parent_program"] = parent_program_title
 
