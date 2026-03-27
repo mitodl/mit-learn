@@ -455,12 +455,15 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    serializer_context = {"program_course_resource_cache": {}}
     metadata = []
     ids = []
     docs = []
     for doc in serialized_resources:
         resource_vector_point_id = str(vector_point_id(vector_point_key(doc)))
-        serializer = LearningResourceMetadataDisplaySerializer(doc)
+        serializer = LearningResourceMetadataDisplaySerializer(
+            doc, context=serializer_context
+        )
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
         key = f"{doc['readable_id']}.course_metadata"

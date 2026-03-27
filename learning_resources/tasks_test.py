@@ -676,6 +676,46 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_non_program_skips_children_content(mocker, settings):
+    """Non-program resources should not invoke program children aggregation."""
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course-no-children",
+        resource_type="course",
+        published=True,
+    )
+
+    html_content = "<html><body><h1>Test Course</h1><p>Course content</p></body></html>"
+    mocker.patch(
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
+    )
+    markdown_content = "# Test Course\n\nCourse content"
+    mocker.patch(
+        "learning_resources.tasks.html_to_markdown", return_value=markdown_content
+    )
+
+    children_content_mock = mocker.patch(
+        "learning_resources.tasks.build_program_children_content"
+    )
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    marketing_page_for_resources([course.id])
+
+    children_content_mock.assert_not_called()
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.content == markdown_content
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
+
+
+@pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
 

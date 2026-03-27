@@ -10,7 +10,7 @@ import dateparser
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max, Prefetch
+from django.db.models import F, Max, Prefetch, Q
 from drf_spectacular.utils import extend_schema_field
 from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
@@ -757,19 +757,31 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             constants.LearningResourceRelationTypes.PROGRAM_COURSES,
             constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
         ]
-        child_resources = models.LearningResource.objects.filter(
-            id__in=child_ids
-        ).prefetch_related(
-            "topics",
-            Prefetch(
-                "children",
-                queryset=models.LearningResourceRelationship.objects.filter(
-                    relation_type__in=program_relation_types
-                ),
-                to_attr="program_children",
-            ),
-        )
-        child_map = {r.id: r for r in child_resources}
+        resource_cache = self.context.setdefault("program_course_resource_cache", {})
+        missing_ids = [cid for cid in child_ids if cid not in resource_cache]
+
+        if missing_ids:
+            child_resources = (
+                models.LearningResource.objects.filter(
+                    id__in=missing_ids,
+                )
+                .filter(Q(published=True) | Q(test_mode=True))
+                .prefetch_related(
+                    "topics",
+                    Prefetch(
+                        "children",
+                        queryset=models.LearningResourceRelationship.objects.filter(
+                            relation_type__in=program_relation_types
+                        ),
+                        to_attr="program_children",
+                    ),
+                )
+            )
+            resource_cache.update({r.id: r for r in child_resources})
+
+        child_map = {
+            cid: resource_cache[cid] for cid in child_ids if cid in resource_cache
+        }
 
         courses = []
         for child_rel in children_data:

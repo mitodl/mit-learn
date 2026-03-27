@@ -1270,3 +1270,58 @@ def test_get_program_courses_recursive_ignores_non_program_relations():
     assert "Child Program" in titles
     assert "Real Course" in titles
     assert "Unrelated Item" not in titles
+
+
+def test_get_program_courses_excludes_unpublished_non_test_mode_children():
+    """Unpublished non-test-mode child resources are excluded from program_courses."""
+    program_lr = _make_program_lr()
+
+    visible_course = _make_course_lr(title="Visible Course", published=True)
+    hidden_course = _make_course_lr(
+        title="Hidden Course", published=False, test_mode=False
+    )
+
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=visible_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=hidden_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Visible Course" in titles
+    assert "Hidden Course" not in titles
+
+
+def test_get_program_courses_includes_unpublished_test_mode_children():
+    """Unpublished test-mode child resources are included in program_courses."""
+    program_lr = _make_program_lr()
+
+    test_mode_course = _make_course_lr(
+        title="Test Mode Course", published=False, test_mode=True
+    )
+
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=test_mode_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Test Mode Course" in titles

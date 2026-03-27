@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db.models import Count, Q
 from django.utils import timezone
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
@@ -726,9 +727,10 @@ def marketing_page_for_resources(resource_ids):
             content_file.key = marketing_page_url
             content_file.url = marketing_page_url
             content = html_to_markdown(page_content)
-            children_content = build_program_children_content(learning_resource)
-            if children_content:
-                content += children_content
+            if learning_resource.resource_type == LearningResourceType.program.name:
+                children_content = build_program_children_content(learning_resource)
+                if children_content:
+                    content += children_content
             content_file.content = content
             content_file.save()
             content_file_ids.append(content_file.id)
