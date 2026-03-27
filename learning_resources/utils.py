@@ -770,11 +770,13 @@ def build_program_children_content_bulk(program_resources):
         LearningResourceRelationTypes.PROGRAM_PROGRAMS,
     ]
 
+    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
     relationships = list(
         LearningResourceRelationship.objects.filter(
             parent_id__in=program_ids,
             relation_type__in=program_relation_types,
         )
+        .filter(child_visibility)
         .select_related("parent", "child")
         .prefetch_related(
             "child__topics",
@@ -783,6 +785,7 @@ def build_program_children_content_bulk(program_resources):
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type__in=program_relation_types,
                 )
+                .filter(child_visibility)
                 .select_related("child")
                 .prefetch_related("child__topics"),
                 to_attr="program_children",

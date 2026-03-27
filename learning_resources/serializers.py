@@ -21,6 +21,8 @@ from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
     RESOURCE_TYPE_GROUP_CHOICES,
+    PROGRAM_COURSE_CACHE_KEY_PUBLISHED,
+    PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
     Availability,
     CertificationType,
     Format,
@@ -761,9 +763,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             "include_test_mode_children", False
         )
         cache_key = (
-            "program_course_resource_cache_with_test_mode"
+            PROGRAM_COURSE_CACHE_KEY_TEST_MODE
             if include_test_mode_children
-            else "program_course_resource_cache_published_only"
+            else PROGRAM_COURSE_CACHE_KEY_PUBLISHED
         )
         resource_cache = self.context.setdefault(cache_key, {})
         missing_ids = [cid for cid in child_ids if cid not in resource_cache]
