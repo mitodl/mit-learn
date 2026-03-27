@@ -123,6 +123,43 @@ describe("MitxOnlineResourceCard", () => {
     })
   })
 
+  describe("certificate display", () => {
+    test.each<{
+      resourceType: "course" | "program"
+      certAvailable: boolean
+    }>([
+      { resourceType: "course", certAvailable: true },
+      { resourceType: "course", certAvailable: false },
+      { resourceType: "program", certAvailable: true },
+      { resourceType: "program", certAvailable: false },
+    ])(
+      "$resourceType with certificate_available=$certAvailable",
+      ({ resourceType, certAvailable }) => {
+        const resource =
+          resourceType === "course"
+            ? factories.courses.course({
+                certificate_available: certAvailable,
+              })
+            : factories.programs.program({
+                certificate_available: certAvailable,
+              })
+        renderCard({
+          resource,
+          resourceType,
+          href: "/test",
+          size: "medium",
+          list: true,
+        } as MitxOnlineResourceCardProps)
+        const cert = screen.queryByText(/^Certificate/)
+        if (certAvailable) {
+          expect(cert).toBeInTheDocument()
+        } else {
+          expect(cert).not.toBeInTheDocument()
+        }
+      },
+    )
+  })
+
   describe("enrollment-based pricing", () => {
     test("shows product price when paid-only (course)", () => {
       const course = factories.courses.course({

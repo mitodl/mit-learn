@@ -70,6 +70,7 @@ const program: PartialFactory<V2ProgramDetail> = (overrides = {}) => {
       },
     },
     certificate_type: faker.lorem.word(),
+    certificate_available: faker.datatype.boolean(),
     topics: [
       {
         name: faker.lorem.word(),
