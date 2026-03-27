@@ -2782,10 +2782,10 @@ export interface LearningResourceDisplayInfoResponse {
   number_of_programs: number | null
   /**
    * Child courses and programs included in this learning resource
-   * @type {Array<LearningResourceDisplayInfoResponseProgramCoursesInner>}
+   * @type {Array<ResourceChildSummary>}
    * @memberof LearningResourceDisplayInfoResponse
    */
-  program_courses: Array<LearningResourceDisplayInfoResponseProgramCoursesInner> | null
+  program_courses: Array<ResourceChildSummary> | null
   /**
    * Location
    * @type {string}
@@ -2822,49 +2822,6 @@ export interface LearningResourceDisplayInfoResponse {
    * @memberof LearningResourceDisplayInfoResponse
    */
   id: number
-}
-/**
- *
- * @export
- * @interface LearningResourceDisplayInfoResponseProgramCoursesInner
- */
-export interface LearningResourceDisplayInfoResponseProgramCoursesInner {
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  title?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  readable_id?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  description?: string
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  resource_type?: string
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  topics?: Array<string>
-  /**
-   *
-   * @type {string}
-   * @memberof LearningResourceDisplayInfoResponseProgramCoursesInner
-   */
-  parent_program?: string
 }
 /**
  *
@@ -7280,6 +7237,49 @@ export const RelationTypeEnum = {
 export type RelationTypeEnum =
   (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
 
+/**
+ * Serializer for child course/program entries within a program.
+ * @export
+ * @interface ResourceChildSummary
+ */
+export interface ResourceChildSummary {
+  /**
+   *
+   * @type {string}
+   * @memberof ResourceChildSummary
+   */
+  title: string
+  /**
+   *
+   * @type {string}
+   * @memberof ResourceChildSummary
+   */
+  readable_id: string
+  /**
+   *
+   * @type {string}
+   * @memberof ResourceChildSummary
+   */
+  description: string
+  /**
+   *
+   * @type {string}
+   * @memberof ResourceChildSummary
+   */
+  resource_type: string
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof ResourceChildSummary
+   */
+  topics: Array<string>
+  /**
+   *
+   * @type {string}
+   * @memberof ResourceChildSummary
+   */
+  parent_program?: string
+}
 /**
  * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
  * @export

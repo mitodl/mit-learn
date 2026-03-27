@@ -613,6 +613,55 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_program_appends_children(mocker, settings):
+    """Test that marketing_page_for_resources appends program children content"""
+
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+
+    program = models.LearningResource.objects.create(
+        title="Test Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    models.Program.objects.create(learning_resource=program)
+
+    child_course = models.LearningResource.objects.create(
+        title="Child Course",
+        url="https://example.com/child-course",
+        resource_type="course",
+        description="A child course description",
+        published=True,
+    )
+    models.LearningResourceRelationship.objects.create(
+        parent=program,
+        child=child_course,
+        relation_type="PROGRAM_COURSES",
+        position=0,
+    )
+
+    html_content = "<html><body><h1>Test Program</h1><p>Program info</p></body></html>"
+    mocker.patch(
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
+    )
+
+    markdown_content = "# Test Program\n\nProgram info"
+    mocker.patch(
+        "learning_resources.tasks.html_to_markdown", return_value=markdown_content
+    )
+
+    marketing_page_for_resources([program.id])
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=program, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.content.startswith(markdown_content)
+    assert "## Program Contents" in content_file.content
+    assert "Child Course" in content_file.content
+
+
+@pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
 

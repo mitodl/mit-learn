@@ -11888,22 +11888,7 @@ components:
         program_courses:
           type: array
           items:
-            type: object
-            properties:
-              title:
-                type: string
-              readable_id:
-                type: string
-              description:
-                type: string
-              resource_type:
-                type: string
-              topics:
-                type: array
-                items:
-                  type: string
-              parent_program:
-                type: string
+            $ref: '#/components/schemas/ResourceChildSummary'
           readOnly: true
           nullable: true
           description: Child courses and programs included in this learning resource
@@ -15334,6 +15319,30 @@ components:
       - Podcast Episodes
       - Playlist Videos
       - Course Learning Materials
+    ResourceChildSummary:
+      type: object
+      description: Serializer for child course/program entries within a program.
+      properties:
+        title:
+          type: string
+        readable_id:
+          type: string
+        description:
+          type: string
+        resource_type:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        parent_program:
+          type: string
+      required:
+      - description
+      - readable_id
+      - resource_type
+      - title
+      - topics
     ResourceTypeEnum:
       enum:
       - course

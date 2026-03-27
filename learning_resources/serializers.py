@@ -519,6 +519,17 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
+class ResourceChildSummarySerializer(serializers.Serializer):
+    """Serializer for child course/program entries within a program."""
+
+    title = serializers.CharField()
+    readable_id = serializers.CharField()
+    description = serializers.CharField()
+    resource_type = serializers.CharField()
+    topics = serializers.ListField(child=serializers.CharField())
+    parent_program = serializers.CharField(required=False)
+
+
 class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     """
     Serializer to render course information as a text document
@@ -698,22 +709,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             return serialized_resource["program"].get("program_count", 0)
         return None
 
-    @extend_schema_field(
-        {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "readable_id": {"type": "string"},
-                    "description": {"type": "string"},
-                    "resource_type": {"type": "string"},
-                    "topics": {"type": "array", "items": {"type": "string"}},
-                    "parent_program": {"type": "string"},
-                },
-            },
-        }
-    )
+    @extend_schema_field(ResourceChildSummarySerializer(many=True))
     def get_program_courses(self, serialized_resource):
         """Return details about courses/programs in a program"""
         if (
