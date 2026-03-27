@@ -455,7 +455,10 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
-    serializer_context = {"program_course_resource_cache": {}}
+    serializer_context = {
+        "program_course_resource_cache": {},
+        "include_test_mode_children": True,
+    }
     metadata = []
     ids = []
     docs = []

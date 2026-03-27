@@ -757,15 +757,27 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             constants.LearningResourceRelationTypes.PROGRAM_COURSES,
             constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
         ]
-        resource_cache = self.context.setdefault("program_course_resource_cache", {})
+        include_test_mode_children = self.context.get(
+            "include_test_mode_children", False
+        )
+        cache_key = (
+            "program_course_resource_cache_with_test_mode"
+            if include_test_mode_children
+            else "program_course_resource_cache_published_only"
+        )
+        resource_cache = self.context.setdefault(cache_key, {})
         missing_ids = [cid for cid in child_ids if cid not in resource_cache]
 
         if missing_ids:
+            visibility_q = Q(published=True)
+            if include_test_mode_children:
+                visibility_q |= Q(test_mode=True)
+
             child_resources = (
                 models.LearningResource.objects.filter(
                     id__in=missing_ids,
                 )
-                .filter(Q(published=True) | Q(test_mode=True))
+                .filter(visibility_q)
                 .prefetch_related(
                     "topics",
                     Prefetch(

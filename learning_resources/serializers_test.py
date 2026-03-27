@@ -1303,8 +1303,8 @@ def test_get_program_courses_excludes_unpublished_non_test_mode_children():
     assert "Hidden Course" not in titles
 
 
-def test_get_program_courses_includes_unpublished_test_mode_children():
-    """Unpublished test-mode child resources are included in program_courses."""
+def test_get_program_courses_excludes_unpublished_test_mode_children_by_default():
+    """Public-facing serializer should exclude unpublished test-mode children."""
     program_lr = _make_program_lr()
 
     test_mode_course = _make_course_lr(
@@ -1320,6 +1320,31 @@ def test_get_program_courses_includes_unpublished_test_mode_children():
     serialized_resource = serializers.LearningResourceSerializer(program_lr).data
     metadata = serializers.LearningResourceMetadataDisplaySerializer(
         serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Test Mode Course" not in titles
+
+
+def test_get_program_courses_includes_unpublished_test_mode_children_with_flag():
+    """Embedding context can opt in to include unpublished test-mode children."""
+    program_lr = _make_program_lr()
+
+    test_mode_course = _make_course_lr(
+        title="Test Mode Course", published=False, test_mode=True
+    )
+
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=test_mode_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource,
+        context={"include_test_mode_children": True},
     )
     result = metadata.data["program_courses"]
     titles = [r["title"] for r in result]
