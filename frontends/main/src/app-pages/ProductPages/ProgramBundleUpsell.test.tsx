@@ -22,7 +22,7 @@ describe("ProgramBundleUpsell", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("Renders upsell with program title, course count, price, and View Program link", async () => {
+  test("Renders upsell with program title, course count description, and View program details link", async () => {
     const requirements = new RequirementTreeBuilder()
     const required = requirements.addOperator({ operator: "all_of" })
     required.addCourse()
@@ -42,6 +42,9 @@ describe("ProgramBundleUpsell", () => {
       readable_id: baseProgram.readable_id,
       req_tree: requirements.serialize(),
       products: [factories.courses.product({ price: "750" })],
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
     })
     setMockResponse.get(urls.programs.programsList({ id: [baseProgram.id] }), {
       results: [programDetail],
@@ -50,19 +53,20 @@ describe("ProgramBundleUpsell", () => {
 
     const upsell = await screen.findByTestId("program-bundle-upsell-item")
     // 3 required + 2 electives = 5 total courses
+    expect(upsell).toHaveTextContent(programDetail.title)
     expect(upsell).toHaveTextContent(
-      `Get all 5 ${programDetail.title} Courses + Certificates`,
+      "Includes 5 courses with a single purchase",
     )
-    expect(upsell).toHaveTextContent("$750")
-    expect(upsell).toHaveTextContent("(19% off)")
-    const link = within(upsell).getByRole("link", { name: "View Program" })
+    const link = within(upsell).getByRole("link", {
+      name: "View program details",
+    })
     expect(link).toHaveAttribute(
       "href",
       `/programs/${programDetail.readable_id}`,
     )
   })
 
-  test("Shows loading skeleton then disappears when program has no price", async () => {
+  test("Shows upsell item without description when program has no price", async () => {
     const baseProgram = factories.programs.baseProgram()
     const programDetail = factories.programs.program({
       id: baseProgram.id,
@@ -76,10 +80,14 @@ describe("ProgramBundleUpsell", () => {
     )
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
-    const upsell = screen.getByTestId(TestIds.ProgramBundleUpsell)
+    // Loading skeleton is shown initially
+    expect(screen.getByTestId(TestIds.ProgramBundleUpsell)).toBeInTheDocument()
 
     resolve({ results: [programDetail] })
-    await waitForElementToBeRemoved(upsell)
+
+    const item = await screen.findByTestId("program-bundle-upsell-item")
+    expect(item).toHaveTextContent(programDetail.title)
+    expect(item).not.toHaveTextContent("with a single purchase")
   })
 
   test("Shows loading skeleton then disappears when program detail fetch fails", async () => {
@@ -138,6 +146,9 @@ describe("ProgramBundleUpsell", () => {
         title: bp.title,
         req_tree: makeReqTree(i + 3),
         products: [factories.courses.product({ price: prices[i] })],
+        enrollment_modes: [
+          factories.courses.enrollmentMode({ requires_payment: true }),
+        ],
       }),
     )
     setMockResponse.get(
@@ -149,8 +160,12 @@ describe("ProgramBundleUpsell", () => {
     const items = await screen.findAllByTestId("program-bundle-upsell-item")
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent(programDetails[0].title)
-    expect(items[0]).toHaveTextContent("$500")
+    expect(items[0]).toHaveTextContent(
+      "Includes 3 courses with a single purchase",
+    )
     expect(items[1]).toHaveTextContent(programDetails[1].title)
-    expect(items[1]).toHaveTextContent("$900")
+    expect(items[1]).toHaveTextContent(
+      "Includes 4 courses with a single purchase",
+    )
   })
 })

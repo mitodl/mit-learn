@@ -1,5 +1,6 @@
 import React from "react"
-import { ButtonLink, styled } from "@mitodl/smoot-design"
+import Link from "next/link"
+import { styled } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { Skeleton } from "ol-components"
 import type {
@@ -8,19 +9,14 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { parseReqTree } from "./util"
-import { formatPrice } from "@/common/mitxonline"
 import { useQuery } from "@tanstack/react-query"
 import { programPageView } from "@/common/urls"
-
-const WideButtonLink = styled(ButtonLink)({
-  width: "100%",
-})
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
   boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: "12px",
   [theme.breakpoints.up("md")]: {
     borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
     padding: "24px 32px",
@@ -37,67 +33,50 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   },
 }))
 
+const SectionLabel = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  display: "block",
+  color: theme.custom.colors.silverGrayDark,
+  textTransform: "uppercase",
+  letterSpacing: "0.0875em",
+}))
+
 const BundleUpsellItem = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  textAlign: "center",
+  gap: "4px",
+  borderLeft: `2px solid ${theme.custom.colors.red}`,
+  paddingLeft: "12px",
   "& + &": {
-    paddingTop: "16px",
-    [theme.breakpoints.between("sm", "md")]: {
-      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-      paddingTop: "24px",
-    },
-  },
-  [theme.breakpoints.between("sm", "md")]: {
-    flexDirection: "row",
-    textAlign: "left",
-    alignItems: "center",
-    gap: "32px",
-  },
-}))
-
-const BundleUpsellActions = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: "24px",
-  alignItems: "center",
-  [theme.breakpoints.between("sm", "md")]: {
-    marginLeft: "auto",
-    gap: "8px",
-    whiteSpace: "nowrap",
-  },
-}))
-
-const BundlePrice = styled.span(({ theme }) => ({
-  ...theme.typography.h4,
-  display: "block",
-  color: theme.custom.colors.red,
-}))
-
-const BundleDiscount = styled.span(({ theme }) => ({
-  ...theme.typography.body1,
-  display: "block",
-  color: theme.custom.colors.darkGray2,
-}))
-
-const BundlePriceRow = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-  justifyContent: "center",
-  [theme.breakpoints.between("sm", "md")]: {
-    justifyContent: "flex-start",
+    marginTop: "8px",
   },
 }))
 
 const BundleUpsellTitle = styled.span(({ theme }) => ({
   ...theme.typography.h5,
+  fontSize: theme.typography.pxToRem(16),
   display: "block",
 }))
 
-// For now we use a static 19% discount that is aligned with business rules
-const BUNDLE_DISCOUNT_LABEL = "(19% off)"
+const BundleDescription = styled.p(({ theme }) => ({
+  ...theme.typography.body2,
+  margin: 0,
+  color: theme.custom.colors.darkGray1,
+}))
+
+const BundleDetailsLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.red,
+  fontWeight: theme.typography.fontWeightMedium,
+  textDecoration: "none",
+  "&::after": {
+    content: '" >"',
+    ariaHidden: "true",
+  },
+  "&:hover": {
+    textDecoration: "underline",
+  },
+}))
 
 type ProgramBundleUpsellItemProps =
   | { loading: true; program?: undefined }
@@ -111,36 +90,19 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
     return (
       <BundleUpsellItem>
         <BundleUpsellTitle>
-          <Skeleton width="80%" variant="text" sx={{ mx: "auto" }} />
-          <Skeleton
-            width="60%"
-            variant="text"
-            sx={(theme) => ({
-              mx: "auto",
-              [theme.breakpoints.between("sm", "md")]: {
-                display: "none",
-              },
-            })}
-          />
+          <Skeleton width="80%" variant="text" />
         </BundleUpsellTitle>
-        <BundleUpsellActions>
-          <BundlePriceRow>
-            <BundlePrice>
-              <Skeleton width={60} variant="text" />
-            </BundlePrice>
-            <BundleDiscount>
-              <Skeleton width={50} variant="text" />
-            </BundleDiscount>
-          </BundlePriceRow>
-          <Skeleton width="100%" variant="rectangular" height={40} />
-        </BundleUpsellActions>
+        <BundleDescription>
+          <Skeleton width="90%" variant="text" />
+        </BundleDescription>
+        <Skeleton width={140} variant="text" />
       </BundleUpsellItem>
     )
   }
 
-  const price = program.products[0]?.price
-  const priceFormatted = price ? formatPrice(price, { avoidCents: true }) : null
-  if (!priceFormatted) return null
+  const hasPricedProgram =
+    !!program.products[0]?.price &&
+    program.enrollment_modes.some((m) => m.requires_payment)
 
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
@@ -150,25 +112,22 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
 
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
-      <BundleUpsellTitle>
-        Get all {totalRequired} {program.title} Courses + Certificates
-      </BundleUpsellTitle>
-      <BundleUpsellActions>
-        <BundlePriceRow>
-          <BundlePrice>{priceFormatted}</BundlePrice>
-          <BundleDiscount>{BUNDLE_DISCOUNT_LABEL}</BundleDiscount>
-        </BundlePriceRow>
-        <WideButtonLink
-          variant="bordered"
-          size="large"
-          href={programPageView({
-            readable_id: program.readable_id,
-            display_mode: program.display_mode,
-          })}
-        >
-          View Program
-        </WideButtonLink>
-      </BundleUpsellActions>
+      <BundleUpsellTitle>{program.title}</BundleUpsellTitle>
+      {hasPricedProgram && (
+        <BundleDescription>
+          {`Includes ${totalRequired} course${
+            totalRequired > 1 ? "s" : ""
+          } with a single purchase`}
+        </BundleDescription>
+      )}
+      <BundleDetailsLink
+        href={programPageView({
+          readable_id: program.readable_id,
+          display_mode: program.display_mode,
+        })}
+      >
+        View program details
+      </BundleDetailsLink>
     </BundleUpsellItem>
   )
 }
@@ -182,17 +141,17 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
     enabled: ids.length > 0,
   })
 
-  const pricedPrograms = (data?.results ?? []).filter(
+  const filteredPrograms = (data?.results ?? []).filter(
     (d): d is V2ProgramDetail =>
       /**
        * Exclude programs with display_mode="course" from bundle upsell.
        * These programs are presented as courses and should not appear as
        * bundleable programs.
        */
-      d.display_mode !== DisplayModeEnum.Course && !!d.products[0]?.price,
+      d.display_mode !== DisplayModeEnum.Course,
   )
 
-  if (!isLoading && pricedPrograms.length === 0) {
+  if (!isLoading && filteredPrograms.length === 0) {
     if (isError) {
       console.warn(
         `ProgramBundleUpsell: programs list query failed for ids=${ids.join(",")}`,
@@ -203,9 +162,10 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
 
   return (
     <BundleUpsellContainer data-testid="program-bundle-upsell">
+      <SectionLabel>Part of a Program</SectionLabel>
       {isLoading
         ? programs.map((p) => <ProgramBundleUpsellItem key={p.id} loading />)
-        : pricedPrograms.map((program) => (
+        : filteredPrograms.map((program) => (
             <ProgramBundleUpsellItem key={program.id} program={program} />
           ))}
     </BundleUpsellContainer>
@@ -213,4 +173,3 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
 }
 
 export default ProgramBundleUpsell
-export { BUNDLE_DISCOUNT_LABEL }
