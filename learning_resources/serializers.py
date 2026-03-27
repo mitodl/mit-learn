@@ -423,7 +423,7 @@ class VideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Video
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+        exclude = ("learning_resource", "transcript", *COMMON_IGNORED_FIELDS)
 
 
 class VideoPlaylistSerializer(serializers.ModelSerializer):

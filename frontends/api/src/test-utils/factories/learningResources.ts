@@ -600,7 +600,6 @@ const video: LearningResourceFactory<VideoResource> = (overrides = {}) => {
     {
       video: {
         duration: faker.number.int({ min: 1, max: 70 }).toString(),
-        transcript: faker.lorem.paragraph(),
       },
     },
     overrides,

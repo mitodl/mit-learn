@@ -2412,6 +2412,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }
@@ -2501,6 +2502,7 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opens
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }
@@ -3046,6 +3048,7 @@ def test_execute_learn_search_with_script_score(
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }
@@ -3551,6 +3554,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }
@@ -4040,6 +4044,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }
@@ -4217,6 +4222,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "summary",
                 "flashcards",
                 "vector_embedding",
+                "video.transcript",
             ]
         },
     }

@@ -15632,8 +15632,6 @@ components:
         duration:
           type: string
           maxLength: 11
-        transcript:
-          type: string
       required:
       - caption_urls
       - cover_image_url
@@ -16092,8 +16090,6 @@ components:
           type: string
           minLength: 1
           maxLength: 11
-        transcript:
-          type: string
       required:
       - duration
     VideoResource:
