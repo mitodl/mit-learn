@@ -634,12 +634,15 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               >
                 {section.title}
               </Typography>
-              <Typography
-                variant="body2"
-                color={theme.custom.colors.silverGrayDark}
-              >
-                Completed {sectionCompletedCount} of {sectionRequiredCount}
-              </Typography>
+              {sectionRequiredCount > 0 ? (
+                <Typography
+                  data-testid="section-completion-count"
+                  variant="body2"
+                  color={theme.custom.colors.silverGrayDark}
+                >
+                  Completed {sectionCompletedCount} of {sectionRequiredCount}
+                </Typography>
+              ) : null}
             </Stack>
             <Stack direction="column" gap="16px">
               {section.items.map((item) => {
