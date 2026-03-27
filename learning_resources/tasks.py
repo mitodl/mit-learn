@@ -40,7 +40,7 @@ from learning_resources.utils import (
     resource_unpublished_actions,
     resource_upserted_actions,
 )
-from learning_resources_search.constants import COURSE_TYPE
+from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
@@ -708,6 +708,9 @@ def scrape_marketing_pages(self):
     rate_limit=settings.CELERY_RATE_LIMIT,
 )
 def marketing_page_for_resources(resource_ids):
+    from vector_search.tasks import generate_embeddings
+
+    content_file_ids = []
     for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
         marketing_page_url = learning_resource.url
         scraper = scraper_for_site(marketing_page_url)
@@ -728,3 +731,6 @@ def marketing_page_for_resources(resource_ids):
                 content += children_content
             content_file.content = content
             content_file.save()
+            content_file_ids.append(content_file.id)
+    if content_file_ids:
+        generate_embeddings.delay(content_file_ids, CONTENT_FILE_TYPE, overwrite=True)

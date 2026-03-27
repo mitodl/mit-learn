@@ -597,6 +597,8 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
         "learning_resources.tasks.html_to_markdown", return_value=markdown_content
     )
 
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
     marketing_page_for_resources([course.id])
 
     mock_fetch_page.assert_called_once_with(course.url)
@@ -610,6 +612,11 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     assert content_file.url == course.url
     assert content_file.content == markdown_content
     assert content_file.file_extension == ".md"
+
+    # Verify embeddings were triggered
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
 
 
 @pytest.mark.django_db
@@ -651,6 +658,8 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
         "learning_resources.tasks.html_to_markdown", return_value=markdown_content
     )
 
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
     marketing_page_for_resources([program.id])
 
     content_file = models.ContentFile.objects.get(
@@ -659,6 +668,11 @@ def test_marketing_page_for_program_appends_children(mocker, settings):
     assert content_file.content.startswith(markdown_content)
     assert "## Program Contents" in content_file.content
     assert "Child Course" in content_file.content
+
+    # Verify embeddings were triggered
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
 
 
 @pytest.mark.django_db
