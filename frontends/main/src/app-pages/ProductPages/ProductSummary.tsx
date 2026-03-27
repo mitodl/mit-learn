@@ -345,8 +345,8 @@ const CourseDurationRow: React.FC<CourseInfoRowProps> = ({
   course,
   ...others
 }) => {
-  const duration = course.page.length ?? ""
-  const effort = course.page.effort ?? ""
+  const duration = course.page?.length ?? ""
+  const effort = course.page?.effort ?? ""
   if (!duration) return null
   const display = [duration, effort].filter(Boolean).join(", ")
   return (
@@ -403,9 +403,8 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
 }) => {
   const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
   const product = nextRun?.products[0]
-  const hasFinancialAid = !!(
-    course?.page.financial_assistance_form_url && product
-  )
+  const financialAidUrl = course?.page?.financial_assistance_form_url
+  const hasFinancialAid = !!(financialAidUrl && product)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
     enabled: canPurchase && hasFinancialAid,
@@ -446,9 +445,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
           {hasFinancialAid ? (
             <UnderlinedLink
               color="black"
-              href={mitxonlineLegacyUrl(
-                course.page.financial_assistance_form_url,
-              )}
+              href={mitxonlineLegacyUrl(financialAidUrl)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -497,9 +494,8 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
   const canPurchase = nextRun ? canPurchaseRun(nextRun) : false
-  const hasFinancialAid = !!(
-    course.page.financial_assistance_form_url && product
-  )
+  const financialAidUrl = course?.page?.financial_assistance_form_url
+  const hasFinancialAid = !!(financialAidUrl && product)
   const userFlexiblePrice = useQuery({
     ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
     enabled: enrollmentType === "paid" && canPurchase && hasFinancialAid,
@@ -536,9 +532,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
             {canPurchase && hasFinancialAid ? (
               <UnderlinedLink
                 color="black"
-                href={mitxonlineLegacyUrl(
-                  course.page.financial_assistance_form_url,
-                )}
+                href={mitxonlineLegacyUrl(financialAidUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
