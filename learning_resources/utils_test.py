@@ -917,3 +917,52 @@ def test_build_program_children_content_excludes_unpublished_grandchildren():
     result = build_program_children_content_bulk([parent_lr])
     assert "Published Grandchild" in result[parent_lr.id]
     assert "Unpublished Grandchild" not in result[parent_lr.id]
+
+
+def test_build_program_children_content_bulk_excludes_unpublished_contentfiles():
+    """Unpublished content files and files on unpublished runs are excluded."""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create(
+        learning_resource__title="Course With Mixed Content"
+    ).learning_resource
+
+    published_run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="published-run",
+        published=True,
+    )
+    unpublished_run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="unpublished-run",
+        published=False,
+    )
+
+    # Published content file on published run — should be included
+    ContentFile.objects.create(
+        run=published_run,
+        key="visible.txt",
+        summary="Visible summary",
+        published=True,
+    )
+    # Unpublished content file on published run — should be excluded
+    ContentFile.objects.create(
+        run=published_run,
+        key="hidden.txt",
+        summary="Hidden unpublished summary",
+        published=False,
+    )
+    # Published content file on unpublished run — should be excluded
+    ContentFile.objects.create(
+        run=unpublished_run,
+        key="hidden-run.txt",
+        summary="Hidden run summary",
+        published=True,
+    )
+
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content_bulk([program_lr])
+    assert "Visible summary" in result[program_lr.id]
+    assert "Hidden unpublished summary" not in result[program_lr.id]
+    assert "Hidden run summary" not in result[program_lr.id]

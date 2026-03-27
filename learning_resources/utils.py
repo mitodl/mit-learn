@@ -815,7 +815,11 @@ def build_program_children_content_bulk(program_resources):
     summaries_by_resource = {}
     if all_ids:
         summary_qs = (
-            ContentFile.objects.filter(run__learning_resource_id__in=all_ids)
+            ContentFile.objects.filter(
+                run__learning_resource_id__in=all_ids,
+                published=True,
+                run__published=True,
+            )
             .exclude(summary="")
             .values_list("run__learning_resource_id", "summary")
         )
