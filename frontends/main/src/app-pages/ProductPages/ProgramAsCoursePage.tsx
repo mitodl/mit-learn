@@ -291,15 +291,15 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
       ) : null}
+      {page.what_you_learn ? (
+        <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
       <ModulesSection
         program={program}
         courses={courses.data?.results}
         childPrograms={childPrograms.data?.results}
         isLoading={dataLoading}
       />
-      {page.what_you_learn ? (
-        <WhatYoullLearnSection html={page.what_you_learn} />
-      ) : null}
       <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
