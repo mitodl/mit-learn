@@ -106,7 +106,7 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
 
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
-    (sum, req) => sum + req.requiredCount,
+    (sum, req) => sum + req.items.length,
     0,
   )
 

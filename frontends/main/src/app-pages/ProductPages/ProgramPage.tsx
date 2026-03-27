@@ -87,27 +87,35 @@ type RequirementsSectionProps = {
 // and bundle upsell would need nontrivial refactoring and design/product input.
 const getCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
-  let electiveCount = 0
+  let requiredElectiveCount = 0
+  let totalElectives = 0
   parsedReqs.forEach((req) => {
     if (req.elective) {
-      electiveCount += req.requiredCount
+      requiredElectiveCount += req.requiredCount
+      totalElectives += req.items.length
     } else {
       requiredCount += req.requiredCount
     }
   })
-  if (requiredCount && electiveCount) {
-    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${electiveCount} elective ${pluralize("course", electiveCount)}.`
+  if (requiredCount && requiredElectiveCount) {
+    return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)} and ${requiredElectiveCount} elective ${pluralize("course", requiredElectiveCount)}.`
+  }
+  if (requiredCount && totalElectives > 0) {
+    return `To complete this program, you must take ${requiredCount} required courses. Additional elective courses are available.`
   }
   if (requiredCount) {
     return `To complete this program, you must take ${requiredCount} required ${pluralize("course", requiredCount)}.`
   }
-  if (electiveCount) {
-    return `To complete this program, you must take ${electiveCount} ${pluralize("course", electiveCount)}.`
+  if (requiredElectiveCount) {
+    return `To complete this program, you must take ${requiredElectiveCount} ${pluralize("course", requiredElectiveCount)}.`
   }
   return ""
 }
 
 const getRequirementSectionSubtitle = (reqData: RequirementData) => {
+  if (reqData.requiredCount === 0 && reqData.items.length > 0) {
+    return null
+  }
   if (reqData.requiredCount < reqData.items.length) {
     return `Complete ${reqData.requiredCount} out of ${reqData.items.length}`
   }
