@@ -39,6 +39,7 @@ from learning_resources.models import (
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
+    build_program_children_content_bulk,
     transfer_list_resources,
     truncate_to_tokens,
 )
@@ -792,3 +793,100 @@ def test_build_program_children_content_two_levels():
     result = build_program_children_content(top_lr)
     assert "Mid Program" in result
     assert "Nested Course" in result
+
+
+# --- build_program_children_content_bulk tests ---
+
+
+def test_build_program_children_content_bulk_empty_list():
+    """Empty input returns empty dict."""
+    assert build_program_children_content_bulk([]) == {}
+
+
+def test_build_program_children_content_bulk_non_programs_ignored():
+    """Non-program resources are silently ignored."""
+    course_lr = _make_course()
+    result = build_program_children_content_bulk([course_lr])
+    assert result == {}
+
+
+def test_build_program_children_content_bulk_program_no_children():
+    """Programs with no children produce empty string content."""
+    program_lr = _make_program()
+    result = build_program_children_content_bulk([program_lr])
+    assert result[program_lr.id] == ""
+
+
+def test_build_program_children_content_bulk_single_program():
+    """Bulk function produces same output as single-resource version."""
+    from learning_resources.models import LearningResourceRelationship
+
+    program_lr = _make_program()
+    course_lr = _make_course(title="Bulk Test Course", description="A description")
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=course_lr,
+        relation_type="PROGRAM_COURSES",
+    )
+
+    single_result = build_program_children_content(program_lr)
+    bulk_result = build_program_children_content_bulk([program_lr])
+    assert bulk_result[program_lr.id] == single_result
+
+
+def test_build_program_children_content_bulk_multiple_programs():
+    """Multiple programs are all included in the result dict."""
+    from learning_resources.models import LearningResourceRelationship
+
+    prog1 = _make_program()
+    prog2 = _make_program()
+    course1 = _make_course(title="Course For Prog1")
+    course2 = _make_course(title="Course For Prog2")
+    LearningResourceRelationship.objects.create(
+        parent=prog1, child=course1, relation_type="PROGRAM_COURSES"
+    )
+    LearningResourceRelationship.objects.create(
+        parent=prog2, child=course2, relation_type="PROGRAM_COURSES"
+    )
+
+    result = build_program_children_content_bulk([prog1, prog2])
+    assert prog1.id in result
+    assert prog2.id in result
+    assert "Course For Prog1" in result[prog1.id]
+    assert "Course For Prog2" in result[prog2.id]
+    assert "Course For Prog2" not in result[prog1.id]
+
+
+def test_build_program_children_content_bulk_mixed_resources():
+    """Mix of programs and non-programs; only programs appear in result."""
+    from learning_resources.models import LearningResourceRelationship
+
+    program_lr = _make_program()
+    course_child = _make_course(title="Child Course")
+    non_program = _make_course()
+    LearningResourceRelationship.objects.create(
+        parent=program_lr, child=course_child, relation_type="PROGRAM_COURSES"
+    )
+
+    result = build_program_children_content_bulk([program_lr, non_program])
+    assert program_lr.id in result
+    assert non_program.id not in result
+
+
+def test_build_program_children_content_bulk_with_grandchildren():
+    """Bulk version includes grandchildren from child programs."""
+    from learning_resources.models import LearningResourceRelationship
+
+    parent_lr = _make_program()
+    child_prog = _make_program(title="Sub Program")
+    grandchild = _make_course(title="Grandchild Course")
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr, child=child_prog, relation_type="PROGRAM_PROGRAMS"
+    )
+    LearningResourceRelationship.objects.create(
+        parent=child_prog, child=grandchild, relation_type="PROGRAM_COURSES"
+    )
+
+    result = build_program_children_content_bulk([parent_lr])
+    assert "Sub Program" in result[parent_lr.id]
+    assert "Grandchild Course" in result[parent_lr.id]

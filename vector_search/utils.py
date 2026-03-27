@@ -456,7 +456,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
     serializer_context = {
-        "program_course_resource_cache": {},
+        "program_course_resource_cache_with_test_mode": {},
         "include_test_mode_children": True,
     }
     metadata = []

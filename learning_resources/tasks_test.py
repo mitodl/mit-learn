@@ -698,7 +698,8 @@ def test_marketing_page_for_non_program_skips_children_content(mocker, settings)
     )
 
     children_content_mock = mocker.patch(
-        "learning_resources.tasks.build_program_children_content"
+        "learning_resources.tasks.build_program_children_content_bulk",
+        return_value={},
     )
     mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
 

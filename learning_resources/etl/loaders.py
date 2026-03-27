@@ -737,14 +737,20 @@ def load_program(
             )
             if course_resource:
                 course_resources.append(course_resource)
-        # Note: .set() replaces ALL children (including any PROGRAM_PROGRAMS
-        # relationships from prior ETL runs). Pass 2 in load_programs() will
-        # re-create the child-program relationships after all programs exist.
-        learning_resource.resources.set(
-            course_resources,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PROGRAM_COURSES
-            },
+        # Replace all children with position-ordered course relationships.
+        # Pass 2 in load_programs() will re-create child-program
+        # relationships after all programs exist.
+        learning_resource.children.all().delete()
+        LearningResourceRelationship.objects.bulk_create(
+            [
+                LearningResourceRelationship(
+                    parent=learning_resource,
+                    child=course_resource,
+                    relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+                    position=position,
+                )
+                for position, course_resource in enumerate(course_resources)
+            ]
         )
 
     return ProgramLoadResult(learning_resource, created, child_programs_data)

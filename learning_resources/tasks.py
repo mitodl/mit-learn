@@ -35,7 +35,7 @@ from learning_resources.etl.utils import (
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
-    build_program_children_content,
+    build_program_children_content_bulk,
     html_to_markdown,
     load_course_blocklist,
     resource_unpublished_actions,
@@ -712,7 +712,19 @@ def marketing_page_for_resources(resource_ids):
     from vector_search.tasks import generate_embeddings
 
     content_file_ids = []
-    for learning_resource in LearningResource.objects.filter(id__in=resource_ids):
+    resources = list(LearningResource.objects.filter(id__in=resource_ids))
+    program_resources = [
+        resource
+        for resource in resources
+        if resource.resource_type == LearningResourceType.program.name
+    ]
+    program_children_content = (
+        build_program_children_content_bulk(program_resources)
+        if program_resources
+        else {}
+    )
+
+    for learning_resource in resources:
         marketing_page_url = learning_resource.url
         scraper = scraper_for_site(marketing_page_url)
         page_content = scraper.scrape()
@@ -728,7 +740,9 @@ def marketing_page_for_resources(resource_ids):
             content_file.url = marketing_page_url
             content = html_to_markdown(page_content)
             if learning_resource.resource_type == LearningResourceType.program.name:
-                children_content = build_program_children_content(learning_resource)
+                children_content = program_children_content.get(
+                    learning_resource.id, ""
+                )
                 if children_content:
                     content += children_content
             content_file.content = content

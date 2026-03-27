@@ -2,6 +2,7 @@
 
 import logging
 import re
+from collections import defaultdict
 from functools import cache
 from shutil import which
 from typing import TYPE_CHECKING
@@ -687,89 +688,36 @@ def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str
     return encoding.decode(tokens[:max_tokens])
 
 
-def _collect_child_resources(learning_resource):
-    """Collect child resources from a program's hierarchy (max 2 levels deep).
+def _build_entry(resource, summaries_by_resource):
+    """Build a resource entry dict for markdown rendering."""
+    return {
+        "title": resource.title,
+        "description": resource.description or "",
+        "resource_type": resource.resource_type,
+        "topics": [t.name for t in resource.topics.all()],
+        "summaries": summaries_by_resource.get(resource.id, []),
+    }
 
-    Returns a list of dicts with resource info and any available
-    contentfile summaries, recursing one level into PROGRAM_PROGRAMS children.
-    Only follows PROGRAM_COURSES and PROGRAM_PROGRAMS relationships.
-    """
-    program_relation_types = [
-        LearningResourceRelationTypes.PROGRAM_COURSES,
-        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-    ]
-    relationships = list(
-        LearningResourceRelationship.objects.filter(
-            parent=learning_resource,
-            relation_type__in=program_relation_types,
-        )
-        .select_related("child")
-        .prefetch_related(
-            "child__topics",
-            Prefetch(
-                "child__children",
-                queryset=LearningResourceRelationship.objects.filter(
-                    relation_type__in=program_relation_types,
-                )
-                .select_related("child")
-                .prefetch_related("child__topics"),
-                to_attr="program_children",
-            ),
-        )
-    )
 
-    # Batch-fetch summaries for all children and grandchildren in one query
-    child_ids = [rel.child_id for rel in relationships]
-    grandchild_ids = [
-        gc.child_id
-        for rel in relationships
-        for gc in getattr(rel.child, "program_children", [])
-    ]
-    all_ids = set(child_ids + grandchild_ids) - {learning_resource.id}
-
-    summaries_by_resource = {}
-    if all_ids:
-        summary_qs = (
-            ContentFile.objects.filter(run__learning_resource_id__in=all_ids)
-            .exclude(summary="")
-            .values_list("run__learning_resource_id", "summary")
-        )
-        for resource_id, summary in summary_qs:
-            summaries_by_resource.setdefault(resource_id, []).append(summary)
-
-    results = []
+def _build_entries_from_relationships(relationships, summaries_by_resource):
+    """Build entry dicts from prefetched relationships, including grandchildren."""
+    entries = []
     for rel in relationships:
-        child = rel.child
-        entry = {
-            "title": child.title,
-            "description": child.description or "",
-            "resource_type": child.resource_type,
-            "topics": [t.name for t in child.topics.all()],
-            "summaries": summaries_by_resource.get(child.id, []),
-        }
+        entry = _build_entry(rel.child, summaries_by_resource)
 
         if (
-            child.resource_type == LearningResourceType.program.name
+            rel.child.resource_type == LearningResourceType.program.name
             and rel.relation_type == LearningResourceRelationTypes.PROGRAM_PROGRAMS
         ):
-            sub_entries = []
-            for sub_rel in getattr(child, "program_children", []):
-                sub_child = sub_rel.child
-                sub_entries.append(
-                    {
-                        "title": sub_child.title,
-                        "description": sub_child.description or "",
-                        "resource_type": sub_child.resource_type,
-                        "topics": [t.name for t in sub_child.topics.all()],
-                        "summaries": summaries_by_resource.get(sub_child.id, []),
-                    }
-                )
+            sub_entries = [
+                _build_entry(sub_rel.child, summaries_by_resource)
+                for sub_rel in getattr(rel.child, "program_children", [])
+            ]
             if sub_entries:
                 entry["children"] = sub_entries
 
-        results.append(entry)
-
-    return results
+        entries.append(entry)
+    return entries
 
 
 def _format_resource_entries(entries, heading_level=3):
@@ -796,18 +744,85 @@ def _format_resource_entries(entries, heading_level=3):
 def build_program_children_content(learning_resource):
     """Build markdown content describing a program's children.
 
-    Recursively collects child courses/programs and their contentfile
-    summaries, formatted as markdown suitable for appending to a
-    program's marketing page contentfile.
+    Delegates to the bulk version for a single resource.
     """
-    if learning_resource.resource_type != LearningResourceType.program.name:
-        return ""
+    result = build_program_children_content_bulk([learning_resource])
+    return result.get(learning_resource.id, "")
 
-    children = _collect_child_resources(learning_resource)
-    if not children:
-        return ""
 
-    sections = ["\n\n## Program Contents\n"]
-    sections.extend(_format_resource_entries(children))
+def build_program_children_content_bulk(program_resources):
+    """Build program children markdown for many program resources in bulk.
 
-    return "\n\n".join(sections)
+    Returns a dict keyed by learning_resource id with markdown content.
+    Non-program resources are ignored.
+    """
+    programs = [
+        resource
+        for resource in program_resources
+        if resource.resource_type == LearningResourceType.program.name
+    ]
+    if not programs:
+        return {}
+
+    program_ids = [program.id for program in programs]
+    program_relation_types = [
+        LearningResourceRelationTypes.PROGRAM_COURSES,
+        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    ]
+
+    relationships = list(
+        LearningResourceRelationship.objects.filter(
+            parent_id__in=program_ids,
+            relation_type__in=program_relation_types,
+        )
+        .select_related("parent", "child")
+        .prefetch_related(
+            "child__topics",
+            Prefetch(
+                "child__children",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types,
+                )
+                .select_related("child")
+                .prefetch_related("child__topics"),
+                to_attr="program_children",
+            ),
+        )
+    )
+
+    child_ids = [rel.child_id for rel in relationships]
+    grandchild_ids = [
+        gc.child_id
+        for rel in relationships
+        for gc in getattr(rel.child, "program_children", [])
+    ]
+    all_ids = set(child_ids + grandchild_ids) - set(program_ids)
+
+    summaries_by_resource = {}
+    if all_ids:
+        summary_qs = (
+            ContentFile.objects.filter(run__learning_resource_id__in=all_ids)
+            .exclude(summary="")
+            .values_list("run__learning_resource_id", "summary")
+        )
+        for resource_id, summary in summary_qs:
+            summaries_by_resource.setdefault(resource_id, []).append(summary)
+
+    relationships_by_program = defaultdict(list)
+    for rel in relationships:
+        relationships_by_program[rel.parent_id].append(rel)
+
+    content_by_program_id = {}
+    for program in programs:
+        rels = relationships_by_program.get(program.id, [])
+        entries = _build_entries_from_relationships(rels, summaries_by_resource)
+
+        if not entries:
+            content_by_program_id[program.id] = ""
+            continue
+
+        sections = ["\n\n## Program Contents\n"]
+        sections.extend(_format_resource_entries(entries))
+        content_by_program_id[program.id] = "\n\n".join(sections)
+
+    return content_by_program_id
