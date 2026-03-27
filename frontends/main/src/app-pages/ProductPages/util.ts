@@ -7,7 +7,6 @@ enum HeadingIds {
   How = "how-you-will-learn",
   Prereqs = "prerequisites",
   Instructors = "instructors",
-  WhoCanTake = "who-can-take",
   Requirements = "requirements",
   Summary = "summary",
   Modules = "modules",

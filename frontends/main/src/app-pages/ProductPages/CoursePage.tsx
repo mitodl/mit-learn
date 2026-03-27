@@ -15,7 +15,6 @@ import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
-import WhoCanTakeSection from "./WhoCanTakeSection"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
@@ -96,7 +95,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
       ) : null}
-      <WhoCanTakeSection productNoun="Course" />
     </ProductPageTemplate>
   )
 }

@@ -103,7 +103,6 @@ describe("CoursePage", () => {
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 3, name: page.faculty[0].instructor_name },
-        { level: 2, name: "Who can take this Course?" },
       ])
     })
   })
