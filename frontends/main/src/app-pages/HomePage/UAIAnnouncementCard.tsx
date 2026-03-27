@@ -1,31 +1,44 @@
 import React from "react"
 import { Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
-import { RiCheckLine } from "@remixicon/react"
+import { RiArrowRightLine } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
 
 const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
 
-const UAI_ANNOUNCEMENT_BG: React.CSSProperties = {
-  backgroundImage: "url('/images/uai-announcement.png')",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-}
+const FEATURES = [
+  {
+    title: "AI Foundations",
+    description: "Core concepts and methods behind how AI works.",
+  },
+  {
+    title: "MIT faculty",
+    description: "Developed by more than 30 MIT faculty.",
+  },
+  {
+    title: "Industry pathways",
+    description: "Application of AI across industries.",
+  },
+  {
+    title: "Earn an MIT Certificate",
+    description: "Certificates awarded upon completion.",
+  },
+]
 
 const Card = styled.div(({ theme }) => ({
   display: "flex",
-  flexDirection: "row",
-  overflow: "hidden",
+  flexDirection: "column",
   borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
-  marginTop: "32px",
-  marginBottom: "112px",
-  boxShadow: "2px 2px 50px 0 rgba(3, 21, 45, 0.05)",
+  borderTop: `2px solid ${theme.custom.colors.red}`,
+  overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
+  boxShadow: "2px 2px 50px 0 rgba(3, 21, 45, 0.05)",
+  marginTop: "32px",
+  marginBottom: "80px",
   [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
     marginTop: "24px",
     marginBottom: "80px",
   },
@@ -35,69 +48,69 @@ const Card = styled.div(({ theme }) => ({
   },
 }))
 
-const ImageSection = styled.div(({ theme }) => ({
-  flexShrink: 0,
-  width: "328px",
-  minHeight: "350px",
-  ...UAI_ANNOUNCEMENT_BG,
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    height: "180px",
-    minHeight: "unset",
-  },
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
-  },
-}))
-
-const MobileImage = styled.div(({ theme }) => ({
-  flexShrink: 0,
-  width: "80px",
-  height: "80px",
-  ...UAI_ANNOUNCEMENT_BG,
-  borderRadius: "8px",
-  display: "none",
-  [theme.breakpoints.down("sm")]: {
-    display: "block",
-  },
-}))
-
-const MobileCardHeader = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: "12px",
-  },
-}))
-
-const TitleGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`
-const ContentSection = styled.div(({ theme }) => ({
-  padding: "40px 48px 40px 48px",
+const CardHeader = styled.div(({ theme }) => ({
   display: "flex",
-  width: "100%",
-  flexDirection: "column",
-  gap: "16px",
-  justifyContent: "center",
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "16px 40px",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("md")]: {
-    padding: "24px",
+    padding: "16px 40px",
   },
   [theme.breakpoints.down("sm")]: {
-    padding: "24px",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "8px",
+    padding: "16px",
   },
 }))
 
-const Eyebrow = styled(Typography)(({ theme }) => ({
+const HeaderEyebrow = styled.span(({ theme }) => ({
+  ...theme.typography.body4,
   color: theme.custom.colors.red,
-  ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+}))
+
+const HeaderMeta = styled.span(({ theme }) => ({
+  ...theme.typography.body4,
+  color: theme.custom.colors.silverGrayDark,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+}))
+
+const HeaderMetaDash = styled.span(({ theme }) => ({
+  color: theme.custom.colors.black,
+  padding: "0 16px 0 16px",
+}))
+
+const CardBody = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+  },
+}))
+
+const LeftSection = styled.div(({ theme }) => ({
+  flex: "0 0 55%",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  gap: "16px",
+  padding: "40px 56px",
+  borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+  [theme.breakpoints.down("md")]: {
+    flex: "none",
+    borderRight: "none",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    padding: "40px",
+  },
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body4,
-    fontWeight: theme.typography.fontWeightBold,
+    padding: "16px",
+    gap: "8px",
   },
 }))
 
@@ -106,114 +119,189 @@ const Title = styled("h2")(({ theme }) => ({
   ...theme.typography.h3,
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h5,
-    marginTop: "-8px",
+    fontWeight: theme.typography.fontWeightBold,
   },
 }))
 
 const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
   ...theme.typography.body1,
-  marginTop: "8px",
-  lineHeight: "170%",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body3,
-    lineHeight: "18px",
-    marginTop: "0px",
-  },
-}))
-
-const CheckList = styled.ul(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: "16px",
-  listStyle: "none",
-  padding: 0,
-  margin: 0,
-  marginTop: "8px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "0px",
-    width: "100%",
-  },
-}))
-
-const CTA = styled.div(({ theme }) => ({
-  marginTop: "24px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "8px",
-  },
-}))
-
-const CheckItem = styled.li(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
   color: theme.custom.colors.darkGray2,
-  ...theme.typography.body1,
-  padding: "4px 8px 4px 0",
+  lineHeight: "160%",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body2,
-    width: "100%",
+    lineHeight: "160%",
+    fontWeight: theme.typography.fontWeightMedium,
   },
 }))
 
-const CTAButtonWrapper = styled(ButtonLink)(({ theme }) => ({
+/** CTA rendered inside the left column — desktop only */
+const DesktopCTA = styled.div(({ theme }) => ({
+  marginTop: "40px",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
+
+const RightSection = styled.ul(({ theme }) => ({
+  flex: 1,
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  padding: "40px",
+  margin: 0,
+  listStyle: "none",
+  backgroundColor: "rgba(40, 39, 72, 0.02)",
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr",
+    padding: "0 0 0 0",
+  },
+  [theme.breakpoints.down("md")]: {
+    padding: "24px 40px 40px 40px",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
+}))
+
+const FeatureItem = styled.li(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  justifyContent: "center",
+  padding: "30px 0px",
+  "&:nth-of-type(odd)": {
+    paddingRight: "32px",
+  },
+  "&:nth-of-type(even)": {
+    paddingLeft: "40px",
+  },
+  // 2-column grid borders (tablet + desktop)
+  [theme.breakpoints.up("sm")]: {
+    "&:nth-of-type(odd)": {
+      borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    },
+    "&:nth-of-type(-n+2)": {
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    },
+  },
+  // Bottom-row padding on tablet only
+  [theme.breakpoints.between("sm", "md")]: {
+    padding: "0",
+    "&:nth-of-type(-n+2)": {
+      paddingBottom: "32px",
+    },
+    "&:nth-of-type(n+3)": {
+      paddingTop: "32px",
+    },
+  },
+  // Single-column borders (mobile)
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px",
+    "&:nth-of-type(even)": {
+      paddingLeft: "16px",
+    },
+    "&:not(:last-of-type)": {
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+    },
+  },
+}))
+
+const FeatureAccent = styled.div(({ theme }) => ({
+  width: "16px",
+  height: "2px",
+  backgroundColor: theme.custom.colors.red,
+}))
+
+const FeatureTitle = styled.span(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  fontWeight: theme.typography.fontWeightMedium,
+  color: theme.custom.colors.darkGray2,
+  display: "block",
+}))
+
+const FeatureDescription = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  color: "#8B959E",
+  fontWeight: theme.typography.fontWeightMedium,
+  display: "block",
+}))
+
+/** CTA rendered below the features grid — tablet + mobile only */
+const BottomCTA = styled.div(({ theme }) => ({
+  display: "none",
+  [theme.breakpoints.between("sm", "md")]: {
+    display: "flex",
+    justifyContent: "center",
+    padding: "24px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    display: "block",
+    padding: "24px 16px",
+  },
+}))
+
+const CTAButton = styled(ButtonLink)(({ theme }) => ({
   ...theme.typography.body1,
-  padding: "14px 30px",
+  padding: "12px 30px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
-}))
-
-const CheckIcon = styled(RiCheckLine)(({ theme }) => ({
-  color: theme.custom.colors.green,
-  flexShrink: 0,
 }))
 
 const UAIAnnouncementCard: React.FC = () => {
   const showUAICard = useFeatureFlagEnabled(FeatureFlags.UniversalAI)
-  if (!showUAICard) {
+  if (showUAICard) {
     return null
   }
+
+  const ctaHref = programPageView({
+    readable_id: UAI_PROGRAM_READABLE_ID,
+    display_mode: null,
+  })
+
   return (
     <Card>
-      <ImageSection aria-hidden="true" />
-      <ContentSection>
-        <MobileCardHeader>
-          <MobileImage aria-hidden="true" />
-          <TitleGroup>
-            <Eyebrow variant="body2">INTRODUCING UNIVERSAL AI</Eyebrow>
-            <Title>Universal AI</Title>
-          </TitleGroup>
-        </MobileCardHeader>
-        <Description variant="body1">
-          A self-paced program covering foundational concepts in artificial
-          intelligence and their application across domains. The curriculum
-          includes foundational study, applied learning, and industry pathways
-          leading to MIT certificates.
-        </Description>
-        <CheckList>
-          {["AI Foundations", "Applied learning", "Industry pathways"].map(
-            (item) => (
-              <CheckItem key={item}>
-                <CheckIcon size={18} aria-hidden="true" focusable="false" />
-                {item}
-              </CheckItem>
-            ),
-          )}
-        </CheckList>
-        <CTA>
-          <CTAButtonWrapper
-            variant="primary"
-            href={programPageView({
-              readable_id: UAI_PROGRAM_READABLE_ID,
-              display_mode: null,
-            })}
-          >
-            Learn about Universal AI
-          </CTAButtonWrapper>
-        </CTA>
-      </ContentSection>
+      <CardHeader>
+        <HeaderEyebrow>New on MIT Learn</HeaderEyebrow>
+        <HeaderMeta>
+          Self-Paced <HeaderMetaDash>—</HeaderMetaDash> Certificate Available
+        </HeaderMeta>
+      </CardHeader>
+      <CardBody>
+        <LeftSection>
+          <Title>Universal AI</Title>
+          <Description variant="body1">
+            A self-paced program covering foundational concepts in artificial
+            intelligence and their application across domains. The curriculum
+            includes foundational study, applied learning, and industry pathways
+            leading to MIT certificates.
+          </Description>
+          <DesktopCTA>
+            <CTAButton
+              variant="primary"
+              href={ctaHref}
+              endIcon={<RiArrowRightLine />}
+            >
+              Learn about Universal AI
+            </CTAButton>
+          </DesktopCTA>
+        </LeftSection>
+        <RightSection>
+          {FEATURES.map(({ title, description }) => (
+            <FeatureItem key={title}>
+              <FeatureAccent aria-hidden="true" />
+              <FeatureTitle>{title}</FeatureTitle>
+              <FeatureDescription>{description}</FeatureDescription>
+            </FeatureItem>
+          ))}
+        </RightSection>
+      </CardBody>
+      <BottomCTA>
+        <CTAButton
+          variant="primary"
+          href={ctaHref}
+          endIcon={<RiArrowRightLine />}
+        >
+          Learn about Universal AI
+        </CTAButton>
+      </BottomCTA>
     </Card>
   )
 }
