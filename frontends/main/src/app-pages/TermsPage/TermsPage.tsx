@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-// Not currently linked to. See https://github.com/mitodl/hq/issues/4639
 import {
   Breadcrumbs,
   Container,
