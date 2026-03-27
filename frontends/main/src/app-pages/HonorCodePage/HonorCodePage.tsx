@@ -179,7 +179,7 @@ const HonorCodePage: React.FC = () => {
             <li>A reduced or failing grade for the entire course.</li>
             <li>Withholding or revocation of any certificate earned.</li>
             <li>Unenrollment from the course or program without a refund.</li>
-            <li>Termination of access to {SITE_NAME} Site.</li>
+            <li>Termination of access to the {SITE_NAME} Site.</li>
           </UnorderedList>
           <BodyText component="h2" variant="h4">
             Commitment to Clarity
