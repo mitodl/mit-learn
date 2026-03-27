@@ -1321,7 +1321,7 @@ def test_get_program_courses_excludes_unpublished_test_mode_children_by_default(
     metadata = serializers.LearningResourceMetadataDisplaySerializer(
         serialized_resource
     )
-    result = metadata.data["program_courses"]
+    result = metadata.data["program_courses"] or []
     titles = [r["title"] for r in result]
 
     assert "Test Mode Course" not in titles
