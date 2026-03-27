@@ -117,7 +117,7 @@ const extractCardData = (
         bestRun?.products[0]?.price,
         bestRun?.enrollment_modes,
       ),
-      hasCertificate: Boolean(course.certificate_type),
+      hasCertificate: course.certificate_available,
       certificateTypeName: course.certificate_type || undefined,
       startDate,
       startLabel:
@@ -142,7 +142,7 @@ const extractCardData = (
     displayType: isCourseDisplay ? "Course" : "Program",
     imageSrc: program.page?.feature_image_src || DEFAULT_RESOURCE_IMG,
     ...getPrices(program, program.products[0]?.price, program.enrollment_modes),
-    hasCertificate: Boolean(program.certificate_type),
+    hasCertificate: program.certificate_available,
     certificateTypeName: program.certificate_type || undefined,
     startDate: programStartDate,
     startLabel:
