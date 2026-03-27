@@ -129,8 +129,8 @@ const HonorCodePage: React.FC = () => {
             <li>
               <strong>Fair Competition:</strong> I will not engage in any
               activity that would dishonestly improve my results or improve/hurt
-              the results of others. This includes facilitating academic
-              dishonesty by assisting others in cheating.
+              the results of others. This includes {'"'}facilitating academic
+              dishonesty{'"'} by assisting others in cheating.
             </li>
             <li>
               <strong>Protecting Assessment Integrity:</strong> I will not post,
