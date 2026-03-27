@@ -150,13 +150,13 @@ const RightSection = styled.ul(({ theme }) => ({
   margin: 0,
   listStyle: "none",
   backgroundColor: "rgba(40, 39, 72, 0.02)",
+  [theme.breakpoints.down("md")]: {
+    padding: "0px 40px 40px 40px",
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  },
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "1fr",
     padding: "0 0 0 0",
-  },
-  [theme.breakpoints.down("md")]: {
-    padding: "24px 40px 40px 40px",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
@@ -165,7 +165,7 @@ const FeatureItem = styled.li(({ theme }) => ({
   flexDirection: "column",
   gap: "8px",
   justifyContent: "flex-start",
-  padding: "30px 0px",
+  padding: "32px 0px",
   "&:nth-of-type(odd)": {
     paddingRight: "32px",
   },
@@ -185,6 +185,7 @@ const FeatureItem = styled.li(({ theme }) => ({
   [theme.breakpoints.between("sm", "md")]: {
     padding: "0",
     "&:nth-of-type(-n+2)": {
+      paddingTop: "32px",
       paddingBottom: "32px",
     },
     "&:nth-of-type(n+3)": {
