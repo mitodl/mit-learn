@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.59.9
+--------------
+
+- feat: implement bundle upsell design (#3110)
+- Use certificate_available for hasCertificate on courses and programs (#3116)
+- swap order of what-youll-learn and requirements (#3117)
+- fix: Handle missing financial_assistance_form_url on product summary and course enrollment button  (#3109)
+- fix: Handle image stretch on product page (#3108)
+
 Version 0.59.8 (Released March 26, 2026)
 --------------
 
