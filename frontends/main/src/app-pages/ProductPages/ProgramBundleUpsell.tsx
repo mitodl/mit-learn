@@ -1,4 +1,5 @@
 import React from "react"
+import Link from "next/link"
 import { styled } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { Skeleton } from "ol-components"
@@ -63,11 +64,15 @@ const BundleDescription = styled.p(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
 }))
 
-const BundleDetailsLink = styled.a(({ theme }) => ({
+const BundleDetailsLink = styled(Link)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.red,
   fontWeight: theme.typography.fontWeightMedium,
   textDecoration: "none",
+  "&::after": {
+    content: '" >"',
+    ariaHidden: "true",
+  },
   "&:hover": {
     textDecoration: "underline",
   },
@@ -95,6 +100,10 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
     )
   }
 
+  const hasPricedProgram =
+    !!program.products[0]?.price &&
+    program.enrollment_modes.some((m) => m.requires_payment)
+
   const parsedReqs = parseReqTree(program.req_tree)
   const totalRequired = parsedReqs.reduce(
     (sum, req) => sum + req.requiredCount,
@@ -104,16 +113,20 @@ const ProgramBundleUpsellItem: React.FC<ProgramBundleUpsellItemProps> = ({
   return (
     <BundleUpsellItem data-testid="program-bundle-upsell-item">
       <BundleUpsellTitle>{program.title}</BundleUpsellTitle>
-      <BundleDescription>
-        Enroll in all {totalRequired} courses and save vs. individual pricing.
-      </BundleDescription>
+      {hasPricedProgram && (
+        <BundleDescription>
+          {`Includes ${totalRequired} course${
+            totalRequired > 1 ? "s" : ""
+          } with a single purchase`}
+        </BundleDescription>
+      )}
       <BundleDetailsLink
         href={programPageView({
           readable_id: program.readable_id,
           display_mode: program.display_mode,
         })}
       >
-        View program details &gt;
+        View program details
       </BundleDetailsLink>
     </BundleUpsellItem>
   )
@@ -128,17 +141,17 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
     enabled: ids.length > 0,
   })
 
-  const pricedPrograms = (data?.results ?? []).filter(
+  const filteredPrograms = (data?.results ?? []).filter(
     (d): d is V2ProgramDetail =>
       /**
        * Exclude programs with display_mode="course" from bundle upsell.
        * These programs are presented as courses and should not appear as
        * bundleable programs.
        */
-      d.display_mode !== DisplayModeEnum.Course && !!d.products[0]?.price,
+      d.display_mode !== DisplayModeEnum.Course,
   )
 
-  if (!isLoading && pricedPrograms.length === 0) {
+  if (!isLoading && filteredPrograms.length === 0) {
     if (isError) {
       console.warn(
         `ProgramBundleUpsell: programs list query failed for ids=${ids.join(",")}`,
@@ -152,7 +165,7 @@ const ProgramBundleUpsell: React.FC<{ programs: BaseProgram[] }> = ({
       <SectionLabel>Part of a Program</SectionLabel>
       {isLoading
         ? programs.map((p) => <ProgramBundleUpsellItem key={p.id} loading />)
-        : pricedPrograms.map((program) => (
+        : filteredPrograms.map((program) => (
             <ProgramBundleUpsellItem key={program.id} program={program} />
           ))}
     </BundleUpsellContainer>
