@@ -239,6 +239,7 @@ describe("MitxOnlineResourceCard", () => {
         enrollment_modes: [freeMode, paidMode],
         min_price: 500,
         max_price: 500,
+        certificate_available: true,
         products: [factories.courses.product({ price: "500.00" })],
       })
       const {
