@@ -6,13 +6,14 @@ export const useThrottle = <T extends (...args: unknown[]) => void>(
   callback: T,
   delay: number,
 ) => {
-  const lastRun = useRef(Date.now())
+  const lastRun = useRef<number | null>(null)
 
   return useCallback(
     (...args: Parameters<T>) => {
-      if (Date.now() - lastRun.current >= delay) {
+      const now = Date.now()
+      if (lastRun.current === null || now - lastRun.current >= delay) {
         callback(...args)
-        lastRun.current = Date.now()
+        lastRun.current = now
       }
     },
     [callback, delay],

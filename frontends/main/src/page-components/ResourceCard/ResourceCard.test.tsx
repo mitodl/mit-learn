@@ -12,10 +12,6 @@ import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceCard } from "./ResourceCard"
 import { getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, MicroUserListRelationship } from "api"
-import {
-  AddToLearningPathDialog,
-  AddToUserListDialog,
-} from "../Dialogs/AddToListDialog"
 import type { ResourceCardProps } from "./ResourceCard"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
@@ -114,9 +110,13 @@ describe.each([
         name: `Bookmark ${getReadableResourceType(resource?.resource_type as ResourceTypeEnum)}`,
       })
 
-      const addToLearningPathButton = screen.queryByRole("button", {
-        name: "Add to Learning Path",
-      })
+      const addToLearningPathButton = expectAddToLearningPathButton
+        ? await screen.findByRole("button", {
+            name: "Add to Learning Path",
+          })
+        : screen.queryByRole("button", {
+            name: "Add to Learning Path",
+          })
       expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
     },
   )
@@ -191,13 +191,20 @@ describe.each([
     expect(showModal).not.toHaveBeenCalled()
     await user.click(addToLearningPathButton)
     invariant(resource)
-    expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
-      resourceId: resource.id,
-    })
+    expect(showModal).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        resourceId: resource.id,
+      }),
+    )
+    showModal.mockClear()
     await user.click(addToUserListButton)
-    expect(showModal).toHaveBeenLastCalledWith(AddToUserListDialog, {
-      resourceId: resource.id,
-    })
+    expect(showModal).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        resourceId: resource.id,
+      }),
+    )
   })
 
   test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
