@@ -577,12 +577,22 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
+  const isVectorSearch = searchParams.get("vector_search") === "true"
+
   const { data, isLoading, isFetching } = useQuery({
-    ...learningResourceQueries.search(allParams as LRSearchRequest),
+    ...(isVectorSearch
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        learningResourceQueries.vectorSearch(allParams as any)
+      : learningResourceQueries.search(allParams as LRSearchRequest)),
     placeholderData: keepPreviousData,
-    select: (data) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    select: (data: any) => {
       // Handle missing data gracefully
-      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
+      if (
+        !data?.metadata?.aggregations?.offered_by ||
+        !data?.results ||
+        data.results.length === 0
+      ) {
         return data
       }
 
@@ -598,7 +608,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           aggregations: {
             ...data.metadata.aggregations,
             offered_by: data.metadata.aggregations.offered_by.filter(
-              (value) => value && displayOfferors.includes(value.key),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (value: any) => value && displayOfferors.includes(value.key),
             ),
           },
         },
@@ -826,6 +837,24 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               adjustment. 0 means content file matches are not counted in the
               score. Only affects the results if there is a search term.
             </ExplanationContainer>
+            <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
+            <Checkbox
+              checked={searchParams.get("vector_search") === "true"}
+              onChange={(e) =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev)
+                  if (e.target.checked) {
+                    next.set("vector_search", "true")
+                  } else {
+                    next.delete("vector_search")
+                  }
+                  return next
+                })
+              }
+            />
+            <ExplanationContainer>
+              Toggle to use the vector hybrid search endpoint.
+            </ExplanationContainer>
             <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
             <Checkbox
               checked={
@@ -898,7 +927,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading ? "" : `${data?.count} results`}
+              {isFetching || isLoading || isVectorSearch
+                ? ""
+                : `${data?.count} results`}
             </VisuallyHidden>
             <Stack direction="row" justifyContent="space-between">
               <StyledResourceTabs
@@ -978,15 +1009,18 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   </PlainList>
                 ) : data && data.count > 0 ? (
                   <PlainList itemSpacing={1.5}>
-                    {data.results.map((resource) => (
-                      <li key={resource.id}>
-                        <ResourceCard
-                          resource={resource}
-                          parentHeadingEl={resultsHeadingEl}
-                          list
-                        />
-                      </li>
-                    ))}
+                    {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      data.results.map((resource: any) => (
+                        <li key={resource.id}>
+                          <ResourceCard
+                            resource={resource}
+                            parentHeadingEl={resultsHeadingEl}
+                            list
+                          />
+                        </li>
+                      ))
+                    }
                   </PlainList>
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
