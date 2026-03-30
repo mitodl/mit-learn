@@ -17,7 +17,6 @@ from rest_framework.utils.urls import replace_query_param
 from learning_resources.constants import (
     DEPARTMENTS,
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
-    RESOURCE_TYPE_GROUP_VALUES,
     CertificationType,
     LearningResourceDelivery,
     LearningResourceType,
@@ -35,6 +34,7 @@ from learning_resources.serializers import (
     ContentFileSerializer,
     CourseNumberSerializer,
     LearningResourceSerializer,
+    ResourceTypeGroupChoiceField,
 )
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
@@ -412,18 +412,9 @@ class LearningResourcesSearchRequestSerializer(SearchRequestSerializer):
             \n\n{build_choice_description_list(delivery_choices)}"
         ),
     )
-    resource_type_group_choices = [
-        (value, value.replace("_", " ").title()) for value in RESOURCE_TYPE_GROUP_VALUES
-    ]
     resource_type_group = serializers.ListField(
         required=False,
-        child=serializers.ChoiceField(
-            choices=resource_type_group_choices,
-        ),
-        help_text=(
-            f"The resource type grouping of learning resource \
-            \n\n{build_choice_description_list(resource_type_group_choices)}"
-        ),
+        child=ResourceTypeGroupChoiceField(),
     )
     resource_category = serializers.ListField(
         required=False,

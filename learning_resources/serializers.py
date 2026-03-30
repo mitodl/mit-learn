@@ -20,6 +20,7 @@ from rest_framework.exceptions import ValidationError
 from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+    RESOURCE_TYPE_GROUP_CHOICES,
     Availability,
     CertificationType,
     Format,
@@ -287,6 +288,54 @@ class FormatSerializer(serializers.Field):
 class PaceSerializer(serializers.Field):
     def to_representation(self, value):
         return {"code": value, "name": Pace[value].value}
+
+
+class ResourceTypeGroupChoiceField(serializers.ChoiceField):
+    """
+    The resource type group for UI grouping.
+    """
+
+    # Note: This serializer centralizes the OpenAPI schema/help text for this field
+    # and is intended to be subclassed (for example, by ComputedResourceTypeGroupField).
+
+    DEFAULT_HELP_TEXT = (
+        "The resource type group for UI grouping.\n\n"
+        "For courses/programs, this is derived from resource_category\n"
+        "(which may differ from resource_type).\n"
+        'For all other types, returns "learning_material".'
+    )
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("help_text", self.DEFAULT_HELP_TEXT)
+        super().__init__(RESOURCE_TYPE_GROUP_CHOICES, **kwargs)
+
+
+class ComputedResourceTypeGroupField(ResourceTypeGroupChoiceField):
+    """ResourceTypeGroupChoiceField that computes value from a model instance."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("read_only", True)
+        kwargs.setdefault("source", "*")  # Pass all instance fields to the serializer
+        super().__init__(**kwargs)
+
+    def to_representation(self, instance):
+        """
+        Compute the resource type group for UI grouping.
+
+        For courses and programs, this is derived from the instance's
+        resource_category (falling back to resource_type if the category
+        is not a valid LearningResourceType). For all other resource types,
+        this returns the learning material resource type group.
+        """
+        if instance.resource_type in [
+            LearningResourceType.course.name,
+            LearningResourceType.program.name,
+        ]:
+            try:
+                return LearningResourceType(instance.resource_category).name
+            except ValueError:
+                return instance.resource_type
+        return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
 
 class LearningResourceRunSerializer(serializers.ModelSerializer):
@@ -937,7 +986,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=LearningResourceDeliverySerializer(), read_only=True
     )
     free = serializers.SerializerMethodField()
-    resource_type_group = serializers.SerializerMethodField()
+    resource_type_group = ComputedResourceTypeGroupField()
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
@@ -955,24 +1004,6 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         if best_run:
             return best_run.id
         return None
-
-    def get_resource_type_group(self, instance) -> str:
-        """Return the resource type group for UI grouping.
-
-        For courses/programs, this is derived from resource_category
-        (which may differ from resource_type, e.g. a program displayed
-        as a course). For all other types, returns "learning_material".
-        """
-        if instance.resource_type in [
-            LearningResourceType.course.name,
-            LearningResourceType.program.name,
-        ]:
-            try:
-                return LearningResourceType(instance.resource_category).name
-            except ValueError:
-                return instance.resource_type
-        else:
-            return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
     def get_free(self, instance) -> bool:
         """Return true if the resource is free/has a free option"""
