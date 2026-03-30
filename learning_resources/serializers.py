@@ -20,9 +20,9 @@ from rest_framework.exceptions import ValidationError
 from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
-    RESOURCE_TYPE_GROUP_CHOICES,
     PROGRAM_COURSE_CACHE_KEY_PUBLISHED,
     PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
+    RESOURCE_TYPE_GROUP_CHOICES,
     Availability,
     CertificationType,
     Format,
