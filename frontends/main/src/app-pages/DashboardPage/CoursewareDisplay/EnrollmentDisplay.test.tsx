@@ -1573,6 +1573,14 @@ describe("EnrollmentDisplay", () => {
       const run = mitxonline.factories.courses.courseRun({
         b2b_contract: null, // Non-B2B
         is_enrollable: true,
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: false,
+          }),
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: true,
+          }),
+        ],
       })
 
       const courses = {
