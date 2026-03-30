@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.60.0
+Version 0.60.0 (Released March 30, 2026)
 --------------
 
 - Route drawer CTAs for MITxOnline programs-as-courses to correct product pages (#3063)
