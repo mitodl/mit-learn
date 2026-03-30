@@ -33,3 +33,17 @@ def list_forms(
         archived=archived,
         form_types=form_types,
     )
+
+
+def submit_form(
+    *,
+    access_token: str,
+    form_id: str,
+    payload: dict,
+):
+    """Submit a form submission to HubSpot."""
+    client = get_hubspot_client(access_token)
+    return client.marketing.forms.submissions_api.submit(
+        form_id=form_id,
+        body=payload,
+    )

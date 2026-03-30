@@ -7,12 +7,12 @@ from django.urls import reverse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from hubspot.marketing.forms.exceptions import ApiException
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from main.permissions import IsSuperuserPermission
-from ol_hubspot.api import get_form, list_forms
+from ol_hubspot.api import get_form, list_forms, submit_form
 from ol_hubspot.schema import serializer_for_hubspot_model
 
 hubspot_forms_list_response_schema = serializer_for_hubspot_model(
@@ -21,6 +21,39 @@ hubspot_forms_list_response_schema = serializer_for_hubspot_model(
 hubspot_form_detail_response_schema = serializer_for_hubspot_model(
     "HubSpotFormDefinition"
 )
+
+
+class HubspotFormFieldValueSerializer(serializers.Serializer):
+    """Serializer for individual form field values in submission."""
+
+    name = serializers.CharField(required=True)
+    value = serializers.JSONField(required=True, allow_null=True)
+
+    def validate_value(self, value):
+        """Ensure value is one of the allowed types."""
+        if value is None:
+            return value
+        if isinstance(value, (str, bool)):
+            return value
+        if isinstance(value, list) and all(isinstance(v, str) for v in value):
+            return value
+        msg = "Value must be a string, boolean, array of strings, or null."
+        raise serializers.ValidationError(msg)
+
+
+class HubspotFormSubmitRequestSerializer(serializers.Serializer):
+    """Serializer for HubSpot form submission requests."""
+
+    fields = serializers.ListField(
+        child=HubspotFormFieldValueSerializer(),
+        required=True,
+    )
+
+
+class HubspotFormSubmitResponseSerializer(serializers.Serializer):
+    """Serializer for HubSpot form submission response."""
+
+    status = serializers.CharField(default="submitted")
 
 
 def _parse_bool(value: str | None) -> bool | None:
@@ -162,6 +195,38 @@ def hubspot_form_detail_view(request, form_id: str):
             archived=archived,
         )
         return Response(_to_dict(result))
+    except ApiException as exc:
+        status_code = exc.status if isinstance(exc.status, int) else 502
+        return Response({"detail": "HubSpot request failed"}, status=status_code)
+
+
+@extend_schema(
+    operation_id="hubspot_forms_submit",
+    request=HubspotFormSubmitRequestSerializer(),
+    responses={200: HubspotFormSubmitResponseSerializer(), 503: OpenApiTypes.OBJECT},
+)
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def hubspot_form_submit_view(request, form_id: str):
+    """Submit a form to HubSpot."""
+    if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
+        return _missing_token_response()
+
+    serializer = HubspotFormSubmitRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        payload = serializer.validated_data
+        submit_form(
+            access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN,
+            form_id=form_id,
+            payload=payload,
+        )
+        response_serializer = HubspotFormSubmitResponseSerializer(
+            {"status": "submitted"}
+        )
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
     except ApiException as exc:
         status_code = exc.status if isinstance(exc.status, int) else 502
         return Response({"detail": "HubSpot request failed"}, status=status_code)

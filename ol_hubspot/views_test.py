@@ -139,3 +139,108 @@ def test_detail_requires_authenticated_user(client, settings):
     response = client.get(detail_url)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_submit_form_success(client, settings, mocker):
+    """Submit endpoint successfully submits form data."""
+    mock_secret = _mock_hubspot_secret()
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [
+            {"name": "email", "value": "test@example.com"},
+            {"name": "agree", "value": True},
+            {"name": "tags", "value": ["tag1", "tag2"]},
+        ]
+    }
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "submitted"}
+    submit_stub.assert_called_once_with(
+        access_token=mock_secret,
+        form_id="form-123",
+        payload=payload,
+    )
+
+
+def test_submit_form_invalid_payload(client, settings):
+    """Submit endpoint returns 400 for invalid payload."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    # Missing required "fields" key
+    payload = {}
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "fields" in response.json()
+
+
+def test_submit_form_invalid_field_value_type(client, settings):
+    """Submit endpoint validates field value types."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    # Invalid value type (dict instead of string/bool/array)
+    payload = {"fields": [{"name": "email", "value": {"nested": "obj"}}]}
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_submit_form_missing_token_returns_503(client, settings):
+    """Submit endpoint returns 503 if token is not configured."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = None
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": []}
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+def test_submit_form_requires_authenticated_user(client, settings):
+    """Submit endpoint requires authentication."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+
+    response = client.post(submit_url, {"fields": []}, format="json")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_submit_form_hubspot_failure(client, settings, mocker):
+    """Submit endpoint passes through HubSpot API failures."""
+    from hubspot.marketing.forms.exceptions import ApiException
+
+    mock_secret = _mock_hubspot_secret()
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+    submit_stub.side_effect = ApiException(status=400)
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"detail": "HubSpot request failed"}
