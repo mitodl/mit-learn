@@ -127,6 +127,11 @@ const mitxonlineLegacyUrl = (relative: string) => {
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
+type CourseEnrollmentDecision = {
+  action: "none" | "audit" | "checkout" | "dialog"
+  run?: CourseRunV2
+}
+
 const getEnrollmentType = (
   modes: EnrollmentMode[] | undefined,
 ): EnrollmentType => {
@@ -136,6 +141,35 @@ const getEnrollmentType = (
   if (hasFree && hasPaid) return "both"
   if (hasFree) return "free"
   return "paid"
+}
+
+/**
+ * Determine course enrollment action using enrollable runs only.
+ *
+ * Rules:
+ * - Multiple enrollable runs -> dialog
+ * - Single enrollable run with both modes -> dialog
+ * - Single enrollable run with audit only -> one-click enrollment
+ * - Single enrollable run with verified only -> checkout
+ */
+const getCourseEnrollmentDecision = (
+  course: CourseWithCourseRunsSerializerV2,
+): CourseEnrollmentDecision => {
+  const enrollableRuns = (course.courseruns ?? []).filter(
+    (run) => run.is_enrollable,
+  )
+  const selectedRun =
+    enrollableRuns.find((run) => run.id === course.next_run_id) ??
+    enrollableRuns[0]
+
+  if (!selectedRun) return { action: "none" }
+  if (enrollableRuns.length > 1) return { action: "dialog", run: selectedRun }
+
+  const enrollmentType = getEnrollmentType(selectedRun.enrollment_modes)
+  if (enrollmentType === "both") return { action: "dialog", run: selectedRun }
+  if (enrollmentType === "free") return { action: "audit", run: selectedRun }
+  if (enrollmentType === "paid") return { action: "checkout", run: selectedRun }
+  return { action: "none", run: selectedRun }
 }
 
 /**
@@ -199,8 +233,9 @@ export {
   upgradeRunUrl,
   mitxonlineLegacyUrl,
   getEnrollmentType,
+  getCourseEnrollmentDecision,
   getIdsFromReqTree,
   getBestRun,
   isVerifiedEnrollmentMode,
 }
-export type { PriceWithDiscount, EnrollmentType }
+export type { PriceWithDiscount, EnrollmentType, CourseEnrollmentDecision }

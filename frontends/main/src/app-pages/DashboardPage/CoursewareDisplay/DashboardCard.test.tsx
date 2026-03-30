@@ -1240,6 +1240,59 @@ describe.each([
         ).not.toBeInTheDocument()
       },
     )
+
+    test.each(ENROLLMENT_TRIGGERS)(
+      "Clicking $trigger on non-B2B course bypasses dialog for paid-only single-run enrollment",
+      async ({ trigger }) => {
+        const userData = mitxUser()
+        setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+        const product = mitxonline.factories.courses.product({ price: "500" })
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          enrollment_modes: [
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: true,
+            }),
+          ],
+          products: [product],
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+
+        const clearUrl = mitxonline.urls.baskets.clear()
+        setMockResponse.delete(clearUrl, undefined)
+        const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
+        setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{ type: DashboardType.Course, data: course }}
+          />,
+        )
+
+        const card = getCard()
+        const triggerElement =
+          trigger === "button"
+            ? within(card).getByTestId("courseware-button")
+            : within(card).getByText(course.title)
+
+        await user.click(triggerElement)
+
+        await waitFor(() => {
+          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "POST", url: basketUrl }),
+          )
+        })
+
+        expect(
+          screen.queryByRole("dialog", { name: course.title }),
+        ).not.toBeInTheDocument()
+      },
+    )
   })
 
   describe("Verified Program Enrollment", () => {

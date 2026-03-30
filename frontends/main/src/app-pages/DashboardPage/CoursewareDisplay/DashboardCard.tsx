@@ -37,7 +37,7 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
-  getEnrollmentType,
+  getCourseEnrollmentDecision,
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -282,6 +282,7 @@ const useEnrollmentHandler = () => {
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const replaceBasketItem = useReplaceBasketItem()
 
   const enroll = React.useCallback(
     ({
@@ -343,16 +344,10 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
-        const enrollableRuns = course.courseruns.filter(
-          (run) => run.is_enrollable,
-        )
-        const hasMultipleRuns = enrollableRuns.length > 1
-        const selectedRun =
-          enrollableRuns.find((run) => run.id === course.next_run_id) ??
-          enrollableRuns[0]
-        const enrollmentType = getEnrollmentType(selectedRun?.enrollment_modes)
+        const enrollmentDecision = getCourseEnrollmentDecision(course)
+        const selectedRun = enrollmentDecision.run
 
-        if (!hasMultipleRuns && selectedRun && enrollmentType === "free") {
+        if (enrollmentDecision.action === "audit" && selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
             {
@@ -367,6 +362,14 @@ const useEnrollmentHandler = () => {
           return
         }
 
+        if (enrollmentDecision.action === "checkout" && selectedRun) {
+          const product = selectedRun.products[0]
+          if (product) {
+            replaceBasketItem.mutate(product.id)
+            return
+          }
+        }
+
         const onCourseEnroll = (run: CourseRunV2) => {
           window.location.href = run.courseware_url!
         }
@@ -379,6 +382,7 @@ const useEnrollmentHandler = () => {
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,
+      replaceBasketItem,
     ],
   )
 
@@ -387,7 +391,8 @@ const useEnrollmentHandler = () => {
     isPending:
       createB2bEnrollment.isPending ||
       createEnrollment.isPending ||
-      createVerifiedProgramEnrollment.isPending,
+      createVerifiedProgramEnrollment.isPending ||
+      replaceBasketItem.isPending,
   }
 }
 
