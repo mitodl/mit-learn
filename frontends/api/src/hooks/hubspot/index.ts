@@ -1,12 +1,27 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
+
+import { hubspotApi } from "../../clients"
 
 import type {
   HubspotCollectionResponseFormDefinitionBaseForwardPaging as HubspotFormsListResponse,
   HubspotApiHubspotFormsDetailRetrieveRequest,
   HubspotApiHubspotFormsListRequest,
+  HubspotFormSubmitResponse,
 } from "../../generated/v1"
 import type { HubspotFormDetailResponse } from "./queries"
 import { hubspotKeys, hubspotQueries } from "./queries"
+
+type HubspotSubmitFieldValue = string | boolean | string[] | null
+
+type HubspotSubmitField = {
+  name: string
+  value: HubspotSubmitFieldValue
+}
+
+type HubspotFormSubmitMutationParams = {
+  formId: string
+  fields: HubspotSubmitField[]
+}
 
 const useHubspotFormsList = (
   params: HubspotApiHubspotFormsListRequest = {},
@@ -28,11 +43,24 @@ const useHubspotFormDetail = (
   })
 }
 
+const useHubspotFormSubmit = () => {
+  return useMutation({
+    mutationFn: ({ formId, fields }: HubspotFormSubmitMutationParams) =>
+      hubspotApi
+        .hubspotFormsSubmit({
+          form_id: formId,
+          HubspotFormSubmitRequestRequest: { fields },
+        })
+        .then((response) => response.data),
+  })
+}
+
 export {
   hubspotKeys,
   hubspotQueries,
   useHubspotFormsList,
   useHubspotFormDetail,
+  useHubspotFormSubmit,
 }
 
 export type {
@@ -40,4 +68,8 @@ export type {
   HubspotApiHubspotFormsListRequest,
   HubspotFormsListResponse,
   HubspotFormDetailResponse,
+  HubspotSubmitField,
+  HubspotSubmitFieldValue,
+  HubspotFormSubmitMutationParams,
+  HubspotFormSubmitResponse,
 }
