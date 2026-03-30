@@ -581,8 +581,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const { data, isLoading, isFetching } = useQuery({
     ...(isVectorSearch
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        learningResourceQueries.vectorSearch(allParams as any)
+      ? learningResourceQueries.vectorSearch({
+          ...allParams,
+          hybrid_search: true,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     placeholderData: keepPreviousData,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
