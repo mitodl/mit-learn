@@ -4,6 +4,7 @@ import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningRe
 import { getCallToActionText } from "./CallToActionSection"
 import type { LearningResourceExpandedProps } from "../LearningResourceExpanded/LearningResourceExpanded"
 import { ResourceTypeEnum } from "api"
+import { faker } from "@faker-js/faker/locale/en"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import invariant from "tiny-invariant"
 import { PLATFORM_LOGOS } from "ol-components"
@@ -395,7 +396,7 @@ describe.each([true, false])(
         setup({ resource })
 
         const chatButton = screen.queryByRole("button", {
-          name: "Ask TIM about this course",
+          name: /Ask\sTIM/,
         })
         const shouldBeVisible =
           enabled &&
@@ -405,6 +406,20 @@ describe.each([true, false])(
         expect(!!chatButton).toBe(shouldBeVisible)
       },
     )
+
+    test("Chat button label includes resource category", () => {
+      if (!enabled) return
+      const resourceCategory = faker.lorem.word()
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Course,
+        resource_category: resourceCategory,
+      })
+      setup({ resource })
+
+      screen.getByRole("button", {
+        name: `Ask TIM about this ${resourceCategory.toLocaleLowerCase()}`,
+      })
+    })
 
     test("Rerendering with a new resource keeps drawer open if and only if AiChat is enabled", async () => {
       if (!enabled) return
