@@ -17,6 +17,7 @@ import type {
   TopicsApi,
   LearningpathsApi,
   ArticlesApi,
+  HubspotApi,
   UserlistsApi,
   OfferorsApi,
   PlatformsApi,
@@ -158,6 +159,15 @@ const articles = {
     `${API_BASE_URL}/api/v1/articles/detail/${identifier}/`,
 }
 
+const hubspot = {
+  list: (params?: Params<HubspotApi, "hubspotFormsList">) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${query(params)}`,
+  details: (params: Params<HubspotApi, "hubspotFormsDetailRetrieve">) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${params.form_id}/`,
+  submit: (formId: string) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${formId}/submit/`,
+}
+
 const userSubscription = {
   list: (
     params?: Params<SubscriptionApi, "learningResourcesUserSubscriptionList">,
@@ -230,6 +240,7 @@ export {
   topics,
   learningPaths,
   articles,
+  hubspot,
   search,
   userLists,
   programLetters,
