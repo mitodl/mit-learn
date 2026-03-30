@@ -37,7 +37,7 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
-  getCourseEnrollmentDecision,
+  getCourseEnrollmentAction,
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -344,7 +344,7 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
-        const enrollmentDecision = getCourseEnrollmentDecision(course)
+        const enrollmentDecision = getCourseEnrollmentAction(course)
         const selectedRun = enrollmentDecision.run
 
         if (enrollmentDecision.action === "audit" && selectedRun) {

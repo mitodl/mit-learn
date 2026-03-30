@@ -127,7 +127,7 @@ const mitxonlineLegacyUrl = (relative: string) => {
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
-type CourseEnrollmentDecision = {
+type CourseEnrollmentAction = {
   action: "none" | "audit" | "checkout" | "dialog"
   run?: CourseRunV2
 }
@@ -152,9 +152,9 @@ const getEnrollmentType = (
  * - Single enrollable run with audit only -> one-click enrollment
  * - Single enrollable run with verified only -> checkout
  */
-const getCourseEnrollmentDecision = (
+const getCourseEnrollmentAction = (
   course: CourseWithCourseRunsSerializerV2,
-): CourseEnrollmentDecision => {
+): CourseEnrollmentAction => {
   const enrollableRuns = (course.courseruns ?? []).filter(
     (run) => run.is_enrollable,
   )
@@ -170,6 +170,12 @@ const getCourseEnrollmentDecision = (
   if (enrollmentType === "free") return { action: "audit", run: selectedRun }
   if (enrollmentType === "paid") return { action: "checkout", run: selectedRun }
   return { action: "none", run: selectedRun }
+}
+
+const getShouldShowEnrollmentDialog = (
+  course: CourseWithCourseRunsSerializerV2,
+): boolean => {
+  return getCourseEnrollmentAction(course).action === "dialog"
 }
 
 /**
@@ -233,9 +239,10 @@ export {
   upgradeRunUrl,
   mitxonlineLegacyUrl,
   getEnrollmentType,
-  getCourseEnrollmentDecision,
+  getCourseEnrollmentAction,
+  getShouldShowEnrollmentDialog,
   getIdsFromReqTree,
   getBestRun,
   isVerifiedEnrollmentMode,
 }
-export type { PriceWithDiscount, EnrollmentType, CourseEnrollmentDecision }
+export type { PriceWithDiscount, EnrollmentType, CourseEnrollmentAction }

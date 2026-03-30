@@ -13,7 +13,7 @@ import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import {
   canPurchaseRun,
   getEnrollmentType,
-  getCourseEnrollmentDecision,
+  getCourseEnrollmentAction,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
@@ -62,7 +62,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const router = useRouter()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
-  const enrollmentDecision = getCourseEnrollmentDecision(course)
+  const enrollmentDecision = getCourseEnrollmentAction(course)
   const actionRun = enrollmentDecision.run
 
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
