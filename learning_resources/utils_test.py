@@ -27,6 +27,7 @@ from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
+    ProgramFactory,
     UserListFactory,
 )
 from learning_resources.models import (
@@ -38,6 +39,8 @@ from learning_resources.models import (
 )
 from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
+    build_program_children_content,
+    build_program_children_content_bulk,
     transfer_list_resources,
     truncate_to_tokens,
 )
@@ -111,6 +114,34 @@ def fixture_test_instructors_data():
     """
     with open("./test_json/test_instructors_data.json") as test_data:  # noqa: PTH123
         return json.load(test_data)["instructors"]
+
+
+@pytest.fixture
+def program_with_visibility_children():
+    """Program with published, unpublished, and test_mode child courses."""
+    from learning_resources.models import LearningResourceRelationship
+
+    published = CourseFactory.create(
+        learning_resource__title="Published Course"
+    ).learning_resource
+    unpublished = CourseFactory.create(
+        is_unpublished=True,
+        learning_resource__title="Unpublished Course",
+    ).learning_resource
+    test_mode = CourseFactory.create(
+        learning_resource__title="Test Mode Course",
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[published]).learning_resource
+    # Manually add unpublished/test_mode children since ProgramFactory
+    # only creates PROGRAM_COURSES relationships for visible courses
+    for child in (unpublished, test_mode):
+        LearningResourceRelationship.objects.create(
+            parent=program_lr, child=child, relation_type="PROGRAM_COURSES"
+        )
+
+    return program_lr
 
 
 @pytest.mark.parametrize("url", [None, "http://test.me"])
@@ -640,3 +671,298 @@ def test_truncate_to_tokens_util(mocker):
     max_tokens = random.randint(1, 50)  # noqa: S311
     truncated = truncate_to_tokens(content, max_tokens, model)
     assert len(mock_encoding.encode(truncated)) <= max_tokens
+
+
+def test_build_program_children_content_no_children():
+    """Programs with no children should return empty string"""
+    program_lr = ProgramFactory.create(courses=[]).learning_resource
+    assert build_program_children_content(program_lr) == ""
+
+
+def test_build_program_children_content_non_program():
+    """Non-program resources should return empty string"""
+    course_lr = CourseFactory.create().learning_resource
+    assert build_program_children_content(course_lr) == ""
+
+
+def test_build_program_children_content_direct_courses():
+    """Programs with direct course children should include them"""
+    course_lr = CourseFactory.create(
+        learning_resource__title="Test Course",
+        learning_resource__description="A test course",
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    assert "## Program Contents" in result
+    assert "Test Course" in result
+    assert "A test course" in result
+
+
+def test_build_program_children_content_child_programs_with_courses():
+    """Programs with child programs should recurse to find courses"""
+    from learning_resources.models import LearningResourceRelationship
+
+    grandchild_course_lr = CourseFactory.create(
+        learning_resource__title="Grandchild Course"
+    ).learning_resource
+    child_program_lr = ProgramFactory.create(
+        courses=[grandchild_course_lr], learning_resource__title="Child Program"
+    ).learning_resource
+    parent_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type="PROGRAM_PROGRAMS",
+    )
+
+    result = build_program_children_content(parent_lr)
+    assert "Child Program" in result
+    assert "Grandchild Course" in result
+
+
+def test_build_program_children_content_with_summaries():
+    """Child course contentfile summaries should be included"""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create(
+        learning_resource__title="Course With Summary"
+    ).learning_resource
+    run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="test-run",
+    )
+    ContentFile.objects.create(
+        run=run,
+        key="transcript.txt",
+        summary="This is a summary of the course content.",
+    )
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    assert "This is a summary of the course content." in result
+    assert "Content summaries" in result
+
+
+def test_build_program_children_content_ignores_non_program_relations():
+    """Only PROGRAM_COURSES and PROGRAM_PROGRAMS relations are included"""
+    from learning_resources.models import LearningResourceRelationship
+
+    course_lr = CourseFactory.create(
+        learning_resource__title="Real Course"
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    # Add a non-program relation (e.g. LEARNING_PATH_ITEMS)
+    unrelated_lr = CourseFactory.create(
+        learning_resource__title="Unrelated Item"
+    ).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=unrelated_lr,
+        relation_type="LEARNING_PATH_ITEMS",
+    )
+
+    result = build_program_children_content(program_lr)
+    assert "Real Course" in result
+    assert "Unrelated Item" not in result
+
+
+def test_build_program_children_content_two_levels():
+    """Program -> child program -> courses are all included (2 levels)"""
+    from learning_resources.models import LearningResourceRelationship
+
+    nested_course = CourseFactory.create(
+        learning_resource__title="Nested Course"
+    ).learning_resource
+    mid_lr = ProgramFactory.create(
+        courses=[nested_course], learning_resource__title="Mid Program"
+    ).learning_resource
+    top_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=top_lr,
+        child=mid_lr,
+        relation_type="PROGRAM_PROGRAMS",
+    )
+
+    result = build_program_children_content(top_lr)
+    assert "Mid Program" in result
+    assert "Nested Course" in result
+
+
+# --- build_program_children_content_bulk tests ---
+
+
+def test_build_program_children_content_bulk_empty_list():
+    """Empty input returns empty dict."""
+    assert build_program_children_content_bulk([]) == {}
+
+
+def test_build_program_children_content_bulk_non_programs_ignored():
+    """Non-program resources are silently ignored."""
+    course_lr = CourseFactory.create().learning_resource
+    result = build_program_children_content_bulk([course_lr])
+    assert result == {}
+
+
+def test_build_program_children_content_bulk_program_no_children():
+    """Programs with no children produce empty string content."""
+    program_lr = ProgramFactory.create(courses=[]).learning_resource
+    result = build_program_children_content_bulk([program_lr])
+    assert result[program_lr.id] == ""
+
+
+def test_build_program_children_content_bulk_single_program():
+    """Bulk function produces same output as single-resource version."""
+    course_lr = CourseFactory.create(
+        learning_resource__title="Bulk Test Course",
+        learning_resource__description="A description",
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    single_result = build_program_children_content(program_lr)
+    bulk_result = build_program_children_content_bulk([program_lr])
+    assert bulk_result[program_lr.id] == single_result
+
+
+def test_build_program_children_content_bulk_multiple_programs():
+    """Multiple programs are all included in the result dict."""
+    course1 = CourseFactory.create(
+        learning_resource__title="Course For Prog1"
+    ).learning_resource
+    course2 = CourseFactory.create(
+        learning_resource__title="Course For Prog2"
+    ).learning_resource
+    prog1, prog2 = (
+        ProgramFactory.create(courses=[course]).learning_resource
+        for course in [course1, course2]
+    )
+
+    result = build_program_children_content_bulk([prog1, prog2])
+    assert prog1.id in result
+    assert prog2.id in result
+    assert "Course For Prog1" in result[prog1.id]
+    assert "Course For Prog2" in result[prog2.id]
+    assert "Course For Prog2" not in result[prog1.id]
+
+
+def test_build_program_children_content_bulk_mixed_resources():
+    """Mix of programs and non-programs; only programs appear in result."""
+    course_child = CourseFactory.create(
+        learning_resource__title="Child Course"
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_child]).learning_resource
+    non_program = CourseFactory.create().learning_resource
+
+    result = build_program_children_content_bulk([program_lr, non_program])
+    assert program_lr.id in result
+    assert non_program.id not in result
+
+
+def test_build_program_children_content_bulk_with_grandchildren():
+    """Bulk version includes grandchildren from child programs."""
+    from learning_resources.models import LearningResourceRelationship
+
+    grandchild = CourseFactory.create(
+        learning_resource__title="Grandchild Course"
+    ).learning_resource
+    child_prog = ProgramFactory.create(
+        courses=[grandchild], learning_resource__title="Sub Program"
+    ).learning_resource
+    parent_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr, child=child_prog, relation_type="PROGRAM_PROGRAMS"
+    )
+
+    result = build_program_children_content_bulk([parent_lr])
+    assert "Sub Program" in result[parent_lr.id]
+    assert "Grandchild Course" in result[parent_lr.id]
+
+
+def test_build_program_children_content_excludes_unpublished_children(
+    program_with_visibility_children,
+):
+    """Unpublished, non-test_mode children are excluded from program content."""
+    result = build_program_children_content(program_with_visibility_children)
+    assert "Published Course" in result
+    assert "Unpublished Course" not in result
+    assert "Test Mode Course" in result
+
+
+def test_build_program_children_content_excludes_unpublished_grandchildren():
+    """Unpublished, non-test_mode grandchildren are excluded from program content."""
+    from learning_resources.models import LearningResourceRelationship
+
+    published_grandchild = CourseFactory.create(
+        learning_resource__title="Published Grandchild"
+    ).learning_resource
+    unpublished_grandchild = CourseFactory.create(
+        is_unpublished=True,
+        learning_resource__title="Unpublished Grandchild",
+    ).learning_resource
+    child_prog = ProgramFactory.create(
+        courses=[published_grandchild], learning_resource__title="Sub Program"
+    ).learning_resource
+    # Manually add the unpublished grandchild relationship
+    LearningResourceRelationship.objects.create(
+        parent=child_prog,
+        child=unpublished_grandchild,
+        relation_type="PROGRAM_COURSES",
+    )
+    parent_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr, child=child_prog, relation_type="PROGRAM_PROGRAMS"
+    )
+
+    result = build_program_children_content_bulk([parent_lr])
+    assert "Published Grandchild" in result[parent_lr.id]
+    assert "Unpublished Grandchild" not in result[parent_lr.id]
+
+
+def test_build_program_children_content_bulk_excludes_unpublished_contentfiles():
+    """Unpublished content files and files on unpublished runs are excluded."""
+    from learning_resources.models import ContentFile, LearningResourceRun
+
+    course_lr = CourseFactory.create(
+        learning_resource__title="Course With Mixed Content"
+    ).learning_resource
+
+    published_run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="published-run",
+        published=True,
+    )
+    unpublished_run = LearningResourceRun.objects.create(
+        learning_resource=course_lr,
+        run_id="unpublished-run",
+        published=False,
+    )
+
+    # Published content file on published run — should be included
+    ContentFile.objects.create(
+        run=published_run,
+        key="visible.txt",
+        summary="Visible summary",
+        published=True,
+    )
+    # Unpublished content file on published run — should be excluded
+    ContentFile.objects.create(
+        run=published_run,
+        key="hidden.txt",
+        summary="Hidden unpublished summary",
+        published=False,
+    )
+    # Published content file on unpublished run — should be excluded
+    ContentFile.objects.create(
+        run=unpublished_run,
+        key="hidden-run.txt",
+        summary="Hidden run summary",
+        published=True,
+    )
+
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content_bulk([program_lr])
+    assert "Visible summary" in result[program_lr.id]
+    assert "Hidden unpublished summary" not in result[program_lr.id]
+    assert "Hidden run summary" not in result[program_lr.id]

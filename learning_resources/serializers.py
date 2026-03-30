@@ -10,7 +10,7 @@ import dateparser
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max, Prefetch
+from django.db.models import F, Max, Prefetch, Q
 from drf_spectacular.utils import extend_schema_field
 from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
@@ -20,6 +20,8 @@ from rest_framework.exceptions import ValidationError
 from learning_resources import constants, models
 from learning_resources.constants import (
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
+    PROGRAM_COURSE_CACHE_KEY_PUBLISHED,
+    PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
     RESOURCE_TYPE_GROUP_CHOICES,
     Availability,
     CertificationType,
@@ -29,7 +31,7 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.utils import json_to_markdown
+from learning_resources.utils import build_resource_summary_dict, json_to_markdown
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -519,6 +521,17 @@ class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
+class ResourceChildSummarySerializer(serializers.Serializer):
+    """Serializer for child course/program entries within a program."""
+
+    title = serializers.CharField()
+    readable_id = serializers.CharField()
+    description = serializers.CharField()
+    resource_type = serializers.CharField()
+    topics = serializers.ListField(child=serializers.CharField())
+    parent_program = serializers.CharField(required=False)
+
+
 class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     """
     Serializer to render course information as a text document
@@ -559,6 +572,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
     )
     number_of_programs = serializers.SerializerMethodField(
         help_text="Number of Programs", allow_null=True
+    )
+    program_courses = serializers.SerializerMethodField(
+        help_text="Child courses and programs included in this learning resource",
+        allow_null=True,
     )
     location = serializers.SerializerMethodField(help_text="Location", allow_null=True)
     starts = serializers.SerializerMethodField(help_text="Starts", allow_null=True)
@@ -693,6 +710,139 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         ):
             return serialized_resource["program"].get("program_count", 0)
         return None
+
+    @extend_schema_field(ResourceChildSummarySerializer(many=True))
+    def get_program_courses(self, serialized_resource):
+        """Return details about courses/programs in a program"""
+        if (
+            serialized_resource.get("resource_type")
+            != LearningResourceType.program.name
+        ):
+            return None
+        program_relation_types = {
+            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
+            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        }
+        children = [
+            c
+            for c in serialized_resource.get("children", [])
+            if c.get("relation_type") in program_relation_types
+        ]
+        if not children:
+            return None
+        courses = self._collect_courses_from_children(children)
+        return courses if courses else None
+
+    def _collect_courses_from_children(
+        self,
+        children_data,
+        max_depth=2,
+        visited=None,
+        parent_program_title=None,
+    ):
+        """Recursively collect courses from program children.
+
+        For PROGRAM_PROGRAMS children, recurse into their children to find
+        actual courses. For PROGRAM_COURSES children, include directly.
+        """
+        if max_depth <= 0:
+            return []
+        if visited is None:
+            visited = set()
+
+        child_ids = [c["child"] for c in children_data if c["child"] not in visited]
+        if not child_ids:
+            return []
+        visited.update(child_ids)
+
+        program_relation_types = [
+            constants.LearningResourceRelationTypes.PROGRAM_COURSES,
+            constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        ]
+        include_test_mode_children = self.context.get(
+            "include_test_mode_children", False
+        )
+        """
+        Caching here to cut down on queries. Separate caches were added because display
+        API endpoints (like learning_resources) should only show published children,
+        while AI/vector search endpoints (content_files) need test_mode courses too.
+        Without separate cache keys, courses might show up where they don't belong or
+        not show up where they should, depending on where this function got called 1st.
+        """
+        cache_key = (
+            PROGRAM_COURSE_CACHE_KEY_TEST_MODE
+            if include_test_mode_children
+            else PROGRAM_COURSE_CACHE_KEY_PUBLISHED
+        )
+        resource_cache = self.context.setdefault(cache_key, {})
+        missing_ids = [cid for cid in child_ids if cid not in resource_cache]
+
+        if missing_ids:
+            visibility_q = Q(published=True)
+            if include_test_mode_children:
+                visibility_q |= Q(test_mode=True)
+
+            child_resources = (
+                models.LearningResource.objects.filter(
+                    id__in=missing_ids,
+                )
+                .filter(visibility_q)
+                .prefetch_related(
+                    "topics",
+                    Prefetch(
+                        "children",
+                        queryset=models.LearningResourceRelationship.objects.filter(
+                            relation_type__in=program_relation_types
+                        ),
+                        to_attr="program_children",
+                    ),
+                )
+            )
+            resource_cache.update({r.id: r for r in child_resources})
+
+        child_map = {
+            cid: resource_cache[cid] for cid in child_ids if cid in resource_cache
+        }
+
+        courses = []
+        for child_rel in children_data:
+            child = child_map.get(child_rel["child"])
+            if not child:
+                continue
+
+            entry = build_resource_summary_dict(child)
+            if parent_program_title:
+                entry["parent_program"] = parent_program_title
+
+            relation_type = child_rel.get("relation_type")
+            if (
+                child.resource_type == LearningResourceType.program.name
+                and relation_type
+                == constants.LearningResourceRelationTypes.PROGRAM_PROGRAMS
+            ):
+                # Include the sub-program itself for structural context
+                courses.append(entry)
+                # Recurse using prefetched children (no extra DB query)
+                sub_children = [
+                    {
+                        "child": rel.child_id,
+                        "relation_type": rel.relation_type,
+                        "position": rel.position,
+                    }
+                    for rel in child.program_children
+                ]
+                courses.extend(
+                    self._collect_courses_from_children(
+                        sub_children,
+                        max_depth - 1,
+                        visited,
+                        parent_program_title=child.title,
+                    )
+                )
+            else:
+                courses.append(entry)
+
+        return courses
 
     @extend_schema_field({"type": "string"})
     def get_duration(self, serialized_resource):
@@ -911,8 +1061,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         return rendered_data
 
     def render_chunks(self):
-        """Convert course info to markdown chunks"""
+        """Convert resource info to markdown chunks"""
         rendered_doc = self.render_document()
+        resource_type = self.instance.get("resource_type", "course")
         """
         We cant use tiktoken for token size calculation so
         we use a rough calculation of 4*chunk_size characters:
@@ -925,7 +1076,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
         return [
             (
-                f"# Information about this course:\n\n"
+                f"# Information about this {resource_type}:\n\n"
                 f"{json_to_markdown(json.loads(json_fragment))}"
             )
             for json_fragment in RecursiveJsonSplitter(

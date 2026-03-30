@@ -27,11 +27,13 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.loaders import load_instructors
 from learning_resources.factories import (
+    CourseFactory,
     LearningResourceFactory,
     LearningResourceInstructorFactory,
     LearningResourceOfferorFactory,
     LearningResourcePriceFactory,
     LearningResourceRunFactory,
+    ProgramFactory,
 )
 from learning_resources.models import (
     ContentFile,
@@ -1025,3 +1027,294 @@ def test_metadata_display_serializer_should_show_format():
     serialized = copy.deepcopy(serialized_resource)
     serialized["resource_type"] = "podcast"
     assert metadata_serializer.should_show_format(serialized) is False
+
+
+def test_get_program_courses_direct_courses_unchanged():
+    """Programs with direct PROGRAM_COURSES children return them without parent_program"""
+    course_lr = CourseFactory.create(
+        learning_resource__title="Direct Course"
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    assert len(result) == 1
+    assert result[0]["title"] == "Direct Course"
+    assert result[0]["resource_type"] == "course"
+    assert "parent_program" not in result[0]
+
+
+def test_get_program_courses_with_child_programs():
+    """Programs with PROGRAM_PROGRAMS children recurse to include their courses"""
+    grandchild_course = CourseFactory.create(
+        learning_resource__title="Grandchild Course"
+    ).learning_resource
+    child_program_lr = ProgramFactory.create(
+        courses=[grandchild_course], learning_resource__title="Child Program"
+    ).learning_resource
+    parent_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(parent_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    # Should include the child program and the grandchild course
+    assert len(result) == 2
+    child_prog = next(r for r in result if r["title"] == "Child Program")
+    grandchild = next(r for r in result if r["title"] == "Grandchild Course")
+
+    assert "parent_program" not in child_prog
+    assert grandchild["parent_program"] == "Child Program"
+
+
+def test_get_program_courses_mixed_children():
+    """Programs with both direct courses and child programs include all"""
+    # Direct course
+    direct_course = CourseFactory.create(
+        learning_resource__title="Direct Course"
+    ).learning_resource
+
+    # Child program with its own course
+    nested_course = CourseFactory.create(
+        learning_resource__title="Nested Course"
+    ).learning_resource
+    child_program_lr = ProgramFactory.create(
+        courses=[nested_course], learning_resource__title="Sub Program"
+    ).learning_resource
+
+    parent_lr = ProgramFactory.create(courses=[direct_course]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(parent_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    titles = [r["title"] for r in result]
+    assert "Direct Course" in titles
+    assert "Sub Program" in titles
+    assert "Nested Course" in titles
+
+
+def test_get_program_courses_programs_as_courses_not_recursed():
+    """Child programs with PROGRAM_COURSES relation type are not recursed into"""
+    # This course is a child of the PAC — should NOT appear
+    hidden_course = CourseFactory.create(
+        learning_resource__title="Hidden Course"
+    ).learning_resource
+    pac_lr = ProgramFactory.create(
+        courses=[hidden_course], learning_resource__title="Program As Course"
+    ).learning_resource
+
+    # Program-as-course uses PROGRAM_COURSES relation
+    parent_lr = ProgramFactory.create(courses=[pac_lr]).learning_resource
+
+    serialized_resource = serializers.LearningResourceSerializer(parent_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    assert len(result) == 1
+    assert result[0]["title"] == "Program As Course"
+
+
+def test_get_program_courses_depth_limit():
+    """Recursion stops at max depth of 2"""
+    # Create a 3-level deep hierarchy: Level 0 -> Level 1 -> Level 2 -> Deep Course
+    deep_course = CourseFactory.create(
+        learning_resource__title="Deep Course"
+    ).learning_resource
+    resources = []
+    for i in range(3):
+        lr = ProgramFactory.create(
+            courses=[], learning_resource__title=f"Level {i}"
+        ).learning_resource
+        resources.append(lr)
+
+    # Level 2 has the deep course
+    LearningResourceRelationship.objects.create(
+        parent=resources[2],
+        child=deep_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    for i in range(2):
+        LearningResourceRelationship.objects.create(
+            parent=resources[i],
+            child=resources[i + 1],
+            relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+        )
+
+    serialized_resource = serializers.LearningResourceSerializer(resources[0]).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    # Depth limit of 2: Level 0 -> Level 1 (depth 1) -> Level 2 (depth 2)
+    # Level 2's children (Deep Course) should not be reached
+    assert "Level 1" in titles
+    assert "Level 2" in titles
+    assert "Deep Course" not in titles
+
+
+def test_get_program_courses_ignores_non_program_relations():
+    """Only PROGRAM_COURSES and PROGRAM_PROGRAMS relations appear in program_courses"""
+    course_lr = CourseFactory.create(
+        learning_resource__title="Program Course"
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    # Add a non-program relation type
+    unrelated_lr = CourseFactory.create(
+        learning_resource__title="Learning Path Item"
+    ).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=unrelated_lr,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+
+    assert len(result) == 1
+    assert result[0]["title"] == "Program Course"
+
+
+def test_get_program_courses_recursive_ignores_non_program_relations():
+    """Non-program relations in sub-programs are also filtered out"""
+    # Valid course child of the sub-program
+    real_course = CourseFactory.create(
+        learning_resource__title="Real Course"
+    ).learning_resource
+    child_program_lr = ProgramFactory.create(
+        courses=[real_course], learning_resource__title="Child Program"
+    ).learning_resource
+
+    # Non-program relation on the sub-program — should be excluded
+    unrelated = CourseFactory.create(
+        learning_resource__title="Unrelated Item"
+    ).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=child_program_lr,
+        child=unrelated,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+    )
+
+    parent_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=parent_lr,
+        child=child_program_lr,
+        relation_type=LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(parent_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Child Program" in titles
+    assert "Real Course" in titles
+    assert "Unrelated Item" not in titles
+
+
+def test_get_program_courses_excludes_unpublished_non_test_mode_children():
+    """Unpublished non-test-mode child resources are excluded from program_courses."""
+    visible_course = CourseFactory.create(
+        learning_resource__title="Visible Course"
+    ).learning_resource
+    hidden_course = CourseFactory.create(
+        is_unpublished=True, learning_resource__title="Hidden Course"
+    ).learning_resource
+
+    program_lr = ProgramFactory.create(courses=[visible_course]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=hidden_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Visible Course" in titles
+    assert "Hidden Course" not in titles
+
+
+def test_get_program_courses_excludes_unpublished_test_mode_children_by_default():
+    """Public-facing serializer should exclude unpublished test-mode children."""
+    test_mode_course = CourseFactory.create(
+        learning_resource__title="Test Mode Course",
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+    ).learning_resource
+
+    program_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=test_mode_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    result = metadata.data["program_courses"] or []
+    titles = [r["title"] for r in result]
+
+    assert "Test Mode Course" not in titles
+
+
+def test_get_program_courses_includes_unpublished_test_mode_children_with_flag():
+    """Embedding context can opt in to include unpublished test-mode children."""
+    test_mode_course = CourseFactory.create(
+        learning_resource__title="Test Mode Course",
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+    ).learning_resource
+
+    program_lr = ProgramFactory.create(courses=[]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program_lr,
+        child=test_mode_course,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(program_lr).data
+    metadata = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource,
+        context={"include_test_mode_children": True},
+    )
+    result = metadata.data["program_courses"]
+    titles = [r["title"] for r in result]
+
+    assert "Test Mode Course" in titles

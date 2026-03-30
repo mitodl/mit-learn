@@ -597,6 +597,8 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
         "learning_resources.tasks.html_to_markdown", return_value=markdown_content
     )
 
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
     marketing_page_for_resources([course.id])
 
     mock_fetch_page.assert_called_once_with(course.url)
@@ -610,6 +612,108 @@ def test_marketing_page_for_resources_with_webdriver(mocker, settings):
     assert content_file.url == course.url
     assert content_file.content == markdown_content
     assert content_file.file_extension == ".md"
+
+    # Verify embeddings were triggered
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_program_appends_children(mocker, settings):
+    """Test that marketing_page_for_resources appends program children content"""
+
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+
+    program = models.LearningResource.objects.create(
+        title="Test Program",
+        url="https://example.com/program",
+        resource_type="program",
+        published=True,
+    )
+    models.Program.objects.create(learning_resource=program)
+
+    child_course = models.LearningResource.objects.create(
+        title="Child Course",
+        url="https://example.com/child-course",
+        resource_type="course",
+        description="A child course description",
+        published=True,
+    )
+    models.LearningResourceRelationship.objects.create(
+        parent=program,
+        child=child_course,
+        relation_type="PROGRAM_COURSES",
+        position=0,
+    )
+
+    html_content = "<html><body><h1>Test Program</h1><p>Program info</p></body></html>"
+    mocker.patch(
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
+    )
+
+    markdown_content = "# Test Program\n\nProgram info"
+    mocker.patch(
+        "learning_resources.tasks.html_to_markdown", return_value=markdown_content
+    )
+
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    marketing_page_for_resources([program.id])
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=program, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.content.startswith(markdown_content)
+    assert "## Program Contents" in content_file.content
+    assert "Child Course" in content_file.content
+
+    # Verify embeddings were triggered
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_non_program_skips_children_content(mocker, settings):
+    """Non-program resources should not invoke program children aggregation."""
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course-no-children",
+        resource_type="course",
+        published=True,
+    )
+
+    html_content = "<html><body><h1>Test Course</h1><p>Course content</p></body></html>"
+    mocker.patch(
+        "learning_resources.site_scrapers.base_scraper.BaseScraper.fetch_page",
+        return_value=html_content,
+    )
+    markdown_content = "# Test Course\n\nCourse content"
+    mocker.patch(
+        "learning_resources.tasks.html_to_markdown", return_value=markdown_content
+    )
+
+    children_content_mock = mocker.patch(
+        "learning_resources.tasks.build_program_children_content_bulk",
+        return_value={},
+    )
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    marketing_page_for_resources([course.id])
+
+    children_content_mock.assert_not_called()
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.content == markdown_content
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [content_file.id], "content_file", overwrite=True
+    )
 
 
 @pytest.mark.django_db

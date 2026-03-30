@@ -9,6 +9,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from qdrant_client import QdrantClient, models
 
+from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
 from learning_resources.content_summarizer import ContentSummarizer
 from learning_resources.models import (
     ContentFile,
@@ -455,12 +456,18 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    serializer_context = {
+        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
+        "include_test_mode_children": True,
+    }
     metadata = []
     ids = []
     docs = []
     for doc in serialized_resources:
         resource_vector_point_id = str(vector_point_id(vector_point_key(doc)))
-        serializer = LearningResourceMetadataDisplaySerializer(doc)
+        serializer = LearningResourceMetadataDisplaySerializer(
+            doc, context=serializer_context
+        )
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
         key = f"{doc['readable_id']}.course_metadata"
