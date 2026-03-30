@@ -1148,7 +1148,7 @@ describe.each([
 
   describe("B2C (non-B2B) Enrollment", () => {
     test.each(ENROLLMENT_TRIGGERS)(
-      "Clicking $trigger on non-B2B course opens CourseEnrollmentDialog",
+      "Clicking $trigger on non-B2B course opens CourseEnrollmentDialog for both-mode enrollment",
       async ({ trigger }) => {
         const userData = mitxUser()
         setMockResponse.get(mitxonline.urls.userMe.get(), userData)
@@ -1156,6 +1156,14 @@ describe.each([
         const run = mitxonline.factories.courses.courseRun({
           b2b_contract: null, // Non-B2B course
           is_enrollable: true,
+          enrollment_modes: [
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: false,
+            }),
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: true,
+            }),
+          ],
         })
         const course = mitxOnlineCourse({
           courseruns: [run],
@@ -1180,6 +1188,55 @@ describe.each([
         await screen.findByRole("dialog", { name: course.title })
         expect(
           screen.queryByRole("dialog", { name: "Just a Few More Details" }),
+        ).not.toBeInTheDocument()
+      },
+    )
+
+    test.each(ENROLLMENT_TRIGGERS)(
+      "Clicking $trigger on non-B2B course bypasses dialog for free-only single-run enrollment",
+      async ({ trigger }) => {
+        const userData = mitxUser()
+        setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          enrollment_modes: [
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: false,
+            }),
+          ],
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+
+        const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+        setMockResponse.post(enrollmentUrl, {})
+
+        renderWithProviders(
+          <DashboardCard
+            resource={{ type: DashboardType.Course, data: course }}
+          />,
+        )
+
+        const card = getCard()
+        const triggerElement =
+          trigger === "button"
+            ? within(card).getByTestId("courseware-button")
+            : within(card).getByText(course.title)
+
+        await user.click(triggerElement)
+
+        await waitFor(() => {
+          expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+            expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+          )
+        })
+
+        expect(
+          screen.queryByRole("dialog", { name: course.title }),
         ).not.toBeInTheDocument()
       },
     )
@@ -1246,13 +1303,21 @@ describe.each([
       },
     )
 
-    test("Audit program enrollment opens CourseEnrollmentDialog", async () => {
+    test("Audit program enrollment opens CourseEnrollmentDialog when both enrollment modes are available", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
 
       const run = mitxonline.factories.courses.courseRun({
         b2b_contract: null,
         is_enrollable: true,
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: false,
+          }),
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: true,
+          }),
+        ],
       })
       const course = mitxOnlineCourse({
         courseruns: [run],
@@ -1278,6 +1343,55 @@ describe.each([
 
       // Should open the CourseEnrollmentDialog for audit enrollments
       await screen.findByRole("dialog", { name: course.title })
+    })
+
+    test("Audit program enrollment bypasses dialog for free-only single-run enrollment", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: false,
+          }),
+        ],
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "audit",
+        })
+
+      const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+      setMockResponse.post(enrollmentUrl, {})
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          programEnrollment={programEnrollment}
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+        )
+      })
+
+      expect(
+        screen.queryByRole("dialog", { name: course.title }),
+      ).not.toBeInTheDocument()
     })
   })
 

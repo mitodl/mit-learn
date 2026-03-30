@@ -29,6 +29,7 @@ import {
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
+  useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
@@ -36,6 +37,7 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
+  getEnrollmentType,
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -278,6 +280,7 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
+  const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
 
   const enroll = React.useCallback(
@@ -340,6 +343,30 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
+        const enrollableRuns = course.courseruns.filter(
+          (run) => run.is_enrollable,
+        )
+        const hasMultipleRuns = enrollableRuns.length > 1
+        const selectedRun =
+          enrollableRuns.find((run) => run.id === course.next_run_id) ??
+          enrollableRuns[0]
+        const enrollmentType = getEnrollmentType(selectedRun?.enrollment_modes)
+
+        if (!hasMultipleRuns && selectedRun && enrollmentType === "free") {
+          createEnrollment.mutate(
+            { run_id: selectedRun.id },
+            {
+              onSuccess: () => {
+                const destination = selectedRun.courseware_url ?? href
+                if (destination) {
+                  window.location.href = destination
+                }
+              },
+            },
+          )
+          return
+        }
+
         const onCourseEnroll = (run: CourseRunV2) => {
           window.location.href = run.courseware_url!
         }
@@ -350,6 +377,7 @@ const useEnrollmentHandler = () => {
       mitxOnlineUser.data?.legal_address?.country,
       mitxOnlineUser.data?.user_profile?.year_of_birth,
       createB2bEnrollment,
+      createEnrollment,
       createVerifiedProgramEnrollment,
     ],
   )
@@ -358,6 +386,7 @@ const useEnrollmentHandler = () => {
     enroll,
     isPending:
       createB2bEnrollment.isPending ||
+      createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending,
   }
 }
