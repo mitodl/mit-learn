@@ -577,7 +577,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
-  const isVectorSearch = searchParams.get("vector_search") === "true"
+  const { data: user } = useUserMe()
+
+  const isVectorSearch =
+    searchParams.get("vector_search") === "true" &&
+    user?.is_learning_path_editor
 
   const { data, isLoading, isFetching } = useQuery({
     ...(isVectorSearch
@@ -619,7 +623,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
-  const { data: user } = useUserMe()
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
