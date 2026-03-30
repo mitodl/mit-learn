@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.60.0
+--------------
+
+- Route drawer CTAs for MITxOnline programs-as-courses to correct product pages (#3063)
+- fix: improve program page handling of elective sections with 0 requir… (#3126)
+- do not distort howyoulllearn icon images (#3127)
+- fix flaky test (#3128)
+- feat: update tos,pp,honor code (#3120)
+
 Version 0.59.12 (Released March 30, 2026)
 ---------------
 
