@@ -54,6 +54,7 @@ const HowYoullLearnIcon = styled(Image)({
   width: "80px",
   height: "50px",
   flexShrink: 0,
+  objectFit: "contain",
 })
 
 const HowYoullLearnTitle = styled.strong(({ theme }) => ({
