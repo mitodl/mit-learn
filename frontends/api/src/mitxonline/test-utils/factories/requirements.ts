@@ -93,10 +93,10 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     invariant(opts.operator, "operator is required")
     if (opts.operator === "min_number_of") {
       invariant(
-        opts.operator_value &&
+        opts.operator_value !== undefined &&
           !isNaN(Number(opts.operator_value)) &&
-          Number(opts.operator_value) > 0,
-        "operator_value is required and must be a positive number when operator is min_number_of",
+          Number(opts.operator_value) >= 0,
+        "operator_value is required and must be a non-negative number when operator is min_number_of",
       )
     }
     const data: V2ProgramRequirementData = {

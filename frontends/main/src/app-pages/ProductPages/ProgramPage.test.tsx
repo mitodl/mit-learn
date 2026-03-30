@@ -62,7 +62,7 @@ const makeReqs = ({
       title: required.title,
     })
   }
-  if (electives.count) {
+  if (electives.outOf) {
     sections.push({
       operator: "min_number_of",
       required: electives.count,
@@ -364,6 +364,33 @@ describe("ProgramPage", () => {
           expect(links.length).toBeGreaterThanOrEqual(1)
         })
     })
+  })
+
+  test("Shows 'Additional elective courses' text when electives require 0", async () => {
+    const numReq = faker.number.int({ min: 2, max: 5 })
+    const numElectives = faker.number.int({ min: 2, max: 5 })
+    const titles = {
+      required: faker.lorem.words(3),
+      elective: faker.lorem.words(3),
+    }
+    const program = makeProgram({
+      ...makeReqs({
+        required: { count: numReq, title: titles.required },
+        electives: {
+          count: 0,
+          outOf: numElectives,
+          title: titles.elective,
+        },
+      }),
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Courses" })
+    within(section).getByText(
+      `To complete this program, you must take ${numReq} required courses. Additional elective courses are available.`,
+    )
   })
 
   test("Renders multiple elective sections", async () => {
