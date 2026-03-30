@@ -45,17 +45,32 @@ def test_list_forms(mocker):
 
 
 def test_submit_form(mocker):
-    """Test submitting a form uses the SDK method and args."""
+    """Test submitting a form uses the account lookup and hsforms endpoint."""
     mock_secret = uuid4().hex
     form_id = "form-456"
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    client.api_request.return_value.json.return_value = {"portalId": 23128026}
+    response = mocker.Mock()
+    response.status_code = 200
+    response.content = b'{"inlineMessage":""}'
+    response.json.return_value = {"inlineMessage": ""}
+    post = mocker.patch("ol_hubspot.api.requests.post", return_value=response)
 
     submit_form(access_token=mock_secret, form_id=form_id, payload=payload)
 
     hubspot_class.assert_called_once_with(access_token=mock_secret)
-    client.marketing.forms.submissions_api.submit.assert_called_once_with(
-        form_id=form_id,
-        body=payload,
+    client.api_request.assert_called_once_with(
+        {"path": "/integrations/v1/me", "method": "GET"}
+    )
+    post.assert_called_once_with(
+        f"https://api.hsforms.com/submissions/v3/integration/secure/submit/23128026/{form_id}",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {mock_secret}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        timeout=30,
     )

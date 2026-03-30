@@ -1,6 +1,12 @@
 """HubSpot API helpers."""
 
+from http import HTTPStatus
+
+import requests
 from hubspot import HubSpot
+from hubspot.marketing.forms.exceptions import ApiException
+
+HSFORMS_API_BASE_URL = "https://api.hsforms.com"
 
 
 def get_hubspot_client(access_token: str) -> HubSpot:
@@ -43,7 +49,22 @@ def submit_form(
 ):
     """Submit a form submission to HubSpot."""
     client = get_hubspot_client(access_token)
-    return client.marketing.forms.submissions_api.submit(
-        form_id=form_id,
-        body=payload,
+    account_response = client.api_request(
+        {"path": "/integrations/v1/me", "method": "GET"}
     )
+    portal_id = account_response.json()["portalId"]
+
+    response = requests.post(
+        f"{HSFORMS_API_BASE_URL}/submissions/v3/integration/secure/submit/{portal_id}/{form_id}",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        timeout=30,
+    )
+    if response.status_code >= HTTPStatus.BAD_REQUEST:
+        raise ApiException(status=response.status_code, reason=response.text)
+
+    return response.json() if response.content else None
