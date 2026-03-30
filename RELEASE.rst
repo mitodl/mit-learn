@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.59.12 (Released March 30, 2026)
+---------------
+
+- fix: spacing issue for mobile (#3124)
+- Hide video transcript from api results (#3078)
+- feat: removed OFAC Gray Box across Learn (#3119)
+- fix: implement the new UAI card (#3118)
+- feat: implement bundle upsell design (#3110)
+- Use certificate_available for hasCertificate on courses and programs (#3116)
+- swap order of what-youll-learn and requirements (#3117)
+- fix: Handle missing financial_assistance_form_url on product summary and course enrollment button  (#3109)
+- fix: Handle image stretch on product page (#3108)
+
 Version 0.59.8 (Released March 26, 2026)
 --------------
 
