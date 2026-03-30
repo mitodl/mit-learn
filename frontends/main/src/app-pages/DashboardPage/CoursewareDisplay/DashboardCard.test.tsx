@@ -1446,6 +1446,59 @@ describe.each([
         screen.queryByRole("dialog", { name: course.title }),
       ).not.toBeInTheDocument()
     })
+
+    test("Audit program enrollment bypasses dialog for paid-only single-run enrollment", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const product = mitxonline.factories.courses.product({ price: "500" })
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: true,
+          }),
+        ],
+        products: [product],
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "audit",
+        })
+
+      const clearUrl = mitxonline.urls.baskets.clear()
+      setMockResponse.delete(clearUrl, undefined)
+      const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
+      setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          programEnrollment={programEnrollment}
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "POST", url: basketUrl }),
+        )
+      })
+
+      expect(
+        screen.queryByRole("dialog", { name: course.title }),
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("CourseEnrollmentDialog", () => {
