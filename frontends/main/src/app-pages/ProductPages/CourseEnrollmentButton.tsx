@@ -84,6 +84,8 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
       : null
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
+  const isCheckoutWithoutProduct =
+    enrollmentDecision.action === "checkout" && !actionRun?.products[0]
 
   const isPending = replaceBasketItem.isPending || createEnrollment.isPending
   const isError = replaceBasketItem.isError || createEnrollment.isError
@@ -96,7 +98,10 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
         NiceModal.show(CourseEnrollmentDialog, { course })
       } else if (enrollmentDecision.action === "checkout" && actionRun) {
         const actionProduct = actionRun.products[0]
-        if (!actionProduct) return
+        if (!actionProduct) {
+          NiceModal.show(CourseEnrollmentDialog, { course })
+          return
+        }
         replaceBasketItem.mutate(actionProduct.id)
       } else if (enrollmentDecision.action === "audit" && actionRun) {
         createEnrollment.mutate(
@@ -118,6 +123,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
             !nextRun ||
             enrollmentType === "none" ||
             isPaidWithoutPrice ||
+            isCheckoutWithoutProduct ||
             isPending
           }
           onClick={handleClick}
