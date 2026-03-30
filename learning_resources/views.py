@@ -319,7 +319,9 @@ class LearningResourceViewSet(
         queryset = self.filter_queryset(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
-            LearningResource.objects.filter(published=True).only("id", "last_modified")
+            LearningResource.objects.filter(published=True)
+            .only("id", "last_modified")
+            .distinct()
         )
         page = self.paginate_queryset(queryset)
 
