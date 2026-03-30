@@ -158,9 +158,7 @@ const getCourseEnrollmentAction = (
   const enrollableRuns = (course.courseruns ?? []).filter(
     (run) => run.is_enrollable,
   )
-  const selectedRun =
-    enrollableRuns.find((run) => run.id === course.next_run_id) ??
-    enrollableRuns[0]
+  const selectedRun = getBestRun(course, { enrollableOnly: true })
 
   if (!selectedRun) return { action: "none" }
   if (enrollableRuns.length > 1) return { action: "dialog", run: selectedRun }
