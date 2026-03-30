@@ -14,16 +14,18 @@ const FEATURES = [
     description: "Core concepts and methods behind how AI works.",
   },
   {
-    title: "MIT faculty",
-    description: "Developed by more than 30 MIT faculty.",
+    title: "MIT Expertise",
+    description:
+      "Practical use of AI across real-world contexts and industries.",
   },
   {
-    title: "Industry pathways",
-    description: "Application of AI across industries.",
+    title: "Applied Learning",
+    description: "Developed by more than 30 MIT experts.",
   },
   {
-    title: "Earn an MIT Certificate",
-    description: "Certificates awarded upon completion.",
+    title: "Stackable Credentials",
+    description:
+      "Learners earn MIT Open Learning certificates as they progress.",
   },
 ]
 
@@ -204,12 +206,6 @@ const FeatureItem = styled.li(({ theme }) => ({
   },
 }))
 
-const FeatureAccent = styled.div(({ theme }) => ({
-  width: "16px",
-  height: "2px",
-  backgroundColor: theme.custom.colors.red,
-}))
-
 const FeatureTitle = styled.span(({ theme }) => ({
   ...theme.typography.subtitle2,
   fontWeight: theme.typography.fontWeightMedium,
@@ -269,10 +265,10 @@ const UAIAnnouncementCard: React.FC = () => {
         <LeftSection>
           <Title>Universal AI</Title>
           <Description variant="body1">
-            A self-paced program covering foundational concepts in artificial
-            intelligence and their application across domains. The curriculum
-            includes foundational study, applied learning, and industry pathways
-            leading to MIT certificates.
+            A self-paced online program that takes learners from AI fundamentals
+            to practical, industry-relevant applications. Designed by more than
+            30 MIT experts for learners from a wide range of backgrounds. No
+            technical background required.
           </Description>
           <DesktopCTA>
             <CTAButton
@@ -287,7 +283,6 @@ const UAIAnnouncementCard: React.FC = () => {
         <RightSection>
           {FEATURES.map(({ title, description }) => (
             <FeatureItem key={title}>
-              <FeatureAccent aria-hidden="true" />
               <FeatureTitle>{title}</FeatureTitle>
               <FeatureDescription>{description}</FeatureDescription>
             </FeatureItem>
