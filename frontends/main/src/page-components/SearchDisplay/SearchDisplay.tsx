@@ -1010,7 +1010,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         </li>
                       ))}
                   </PlainList>
-                ) : data && data.count > 0 ? (
+                ) : data && (data.results?.length ?? 0) > 0 ? (
                   <PlainList itemSpacing={1.5}>
                     {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
