@@ -762,6 +762,13 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         include_test_mode_children = self.context.get(
             "include_test_mode_children", False
         )
+        """
+        Caching here to cut down on queries. Separate caches were added because display
+        API endpoints (like learning_resources) should only show published children,
+        while AI/vector search endpoints (content_files) need test_mode courses too.
+        Without separate cache keys, courses might show up where they don't belong or
+        not show up where they should, depending on where this function got called 1st.
+        """
         cache_key = (
             PROGRAM_COURSE_CACHE_KEY_TEST_MODE
             if include_test_mode_children
