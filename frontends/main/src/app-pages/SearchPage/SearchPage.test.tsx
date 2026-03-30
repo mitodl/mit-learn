@@ -44,7 +44,7 @@ const setMockApiResponses = ({
     ...search,
   })
   setMockResponse.get(
-    expect.stringContaining("/api/v0/vector_learning_resources_search/"),
+    expect.stringContaining(urls.search.vectorResources()),
     {
       ...DEFAULT_SEARCH_RESPONSE,
       ...search,
@@ -170,13 +170,13 @@ describe("SearchPage", () => {
 
     await waitFor(() => {
       const call = makeRequest.mock.calls.find(([_method, url]) => {
-        return url.includes("vector_learning_resources_search")
+        return url.includes(urls.search.vectorResources())
       })
       expect(call).toBeDefined()
     })
 
     const call = makeRequest.mock.calls.find(([_method, url]) =>
-      url.includes("vector_learning_resources_search"),
+      url.includes(urls.search.vectorResources()),
     )
     invariant(call)
     const fullUrl = new URL(call[1], "http://mit.edu")

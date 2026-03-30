@@ -34,10 +34,14 @@ import {
   learningResourceQueries,
 } from "api/hooks/learningResources"
 import {
+  LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
+  LearningResourcesSearchResponse,
   ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
+import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest } from "api/v0"
+import type { LearningResourcesVectorSearchResponse } from "api/v0"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
@@ -507,6 +511,40 @@ const searchModeDropdownOptions = Object.entries(
   SearchModeEnumDescriptions,
 ).map(([label, value]) => ({ label, value }))
 
+/**
+ * Extracts only the fields supported by the vector search API from a broader
+ * search params object, dropping admin-only params (e.g., aggregations,
+ * content_file_score_weight) that the vector endpoint does not accept.
+ *
+ * The `as` casts for enum arrays are safe because the v0 and v1 generated
+ * clients define separate (but structurally identical) enum types for the same
+ * string-literal values (e.g., delivery: 'online' | 'hybrid' | ...).
+ */
+const toVectorSearchParams = (
+  params: ReturnType<typeof getSearchParams>,
+): VectorSearchRequest => ({
+  certification: params.certification,
+  certification_type:
+    params.certification_type as VectorSearchRequest["certification_type"],
+  course_feature: params.course_feature,
+  delivery: params.delivery as VectorSearchRequest["delivery"],
+  department: params.department as VectorSearchRequest["department"],
+  free: params.free,
+  level: params.level as VectorSearchRequest["level"],
+  limit: params.limit,
+  ocw_topic: params.ocw_topic,
+  offered_by: params.offered_by as VectorSearchRequest["offered_by"],
+  offset: params.offset,
+  platform: params.platform as VectorSearchRequest["platform"],
+  professional: params.professional,
+  q: params.q,
+  resource_type: params.resource_type as VectorSearchRequest["resource_type"],
+  resource_type_group:
+    params.resource_type_group as VectorSearchRequest["resource_type_group"],
+  topic: params.topic,
+  hybrid_search: true,
+})
+
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
@@ -585,15 +623,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const { data, isLoading, isFetching } = useQuery({
     ...(isVectorSearch
-      ? learningResourceQueries.vectorSearch({
-          ...allParams,
-          hybrid_search: true,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any)
+      ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     placeholderData: keepPreviousData,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    select: (data: any) => {
+    select: (
+      data: LearningResourcesSearchResponse | LearningResourcesVectorSearchResponse,
+    ) => {
       // Handle missing data gracefully
       if (
         !data?.metadata?.aggregations?.offered_by ||
@@ -615,8 +650,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           aggregations: {
             ...data.metadata.aggregations,
             offered_by: data.metadata.aggregations.offered_by.filter(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (value: any) => value && displayOfferors.includes(value.key),
+              (value) => value && displayOfferors.includes(value.key),
             ),
           },
         },
@@ -845,6 +879,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </ExplanationContainer>
             <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
             <Checkbox
+              aria-label="Vector Hybrid Search"
               checked={searchParams.get("vector_search") === "true"}
               onChange={(e) =>
                 setSearchParams((prev) => {
@@ -1015,18 +1050,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   </PlainList>
                 ) : data && (data.results?.length ?? 0) > 0 ? (
                   <PlainList itemSpacing={1.5}>
-                    {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      data.results.map((resource: any) => (
-                        <li key={resource.id}>
-                          <ResourceCard
-                            resource={resource}
-                            parentHeadingEl={resultsHeadingEl}
-                            list
-                          />
-                        </li>
-                      ))
-                    }
+                    {data.results.map((resource: LearningResource) => (
+                      <li key={resource.id}>
+                        <ResourceCard
+                          resource={resource}
+                          parentHeadingEl={resultsHeadingEl}
+                          list
+                        />
+                      </li>
+                    ))}
                   </PlainList>
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
