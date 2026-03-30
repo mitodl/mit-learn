@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.59.12
+Version 0.59.12 (Released March 30, 2026)
 ---------------
 
 - fix: spacing issue for mobile (#3124)
