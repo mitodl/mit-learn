@@ -261,6 +261,36 @@ describe("CourseEnrollmentButton", () => {
     expect(button).toBeDisabled()
   })
 
+  test("Falls back to enrollment dialog when checkout run has no product even if next_run has pricing", async () => {
+    const pricedNonEnrollableRun = makeRun({
+      is_archived: false,
+      is_enrollable: false,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [makeProduct({ price: "500" })],
+    })
+    const enrollableCheckoutRunWithoutProduct = makeRun({
+      is_archived: false,
+      is_enrollable: true,
+      enrollment_modes: [makeEnrollmentMode({ requires_payment: true })],
+      products: [],
+    })
+    const course = makeCourse({
+      next_run_id: pricedNonEnrollableRun.id,
+      courseruns: [pricedNonEnrollableRun, enrollableCheckoutRunWithoutProduct],
+    })
+
+    setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
+
+    renderWithProviders(<CourseEnrollmentButton course={course} />)
+
+    const button = await screen.findByRole("button", {
+      name: "Enroll Now—$500",
+    })
+    await user.click(button)
+
+    await screen.findByRole("dialog", { name: course.title })
+  })
+
   test("Shows 'Enroll for Free' for both free and paid enrollment modes", async () => {
     const run = makeRun({
       is_archived: false,
