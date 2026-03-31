@@ -170,12 +170,6 @@ const getCourseEnrollmentAction = (
   return { action: "none", run: selectedRun }
 }
 
-const getShouldShowEnrollmentDialog = (
-  course: CourseWithCourseRunsSerializerV2,
-): boolean => {
-  return getCourseEnrollmentAction(course).action === "dialog"
-}
-
 /**
  * Extract all course and program IDs from a program's req_tree.
  * This is the single source of truth for which courses/programs belong to a program.
@@ -238,7 +232,6 @@ export {
   mitxonlineLegacyUrl,
   getEnrollmentType,
   getCourseEnrollmentAction,
-  getShouldShowEnrollmentDialog,
   getIdsFromReqTree,
   getBestRun,
   isVerifiedEnrollmentMode,
