@@ -93,8 +93,8 @@ export const getServerQueryClient = cache(() => {
               name: axiosError.name,
               status: axiosError?.status,
               code: axiosError.code,
-              method: axiosError.request?.method,
-              url: axiosError.request?.url,
+              method: axiosError.config?.method,
+              url: axiosError.config?.url,
             },
           })
           const status = (error as AxiosError)?.response?.status
