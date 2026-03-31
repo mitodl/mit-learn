@@ -10433,7 +10433,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -10561,10 +10561,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -10651,7 +10647,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     CourseResourceResourceTypeEnum:
       type: string
@@ -10967,7 +10962,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -11093,10 +11088,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -11180,7 +11171,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     DocumentResourceResourceTypeEnum:
       type: string
@@ -11449,6 +11439,7 @@ components:
             maxLength: 128
         professional:
           type: boolean
+          readOnly: true
         next_start_date:
           type: string
           format: date-time
@@ -11501,6 +11492,7 @@ components:
           nullable: true
         require_summaries:
           type: boolean
+          readOnly: true
       required:
       - best_run_id
       - certification
@@ -11519,7 +11511,9 @@ components:
       - platform
       - position
       - prices
+      - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -11570,8 +11564,6 @@ components:
             type: string
             minLength: 1
             maxLength: 128
-        professional:
-          type: boolean
         next_start_date:
           type: string
           format: date-time
@@ -11622,8 +11614,6 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
-        require_summaries:
-          type: boolean
       required:
       - title
     LearningPathResourceResourceTypeEnum:
@@ -13359,8 +13349,6 @@ components:
             type: string
             minLength: 1
             maxLength: 128
-        professional:
-          type: boolean
         next_start_date:
           type: string
           format: date-time
@@ -13411,8 +13399,6 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
-        require_summaries:
-          type: boolean
     PatchedLearningResourceRelationshipRequest:
       type: object
       description: CRUD serializer for LearningResourceRelationship
@@ -14088,7 +14074,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -14216,10 +14202,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -14306,7 +14288,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     PodcastEpisodeResourceResourceTypeEnum:
       type: string
@@ -14509,7 +14490,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -14637,10 +14618,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -14727,7 +14704,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     PodcastResourceResourceTypeEnum:
       type: string
@@ -15072,7 +15048,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -15200,10 +15176,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -15290,7 +15262,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     ProgramResourceResourceTypeEnum:
       type: string
@@ -15945,7 +15916,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -16073,10 +16044,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -16163,7 +16130,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     VideoPlaylistResourceResourceTypeEnum:
       type: string
@@ -16367,7 +16333,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -16495,10 +16461,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -16582,7 +16544,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     VideoResourceResourceTypeEnum:
       type: string

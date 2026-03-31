@@ -1201,8 +1201,17 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "professional",
             "views",
             "require_summaries",
+            "platform",
+            "offered_by",
+            "readable_id",
         ]
-        exclude = ["resource_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
+        exclude = [
+            "resource_tags",
+            "resources",
+            "etl_source",
+            "view_count",
+            *COMMON_IGNORED_FIELDS,
+        ]
 
 
 class ProgramResourceSerializer(LearningResourceBaseSerializer):
@@ -1273,11 +1282,6 @@ class LearningPathResourceSerializer(LearningResourceBaseSerializer):
                     models.LearningResourceTopic.objects.filter(id__in=topics_data)
                 )
         return resource
-
-    class Meta:
-        model = models.LearningResource
-        exclude = ["resource_tags", "resources", "etl_source", *COMMON_IGNORED_FIELDS]
-        read_only_fields = ["platform", "offered_by", "readable_id"]
 
 
 class PodcastResourceSerializer(LearningResourceBaseSerializer):

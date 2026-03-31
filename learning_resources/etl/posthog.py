@@ -174,4 +174,7 @@ def load_posthog_lrd_view_events(
                 learning_resource, percolate=False, generate_embeddings=False
             )
 
+        learning_resource.view_count = learning_resource.views.count()
+        learning_resource.save()
+
     return events
