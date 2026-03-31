@@ -120,10 +120,10 @@ export const getServerQueryClient = cache(() => {
         },
 
         /**
-         * Exponential backoff: 100ms, 200ms, 400ms (700ms total).
-         * Fast enough to avoid significantly delaying SSR, but gives
-         * transient upstream errors a moment to recover.
-         */
+         * Exponential backoff: 200ms, 400ms, 800ms (~1400ms total for 3 retries),
+         * capped at a maximum delay of 1000ms per attempt. This is fast enough
+         * to avoid significantly delaying SSR, but gives transient upstream
+         * errors a moment to recover.
         retryDelay: (retryCount) =>
           Math.min(BASE_RETRY_DELAY * 2 ** retryCount, MAX_RETRY_DELAY),
       },
