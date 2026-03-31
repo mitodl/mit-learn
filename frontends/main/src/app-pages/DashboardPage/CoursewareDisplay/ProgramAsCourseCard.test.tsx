@@ -230,6 +230,14 @@ describe("ProgramAsCourseCard", () => {
 
     const run = mitxonline.factories.courses.courseRun({
       is_enrollable: true,
+      enrollment_modes: [
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: false,
+        }),
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: true,
+        }),
+      ],
     })
     const moduleWithRun = mitxonline.factories.courses.course({
       id: moduleOne.id,
@@ -255,5 +263,105 @@ describe("ProgramAsCourseCard", () => {
     await user.click(startButton)
 
     await screen.findByRole("dialog", { name: moduleWithRun.title })
+  })
+
+  test("clicking 'Start Course' on an unenrolled module bypasses dialog for free-only single-run enrollment", async () => {
+    const cardData = setupCardData()
+    const [moduleOne] = cardData.moduleCourses
+
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      enrollment_modes: [
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: false,
+        }),
+      ],
+    })
+    const moduleWithRun = mitxonline.factories.courses.course({
+      id: moduleOne.id,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+
+    const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+    setMockResponse.post(enrollmentUrl, {})
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
+        moduleEnrollmentsByCourseId={{}}
+      />,
+    )
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
+    invariant(
+      card,
+      `Expected to find a card containing "${moduleWithRun.title}"`,
+    )
+    const startButton = within(card).getByTestId("courseware-button")
+    await user.click(startButton)
+
+    await waitFor(() => {
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "POST", url: enrollmentUrl }),
+      )
+    })
+    expect(
+      screen.queryByRole("dialog", { name: moduleWithRun.title }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("clicking 'Start Course' on an unenrolled module bypasses dialog for paid-only single-run enrollment", async () => {
+    const cardData = setupCardData()
+    const [moduleOne] = cardData.moduleCourses
+
+    const product = mitxonline.factories.courses.product({ price: "500" })
+    const run = mitxonline.factories.courses.courseRun({
+      is_enrollable: true,
+      enrollment_modes: [
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: true,
+        }),
+      ],
+      products: [product],
+    })
+    const moduleWithRun = mitxonline.factories.courses.course({
+      id: moduleOne.id,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={[moduleWithRun, cardData.moduleCourses[1]]}
+        moduleEnrollmentsByCourseId={{}}
+      />,
+    )
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find((c) => within(c).queryByText(moduleWithRun.title))
+    invariant(
+      card,
+      `Expected to find a card containing "${moduleWithRun.title}"`,
+    )
+    const startButton = within(card).getByTestId("courseware-button")
+    await user.click(startButton)
+
+    await waitFor(() => {
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "POST", url: basketUrl }),
+      )
+    })
+    expect(
+      screen.queryByRole("dialog", { name: moduleWithRun.title }),
+    ).not.toBeInTheDocument()
   })
 })

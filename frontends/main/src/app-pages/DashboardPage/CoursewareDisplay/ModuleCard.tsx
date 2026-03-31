@@ -20,11 +20,15 @@ import {
 import NiceModal from "@ebay/nice-modal-react"
 import {
   useCreateB2bEnrollment,
+  useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import {
+  getCourseEnrollmentAction,
+  mitxonlineLegacyUrl,
+} from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
 import {
@@ -256,7 +260,9 @@ const getDashboardEnrollmentStatus = (
 const useEnrollmentHandler = () => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
+  const createEnrollment = useCreateEnrollment()
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const replaceBasketItem = useReplaceBasketItem()
 
   const enroll = React.useCallback(
     ({
@@ -314,6 +320,32 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
+        const enrollmentDecision = getCourseEnrollmentAction(course)
+        const selectedRun = enrollmentDecision.run
+
+        if (enrollmentDecision.action === "audit" && selectedRun) {
+          createEnrollment.mutate(
+            { run_id: selectedRun.id },
+            {
+              onSuccess: () => {
+                const destination = selectedRun.courseware_url ?? href
+                if (destination) {
+                  window.location.href = destination
+                }
+              },
+            },
+          )
+          return
+        }
+
+        if (enrollmentDecision.action === "checkout" && selectedRun) {
+          const product = selectedRun.products[0]
+          if (product) {
+            replaceBasketItem.mutate(product.id)
+            return
+          }
+        }
+
         const onCourseEnroll = (run: CourseRunV2) => {
           window.location.href = run.courseware_url!
         }
@@ -324,7 +356,9 @@ const useEnrollmentHandler = () => {
       mitxOnlineUser.data?.legal_address?.country,
       mitxOnlineUser.data?.user_profile?.year_of_birth,
       createB2bEnrollment,
+      createEnrollment,
       createVerifiedProgramEnrollment,
+      replaceBasketItem,
     ],
   )
 
@@ -332,7 +366,9 @@ const useEnrollmentHandler = () => {
     enroll,
     isPending:
       createB2bEnrollment.isPending ||
-      createVerifiedProgramEnrollment.isPending,
+      createEnrollment.isPending ||
+      createVerifiedProgramEnrollment.isPending ||
+      replaceBasketItem.isPending,
   }
 }
 
