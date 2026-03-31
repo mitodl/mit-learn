@@ -121,6 +121,7 @@ export const getServerQueryClient = cache(() => {
          * capped at a maximum delay of 1000ms per attempt. This is fast enough
          * to avoid significantly delaying SSR, but gives transient upstream
          * errors a moment to recover.
+         */
         retryDelay: (retryCount) =>
           Math.min(BASE_RETRY_DELAY * 2 ** retryCount, MAX_RETRY_DELAY),
       },
