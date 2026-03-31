@@ -63,7 +63,6 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   const enrollmentDecision = getCourseEnrollmentAction(course)
-  const actionRun = enrollmentDecision.run
 
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
@@ -84,8 +83,6 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
       : null
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
-  const isCheckoutWithoutProduct =
-    enrollmentDecision.type === "checkout" && !actionRun?.products[0]
 
   const isPending = replaceBasketItem.isPending || createEnrollment.isPending
   const isError = replaceBasketItem.isError || createEnrollment.isError
@@ -96,18 +93,15 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
-      } else if (enrollmentDecision.type === "checkout" && actionRun) {
-        const actionProduct = actionRun.products[0]
-        if (!actionProduct) {
-          NiceModal.show(CourseEnrollmentDialog, { course })
-          return
-        }
-        replaceBasketItem.mutate(actionProduct.id)
-      } else if (enrollmentDecision.type === "audit" && actionRun) {
+      } else if (enrollmentDecision.type === "checkout") {
+        replaceBasketItem.mutate(enrollmentDecision.product.id)
+      } else if (enrollmentDecision.type === "audit") {
         createEnrollment.mutate(
-          { run_id: actionRun.id },
+          { run_id: enrollmentDecision.run.id },
           { onSuccess: () => router.push(DASHBOARD_HOME) },
         )
+      } else {
+        NiceModal.show(CourseEnrollmentDialog, { course })
       }
     } else {
       setAnchor(e.currentTarget)
@@ -123,7 +117,6 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
             !nextRun ||
             enrollmentType === "none" ||
             isPaidWithoutPrice ||
-            isCheckoutWithoutProduct ||
             isPending
           }
           onClick={handleClick}

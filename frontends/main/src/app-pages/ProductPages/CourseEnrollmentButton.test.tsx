@@ -261,7 +261,7 @@ describe("CourseEnrollmentButton", () => {
     expect(button).toBeDisabled()
   })
 
-  test("Disables button when non-enrollable next_run has price but selected enrollable checkout run has no product", async () => {
+  test("Falls back to enrollment dialog when checkout run has no product even if next_run has pricing", async () => {
     const pricedNonEnrollableRun = makeRun({
       is_archived: false,
       is_enrollable: false,
@@ -286,7 +286,9 @@ describe("CourseEnrollmentButton", () => {
     const button = await screen.findByRole("button", {
       name: "Enroll Now—$500",
     })
-    expect(button).toBeDisabled()
+    await user.click(button)
+
+    await screen.findByRole("dialog", { name: course.title })
   })
 
   test("Shows 'Enroll for Free' for both free and paid enrollment modes", async () => {

@@ -321,14 +321,14 @@ const useEnrollmentHandler = () => {
         )
       } else {
         const enrollmentDecision = getCourseEnrollmentAction(course)
-        const selectedRun = enrollmentDecision.run
 
-        if (enrollmentDecision.type === "audit" && selectedRun) {
+        if (enrollmentDecision.type === "audit") {
           createEnrollment.mutate(
-            { run_id: selectedRun.id },
+            { run_id: enrollmentDecision.run.id },
             {
               onSuccess: () => {
-                const destination = selectedRun.courseware_url ?? href
+                const destination =
+                  enrollmentDecision.run.courseware_url ?? href
                 if (destination) {
                   window.location.href = destination
                 }
@@ -338,12 +338,9 @@ const useEnrollmentHandler = () => {
           return
         }
 
-        if (enrollmentDecision.type === "checkout" && selectedRun) {
-          const product = selectedRun.products[0]
-          if (product) {
-            replaceBasketItem.mutate(product.id)
-            return
-          }
+        if (enrollmentDecision.type === "checkout") {
+          replaceBasketItem.mutate(enrollmentDecision.product.id)
+          return
         }
 
         const onCourseEnroll = (run: CourseRunV2) => {

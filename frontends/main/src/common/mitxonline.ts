@@ -127,10 +127,23 @@ const mitxonlineLegacyUrl = (relative: string) => {
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
-type CourseEnrollmentAction = {
-  type: "none" | "audit" | "checkout" | "dialog"
-  run?: CourseRunV2
+type CourseRunEnrollmentActionNone = { type: "none" }
+type CourseRunEnrollmentActionAudit = {
+  type: "audit"
+  run: CourseRunV2
 }
+type CourseRunEnrollmentActionCheckout = {
+  type: "checkout"
+  run: CourseRunV2
+  product: BaseProduct
+}
+type CourseRunEnrollmentActionDialog = { type: "dialog" }
+
+type CourseEnrollmentAction =
+  | CourseRunEnrollmentActionNone
+  | CourseRunEnrollmentActionAudit
+  | CourseRunEnrollmentActionCheckout
+  | CourseRunEnrollmentActionDialog
 
 const getEnrollmentType = (
   modes: EnrollmentMode[] | undefined,
@@ -163,13 +176,17 @@ const getCourseEnrollmentAction = (
   const selectedRun = getBestRun(course, { enrollableOnly: true })
 
   if (!selectedRun) return { type: "none" }
-  if (enrollableRuns.length > 1) return { type: "dialog", run: selectedRun }
+  if (enrollableRuns.length > 1) return { type: "dialog" }
 
   const enrollmentType = getEnrollmentType(selectedRun.enrollment_modes)
-  if (enrollmentType === "both") return { type: "dialog", run: selectedRun }
+  if (enrollmentType === "both") return { type: "dialog" }
   if (enrollmentType === "free") return { type: "audit", run: selectedRun }
-  if (enrollmentType === "paid") return { type: "checkout", run: selectedRun }
-  return { type: "none", run: selectedRun }
+  if (enrollmentType === "paid") {
+    const product = selectedRun.products?.[0]
+    if (!product) return { type: "none" }
+    return { type: "checkout", run: selectedRun, product }
+  }
+  return { type: "none" }
 }
 
 /**
