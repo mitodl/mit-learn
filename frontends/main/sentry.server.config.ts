@@ -12,11 +12,14 @@ Sentry.init({
   // Independently controls what fraction of OTEL-sampled spans Sentry reports
   // to its own backend. Set NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE in your
   // environment (same variable used by the client config). Defaults to 1 if
-  // unset. This is separate from OTEL_TRACES_SAMPLER_ARG, which controls the
-  // upstream OTEL sampling rate.
-  tracesSampleRate: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
-    ? Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
-    : 1,
+  // unset or invalid. This is separate from OTEL_TRACES_SAMPLER_ARG, which
+  // controls the upstream OTEL sampling rate.
+  tracesSampleRate: (() => {
+    const rate = parseFloat(
+      process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? "",
+    )
+    return Number.isNaN(rate) ? 1 : Math.min(1, Math.max(0, rate))
+  })(),
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,

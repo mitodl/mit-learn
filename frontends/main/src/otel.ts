@@ -19,10 +19,20 @@
  *
  * When OTEL_EXPORTER_OTLP_ENDPOINT is not set, traces are not exported to
  * Alloy/Tempo but Sentry still receives spans via SentrySpanProcessor.
+ *
+ * LOCAL TESTING (no Alloy required):
+ * Set OTEL_TRACES_EXPORTER=console and OTEL_TRACES_SAMPLER_ARG=1.0 to print
+ * spans as JSON to stdout. Each span includes its trace ID, name, duration,
+ * attributes, and status — useful for verifying instrumentation without a
+ * running collector. See env/frontend.env for a ready-to-uncomment block.
  */
 import { NodeSDK } from "@opentelemetry/sdk-node"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base"
+import {
+  BatchSpanProcessor,
+  ConsoleSpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base"
 import type { SpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
 import {
@@ -32,39 +42,57 @@ import {
 } from "@opentelemetry/core"
 import { SentrySpanProcessor, SentryPropagator } from "@sentry/opentelemetry"
 
-const spanProcessors: SpanProcessor[] = [
-  // Forward spans to Sentry (required because Sentry.init uses skipOpenTelemetrySetup: true)
-  new SentrySpanProcessor(),
-]
-
-if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
-  // OTLPTraceExporter automatically appends /v1/traces to OTEL_EXPORTER_OTLP_ENDPOINT
-  spanProcessors.push(new BatchSpanProcessor(new OTLPTraceExporter()))
+// Guard against duplicate initialisation in dev/HMR environments where modules
+// can be re-evaluated across worker restarts. The SDK and SIGTERM handler must
+// only be registered once per process.
+const globalWithOtel = globalThis as typeof globalThis & {
+  __OTEL_NODE_SDK__?: NodeSDK
 }
 
-const sdk = new NodeSDK({
-  spanProcessors,
-  instrumentations: [
-    getNodeAutoInstrumentations({
-      // Disable fs instrumentation — it generates very high span volume with little
-      // diagnostic value and can significantly slow down the application.
-      "@opentelemetry/instrumentation-fs": { enabled: false },
-    }),
-  ],
-  textMapPropagator: new CompositePropagator({
-    propagators: [
-      // W3C Trace Context: injects/extracts traceparent and tracestate headers
-      // on all outgoing HTTP requests (axios, fetch) for distributed tracing.
-      new W3CTraceContextPropagator(),
-      new W3CBaggagePropagator(),
-      // Sentry's propagator handles Sentry-specific baggage (DSC)
-      new SentryPropagator(),
+if (!globalWithOtel.__OTEL_NODE_SDK__) {
+  const spanProcessors: SpanProcessor[] = [
+    // Forward spans to Sentry (required because Sentry.init uses skipOpenTelemetrySetup: true)
+    new SentrySpanProcessor(),
+  ]
+
+  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    // OTLPTraceExporter automatically appends /v1/traces to OTEL_EXPORTER_OTLP_ENDPOINT
+    spanProcessors.push(new BatchSpanProcessor(new OTLPTraceExporter()))
+  } else if (process.env.OTEL_TRACES_EXPORTER === "console") {
+    // Local development: print completed spans as JSON to stdout.
+    // Enable with: OTEL_TRACES_EXPORTER=console OTEL_TRACES_SAMPLER_ARG=1.0
+    spanProcessors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))
+  }
+
+  const sdk = new NodeSDK({
+    spanProcessors,
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        // Disable fs instrumentation — it generates very high span volume with little
+        // diagnostic value and can significantly slow down the application.
+        "@opentelemetry/instrumentation-fs": { enabled: false },
+      }),
     ],
-  }),
-})
+    textMapPropagator: new CompositePropagator({
+      propagators: [
+        // W3C Trace Context: injects/extracts traceparent and tracestate headers
+        // on all outgoing HTTP requests (axios, fetch) for distributed tracing.
+        new W3CTraceContextPropagator(),
+        new W3CBaggagePropagator(),
+        // Sentry's propagator handles Sentry-specific baggage (DSC)
+        new SentryPropagator(),
+      ],
+    }),
+  })
 
-sdk.start()
+  // Awaiting sdk.start() ensures the module fully evaluates (and propagators/
+  // processors are registered) before instrumentation.ts proceeds to init Sentry.
+  // start() is currently synchronous (returns void) but awaiting is future-proof.
+  await sdk.start()
 
-process.on("SIGTERM", () => {
-  sdk.shutdown().catch(console.error)
-})
+  process.once("SIGTERM", () => {
+    sdk.shutdown().catch(console.error)
+  })
+
+  globalWithOtel.__OTEL_NODE_SDK__ = sdk
+}
