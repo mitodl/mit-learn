@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.60.1
+Version 0.60.1 (Released March 31, 2026)
 --------------
 
 - More vector data for programs, programs-as-courses (#3115)
