@@ -3,7 +3,7 @@ import {
   CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getBestRun } from "@/common/mitxonline"
+import { getBestRun, isVerifiedEnrollmentMode } from "@/common/mitxonline"
 export { getBestRun }
 
 const ResourceType = {
@@ -101,6 +101,31 @@ const getProgramEnrollmentStatus = (
   return EnrollmentStatus.NotEnrolled
 }
 
+const hasVerifiedEnrollmentOption = (
+  run: CourseRunEnrollmentV3["run"] | null | undefined,
+): boolean => {
+  return (
+    run?.enrollment_modes?.some((mode) =>
+      isVerifiedEnrollmentMode(mode.mode_slug),
+    ) ?? false
+  )
+}
+
+const canShowCertificateUpgradeBanner = ({
+  enrollmentMode,
+  run,
+}: {
+  enrollmentMode?: string | null
+  run: CourseRunEnrollmentV3["run"] | null | undefined
+}): boolean => {
+  return (
+    !isVerifiedEnrollmentMode(enrollmentMode) &&
+    (run?.is_upgradable ?? false) &&
+    (run?.upgrade_product_is_active ?? false) &&
+    hasVerifiedEnrollmentOption(run)
+  )
+}
+
 export {
   ResourceType,
   EnrollmentStatus,
@@ -109,4 +134,6 @@ export {
   getKey,
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
+  hasVerifiedEnrollmentOption,
+  canShowCertificateUpgradeBanner,
 }

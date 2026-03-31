@@ -30,6 +30,23 @@ const EnrollmentMode = {
 } as const
 type EnrollmentMode = (typeof EnrollmentMode)[keyof typeof EnrollmentMode]
 
+const auditEnrollmentMode = () =>
+  mitxonline.factories.courses.enrollmentMode({
+    mode_slug: EnrollmentMode.Audit,
+    requires_payment: false,
+  })
+
+const verifiedEnrollmentMode = () =>
+  mitxonline.factories.courses.enrollmentMode({
+    mode_slug: EnrollmentMode.Verified,
+    requires_payment: true,
+  })
+
+const upgradeableEnrollmentModes = () => [
+  auditEnrollmentMode(),
+  verifiedEnrollmentMode(),
+]
+
 const mitxOnlineCourse = mitxonline.factories.courses.course
 
 const pastDashboardCourse: typeof mitxOnlineCourse = (...overrides) => {
@@ -340,6 +357,7 @@ describe.each([
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
         run: {
+          enrollment_modes: upgradeableEnrollmentModes(),
           is_upgradable: true,
           upgrade_deadline: faker.date.future().toISOString(),
           upgrade_product_id: faker.number.int(),
@@ -353,6 +371,7 @@ describe.each([
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Verified,
         run: {
+          enrollment_modes: upgradeableEnrollmentModes(),
           is_upgradable: true,
           upgrade_deadline: faker.date.future().toISOString(),
           upgrade_product_id: faker.number.int(),
@@ -366,6 +385,7 @@ describe.each([
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
         run: {
+          enrollment_modes: upgradeableEnrollmentModes(),
           is_upgradable: false,
           upgrade_deadline: faker.date.future().toISOString(),
           upgrade_product_id: faker.number.int(),
@@ -379,6 +399,7 @@ describe.each([
       enrollment: mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
         run: {
+          enrollment_modes: upgradeableEnrollmentModes(),
           is_upgradable: true,
           upgrade_deadline: faker.date.future().toISOString(),
           upgrade_product_id: faker.number.int(),
@@ -412,6 +433,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
         upgrade_product_id: faker.number.int(),
@@ -440,6 +462,30 @@ describe.each([
     expect(within(card).queryByTestId("upgrade-root")).toBeNull()
   })
 
+  test("Does not show upgrade banner when verified enrollment mode is unavailable", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      run: {
+        enrollment_modes: [auditEnrollmentMode()],
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.CourseRunEnrollment, data: enrollment }}
+      />,
+    )
+
+    const card = getCard()
+    expect(within(card).queryByTestId("upgrade-root")).toBeNull()
+  })
+
   test.each([
     { offerUpgrade: true, expected: { visible: true } },
     { offerUpgrade: false, expected: { visible: false } },
@@ -450,6 +496,7 @@ describe.each([
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Audit,
         run: {
+          enrollment_modes: upgradeableEnrollmentModes(),
           is_upgradable: true,
           upgrade_deadline: faker.date.future().toISOString(),
           upgrade_product_id: faker.number.int(),
@@ -486,6 +533,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: certificateUpgradeDeadline,
         upgrade_product_id: faker.number.int(),
@@ -516,6 +564,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: null,
         upgrade_product_id: faker.number.int(),
@@ -551,6 +600,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: certificateUpgradeDeadline,
         upgrade_product_id: productId,
@@ -605,6 +655,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
         upgrade_product_id: productId,
@@ -650,6 +701,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       run: {
+        enrollment_modes: upgradeableEnrollmentModes(),
         is_upgradable: true,
         upgrade_deadline: faker.date.future().toISOString(),
         upgrade_product_id: productId,

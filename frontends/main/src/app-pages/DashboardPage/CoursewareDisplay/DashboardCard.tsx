@@ -41,7 +41,12 @@ import {
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  EnrollmentStatus,
+  canShowCertificateUpgradeBanner,
+  getBestRun,
+  getEnrollmentStatus,
+} from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -533,14 +538,12 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
 
 const UpgradeBanner: React.FC<
   {
-    canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
     onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
-  canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
@@ -560,7 +563,7 @@ const UpgradeBanner: React.FC<
     }
   }
 
-  if (!canUpgrade || !certificateUpgradePrice || !productId) {
+  if (!certificateUpgradePrice || !productId) {
     return null
   }
 
@@ -715,9 +718,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 
   const canUpgrade =
     isCourseRunEnrollment &&
-    !isVerifiedEnrollmentMode(resource.data.enrollment_mode) &&
-    (enrollmentRun?.is_upgradable ?? false) &&
-    (enrollmentRun?.upgrade_product_is_active ?? false)
+    canShowCertificateUpgradeBanner({
+      enrollmentMode: resource.data.enrollment_mode,
+      run: enrollmentRun,
+    })
+  const showUpgradeBanner = offerUpgrade && canUpgrade
 
   // Handle enrollment click for courses
   const handleEnrollmentClick = React.useCallback(() => {
@@ -797,12 +802,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           View Certificate
         </SubtitleLink>
       ) : null}
-      {isCourseRunEnrollment &&
-      !isVerifiedEnrollmentMode(resource.data.enrollment_mode) &&
-      offerUpgrade ? (
+      {showUpgradeBanner ? (
         <UpgradeBanner
           data-testid="upgrade-root"
-          canUpgrade={canUpgrade}
           certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
           certificateUpgradePrice={enrollmentRun?.upgrade_product_price}
           productId={enrollmentRun?.upgrade_product_id}

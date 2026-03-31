@@ -30,12 +30,16 @@ import {
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
-import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import {
+  EnrollmentStatus,
+  canShowCertificateUpgradeBanner,
+  getBestRun,
+  getEnrollmentStatus,
+} from "./helpers"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
   CourseRunV2,
-  EnrollmentModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 
@@ -494,14 +498,12 @@ const SubtitleLink = styled(NextLink)(({ theme }) => ({
 
 const UpgradeBanner: React.FC<
   {
-    canUpgrade: boolean
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
     onError?: (error: Error) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
-  canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
@@ -521,7 +523,7 @@ const UpgradeBanner: React.FC<
     }
   }
 
-  if (!canUpgrade || !certificateUpgradePrice || !productId) {
+  if (!certificateUpgradePrice || !productId) {
     return null
   }
 
@@ -732,9 +734,11 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
 
   const canUpgrade =
     isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentModeEnum.Verified &&
-    (enrollmentRun?.is_upgradable ?? false) &&
-    (enrollmentRun?.upgrade_product_is_active ?? false)
+    canShowCertificateUpgradeBanner({
+      enrollmentMode: resource.data.enrollment_mode,
+      run: enrollmentRun,
+    })
+  const showUpgradeBanner = offerUpgrade && canUpgrade
 
   const upgradeProductPrice = enrollmentRun?.upgrade_product_price
 
@@ -797,10 +801,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
     </>
   )
 
-  const showUpgradeLink =
-    isCourseRunEnrollment &&
-    resource.data.enrollment_mode !== EnrollmentModeEnum.Verified &&
-    offerUpgrade
+  const showUpgradeLink = showUpgradeBanner
   const showCertificateSection = certificateLink || showUpgradeLink
   const startDate = courseRun?.start_date ?? enrollmentRun?.start_date
 
@@ -818,7 +819,6 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
         {showUpgradeLink ? (
           <UpgradeBanner
             data-testid="upgrade-root"
-            canUpgrade={canUpgrade}
             certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
             certificateUpgradePrice={upgradeProductPrice}
             productId={upgradeProductId}
