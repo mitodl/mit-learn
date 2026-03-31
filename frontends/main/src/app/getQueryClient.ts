@@ -5,7 +5,6 @@ import type { AxiosError } from "axios"
 import { cache } from "react"
 import { notFound } from "next/navigation"
 
-const MAX_RETRIES = 3
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
@@ -62,6 +61,21 @@ class AugmentedQueryClient extends QueryClient {
  * readiness for the dehydrated state to be sent to the client.
  */
 export const getServerQueryClient = cache(() => {
+  /**
+   * Max retries after first failure
+   */
+  const MAX_RETRIES = 3
+  /**
+   * Base delay for retries, in milliseconds. The delay doubles with each retry,
+   * up to the max delay.
+   */
+  const BASE_RETRY_DELAY = 200
+  /**
+   * Maximum delay for retries, in milliseconds. This caps the exponential
+   * backoff to avoid excessively long delays.
+   */
+  const MAX_RETRY_DELAY = 1000
+
   return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
@@ -84,36 +98,34 @@ export const getServerQueryClient = cache(() => {
          *
          * Includes status undefined as we want to retry on network errors
          */
-        retry: (failureCount, error) => {
+        retry: (retryCount, error) => {
           const axiosError = error as AxiosError
-          console.info("Retrying failed request", {
-            failureCount,
-            error: {
-              message: axiosError.message,
-              name: axiosError.name,
-              status: axiosError?.status,
-              code: axiosError.code,
-              method: axiosError.config?.method,
-              url: axiosError.config?.url,
-            },
-          })
-          const status = (error as AxiosError)?.response?.status
+          const status = axiosError?.response?.status
           const isNetworkError = status === undefined || status === 0
+          const willRetry =
+            (isNetworkError || !NO_RETRY_CODES.includes(status)) &&
+            retryCount < MAX_RETRIES
 
-          if (isNetworkError || !NO_RETRY_CODES.includes(status)) {
-            return failureCount < MAX_RETRIES
-          }
-          return false
+          console.info("SSR query failed", {
+            retryCount,
+            willRetry,
+            status,
+            url: axiosError.config?.url,
+            method: axiosError.config?.method,
+            code: axiosError.code,
+            message: axiosError.message,
+          })
+
+          return willRetry
         },
 
         /**
-         * By default, React Query gradually applies a backoff delay, though it is
-         * preferable that we do not significantly delay initial page renders (or
-         * indeed pages that are Statically Rendered during the build process) and
-         * instead allow the request to fail quickly so it can be subsequently
-         * fetched on the client.
+         * Exponential backoff: 100ms, 200ms, 400ms (700ms total).
+         * Fast enough to avoid significantly delaying SSR, but gives
+         * transient upstream errors a moment to recover.
          */
-        retryDelay: 1000,
+        retryDelay: (retryCount) =>
+          Math.min(BASE_RETRY_DELAY * 2 ** retryCount, MAX_RETRY_DELAY),
       },
     },
   })
@@ -123,7 +135,7 @@ type BrowserClientConfig = {
   maxRetries: number
 }
 const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
-  maxRetries: MAX_RETRIES,
+  maxRetries: 3,
 }
 const makeBrowserQueryClient = (
   config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,

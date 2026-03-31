@@ -1,6 +1,6 @@
 import React from "react"
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { allowConsoleErrors } from "ol-test-utilities"
+import { allowConsoleErrors, cartesianProduct } from "ol-test-utilities"
 import { QueryClientProvider, useQuery } from "@tanstack/react-query"
 import { makeBrowserQueryClient, getServerQueryClient } from "./getQueryClient"
 import { nextNavigationMocks } from "ol-test-utilities/mocks/nextNavigation"
@@ -14,15 +14,7 @@ jest.mock("@tanstack/react-query", () => {
   }
 })
 
-const getWrapper = () => {
-  const queryClient = makeBrowserQueryClient()
-  const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
-  return wrapper
-}
-
-test.each([
+const RETRY_CASES = [
   { status: 0, retries: 3 },
   { status: 404, retries: 0 },
   { status: 405, retries: 0 },
@@ -33,29 +25,39 @@ test.each([
   { status: 502, retries: 3 },
   { status: 503, retries: 3 },
   { status: 504, retries: 3 },
-])(
-  "should retry $status failures $retries times",
-  async ({ status, retries }) => {
+]
+
+const QUERY_CLIENTS = [
+  { name: "browser", getClient: makeBrowserQueryClient },
+  { name: "server", getClient: getServerQueryClient },
+]
+
+test.each(cartesianProduct(RETRY_CASES, QUERY_CLIENTS))(
+  "$name client should retry $status failures $retries times",
+  async ({ status, retries, getClient, name }) => {
     allowConsoleErrors()
-    const wrapper = getWrapper()
+    const queryClient = getClient()
     const queryFn = jest.fn().mockRejectedValue({ response: { status } })
 
-    const { result } = renderHook(
-      () =>
-        useQuery({
-          queryKey: ["test"],
-          queryFn,
-          retryDelay: 0,
-        }),
-      { wrapper },
-    )
+    await expect(
+      queryClient.fetchQuery({
+        queryKey: [`${name}-retry-test`, status],
+        queryFn,
+        retryDelay: 0,
+      }),
+    ).rejects.toBeDefined()
 
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true)
-    })
     expect(queryFn).toHaveBeenCalledTimes(retries + 1)
   },
 )
+
+const getWrapper = () => {
+  const queryClient = makeBrowserQueryClient()
+  const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+  return wrapper
+}
 
 describe("refetching stale queries on visibilitychange and focus", () => {
   let visibilityStateMock: jest.SpyInstance, documentHasFocus: jest.SpyInstance
