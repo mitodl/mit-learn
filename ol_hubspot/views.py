@@ -22,6 +22,13 @@ hubspot_form_detail_response_schema = serializer_for_hubspot_model(
     "HubSpotFormDefinition"
 )
 
+hubspot_error_responses = {
+    400: OpenApiTypes.OBJECT,
+    503: OpenApiTypes.OBJECT,
+    "4XX": OpenApiTypes.OBJECT,
+    "5XX": OpenApiTypes.OBJECT,
+}
+
 
 class HubspotFormFieldValueSerializer(serializers.Serializer):
     """Serializer for individual form field values in submission."""
@@ -117,7 +124,7 @@ def _missing_token_response() -> Response:
 
 @extend_schema(
     operation_id="hubspot_forms_list",
-    responses={200: hubspot_forms_list_response_schema, 503: OpenApiTypes.OBJECT},
+    responses={200: hubspot_forms_list_response_schema, **hubspot_error_responses},
     parameters=[
         OpenApiParameter(name="after", type=str, required=False),
         OpenApiParameter(name="limit", type=int, required=False),
@@ -170,7 +177,7 @@ def hubspot_forms_list_view(request):
 
 @extend_schema(
     operation_id="hubspot_forms_detail_retrieve",
-    responses={200: hubspot_form_detail_response_schema, 503: OpenApiTypes.OBJECT},
+    responses={200: hubspot_form_detail_response_schema, **hubspot_error_responses},
     parameters=[OpenApiParameter(name="archived", type=bool, required=False)],
 )
 @api_view(["GET"])
@@ -203,7 +210,7 @@ def hubspot_form_detail_view(request, form_id: str):
 @extend_schema(
     operation_id="hubspot_forms_submit",
     request=HubspotFormSubmitRequestSerializer(),
-    responses={200: HubspotFormSubmitResponseSerializer(), 503: OpenApiTypes.OBJECT},
+    responses={200: HubspotFormSubmitResponseSerializer(), **hubspot_error_responses},
 )
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
