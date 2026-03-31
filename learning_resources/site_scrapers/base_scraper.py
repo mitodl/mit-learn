@@ -2,6 +2,8 @@ import logging
 
 import requests
 from django.conf import settings
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.utils import get_web_driver
@@ -22,9 +24,26 @@ class BaseScraper:
         if url:
             if self.driver:
                 self.driver.get(url)
-                WebDriverWait(self.driver, 10).until(
+                wait = WebDriverWait(self.driver, settings.WEBDRIVER_WAIT_SECONDS)
+                wait.until(
                     lambda d: (
                         d.execute_script("return document.readyState") == "complete"
+                    )
+                )
+                wait.until(
+                    lambda d: (
+                        not d.find_elements(By.TAG_NAME, "main")
+                        or len(
+                            d.find_elements(By.TAG_NAME, "main")[0].find_elements(
+                                By.CSS_SELECTOR, "*"
+                            )
+                        )
+                        > 0
+                    )
+                )
+                wait.until(
+                    expected_conditions.invisibility_of_element_located(
+                        (By.CLASS_NAME, "MuiSkeleton-root")
                     )
                 )
                 return self.driver.execute_script("return document.body.innerHTML")
