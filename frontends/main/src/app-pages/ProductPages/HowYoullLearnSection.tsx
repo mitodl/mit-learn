@@ -4,7 +4,6 @@ import { styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import { HeadingIds } from "./util"
 
-import IconBookPlay from "@/public/images/product/icon_book_play.png"
 import IconBrains from "@/public/images/product/icon_brains.png"
 import IconCertificate from "@/public/images/product/icon_certificate.png"
 import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
@@ -79,34 +78,24 @@ type HowYoullLearnItemData = {
 // Placeholder data — will be replaced by API-driven content.
 const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
   {
-    icon: IconComputerBulb,
-    title: "Learn by doing",
-    text: "Practice processes and methods through simulations, assessments, case studies, and tools.",
-  },
-  {
     icon: IconConnectedPeople,
-    title: "Learn from others",
-    text: "Connect with an international community of professionals while working on projects based on real-world examples.",
-  },
-  {
-    icon: IconBookPlay,
-    title: "Learn on demand",
-    text: "Access course content online and watch videos at your own pace.",
+    title: "Real-World Learning",
+    text: "Learn from MIT faculty and experts who ground their teaching in real-world cases rather than mathematical models, making the material approachable for all.",
   },
   {
     icon: IconBrains,
-    title: "Reflect and apply",
-    text: "Bring new skills to your organization through real-world examples and prompts for reflection.",
+    title: "Practical Application",
+    text: "Apply your new knowledge with hands-on, practical exercises drawn from healthcare, sports, finance, sustainability, and more.",
+  },
+  {
+    icon: IconComputerBulb,
+    title: "AI-Enabled Support",
+    text: "Deepen your understanding of the course material and get help on assignments from AskTIM, the AI assistant built by MIT researchers.",
   },
   {
     icon: IconCertificate,
-    title: "Demonstrate your success",
-    text: "Earn a credential from MIT to showcase your achievement.",
-  },
-  {
-    icon: IconConnectedPeople,
-    title: "Learn from the best",
-    text: "Gain insights from MIT faculty and industry experts.",
+    title: "Stackable Certificates",
+    text: "Earn an MIT Open Learning certificate at each learning milestone—module, course, and full program—that demonstrates your AI expertise.",
   },
 ]
 
