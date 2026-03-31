@@ -344,10 +344,10 @@ const useEnrollmentHandler = () => {
           },
         )
       } else {
-        const enrollmentDecision = getCourseEnrollmentAction(course)
-        const selectedRun = enrollmentDecision.run
+        const enrollmentAction = getCourseEnrollmentAction(course)
+        const selectedRun = enrollmentAction.run
 
-        if (enrollmentDecision.action === "audit" && selectedRun) {
+        if (enrollmentAction.type === "audit" && selectedRun) {
           createEnrollment.mutate(
             { run_id: selectedRun.id },
             {
@@ -362,7 +362,7 @@ const useEnrollmentHandler = () => {
           return
         }
 
-        if (enrollmentDecision.action === "checkout" && selectedRun) {
+        if (enrollmentAction.type === "checkout" && selectedRun) {
           const product = selectedRun.products[0]
           if (product) {
             replaceBasketItem.mutate(product.id)

@@ -128,7 +128,7 @@ const mitxonlineLegacyUrl = (relative: string) => {
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
 type CourseEnrollmentAction = {
-  action: "none" | "audit" | "checkout" | "dialog"
+  type: "none" | "audit" | "checkout" | "dialog"
   run?: CourseRunV2
 }
 
@@ -160,14 +160,14 @@ const getCourseEnrollmentAction = (
   )
   const selectedRun = getBestRun(course, { enrollableOnly: true })
 
-  if (!selectedRun) return { action: "none" }
-  if (enrollableRuns.length > 1) return { action: "dialog", run: selectedRun }
+  if (!selectedRun) return { type: "none" }
+  if (enrollableRuns.length > 1) return { type: "dialog", run: selectedRun }
 
   const enrollmentType = getEnrollmentType(selectedRun.enrollment_modes)
-  if (enrollmentType === "both") return { action: "dialog", run: selectedRun }
-  if (enrollmentType === "free") return { action: "audit", run: selectedRun }
-  if (enrollmentType === "paid") return { action: "checkout", run: selectedRun }
-  return { action: "none", run: selectedRun }
+  if (enrollmentType === "both") return { type: "dialog", run: selectedRun }
+  if (enrollmentType === "free") return { type: "audit", run: selectedRun }
+  if (enrollmentType === "paid") return { type: "checkout", run: selectedRun }
+  return { type: "none", run: selectedRun }
 }
 
 /**

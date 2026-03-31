@@ -85,7 +85,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
 
   const isPaidWithoutPrice = enrollmentType === "paid" && !product?.price
   const isCheckoutWithoutProduct =
-    enrollmentDecision.action === "checkout" && !actionRun?.products[0]
+    enrollmentDecision.type === "checkout" && !actionRun?.products[0]
 
   const isPending = replaceBasketItem.isPending || createEnrollment.isPending
   const isError = replaceBasketItem.isError || createEnrollment.isError
@@ -94,16 +94,16 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      if (enrollmentDecision.action === "dialog") {
+      if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
-      } else if (enrollmentDecision.action === "checkout" && actionRun) {
+      } else if (enrollmentDecision.type === "checkout" && actionRun) {
         const actionProduct = actionRun.products[0]
         if (!actionProduct) {
           NiceModal.show(CourseEnrollmentDialog, { course })
           return
         }
         replaceBasketItem.mutate(actionProduct.id)
-      } else if (enrollmentDecision.action === "audit" && actionRun) {
+      } else if (enrollmentDecision.type === "audit" && actionRun) {
         createEnrollment.mutate(
           { run_id: actionRun.id },
           { onSuccess: () => router.push(DASHBOARD_HOME) },
