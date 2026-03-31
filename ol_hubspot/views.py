@@ -1,6 +1,6 @@
 """HubSpot proxy views."""
 
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from django.conf import settings
 from django.urls import reverse
@@ -88,13 +88,17 @@ def _normalize_forms_paging(request, payload: dict) -> dict:
     if not isinstance(next_page, dict):
         return payload
 
-    after = next_page.get("after")
+    after = None
+    next_link = next_page.get("link")
+    if isinstance(next_link, str) and next_link:
+        parsed = urlparse(next_link)
+        parsed_query = parse_qs(parsed.query)
+        after = (parsed_query.get("after") or [None])[0]
+
     if not after:
-        next_link = next_page.get("link")
-        if isinstance(next_link, str) and next_link:
-            parsed = urlparse(next_link)
-            parsed_query = parse_qs(parsed.query)
-            after = (parsed_query.get("after") or [None])[0]
+        raw_after = next_page.get("after")
+        if isinstance(raw_after, str) and raw_after:
+            after = unquote(raw_after)
 
     if not after:
         return payload
