@@ -36,6 +36,28 @@ def test_list_forms(client, settings, mocker):
     )
 
 
+def test_list_forms_multiple_form_types(client, settings, mocker):
+    """List endpoint forwards repeated form_types values as a list."""
+    mock_secret = _mock_hubspot_secret()
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    client.force_login(UserFactory.create(is_superuser=True))
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
+    expected = {"results": [{"id": "abc"}]}
+    get_stub = mocker.patch("ol_hubspot.views.list_forms")
+    get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
+
+    response = client.get(f"{list_url}?form_types=hubspot&form_types=captured")
+
+    assert response.status_code == status.HTTP_200_OK
+    get_stub.assert_called_once_with(
+        access_token=mock_secret,
+        after=None,
+        limit=None,
+        archived=None,
+        form_types=["hubspot", "captured"],
+    )
+
+
 def test_list_forms_rewrites_next_paging_link(client, settings, mocker):
     """List endpoint rewrites HubSpot paging links to local proxy links."""
     mock_secret = _mock_hubspot_secret()

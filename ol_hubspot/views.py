@@ -133,7 +133,7 @@ def _missing_token_response() -> Response:
         OpenApiParameter(name="after", type=str, required=False),
         OpenApiParameter(name="limit", type=int, required=False),
         OpenApiParameter(name="archived", type=bool, required=False),
-        OpenApiParameter(name="form_types", type=str, required=False),
+        OpenApiParameter(name="form_types", type=str, required=False, many=True),
     ],
 )
 @api_view(["GET"])
@@ -160,10 +160,7 @@ def hubspot_forms_list_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    form_types = request.query_params.getlist("form_types")
-    if not form_types:
-        form_types_csv = request.query_params.get("form_types")
-        form_types = [form_types_csv] if form_types_csv else None
+    form_types = request.query_params.getlist("form_types") or None
 
     try:
         result = list_forms(
