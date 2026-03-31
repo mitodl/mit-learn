@@ -9,9 +9,19 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   release: process.env.NEXT_PUBLIC_VERSION,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENV,
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+  // Independently controls what fraction of OTEL-sampled spans Sentry reports
+  // to its own backend. Set NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE in your
+  // environment (same variable used by the client config). Defaults to 1 if
+  // unset. This is separate from OTEL_TRACES_SAMPLER_ARG, which controls the
+  // upstream OTEL sampling rate.
+  tracesSampleRate: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
+    ? Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
+    : 1,
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
+
+  // Our custom NodeSDK manages the OpenTelemetry provider (see src/otel.ts).
+  // Sentry receives spans via SentrySpanProcessor rather than its own provider.
+  skipOpenTelemetrySetup: true,
 })
