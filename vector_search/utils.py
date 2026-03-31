@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import logging
 import uuid
@@ -889,6 +890,68 @@ def vector_point_key(
         raise ValueError(msg)
 
 
+async def async_qdrant_aggregations(
+    aggregation_keys: list,
+    facet_filter,
+    collection_name: str = RESOURCES_COLLECTION_NAME,
+) -> dict:
+    """
+    Compute facet aggregations from Qdrant for each requested field.
+
+    Issues one concurrent facet query per aggregation key and returns results
+    in the same shape used by the OpenSearch aggregation API:
+    ``{"delivery": [{"key": "online", "doc_count": 24}, ...], ...}``
+
+    Args:
+        aggregation_keys: list of aggregation parameter names.
+            Must be valid keys in the collection's param map
+            (e.g. ``QDRANT_RESOURCE_PARAM_MAP``).
+        search_filter: Qdrant ``models.Filter`` to apply to every facet query,
+            or ``None`` to aggregate over the whole collection.
+        collection_name: name of the Qdrant collection to query.
+
+    Returns:
+        dict mapping each requested aggregation name to a list of
+        ``{"key": str, "doc_count": int}`` dicts sorted by
+        ``doc_count`` descending.
+    """
+    if not aggregation_keys:
+        return {}
+
+    collection_param_map = {
+        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
+        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
+        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
+    }
+    param_map = collection_param_map.get(collection_name, QDRANT_RESOURCE_PARAM_MAP)
+    client = async_qdrant_client()
+
+    async def _get_facet(agg_key: str):
+        qdrant_field = param_map.get(agg_key)
+        if not qdrant_field:
+            return agg_key, []
+        result = await client.facet(
+            collection_name=collection_name,
+            key=qdrant_field,
+            facet_filter=facet_filter,
+            limit=100,
+        )
+        hits = [
+            {
+                "key": str(hit.value).lower()
+                if isinstance(hit.value, bool)
+                else str(hit.value),
+                "doc_count": hit.count,
+            }
+            for hit in result.hits
+        ]
+        hits.sort(key=lambda x: x["doc_count"], reverse=True)
+        return agg_key, hits
+
+    results = await asyncio.gather(*[_get_facet(key) for key in aggregation_keys])
+    return dict(results)
+
+
 async def async_vector_search(  # noqa: PLR0913
     query_string: str,
     params: dict,
@@ -976,15 +1039,24 @@ async def async_vector_search(  # noqa: PLR0913
     else:
         hits = await sync_to_async(_content_file_vector_hits)(search_result)
 
-    count_result = await client.count(
-        collection_name=search_collection,
-        count_filter=search_filter,
-        exact=False,
+    aggregation_keys = params.get("aggregations") or []
+    count_result, aggregations = await asyncio.gather(
+        client.count(
+            collection_name=search_collection,
+            count_filter=search_filter,
+            exact=False,
+        ),
+        async_qdrant_aggregations(
+            aggregation_keys,
+            search_filter,
+            collection_name=search_collection,
+        ),
     )
 
     return {
         "hits": hits,
         "total": {"value": count_result.count},
+        "aggregations": aggregations,
     }
 
 

@@ -35,6 +35,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "professional": "professional",
     "free": "free",
     "course_feature": "course_feature",
+    "resource_category": "resource_category",
     "topic": "topics[].name",
     "ocw_topic": "ocw_topics",
     "level": "runs[].level[].code",
@@ -71,6 +72,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "url": models.PayloadSchemaType.KEYWORD,
     "title": models.PayloadSchemaType.KEYWORD,
     "resource_type_group": models.PayloadSchemaType.KEYWORD,
+    "resource_category": models.PayloadSchemaType.KEYWORD,
 }
 
 

@@ -1,6 +1,7 @@
 import logging
 from itertools import chain
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -124,7 +125,6 @@ class LearningResourcesVectorSearchView(QdrantView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                from asgiref.sync import sync_to_async
 
                 def serialize():
                     return LearningResourcesVectorSearchResponseSerializer(

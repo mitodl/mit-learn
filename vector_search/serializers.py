@@ -20,6 +20,7 @@ from learning_resources_search.serializers import (
     SearchResponseMetadata,
     SearchResponseSerializer,
 )
+from vector_search.constants import QDRANT_RESOURCE_PARAM_MAP
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
@@ -34,6 +35,18 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
     )
     limit = serializers.IntegerField(
         required=False, help_text="Number of results to return per page"
+    )
+
+    aggregation_choices = [
+        (key, key.replace("_", " ").title()) for key in QDRANT_RESOURCE_PARAM_MAP
+    ]
+    aggregations = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=aggregation_choices),
+        help_text=(
+            f"aggregations for facet counts \
+            \n\n{build_choice_description_list(aggregation_choices)}"
+        ),
     )
     readable_id = serializers.CharField(
         required=False, help_text="The readable id of the resource"
@@ -179,9 +192,9 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
     def get_count(self, instance) -> int:
         return instance.get("total", {}).get("value")
 
-    def get_metadata(self, _) -> SearchResponseMetadata:
+    def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
-            "aggregations": [],
+            "aggregations": instance.get("aggregations", []),
             "suggest": [],
         }
 
