@@ -51,6 +51,19 @@ test.each(cartesianProduct(RETRY_CASES, QUERY_CLIENTS))(
   },
 )
 
+test("server client retryDelay uses exponential backoff clamped to 1000ms", () => {
+  const queryClient = getServerQueryClient()
+  const retryDelay = queryClient.getDefaultOptions().queries?.retryDelay
+  if (typeof retryDelay !== "function") {
+    throw new Error("Expected retryDelay to be a function")
+  }
+  expect(retryDelay(0, new Error())).toBe(200)
+  expect(retryDelay(1, new Error())).toBe(400)
+  expect(retryDelay(2, new Error())).toBe(800)
+  expect(retryDelay(3, new Error())).toBe(1000)
+  expect(retryDelay(4, new Error())).toBe(1000)
+})
+
 const getWrapper = () => {
   const queryClient = makeBrowserQueryClient()
   const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (

@@ -5,6 +5,18 @@ import type { AxiosError } from "axios"
 import { cache } from "react"
 import { notFound } from "next/navigation"
 
+/** Max retries after first failure */
+const MAX_RETRIES = 3
+/**
+ * Base delay for retries, in milliseconds. The delay doubles with each retry,
+ * up to the max delay.
+ */
+const BASE_RETRY_DELAY = 200
+/**
+ * Maximum delay for retries, in milliseconds. This caps the exponential
+ * backoff to avoid excessively long delays.
+ */
+const MAX_RETRY_DELAY = 1000
 const THROW_ERROR_CODES = [400, 401, 403]
 const NO_RETRY_CODES = [400, 401, 403, 404, 405, 409, 422]
 
@@ -61,21 +73,6 @@ class AugmentedQueryClient extends QueryClient {
  * readiness for the dehydrated state to be sent to the client.
  */
 export const getServerQueryClient = cache(() => {
-  /**
-   * Max retries after first failure
-   */
-  const MAX_RETRIES = 3
-  /**
-   * Base delay for retries, in milliseconds. The delay doubles with each retry,
-   * up to the max delay.
-   */
-  const BASE_RETRY_DELAY = 200
-  /**
-   * Maximum delay for retries, in milliseconds. This caps the exponential
-   * backoff to avoid excessively long delays.
-   */
-  const MAX_RETRY_DELAY = 1000
-
   return new AugmentedQueryClient({
     defaultOptions: {
       queries: {
@@ -135,7 +132,7 @@ type BrowserClientConfig = {
   maxRetries: number
 }
 const DEFAULT_BROWSER_CLIENT_CONFIG: BrowserClientConfig = {
-  maxRetries: 3,
+  maxRetries: MAX_RETRIES,
 }
 const makeBrowserQueryClient = (
   config: BrowserClientConfig = DEFAULT_BROWSER_CLIENT_CONFIG,
