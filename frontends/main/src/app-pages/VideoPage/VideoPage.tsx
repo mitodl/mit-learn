@@ -1,17 +1,22 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useCallback } from "react"
 import { styled, Skeleton } from "ol-components"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { notFound } from "next/navigation"
+import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
+import { VideoResourceResourceTypeEnum } from "api/v1"
 import VideoPageHeader from "./VideoPageHeader"
 import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
-import VideoPlayerModal from "./VideoPlayerModal"
+import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 const Page = styled.div({
   backgroundColor: "#fff",
@@ -23,15 +28,19 @@ type VideoPageProps = {
 }
 
 const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
-  const [activeVideo, setActiveVideo] = useState<VideoResource | null>(null)
+  const router = useRouter()
 
-  const openVideo = useCallback((resource: VideoResource) => {
-    setActiveVideo(resource)
-  }, [])
+  const navigateToVideo = useCallback(
+    (resource: VideoResource) => {
+      router.push(`/playlist/detail/${resource.id}?playlist=${playlistId}`)
+    },
+    [router, playlistId],
+  )
 
-  const closeVideo = useCallback(() => {
-    setActiveVideo(null)
-  }, [])
+  const showVideoPlaylistPage = useFeatureFlagEnabled(
+    FeatureFlags.VideoPlaylistPage,
+  )
+  const flagsLoaded = useFeatureFlagsLoaded()
 
   const { data: playlistData, isLoading: playlistLoading } = useQuery(
     videoPlaylistQueries.detail(playlistId),
@@ -44,8 +53,14 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
     }),
   )
 
+  if (!showVideoPlaylistPage) {
+    return flagsLoaded ? notFound() : null
+  }
   const isLoading = playlistLoading || itemsLoading
-  const videos = (items ?? []) as VideoResource[]
+  const videos = (items ?? []).filter(
+    (item): item is VideoResource =>
+      item.resource_type === VideoResourceResourceTypeEnum.Video,
+  )
   const featuredVideo = videos[0] ?? null
   const collectionVideos = videos.slice(1)
 
@@ -56,18 +71,14 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
       ) : featuredVideo ? (
-        <FeaturedVideo video={featuredVideo} onPlay={openVideo} />
+        <FeaturedVideo video={featuredVideo} onPlay={navigateToVideo} />
       ) : null}
 
       <VideoCollection
         videos={collectionVideos}
         isLoading={isLoading}
-        onPlay={openVideo}
+        onPlay={navigateToVideo}
       />
-
-      {activeVideo && (
-        <VideoPlayerModal video={activeVideo} onClose={closeVideo} />
-      )}
     </Page>
   )
 }

@@ -45,10 +45,11 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
         <PageHeaderTop>
           <PageHeaderContent>
             <PageTitle>{playlist?.title ?? <Skeleton width={320} />}</PageTitle>
-            <PageDescription>
-              {playlist?.description ??
-                "Conversations with MIT faculty on the future of science, technology, and society."}
-            </PageDescription>
+            {playlist === undefined ? (
+              <Skeleton width={480} />
+            ) : playlist.description ? (
+              <PageDescription>{playlist.description}</PageDescription>
+            ) : null}
           </PageHeaderContent>
         </PageHeaderTop>
       </Container>

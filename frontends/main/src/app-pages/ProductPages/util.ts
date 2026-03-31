@@ -58,7 +58,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
 
       const requiredCount =
         node.data.operator === "min_number_of"
-          ? Number(node.data.operator_value) || items.length
+          ? Number(node.data.operator_value)
           : items.length
       return {
         id: node.id,

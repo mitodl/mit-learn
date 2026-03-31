@@ -46,6 +46,15 @@ RESOURCE_TYPE_GROUP_VALUES = [
     LEARNING_MATERIAL_RESOURCE_TYPE_GROUP,
 ]
 
+# Choices for the resource_type_group DRF field (a higher-level grouping
+# than resource_type).
+RESOURCE_TYPE_GROUP_CHOICES = [
+    (value, value.replace("_", " ").title()) for value in RESOURCE_TYPE_GROUP_VALUES
+]
+
+PROGRAM_COURSE_CACHE_KEY_TEST_MODE = "program_course_resource_cache_with_test_mode"
+PROGRAM_COURSE_CACHE_KEY_PUBLISHED = "program_course_resource_cache_published_only"
+
 
 class OfferedBy(ExtendedEnum):
     """

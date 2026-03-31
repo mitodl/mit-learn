@@ -4,10 +4,16 @@ import { Container, Typography, styled } from "ol-components"
 import { RiPlayFill } from "@remixicon/react"
 import type { VideoResource, LearningResourceTopic } from "api/v1"
 
-const FeaturedSection = styled.div({
+const FeaturedSection = styled.button({
   cursor: "pointer",
   borderRadius: "6px",
   overflow: "hidden",
+  display: "block",
+  width: "100%",
+  background: "none",
+  border: "none",
+  padding: 0,
+  textAlign: "left",
 })
 
 const FeaturedImageWrapper = styled.div(({ theme }) => ({
@@ -158,14 +164,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, onPlay }) => {
   return (
     <div style={{ padding: "24px 0 0" }}>
       <Container>
-        <FeaturedSection
-          role="button"
-          tabIndex={0}
-          onClick={() => onPlay(video)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") onPlay(video)
-          }}
-        >
+        <FeaturedSection type="button" onClick={() => onPlay(video)}>
           <FeaturedImageWrapper>
             {imageUrl ? (
               <Image

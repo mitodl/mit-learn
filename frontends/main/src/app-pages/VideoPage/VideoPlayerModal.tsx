@@ -1,8 +1,17 @@
-import React from "react"
+import React, { useEffect, useId, useRef } from "react"
+import dynamic from "next/dynamic"
 import { Typography, styled, theme } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
-import VideoJsPlayer, { resolveVideoSources } from "./VideoJsPlayer"
+import type { VideoJsPlayerProps } from "./VideoJsPlayer"
+import { resolveVideoSources } from "./videoSources"
+
+// Lazy-load the video.js player (and its CSS) only when the modal is opened,
+// keeping video.js out of the initial page bundle entirely.
+const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
+  () => import("./VideoJsPlayer"),
+  { ssr: false },
+)
 
 const ModalBackdrop = styled.div({
   position: "fixed",
@@ -80,6 +89,54 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   onClose,
 }) => {
   const sources = resolveVideoSources(video.video?.streaming_url, video.url)
+  const titleId = useId()
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const previousFocusRef = useRef<Element | null>(null)
+
+  // Save the element that had focus before the modal opened so we can restore
+  // it on close, and move focus into the modal immediately.
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement
+    closeButtonRef.current?.focus()
+
+    return () => {
+      ;(previousFocusRef.current as HTMLElement | null)?.focus()
+    }
+  }, [])
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [onClose])
+
+  // Trap focus inside the modal: intercept Tab/Shift+Tab and cycle through
+  // all keyboard-focusable descendants.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return
+    const focusable = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => el.offsetParent !== null)
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }
 
   return (
     <ModalBackdrop
@@ -87,10 +144,16 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <ModalContent>
+      <ModalContent
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={handleKeyDown}
+      >
         <ModalHeader>
-          <ModalTitle>{video.title}</ModalTitle>
+          <ModalTitle id={titleId}>{video.title}</ModalTitle>
           <ModalCloseButton
+            ref={closeButtonRef}
             type="button"
             aria-label="Close video"
             onClick={onClose}

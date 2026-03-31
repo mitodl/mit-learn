@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import Image from "next/image"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
@@ -107,7 +107,9 @@ type VideoCardProps = {
 }
 
 const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
-  const imageUrl = resource.image?.url ?? PLACEHOLDER_IMG
+  const [imgError, setImgError] = useState(false)
+  const imageUrl =
+    !imgError && resource.image?.url ? resource.image.url : PLACEHOLDER_IMG
   const description = resource.description ?? ""
   const duration = resource.video?.duration
     ? formatDurationClockTime(resource.video.duration)
@@ -119,7 +121,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
       tabIndex={0}
       onClick={() => onClick(resource)}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onClick(resource)
+        if (e.key === "Enter" || e.key === " ") {
+          if (e.key === " ") {
+            e.preventDefault()
+          }
+          onClick(resource)
+        }
       }}
     >
       <ThumbnailWrapper>
@@ -128,9 +135,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
           alt={resource.title}
           fill
           sizes="200px"
-          onError={(e) => {
-            ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMG
-          }}
+          onError={() => setImgError(true)}
         />
         {duration && <DurationBadge>{duration}</DurationBadge>}
         <div

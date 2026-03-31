@@ -1033,11 +1033,11 @@ export interface CourseResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof CourseResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -1738,11 +1738,11 @@ export interface DocumentResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof DocumentResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -2391,11 +2391,11 @@ export interface LearningPathResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof LearningPathResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4147,11 +4147,11 @@ export interface PodcastEpisodeResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof PodcastEpisodeResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -4460,11 +4460,11 @@ export interface PodcastResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof PodcastResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -5181,11 +5181,11 @@ export interface ProgramResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof ProgramResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -5460,6 +5460,36 @@ export const ResourceTypeEnum = {
 
 export type ResourceTypeEnum =
   (typeof ResourceTypeEnum)[keyof typeof ResourceTypeEnum]
+
+/**
+ * * `course` - Course * `program` - Program * `learning_material` - Learning Material
+ * @export
+ * @enum {string}
+ */
+
+export const ResourceTypeGroupEnumDescriptions = {
+  course: "Course",
+  program: "Program",
+  learning_material: "Learning Material",
+} as const
+
+export const ResourceTypeGroupEnum = {
+  /**
+   * Course
+   */
+  Course: "course",
+  /**
+   * Program
+   */
+  Program: "program",
+  /**
+   * Learning Material
+   */
+  LearningMaterial: "learning_material",
+} as const
+
+export type ResourceTypeGroupEnum =
+  (typeof ResourceTypeGroupEnum)[keyof typeof ResourceTypeGroupEnum]
 
 /**
  *
@@ -6208,11 +6238,11 @@ export interface VideoPlaylistResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof VideoPlaylistResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}
@@ -6521,11 +6551,11 @@ export interface VideoResource {
    */
   free: boolean
   /**
-   * Return the resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type, e.g. a program displayed as a course). For all other types, returns \"learning_material\".
-   * @type {string}
+   *
+   * @type {ResourceTypeGroupEnum}
    * @memberof VideoResource
    */
-  resource_type_group: string
+  resource_type_group: ResourceTypeGroupEnum
   /**
    *
    * @type {Array<CourseResourceFormatInner>}

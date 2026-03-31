@@ -12,7 +12,7 @@ export type VideoJsSource = {
   type: string
 }
 
-type VideoJsPlayerProps = {
+export type VideoJsPlayerProps = {
   sources: VideoJsSource[]
   poster?: string | null
   autoplay?: boolean
@@ -94,29 +94,6 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
 
 export default VideoJsPlayer
 
-/**
- * Derive the correct video.js source object from a VideoResource.
- * Prefers direct streaming_url; falls back to the YouTube page URL.
- */
-export function resolveVideoSources(
-  streamingUrl: string | null | undefined,
-  pageUrl: string | null | undefined,
-): VideoJsSource[] {
-  if (streamingUrl) {
-    // HLS
-    if (streamingUrl.includes(".m3u8")) {
-      return [{ src: streamingUrl, type: "application/x-mpegURL" }]
-    }
-    // DASH
-    if (streamingUrl.includes(".mpd")) {
-      return [{ src: streamingUrl, type: "application/dash+xml" }]
-    }
-    // MP4 or generic
-    return [{ src: streamingUrl, type: "video/mp4" }]
-  }
-
-  if (pageUrl && /youtube\.com|youtu\.be/.test(pageUrl)) {
-    return [{ src: pageUrl, type: "video/youtube" }]
-  }
-  return []
-}
+// Re-export for backward compatibility — the implementation lives in
+// videoSources.ts so it can be imported without pulling in video.js.
+export { resolveVideoSources } from "./videoSources"

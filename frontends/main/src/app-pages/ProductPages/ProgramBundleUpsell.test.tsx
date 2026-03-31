@@ -52,10 +52,10 @@ describe("ProgramBundleUpsell", () => {
     renderWithProviders(<ProgramBundleUpsell programs={[baseProgram]} />)
 
     const upsell = await screen.findByTestId("program-bundle-upsell-item")
-    // 3 required + 2 electives = 5 total courses
+    // 3 required + 3 electives = 6 total courses
     expect(upsell).toHaveTextContent(programDetail.title)
     expect(upsell).toHaveTextContent(
-      "Includes 5 courses with a single purchase",
+      "Includes 6 courses with a single purchase",
     )
     const link = within(upsell).getByRole("link", {
       name: "View program details",

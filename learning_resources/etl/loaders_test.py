@@ -319,6 +319,11 @@ def test_load_program(  # noqa: PLR0913
         assert isinstance(relationship.child, LearningResource)
         assert relationship.child.readable_id == data.learning_resource.readable_id
 
+    # Verify positions are assigned sequentially matching input order
+    ordered_children = list(result.children.order_by("position"))
+    for idx, relationship in enumerate(ordered_children):
+        assert relationship.position == idx
+
     # Note: update_index is called by load_programs (after pass 2),
     # not by load_program directly, so indexing is not asserted here.
     mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
@@ -857,7 +862,8 @@ def test_load_course_fetch_only(mocker, course_exists):
     else:
         assert result is None
         mock_warn.assert_called_once_with(
-            "No published resource found for %s", resource.readable_id
+            "No published or test_mode resource found for %s",
+            resource.readable_id,
         )
     mock_next_runs_prices.assert_not_called()
 

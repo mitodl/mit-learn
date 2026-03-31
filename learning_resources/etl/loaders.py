@@ -465,14 +465,17 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     if config and config.fetch_only:
         # Do not upsert the course, it should already exist.
         # Just find it and return it.
-        resource = LearningResource.objects.filter(
-            readable_id=resource_id,
-            platform=platform,
-            resource_type=resource_type,
-            published=True,
-        ).first()
+        resource = (
+            LearningResource.objects.filter(
+                readable_id=resource_id,
+                platform=platform,
+                resource_type=resource_type,
+            )
+            .filter(Q(published=True) | Q(test_mode=True))
+            .first()
+        )
         if not resource:
-            log.warning("No published resource found for %s", resource_id)
+            log.warning("No published or test_mode resource found for %s", resource_id)
         return resource, False
 
     if unique_field_name != READABLE_ID_FIELD:
@@ -734,14 +737,20 @@ def load_program(
             )
             if course_resource:
                 course_resources.append(course_resource)
-        # Note: .set() replaces ALL children (including any PROGRAM_PROGRAMS
-        # relationships from prior ETL runs). Pass 2 in load_programs() will
-        # re-create the child-program relationships after all programs exist.
-        learning_resource.resources.set(
-            course_resources,
-            through_defaults={
-                "relation_type": LearningResourceRelationTypes.PROGRAM_COURSES
-            },
+        # Replace all children with position-ordered course relationships.
+        # Pass 2 in load_programs() will re-create child-program
+        # relationships after all programs exist.
+        learning_resource.children.all().delete()
+        LearningResourceRelationship.objects.bulk_create(
+            [
+                LearningResourceRelationship(
+                    parent=learning_resource,
+                    child=course_resource,
+                    relation_type=LearningResourceRelationTypes.PROGRAM_COURSES,
+                    position=position,
+                )
+                for position, course_resource in enumerate(course_resources)
+            ]
         )
 
     return ProgramLoadResult(learning_resource, created, child_programs_data)

@@ -8,18 +8,18 @@ import {
 } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import VideoPage from "@/app-pages/VideoPage/VideoPage"
+import { notFound } from "next/navigation"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Video Playlist",
 })
 
-type Props = {
-  params: Promise<{ id: string }>
-}
-
-const Page: React.FC<Props> = async ({ params }) => {
+const Page: React.FC<PageProps<"/playlist/[id]">> = async ({ params }) => {
   const { id } = await params
   const playlistId = Number(id)
+  if (Number.isNaN(playlistId)) {
+    notFound()
+  }
   const queryClient = getQueryClient()
 
   await Promise.all([
