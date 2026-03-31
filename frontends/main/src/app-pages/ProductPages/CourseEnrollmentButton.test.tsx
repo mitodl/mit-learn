@@ -261,7 +261,7 @@ describe("CourseEnrollmentButton", () => {
     expect(button).toBeDisabled()
   })
 
-  test("Disables button when checkout run has no product even if next_run has pricing", async () => {
+  test("Disables button when non-enrollable next_run has price but selected enrollable checkout run has no product", async () => {
     const pricedNonEnrollableRun = makeRun({
       is_archived: false,
       is_enrollable: false,
