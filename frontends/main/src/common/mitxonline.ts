@@ -145,6 +145,8 @@ const getEnrollmentType = (
 
 /**
  * Determine course enrollment action using enrollable runs only.
+ * If there is a choice to be made by the user, open the dialog.
+ * Otherwise, direct them to the appropriate action (audit, checkout, or none).
  *
  * Rules:
  * - Multiple enrollable runs -> dialog
