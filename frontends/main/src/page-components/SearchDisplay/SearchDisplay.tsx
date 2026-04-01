@@ -628,6 +628,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     placeholderData: keepPreviousData,
+    enabled: !!user,
     select: (
       data:
         | LearningResourcesSearchResponse
