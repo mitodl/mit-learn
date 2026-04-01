@@ -8,37 +8,42 @@ from hubspot.marketing.forms.exceptions import ApiException
 from ol_hubspot.api import get_form, list_forms, submit_form
 
 
-def test_get_form(mocker):
+def test_get_form(mocker, settings):
     """Test fetching a single form uses the SDK method and args."""
-    mock_secret = uuid4().hex
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
     form_id = "form-123"
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
 
-    get_form(access_token=mock_secret, form_id=form_id, archived=True)
+    get_form(form_id=form_id, archived=True)
 
-    hubspot_class.assert_called_once_with(access_token=mock_secret)
+    hubspot_class.assert_called_once_with(
+        access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN
+    )
+
     client.marketing.forms.forms_api.get_by_id.assert_called_once_with(
         form_id=form_id,
         archived=True,
     )
 
 
-def test_list_forms(mocker):
+def test_list_forms(mocker, settings):
     """Test listing forms uses the SDK method and args."""
-    mock_secret = uuid4().hex
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
 
     list_forms(
-        access_token=mock_secret,
         after="cursor",
         limit=25,
         archived=False,
         form_types=["hubspot"],
     )
 
-    hubspot_class.assert_called_once_with(access_token=mock_secret)
+    hubspot_class.assert_called_once_with(
+        access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN
+    )
+
     client.marketing.forms.forms_api.get_page.assert_called_once_with(
         after="cursor",
         limit=25,
@@ -47,9 +52,10 @@ def test_list_forms(mocker):
     )
 
 
-def test_submit_form(mocker):
+def test_submit_form(mocker, settings):
     """Test submitting a form uses the account lookup and hsforms endpoint."""
     mock_secret = uuid4().hex
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
     form_id = "form-456"
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
@@ -61,9 +67,8 @@ def test_submit_form(mocker):
     response.json.return_value = {"inlineMessage": ""}
     post = mocker.patch("ol_hubspot.api.requests.post", return_value=response)
 
-    submit_form(access_token=mock_secret, form_id=form_id, payload=payload)
+    submit_form(form_id=form_id, payload=payload)
 
-    hubspot_class.assert_called_once_with(access_token=mock_secret)
     client.api_request.assert_called_once_with(
         {"path": "/integrations/v1/me", "method": "GET"}
     )
@@ -79,9 +84,10 @@ def test_submit_form(mocker):
     )
 
 
-def test_submit_form_raises_api_exception_for_error_response(mocker):
+def test_submit_form_raises_api_exception_for_error_response(mocker, settings):
     """Test submitting a form raises ApiException for non-2xx responses."""
     mock_secret = uuid4().hex
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
     form_id = "form-456"
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
@@ -93,7 +99,7 @@ def test_submit_form_raises_api_exception_for_error_response(mocker):
     mocker.patch("ol_hubspot.api.requests.post", return_value=response)
 
     with pytest.raises(ApiException) as exc_info:
-        submit_form(access_token=mock_secret, form_id=form_id, payload=payload)
+        submit_form(form_id=form_id, payload=payload)
 
     assert exc_info.value.status == 400
     assert exc_info.value.reason == '{"message":"Bad Request"}'

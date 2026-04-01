@@ -28,7 +28,6 @@ def test_list_forms(client, settings, mocker):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == expected
     get_stub.assert_called_once_with(
-        access_token=mock_secret,
         after=None,
         limit=10,
         archived=False,
@@ -50,7 +49,6 @@ def test_list_forms_multiple_form_types(client, settings, mocker):
 
     assert response.status_code == status.HTTP_200_OK
     get_stub.assert_called_once_with(
-        access_token=mock_secret,
         after=None,
         limit=None,
         archived=None,
@@ -138,7 +136,6 @@ def test_get_form_detail(client, settings, mocker):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == expected
     get_stub.assert_called_once_with(
-        access_token=mock_secret,
         form_id="abc",
         archived=None,
     )
@@ -217,7 +214,6 @@ def test_submit_form_success(client, settings, mocker):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"status": "submitted"}
     submit_stub.assert_called_once_with(
-        access_token=mock_secret,
         form_id="form-123",
         payload=payload,
     )

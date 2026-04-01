@@ -164,7 +164,6 @@ def hubspot_forms_list_view(request):
 
     try:
         result = list_forms(
-            access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN,
             after=request.query_params.get("after"),
             limit=limit,
             archived=archived,
@@ -198,7 +197,6 @@ def hubspot_form_detail_view(request, form_id: str):
 
     try:
         result = get_form(
-            access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN,
             form_id=form_id,
             archived=archived,
         )
@@ -227,7 +225,6 @@ def hubspot_form_submit_view(request, form_id: str):
     try:
         payload = serializer.validated_data
         submit_form(
-            access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN,
             form_id=form_id,
             payload=payload,
         )

@@ -3,20 +3,21 @@
 from http import HTTPStatus
 
 import requests
+from django.conf import settings
 from hubspot import HubSpot
 from hubspot.marketing.forms.exceptions import ApiException
 
 HSFORMS_API_BASE_URL = "https://api.hsforms.com"
 
 
-def get_hubspot_client(access_token: str) -> HubSpot:
+def get_hubspot_client() -> HubSpot:
     """Create an authenticated HubSpot SDK client."""
-    return HubSpot(access_token=access_token)
+    return HubSpot(access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN)
 
 
-def get_form(*, access_token: str, form_id: str, archived: bool | None = None):
+def get_form(*, form_id: str, archived: bool | None = None):
     """Fetch a single HubSpot form definition."""
-    client = get_hubspot_client(access_token)
+    client = get_hubspot_client()
     return client.marketing.forms.forms_api.get_by_id(
         form_id=form_id,
         archived=archived,
@@ -25,14 +26,13 @@ def get_form(*, access_token: str, form_id: str, archived: bool | None = None):
 
 def list_forms(
     *,
-    access_token: str,
     after: str | None = None,
     limit: int | None = None,
     archived: bool | None = None,
     form_types: list[str] | None = None,
 ):
     """Fetch a page of HubSpot form definitions."""
-    client = get_hubspot_client(access_token)
+    client = get_hubspot_client()
     return client.marketing.forms.forms_api.get_page(
         after=after,
         limit=limit,
@@ -43,12 +43,11 @@ def list_forms(
 
 def submit_form(
     *,
-    access_token: str,
     form_id: str,
     payload: dict,
 ):
     """Submit a form submission to HubSpot."""
-    client = get_hubspot_client(access_token)
+    client = get_hubspot_client()
     account_response = client.api_request(
         {"path": "/integrations/v1/me", "method": "GET"}
     )
@@ -58,7 +57,7 @@ def submit_form(
         f"{HSFORMS_API_BASE_URL}/submissions/v3/integration/secure/submit/{portal_id}/{form_id}",
         json=payload,
         headers={
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         },
