@@ -43,13 +43,10 @@ const setMockApiResponses = ({
     ...DEFAULT_SEARCH_RESPONSE,
     ...search,
   })
-  setMockResponse.get(
-    expect.stringContaining(urls.search.vectorResources()),
-    {
-      ...DEFAULT_SEARCH_RESPONSE,
-      ...search,
-    },
-  )
+  setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
+    ...DEFAULT_SEARCH_RESPONSE,
+    ...search,
+  })
   setMockResponse.get(
     urls.offerors.list(),
     offerors ?? factories.learningResources.offerors({ count: 5 }),

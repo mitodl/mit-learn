@@ -40,8 +40,10 @@ import {
   ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
-import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest } from "api/v0"
-import type { LearningResourcesVectorSearchResponse } from "api/v0"
+import type {
+  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest,
+  LearningResourcesVectorSearchResponse,
+} from "api/v0"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
@@ -627,7 +629,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     placeholderData: keepPreviousData,
     select: (
-      data: LearningResourcesSearchResponse | LearningResourcesVectorSearchResponse,
+      data:
+        | LearningResourcesSearchResponse
+        | LearningResourcesVectorSearchResponse,
     ) => {
       // Handle missing data gracefully
       if (
