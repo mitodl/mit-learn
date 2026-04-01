@@ -226,6 +226,7 @@ describe("Learning Resource List Card", () => {
   test("Click action buttons", async () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
+      resource_category: "Course",
       platform: { code: PlatformEnum.Ocw },
     })
 
