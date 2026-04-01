@@ -53,6 +53,7 @@ class TestFetchPageWebdriver:
 
         page_ready_fn = mock_wait_instance.until.call_args_list[0][0][0]
         assert callable(page_ready_fn)
+        mock_driver.execute_script.side_effect = None
         # readyState not complete → False
         mock_driver.execute_script.return_value = "loading"
         assert page_ready_fn(mock_driver) is False
