@@ -9,6 +9,7 @@ import type {
   NewsEventsApiNewsEventsListRequest,
   TestimonialsApi,
   ChannelsApi,
+  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRequest,
 } from "../generated/v0"
 import type {
   LearningResourcesApi as LRApi,
@@ -202,6 +203,8 @@ const testimonials = {
 const search = {
   resources: (params?: LearningResourcesSearchRequest) =>
     `${API_BASE_URL}/api/v1/learning_resources_search/${queryify(params)}`,
+  vectorResources: (params?: VectorLearningResourcesSearchRequest) =>
+    `${API_BASE_URL}/api/v0/vector_learning_resources_search/${queryify(params)}`,
 }
 
 const userMe = {

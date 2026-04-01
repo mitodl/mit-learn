@@ -23,6 +23,7 @@ import {
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
   VideoShortsApi,
+  VectorLearningResourcesSearchApi,
 } from "./generated/v0/api"
 
 import axiosInstance from "./axios"
@@ -98,6 +99,12 @@ const testimonialsApi = new TestimonialsApi(undefined, BASE_PATH, axiosInstance)
 
 const videoShortsApi = new VideoShortsApi(undefined, BASE_PATH, axiosInstance)
 
+const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
 export {
   learningResourcesApi,
   learningPathsApi,
@@ -120,4 +127,5 @@ export {
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
   videoShortsApi,
+  vectorLearningResourcesSearchApi,
 }
