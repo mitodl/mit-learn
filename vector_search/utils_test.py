@@ -590,7 +590,12 @@ def test_prepend_heading_context_mid_chunk_heading():
     assert "Industry-specific Verticals" in docs[1].page_content
 
 
-def test_generate_content_points_resplit_uses_splitter_length_function(mocker):
+@pytest.fixture
+def resplit_setup(mocker):
+    """Set up _generate_content_file_points resplit tests.
+
+    Return a dict with the mock splitter, original doc, and serialized doc.
+    """
     from langchain.schema import Document
 
     class SplitterStub:
@@ -611,86 +616,48 @@ def test_generate_content_points_resplit_uses_splitter_length_function(mocker):
     split_doc_2 = Document(page_content="bc", metadata={})
 
     mocker.patch("vector_search.utils._chunk_documents", return_value=[original_doc])
+    mocker.patch(
+        "vector_search.utils.should_generate_content_embeddings", return_value=True
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_splitter = SplitterStub([split_doc_1, split_doc_2])
+    mocker.patch("vector_search.utils._get_text_splitter", return_value=mock_splitter)
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "abc",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    return {"mock_splitter": mock_splitter, "doc": doc}
+
+
+def test_generate_content_points_resplit_uses_splitter_length_function(
+    mocker, resplit_setup
+):
     mocker.patch("vector_search.utils._prepend_heading_context")
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
-    mocker.patch("vector_search.utils.remove_points_matching_params")
-
-    # Simulate token-based length where len("abc") is small but token count is larger.
-    mock_splitter = SplitterStub([split_doc_1, split_doc_2])
-    mocker.patch("vector_search.utils._get_text_splitter", return_value=mock_splitter)
-
-    mock_dense = mocker.MagicMock()
-    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
-    mock_dense.model_short_name.return_value = "dense"
-    mock_sparse = mocker.MagicMock()
-    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
-    mock_sparse.model_short_name.return_value = "sparse"
-    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
-    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
-
-    doc = {
-        "content": "abc",
-        "platform": {"code": "x"},
-        "resource_readable_id": "r1",
-        "run_readable_id": "run1",
-        "key": "k1",
-    }
-
-    points = list(_generate_content_file_points([doc]))
+    points = list(_generate_content_file_points([resplit_setup["doc"]]))
     assert len(points) == 2
-    mock_splitter.split_documents.assert_called_once()
+    resplit_setup["mock_splitter"].split_documents.assert_called_once()
 
 
-def test_generate_content_points_reapplies_heading_context_after_resplit(mocker):
-    from langchain.schema import Document
-
-    class SplitterStub:
-        def __init__(self, docs):
-            self.split_documents = MagicMock(return_value=docs)
-
-        def __getattr__(self, name):
-            if name == "_length_function":
-                return lambda _text: 10
-            msg = f"Unknown attribute: {name}"
-            raise AttributeError(msg)
-
-    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 5
-    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 1
-
-    original_doc = Document(page_content="abc", metadata={})
-    split_doc_1 = Document(page_content="a", metadata={})
-    split_doc_2 = Document(page_content="bc", metadata={})
-
-    mocker.patch("vector_search.utils._chunk_documents", return_value=[original_doc])
+def test_generate_content_points_reapplies_heading_context_after_resplit(
+    mocker, resplit_setup
+):
     mock_prepend = mocker.patch("vector_search.utils._prepend_heading_context")
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
-    mocker.patch("vector_search.utils.remove_points_matching_params")
-
-    mock_splitter = SplitterStub([split_doc_1, split_doc_2])
-    mocker.patch("vector_search.utils._get_text_splitter", return_value=mock_splitter)
-
-    mock_dense = mocker.MagicMock()
-    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
-    mock_dense.model_short_name.return_value = "dense"
-    mock_sparse = mocker.MagicMock()
-    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
-    mock_sparse.model_short_name.return_value = "sparse"
-    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
-    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
-
-    doc = {
-        "content": "abc",
-        "platform": {"code": "x"},
-        "resource_readable_id": "r1",
-        "run_readable_id": "run1",
-        "key": "k1",
-    }
-
-    list(_generate_content_file_points([doc]))
+    list(_generate_content_file_points([resplit_setup["doc"]]))
     assert mock_prepend.call_count == 2
 
 

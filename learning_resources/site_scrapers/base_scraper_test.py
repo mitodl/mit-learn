@@ -42,108 +42,112 @@ def scraper(settings, mock_driver, mock_wait):
         return BaseScraper("https://example.com")
 
 
-class TestFetchPageWebdriver:
-    def test_fetch_page_returns_inner_html(self, scraper, mock_driver):
-        result = scraper.fetch_page("https://example.com/page")
-        assert result == "<main><div>content</div></main>"
-        mock_driver.get.assert_called_once_with("https://example.com/page")
+def test_fetch_page_returns_inner_html(scraper, mock_driver):
+    result = scraper.fetch_page("https://example.com/page")
+    assert result == "<main><div>content</div></main>"
+    mock_driver.get.assert_called_once_with("https://example.com/page")
 
-    def test_fetch_page_waits_for_page_ready(self, scraper, mock_driver, mock_wait):
-        _, mock_wait_instance = mock_wait
+
+def test_fetch_page_waits_for_page_ready(scraper, mock_driver, mock_wait):
+    _, mock_wait_instance = mock_wait
+    scraper.fetch_page("https://example.com/page")
+
+    page_ready_fn = mock_wait_instance.until.call_args_list[0][0][0]
+    assert callable(page_ready_fn)
+    mock_driver.execute_script.side_effect = None
+    # readyState not complete → False
+    mock_driver.execute_script.return_value = "loading"
+    assert page_ready_fn(mock_driver) is False
+    # readyState complete + <main> with children → True
+    mock_driver.execute_script.return_value = "complete"
+    main_el = MagicMock()
+    main_el.find_elements.return_value = [MagicMock()]
+    mock_driver.find_elements.return_value = [main_el]
+    assert page_ready_fn(mock_driver) is True
+    # readyState complete + no <main> tag → True (skip check)
+    mock_driver.find_elements.return_value = []
+    assert page_ready_fn(mock_driver) is True
+
+
+def test_fetch_page_waits_for_skeleton_invisibility(scraper):
+    with patch(
+        "learning_resources.site_scrapers.base_scraper.expected_conditions"
+    ) as mock_ec:
         scraper.fetch_page("https://example.com/page")
+        mock_ec.invisibility_of_element_located.assert_called_once_with(
+            (By.CLASS_NAME, "MuiSkeleton-root")
+        )
 
-        page_ready_fn = mock_wait_instance.until.call_args_list[0][0][0]
-        assert callable(page_ready_fn)
-        mock_driver.execute_script.side_effect = None
-        # readyState not complete → False
-        mock_driver.execute_script.return_value = "loading"
-        assert page_ready_fn(mock_driver) is False
-        # readyState complete + <main> with children → True
-        mock_driver.execute_script.return_value = "complete"
-        main_el = MagicMock()
-        main_el.find_elements.return_value = [MagicMock()]
-        mock_driver.find_elements.return_value = [main_el]
-        assert page_ready_fn(mock_driver) is True
-        # readyState complete + no <main> tag → True (skip check)
-        mock_driver.find_elements.return_value = []
-        assert page_ready_fn(mock_driver) is True
 
-    def test_fetch_page_waits_for_skeleton_invisibility(self, scraper):
-        with patch(
-            "learning_resources.site_scrapers.base_scraper.expected_conditions"
-        ) as mock_ec:
-            scraper.fetch_page("https://example.com/page")
-            mock_ec.invisibility_of_element_located.assert_called_once_with(
-                (By.CLASS_NAME, "MuiSkeleton-root")
-            )
+def test_fetch_page_returns_html_on_webdriver_timeout(scraper, mock_wait):
+    _, mock_wait_instance = mock_wait
+    mock_wait_instance.until.side_effect = [None, TimeoutException("timeout")]
 
-    def test_fetch_page_returns_html_on_webdriver_timeout(self, scraper, mock_wait):
-        _, mock_wait_instance = mock_wait
-        mock_wait_instance.until.side_effect = [None, TimeoutException("timeout")]
+    result = scraper.fetch_page("https://example.com/page")
 
-        result = scraper.fetch_page("https://example.com/page")
+    assert result == "<main><div>content</div></main>"
 
-        assert result == "<main><div>content</div></main>"
 
-    def test_fetch_page_returns_none_for_empty_url(self, scraper):
-        assert scraper.fetch_page("") is None
-        assert scraper.fetch_page(None) is None
+def test_fetch_page_returns_none_for_empty_url(scraper):
+    assert scraper.fetch_page("") is None
+    assert scraper.fetch_page(None) is None
 
-    def test_fetch_page_uses_webdriver_wait_seconds_setting(
-        self, settings, mock_driver, mock_wait
+
+def test_fetch_page_uses_webdriver_wait_seconds_setting(
+    settings, mock_driver, mock_wait
+):
+    mock_wait_cls, mock_wait_instance = mock_wait
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
+    settings.WEBDRIVER_WAIT_SECONDS = 30
+    with patch(
+        "learning_resources.site_scrapers.base_scraper.get_web_driver",
+        return_value=mock_driver,
     ):
-        mock_wait_cls, mock_wait_instance = mock_wait
-        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
-        settings.WEBDRIVER_WAIT_SECONDS = 30
-        with patch(
-            "learning_resources.site_scrapers.base_scraper.get_web_driver",
-            return_value=mock_driver,
-        ):
-            scraper = BaseScraper("https://example.com")
-            scraper.fetch_page("https://example.com/page")
-            mock_wait_cls.assert_called_with(mock_driver, 30)
-            assert mock_wait_instance.until.call_count == 2
+        scraper = BaseScraper("https://example.com")
+        scraper.fetch_page("https://example.com/page")
+        mock_wait_cls.assert_called_with(mock_driver, 30)
+        assert mock_wait_instance.until.call_count == 2
 
 
-class TestFetchPageRequests:
-    def test_fetch_page_falls_back_to_requests(self, settings):
-        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
-        with (
-            patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
-        ):
-            mock_response = MagicMock()
-            mock_response.ok = True
-            mock_response.text = "<html>content</html>"
-            mock_req.get.return_value = mock_response
-            scraper = BaseScraper("https://example.com")
-            result = scraper.fetch_page("https://example.com/page")
-            assert result == "<html>content</html>"
-
-    def test_fetch_page_returns_none_on_request_error(self, settings):
-        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
-        with (
-            patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
-        ):
-            mock_req.get.side_effect = Exception("connection error")
-            mock_req.exceptions.RequestException = Exception
-            scraper = BaseScraper("https://example.com")
-            result = scraper.fetch_page("https://example.com/page")
-            assert result is None
+def test_fetch_page_falls_back_to_requests(settings):
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
+    with (
+        patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
+    ):
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.text = "<html>content</html>"
+        mock_req.get.return_value = mock_response
+        scraper = BaseScraper("https://example.com")
+        result = scraper.fetch_page("https://example.com/page")
+        assert result == "<html>content</html>"
 
 
-class TestScrape:
-    def test_scrape_returns_page_content(self, scraper):
+def test_fetch_page_returns_none_on_request_error(settings):
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
+    with (
+        patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
+    ):
+        mock_req.get.side_effect = Exception("connection error")
+        mock_req.exceptions.RequestException = Exception
+        scraper = BaseScraper("https://example.com")
+        result = scraper.fetch_page("https://example.com/page")
+        assert result is None
+
+
+def test_scrape_returns_page_content(scraper):
+    result = scraper.scrape()
+    assert result == "<main><div>content</div></main>"
+
+
+def test_scrape_returns_none_on_failure(settings):
+    settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
+    with (
+        patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
+    ):
+        mock_response = MagicMock()
+        mock_response.ok = False
+        mock_req.get.return_value = mock_response
+        scraper = BaseScraper("https://example.com")
         result = scraper.scrape()
-        assert result == "<main><div>content</div></main>"
-
-    def test_scrape_returns_none_on_failure(self, settings):
-        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
-        with (
-            patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
-        ):
-            mock_response = MagicMock()
-            mock_response.ok = False
-            mock_req.get.return_value = mock_response
-            scraper = BaseScraper("https://example.com")
-            result = scraper.scrape()
-            assert result is None
+        assert result is None
