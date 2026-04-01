@@ -46,10 +46,10 @@ class TestFetchPageWebdriver:
         assert result == "<main><div>content</div></main>"
         mock_driver.get.assert_called_once_with("https://example.com/page")
 
-    def test_fetch_page_calls_three_waits(self, scraper, mock_wait):
+    def test_fetch_page_calls_two_waits(self, scraper, mock_wait):
         _, mock_wait_instance = mock_wait
         scraper.fetch_page("https://example.com/page")
-        assert mock_wait_instance.until.call_count == 3
+        assert mock_wait_instance.until.call_count == 2
 
     def test_fetch_page_returns_none_for_empty_url(self, scraper):
         assert scraper.fetch_page("") is None
@@ -68,13 +68,13 @@ class TestFetchPageWebdriver:
             scraper = BaseScraper("https://example.com")
             scraper.fetch_page("https://example.com/page")
             mock_wait_cls.assert_called_with(mock_driver, 30)
-            assert mock_wait_instance.until.call_count == 3
+            assert mock_wait_instance.until.call_count == 2
 
 
 class TestFetchPageRequests:
-    def test_fetch_page_falls_back_to_requests(self):
+    def test_fetch_page_falls_back_to_requests(self, settings):
+        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
         with (
-            patch.object(BaseScraper, "use_webdriver", new=False),
             patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
         ):
             mock_response = MagicMock()
@@ -85,9 +85,9 @@ class TestFetchPageRequests:
             result = scraper.fetch_page("https://example.com/page")
             assert result == "<html>content</html>"
 
-    def test_fetch_page_returns_none_on_request_error(self):
+    def test_fetch_page_returns_none_on_request_error(self, settings):
+        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
         with (
-            patch.object(BaseScraper, "use_webdriver", new=False),
             patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
         ):
             mock_req.get.side_effect = Exception("connection error")
@@ -102,9 +102,9 @@ class TestScrape:
         result = scraper.scrape()
         assert result == "<main><div>content</div></main>"
 
-    def test_scrape_returns_none_on_failure(self):
+    def test_scrape_returns_none_on_failure(self, settings):
+        settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = False
         with (
-            patch.object(BaseScraper, "use_webdriver", new=False),
             patch("learning_resources.site_scrapers.base_scraper.requests") as mock_req,
         ):
             mock_response = MagicMock()

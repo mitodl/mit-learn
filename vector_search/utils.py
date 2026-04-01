@@ -1,5 +1,6 @@
 import gc
 import logging
+import re
 import uuid
 from functools import cache
 
@@ -44,6 +45,10 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
+
+# ATX-style markdown headings (e.g. "## Heading").  This is the format
+# produced by html2text, which is used upstream in html_to_markdown().
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)", re.MULTILINE)
 
 
 @cache
@@ -295,6 +300,57 @@ def _chunk_documents(encoder, texts, metadatas):
             ).create_documents(texts=texts, metadatas=metadatas)
         )
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
+
+
+def _prepend_heading_context(split_docs):
+    """Prepend active markdown heading context to chunks that lack it.
+
+    When a long markdown section is split across multiple chunks, only the
+    first chunk contains the section headings.  This function tracks the
+    heading across sequential chunks and prepends the active
+    headings to any chunk that doesn't already start with them, so every
+    chunk is self-describing (e.g. a course listing chunk will carry its
+    "Required Courses" or "Industry-specific Verticals" heading).
+
+    Note: This runs on all content files, not just marketing pages.
+    The heading context is broadly useful (e.g. OCW lecture notes,
+    course pages) but was motivated by program marketing pages where
+    course listings may lose their section headings after chunking.
+    """
+    # current_headings[level] = "## Heading text" (full line)
+    current_headings = {}
+
+    for doc in split_docs:
+        text = doc.page_content
+
+        # Only prepend context if the chunk has leading text before its
+        # first heading (or no headings at all).  When a chunk starts with
+        # a heading, all its content already belongs to that section.
+        first_heading = _HEADING_RE.search(text)
+        has_leading_text = first_heading is None or bool(
+            text[: first_heading.start()].strip()
+        )
+
+        if has_leading_text and current_headings:
+            chunk_headings = {m.group(0) for m in _HEADING_RE.finditer(text)}
+            prefix_lines = [
+                heading
+                for _, heading in sorted(current_headings.items())
+                if heading not in chunk_headings
+            ]
+            if prefix_lines:
+                doc.page_content = "\n".join(prefix_lines) + "\n\n" + text
+
+        # Update heading state *after* prepending, so next chunk gets
+        # the correct context even when this chunk introduces new headings
+        for match in _HEADING_RE.finditer(text):
+            level = len(match.group(1))
+            line = match.group(0)
+            current_headings[level] = line
+            # Clear deeper headings when a higher-level heading appears
+            for deeper in list(current_headings):
+                if deeper > level:
+                    del current_headings[deeper]
 
 
 def _learning_resource_embedding_context(document):
@@ -571,6 +627,7 @@ def _generate_content_file_points(serialized_content):
         )
 
         split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
+        _prepend_heading_context(split_docs)
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]

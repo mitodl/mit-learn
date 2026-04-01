@@ -37,6 +37,7 @@ from vector_search.utils import (
     _chunk_documents,
     _embed_course_metadata_as_contentfile,
     _get_text_splitter,
+    _prepend_heading_context,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -490,6 +491,102 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _chunk_documents(encoder, ["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
+
+
+def _make_docs(texts):
+    from langchain.schema import Document
+
+    return [Document(page_content=t) for t in texts]
+
+
+def test_prepend_heading_context_no_headings():
+    """Chunks without headings are unchanged"""
+    docs = _make_docs(["Some plain text", "More plain text"])
+    _prepend_heading_context(docs)
+    assert docs[0].page_content == "Some plain text"
+    assert docs[1].page_content == "More plain text"
+
+
+def test_prepend_heading_context_carried_forward():
+    """A heading in chunk 1 is prepended to chunk 2 which lacks it"""
+    docs = _make_docs(
+        [
+            "## Required Courses\n\nCourse A description",
+            "Course B description",
+        ]
+    )
+    _prepend_heading_context(docs)
+    assert docs[0].page_content == "## Required Courses\n\nCourse A description"
+    assert docs[1].page_content.startswith("## Required Courses\n\n")
+    assert "Course B description" in docs[1].page_content
+
+
+def test_prepend_heading_context_not_duplicated():
+    """A heading already in the chunk is not prepended again"""
+    docs = _make_docs(
+        [
+            "## Section A\n\nContent A",
+            "## Section B\n\nContent B",
+        ]
+    )
+    _prepend_heading_context(docs)
+    assert docs[1].page_content == "## Section B\n\nContent B"
+
+
+def test_prepend_heading_context_nested():
+    """Nested heading hierarchy is preserved across chunks"""
+    docs = _make_docs(
+        [
+            "## Program Contents\n\n### Required Courses\n\nCourse A",
+            "Course B details",
+        ]
+    )
+    _prepend_heading_context(docs)
+    assert "## Program Contents" in docs[1].page_content
+    assert "### Required Courses" in docs[1].page_content
+
+
+def test_prepend_heading_context_replaced_at_same_level():
+    """A new heading at the same level replaces the old one"""
+    docs = _make_docs(
+        [
+            "### Required Courses\n\nCourse A",
+            "### Industry-specific Verticals\n\nCourse B",
+            "Course C details",
+        ]
+    )
+    _prepend_heading_context(docs)
+    assert "Industry-specific Verticals" in docs[2].page_content
+    assert "Required Courses" not in docs[2].page_content
+
+
+def test_prepend_heading_context_deeper_headings_cleared():
+    """When a higher-level heading appears, deeper headings are cleared"""
+    docs = _make_docs(
+        [
+            "## Section A\n\n### Subsection A1\n\nContent",
+            "## Section B\n\nContent",
+            "More content in section B",
+        ]
+    )
+    _prepend_heading_context(docs)
+    assert "## Section B" in docs[2].page_content
+    assert "Subsection A1" not in docs[2].page_content
+
+
+def test_prepend_heading_context_mid_chunk_heading():
+    """Leading text from a prior section gets its heading even when a new heading appears mid-chunk"""
+    docs = _make_docs(
+        [
+            "### Required Courses\n\nCourse A",
+            "Course E details\n\n### Industry-specific Verticals\n\nCourse F details",
+        ]
+    )
+    _prepend_heading_context(docs)
+    # The second chunk's leading text belongs to "Required Courses"
+    assert docs[1].page_content.startswith("### Required Courses\n\n")
+    assert "Course E details" in docs[1].page_content
+    assert "Industry-specific Verticals" in docs[1].page_content
 
 
 def test_course_metadata_indexed_with_learning_resources(mocker):
