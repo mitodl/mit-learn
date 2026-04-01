@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.60.2
+Version 0.60.2 (Released April 01, 2026)
 --------------
 
 - bypass dashboard enrollment dialog when there is only one run (#3133)
