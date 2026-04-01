@@ -94,8 +94,8 @@ const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
   },
   {
     icon: IconCertificate,
-    title: "Stackable Certificates",
-    text: "Earn an MIT Open Learning certificate at each learning milestone—module, course, and full program—that demonstrates your AI expertise.",
+    title: "Stackable Credentials",
+    text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
   },
 ]
 
