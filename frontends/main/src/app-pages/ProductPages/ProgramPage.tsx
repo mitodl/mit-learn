@@ -55,7 +55,7 @@ const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
 const RequirementsListing = styled(PlainList)({
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: "16px",
   marginTop: "24px",
 })
 
