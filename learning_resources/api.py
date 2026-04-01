@@ -11,6 +11,7 @@ VIEW_COUNT_BATCH_SIZE = 1000
 def _update_view_counts_batch(resource_ids: list[int]) -> int:
     counts = dict(
         LearningResourceViewEvent.objects.filter(learning_resource_id__in=resource_ids)
+        .values("learning_resource_id")
         .annotate(total=Count("id"))
         .values_list("learning_resource_id", "total")
     )
