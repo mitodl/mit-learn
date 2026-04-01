@@ -581,7 +581,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
-def _generate_content_file_points(serialized_content):
+def _generate_content_file_points(serialized_content):  # noqa: C901, PLR0912, PLR0915
     """
     Chunk and embed content file documents, yielding PointStructs
     """
@@ -628,6 +628,31 @@ def _generate_content_file_points(serialized_content):
 
         split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
         _prepend_heading_context(split_docs)
+
+        # Re-split any chunks that now exceed the size limit after heading
+        # context was prepended.
+        chunk_size = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+        if chunk_size:
+            resplitter = _get_text_splitter(
+                chunk_size=chunk_size,
+                chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
+            )
+            length_fn = getattr(resplitter, "_length_function", len)
+            resplit_performed = False
+            i = 0
+            while i < len(split_docs):
+                if length_fn(split_docs[i].page_content) > chunk_size:
+                    resplit = resplitter.split_documents([split_docs[i]])
+                    split_docs[i : i + 1] = resplit
+                    resplit_performed = True
+                    i += len(resplit)
+                else:
+                    i += 1
+
+            # If an oversized chunk was split again, reapply heading context so
+            # newly created fragments keep section context where needed.
+            if resplit_performed:
+                _prepend_heading_context(split_docs)
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from selenium.webdriver.common.by import By
 
 from learning_resources.site_scrapers.base_scraper import BaseScraper
 
@@ -46,10 +47,33 @@ class TestFetchPageWebdriver:
         assert result == "<main><div>content</div></main>"
         mock_driver.get.assert_called_once_with("https://example.com/page")
 
-    def test_fetch_page_calls_two_waits(self, scraper, mock_wait):
+    def test_fetch_page_waits_for_page_ready(self, scraper, mock_driver, mock_wait):
         _, mock_wait_instance = mock_wait
         scraper.fetch_page("https://example.com/page")
-        assert mock_wait_instance.until.call_count == 2
+
+        page_ready_fn = mock_wait_instance.until.call_args_list[0][0][0]
+        assert callable(page_ready_fn)
+        # readyState not complete → False
+        mock_driver.execute_script.return_value = "loading"
+        assert page_ready_fn(mock_driver) is False
+        # readyState complete + <main> with children → True
+        mock_driver.execute_script.return_value = "complete"
+        main_el = MagicMock()
+        main_el.find_elements.return_value = [MagicMock()]
+        mock_driver.find_elements.return_value = [main_el]
+        assert page_ready_fn(mock_driver) is True
+        # readyState complete + no <main> tag → True (skip check)
+        mock_driver.find_elements.return_value = []
+        assert page_ready_fn(mock_driver) is True
+
+    def test_fetch_page_waits_for_skeleton_invisibility(self, scraper):
+        with patch(
+            "learning_resources.site_scrapers.base_scraper.expected_conditions"
+        ) as mock_ec:
+            scraper.fetch_page("https://example.com/page")
+            mock_ec.invisibility_of_element_located.assert_called_once_with(
+                (By.CLASS_NAME, "MuiSkeleton-root")
+            )
 
     def test_fetch_page_returns_none_for_empty_url(self, scraper):
         assert scraper.fetch_page("") is None
