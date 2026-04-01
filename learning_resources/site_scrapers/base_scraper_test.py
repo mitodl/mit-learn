@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 
 from learning_resources.site_scrapers.base_scraper import BaseScraper
@@ -75,6 +76,14 @@ class TestFetchPageWebdriver:
             mock_ec.invisibility_of_element_located.assert_called_once_with(
                 (By.CLASS_NAME, "MuiSkeleton-root")
             )
+
+    def test_fetch_page_returns_html_on_webdriver_timeout(self, scraper, mock_wait):
+        _, mock_wait_instance = mock_wait
+        mock_wait_instance.until.side_effect = [None, TimeoutException("timeout")]
+
+        result = scraper.fetch_page("https://example.com/page")
+
+        assert result == "<main><div>content</div></main>"
 
     def test_fetch_page_returns_none_for_empty_url(self, scraper):
         assert scraper.fetch_page("") is None
