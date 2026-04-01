@@ -12,6 +12,7 @@ import {
   SchoolsApi,
   FeaturedApi,
   MediaApi,
+  VideoPlaylistsApi,
 } from "./generated/v1/api"
 
 import {
@@ -98,6 +99,12 @@ const testimonialsApi = new TestimonialsApi(undefined, BASE_PATH, axiosInstance)
 
 const videoShortsApi = new VideoShortsApi(undefined, BASE_PATH, axiosInstance)
 
+const videoPlaylistsApi = new VideoPlaylistsApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
 export {
   learningResourcesApi,
   learningPathsApi,
@@ -120,4 +127,5 @@ export {
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
   videoShortsApi,
+  videoPlaylistsApi,
 }

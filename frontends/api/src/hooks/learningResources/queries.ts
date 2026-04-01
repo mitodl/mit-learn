@@ -6,6 +6,7 @@ import {
   platformsApi,
   schoolsApi,
   featuredApi,
+  videoPlaylistsApi,
 } from "../../clients"
 
 import type {
@@ -17,6 +18,7 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
+  VideoPlaylistResource,
 } from "../../generated/v1"
 import { queryOptions } from "@tanstack/react-query"
 import { hasPosition, randomizeGroups } from "./util"
@@ -208,6 +210,23 @@ const offerorQueries = {
     }),
 }
 
+const videoPlaylistKeys = {
+  root: ["video_playlists"],
+  detailRoot: () => [...videoPlaylistKeys.root, "detail"],
+  detail: (id: number) => [...videoPlaylistKeys.detailRoot(), id],
+}
+
+const videoPlaylistQueries = {
+  detail: (id: number) =>
+    queryOptions<VideoPlaylistResource>({
+      queryKey: videoPlaylistKeys.detail(id),
+      queryFn: () =>
+        videoPlaylistsApi
+          .videoPlaylistsRetrieve({ id })
+          .then((res) => res.data as VideoPlaylistResource),
+    }),
+}
+
 export {
   learningResourceKeys,
   learningResourceQueries,
@@ -215,4 +234,5 @@ export {
   platformsQueries,
   schoolQueries,
   offerorQueries,
+  videoPlaylistQueries,
 }

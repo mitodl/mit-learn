@@ -11,6 +11,7 @@ export enum FeatureFlags {
   UniversalAI = "universal-ai",
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
+  VideoPlaylistPage = "video-playlist-page",
 }
 
 /**
