@@ -1957,6 +1957,1162 @@ export type DocumentResourceResourceTypeEnum =
   (typeof DocumentResourceResourceTypeEnum)[keyof typeof DocumentResourceResourceTypeEnum]
 
 /**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPaging
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPaging {
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPaging
+   */
+  paging?: HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging
+  /**
+   *
+   * @type {Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPaging
+   */
+  results?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem>
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging {
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging
+   */
+  next?: HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext
+   */
+  link?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext
+   */
+  after?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  form_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  created_at?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  updated_at?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  archived?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  archived_at?: string | null
+  /**
+   *
+   * @type {Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  field_groups?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem>
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  configuration?: HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  display_options?: HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem
+   */
+  legal_consent_options?: HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration {
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  create_new_contact_for_new_email?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  editable?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  allow_link_to_reset_known_values?: boolean | null
+  /**
+   *
+   * @type {Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  lifecycle_stages?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem>
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  post_submit_action?: HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  language?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  pre_populate_known_values?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  cloneable?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  notify_contact_owner?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  recaptcha_enabled?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  archivable?: boolean | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration
+   */
+  notify_recipients?: Array<string>
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem
+   */
+  object_type_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem
+   */
+  value?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction
+   */
+  type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction
+   */
+  value?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions {
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+   */
+  render_raw_html?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+   */
+  css_class?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+   */
+  theme?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+   */
+  submit_button_text?: string | null
+  /**
+   *
+   * @type {HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions
+   */
+  style?: HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  label_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  legal_consent_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  font_family?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  legal_consent_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  background_width?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  help_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  submit_font_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  label_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  submit_alignment?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  submit_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  help_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle
+   */
+  submit_color?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem
+   */
+  group_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem
+   */
+  rich_text_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem
+   */
+  rich_text?: string | null
+  /**
+   *
+   * @type {Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem
+   */
+  fields?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated>
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  object_type_id?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  hidden?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  default_value?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  label?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  placeholder?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  field_type?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  required?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  use_country_code_select?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated
+   */
+  allow_multiple_files?: boolean | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  type?: string | null
+  /**
+   *
+   * @type {Array<number>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  subscription_type_ids?: Array<number>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  lawful_basis?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  privacy_text?: string | null
+  /**
+   *
+   * @type {Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem>}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  communications_checkboxes?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  communication_consent_text?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  consent_to_process_checkbox_label?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  consent_to_process_footer_text?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions
+   */
+  consent_to_process_text?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem
+ */
+export interface HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem {
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  subscription_type_id?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  label?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  required?: boolean | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinition
+ */
+export interface HubspotFormDefinition {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  form_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  created_at?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  updated_at?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinition
+   */
+  archived?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinition
+   */
+  archived_at?: string | null
+  /**
+   *
+   * @type {Array<HubspotFormDefinitionFieldGroupItem>}
+   * @memberof HubspotFormDefinition
+   */
+  field_groups?: Array<HubspotFormDefinitionFieldGroupItem>
+  /**
+   *
+   * @type {HubspotFormDefinitionConfiguration}
+   * @memberof HubspotFormDefinition
+   */
+  configuration?: HubspotFormDefinitionConfiguration
+  /**
+   *
+   * @type {HubspotFormDefinitionDisplayOptions}
+   * @memberof HubspotFormDefinition
+   */
+  display_options?: HubspotFormDefinitionDisplayOptions
+  /**
+   *
+   * @type {HubspotFormDefinitionLegalConsentOptions}
+   * @memberof HubspotFormDefinition
+   */
+  legal_consent_options?: HubspotFormDefinitionLegalConsentOptions
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionConfiguration
+ */
+export interface HubspotFormDefinitionConfiguration {
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  create_new_contact_for_new_email?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  editable?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  allow_link_to_reset_known_values?: boolean | null
+  /**
+   *
+   * @type {Array<HubspotFormDefinitionConfigurationLifecycleStageItem>}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  lifecycle_stages?: Array<HubspotFormDefinitionConfigurationLifecycleStageItem>
+  /**
+   *
+   * @type {HubspotFormDefinitionConfigurationPostSubmitAction}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  post_submit_action?: HubspotFormDefinitionConfigurationPostSubmitAction
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  language?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  pre_populate_known_values?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  cloneable?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  notify_contact_owner?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  recaptcha_enabled?: boolean | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  archivable?: boolean | null
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof HubspotFormDefinitionConfiguration
+   */
+  notify_recipients?: Array<string>
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionConfigurationLifecycleStageItem
+ */
+export interface HubspotFormDefinitionConfigurationLifecycleStageItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionConfigurationLifecycleStageItem
+   */
+  object_type_id?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionConfigurationLifecycleStageItem
+   */
+  value?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionConfigurationPostSubmitAction
+ */
+export interface HubspotFormDefinitionConfigurationPostSubmitAction {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionConfigurationPostSubmitAction
+   */
+  type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionConfigurationPostSubmitAction
+   */
+  value?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionDisplayOptions
+ */
+export interface HubspotFormDefinitionDisplayOptions {
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionDisplayOptions
+   */
+  render_raw_html?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptions
+   */
+  css_class?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptions
+   */
+  theme?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptions
+   */
+  submit_button_text?: string | null
+  /**
+   *
+   * @type {HubspotFormDefinitionDisplayOptionsStyle}
+   * @memberof HubspotFormDefinitionDisplayOptions
+   */
+  style?: HubspotFormDefinitionDisplayOptionsStyle
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionDisplayOptionsStyle
+ */
+export interface HubspotFormDefinitionDisplayOptionsStyle {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  label_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  legal_consent_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  font_family?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  legal_consent_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  background_width?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  help_text_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  submit_font_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  label_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  submit_alignment?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  submit_size?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  help_text_color?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionDisplayOptionsStyle
+   */
+  submit_color?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionFieldGroupItem
+ */
+export interface HubspotFormDefinitionFieldGroupItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItem
+   */
+  group_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItem
+   */
+  rich_text_type?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItem
+   */
+  rich_text?: string | null
+  /**
+   *
+   * @type {Array<HubspotFormDefinitionFieldGroupItemFieldItem>}
+   * @memberof HubspotFormDefinitionFieldGroupItem
+   */
+  fields?: Array<HubspotFormDefinitionFieldGroupItemFieldItem>
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionFieldGroupItemFieldItem
+ */
+export interface HubspotFormDefinitionFieldGroupItemFieldItem {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  object_type_id?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  hidden?: boolean | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  default_value?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  name?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  label?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  placeholder?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  field_type?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  required?: boolean | null
+  /**
+   *
+   * @type {HubspotFormDefinitionFieldGroupItemFieldItemValidation}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  validation?: HubspotFormDefinitionFieldGroupItemFieldItemValidation
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  use_country_code_select?: boolean | null
+  /**
+   *
+   * @type {Array<HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated>}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  options?: Array<HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated>
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  default_values?: Array<string>
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItem
+   */
+  allow_multiple_files?: boolean | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated
+ */
+export interface HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated {
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated
+   */
+  display_order?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated
+   */
+  description?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated
+   */
+  label?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated
+   */
+  value?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionFieldGroupItemFieldItemValidation
+ */
+export interface HubspotFormDefinitionFieldGroupItemFieldItemValidation {
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemValidation
+   */
+  min_allowed_digits?: number | null
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormDefinitionFieldGroupItemFieldItemValidation
+   */
+  max_allowed_digits?: number | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionLegalConsentOptions
+ */
+export interface HubspotFormDefinitionLegalConsentOptions {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  type?: string | null
+  /**
+   *
+   * @type {Array<number>}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  subscription_type_ids?: Array<number>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  lawful_basis?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  privacy_text?: string | null
+  /**
+   *
+   * @type {Array<HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem>}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  communications_checkboxes?: Array<HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  communication_consent_text?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  consent_to_process_checkbox_label?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  consent_to_process_footer_text?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptions
+   */
+  consent_to_process_text?: string | null
+}
+/**
+ *
+ * @export
+ * @interface HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem
+ */
+export interface HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem {
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  subscription_type_id?: number | null
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  label?: string | null
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem
+   */
+  required?: boolean | null
+}
+/**
+ * Serializer for individual form field values in submission.
+ * @export
+ * @interface HubspotFormFieldValueRequest
+ */
+export interface HubspotFormFieldValueRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormFieldValueRequest
+   */
+  name: string
+  /**
+   *
+   * @type {any}
+   * @memberof HubspotFormFieldValueRequest
+   */
+  value: any | null
+}
+/**
+ * Serializer for HubSpot form submission requests.
+ * @export
+ * @interface HubspotFormSubmitRequestRequest
+ */
+export interface HubspotFormSubmitRequestRequest {
+  /**
+   *
+   * @type {Array<HubspotFormFieldValueRequest>}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  fields: Array<HubspotFormFieldValueRequest>
+}
+/**
+ * Serializer for HubSpot form submission response.
+ * @export
+ * @interface HubspotFormSubmitResponse
+ */
+export interface HubspotFormSubmitResponse {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitResponse
+   */
+  status?: string
+}
+/**
  * Serializer for the LearningPath model
  * @export
  * @interface LearningPath
@@ -13393,6 +14549,526 @@ export const FeaturedListSortbyEnum = {
 } as const
 export type FeaturedListSortbyEnum =
   (typeof FeaturedListSortbyEnum)[keyof typeof FeaturedListSortbyEnum]
+
+/**
+ * HubspotApi - axios parameter creator
+ * @export
+ */
+export const HubspotApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Get one HubSpot form by id from the backend.
+     * @param {string} form_id
+     * @param {boolean} [archived]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsDetailRetrieve: async (
+      form_id: string,
+      archived?: boolean,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'form_id' is not null or undefined
+      assertParamExists("hubspotFormsDetailRetrieve", "form_id", form_id)
+      const localVarPath = `/api/v1/hubspot/forms/{form_id}/`.replace(
+        `{${"form_id"}}`,
+        encodeURIComponent(String(form_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (archived !== undefined) {
+        localVarQueryParameter["archived"] = archived
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * List HubSpot forms from the backend.
+     * @param {string} [after]
+     * @param {boolean} [archived]
+     * @param {Array<string>} [form_types]
+     * @param {number} [limit]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsList: async (
+      after?: string,
+      archived?: boolean,
+      form_types?: Array<string>,
+      limit?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/hubspot/forms/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (after !== undefined) {
+        localVarQueryParameter["after"] = after
+      }
+
+      if (archived !== undefined) {
+        localVarQueryParameter["archived"] = archived
+      }
+
+      if (form_types) {
+        localVarQueryParameter["form_types"] = form_types
+      }
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
+     * Submit a form to HubSpot.
+     * @param {string} form_id
+     * @param {HubspotFormSubmitRequestRequest} HubspotFormSubmitRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsSubmit: async (
+      form_id: string,
+      HubspotFormSubmitRequestRequest: HubspotFormSubmitRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'form_id' is not null or undefined
+      assertParamExists("hubspotFormsSubmit", "form_id", form_id)
+      // verify required parameter 'HubspotFormSubmitRequestRequest' is not null or undefined
+      assertParamExists(
+        "hubspotFormsSubmit",
+        "HubspotFormSubmitRequestRequest",
+        HubspotFormSubmitRequestRequest,
+      )
+      const localVarPath = `/api/v1/hubspot/forms/{form_id}/submit/`.replace(
+        `{${"form_id"}}`,
+        encodeURIComponent(String(form_id)),
+      )
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        HubspotFormSubmitRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * HubspotApi - functional programming interface
+ * @export
+ */
+export const HubspotApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = HubspotApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Get one HubSpot form by id from the backend.
+     * @param {string} form_id
+     * @param {boolean} [archived]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async hubspotFormsDetailRetrieve(
+      form_id: string,
+      archived?: boolean,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<HubspotFormDefinition>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.hubspotFormsDetailRetrieve(
+          form_id,
+          archived,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["HubspotApi.hubspotFormsDetailRetrieve"]?.[index]
+          ?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * List HubSpot forms from the backend.
+     * @param {string} [after]
+     * @param {boolean} [archived]
+     * @param {Array<string>} [form_types]
+     * @param {number} [limit]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async hubspotFormsList(
+      after?: string,
+      archived?: boolean,
+      form_types?: Array<string>,
+      limit?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<HubspotCollectionResponseFormDefinitionBaseForwardPaging>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.hubspotFormsList(
+          after,
+          archived,
+          form_types,
+          limit,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["HubspotApi.hubspotFormsList"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
+     * Submit a form to HubSpot.
+     * @param {string} form_id
+     * @param {HubspotFormSubmitRequestRequest} HubspotFormSubmitRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async hubspotFormsSubmit(
+      form_id: string,
+      HubspotFormSubmitRequestRequest: HubspotFormSubmitRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<HubspotFormSubmitResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.hubspotFormsSubmit(
+          form_id,
+          HubspotFormSubmitRequestRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["HubspotApi.hubspotFormsSubmit"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * HubspotApi - factory interface
+ * @export
+ */
+export const HubspotApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = HubspotApiFp(configuration)
+  return {
+    /**
+     * Get one HubSpot form by id from the backend.
+     * @param {HubspotApiHubspotFormsDetailRetrieveRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsDetailRetrieve(
+      requestParameters: HubspotApiHubspotFormsDetailRetrieveRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<HubspotFormDefinition> {
+      return localVarFp
+        .hubspotFormsDetailRetrieve(
+          requestParameters.form_id,
+          requestParameters.archived,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * List HubSpot forms from the backend.
+     * @param {HubspotApiHubspotFormsListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsList(
+      requestParameters: HubspotApiHubspotFormsListRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<HubspotCollectionResponseFormDefinitionBaseForwardPaging> {
+      return localVarFp
+        .hubspotFormsList(
+          requestParameters.after,
+          requestParameters.archived,
+          requestParameters.form_types,
+          requestParameters.limit,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
+     * Submit a form to HubSpot.
+     * @param {HubspotApiHubspotFormsSubmitRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    hubspotFormsSubmit(
+      requestParameters: HubspotApiHubspotFormsSubmitRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<HubspotFormSubmitResponse> {
+      return localVarFp
+        .hubspotFormsSubmit(
+          requestParameters.form_id,
+          requestParameters.HubspotFormSubmitRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for hubspotFormsDetailRetrieve operation in HubspotApi.
+ * @export
+ * @interface HubspotApiHubspotFormsDetailRetrieveRequest
+ */
+export interface HubspotApiHubspotFormsDetailRetrieveRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotApiHubspotFormsDetailRetrieve
+   */
+  readonly form_id: string
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotApiHubspotFormsDetailRetrieve
+   */
+  readonly archived?: boolean
+}
+
+/**
+ * Request parameters for hubspotFormsList operation in HubspotApi.
+ * @export
+ * @interface HubspotApiHubspotFormsListRequest
+ */
+export interface HubspotApiHubspotFormsListRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotApiHubspotFormsList
+   */
+  readonly after?: string
+
+  /**
+   *
+   * @type {boolean}
+   * @memberof HubspotApiHubspotFormsList
+   */
+  readonly archived?: boolean
+
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof HubspotApiHubspotFormsList
+   */
+  readonly form_types?: Array<string>
+
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotApiHubspotFormsList
+   */
+  readonly limit?: number
+}
+
+/**
+ * Request parameters for hubspotFormsSubmit operation in HubspotApi.
+ * @export
+ * @interface HubspotApiHubspotFormsSubmitRequest
+ */
+export interface HubspotApiHubspotFormsSubmitRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotApiHubspotFormsSubmit
+   */
+  readonly form_id: string
+
+  /**
+   *
+   * @type {HubspotFormSubmitRequestRequest}
+   * @memberof HubspotApiHubspotFormsSubmit
+   */
+  readonly HubspotFormSubmitRequestRequest: HubspotFormSubmitRequestRequest
+}
+
+/**
+ * HubspotApi - object-oriented interface
+ * @export
+ * @class HubspotApi
+ * @extends {BaseAPI}
+ */
+export class HubspotApi extends BaseAPI {
+  /**
+   * Get one HubSpot form by id from the backend.
+   * @param {HubspotApiHubspotFormsDetailRetrieveRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof HubspotApi
+   */
+  public hubspotFormsDetailRetrieve(
+    requestParameters: HubspotApiHubspotFormsDetailRetrieveRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return HubspotApiFp(this.configuration)
+      .hubspotFormsDetailRetrieve(
+        requestParameters.form_id,
+        requestParameters.archived,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * List HubSpot forms from the backend.
+   * @param {HubspotApiHubspotFormsListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof HubspotApi
+   */
+  public hubspotFormsList(
+    requestParameters: HubspotApiHubspotFormsListRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return HubspotApiFp(this.configuration)
+      .hubspotFormsList(
+        requestParameters.after,
+        requestParameters.archived,
+        requestParameters.form_types,
+        requestParameters.limit,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Submit a form to HubSpot.
+   * @param {HubspotApiHubspotFormsSubmitRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof HubspotApi
+   */
+  public hubspotFormsSubmit(
+    requestParameters: HubspotApiHubspotFormsSubmitRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return HubspotApiFp(this.configuration)
+      .hubspotFormsSubmit(
+        requestParameters.form_id,
+        requestParameters.HubspotFormSubmitRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
 
 /**
  * LearningResourceDisplayInfoApi - axios parameter creator
