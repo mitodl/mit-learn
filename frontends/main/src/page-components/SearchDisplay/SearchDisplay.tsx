@@ -617,16 +617,16 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
-  const { data: user } = useUserMe()
+  const { data: user, isLoading: isUserLoading } = useUserMe()
 
-  const isVectorSearch =
-    searchParams.get("vector_search") === "true" &&
-    user?.is_learning_path_editor
+  const wantsVectorSearch = searchParams.get("vector_search") === "true"
+  const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
 
   const { data, isLoading, isFetching } = useQuery({
     ...(isVectorSearch
       ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
       : learningResourceQueries.search(allParams as LRSearchRequest)),
+    enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
     select: (
       data:
