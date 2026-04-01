@@ -206,6 +206,7 @@ def test_generate_learning_resources_text_clause(
                                                 "offered_by",
                                                 "course_feature",
                                                 "video.transcript.english",
+                                                "promoted_search_terms^1000",
                                             ],
                                             **extra_params,
                                         }
@@ -355,6 +356,7 @@ def test_generate_learning_resources_text_clause(
                             "offered_by",
                             "course_feature",
                             "video.transcript.english",
+                            "promoted_search_terms^1000",
                         ],
                         **extra_params,
                     }
@@ -525,6 +527,7 @@ def test_generate_learning_resources_text_clause(
                                                 "offered_by",
                                                 "course_feature",
                                                 "video.transcript.english",
+                                                "promoted_search_terms^1000",
                                             ],
                                         }
                                     },
@@ -665,6 +668,7 @@ def test_generate_learning_resources_text_clause(
                             "offered_by",
                             "course_feature",
                             "video.transcript.english",
+                            "promoted_search_terms^1000",
                         ],
                     }
                 },
@@ -847,6 +851,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "offered_by",
                                                         "course_feature",
                                                         "video.transcript.english",
+                                                        "promoted_search_terms^1000",
                                                     ],
                                                     "type": "phrase",
                                                     "slop": 2,
@@ -1028,6 +1033,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                             "offered_by",
                             "course_feature",
                             "video.transcript.english",
+                            "promoted_search_terms^1000",
                         ],
                         "type": "phrase",
                         "slop": 2,
@@ -1203,6 +1209,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "offered_by",
                                                         "course_feature",
                                                         "video.transcript.english",
+                                                        "promoted_search_terms^1000",
                                                     ],
                                                 }
                                             },
@@ -1364,6 +1371,7 @@ def test_generate_learning_resources_text_clause_with_min_score():
                             "offered_by",
                             "course_feature",
                             "video.transcript.english",
+                            "promoted_search_terms^1000",
                         ],
                     }
                 },
@@ -1987,6 +1995,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                                                     "offered_by",
                                                                     "course_feature",
                                                                     "video.transcript.english",
+                                                                    "promoted_search_terms^1000",
                                                                 ],
                                                                 "type": "best_fields",
                                                             }
@@ -2158,6 +2167,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                                             "offered_by",
                                             "course_feature",
                                             "video.transcript.english",
+                                            "promoted_search_terms^1000",
                                         ],
                                         "type": "best_fields",
                                     }
@@ -2413,6 +2423,7 @@ def test_execute_learn_search_for_learning_resource_query(opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }
@@ -2503,6 +2514,7 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opens
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }
@@ -2609,6 +2621,7 @@ def test_execute_learn_search_with_script_score(
                                                                             "offered_by",
                                                                             "course_feature",
                                                                             "video.transcript.english",
+                                                                            "promoted_search_terms^1000",
                                                                         ],
                                                                         "type": "phrase",
                                                                     }
@@ -2780,6 +2793,7 @@ def test_execute_learn_search_with_script_score(
                                                     "offered_by",
                                                     "course_feature",
                                                     "video.transcript.english",
+                                                    "promoted_search_terms^1000",
                                                 ],
                                                 "type": "phrase",
                                             }
@@ -3049,6 +3063,7 @@ def test_execute_learn_search_with_script_score(
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }
@@ -3152,6 +3167,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                             "offered_by",
                                                                             "course_feature",
                                                                             "video.transcript.english",
+                                                                            "promoted_search_terms^1000",
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -3322,6 +3338,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                         "offered_by",
                                                         "course_feature",
                                                         "video.transcript.english",
+                                                        "promoted_search_terms^1000",
                                                     ],
                                                     "type": "best_fields",
                                                 }
@@ -3555,6 +3572,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }
@@ -3616,6 +3634,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                             "offered_by",
                                                                             "course_feature",
                                                                             "video.transcript.english",
+                                                                            "promoted_search_terms^1000",
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -3790,6 +3809,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                             "offered_by",
                                             "course_feature",
                                             "video.transcript.english",
+                                            "promoted_search_terms^1000",
                                         ],
                                         "type": "best_fields",
                                     }
@@ -4045,6 +4065,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }
@@ -4223,6 +4244,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "promoted_search_terms",
             ]
         },
     }

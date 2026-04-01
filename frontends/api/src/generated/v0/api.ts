@@ -3316,6 +3316,12 @@ export interface LearningResourcesVectorSearchResponse {
    * @memberof LearningResourcesVectorSearchResponse
    */
   metadata: ContentFileVectorSearchResponseMetadata
+  /**
+   *
+   * @type {Array<LearningResource>}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  promoted_results: Array<LearningResource>
 }
 /**
  * Serializer for News FeedItem

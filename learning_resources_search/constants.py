@@ -338,6 +338,7 @@ LEARNING_RESOURCE_MAP = {
     "time_commitment": {"type": "keyword"},
     "min_weekly_hours": {"type": "integer"},
     "max_weekly_hours": {"type": "integer"},
+    "promoted_search_terms": ENGLISH_TEXT_FIELD,
 }
 
 EMBEDDING_FIELDS = {
@@ -417,6 +418,7 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
     "offered_by",
     "course_feature",
     "video.transcript.english",
+    "promoted_search_terms^1000",
 ]
 
 TOPICS_QUERY_FIELDS = ["topics.name"]
@@ -493,6 +495,7 @@ SOURCE_EXCLUDED_FIELDS = [
     "flashcards",
     "vector_embedding",
     "video.transcript",
+    "promoted_search_terms",
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {
@@ -513,3 +516,85 @@ SYNONYMS = [
     "large language model, llm",
     "micromasters, micro masters",
 ]
+
+PROMOTED_SEARCH_TERMS_MAPPING = {
+    "program-v1:UAI+B2C": [
+        "Universal AI",
+        "AI",
+        "AI basics",
+        "AI intro",
+        "AI introduction",
+        "AI fundamentals",
+        "AI foundations",
+        "Artificial intelligence",
+        "Machine learning",
+        "Data analytics",
+        "Deep learning",
+        "Prescriptive AI",
+        "Predictive AI",
+        "Multimodal AI",
+        "Large language models",
+        "LLMs",
+        "Generative AI",
+        "Gen AI",
+        "AI ethics",
+        "Optimization",
+        "Python",
+        "Computer vision",
+        "AI framework",
+        "AI models",
+        "AI agents",
+        "Agentic AI",
+        "AI and sustainability",
+        "AI and health",
+        "AI and healthcare",
+        "AI and medicine",
+        "AI and entrepreneurship",
+    ],
+    "program-v1:UAI+B2C.1": [
+        "Python",
+        "Coding",
+        "Data analytics",
+        "Data visualization",
+        "Machine learning",
+        "ML",
+        "Supervised learning",
+        "Unsupervised learning",
+    ],
+    "program-v1:UAI+B2C.2": [
+        "Deep learning",
+        "Neural network",
+        "Optimization",
+        "Keras",
+        "TensorFlow",
+        "PyTorch",
+        "Computer vision",
+    ],
+    "program-v1:UAI+B2C.3": [
+        "Predictive analytics",
+        "Prescriptive analytics",
+        "Optimization",
+    ],
+    "program-v1:UAI+B2C.4": [
+        "Large language models",
+        "LLM",
+        "Generative AI",
+        "Gen AI",
+        "Multimodal AI",
+    ],
+    "program-v1:UAI+B2C.5": ["AI ethics", "AI explainability"],
+    "course-v1:UAI_SOURCE+UAI.SE.1": ["AI and sustainability", "AI and energy"],
+    "course-v1:UAI_SOURCE+UAI.ST.1": ["AI and sustainability", "AI and transportation"],
+    "course-v1:UAI_SOURCE+UAI.MLTL.1": ["AI and transportation"],
+    "course-v1:UAI_SOURCE+UAI.PM.1": ["Healthcare", "AI and healthcare"],
+    "course-v1:UAI_SOURCE+UAI.HAIM.1": ["Healthcare", "AI and healthcare"],
+    "course-v1:UAI_SOURCE+UAI.ENT.1": [
+        "AI and entrepreneurship",
+        "Entrepreneurship",
+        "Innovation",
+        "AI and innovation",
+    ],
+}
+
+
+PROMOTED_READABLE_IDS = set(PROMOTED_SEARCH_TERMS_MAPPING.keys())

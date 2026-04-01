@@ -40,9 +40,10 @@ from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
+    PROMOTED_SEARCH_TERMS_MAPPING,
 )
 from learning_resources_search.models import PercolateQuery
-from learning_resources_search.utils import remove_child_queries
+from learning_resources_search.utils import get_promoted_results, remove_child_queries
 from main.serializers import (
     COMMON_IGNORED_FIELDS,
 )
@@ -165,6 +166,11 @@ def serialize_learning_resource_for_update(
     is_incomplete_or_stale = (
         resource_age_date and resource_age_date.year <= STALENESS_CUTOFF
     ) or (learning_resource_obj.completeness < COMPLETENESS_CUTOFF)
+
+    if PROMOTED_SEARCH_TERMS_MAPPING.get(learning_resource_obj.readable_id):
+        serialized_data["promoted_search_terms"] = PROMOTED_SEARCH_TERMS_MAPPING[
+            learning_resource_obj.readable_id
+        ]
 
     return {
         "resource_relations": {"name": "resource"},
@@ -658,10 +664,20 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     search
     """
 
+    promoted_results = serializers.SerializerMethodField()
+
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
         return (hit.get("_source") for hit in hits)
+
+    @extend_schema_field(LearningResourceSerializer(many=True))
+    def get_promoted_results(self, _):
+        request = self.context.get("request")
+        if request and not request.GET.get("q"):
+            return get_promoted_results()
+        else:
+            return []
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):

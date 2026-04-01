@@ -36,6 +36,7 @@ const makeSearchResponse = (
     },
     count: results.length,
     results: results,
+    promoted_results: [],
     next: null,
     previous: null,
   }
