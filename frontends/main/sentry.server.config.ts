@@ -53,6 +53,13 @@ function parseSampleRate(
 // of requests create spans at all. All sampled spans flow to both Sentry's
 // internal processor AND the OTLP processor (→ Alloy/Tempo).
 // Defaults to 1.0 (100%) so that Alloy receives every trace in production.
+//
+// NOTE: OTEL_TRACES_SAMPLER is intentionally NOT read here. Sentry manages its
+// own OTEL provider via SentrySampler, which already implements parent-based
+// sampling as a built-in rule: when an incoming request carries a sampled
+// traceparent header, that decision is inherited before tracesSampleRate is
+// consulted — equivalent to parentbased_traceidratio. The standard OTEL env var
+// has no effect on Sentry's provider and can be ignored.
 const otelSampleRate = parseSampleRate(process.env.OTEL_TRACES_SAMPLER_ARG, 1)
 
 // NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE is a secondary, Sentry-only filter.
