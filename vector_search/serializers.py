@@ -171,6 +171,7 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
     """
     Response serializer for vector based search
     """
+
     promoted_results = serializers.SerializerMethodField()
 
     @extend_schema_field(LearningResourceSerializer(many=True))
@@ -185,11 +186,10 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
             "aggregations": [],
             "suggest": [],
         }
-    
+
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_promoted_results(self, _):
         return []
-
 
 
 class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
