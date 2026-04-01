@@ -1135,12 +1135,6 @@ export interface CourseResourceRequest {
    * @type {string}
    * @memberof CourseResourceRequest
    */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof CourseResourceRequest
-   */
   title: string
   /**
    *
@@ -1828,12 +1822,6 @@ export interface DocumentResourceRequest {
    * @type {string}
    * @memberof DocumentResourceRequest
    */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof DocumentResourceRequest
-   */
   title: string
   /**
    *
@@ -2258,7 +2246,7 @@ export interface LearningPathResource {
    * @type {boolean}
    * @memberof LearningPathResource
    */
-  professional?: boolean
+  professional: boolean
   /**
    *
    * @type {string}
@@ -2342,7 +2330,7 @@ export interface LearningPathResource {
    * @type {boolean}
    * @memberof LearningPathResource
    */
-  require_summaries?: boolean
+  require_summaries: boolean
 }
 
 /**
@@ -2407,12 +2395,6 @@ export interface LearningPathResourceRequest {
   ocw_topics?: Array<string>
   /**
    *
-   * @type {boolean}
-   * @memberof LearningPathResourceRequest
-   */
-  professional?: boolean
-  /**
-   *
    * @type {string}
    * @memberof LearningPathResourceRequest
    */
@@ -2489,12 +2471,6 @@ export interface LearningPathResourceRequest {
    * @memberof LearningPathResourceRequest
    */
   max_weekly_hours?: number | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof LearningPathResourceRequest
-   */
-  require_summaries?: boolean
 }
 
 /**
@@ -4764,12 +4740,6 @@ export interface PatchedLearningPathResourceRequest {
   ocw_topics?: Array<string>
   /**
    *
-   * @type {boolean}
-   * @memberof PatchedLearningPathResourceRequest
-   */
-  professional?: boolean
-  /**
-   *
    * @type {string}
    * @memberof PatchedLearningPathResourceRequest
    */
@@ -4846,12 +4816,6 @@ export interface PatchedLearningPathResourceRequest {
    * @memberof PatchedLearningPathResourceRequest
    */
   max_weekly_hours?: number | null
-  /**
-   *
-   * @type {boolean}
-   * @memberof PatchedLearningPathResourceRequest
-   */
-  require_summaries?: boolean
 }
 
 /**
@@ -5828,12 +5792,6 @@ export interface PodcastEpisodeResourceRequest {
    * @type {string}
    * @memberof PodcastEpisodeResourceRequest
    */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastEpisodeResourceRequest
-   */
   title: string
   /**
    *
@@ -6313,12 +6271,6 @@ export interface PodcastResourceRequest {
    * @memberof PodcastResourceRequest
    */
   topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {string}
-   * @memberof PodcastResourceRequest
-   */
-  readable_id: string
   /**
    *
    * @type {string}
@@ -7041,12 +6993,6 @@ export interface ProgramResourceRequest {
    * @memberof ProgramResourceRequest
    */
   topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {string}
-   * @memberof ProgramResourceRequest
-   */
-  readable_id: string
   /**
    *
    * @type {string}
@@ -8311,12 +8257,6 @@ export interface VideoPlaylistResourceRequest {
    * @type {string}
    * @memberof VideoPlaylistResourceRequest
    */
-  readable_id: string
-  /**
-   *
-   * @type {string}
-   * @memberof VideoPlaylistResourceRequest
-   */
   title: string
   /**
    *
@@ -8790,12 +8730,6 @@ export interface VideoResourceRequest {
    * @memberof VideoResourceRequest
    */
   topics?: Array<LearningResourceTopic>
-  /**
-   *
-   * @type {string}
-   * @memberof VideoResourceRequest
-   */
-  readable_id: string
   /**
    *
    * @type {string}

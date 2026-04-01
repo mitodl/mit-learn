@@ -2285,7 +2285,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -2742,7 +2742,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -3287,6 +3287,7 @@ components:
             maxLength: 128
         professional:
           type: boolean
+          readOnly: true
         next_start_date:
           type: string
           format: date-time
@@ -3339,6 +3340,7 @@ components:
           nullable: true
         require_summaries:
           type: boolean
+          readOnly: true
       required:
       - best_run_id
       - certification
@@ -3357,7 +3359,9 @@ components:
       - platform
       - position
       - prices
+      - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -4583,7 +4587,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -4878,7 +4882,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -5455,7 +5459,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -6224,7 +6228,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -6536,7 +6540,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
