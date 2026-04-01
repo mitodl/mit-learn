@@ -275,7 +275,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     </SidebarCol>
                     <Typography
                       component="h1"
-                      typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                      typography={{ xs: "h4", sm: "h4", md: "h3" }}
                       style={{ lineHeight: "2.25rem" }}
                     >
                       {title}
