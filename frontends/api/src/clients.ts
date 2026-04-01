@@ -12,6 +12,7 @@ import {
   SchoolsApi,
   FeaturedApi,
   MediaApi,
+  HubspotApi,
 } from "./generated/v1/api"
 
 import {
@@ -71,6 +72,7 @@ const topicsApi = new TopicsApi(undefined, BASE_PATH, axiosInstance)
 
 const articlesApi = new ArticlesApi(undefined, BASE_PATH, axiosInstance)
 const mediaApi = new MediaApi(undefined, BASE_PATH, axiosInstance)
+const hubspotApi = new HubspotApi(undefined, BASE_PATH, axiosInstance)
 
 const programLettersApi = new ProgramLettersApi(
   undefined,
@@ -112,6 +114,7 @@ export {
   topicsApi,
   articlesApi,
   mediaApi,
+  hubspotApi,
   offerorsApi,
   programLettersApi,
   learningResourcesSearchApi,

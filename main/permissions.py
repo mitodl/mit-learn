@@ -57,6 +57,16 @@ class IsStaffPermission(permissions.BasePermission):
         return is_admin_user(request)
 
 
+class IsSuperuserPermission(permissions.BasePermission):
+    """Checks that the user has superuser permission"""
+
+    def has_permission(self, request, view):  # noqa: ARG002
+        """Returns True if the user is authenticated and a superuser"""  # noqa: D401
+        return bool(
+            request.user and request.user.is_authenticated and request.user.is_superuser
+        )
+
+
 class IsStaffOrReadonlyPermission(permissions.BasePermission):
     """Checks the user for the staff permission"""
 
