@@ -1,11 +1,15 @@
 import logging
+import random
 import urllib
 
+from django.conf import settings
 from opensearch_dsl import Search
 
 from channels.models import Channel
 from learning_resources.hooks import get_plugin_manager
-from learning_resources_search.constants import LEARNING_RESOURCE
+from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceSerializer
+from learning_resources_search.constants import LEARNING_RESOURCE, PROMOTED_READABLE_IDS
 from learning_resources_search.models import PercolateQuery
 
 log = logging.getLogger()
@@ -152,3 +156,20 @@ def percolate_query_saved_actions(percolate_query):
     pm = get_plugin_manager()
     hook = pm.hook
     hook.percolate_query_upserted(percolate_query=percolate_query)
+
+
+def get_promoted_results():
+    """
+    Get promoted search results to be included in search response
+    """
+    if settings.SEARCH_NUM_PROMOTED_RESULTS > 0:
+        num = settings.SEARCH_NUM_PROMOTED_RESULTS
+        selected_ids = random.sample(
+            sorted(PROMOTED_READABLE_IDS), min(num, len(PROMOTED_READABLE_IDS))
+        )
+        resources = LearningResource.objects.for_search_serialization().filter(
+            readable_id__in=selected_ids, published=True
+        )
+        return LearningResourceSerializer(resources, many=True).data
+    else:
+        return []

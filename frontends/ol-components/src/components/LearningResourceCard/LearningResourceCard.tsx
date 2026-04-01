@@ -21,9 +21,11 @@ type ResourceIdCallback = (
   resourceId: number,
 ) => void
 
+type LearningResourceWithPromoted = LearningResource & { promoted?: boolean }
+
 interface LearningResourceCardProps {
   isLoading?: boolean
-  resource?: LearningResource | null
+  resource?: LearningResourceWithPromoted | null
   className?: string
   size?: Size
   isMedia?: boolean
@@ -165,4 +167,4 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
 }
 
 export { LearningResourceCard }
-export type { LearningResourceCardProps }
+export type { LearningResourceCardProps, LearningResourceWithPromoted }

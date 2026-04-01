@@ -7,6 +7,7 @@ import { ResourceTypeEnum, PlatformEnum, AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
 import { getByImageSrc } from "ol-test-utilities"
 import { renderWithTheme } from "../../test-utils"
+import { startCase } from "lodash"
 
 // Helper function to create a date N days from today
 const daysFromToday = (days: number): string => {
@@ -32,11 +33,29 @@ const setup = (props: LearningResourceListCardProps) => {
 
 describe("Learning Resource List Card", () => {
   test.each([
-    { resourceType: ResourceTypeEnum.Course, expectedLabel: "Course" },
-    { resourceType: ResourceTypeEnum.Program, expectedLabel: "Program" },
+    {
+      resourceType: ResourceTypeEnum.Course,
+      expectedLabel: "Course",
+      promoted: false,
+    },
+    {
+      resourceType: ResourceTypeEnum.Program,
+      expectedLabel: "Program",
+      promoted: false,
+    },
+    {
+      resourceType: ResourceTypeEnum.Course,
+      expectedLabel: "Promoted Course",
+      promoted: true,
+    },
+    {
+      resourceType: ResourceTypeEnum.Program,
+      expectedLabel: "Promoted Program",
+      promoted: true,
+    },
   ])(
     "Renders resource type, title and start date as a labeled article",
-    ({ resourceType, expectedLabel }) => {
+    ({ resourceType, expectedLabel, promoted }) => {
       const startDate = daysFromToday(30)
       const run = factories.learningResources.run({
         id: 1,
@@ -45,18 +64,22 @@ describe("Learning Resource List Card", () => {
       })
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
-        resource_category: expectedLabel,
+        resource_category: startCase(resourceType),
         best_run_id: 1,
         runs: [run],
-      })
+      }) as LearningResourceListCardProps["resource"] & { promoted?: boolean }
+
+      if (promoted) {
+        resource.promoted = true
+      }
 
       setup({ resource })
 
       const card = screen.getByRole("article", {
-        name: `${resource.resource_category}: ${resource.title}`,
+        name: `${expectedLabel}: ${resource.title}`,
       })
 
-      within(card).getByText(resource.resource_category)
+      within(card).getByText(expectedLabel)
       within(card).getByText(resource.title)
       within(card).getByText("Starts:")
       within(card).getByText(formatTestDate(startDate))

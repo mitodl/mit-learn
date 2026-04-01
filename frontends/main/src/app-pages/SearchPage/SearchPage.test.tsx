@@ -22,6 +22,7 @@ const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   next: null,
   previous: null,
   results: [],
+  promoted_results: [],
   metadata: {
     aggregations: {},
     suggestions: [],
@@ -71,6 +72,9 @@ describe("SearchPage", () => {
     const resources = factories.learningResources.resources({
       count: 10,
     }).results
+    const promotedResources = factories.learningResources.resources({
+      count: 2,
+    }).results
     setMockApiResponses({
       search: {
         count: 1000,
@@ -86,6 +90,7 @@ describe("SearchPage", () => {
           suggestions: [],
         },
         results: resources,
+        promoted_results: promotedResources,
       },
     })
     renderWithProviders(<SearchPage />)
@@ -93,6 +98,12 @@ describe("SearchPage", () => {
     const tabpanel = await screen.findByRole("tabpanel")
     for (const resource of resources) {
       await within(tabpanel).findByText(resource.title)
+    }
+    for (const resource of promotedResources) {
+      await within(tabpanel).findByText(resource.title)
+      await within(tabpanel).findByText(
+        `Promoted ${resource.resource_category}`,
+      )
     }
   })
 

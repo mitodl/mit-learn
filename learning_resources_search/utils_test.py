@@ -7,9 +7,15 @@ from django.db.models import signals
 from django.urls import reverse
 
 from channels.factories import ChannelFactory
+from learning_resources.constants import LearningResourceType
+from learning_resources.factories import LearningResourceFactory
+from learning_resources_search.constants import PROMOTED_READABLE_IDS
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
-from learning_resources_search.utils import prune_channel_subscriptions
+from learning_resources_search.utils import (
+    get_promoted_results,
+    prune_channel_subscriptions,
+)
 from main.factories import UserFactory
 
 
@@ -137,3 +143,49 @@ def test_prune_subscription_on_empty_channel_search_filter(
         == 2
     )
     assert user.percolate_queries.count() == 2
+
+
+@pytest.mark.django_db
+def test_get_promoted_results(settings):
+    """
+    Test that get_promoted_results returns serialized resources
+    matching promoted readable IDs
+    """
+    for readable_id in PROMOTED_READABLE_IDS:
+        LearningResourceFactory.create(
+            resource_type=LearningResourceType.program.name,
+            readable_id=readable_id,
+            published=True,
+        )
+    settings.SEARCH_NUM_PROMOTED_RESULTS = 2
+    results = get_promoted_results()
+    assert len(results) == 2
+    result_ids = {r["readable_id"] for r in results}
+    assert result_ids.issubset(PROMOTED_READABLE_IDS)
+
+
+@pytest.mark.django_db
+def test_get_promoted_results_zero_setting(settings):
+    """
+    Test that get_promoted_results returns empty list
+    when SEARCH_NUM_PROMOTED_RESULTS is 0
+    """
+    settings.SEARCH_NUM_PROMOTED_RESULTS = 0
+    results = get_promoted_results()
+    assert results == []
+
+
+@pytest.mark.django_db
+def test_get_promoted_results_excludes_unpublished(settings):
+    """
+    Test that get_promoted_results excludes unpublished resources
+    """
+    for readable_id in PROMOTED_READABLE_IDS:
+        LearningResourceFactory.create(
+            resource_type=LearningResourceType.program.name,
+            readable_id=readable_id,
+            published=False,
+        )
+    settings.SEARCH_NUM_PROMOTED_RESULTS = 1
+    results = get_promoted_results()
+    assert results == []
