@@ -42,7 +42,7 @@ const AboutSection: React.FC<{
       expanded={aboutExpanded}
       aria-labelledby={HeadingIds.About}
     >
-      <Typography variant="h3" component="h2" id={HeadingIds.About}>
+      <Typography variant="h4" component="h2" id={HeadingIds.About}>
         About this {productNoun}
       </Typography>
       <RawHTML html={aboutHtml} />
