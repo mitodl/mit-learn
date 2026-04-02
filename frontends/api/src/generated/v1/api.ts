@@ -4865,6 +4865,12 @@ export interface LearningResourceSchool {
 export interface LearningResourceSummary {
   /**
    *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  canonical_product_url: string | null
+  /**
+   *
    * @type {number}
    * @memberof LearningResourceSummary
    */
