@@ -169,7 +169,7 @@ const Footer: FunctionComponent = () => {
                   text="Terms of Service"
                   href={urls.TERMS}
                 />
-                <FooterLinkComponent text="Contact Us" href={urls.CONTACT} />
+                <FooterLinkComponent text="Help" href={urls.CONTACT} />
               </FooterLinksContainer>
               <FooterCopyrightContainer>
                 <FooterCopyright>
