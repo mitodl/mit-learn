@@ -37,7 +37,9 @@ describe("CertificatePage", () => {
     await screen.findAllByText("Certificate")
     await screen.findAllByText(certificate.user.name!)
     await screen.findAllByText(
-      `${moment(certificate.course_run.start_date).format("MMM D, YYYY")} - ${moment(certificate.course_run.end_date).format("MMM D, YYYY")}`,
+      moment(certificate.verifiable_credential_json.validFrom).format(
+        "MMM D, YYYY",
+      ),
     )
 
     await screen.findAllByText(
@@ -107,7 +109,9 @@ describe("CertificatePage", () => {
       `Awarded ${certificate.certificate_page.CEUs} Continuing Education Units (CEUs)`,
     )
     await screen.findAllByText(
-      `${moment(certificate.program.start_date).format("MMM D, YYYY")} - ${moment(certificate.program.end_date).format("MMM D, YYYY")}`,
+      moment(certificate.verifiable_credential_json.validFrom).format(
+        "MMM D, YYYY",
+      ),
     )
 
     await screen.findAllByText(certificate.uuid)
