@@ -1054,20 +1054,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   </PlainList>
                 ) : data && (data.results?.length ?? 0) > 0 ? (
                   <PlainList itemSpacing={1.5}>
-                    {data.promoted_results &&
-                      data.promoted_results.length > 0 &&
-                      data.promoted_results.map(
-                        (resource: LearningResource) => (
-                          <li key={`promoted-${resource.id}`}>
-                            <ResourceCard
-                              resource={{ ...resource, promoted: true }}
-                              parentHeadingEl={resultsHeadingEl}
-                              list
-                            />
-                          </li>
-                        ),
-                      )}
-
                     {data.results.map((resource: LearningResource) => (
                       <li key={resource.id}>
                         <ResourceCard
