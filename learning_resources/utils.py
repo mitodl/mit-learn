@@ -617,6 +617,17 @@ def html_to_markdown(html):
     return htmlformatter.handle(html)
 
 
+def strip_markdown_images(markdown):
+    """Strip image markup from markdown, keeping alt text if present.
+
+    ![alt text](url) → "alt text"
+    ![](url)         → removed entirely
+
+    Note: Alt text containing literal ']' characters is not supported.
+    """
+    return re.sub(r"!\[([^\]]*)\]\([^)]*\)", lambda m: m.group(1), markdown)
+
+
 @cache
 def get_web_driver():
     service = webdriver.ChromeService(executable_path=which("chromedriver"))
