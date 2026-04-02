@@ -555,6 +555,27 @@ def test_chunk_markdown_documents_long_section_preserves_header(mocker):
         assert "My Section" in doc.page_content
 
 
+def test_chunk_markdown_documents_header_text_in_body(mocker):
+    """Header is prepended even when its text appears as a substring in the body."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 50
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 5
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    # The body naturally contains the heading text "Required Courses"
+    long_body = " ".join(["There are 6 Required Courses for this program."] * 20)
+    text = f"## Required Courses\n\n{long_body}"
+    metadata = {"key": "k1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) > 1
+    # Every chunk should have "Required Courses" prepended or as the heading,
+    # even though the same text appears in the body content
+    for doc in docs:
+        assert "Required Courses" in doc.page_content
+
+
 def test_chunk_markdown_documents_without_headers(mocker):
     """Markdown content without headers still yields non-empty chunks."""
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 80

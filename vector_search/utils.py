@@ -344,7 +344,8 @@ def _chunk_markdown_documents(text, metadata):
         header_parts = [
             doc.metadata[key]
             for key in header_keys
-            if key in doc.metadata and doc.metadata[key] not in doc.page_content
+            if key in doc.metadata
+            and not doc.page_content.startswith(doc.metadata[key])
         ]
         if header_parts:
             prefix = " > ".join(header_parts)
