@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.61.0
+Version 0.61.0 (Released April 02, 2026)
 --------------
 
 - revert (#3155)
