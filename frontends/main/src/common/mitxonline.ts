@@ -127,6 +127,24 @@ const mitxonlineLegacyUrl = (relative: string) => {
 
 type EnrollmentType = "none" | "free" | "paid" | "both"
 
+type CourseRunEnrollmentActionNone = { type: "none" }
+type CourseRunEnrollmentActionAudit = {
+  type: "audit"
+  run: CourseRunV2
+}
+type CourseRunEnrollmentActionCheckout = {
+  type: "checkout"
+  run: CourseRunV2
+  product: BaseProduct
+}
+type CourseRunEnrollmentActionDialog = { type: "dialog" }
+
+type CourseEnrollmentAction =
+  | CourseRunEnrollmentActionNone
+  | CourseRunEnrollmentActionAudit
+  | CourseRunEnrollmentActionCheckout
+  | CourseRunEnrollmentActionDialog
+
 const getEnrollmentType = (
   modes: EnrollmentMode[] | undefined,
 ): EnrollmentType => {
@@ -136,6 +154,39 @@ const getEnrollmentType = (
   if (hasFree && hasPaid) return "both"
   if (hasFree) return "free"
   return "paid"
+}
+
+/**
+ * Determine course enrollment action using enrollable runs only.
+ * If there is a choice to be made by the user, open the dialog.
+ * Otherwise, direct them to the appropriate action (audit, checkout, or none).
+ *
+ * Rules:
+ * - Multiple enrollable runs -> dialog
+ * - Single enrollable run with both modes -> dialog
+ * - Single enrollable run with audit only -> one-click enrollment
+ * - Single enrollable run with verified only -> checkout
+ */
+const getCourseEnrollmentAction = (
+  course: CourseWithCourseRunsSerializerV2,
+): CourseEnrollmentAction => {
+  const enrollableRuns = (course.courseruns ?? []).filter(
+    (run) => run.is_enrollable,
+  )
+  const selectedRun = getBestRun(course, { enrollableOnly: true })
+
+  if (!selectedRun) return { type: "none" }
+  if (enrollableRuns.length > 1) return { type: "dialog" }
+
+  const enrollmentType = getEnrollmentType(selectedRun.enrollment_modes)
+  if (enrollmentType === "both") return { type: "dialog" }
+  if (enrollmentType === "free") return { type: "audit", run: selectedRun }
+  if (enrollmentType === "paid") {
+    const product = selectedRun.products?.[0]
+    if (!product) return { type: "none" }
+    return { type: "checkout", run: selectedRun, product }
+  }
+  return { type: "none" }
 }
 
 /**
@@ -199,8 +250,9 @@ export {
   upgradeRunUrl,
   mitxonlineLegacyUrl,
   getEnrollmentType,
+  getCourseEnrollmentAction,
   getIdsFromReqTree,
   getBestRun,
   isVerifiedEnrollmentMode,
 }
-export type { PriceWithDiscount, EnrollmentType }
+export type { PriceWithDiscount, EnrollmentType, CourseEnrollmentAction }

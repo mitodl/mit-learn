@@ -33,6 +33,7 @@ from learning_resources.serializers import (
 )
 from learning_resources_search import serializers
 from learning_resources_search.api import gen_content_file_id
+from learning_resources_search.constants import PROMOTED_SEARCH_TERMS_MAPPING
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.serializers import (
     ContentFileSearchRequestSerializer,
@@ -44,6 +45,8 @@ from learning_resources_search.serializers import (
     get_resource_age_date,
     serialize_percolate_query,
 )
+
+PROMOTED_RESULTS = [{"id": 1, "title": "Promoted Resource"}]
 
 response_test_raw_data_1 = {
     "took": 8,
@@ -303,6 +306,7 @@ response_test_response_1 = {
         },
         "suggest": ["manage"],
     },
+    "promoted_results": [],
 }
 
 response_test_raw_data_2 = {
@@ -567,6 +571,7 @@ response_test_response_2 = {
         },
         "suggest": ["broadignite"],
     },
+    "promoted_results": [],
 }
 
 
@@ -789,6 +794,31 @@ def test_get_resource_age_date():
         0,
         tzinfo=UTC,
     )
+
+
+@pytest.mark.django_db
+def test_promoted_serialize_learning_resource_for_bulk(mocker):
+    """
+    Test that serialize_learning_resource_for_bulk includes promoted_search_terms
+    for resources with readable_id in PROMOTED_SEARCH_TERMS_MAPPING
+    """
+    promoted_readable_id = next(iter(PROMOTED_SEARCH_TERMS_MAPPING))
+    promoted_search_terms = PROMOTED_SEARCH_TERMS_MAPPING[promoted_readable_id]
+
+    resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.program.name,
+        readable_id=promoted_readable_id,
+        runs=[],
+    )
+
+    mocker.patch(
+        "learning_resources_search.serializers.get_resource_age_date",
+        return_value=None,
+    )
+
+    resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
+    result = serializers.serialize_learning_resource_for_bulk(resource)
+    assert result["promoted_search_terms"] == promoted_search_terms
 
 
 @pytest.mark.django_db
@@ -1050,6 +1080,29 @@ def test_learning_resources_search_response_serializer(
             raw_data, context={"request": request}
         ).data
     ) == JSONRenderer().render(response)
+
+
+def test_learning_resources_search_response_serializer_promoted_results(
+    settings, mocker, learning_resources_search_view
+):
+    """
+    Test that the search response serializer returns promoted results
+    when there is no q param in the request
+    """
+    settings.OPENSEARCH_MAX_SUGGEST_HITS = 10
+    mocker.patch(
+        "learning_resources_search.serializers.get_promoted_results",
+        return_value=PROMOTED_RESULTS,
+    )
+    request_factory = APIRequestFactory()
+    api_request = request_factory.get(learning_resources_search_view.url)
+    request = Request(api_request)
+
+    result = LearningResourcesSearchResponseSerializer(
+        response_test_raw_data_1, context={"request": request}
+    ).data
+
+    assert result["promoted_results"] == PROMOTED_RESULTS
 
 
 @pytest.mark.django_db

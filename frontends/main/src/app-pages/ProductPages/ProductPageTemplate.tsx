@@ -182,11 +182,12 @@ const SidebarVideo = styled.iframe(({ theme }) => ({
 const SidebarImage = styled(Image)(({ theme }) => ({
   borderRadius: "16px",
   boxShadow: "0 0 48.4px 0 rgba(0, 0, 0, 0.50)",
-  width: "100%",
   aspectRatio: "16/9",
   height: "auto",
   objectFit: "cover",
   objectPosition: "center",
+  justifySelf: "end",
+  maxWidth: "100%",
   maxHeight: "500px",
   display: "block",
   "& img": {
@@ -257,7 +258,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
       <GradientBanner>
         <TopContainer data-testid="banner-container">
           <Grid2 container spacing={{ xs: 2, sm: 2, md: 8 }}>
-            <Grid2 size={{ xs: 12, sm: 6, md: 7 }}>
+            <Grid2 size={{ xs: 12, sm: 6, md: 6.5 }}>
               <MainCol>
                 <StyledBreadcrumbs
                   variant="dark"
@@ -275,7 +276,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     </SidebarCol>
                     <Typography
                       component="h1"
-                      typography={{ xs: "h4", sm: "h4", md: "h4" }}
+                      typography={{ xs: "h4", sm: "h4", md: "h3" }}
                       style={{ lineHeight: "2.25rem" }}
                     >
                       {title}
@@ -287,7 +288,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
               </MainCol>
             </Grid2>
             <Grid2
-              size={{ xs: 12, sm: 6, md: 5 }}
+              size={{ xs: 12, sm: 6, md: 5.5 }}
               style={{ display: "flex", alignSelf: "center" }}
             >
               <SidebarCol showAbove="sm" alignSelf="flex-end">

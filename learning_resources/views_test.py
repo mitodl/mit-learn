@@ -229,7 +229,7 @@ def test_list_resources_endpoint(client):
 
 
 @pytest.mark.parametrize("course_count", [1, 5, 20])
-def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_count):
+def test_no_excess_queries(rf, user, django_assert_num_queries, course_count):
     """
     There should be a constant number of queries made (based on number of
     related models), regardless of number of results returned.
@@ -241,7 +241,7 @@ def test_no_excess_queries(rf, user, mocker, django_assert_num_queries, course_c
     request = rf.get("/")
     request.user = user
 
-    with django_assert_num_queries(21):
+    with django_assert_num_queries(20):
         view = CourseViewSet(request=request)
         results = view.get_queryset().all()
         assert len(results) == course_count

@@ -390,11 +390,6 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 ).order_by("position"),
             ),
             Prefetch(
-                "views",
-                queryset=LearningResourceViewEvent.objects.all(),
-                to_attr="_views",
-            ),
-            Prefetch(
                 "direct_content_files",
                 queryset=ContentFile.objects.prefetch_related(
                     "learning_resource__course",
@@ -547,6 +542,8 @@ class LearningResource(TimestampedModel):
     max_weekly_hours = models.IntegerField(null=True, blank=True)
     require_summaries = models.BooleanField(default=False)
 
+    view_count = models.PositiveBigIntegerField(null=True, default=None)
+
     @property
     def audience(self) -> str | None:
         """Returns the audience for the learning resource"""
@@ -632,8 +629,9 @@ class LearningResource(TimestampedModel):
     @cached_property
     def views_count(self) -> int:
         """Return the number of views for the resource."""
-        if hasattr(self, "_views"):
-            return len(self._views)
+        if self.view_count is not None:
+            return self.view_count
+
         return LearningResourceViewEvent.objects.filter(learning_resource=self).count()
 
     @cached_property

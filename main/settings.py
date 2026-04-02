@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.60.1"
+VERSION = "0.60.2"
 
 log = logging.getLogger()
 
@@ -137,6 +137,7 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "video_shorts",
+    "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
     "health_check.cache",
@@ -585,6 +586,8 @@ OPENSEARCH_MAX_SUGGEST_RESULTS = get_int("OPENSEARCH_MAX_SUGGEST_RESULTS", 1)
 OPENSEARCH_SHARD_COUNT = get_int("OPENSEARCH_SHARD_COUNT", 2)
 OPENSEARCH_REPLICA_COUNT = get_int("OPENSEARCH_REPLICA_COUNT", 2)
 OPENSEARCH_MAX_REQUEST_SIZE = get_int("OPENSEARCH_MAX_REQUEST_SIZE", 10485760)
+
+SEARCH_NUM_PROMOTED_RESULTS = get_int("SEARCH_NUM_PROMOTED_RESULTS", 2)
 INDEXING_ERROR_RETRIES = get_int("INDEXING_ERROR_RETRIES", 1)
 
 # JWT authentication settings
@@ -916,3 +919,6 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 # Video Shorts settings
 VIDEO_SHORTS_S3_PREFIX = get_string("VIDEO_SHORTS_S3_PREFIX", "shorts/")
 VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
+
+# Hubspot settings
+MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)

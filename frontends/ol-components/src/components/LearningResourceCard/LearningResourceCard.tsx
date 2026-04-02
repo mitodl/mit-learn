@@ -3,7 +3,6 @@ import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { LearningResource } from "api"
 import {
   LocalDate,
-  getReadableResourceType,
   DEFAULT_RESOURCE_IMG,
   getLearningResourcePrices,
   getBestResourceStartDate,
@@ -21,9 +20,11 @@ type ResourceIdCallback = (
   resourceId: number,
 ) => void
 
+type LearningResourceWithPromoted = LearningResource & { promoted?: boolean }
+
 interface LearningResourceCardProps {
   isLoading?: boolean
-  resource?: LearningResource | null
+  resource?: LearningResourceWithPromoted | null
   className?: string
   size?: Size
   isMedia?: boolean
@@ -105,7 +106,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   }
 
   const prices = getLearningResourcePrices(resource)
-  const readableType = getReadableResourceType(resource.resource_type)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
   const format = size === "small" ? "MMM DD, YYYY" : "MMMM DD, YYYY"
@@ -130,7 +130,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   if (onAddToUserListClick) {
     actions.push({
       onClick: (event) => onAddToUserListClick(event, resource.id),
-      "aria-label": `Bookmark ${readableType}`,
+      "aria-label": `Bookmark ${resource.resource_category}`,
       filled: inUserList,
       icon: inUserList ? (
         <RiBookmarkFill aria-hidden />
@@ -151,7 +151,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
       imageAlt={resource.image?.alt ?? ""}
       title={resource.title}
-      resourceType={readableType}
+      resourceType={resource.resource_category}
       resourcePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
@@ -159,10 +159,10 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       startDate={formattedDate}
       actions={actions}
       lang={getResourceLanguage(resource)}
-      ariaLabel={`${readableType}: ${resource.title}`}
+      ariaLabel={`${resource.resource_category}: ${resource.title}`}
     />
   )
 }
 
 export { LearningResourceCard }
-export type { LearningResourceCardProps }
+export type { LearningResourceCardProps, LearningResourceWithPromoted }

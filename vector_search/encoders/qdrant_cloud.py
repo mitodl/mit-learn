@@ -1,5 +1,6 @@
 import logging
 
+import litellm
 import tiktoken
 from django.conf import settings
 from qdrant_client import models
@@ -19,9 +20,14 @@ class QdrantCloudEncoder(BaseEncoder):
     def __init__(self, model_name):
         self.model_name = model_name
         try:
-            self.token_encoding_name = tiktoken.encoding_name_for_model(model_name)
+            self.token_encoding_name = tiktoken.encoding_name_for_model(
+                self.model_short_name()
+            )
         except KeyError:
-            msg = f"Model {model_name} not found in tiktoken. defaulting to None"
+            msg = (
+                f"Model short name {self.model_short_name()!r} (from original model "
+                f"{model_name!r}) not found in tiktoken. defaulting to None"
+            )
             log.warning(msg)
 
     def embed_documents(self, documents):
@@ -42,3 +48,32 @@ class QdrantCloudEncoder(BaseEncoder):
             )
             for text in texts
         ]
+
+    def dim(self):
+        """
+        Return the dimension of the embeddings
+        """
+        info = litellm.get_model_info(self.model_short_name())
+        if not isinstance(info, dict):
+            msg = (
+                f"Could not determine embedding dimension: litellm.get_model_info("
+                f"{self.model_short_name()!r}) returned {type(info).__name__}, "
+                "expected a dict with an 'output_vector_size' field."
+            )
+            raise TypeError(msg)
+        if "output_vector_size" not in info:
+            msg = (
+                "Could not determine embedding dimension: 'output_vector_size' "
+                f"missing from litellm.get_model_info({self.model_short_name()!r}) "
+                "response."
+            )
+            raise ValueError(msg)
+        dim = info["output_vector_size"]
+        if not isinstance(dim, int):
+            msg = (
+                "Could not determine embedding dimension: 'output_vector_size' "
+                f"from litellm.get_model_info({self.model_short_name()!r}) is of "
+                f"type {type(dim).__name__}, expected int."
+            )
+            raise TypeError(msg)
+        return dim

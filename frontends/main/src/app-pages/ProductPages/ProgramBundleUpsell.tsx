@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { programPageView } from "@/common/urls"
 
 const BundleUpsellContainer = styled.div(({ theme }) => ({
-  boxShadow: "inset 0px 16px 24px 0px rgba(0, 40, 150, 0.05)",
+  backgroundColor: theme.custom.colors.lightGray1,
   display: "flex",
   flexDirection: "column",
   gap: "12px",
@@ -34,9 +34,9 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
 }))
 
 const SectionLabel = styled.span(({ theme }) => ({
-  ...theme.typography.body2,
+  ...theme.typography.subtitle3,
   display: "block",
-  color: theme.custom.colors.silverGrayDark,
+  color: theme.custom.colors.darkGray1,
   textTransform: "uppercase",
   letterSpacing: "0.0875em",
 }))
@@ -53,8 +53,7 @@ const BundleUpsellItem = styled.div(({ theme }) => ({
 }))
 
 const BundleUpsellTitle = styled.span(({ theme }) => ({
-  ...theme.typography.h5,
-  fontSize: theme.typography.pxToRem(16),
+  ...theme.typography.subtitle1,
   display: "block",
 }))
 
@@ -65,7 +64,7 @@ const BundleDescription = styled.p(({ theme }) => ({
 }))
 
 const BundleDetailsLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.body2,
+  ...theme.typography.subtitle2,
   color: theme.custom.colors.red,
   fontWeight: theme.typography.fontWeightMedium,
   textDecoration: "none",

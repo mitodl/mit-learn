@@ -6,6 +6,7 @@ import {
   platformsApi,
   schoolsApi,
   featuredApi,
+  vectorLearningResourcesSearchApi,
 } from "../../clients"
 
 import type {
@@ -18,6 +19,7 @@ import type {
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
 } from "../../generated/v1"
+import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { queryOptions } from "@tanstack/react-query"
 import { hasPosition, randomizeGroups } from "./util"
 
@@ -57,6 +59,11 @@ const learningResourceKeys = {
   searchRoot: () => [...learningResourceKeys.root, "search"],
   search: (params: LearningResourcesSearchRetrieveRequest) => [
     ...learningResourceKeys.searchRoot(),
+    params,
+  ],
+  vectorSearchRoot: () => [...learningResourceKeys.root, "vectorSearch"],
+  vectorSearch: (params: VectorLearningResourcesSearchRetrieveRequest) => [
+    ...learningResourceKeys.vectorSearchRoot(),
     params,
   ],
 }
@@ -168,6 +175,14 @@ const learningResourceQueries = {
       queryFn: () =>
         learningResourcesSearchApi
           .learningResourcesSearchRetrieve(params)
+          .then((res) => res.data),
+    }),
+  vectorSearch: (params: VectorLearningResourcesSearchRetrieveRequest) =>
+    queryOptions({
+      queryKey: learningResourceKeys.vectorSearch(params),
+      queryFn: () =>
+        vectorLearningResourcesSearchApi
+          .vectorLearningResourcesSearchRetrieve(params)
           .then((res) => res.data),
     }),
 }

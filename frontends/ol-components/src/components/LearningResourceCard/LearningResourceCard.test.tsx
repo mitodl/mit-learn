@@ -33,11 +33,11 @@ const setup = (props: LearningResourceCardProps) => {
 
 describe("Learning Resource Card", () => {
   test.each([
-    { resourceType: ResourceTypeEnum.Course, expectedLabel: "Course" },
-    { resourceType: ResourceTypeEnum.Program, expectedLabel: "Program" },
+    { resourceType: ResourceTypeEnum.Course, resourceCategory: "Course" },
+    { resourceType: ResourceTypeEnum.Document, resourceCategory: "Article" },
   ])(
     "Renders resource type, title and start date as a labeled article",
-    ({ resourceType, expectedLabel }) => {
+    ({ resourceType, resourceCategory }) => {
       const startDate = daysFromToday(30)
       const run = factories.learningResources.run({
         id: 1,
@@ -46,6 +46,7 @@ describe("Learning Resource Card", () => {
       })
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
+        resource_category: resourceCategory,
         best_run_id: 1,
         runs: [run],
       })
@@ -53,10 +54,10 @@ describe("Learning Resource Card", () => {
       setup({ resource })
 
       const card = screen.getByRole("article", {
-        name: `${expectedLabel}: ${resource.title}`,
+        name: `${resourceCategory}: ${resource.title}`,
       })
 
-      within(card).getByText(expectedLabel)
+      within(card).getByText(resourceCategory)
       within(card).getByText(resource.title)
       within(card).getByText("Starts:")
       within(card).getByText(formatTestDate(startDate))
@@ -212,6 +213,7 @@ describe("Learning Resource Card", () => {
   test("Click action buttons", async () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
+      resource_category: "Course",
       platform: { code: PlatformEnum.Ocw },
     })
 

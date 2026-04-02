@@ -1662,6 +1662,178 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResource'
           description: ''
+  /api/v1/hubspot/forms/:
+    get:
+      operationId: hubspot_forms_list
+      description: List HubSpot forms from the backend.
+      parameters:
+      - in: query
+        name: after
+        schema:
+          type: string
+      - in: query
+        name: archived
+        schema:
+          type: boolean
+      - in: query
+        name: form_types
+        schema:
+          type: array
+          items:
+            type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+      tags:
+      - hubspot
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPaging'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        4XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        5XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/hubspot/forms/{form_id}/:
+    get:
+      operationId: hubspot_forms_detail_retrieve
+      description: Get one HubSpot form by id from the backend.
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: boolean
+      - in: path
+        name: form_id
+        schema:
+          type: string
+          pattern: ^[^/]+$
+        required: true
+      tags:
+      - hubspot
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HubspotFormDefinition'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        4XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        5XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/hubspot/forms/{form_id}/submit/:
+    post:
+      operationId: hubspot_forms_submit
+      description: Submit a form to HubSpot.
+      parameters:
+      - in: path
+        name: form_id
+        schema:
+          type: string
+          pattern: ^[^/]+$
+        required: true
+      tags:
+      - hubspot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HubspotFormSubmitRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HubspotFormSubmitResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        4XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        5XX:
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/learning_resource_display_info/:
     get:
       operationId: learning_resource_display_info_list
@@ -10433,7 +10605,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -10561,10 +10733,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -10651,7 +10819,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     CourseResourceResourceTypeEnum:
       type: string
@@ -10967,7 +11134,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -11093,10 +11260,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -11180,12 +11343,596 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     DocumentResourceResourceTypeEnum:
       type: string
       enum:
       - document
+    HubspotCollectionResponseFormDefinitionBaseForwardPaging:
+      type: object
+      properties:
+        paging:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem'
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging:
+      type: object
+      properties:
+        next:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext'
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingPagingNext:
+      type: object
+      properties:
+        link:
+          type: string
+          nullable: true
+        after:
+          type: string
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem:
+      type: object
+      properties:
+        form_type:
+          type: string
+          nullable: true
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        archived:
+          type: boolean
+          nullable: true
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        field_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem'
+        configuration:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration'
+        display_options:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions'
+        legal_consent_options:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions'
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfiguration:
+      type: object
+      properties:
+        create_new_contact_for_new_email:
+          type: boolean
+          nullable: true
+        editable:
+          type: boolean
+          nullable: true
+        allow_link_to_reset_known_values:
+          type: boolean
+          nullable: true
+        lifecycle_stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem'
+        post_submit_action:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction'
+        language:
+          type: string
+          nullable: true
+        pre_populate_known_values:
+          type: boolean
+          nullable: true
+        cloneable:
+          type: boolean
+          nullable: true
+        notify_contact_owner:
+          type: boolean
+          nullable: true
+        recaptcha_enabled:
+          type: boolean
+          nullable: true
+        archivable:
+          type: boolean
+          nullable: true
+        notify_recipients:
+          type: array
+          items:
+            type: string
+            nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationLifecycleStageItem:
+      type: object
+      properties:
+        object_type_id:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemConfigurationPostSubmitAction:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptions:
+      type: object
+      properties:
+        render_raw_html:
+          type: boolean
+          nullable: true
+        css_class:
+          type: string
+          nullable: true
+        theme:
+          type: string
+          nullable: true
+        submit_button_text:
+          type: string
+          nullable: true
+        style:
+          $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle'
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemDisplayOptionsStyle:
+      type: object
+      properties:
+        label_text_size:
+          type: string
+          nullable: true
+        legal_consent_text_color:
+          type: string
+          nullable: true
+        font_family:
+          type: string
+          nullable: true
+        legal_consent_text_size:
+          type: string
+          nullable: true
+        background_width:
+          type: string
+          nullable: true
+        help_text_size:
+          type: string
+          nullable: true
+        submit_font_color:
+          type: string
+          nullable: true
+        label_text_color:
+          type: string
+          nullable: true
+        submit_alignment:
+          type: string
+          nullable: true
+        submit_size:
+          type: string
+          nullable: true
+        help_text_color:
+          type: string
+          nullable: true
+        submit_color:
+          type: string
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItem:
+      type: object
+      properties:
+        group_type:
+          type: string
+          nullable: true
+        rich_text_type:
+          type: string
+          nullable: true
+        rich_text:
+          type: string
+          nullable: true
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated'
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemFieldGroupItemFieldItemTruncated:
+      type: object
+      properties:
+        object_type_id:
+          type: string
+          nullable: true
+        hidden:
+          type: boolean
+          nullable: true
+        default_value:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        placeholder:
+          type: string
+          nullable: true
+        field_type:
+          type: string
+          nullable: true
+        required:
+          type: boolean
+          nullable: true
+        use_country_code_select:
+          type: boolean
+          nullable: true
+        allow_multiple_files:
+          type: boolean
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptions:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        subscription_type_ids:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        lawful_basis:
+          type: string
+          nullable: true
+        privacy_text:
+          type: string
+          nullable: true
+        communications_checkboxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem'
+        communication_consent_text:
+          type: string
+          nullable: true
+        consent_to_process_checkbox_label:
+          type: string
+          nullable: true
+        consent_to_process_footer_text:
+          type: string
+          nullable: true
+        consent_to_process_text:
+          type: string
+          nullable: true
+    HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItemLegalConsentOptionsCommunicationsCheckboxItem:
+      type: object
+      properties:
+        subscription_type_id:
+          type: integer
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        required:
+          type: boolean
+          nullable: true
+    HubspotFormDefinition:
+      type: object
+      properties:
+        form_type:
+          type: string
+          nullable: true
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        archived:
+          type: boolean
+          nullable: true
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        field_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItem'
+        configuration:
+          $ref: '#/components/schemas/HubspotFormDefinitionConfiguration'
+        display_options:
+          $ref: '#/components/schemas/HubspotFormDefinitionDisplayOptions'
+        legal_consent_options:
+          $ref: '#/components/schemas/HubspotFormDefinitionLegalConsentOptions'
+    HubspotFormDefinitionConfiguration:
+      type: object
+      properties:
+        create_new_contact_for_new_email:
+          type: boolean
+          nullable: true
+        editable:
+          type: boolean
+          nullable: true
+        allow_link_to_reset_known_values:
+          type: boolean
+          nullable: true
+        lifecycle_stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormDefinitionConfigurationLifecycleStageItem'
+        post_submit_action:
+          $ref: '#/components/schemas/HubspotFormDefinitionConfigurationPostSubmitAction'
+        language:
+          type: string
+          nullable: true
+        pre_populate_known_values:
+          type: boolean
+          nullable: true
+        cloneable:
+          type: boolean
+          nullable: true
+        notify_contact_owner:
+          type: boolean
+          nullable: true
+        recaptcha_enabled:
+          type: boolean
+          nullable: true
+        archivable:
+          type: boolean
+          nullable: true
+        notify_recipients:
+          type: array
+          items:
+            type: string
+            nullable: true
+    HubspotFormDefinitionConfigurationLifecycleStageItem:
+      type: object
+      properties:
+        object_type_id:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    HubspotFormDefinitionConfigurationPostSubmitAction:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    HubspotFormDefinitionDisplayOptions:
+      type: object
+      properties:
+        render_raw_html:
+          type: boolean
+          nullable: true
+        css_class:
+          type: string
+          nullable: true
+        theme:
+          type: string
+          nullable: true
+        submit_button_text:
+          type: string
+          nullable: true
+        style:
+          $ref: '#/components/schemas/HubspotFormDefinitionDisplayOptionsStyle'
+    HubspotFormDefinitionDisplayOptionsStyle:
+      type: object
+      properties:
+        label_text_size:
+          type: string
+          nullable: true
+        legal_consent_text_color:
+          type: string
+          nullable: true
+        font_family:
+          type: string
+          nullable: true
+        legal_consent_text_size:
+          type: string
+          nullable: true
+        background_width:
+          type: string
+          nullable: true
+        help_text_size:
+          type: string
+          nullable: true
+        submit_font_color:
+          type: string
+          nullable: true
+        label_text_color:
+          type: string
+          nullable: true
+        submit_alignment:
+          type: string
+          nullable: true
+        submit_size:
+          type: string
+          nullable: true
+        help_text_color:
+          type: string
+          nullable: true
+        submit_color:
+          type: string
+          nullable: true
+    HubspotFormDefinitionFieldGroupItem:
+      type: object
+      properties:
+        group_type:
+          type: string
+          nullable: true
+        rich_text_type:
+          type: string
+          nullable: true
+        rich_text:
+          type: string
+          nullable: true
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItem'
+    HubspotFormDefinitionFieldGroupItemFieldItem:
+      type: object
+      properties:
+        object_type_id:
+          type: string
+          nullable: true
+        hidden:
+          type: boolean
+          nullable: true
+        default_value:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        placeholder:
+          type: string
+          nullable: true
+        field_type:
+          type: string
+          nullable: true
+        required:
+          type: boolean
+          nullable: true
+        validation:
+          $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItemValidation'
+        use_country_code_select:
+          type: boolean
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated'
+        default_values:
+          type: array
+          items:
+            type: string
+            nullable: true
+        allow_multiple_files:
+          type: boolean
+          nullable: true
+    HubspotFormDefinitionFieldGroupItemFieldItemOptionItemTruncated:
+      type: object
+      properties:
+        display_order:
+          type: integer
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        value:
+          type: string
+          nullable: true
+    HubspotFormDefinitionFieldGroupItemFieldItemValidation:
+      type: object
+      properties:
+        min_allowed_digits:
+          type: integer
+          nullable: true
+        max_allowed_digits:
+          type: integer
+          nullable: true
+    HubspotFormDefinitionLegalConsentOptions:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        subscription_type_ids:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        lawful_basis:
+          type: string
+          nullable: true
+        privacy_text:
+          type: string
+          nullable: true
+        communications_checkboxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem'
+        communication_consent_text:
+          type: string
+          nullable: true
+        consent_to_process_checkbox_label:
+          type: string
+          nullable: true
+        consent_to_process_footer_text:
+          type: string
+          nullable: true
+        consent_to_process_text:
+          type: string
+          nullable: true
+    HubspotFormDefinitionLegalConsentOptionsCommunicationsCheckboxItem:
+      type: object
+      properties:
+        subscription_type_id:
+          type: integer
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        required:
+          type: boolean
+          nullable: true
+    HubspotFormFieldValueRequest:
+      type: object
+      description: Serializer for individual form field values in submission.
+      properties:
+        name:
+          type: string
+          minLength: 1
+        value:
+          nullable: true
+      required:
+      - name
+      - value
+    HubspotFormSubmitRequestRequest:
+      type: object
+      description: Serializer for HubSpot form submission requests.
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/HubspotFormFieldValueRequest'
+      required:
+      - fields
+    HubspotFormSubmitResponse:
+      type: object
+      description: Serializer for HubSpot form submission response.
+      properties:
+        status:
+          type: string
+          default: submitted
     LearningPath:
       type: object
       description: Serializer for the LearningPath model
@@ -11449,6 +12196,7 @@ components:
             maxLength: 128
         professional:
           type: boolean
+          readOnly: true
         next_start_date:
           type: string
           format: date-time
@@ -11501,6 +12249,7 @@ components:
           nullable: true
         require_summaries:
           type: boolean
+          readOnly: true
       required:
       - best_run_id
       - certification
@@ -11519,7 +12268,9 @@ components:
       - platform
       - position
       - prices
+      - professional
       - readable_id
+      - require_summaries
       - resource_category
       - resource_prices
       - resource_type
@@ -11570,8 +12321,6 @@ components:
             type: string
             minLength: 1
             maxLength: 128
-        professional:
-          type: boolean
         next_start_date:
           type: string
           format: date-time
@@ -11622,8 +12371,6 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
-        require_summaries:
-          type: boolean
       required:
       - title
     LearningPathResourceResourceTypeEnum:
@@ -12699,11 +13446,17 @@ components:
           - aggregations
           - suggestions
           readOnly: true
+        promoted_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResource'
+          readOnly: true
       required:
       - count
       - metadata
       - next
       - previous
+      - promoted_results
       - results
     LevelEnum:
       enum:
@@ -13359,8 +14112,6 @@ components:
             type: string
             minLength: 1
             maxLength: 128
-        professional:
-          type: boolean
         next_start_date:
           type: string
           format: date-time
@@ -13411,8 +14162,6 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
-        require_summaries:
-          type: boolean
     PatchedLearningResourceRelationshipRequest:
       type: object
       description: CRUD serializer for LearningResourceRelationship
@@ -14088,7 +14837,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -14216,10 +14965,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -14306,7 +15051,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     PodcastEpisodeResourceResourceTypeEnum:
       type: string
@@ -14509,7 +15253,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -14637,10 +15381,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -14727,7 +15467,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     PodcastResourceResourceTypeEnum:
       type: string
@@ -15072,7 +15811,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -15200,10 +15939,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -15290,7 +16025,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     ProgramResourceResourceTypeEnum:
       type: string
@@ -15945,7 +16679,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -16073,10 +16807,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -16163,7 +16893,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     VideoPlaylistResourceResourceTypeEnum:
       type: string
@@ -16367,7 +17096,7 @@ components:
           readOnly: true
         readable_id:
           type: string
-          maxLength: 512
+          readOnly: true
         title:
           type: string
           maxLength: 256
@@ -16495,10 +17224,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceTopic'
-        readable_id:
-          type: string
-          minLength: 1
-          maxLength: 512
         title:
           type: string
           minLength: 1
@@ -16582,7 +17307,6 @@ components:
           minimum: -2147483648
           nullable: true
       required:
-      - readable_id
       - title
     VideoResourceResourceTypeEnum:
       type: string

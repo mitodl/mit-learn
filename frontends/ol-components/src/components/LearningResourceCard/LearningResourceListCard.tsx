@@ -12,11 +12,11 @@ import {
   getResourceLanguage,
   formattedParentCourseName,
   resourceContentFilesImageSrc,
-  getReadableResourceType,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
+import type { LearningResourceWithPromoted } from "./LearningResourceCard"
 
 export const CardLabel = styled.span`
   color: ${theme.custom.colors.silverGrayDark};
@@ -128,7 +128,7 @@ export const Format = ({ resource }: { resource: LearningResource }) => {
 
 interface LearningResourceListCardProps {
   isLoading?: boolean
-  resource?: LearningResource | null
+  resource?: LearningResourceWithPromoted | null
   className?: string
   href?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
@@ -162,7 +162,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     return null
   }
 
-  const readableType = getReadableResourceType(resource.resource_type)
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
@@ -184,7 +183,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (onAddToUserListClick) {
     actions.push({
       onClick: (event) => onAddToUserListClick(event, resource.id),
-      "aria-label": `Bookmark ${readableType}`,
+      "aria-label": `Bookmark ${resource.resource_category}`,
       filled: inUserList,
       icon: inUserList ? (
         <RiBookmarkFill aria-hidden />
@@ -202,6 +201,10 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     </BorderSeparator>
   )
 
+  const resourceTypeLabel = resource.promoted
+    ? `Promoted ${resource.resource_category}`
+    : resource.resource_category
+
   return (
     <BaseLearningResourceCard
       className={className}
@@ -217,7 +220,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       imageAlt={resource.image?.alt ?? ""}
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
-      resourceType={resource.resource_category}
+      resourceType={resourceTypeLabel}
       resourcePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
@@ -226,7 +229,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       startDate={formattedDate}
       actions={actions}
       lang={getResourceLanguage(resource)}
-      ariaLabel={`${resource.resource_category}: ${resource.title}`}
+      ariaLabel={`${resourceTypeLabel}: ${resource.title}`}
       footerContent={footerContent}
       draggable={draggable}
       editMenu={editMenu}

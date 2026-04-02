@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.60.2 (Released April 01, 2026)
+--------------
+
+- bypass dashboard enrollment dialog when there is only one run (#3133)
+- tos copy update (#3141)
+- update uai announcement copy (#3132)
+
 Version 0.60.1 (Released March 31, 2026)
 --------------
 

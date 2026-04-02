@@ -22,6 +22,7 @@ const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   next: null,
   previous: null,
   results: [],
+  promoted_results: [],
   metadata: {
     aggregations: {},
     suggestions: [],
@@ -40,6 +41,10 @@ const setMockApiResponses = ({
   })
 
   setMockResponse.get(expect.stringContaining(urls.search.resources()), {
+    ...DEFAULT_SEARCH_RESPONSE,
+    ...search,
+  })
+  setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
     ...DEFAULT_SEARCH_RESPONSE,
     ...search,
   })
@@ -67,6 +72,9 @@ describe("SearchPage", () => {
     const resources = factories.learningResources.resources({
       count: 10,
     }).results
+    const promotedResources = factories.learningResources.resources({
+      count: 2,
+    }).results
     setMockApiResponses({
       search: {
         count: 1000,
@@ -82,6 +90,7 @@ describe("SearchPage", () => {
           suggestions: [],
         },
         results: resources,
+        promoted_results: promotedResources,
       },
     })
     renderWithProviders(<SearchPage />)
@@ -89,6 +98,12 @@ describe("SearchPage", () => {
     const tabpanel = await screen.findByRole("tabpanel")
     for (const resource of resources) {
       await within(tabpanel).findByText(resource.title)
+    }
+    for (const resource of promotedResources) {
+      await within(tabpanel).findByText(resource.title)
+      await within(tabpanel).findByText(
+        `Promoted ${resource.resource_category}`,
+      )
     }
   })
 
@@ -138,6 +153,50 @@ describe("SearchPage", () => {
       )
     },
   )
+
+  test("Vector Hybrid Search passes correct params and hides count", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+        results: factories.learningResources.resources({ count: 5 }).results,
+      },
+    })
+
+    // Authenticate as path editor (admin)
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    renderWithProviders(<SearchPage />, { url: "?vector_search=true&q=test" })
+
+    await waitFor(() => {
+      const call = makeRequest.mock.calls.find(([_method, url]) => {
+        return url.includes(urls.search.vectorResources())
+      })
+      expect(call).toBeDefined()
+    })
+
+    const call = makeRequest.mock.calls.find(([_method, url]) =>
+      url.includes(urls.search.vectorResources()),
+    )
+    invariant(call)
+    const fullUrl = new URL(call[1], "http://mit.edu")
+    const apiSearchParams = fullUrl.searchParams
+
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
+    expect(apiSearchParams.get("q")).toBe("test")
+
+    // Ensure count is hidden
+    const hideCountText = screen.queryByText("700 results")
+    expect(hideCountText).toBeNull()
+  })
 
   test("Toggling facets", async () => {
     setMockApiResponses({

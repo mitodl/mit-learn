@@ -2497,7 +2497,7 @@ export interface LearningPathResource {
    * @type {boolean}
    * @memberof LearningPathResource
    */
-  professional?: boolean
+  professional: boolean
   /**
    *
    * @type {string}
@@ -2581,7 +2581,7 @@ export interface LearningPathResource {
    * @type {boolean}
    * @memberof LearningPathResource
    */
-  require_summaries?: boolean
+  require_summaries: boolean
 }
 
 /**
@@ -3316,6 +3316,12 @@ export interface LearningResourcesVectorSearchResponse {
    * @memberof LearningResourcesVectorSearchResponse
    */
   metadata: ContentFileVectorSearchResponseMetadata
+  /**
+   *
+   * @type {Array<LearningResource>}
+   * @memberof LearningResourcesVectorSearchResponse
+   */
+  promoted_results: Array<LearningResource>
 }
 /**
  * Serializer for News FeedItem

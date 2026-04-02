@@ -34,10 +34,16 @@ import {
   learningResourceQueries,
 } from "api/hooks/learningResources"
 import {
+  LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
+  LearningResourcesSearchResponse,
   ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
+import type {
+  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest,
+  LearningResourcesVectorSearchResponse,
+} from "api/v0"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
@@ -507,6 +513,40 @@ const searchModeDropdownOptions = Object.entries(
   SearchModeEnumDescriptions,
 ).map(([label, value]) => ({ label, value }))
 
+/**
+ * Extracts only the fields supported by the vector search API from a broader
+ * search params object, dropping admin-only params (e.g., aggregations,
+ * content_file_score_weight) that the vector endpoint does not accept.
+ *
+ * The `as` casts for enum arrays are safe because the v0 and v1 generated
+ * clients define separate (but structurally identical) enum types for the same
+ * string-literal values (e.g., delivery: 'online' | 'hybrid' | ...).
+ */
+const toVectorSearchParams = (
+  params: ReturnType<typeof getSearchParams>,
+): VectorSearchRequest => ({
+  certification: params.certification,
+  certification_type:
+    params.certification_type as VectorSearchRequest["certification_type"],
+  course_feature: params.course_feature,
+  delivery: params.delivery as VectorSearchRequest["delivery"],
+  department: params.department as VectorSearchRequest["department"],
+  free: params.free,
+  level: params.level as VectorSearchRequest["level"],
+  limit: params.limit,
+  ocw_topic: params.ocw_topic,
+  offered_by: params.offered_by as VectorSearchRequest["offered_by"],
+  offset: params.offset,
+  platform: params.platform as VectorSearchRequest["platform"],
+  professional: params.professional,
+  q: params.q,
+  resource_type: params.resource_type as VectorSearchRequest["resource_type"],
+  resource_type_group:
+    params.resource_type_group as VectorSearchRequest["resource_type_group"],
+  topic: params.topic,
+  hybrid_search: true,
+})
+
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
@@ -577,12 +617,28 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
+  const { data: user, isLoading: isUserLoading } = useUserMe()
+
+  const wantsVectorSearch = searchParams.get("vector_search") === "true"
+  const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
+
   const { data, isLoading, isFetching } = useQuery({
-    ...learningResourceQueries.search(allParams as LRSearchRequest),
+    ...(isVectorSearch
+      ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
+      : learningResourceQueries.search(allParams as LRSearchRequest)),
+    enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
-    select: (data) => {
+    select: (
+      data:
+        | LearningResourcesSearchResponse
+        | LearningResourcesVectorSearchResponse,
+    ) => {
       // Handle missing data gracefully
-      if (!data.metadata.aggregations.offered_by || data.results.length === 0) {
+      if (
+        !data?.metadata?.aggregations?.offered_by ||
+        !data?.results ||
+        data.results.length === 0
+      ) {
         return data
       }
 
@@ -605,7 +661,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
-  const { data: user } = useUserMe()
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
@@ -826,6 +881,25 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               adjustment. 0 means content file matches are not counted in the
               score. Only affects the results if there is a search term.
             </ExplanationContainer>
+            <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
+            <Checkbox
+              aria-label="Vector Hybrid Search"
+              checked={searchParams.get("vector_search") === "true"}
+              onChange={(e) =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev)
+                  if (e.target.checked) {
+                    next.set("vector_search", "true")
+                  } else {
+                    next.delete("vector_search")
+                  }
+                  return next
+                })
+              }
+            />
+            <ExplanationContainer>
+              Toggle to use the vector hybrid search endpoint.
+            </ExplanationContainer>
             <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
             <Checkbox
               checked={
@@ -898,7 +972,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading ? "" : `${data?.count} results`}
+              {isFetching || isLoading || isVectorSearch
+                ? ""
+                : `${data?.count} results`}
             </VisuallyHidden>
             <Stack direction="row" justifyContent="space-between">
               <StyledResourceTabs
@@ -976,9 +1052,23 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         </li>
                       ))}
                   </PlainList>
-                ) : data && data.count > 0 ? (
+                ) : data && (data.results?.length ?? 0) > 0 ? (
                   <PlainList itemSpacing={1.5}>
-                    {data.results.map((resource) => (
+                    {data.promoted_results &&
+                      data.promoted_results.length > 0 &&
+                      data.promoted_results.map(
+                        (resource: LearningResource) => (
+                          <li key={`promoted-${resource.id}`}>
+                            <ResourceCard
+                              resource={{ ...resource, promoted: true }}
+                              parentHeadingEl={resultsHeadingEl}
+                              list
+                            />
+                          </li>
+                        ),
+                      )}
+
+                    {data.results.map((resource: LearningResource) => (
                       <li key={resource.id}>
                         <ResourceCard
                           resource={resource}
