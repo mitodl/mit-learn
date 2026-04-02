@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.61.1
+Version 0.61.1 (Released April 02, 2026)
 --------------
 
 - Fix scrape results for mitxonline (#3143)
