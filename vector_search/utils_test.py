@@ -576,6 +576,27 @@ def test_chunk_markdown_documents_header_text_in_body(mocker):
         assert "Required Courses" in doc.page_content
 
 
+def test_chunk_markdown_documents_no_redundant_header(mocker):
+    """First chunk with intact markdown header should not get a duplicate prepended."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 50
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 5
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    long_content = " ".join(["word"] * 100)
+    text = f"## My Section\n\n{long_content}"
+    metadata = {"key": "k1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) > 1
+    # The first chunk already starts with the markdown header,
+    # so "My Section" should NOT be redundantly prepended as plain text
+    first = docs[0].page_content
+    assert first.startswith("## My Section")
+    assert not first.startswith("My Section\n\n## My Section")
+
+
 def test_chunk_markdown_documents_without_headers(mocker):
     """Markdown content without headers still yields non-empty chunks."""
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 80

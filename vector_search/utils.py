@@ -339,13 +339,16 @@ def _chunk_markdown_documents(text, metadata):
 
     # Prepend header context to sub-chunks that lost their heading
     # after recursive splitting, using metadata from the header split.
-    header_keys = [key for _, key in MARKDOWN_HEADERS_TO_SPLIT_ON]
+    # Build a map from metadata key to markdown prefix (e.g. "Header 2" -> "##")
+    header_prefix_map = {key: prefix for prefix, key in MARKDOWN_HEADERS_TO_SPLIT_ON}
     for doc in split_docs:
         header_parts = [
             doc.metadata[key]
-            for key in header_keys
+            for key in header_prefix_map
             if key in doc.metadata
-            and not doc.page_content.startswith(doc.metadata[key])
+            and not doc.page_content.startswith(
+                f"{header_prefix_map[key]} {doc.metadata[key]}"
+            )
         ]
         if header_parts:
             prefix = " > ".join(header_parts)
