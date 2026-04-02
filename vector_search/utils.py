@@ -1,6 +1,5 @@
 import gc
 import logging
-import re
 import uuid
 from functools import cache
 
@@ -8,6 +7,7 @@ from django.conf import settings
 from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
@@ -46,9 +46,12 @@ from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
 
-# ATX-style markdown headings (e.g. "## Heading").  This is the format
-# produced by html2text, which is used upstream in html_to_markdown().
-_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)", re.MULTILINE)
+MARKDOWN_HEADERS_TO_SPLIT_ON = [
+    ("#", "Header 1"),
+    ("##", "Header 2"),
+    ("###", "Header 3"),
+    ("####", "Header 4"),
+]
 
 
 @cache
@@ -302,55 +305,56 @@ def _chunk_documents(encoder, texts, metadatas):
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
 
 
-def _prepend_heading_context(split_docs):
-    """Prepend active markdown heading context to chunks that lack it.
+def _is_markdown_content(doc):
+    """Check if a content file document is markdown content."""
+    return (
+        doc.get("file_type") == "marketing_page" or doc.get("file_extension") == ".md"
+    )
 
-    When a long markdown section is split across multiple chunks, only the
-    first chunk contains the section headings.  This function tracks the
-    heading across sequential chunks and prepends the active
-    headings to any chunk that doesn't already start with them, so every
-    chunk is self-describing (e.g. a course listing chunk will carry its
-    "Required Courses" or "Industry-specific Verticals" heading).
 
-    Note: This runs on all content files, not just marketing pages.
-    The heading context is broadly useful (e.g. OCW lecture notes,
-    course pages) but was motivated by program marketing pages where
-    course listings may lose their section headings after chunking.
+def _chunk_markdown_documents(text, metadata):
+    """Chunk markdown text using header-aware splitting.
+
+    First splits by markdown headers to preserve section context,
+    then sub-splits with RecursiveCharacterTextSplitter to stay
+    within chunk size limits. After sub-splitting, any chunk that
+    lost its heading is prepended with the header context from
+    metadata so every chunk's page_content is self-describing
+    for embedding.
     """
-    # current_headings[level] = "## Heading text" (full line)
-    current_headings = {}
+    header_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=MARKDOWN_HEADERS_TO_SPLIT_ON,
+        strip_headers=False,
+    )
+    header_docs = header_splitter.split_text(text)
 
+    chunk_params = {
+        "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
+    }
+    if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
+        chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+
+    recursive_splitter = _get_text_splitter(**chunk_params)
+    split_docs = recursive_splitter.split_documents(header_docs)
+
+    # Prepend header context to sub-chunks that lost their heading
+    # after recursive splitting, using metadata from the header split.
+    header_keys = [key for _, key in MARKDOWN_HEADERS_TO_SPLIT_ON]
     for doc in split_docs:
-        text = doc.page_content
+        header_parts = [
+            doc.metadata[key]
+            for key in header_keys
+            if key in doc.metadata and doc.metadata[key] not in doc.page_content
+        ]
+        if header_parts:
+            prefix = " > ".join(header_parts)
+            doc.page_content = f"{prefix}\n\n{doc.page_content}"
 
-        # Only prepend context if the chunk has leading text before its
-        # first heading (or no headings at all).  When a chunk starts with
-        # a heading, all its content already belongs to that section.
-        first_heading = _HEADING_RE.search(text)
-        has_leading_text = first_heading is None or bool(
-            text[: first_heading.start()].strip()
-        )
+    # Merge the original content file metadata into each chunk
+    for doc in split_docs:
+        doc.metadata.update(metadata)
 
-        if has_leading_text and current_headings:
-            chunk_headings = {m.group(0) for m in _HEADING_RE.finditer(text)}
-            prefix_lines = [
-                heading
-                for _, heading in sorted(current_headings.items())
-                if heading not in chunk_headings
-            ]
-            if prefix_lines:
-                doc.page_content = "\n".join(prefix_lines) + "\n\n" + text
-
-        # Update heading state *after* prepending, so next chunk gets
-        # the correct context even when this chunk introduces new headings
-        for match in _HEADING_RE.finditer(text):
-            level = len(match.group(1))
-            line = match.group(0)
-            current_headings[level] = line
-            # Clear deeper headings when a higher-level heading appears
-            for deeper in list(current_headings):
-                if deeper > level:
-                    del current_headings[deeper]
+    return split_docs
 
 
 def _learning_resource_embedding_context(document):
@@ -581,7 +585,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
-def _generate_content_file_points(serialized_content):  # noqa: C901, PLR0912, PLR0915
+def _generate_content_file_points(serialized_content):
     """
     Chunk and embed content file documents, yielding PointStructs
     """
@@ -626,33 +630,10 @@ def _generate_content_file_points(serialized_content):  # noqa: C901, PLR0912, P
             remove_params, collection_name=CONTENT_FILES_COLLECTION_NAME
         )
 
-        split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
-        _prepend_heading_context(split_docs)
-
-        # Re-split any chunks that now exceed the size limit after heading
-        # context was prepended.
-        chunk_size = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
-        if chunk_size:
-            resplitter = _get_text_splitter(
-                chunk_size=chunk_size,
-                chunk_overlap=settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
-            )
-            length_fn = getattr(resplitter, "_length_function", len)
-            resplit_performed = False
-            i = 0
-            while i < len(split_docs):
-                if length_fn(split_docs[i].page_content) > chunk_size:
-                    resplit = resplitter.split_documents([split_docs[i]])
-                    split_docs[i : i + 1] = resplit
-                    resplit_performed = True
-                    i += len(resplit)
-                else:
-                    i += 1
-
-            # If an oversized chunk was split again, reapply heading context so
-            # newly created fragments keep section context where needed.
-            if resplit_performed:
-                _prepend_heading_context(split_docs)
+        if _is_markdown_content(doc):
+            split_docs = _chunk_markdown_documents(embedding_context, doc)
+        else:
+            split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]
