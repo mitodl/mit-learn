@@ -34,7 +34,6 @@ export const generateMetadata = async (
     return standardizeMetadata({
       title: program.title,
       image,
-      robots: "noindex, nofollow",
     })
   })
 }

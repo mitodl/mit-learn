@@ -13372,7 +13372,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        canonical_product_url:
+          type: string
+          readOnly: true
       required:
+      - canonical_product_url
       - id
     LearningResourceTopic:
       type: object

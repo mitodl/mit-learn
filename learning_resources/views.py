@@ -334,7 +334,14 @@ class LearningResourceViewSet(
             Intended to be performant with large page sizes.
         """
         queryset = self.filter_queryset(
-            self.get_queryset().values("id", "last_modified")
+            self.get_queryset().values(
+                "id",
+                "last_modified",
+                "readable_id",
+                "resource_type",
+                "resource_category",
+                "platform__code",
+            )
         )
         page = self.paginate_queryset(queryset)
 

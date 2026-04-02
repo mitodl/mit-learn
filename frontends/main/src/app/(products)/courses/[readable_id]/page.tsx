@@ -32,7 +32,6 @@ export const generateMetadata = async (
     return standardizeMetadata({
       title: course.title,
       image,
-      robots: "noindex, nofollow",
     })
   })
 }

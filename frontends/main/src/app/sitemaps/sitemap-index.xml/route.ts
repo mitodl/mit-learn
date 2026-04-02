@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import invariant from "tiny-invariant"
 import * as resourceSitemap from "../resources/sitemap"
 import * as channelsSitemap from "../channels/sitemap"
+import * as productsSitemap from "../products/sitemap"
 
 invariant(process.env.NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 const BASE_URL: string = process.env.NEXT_PUBLIC_ORIGIN
@@ -20,6 +21,7 @@ async function buildSitemapIndex(): Promise<string> {
   const sitemaps = await Promise.all([
     resourceSitemap.generateSitemaps(),
     channelsSitemap.generateSitemaps(),
+    productsSitemap.generateSitemaps(),
   ])
   const sitemapUrls = [
     `${BASE_URL}/sitemaps/static/sitemap.xml`,
