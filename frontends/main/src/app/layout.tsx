@@ -64,7 +64,13 @@ export default function RootLayout({
         <Script async src={process.env.NEXT_PUBLIC_APPZI_URL} />
       ) : null}
       {process.env.PUBLIC_HUBSPOT_PORTAL_ID ? (
-        <script type="text/javascript" id="hs-script-loader" async defer src={`//js.hs-scripts.com/${process.env.PUBLIC_HUBSPOT_PORTAL_ID}.js`}></script>
+        <script
+          type="text/javascript"
+          id="hs-script-loader"
+          async
+          defer
+          src={`//js.hs-scripts.com/${process.env.PUBLIC_HUBSPOT_PORTAL_ID}.js`}
+        ></script>
       ) : null}
     </html>
   )
