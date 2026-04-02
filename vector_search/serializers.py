@@ -214,11 +214,6 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="The filename of the content file",
     )
-    course_number = serializers.ListField(
-        required=False,
-        child=serializers.CharField(),
-        help_text="Course number of the content file",
-    )
     offered_by = serializers.ListField(
         required=False,
         child=serializers.CharField(),
@@ -229,12 +224,7 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="platform(s) of the content file",
     )
-    content_feature_type = serializers.ListField(
-        required=False,
-        child=serializers.CharField(),
-        help_text="The feature type of the content file. "
-        "Possible options are at api/v1/course_features/",
-    )
+
     file_extension = serializers.ListField(
         required=False,
         child=serializers.CharField(),
@@ -252,11 +242,6 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
             "The readable_id value of the parent learning resource for the content file"
         ),
     )
-    edx_module_id = serializers.ListField(
-        required=False,
-        child=serializers.CharField(),
-        help_text="The edx_module_id of the content file",
-    )
     collection_name = serializers.CharField(
         required=False,
         help_text=("Manually specify the name of the Qdrant collection to query"),
@@ -271,17 +256,6 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
             "The number of chunks in each group. Only relevant when group_by is used"
         ),
     )
-    url = serializers.ListField(
-        required=False,
-        child=serializers.CharField(),
-        help_text="The url of the content file. ",
-    )
-    title = serializers.ListField(
-        required=False,
-        child=serializers.CharField(),
-        help_text="The title of the content file. ",
-    )
-
     url__isnull = serializers.BooleanField(
         required=False,
         default=None,
