@@ -22,7 +22,6 @@ const makeSearchResponse = (
     },
     count: 0,
     results: [],
-    promoted_results: [],
     next: null,
     previous: null,
   }
