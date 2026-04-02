@@ -38,7 +38,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "topic": "topics[].name",
     "ocw_topic": "ocw_topics",
     "level": "runs[].level[].code",
-    "department": "departments.department_id",
+    "department": "departments[].department_id",
     "platform": "platform.code",
     "offered_by": "offered_by.code",
     "delivery": "delivery[].code",
