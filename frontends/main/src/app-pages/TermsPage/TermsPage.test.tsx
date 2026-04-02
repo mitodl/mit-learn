@@ -15,4 +15,13 @@ describe("TermsPage", () => {
       name: "Terms of Service",
     })
   })
+
+  test("Privacy policy sentence does not contain a literal dollar sign", async () => {
+    setMockResponse.get(urls.userMe.get(), {
+      [Permission.Authenticated]: true,
+    })
+
+    renderWithProviders(<TermsPage />)
+    expect(document.body.textContent).not.toMatch(/\$\s*PRIVACY POLICY/)
+  })
 })

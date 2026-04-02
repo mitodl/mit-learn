@@ -630,7 +630,7 @@ const TermsPage: React.FC = () => {
             RESPONSIBLE FOR ANY DAMAGE TO YOUR PROPERTY (INCLUDING YOUR COMPUTER
             SYSTEM) OR LOSS OF DATA THAT RESULTS FROM THE DOWNLOAD OR USE OF
             SUCH MATERIAL OR DATA, UNLESS OTHERWISE EXPRESSLY PROVIDED FOR IN
-            THE {SITE_NAME} PRIVACY POLICY.
+            THE {SITE_NAME?.toUpperCase()} PRIVACY POLICY.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             User Postings Disclaimer.
