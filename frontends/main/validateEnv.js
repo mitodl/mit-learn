@@ -25,7 +25,7 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX: yup.string(),
   NEXT_PUBLIC_POSTHOG_API_HOST: yup.string(),
   NEXT_PUBLIC_POSTHOG_UI_HOST: yup.string(),
-  PUBLIC_HUBSPOT_PORTAL_ID: yup.string(),
+  NEXT_ PUBLIC_HUBSPOT_PORTAL_ID: yup.string(),
 })
 
 const validateEnv = () => schema.validateSync(process.env)
