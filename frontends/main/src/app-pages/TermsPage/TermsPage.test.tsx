@@ -15,5 +15,4 @@ describe("TermsPage", () => {
       name: "Terms of Service",
     })
   })
-
 })
