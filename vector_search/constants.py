@@ -73,25 +73,19 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "resource_type_group": models.PayloadSchemaType.KEYWORD,
 }
 
-
+"""
+Note: Be intentional about which fields we add as indexes.
+Only add fields that we expect to filter or facet on frequently.
+"""
 QDRANT_CONTENT_FILE_INDEXES = {
-    "chunk_number": models.PayloadSchemaType.INTEGER,
     "key": models.PayloadSchemaType.KEYWORD,
     "title": models.PayloadSchemaType.KEYWORD,
-    "course_number": models.PayloadSchemaType.INTEGER,
     "platform.code": models.PayloadSchemaType.KEYWORD,
     "offered_by.code": models.PayloadSchemaType.KEYWORD,
-    "published": models.PayloadSchemaType.BOOL,
-    "content_feature_type": models.PayloadSchemaType.KEYWORD,
-    "file_type": models.PayloadSchemaType.KEYWORD,
     "file_extension": models.PayloadSchemaType.KEYWORD,
     "run_readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_readable_id": models.PayloadSchemaType.KEYWORD,
-    "run_title": models.PayloadSchemaType.KEYWORD,
     "edx_module_id": models.PayloadSchemaType.KEYWORD,
-    "checksum": models.PayloadSchemaType.KEYWORD,
-    "content_type": models.PayloadSchemaType.KEYWORD,
-    "edx_block_id": models.PayloadSchemaType.KEYWORD,
     "url": models.PayloadSchemaType.KEYWORD,
 }
 
