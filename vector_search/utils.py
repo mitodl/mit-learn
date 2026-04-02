@@ -785,13 +785,19 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 def _resource_vector_hits(search_result):
     hits = [hit.payload["readable_id"] for hit in search_result]
     """
-     Always lookup learning resources by readable_id for portability
-     in case we load points from external systems
-     """
-    return LearningResourceSerializer(
-        LearningResource.objects.for_serialization().filter(readable_id__in=hits),
-        many=True,
-    ).data
+    Always lookup learning resources by readable_id for portability
+    in case we load points from external systems
+    """
+    resources_by_id = {
+        r.readable_id: r
+        for r in LearningResource.objects.for_serialization().filter(
+            readable_id__in=hits
+        )
+    }
+    # Re-order to match the Qdrant ranking
+    ordered_resources = [resources_by_id[rid] for rid in hits if rid in resources_by_id]
+
+    return LearningResourceSerializer(ordered_resources, many=True).data
 
 
 def _content_file_vector_hits(search_result):
