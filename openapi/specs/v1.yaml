@@ -11924,6 +11924,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HubspotFormFieldValueRequest'
+        page_uri:
+          type: string
+          format: uri
+          minLength: 1
+        hutk:
+          type: string
+        page_title:
+          type: string
+        user_agent:
+          type: string
+        timestamp:
+          type: integer
+          minimum: 0
+        locale:
+          type: string
       required:
       - fields
     HubspotFormSubmitResponse:

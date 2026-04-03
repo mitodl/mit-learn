@@ -53,9 +53,30 @@ def submit_form(
     )
     portal_id = account_response.json()["portalId"]
 
+    fields = payload.get("fields", [])
+    hubspot_payload = {"fields": fields}
+
+    # Build context object with all available context properties
+    context = {}
+    if page_uri := payload.get("page_uri"):
+        context["pageUri"] = page_uri
+    if hutk := payload.get("hutk"):
+        context["hutk"] = hutk
+    if page_title := payload.get("page_title"):
+        context["pageTitle"] = page_title
+    if user_agent := payload.get("user_agent"):
+        context["userAgent"] = user_agent
+    if timestamp := payload.get("timestamp"):
+        context["timestamp"] = timestamp
+    if locale := payload.get("locale"):
+        context["locale"] = locale
+
+    if context:
+        hubspot_payload["context"] = context
+
     response = requests.post(
         f"{HSFORMS_API_BASE_URL}/submissions/v3/integration/secure/submit/{portal_id}/{form_id}",
-        json=payload,
+        json=hubspot_payload,
         headers={
             "Authorization": f"Bearer {settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN}",
             "Content-Type": "application/json",

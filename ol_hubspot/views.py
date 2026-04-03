@@ -55,6 +55,12 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
         child=HubspotFormFieldValueSerializer(),
         required=True,
     )
+    page_uri = serializers.URLField(required=False)
+    hutk = serializers.CharField(required=False, allow_blank=True)
+    page_title = serializers.CharField(required=False, allow_blank=True)
+    user_agent = serializers.CharField(required=False, allow_blank=True)
+    timestamp = serializers.IntegerField(required=False, min_value=0)
+    locale = serializers.CharField(required=False, allow_blank=True)
 
 
 class HubspotFormSubmitResponseSerializer(serializers.Serializer):
@@ -223,7 +229,8 @@ def hubspot_form_submit_view(request, form_id: str):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payload = serializer.validated_data
+        payload = dict(serializer.validated_data)
+        payload.setdefault("page_uri", request.META.get("HTTP_REFERER"))
         submit_form(
             form_id=form_id,
             payload=payload,
