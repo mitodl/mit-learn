@@ -4858,7 +4858,7 @@ export interface LearningResourceSchool {
   departments: Array<LearningResourceBaseDepartment>
 }
 /**
- * Minimal serializer for LearningResource - returns only essential fields for sitemap generation and other use cases requiring minimal data transfer.
+ * Minimal serializer for LearningResource - returns only essential fields for sitemap generation and other use cases requiring minimal data transfer.  ``url`` is typically the public Learn product page URL when set by ETL (e.g. MITx Online resources); consumers such as the product sitemap rely on it.
  * @export
  * @interface LearningResourceSummary
  */
@@ -16555,7 +16555,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       }
     },
     /**
-     * Get a paginated list of learning resources with summary fields
+     * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
      * @summary Get learning resources summary
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -17336,7 +17336,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
-     * Get a paginated list of learning resources with summary fields
+     * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
      * @summary Get learning resources summary
      * @param {boolean} [certification]
      * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -17750,7 +17750,7 @@ export const LearningResourcesApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Get a paginated list of learning resources with summary fields
+     * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
      * @summary Get learning resources summary
      * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -18807,7 +18807,7 @@ export class LearningResourcesApi extends BaseAPI {
   }
 
   /**
-   * Get a paginated list of learning resources with summary fields
+   * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
    * @summary Get learning resources summary
    * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
