@@ -215,7 +215,7 @@ def hubspot_forms_list_view(request):
     parameters=[OpenApiParameter(name="archived", type=bool, required=False)],
 )
 @api_view(["GET"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def hubspot_form_detail_view(request, form_id: str):
     """Get one HubSpot form by id from the backend."""
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
@@ -246,7 +246,7 @@ def hubspot_form_detail_view(request, form_id: str):
     responses={200: HubspotFormSubmitResponseSerializer(), **hubspot_error_responses},
 )
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def hubspot_form_submit_view(request, form_id: str):
     """Submit a form to HubSpot."""
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:

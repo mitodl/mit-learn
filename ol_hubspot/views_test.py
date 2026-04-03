@@ -180,16 +180,20 @@ def test_list_forms_requires_superuser(client, settings):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_detail_requires_authenticated_user(client, settings):
-    """Detail endpoint requires authentication."""
+def test_detail_allows_anonymous_user(client, settings, mocker):
+    """Detail endpoint allows anonymous access."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     detail_url = reverse(
         "ol_hubspot:v1:hubspot-forms-detail", kwargs={"form_id": "abc"}
     )
+    expected = {"id": "abc", "name": "Test Form"}
+    get_stub = mocker.patch("ol_hubspot.views.get_form")
+    get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
 
     response = client.get(detail_url)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected
 
 
 def test_submit_form_success(client, settings, mocker):
@@ -432,16 +436,23 @@ def test_submit_form_missing_token_returns_503(client, settings):
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
-def test_submit_form_requires_authenticated_user(client, settings):
-    """Submit endpoint requires authentication."""
+def test_submit_form_allows_anonymous_user(client, settings, mocker):
+    """Submit endpoint allows anonymous access."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
     )
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
 
-    response = client.post(submit_url, {"fields": []}, format="json")
+    response = client.post(
+        submit_url,
+        {"fields": [{"name": "email", "value": "anon@example.com"}]},
+        format="json",
+    )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once()
 
 
 def test_submit_form_hubspot_failure(client, settings, mocker):
