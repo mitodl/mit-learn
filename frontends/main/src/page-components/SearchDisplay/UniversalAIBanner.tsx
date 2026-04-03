@@ -10,7 +10,6 @@ const BANNER_SEARCH_TERMS_PATTERN =
 const BannerContainer = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   padding: "16px 24px",
-  borderRadius: "8px",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   display: "flex",
   justifyContent: "space-between",
@@ -26,19 +25,17 @@ const BannerContent = styled.div({
 
 const BannerLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
-  fontWeight: 600,
   fontSize: "12px",
   letterSpacing: "1px",
   textTransform: "uppercase",
 }))
 
-const BannerTitle = styled(Typography)({
-  fontWeight: 700,
-})
+const BannerTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: theme.typography.fontWeightBold,
+}))
 
 const BannerLink = styled.a(({ theme }) => ({
   color: theme.palette.text.primary,
-  fontWeight: 600,
   whiteSpace: "nowrap",
   textDecoration: "none",
   "&:hover": {
