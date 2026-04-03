@@ -5,7 +5,11 @@ import json
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from video_shorts.api import upsert_video_short, walk_video_shorts_from_s3
+from video_shorts.api import (
+    delete_video_short,
+    upsert_video_short,
+    walk_video_shorts_from_s3,
+)
 from video_shorts.models import VideoShort
 
 pytestmark = [pytest.mark.django_db]
@@ -43,6 +47,29 @@ def test_upsert_video_short_updates_existing(settings, sample_video_metadata):
     assert updated_short.video_id == first_short.video_id
     assert updated_short.title == "Updated Title"
     assert updated_short.created_on == original_created_on  # Not changed
+
+
+def test_delete_video_short_removes_record(mocker):
+    """Test delete_video_short deletes the record and triggers S3 cleanup"""
+    from video_shorts.factories import VideoShortFactory
+
+    video = VideoShortFactory.create(video_id="to_delete")
+    mock_s3_task = mocker.patch("video_shorts.api.delete_video_short_from_s3")
+
+    delete_video_short("to_delete")
+
+    assert not VideoShort.objects.filter(video_id="to_delete").exists()
+    mock_s3_task.delay.assert_called_once_with(video.video_url)
+
+
+def test_delete_video_short_nonexistent_is_noop(mocker):
+    """Test delete_video_short does nothing for a nonexistent video_id"""
+    mock_s3_task = mocker.patch("video_shorts.api.delete_video_short_from_s3")
+
+    delete_video_short("nonexistent")
+
+    assert VideoShort.objects.count() == 0
+    mock_s3_task.delay.assert_not_called()
 
 
 def test_process_video_short_invalid_metadata_raises(settings):
