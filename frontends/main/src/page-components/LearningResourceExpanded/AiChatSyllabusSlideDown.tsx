@@ -3,7 +3,7 @@ import { Skeleton, Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
-import { LearningResource } from "api"
+import { LearningResource, ResourceTypeGroupEnum } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
 
 export enum ChatTransitionState {
@@ -109,11 +109,20 @@ const StyledAiChat = styled(AiChat)<{
   },
 }))
 
-const STARTERS: AiChatProps["conversationStarters"] = [
-  { content: "What is this course about?" },
-  { content: "What are the prerequisites for this course?" },
-  { content: "How will this course be graded?" },
-]
+export const STARTERS: Partial<
+  Record<ResourceTypeGroupEnum, AiChatProps["conversationStarters"]>
+> = {
+  [ResourceTypeGroupEnum.Course]: [
+    { content: "What is this course about?" },
+    { content: "What are the prerequisites for this course?" },
+    { content: "How will this course be graded?" },
+  ],
+  [ResourceTypeGroupEnum.Program]: [
+    { content: "What is this program about?" },
+    { content: "What are the prerequisites for this program?" },
+    { content: "How will this program be graded?" },
+  ],
+}
 type ChatParams = {
   collection_name: string
   message: string
@@ -196,8 +205,8 @@ const AiChatSyllabusSlideDown = ({
       <StyledAiChat
         key={resource.readable_id}
         chatId={resource.readable_id}
-        entryScreenTitle="What do you want to know about this course?"
-        conversationStarters={STARTERS}
+        entryScreenTitle={`What do you want to know about this ${resource.resource_category.toLocaleLowerCase()}?`}
+        conversationStarters={STARTERS[resource.resource_type_group]}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
         requestOpts={{

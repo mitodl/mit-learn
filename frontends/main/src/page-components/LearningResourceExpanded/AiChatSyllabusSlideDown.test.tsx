@@ -1,9 +1,11 @@
 import React from "react"
 import AiChatSyllabusSlideDown, {
   ChatTransitionState,
+  STARTERS,
 } from "./AiChatSyllabusSlideDown"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
+import { ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
 import invariant from "tiny-invariant"
 
 const mockAiChat = jest.fn<React.JSX.Element, [Record<string, unknown>]>(() => (
@@ -49,6 +51,43 @@ describe("AiChatSyllabus", () => {
     invariant(firstMessage instanceof HTMLElement)
     expect(firstMessage?.dataset.chatRole).toBe("user")
   })
+
+  test.each([
+    {
+      overrides: {
+        resource_type: ResourceTypeEnum.Course,
+        resource_type_group: ResourceTypeGroupEnum.Course,
+      },
+    },
+    {
+      overrides: {
+        resource_type: ResourceTypeEnum.Program,
+        resource_type_group: ResourceTypeGroupEnum.Program,
+      },
+    },
+  ] as const)(
+    "passes conversation starters for $resource_type_group",
+    ({ overrides }) => {
+      mockAiChat.mockClear()
+      const resource = factories.learningResources.resource(overrides)
+
+      renderWithProviders(
+        <AiChatSyllabusSlideDown
+          open
+          resource={resource}
+          onTransitionEnd={jest.fn()}
+          scrollElement={null}
+          contentTopPosition={0}
+          chatTransitionState={ChatTransitionState.Open}
+        />,
+      )
+
+      const call = mockAiChat.mock.calls[0][0] as Record<string, unknown>
+      expect(call.conversationStarters).toEqual(
+        STARTERS[overrides.resource_type_group],
+      )
+    },
+  )
 
   test("passes CSRF config in requestOpts", () => {
     const resource = factories.learningResources.course()
