@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 def delete_video_short_from_s3(video_url: str) -> None:
     """Delete all objects from the S3 storage bucket for a video short."""
     prefix = video_url.rsplit("/", 1)[0].lstrip("/") if video_url else ""
-    if not prefix or "shorts" not in prefix:
+    if not prefix or "shorts" not in prefix.split("/"):
         log.warning("No shorts prefix provided for S3 deletion, skipping.")
         return
     s3 = boto3.resource(
