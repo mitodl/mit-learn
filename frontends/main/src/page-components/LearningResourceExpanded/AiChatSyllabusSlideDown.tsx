@@ -152,7 +152,7 @@ export const AiChatSyllabusOpener = ({
         <RiSparkling2Line />
         <Typography variant="body1">
           Ask<strong>TIM</strong> about this{" "}
-          {resource?.resource_category.toLocaleLowerCase() ?? (
+          {resource?.resource_category?.toLowerCase() ?? (
             <Skeleton sx={{ display: "inline-block" }} width={50} />
           )}
         </Typography>
