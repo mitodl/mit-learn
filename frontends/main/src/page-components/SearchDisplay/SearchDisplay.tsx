@@ -977,7 +977,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 ? ""
                 : `${data?.count} results`}
             </VisuallyHidden>
-            <UniversalAIBanner />
+            <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">
               <StyledResourceTabs
                 setSearchParams={setSearchParams}
