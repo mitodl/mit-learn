@@ -562,11 +562,11 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
         pace = sorted(
             {course_pace for course in courses for course_pace in course["pace"]}
         )
-        has_program_page = bool(parse_page_attribute(program, "page_url"))
+        has_product_page = bool(parse_page_attribute(program, "page_url"))
         learn_program_url = _learn_product_url_for_mitx_program(
             program["readable_id"],
             program.get("display_mode"),
-            has_product_page=has_program_page,
+            has_product_page=has_product_page,
         )
         run = {
             "run_id": program["readable_id"],
