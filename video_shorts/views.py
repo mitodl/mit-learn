@@ -4,21 +4,20 @@ from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
-from rest_framework.pagination import LimitOffsetPagination
 
+from main.pagination import DefaultPagination
 from main.permissions import AnonymousAccessReadonlyPermission
 from main.utils import cache_page_for_all_users
 from video_shorts.models import VideoShort
 from video_shorts.serializers import VideoShortSerializer
 
 
-class VideoShortPagination(LimitOffsetPagination):
+class VideoShortPagination(DefaultPagination):
     """
     Pagination class for video shorts viewset with a default limit of 12
     """
 
     default_limit = 12
-    max_limit = 100
 
 
 @extend_schema_view(
