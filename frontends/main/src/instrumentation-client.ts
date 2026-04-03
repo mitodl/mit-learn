@@ -6,15 +6,20 @@
 // instead. This file runs before React hydration on every page load.
 
 import * as Sentry from "@sentry/nextjs"
+import { parseSampleRate } from "./sentry-utils"
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   release: process.env.NEXT_PUBLIC_VERSION,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENV,
-  profilesSampleRate: Number(
+  profilesSampleRate: parseSampleRate(
     process.env.NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE,
+    0,
   ),
-  tracesSampleRate: Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE),
+  tracesSampleRate: parseSampleRate(
+    process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    1,
+  ),
   tracePropagationTargets: [
     process.env.NEXT_PUBLIC_MITOL_API_BASE_URL,
     process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL,
