@@ -404,7 +404,7 @@ def test_video_short_webhook_view_deletes_existing(settings, client, mocker):
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "delete_me",
-        "video_metadata": {"delete": True},
+        "video_metadata": {"video_id": "delete_me", "delete": True},
         "source": "video_shorts",
     }
 
@@ -431,7 +431,7 @@ def test_video_short_webhook_view_delete_nonexistent(settings, client, mocker):
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "does_not_exist",
-        "video_metadata": {"delete": True},
+        "video_metadata": {"video_id": "does_not_exist", "delete": True},
         "source": "video_shorts",
     }
 
