@@ -337,10 +337,7 @@ class LearningResourceViewSet(
             self.get_queryset().values(
                 "id",
                 "last_modified",
-                "readable_id",
-                "resource_type",
-                "resource_category",
-                "platform__code",
+                "url",
             )
         )
         page = self.paginate_queryset(queryset)

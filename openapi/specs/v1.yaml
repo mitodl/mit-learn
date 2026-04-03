@@ -13372,12 +13372,12 @@ components:
           type: string
           format: date-time
           nullable: true
-        canonical_product_url:
+        url:
           type: string
+          format: uri
           nullable: true
-          readOnly: true
+          maxLength: 2048
       required:
-      - canonical_product_url
       - id
     LearningResourceTopic:
       type: object

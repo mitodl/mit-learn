@@ -4865,12 +4865,6 @@ export interface LearningResourceSchool {
 export interface LearningResourceSummary {
   /**
    *
-   * @type {string}
-   * @memberof LearningResourceSummary
-   */
-  canonical_product_url: string | null
-  /**
-   *
    * @type {number}
    * @memberof LearningResourceSummary
    */
@@ -4881,6 +4875,12 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   last_modified?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  url?: string | null
 }
 /**
  * Serializer for LearningResourceTopic model
