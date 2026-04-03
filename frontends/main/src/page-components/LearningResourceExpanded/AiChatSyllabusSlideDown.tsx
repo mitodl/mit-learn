@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react"
-import { Skeleton, Typography, styled } from "ol-components"
+import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
@@ -138,7 +138,7 @@ export const AiChatSyllabusOpener = ({
   open: boolean
   className?: string
   onToggleOpen: (open: boolean) => void
-  resource?: LearningResource
+  resource: LearningResource
 }) => {
   return (
     <Opener className={className}>
@@ -152,9 +152,7 @@ export const AiChatSyllabusOpener = ({
         <RiSparkling2Line />
         <Typography variant="body1">
           Ask<strong>TIM</strong> about this{" "}
-          {resource?.resource_category?.toLowerCase() ?? (
-            <Skeleton sx={{ display: "inline-block" }} width={50} />
-          )}
+          {resource.resource_category.toLowerCase()}
         </Typography>
         <Chevron />
       </StyledButton>

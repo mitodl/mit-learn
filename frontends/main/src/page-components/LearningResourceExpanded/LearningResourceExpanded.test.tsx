@@ -11,6 +11,7 @@ import user from "@testing-library/user-event"
 import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { kebabCase } from "lodash"
+import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -409,7 +410,10 @@ describe.each([true, false])(
     test("Chat button label includes resource category", () => {
       if (!enabled) return
       const resource = factories.learningResources.resource({
-        resource_type: ResourceTypeEnum.Course,
+        resource_type: faker.helpers.arrayElement([
+          ResourceTypeEnum.Course,
+          ResourceTypeEnum.Program,
+        ]),
       })
       setup({ resource })
 
