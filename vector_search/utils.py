@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from qdrant_client import QdrantClient, models
 
 from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
@@ -44,6 +45,13 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 
 logger = logging.getLogger(__name__)
+
+MARKDOWN_HEADERS_TO_SPLIT_ON = [
+    ("#", "Header 1"),
+    ("##", "Header 2"),
+    ("###", "Header 3"),
+    ("####", "Header 4"),
+]
 
 
 @cache
@@ -295,6 +303,62 @@ def _chunk_documents(encoder, texts, metadatas):
             ).create_documents(texts=texts, metadatas=metadatas)
         )
     return recursive_splitter.create_documents(texts=texts, metadatas=metadatas)
+
+
+def _is_markdown_content(doc):
+    """Check if a content file document is markdown content."""
+    return (
+        doc.get("file_type") == "marketing_page" or doc.get("file_extension") == ".md"
+    )
+
+
+def _chunk_markdown_documents(text, metadata):
+    """Chunk markdown text using header-aware splitting.
+
+    First splits by markdown headers to preserve section context,
+    then sub-splits with RecursiveCharacterTextSplitter to stay
+    within chunk size limits. After sub-splitting, any chunk that
+    lost its heading is prepended with the header context from
+    metadata so every chunk's page_content is self-describing
+    for embedding.
+    """
+    header_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=MARKDOWN_HEADERS_TO_SPLIT_ON,
+        strip_headers=False,
+    )
+    header_docs = header_splitter.split_text(text)
+
+    chunk_params = {
+        "chunk_overlap": settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP,
+    }
+    if settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE:
+        chunk_params["chunk_size"] = settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+
+    recursive_splitter = _get_text_splitter(**chunk_params)
+    split_docs = recursive_splitter.split_documents(header_docs)
+
+    # Prepend header context to sub-chunks that lost their heading
+    # after recursive splitting, using metadata from the header split.
+    # Build a map from metadata key to markdown prefix (e.g. "Header 2" -> "##")
+    header_prefix_map = {key: prefix for prefix, key in MARKDOWN_HEADERS_TO_SPLIT_ON}
+    for doc in split_docs:
+        header_parts = [
+            doc.metadata[key]
+            for key in header_prefix_map
+            if key in doc.metadata
+            and not doc.page_content.startswith(
+                f"{header_prefix_map[key]} {doc.metadata[key]}"
+            )
+        ]
+        if header_parts:
+            prefix = " > ".join(header_parts)
+            doc.page_content = f"{prefix}\n\n{doc.page_content}"
+
+    # Merge the original content file metadata into each chunk
+    for doc in split_docs:
+        doc.metadata.update(metadata)
+
+    return split_docs
 
 
 def _learning_resource_embedding_context(document):
@@ -570,7 +634,10 @@ def _generate_content_file_points(serialized_content):
             remove_params, collection_name=CONTENT_FILES_COLLECTION_NAME
         )
 
-        split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
+        if _is_markdown_content(doc):
+            split_docs = _chunk_markdown_documents(embedding_context, doc)
+        else:
+            split_docs = _chunk_documents(encoder_dense, [embedding_context], [doc])
 
         # Identify non-empty chunks and their original indices
         valid_chunks = [(i, d) for i, d in enumerate(split_docs) if d.page_content]

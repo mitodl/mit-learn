@@ -3905,17 +3905,11 @@ components:
           - aggregations
           - suggestions
           readOnly: true
-        promoted_results:
-          type: array
-          items:
-            $ref: '#/components/schemas/LearningResource'
-          readOnly: true
       required:
       - count
       - metadata
       - next
       - previous
-      - promoted_results
       - results
     NewsFeedItem:
       type: object

@@ -1,6 +1,27 @@
 Release Notes
 =============
 
+Version 0.61.1 (Released April 02, 2026)
+--------------
+
+- Fix scrape results for mitxonline (#3143)
+
+Version 0.61.0 (Released April 02, 2026)
+--------------
+
+- revert (#3155)
+- Rename footer "Contact Us" link to "Help" (#3148)
+- product page design updates (#3145)
+- copy edits for how-youll-learn (#3138)
+- hubspot api (#3096)
+- resource type in carusel (#3140)
+- promoted resources (#3144)
+- feat: add OpenTelemetry tracing to Next.js server runtime (#3136)
+- Add LearningResource.view_count (#3139)
+- improve retry logging (#3137)
+- Learning Resource Hybrid Search (#3130)
+- fix dim() (embedding dimensions) method for qdrant cloud dense encoders (#3079)
+
 Version 0.60.2 (Released April 01, 2026)
 --------------
 

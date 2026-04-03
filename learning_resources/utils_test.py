@@ -41,6 +41,7 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    strip_markdown_images,
     transfer_list_resources,
     truncate_to_tokens,
 )
@@ -966,3 +967,27 @@ def test_build_program_children_content_bulk_excludes_unpublished_contentfiles()
     assert "Visible summary" in result[program_lr.id]
     assert "Hidden unpublished summary" not in result[program_lr.id]
     assert "Hidden run summary" not in result[program_lr.id]
+
+
+@pytest.mark.parametrize(
+    ("input_md", "expected"),
+    [
+        ("![](https://example.com/img.png)", ""),
+        (
+            "![Course thumbnail](https://example.com/img.png)",
+            "Course thumbnail",
+        ),
+        (
+            "Before ![](https://example.com/a.png) after",
+            "Before  after",
+        ),
+        (
+            "![alt1](url1) text ![](url2) ![alt2](url3)",
+            "alt1 text  alt2",
+        ),
+        ("No images here", "No images here"),
+        ("[regular link](https://example.com)", "[regular link](https://example.com)"),
+    ],
+)
+def test_strip_markdown_images(input_md, expected):
+    assert strip_markdown_images(input_md) == expected

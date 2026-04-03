@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.60.2"
+VERSION = "0.61.1"
 
 log = logging.getLogger()
 
@@ -586,8 +586,6 @@ OPENSEARCH_MAX_SUGGEST_RESULTS = get_int("OPENSEARCH_MAX_SUGGEST_RESULTS", 1)
 OPENSEARCH_SHARD_COUNT = get_int("OPENSEARCH_SHARD_COUNT", 2)
 OPENSEARCH_REPLICA_COUNT = get_int("OPENSEARCH_REPLICA_COUNT", 2)
 OPENSEARCH_MAX_REQUEST_SIZE = get_int("OPENSEARCH_MAX_REQUEST_SIZE", 10485760)
-
-SEARCH_NUM_PROMOTED_RESULTS = get_int("SEARCH_NUM_PROMOTED_RESULTS", 2)
 INDEXING_ERROR_RETRIES = get_int("INDEXING_ERROR_RETRIES", 1)
 
 # JWT authentication settings
@@ -830,6 +828,7 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
 )
+WEBDRIVER_WAIT_SECONDS = get_int(name="WEBDRIVER_WAIT_SECONDS", default=10)
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )

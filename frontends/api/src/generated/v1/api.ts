@@ -4949,12 +4949,6 @@ export interface LearningResourcesSearchResponse {
    * @memberof LearningResourcesSearchResponse
    */
   metadata: ContentFileSearchResponseMetadata
-  /**
-   *
-   * @type {Array<LearningResource>}
-   * @memberof LearningResourcesSearchResponse
-   */
-  promoted_results: Array<LearningResource>
 }
 /**
  * * `undergraduate` - Undergraduate * `graduate` - Graduate * `high_school` - High School * `noncredit` - Non-Credit * `advanced` - Advanced * `intermediate` - Intermediate * `introductory` - Introductory

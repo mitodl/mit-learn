@@ -35,9 +35,12 @@ from vector_search.constants import (
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
+    _chunk_markdown_documents,
     _embed_course_metadata_as_contentfile,
+    _generate_content_file_points,
     _get_text_splitter,
     _resource_vector_hits,
+    _is_markdown_content,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -491,6 +494,209 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _chunk_documents(encoder, ["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
+
+
+@pytest.mark.parametrize(
+    ("doc", "expected"),
+    [
+        ({"file_type": "marketing_page"}, True),
+        ({"file_extension": ".md"}, True),
+        ({"file_type": "marketing_page", "file_extension": ".md"}, True),
+        ({"file_type": "page", "file_extension": ".html"}, False),
+        ({}, False),
+    ],
+)
+def test_is_markdown_content(doc, expected):
+    assert _is_markdown_content(doc) == expected
+
+
+def test_chunk_markdown_documents_preserves_headers(mocker):
+    """Headers are preserved in subchunks after markdown-aware splitting"""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 100
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 10
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+
+    # Clear the cached text splitter so settings take effect
+    _get_text_splitter.cache_clear()
+
+    text = "## Section A\n\nContent under A\n\n## Section B\n\nContent under B"
+    metadata = {"key": "test_key", "resource_readable_id": "r1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) >= 2
+    # Each chunk should carry the original metadata
+    for doc in docs:
+        assert doc.metadata["key"] == "test_key"
+        assert doc.metadata["resource_readable_id"] == "r1"
+    # Header metadata from MarkdownHeaderTextSplitter is preserved
+    contents = [d.page_content for d in docs]
+    assert any("Section A" in c for c in contents)
+    assert any("Section B" in c for c in contents)
+
+
+def test_chunk_markdown_documents_long_section_preserves_header(mocker):
+    """When a section is split into multiple chunks, header text is prepended"""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 50
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 5
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    long_content = " ".join(["word"] * 100)
+    text = f"## My Section\n\n{long_content}"
+    metadata = {"key": "k1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    # Should produce multiple chunks
+    assert len(docs) > 1
+    # Every chunk should have "My Section" in its page_content,
+    # either from the original heading or prepended from metadata
+    for doc in docs:
+        assert "My Section" in doc.page_content
+
+
+def test_chunk_markdown_documents_header_text_in_body(mocker):
+    """Header is prepended even when its text appears as a substring in the body."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 50
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 5
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    # The body naturally contains the heading text "Required Courses"
+    long_body = " ".join(["There are 6 Required Courses for this program."] * 20)
+    text = f"## Required Courses\n\n{long_body}"
+    metadata = {"key": "k1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) > 1
+    # Every chunk should have "Required Courses" prepended or as the heading,
+    # even though the same text appears in the body content
+    for doc in docs:
+        assert "Required Courses" in doc.page_content
+
+
+def test_chunk_markdown_documents_no_redundant_header(mocker):
+    """First chunk with intact markdown header should not get a duplicate prepended."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 50
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 5
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    long_content = " ".join(["word"] * 100)
+    text = f"## My Section\n\n{long_content}"
+    metadata = {"key": "k1"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) > 1
+    # The first chunk already starts with the markdown header,
+    # so "My Section" should NOT be redundantly prepended as plain text
+    first = docs[0].page_content
+    assert first.startswith("## My Section")
+    assert not first.startswith("My Section\n\n## My Section")
+
+
+def test_chunk_markdown_documents_without_headers(mocker):
+    """Markdown content without headers still yields non-empty chunks."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 80
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 10
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    _get_text_splitter.cache_clear()
+
+    text = "This is markdown text without any ATX headings. " * 10
+    metadata = {"key": "no_header_doc", "resource_readable_id": "r-no-header"}
+
+    docs = _chunk_markdown_documents(text, metadata)
+
+    assert len(docs) >= 1
+    assert any(doc.page_content.strip() for doc in docs)
+    for doc in docs:
+        assert doc.metadata["key"] == "no_header_doc"
+        assert doc.metadata["resource_readable_id"] == "r-no-header"
+
+
+def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mocker):
+    """marketing_page files use _chunk_markdown_documents instead of _chunk_documents"""
+    from langchain.schema import Document
+
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mock_md_chunk = mocker.patch(
+        "vector_search.utils._chunk_markdown_documents",
+        return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
+    )
+    mock_chunk = mocker.patch("vector_search.utils._chunk_documents")
+    mocker.patch(
+        "vector_search.utils.should_generate_content_embeddings", return_value=True
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "## Heading\n\nSome content",
+        "file_type": "marketing_page",
+        "file_extension": ".md",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    list(_generate_content_file_points([doc]))
+    mock_md_chunk.assert_called_once()
+    mock_chunk.assert_not_called()
+
+
+def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker):
+    """Non-markdown files use _chunk_documents"""
+    from langchain.schema import Document
+
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mock_md_chunk = mocker.patch("vector_search.utils._chunk_markdown_documents")
+    mock_chunk = mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
+    )
+    mocker.patch(
+        "vector_search.utils.should_generate_content_embeddings", return_value=True
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    list(_generate_content_file_points([doc]))
+    mock_chunk.assert_called_once()
+    mock_md_chunk.assert_not_called()
 
 
 def test_course_metadata_indexed_with_learning_resources(mocker):

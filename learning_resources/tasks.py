@@ -40,6 +40,7 @@ from learning_resources.utils import (
     load_course_blocklist,
     resource_unpublished_actions,
     resource_upserted_actions,
+    strip_markdown_images,
 )
 from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
 from learning_resources_search.exceptions import RetryError
@@ -738,7 +739,7 @@ def marketing_page_for_resources(resource_ids):
             )
             content_file.key = marketing_page_url
             content_file.url = marketing_page_url
-            content = html_to_markdown(page_content)
+            content = strip_markdown_images(html_to_markdown(page_content))
             if learning_resource.resource_type == LearningResourceType.program.name:
                 children_content = program_children_content.get(
                     learning_resource.id, ""
