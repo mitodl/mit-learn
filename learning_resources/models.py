@@ -1092,7 +1092,12 @@ class ContentFile(TimestampedModel):
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
     file_extension = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
-    edx_module_id = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
+    edx_module_id = models.CharField(  # noqa: DJ001
+        max_length=1024,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
     duration = models.CharField(max_length=11, null=True, blank=True)  # noqa: DJ001
