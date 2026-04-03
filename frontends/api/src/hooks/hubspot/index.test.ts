@@ -13,10 +13,8 @@ type HubspotSubmitBody = {
   fields: Array<{ name: string; value: string | boolean | string[] | null }>
   page_uri?: string
   hutk?: string
-  page_title?: string
-  user_agent?: string
-  timestamp?: number
-  locale?: string
+  page_name?: string
+  submitted_at?: number
 }
 
 const isHubspotSubmitBody = (value: unknown): value is HubspotSubmitBody => {
@@ -137,7 +135,7 @@ describe("useHubspotFormSubmit", () => {
       value: "MIT Learn - Test Program",
       writable: true,
     })
-    document.cookie = "__hstc=abc123def456; Path=/"
+    document.cookie = "hubspotutk=abc123def456; Path=/"
 
     window.history.pushState({}, "", "/programs/test-program")
     const now = Date.now()
@@ -167,11 +165,49 @@ describe("useHubspotFormSubmit", () => {
 
     expect(body.page_uri).toBe("http://localhost/programs/test-program")
     expect(body.hutk).toBe("abc123def456") // pragma: allowlist secret
-    expect(body.page_title).toBe("MIT Learn - Test Program")
-    expect(body.user_agent).toBeDefined()
-    expect(body.locale).toBeDefined()
-    expect(body.timestamp).toBeGreaterThanOrEqual(now)
-    expect(body.timestamp).toBeLessThanOrEqual(Date.now())
+    expect(body.page_name).toBe("MIT Learn - Test Program")
+    expect(body.submitted_at).toBeGreaterThanOrEqual(now)
+    expect(body.submitted_at).toBeLessThanOrEqual(Date.now())
+  })
+
+  it("Creates hubspotutk cookie when absent and uses it as hutk", async () => {
+    const formId = "form-123"
+    const fields = [{ name: "email", value: "test@example.com" }]
+    const url = urls.hubspot.submit(formId)
+    const response = { status: "submitted" }
+
+    // Ensure the cookie is absent before this test
+    document.cookie = "hubspotutk=; max-age=0; path=/"
+
+    setMockResponse.post(url, response, { code: 200 })
+
+    const { wrapper } = setupReactQueryTest()
+    const { result } = renderHook(useHubspotFormSubmit, { wrapper })
+
+    result.current.mutate({ formId, fields })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const call = makeRequest.mock.calls.find(
+      (args) => args[0] === "post" && args[1] === url,
+    )
+    const requestBody = call![2]
+
+    if (!isHubspotSubmitBody(requestBody)) {
+      throw new Error("Request body does not match expected shape")
+    }
+
+    // A 32-char hex utk should have been generated and sent
+    expect(typeof requestBody.hutk).toBe("string")
+    expect(requestBody.hutk).toHaveLength(32)
+    expect(requestBody.hutk).toMatch(/^[0-9a-f]{32}$/)
+
+    // The generated value should also be stored in the cookie
+    const storedUtk = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("hubspotutk="))
+      ?.split("=")[1]
+    expect(storedUtk).toBe(requestBody.hutk)
   })
 
   it("Allows explicit context properties to override auto-captured ones", async () => {
@@ -209,6 +245,6 @@ describe("useHubspotFormSubmit", () => {
 
     // Explicit values should be used as-is
     expect(requestBody.page_uri).toBe(customPageUri)
-    expect(requestBody.page_title).toBe(customPageTitle)
+    expect(requestBody.page_name).toBe(customPageTitle)
   })
 })

@@ -150,10 +150,9 @@ def test_submit_form_with_all_context_properties(mocker, settings):
         "fields": [{"name": "email", "value": "test@example.com"}],
         "page_uri": "https://learn.mit.edu/programs/test-program/",
         "hutk": "abc123def456",
-        "page_title": "MIT Learn - Test Program",
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "timestamp": timestamp_ms,
-        "locale": "en-US",
+        "page_name": "MIT Learn - Test Program",
+        "ip_address": "1.2.3.4",
+        "submitted_at": timestamp_ms,
     }
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
@@ -173,11 +172,10 @@ def test_submit_form_with_all_context_properties(mocker, settings):
             "context": {
                 "pageUri": "https://learn.mit.edu/programs/test-program/",
                 "hutk": "abc123def456",
-                "pageTitle": "MIT Learn - Test Program",
-                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                "timestamp": timestamp_ms,
-                "locale": "en-US",
+                "pageName": "MIT Learn - Test Program",
+                "ipAddress": "1.2.3.4",
             },
+            "submittedAt": timestamp_ms,
         },
         headers={
             "Authorization": f"Bearer {mock_secret}",
