@@ -58,6 +58,7 @@ type HubspotFormSubmitMutationParams = {
   hutk?: string
   pageName?: string
   submittedAt?: number
+  recaptchaToken?: string | null
   // Backward-compatible aliases
   pageTitle?: string
   timestamp?: number
@@ -92,6 +93,7 @@ const useHubspotFormSubmit = () => {
       hutk,
       pageName,
       submittedAt,
+      recaptchaToken,
       pageTitle,
       timestamp,
     }: HubspotFormSubmitMutationParams) => {
@@ -125,6 +127,7 @@ const useHubspotFormSubmit = () => {
             ...(resolvedSubmittedAt
               ? { submitted_at: resolvedSubmittedAt }
               : {}),
+            ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
           },
         })
         .then((response) => response.data)

@@ -3115,13 +3115,25 @@ export interface HubspotFormSubmitRequestRequest {
    * @type {string}
    * @memberof HubspotFormSubmitRequestRequest
    */
-  page_title?: string
+  page_name?: string
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  submitted_at?: number
   /**
    *
    * @type {string}
    * @memberof HubspotFormSubmitRequestRequest
    */
-  user_agent?: string
+  recaptcha_token?: string
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_title?: string
   /**
    *
    * @type {number}
@@ -3133,7 +3145,7 @@ export interface HubspotFormSubmitRequestRequest {
    * @type {string}
    * @memberof HubspotFormSubmitRequestRequest
    */
-  locale?: string
+  ip_address?: string
 }
 /**
  * Serializer for HubSpot form submission response.

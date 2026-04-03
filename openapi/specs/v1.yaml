@@ -11930,15 +11930,21 @@ components:
           minLength: 1
         hutk:
           type: string
-        page_title:
+        page_name:
           type: string
-        user_agent:
+        submitted_at:
+          type: integer
+          minimum: 0
+        recaptcha_token:
+          type: string
+        page_title:
           type: string
         timestamp:
           type: integer
           minimum: 0
-        locale:
+        ip_address:
           type: string
+          minLength: 1
       required:
       - fields
     HubspotFormSubmitResponse:

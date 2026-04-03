@@ -1,6 +1,8 @@
 import React from "react"
+import ReCAPTCHA from "react-google-recaptcha"
 import styled from "@emotion/styled"
 import { Button, Checkbox, TextField } from "@mitodl/smoot-design"
+import { ReCaptcha } from "../ReCaptcha"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
 import { Radio } from "../Radio/Radio"
 import { SimpleSelectField } from "../SimpleSelect/SimpleSelect"
@@ -18,6 +20,12 @@ const Form = styled.form({
   display: "flex",
   flexDirection: "column",
   gap: "20px",
+})
+
+const Actions = styled.div({
+  display: "flex",
+  gap: "8px",
+  justifyContent: "flex-end",
 })
 
 const Group = styled.fieldset(({ theme }) => ({
@@ -52,14 +60,21 @@ type HubspotFormProps = {
   onSubmit?: (
     values: Record<string, HubspotFormValue>,
     event: React.FormEvent<HTMLFormElement>,
+    recaptchaToken?: string | null,
   ) => void | Promise<void>
   onValuesChange?: (values: Record<string, HubspotFormValue>) => void
+  onRecaptchaChange?: (token: string | null) => void
   initialValues?: Record<string, HubspotFormValue>
+  recaptchaEnabled?: boolean
+  recaptchaSiteKey?: string
   submitLabel?: string
   isSubmitting?: boolean
   isLoading?: boolean
   disabled?: boolean
   className?: string
+  hideSubmitButton?: boolean
+  submitButton?: React.ReactNode
+  actions?: React.ReactNode
 }
 
 const normalizeField = (
@@ -116,6 +131,7 @@ const normalizeForm = (form: HubspotFormInput): HubspotFormDefinition => {
     formId: form.formId ?? form.id ?? "",
     name: form.name ?? undefined,
     submitText: form.submitText ?? form.submit_text ?? undefined,
+    recaptchaEnabled: form.configuration?.recaptcha_enabled ?? undefined,
     fieldGroups: groupsInput.map(normalizeGroup),
   }
 }
@@ -360,86 +376,151 @@ const HubspotField: React.FC<{
   }
 }
 
-const HubspotForm: React.FC<HubspotFormProps> = ({
-  form,
-  onSubmit,
-  onValuesChange,
-  initialValues,
-  submitLabel = "Submit",
-  isSubmitting = false,
-  isLoading = false,
-  disabled = false,
-  className,
-}) => {
-  const [resolvedForm, setResolvedForm] =
-    React.useState<HubspotFormDefinition | null>(
-      form ? normalizeForm(form) : null,
+const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
+  function HubspotForm(
+    {
+      form,
+      onSubmit,
+      onValuesChange,
+      onRecaptchaChange,
+      initialValues,
+      recaptchaEnabled,
+      recaptchaSiteKey,
+      submitLabel = "Submit",
+      isSubmitting = false,
+      isLoading = false,
+      disabled = false,
+      className,
+      hideSubmitButton = false,
+      submitButton,
+      actions,
+    },
+    ref,
+  ) {
+    const [resolvedForm, setResolvedForm] =
+      React.useState<HubspotFormDefinition | null>(
+        form ? normalizeForm(form) : null,
+      )
+    const [values, setValues] = React.useState<
+      Record<string, HubspotFormValue>
+    >({})
+    const [recaptchaToken, setRecaptchaToken] = React.useState<string | null>(
+      null,
     )
-  const [values, setValues] = React.useState<Record<string, HubspotFormValue>>(
-    {},
-  )
+    const [recaptchaError, setRecaptchaError] = React.useState<string | null>(
+      null,
+    )
+    const recaptchaRef = React.useRef<ReCAPTCHA>(null)
 
-  React.useEffect(() => {
-    setResolvedForm(form ? normalizeForm(form) : null)
-  }, [form])
+    React.useEffect(() => {
+      setResolvedForm(form ? normalizeForm(form) : null)
+    }, [form])
 
-  React.useEffect(() => {
+    React.useEffect(() => {
+      if (!resolvedForm) {
+        return
+      }
+      const nextValues = buildInitialValues(resolvedForm, initialValues)
+      setValues(nextValues)
+      onValuesChange?.(nextValues)
+    }, [initialValues, onValuesChange, resolvedForm])
+
+    const handleChange = React.useCallback(
+      (name: string, nextValue: HubspotFormValue) => {
+        setValues((prevValues) => {
+          const nextValues = { ...prevValues, [name]: nextValue }
+          onValuesChange?.(nextValues)
+          return nextValues
+        })
+      },
+      [onValuesChange],
+    )
+
+    const handleRecaptchaChange = React.useCallback(
+      (token: string | null) => {
+        setRecaptchaToken(token)
+        setRecaptchaError(null)
+        onRecaptchaChange?.(token)
+      },
+      [onRecaptchaChange],
+    )
+
+    const shouldRenderRecaptcha =
+      recaptchaEnabled ?? resolvedForm?.recaptchaEnabled ?? false
+
+    const handleSubmit = React.useCallback(
+      async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+
+        if (shouldRenderRecaptcha && !recaptchaToken) {
+          setRecaptchaError("Complete the reCAPTCHA before submitting.")
+          return
+        }
+
+        await onSubmit?.(values, event, recaptchaToken)
+      },
+      [onSubmit, recaptchaToken, shouldRenderRecaptcha, values],
+    )
+
     if (!resolvedForm) {
-      return
+      return null
     }
-    const nextValues = buildInitialValues(resolvedForm, initialValues)
-    setValues(nextValues)
-    onValuesChange?.(nextValues)
-  }, [initialValues, onValuesChange, resolvedForm])
 
-  const handleChange = React.useCallback(
-    (name: string, nextValue: HubspotFormValue) => {
-      setValues((prevValues) => {
-        const nextValues = { ...prevValues, [name]: nextValue }
-        onValuesChange?.(nextValues)
-        return nextValues
-      })
-    },
-    [onValuesChange],
-  )
-
-  const handleSubmit = React.useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      await onSubmit?.(values, event)
-    },
-    [onSubmit, values],
-  )
-
-  if (!resolvedForm) {
-    return null
-  }
-
-  return (
-    <Form className={className} onSubmit={handleSubmit}>
-      {isLoading ? <LoadingText>Loading form...</LoadingText> : null}
-      {resolvedForm.fieldGroups.map((group, groupIndex) => (
-        <Group key={`${group.name || "group"}-${groupIndex}`}>
-          {group.name ? <legend>{group.name}</legend> : null}
-          {group.fields
-            .filter((field) => !field.hidden)
-            .map((field) => (
-              <HubspotField
-                key={field.name}
-                field={field}
-                value={values[field.name]}
-                disabled={disabled || isSubmitting}
-                onChange={handleChange}
-              />
-            ))}
-        </Group>
-      ))}
+    const defaultSubmitButton = hideSubmitButton ? null : (
       <Button type="submit" disabled={disabled || isSubmitting}>
         {submitLabel}
       </Button>
-    </Form>
-  )
-}
+    )
+
+    const resolvedSubmitButton =
+      submitButton === undefined ? defaultSubmitButton : submitButton
+
+    return (
+      <Form ref={ref} className={className} onSubmit={handleSubmit}>
+        {isLoading ? <LoadingText>Loading form...</LoadingText> : null}
+        {resolvedForm.fieldGroups.map((group, groupIndex) => (
+          <Group key={`${group.name || "group"}-${groupIndex}`}>
+            {group.name ? <legend>{group.name}</legend> : null}
+            {group.fields
+              .filter((field) => !field.hidden)
+              .map((field) => (
+                <HubspotField
+                  key={field.name}
+                  field={field}
+                  value={values[field.name]}
+                  disabled={disabled || isSubmitting}
+                  onChange={handleChange}
+                />
+              ))}
+          </Group>
+        ))}
+        {shouldRenderRecaptcha && (
+          <ReCaptcha
+            ref={recaptchaRef}
+            siteKey={
+              recaptchaSiteKey ?? process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+            }
+            onChange={handleRecaptchaChange}
+            onExpired={() => {
+              setRecaptchaToken(null)
+              setRecaptchaError("Complete the reCAPTCHA before submitting.")
+              recaptchaRef.current?.reset()
+            }}
+            disabled={disabled || isSubmitting}
+            error={Boolean(recaptchaError)}
+            helperText={recaptchaError ?? undefined}
+          />
+        )}
+        {actions || resolvedSubmitButton ? (
+          <Actions>
+            {actions}
+            {resolvedSubmitButton}
+          </Actions>
+        ) : null}
+      </Form>
+    )
+  },
+)
 
 export { HubspotForm, buildInitialValues }
 export type { HubspotFormProps }

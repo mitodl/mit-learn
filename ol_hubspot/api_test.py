@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from hubspot.marketing.forms.exceptions import ApiException
 
-from ol_hubspot.api import get_form, list_forms, submit_form
+from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
 
 
 def test_get_form(mocker, settings):
@@ -184,3 +184,31 @@ def test_submit_form_with_all_context_properties(mocker, settings):
         },
         timeout=30,
     )
+
+
+def test_verify_recaptcha_success(mocker, settings):
+    """ReCAPTCHA verification returns True when Google accepts the token."""
+    settings.RECAPTCHA_SECRET_KEY = uuid4().hex
+    response = mocker.Mock()
+    response.status_code = 200
+    response.content = b'{"success": true}'
+    response.json.return_value = {"success": True}
+    post = mocker.patch("ol_hubspot.api.requests.post", return_value=response)
+
+    assert verify_recaptcha("captcha-token", remote_ip="1.2.3.4") is True
+    post.assert_called_once_with(
+        "https://www.google.com/recaptcha/api/siteverify",
+        data={
+            "secret": settings.RECAPTCHA_SECRET_KEY,
+            "response": "captcha-token",
+            "remoteip": "1.2.3.4",
+        },
+        timeout=30,
+    )
+
+
+def test_verify_recaptcha_failure_without_secret(settings):
+    """ReCAPTCHA verification returns False when no secret is configured."""
+    settings.RECAPTCHA_SECRET_KEY = ""
+
+    assert verify_recaptcha("captcha-token") is False
