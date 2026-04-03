@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from main.permissions import IsSuperuserPermission
-from ol_hubspot.api import get_form, list_forms, submit_form
+from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
 from ol_hubspot.schema import serializer_for_hubspot_model
 
 hubspot_forms_list_response_schema = serializer_for_hubspot_model(
@@ -60,6 +60,7 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
     hutk = serializers.CharField(required=False, allow_blank=True)
     page_name = serializers.CharField(required=False, allow_blank=True)
     submitted_at = serializers.IntegerField(required=False, min_value=0)
+    recaptcha_token = serializers.CharField(required=False, allow_blank=True)
     # Backward-compatible aliases
     page_title = serializers.CharField(required=False, allow_blank=True)
     timestamp = serializers.IntegerField(required=False, min_value=0)
@@ -284,6 +285,15 @@ def hubspot_form_submit_view(request, form_id: str):
         client_ip = _extract_client_ip(request)
         if client_ip:
             payload["ip_address"] = client_ip
+        recaptcha_token = payload.pop("recaptcha_token", None)
+        if recaptcha_token and not verify_recaptcha(
+            recaptcha_token,
+            remote_ip=payload.get("ip_address"),
+        ):
+            return Response(
+                {"recaptcha_token": ["reCAPTCHA verification failed."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         submit_form(form_id=form_id, payload=payload)
         return Response(
             HubspotFormSubmitResponseSerializer({"status": "submitted"}).data,

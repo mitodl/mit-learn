@@ -337,6 +337,56 @@ def test_submit_form_with_all_context_properties(client, settings, mocker):
     )
 
 
+def test_submit_form_verifies_recaptcha_before_forwarding(client, settings, mocker):
+    """Submit endpoint verifies reCAPTCHA and does not forward the raw token."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    verify_stub = mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=True)
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    verify_stub.assert_called_once_with("captcha-token", remote_ip="1.2.3.4")
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            "fields": [{"name": "email", "value": "test@example.com"}],
+            "ip_address": "1.2.3.4",
+        },
+    )
+
+
+def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
+    """Submit endpoint returns 400 when reCAPTCHA verification fails."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"recaptcha_token": ["reCAPTCHA verification failed."]}
+    submit_stub.assert_not_called()
+
+
 def test_submit_form_invalid_payload(client, settings):
     """Submit endpoint returns 400 for invalid payload."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()

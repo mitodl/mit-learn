@@ -8,6 +8,7 @@ from hubspot import HubSpot
 from hubspot.marketing.forms.exceptions import ApiException
 
 HSFORMS_API_BASE_URL = "https://api.hsforms.com"
+RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 
 
 def get_hubspot_client() -> HubSpot:
@@ -39,6 +40,30 @@ def list_forms(
         archived=archived,
         form_types=form_types,
     )
+
+
+def verify_recaptcha(response_token: str, remote_ip: str | None = None) -> bool:
+    """Validate a reCAPTCHA token with Google."""
+    if not settings.RECAPTCHA_SECRET_KEY:
+        return False
+
+    payload = {
+        "secret": settings.RECAPTCHA_SECRET_KEY,
+        "response": response_token,
+    }
+    if remote_ip:
+        payload["remoteip"] = remote_ip
+
+    response = requests.post(
+        RECAPTCHA_VERIFY_URL,
+        data=payload,
+        timeout=30,
+    )
+    if response.status_code >= HTTPStatus.BAD_REQUEST:
+        return False
+
+    body = response.json() if response.content else {}
+    return bool(body.get("success"))
 
 
 def submit_form(
