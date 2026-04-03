@@ -54,7 +54,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     serializer_class = RichTextArticleSerializer
     queryset = Article.objects.all()
-
     permission_classes = [CanViewArticle, CanEditArticle]
     http_method_names = VALID_HTTP_METHODS
 
