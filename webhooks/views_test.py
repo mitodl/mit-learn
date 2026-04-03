@@ -388,3 +388,60 @@ def test_video_short_webhook_view_invalid_video_metadata(settings, client):
 
     # Should fail validation with 400 Bad Request
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_video_short_webhook_view_deletes_existing(settings, client, mocker):
+    """Test VideoShortWebhookView deletes an existing VideoShort"""
+    from video_shorts.factories import VideoShortFactory
+    from video_shorts.models import VideoShort
+
+    VideoShortFactory.create(video_id="delete_me")
+    assert VideoShort.objects.count() == 1
+
+    mock_s3_task = mocker.patch("video_shorts.api.delete_video_short_from_s3")
+
+    url = reverse("webhooks:v1:video_short_webhook")
+    data = {
+        "video_id": "delete_me",
+        "video_metadata": {"video_id": "delete_me", "delete": True},
+        "source": "video_shorts",
+    }
+
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert VideoShort.objects.count() == 0
+    mock_s3_task.delay.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_video_short_webhook_view_delete_nonexistent(settings, client, mocker):
+    """Test VideoShortWebhookView delete for a nonexistent video is a no-op"""
+    from video_shorts.models import VideoShort
+
+    mock_s3_task = mocker.patch("video_shorts.api.delete_video_short_from_s3")
+
+    url = reverse("webhooks:v1:video_short_webhook")
+    data = {
+        "video_id": "does_not_exist",
+        "video_metadata": {"video_id": "does_not_exist", "delete": True},
+        "source": "video_shorts",
+    }
+
+    response = client.post(
+        url,
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+
+    assert response.status_code == 200
+    assert VideoShort.objects.count() == 0
+    mock_s3_task.delay.assert_not_called()
