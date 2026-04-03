@@ -1819,43 +1819,8 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
     for sitemap generation and other use cases requiring minimal data transfer.
     """
 
-    canonical_product_url = serializers.SerializerMethodField()
-
-    def get_canonical_product_url(self, instance):
-        """
-        Return the canonical product URL for MITx Online courses/programs.
-        """
-        app_base_url = settings.APP_BASE_URL.rstrip("/")
-
-        if isinstance(instance, dict):
-            readable_id = instance.get("readable_id")
-            resource_type = instance.get("resource_type")
-            resource_category = instance.get("resource_category")
-            platform_code = instance.get("platform__code")
-        else:
-            readable_id = instance.readable_id
-            resource_type = instance.resource_type
-            resource_category = instance.resource_category
-            platform_code = instance.platform.code if instance.platform else None
-
-        if platform_code != constants.PlatformType.mitxonline.name:
-            return None
-
-        if not readable_id:
-            return None
-
-        if resource_type == LearningResourceType.course.name:
-            return f"{app_base_url}/courses/{readable_id}"
-
-        if resource_type == LearningResourceType.program.name:
-            if resource_category == LearningResourceType.course.value:
-                return f"{app_base_url}/courses/p/{readable_id}"
-            return f"{app_base_url}/programs/{readable_id}"
-
-        return None
-
     class Meta:
         """Meta configuration for LearningResourceSummarySerializer"""
 
         model = models.LearningResource
-        fields = ("id", "last_modified", "canonical_product_url")
+        fields = ("id", "last_modified", "url")

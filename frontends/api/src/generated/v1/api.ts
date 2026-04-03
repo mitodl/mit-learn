@@ -4853,7 +4853,7 @@ export interface LearningResourceSummary {
      * @type {string}
      * @memberof LearningResourceSummary
      */
-    'canonical_product_url': string;
+    'url'?: string | null;
 }
 /**
  * Serializer for LearningResourceTopic model
