@@ -26,6 +26,7 @@ interface LearningResourceCardProps {
   className?: string
   size?: Size
   isMedia?: boolean
+  imageHeight?: number
   href?: string
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
@@ -33,6 +34,7 @@ interface LearningResourceCardProps {
   inLearningPath?: boolean
   onClick?: React.MouseEventHandler
   headingLevel?: number
+  footerLabel?: string
   list?: boolean
   condensed?: boolean
 }
@@ -43,6 +45,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   className,
   size = "medium",
   isMedia = false,
+  imageHeight,
   href,
   onAddToLearningPathClick,
   onAddToUserListClick,
@@ -50,6 +53,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   inUserList,
   onClick,
   headingLevel = 6,
+  footerLabel,
   list = false,
   condensed = false,
 }) => {
@@ -77,6 +81,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         resource={resource}
         className={className}
         href={href}
+        footerLabel={footerLabel}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
         inUserList={inUserList}
@@ -148,11 +153,13 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       headingLevel={headingLevel}
       imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
       imageAlt={resource.image?.alt ?? ""}
+      imageHeight={imageHeight}
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
+      footerLabel={footerLabel}
       startLabel={startLabel}
       startDate={formattedDate}
       actions={actions}

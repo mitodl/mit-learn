@@ -36,6 +36,7 @@ const Value = styled.span<{ size?: Size }>(({ theme, size }) => [
 const getImageDimensions = (size: Size, isMedia: boolean) => {
   const dimensions = {
     small: { width: 190, height: isMedia ? 190 : 120 },
+    compact: { width: 235, height: isMedia ? 235 : 170 },
     medium: { width: 298, height: isMedia ? 298 : 170 },
   }
   return dimensions[size]
@@ -91,6 +92,7 @@ interface BaseLearningResourceCardProps {
   // Display data
   imageSrc?: string
   imageAlt?: string
+  imageHeight?: number
   title?: string
   resourceType?: string
   /**
@@ -117,6 +119,7 @@ interface BaseLearningResourceCardProps {
   list?: boolean
   condensed?: boolean
   footerContent?: React.ReactNode
+  footerLabel?: string
   draggable?: boolean
   editMenu?: React.ReactNode | null
   parentCourseName?: string | null
@@ -292,6 +295,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   headingLevel = 6,
   imageSrc,
   imageAlt = "",
+  imageHeight,
   title,
   resourceType,
   resourcePrice,
@@ -306,6 +310,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   list = false,
   condensed = false,
   footerContent,
+  footerLabel,
   draggable = false,
   editMenu = null,
   parentCourseName = null,
@@ -473,6 +478,8 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         <ListCardCondensed.Footer>
           {footerContent ? (
             footerContent
+          ) : footerLabel ? (
+            footerLabel
           ) : startDate ? (
             <BorderSeparator>
               <div>
@@ -561,6 +568,8 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         <ListCard.Footer>
           {footerContent ? (
             footerContent
+          ) : footerLabel ? (
+            footerLabel
           ) : startDate ? (
             <BorderSeparator>
               <div>
@@ -589,6 +598,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           src={imageSrc}
           alt={imageAlt}
           {...getImageDimensions(size, isMedia)}
+          {...(imageHeight !== undefined ? { height: imageHeight } : {})}
         />
       )}
       <Card.Info>
@@ -639,7 +649,9 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         ))}
       </Card.Actions>
       <Card.Footer>
-        {startDate ? (
+        {footerLabel ? (
+          footerLabel
+        ) : startDate ? (
           <>
             {startLabel && <Label>{startLabel}</Label>}
             <Value size={size}>{startDate}</Value>

@@ -50,6 +50,7 @@ export const articlesEditView = (id: number) =>
 
 export const DEPARTMENTS = "/departments/"
 export const TOPICS = "/topics/"
+export const PODCAST = "/podcast/"
 
 export const CHANNEL_VIEW = "/c/[channelType]/[name]" as const
 export const CHANNEL_EDIT = "/c/[channelType]/[name]/manage/" as const

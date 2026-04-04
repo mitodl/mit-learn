@@ -136,6 +136,7 @@ interface LearningResourceListCardProps {
   inUserList?: boolean
   inLearningPath?: boolean
   draggable?: boolean
+  footerLabel?: string
   onClick?: React.MouseEventHandler
   headingLevel?: number
 }
@@ -150,6 +151,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   editMenu,
   inLearningPath,
   inUserList,
+  footerLabel,
   draggable,
   onClick,
   headingLevel = 6,
@@ -192,13 +194,16 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     })
   }
 
-  const footerContent = (
-    <BorderSeparator>
-      <Count resource={resource} />
-      <StartDate resource={resource} />
-      <Format resource={resource} />
-    </BorderSeparator>
-  )
+  const footerContent =
+    resource.resource_type === ResourceTypeEnum.Podcast ? (
+      footerLabel
+    ) : (
+      <BorderSeparator>
+        <Count resource={resource} />
+        <StartDate resource={resource} />
+        <Format resource={resource} />
+      </BorderSeparator>
+    )
 
   return (
     <BaseLearningResourceCard

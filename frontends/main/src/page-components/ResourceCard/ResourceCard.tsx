@@ -81,6 +81,7 @@ type ResourceCardProps = Omit<
   "href" | "onAddToLearningPathClick" | "onAddToUserListClick"
 > & {
   headingLevel?: number
+  footerLabel?: string
   parentHeadingEl?: HeadingElement
 }
 
@@ -94,6 +95,7 @@ type ResourceCardProps = Omit<
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
   parentHeadingEl,
+  footerLabel,
   ...others
 }) => {
   const {
@@ -120,6 +122,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         inLearningPath={inLearningPath}
         headingLevel={headingLevel}
         {...others}
+        footerLabel={footerLabel}
       />
       <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />
     </>
