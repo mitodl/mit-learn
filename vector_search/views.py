@@ -1,9 +1,11 @@
 import logging
 from itertools import chain
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from qdrant_client import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
@@ -13,14 +15,23 @@ from rest_framework.views import APIView
 from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
-from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     ContentFileVectorSearchResponseSerializer,
     LearningResourcesVectorSearchRequestSerializer,
     LearningResourcesVectorSearchResponseSerializer,
 )
-from vector_search.utils import async_vector_search
+from vector_search.utils import (
+    CONTENT_FILES_COLLECTION_NAME,
+    RESOURCES_COLLECTION_NAME,
+    _content_file_vector_hits,
+    _merge_dicts,
+    _resource_vector_hits,
+    async_qdrant_client,
+    dense_encoder,
+    qdrant_query_conditions,
+    sparse_encoder,
+)
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +55,6 @@ class QdrantView(APIView):
         return async_view
 
     async def dispatch(self, request, *args, **kwargs):
-        from asgiref.sync import sync_to_async
-
         self.args = args
         self.kwargs = kwargs
         request = self.initialize_request(request, *args, **kwargs)
@@ -73,6 +82,109 @@ class QdrantView(APIView):
 
         self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
+
+    async def async_vector_search(  # noqa: PLR0913
+        self,
+        query_string: str,
+        params: dict,
+        limit: int = 10,
+        offset: int = 10,
+        search_collection=RESOURCES_COLLECTION_NAME,
+        *,
+        hybrid_search: bool = False,
+    ):
+        client = async_qdrant_client()
+        encoder_dense = dense_encoder()
+        encoder_sparse = sparse_encoder()
+
+        search_filter = qdrant_query_conditions(
+            params, collection_name=search_collection
+        )
+        prefetch_multiplier = 20
+        prefetch_limit = (offset + limit) * prefetch_multiplier
+        if query_string:
+            search_params = {
+                "collection_name": search_collection,
+                "query_filter": search_filter,
+                "with_vectors": False,
+                "with_payload": True,
+                "search_params": models.SearchParams(indexed_only=True, exact=False),
+                "limit": limit,
+            }
+
+            if hybrid_search:
+                sparse_query = await sync_to_async(encoder_sparse.embed)(query_string)
+                dense_query = await sync_to_async(encoder_dense.embed_query)(
+                    query_string
+                )
+                search_params["prefetch"] = [
+                    models.Prefetch(
+                        query=sparse_query,
+                        using=encoder_sparse.model_short_name(),
+                        limit=prefetch_limit,
+                    ),
+                    models.Prefetch(
+                        query=dense_query,
+                        using=encoder_dense.model_short_name(),
+                        limit=prefetch_limit,
+                    ),
+                ]
+                search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
+            else:
+                dense_query = await sync_to_async(encoder_dense.embed_query)(
+                    query_string
+                )
+                search_params["using"] = encoder_dense.model_short_name()
+                search_params["query"] = dense_query
+
+            if "group_by" in params:
+                search_params.pop("search_params", None)
+                search_params["group_by"] = params.get("group_by")
+                search_params["group_size"] = params.get("group_size", 1)
+                group_result = await client.query_points_groups(**search_params)
+                search_result = []
+                for group in group_result.groups:
+                    payloads = [hit.payload for hit in group.hits]
+                    response_hit = _merge_dicts(payloads)
+                    chunks = [payload.get("chunk_content") for payload in payloads]
+                    response_hit["chunk_content"] = None
+                    response_hit["chunks"] = chunks
+                    response_row = {
+                        "id": response_hit[search_params["group_by"]],
+                        "payload": response_hit,
+                        "vector": [],
+                    }
+                    search_result.append(models.PointStruct(**response_row))
+
+            else:
+                search_params["offset"] = offset
+                result_obj = await client.query_points(**search_params)
+                search_result = result_obj.points
+        else:
+            scroll_res = await client.scroll(
+                collection_name=search_collection,
+                scroll_filter=search_filter,
+                limit=limit,
+                offset=offset,
+                with_vectors=False,
+            )
+            search_result = scroll_res[0]
+
+        if search_collection == RESOURCES_COLLECTION_NAME:
+            hits = await sync_to_async(_resource_vector_hits)(search_result)
+        else:
+            hits = await sync_to_async(_content_file_vector_hits)(search_result)
+
+        count_result = await client.count(
+            collection_name=search_collection,
+            count_filter=search_filter,
+            exact=False,
+        )
+
+        return {
+            "hits": hits,
+            "total": {"value": count_result.count},
+        }
 
     def handle_exception(self, exc):
         if isinstance(exc, UnexpectedResponse) and (
@@ -114,7 +226,7 @@ class LearningResourcesVectorSearchView(QdrantView):
             hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
-            response = await async_vector_search(
+            response = await self.async_vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,
@@ -124,7 +236,6 @@ class LearningResourcesVectorSearchView(QdrantView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
-                from asgiref.sync import sync_to_async
 
                 def serialize():
                     return LearningResourcesVectorSearchResponseSerializer(
@@ -191,7 +302,7 @@ class ContentFilesVectorSearchView(QdrantView):
                     f"{settings.QDRANT_BASE_COLLECTION_NAME}.{collection_name_override}"
                 )
 
-            response = await async_vector_search(
+            response = await self.async_vector_search(
                 query_text,
                 limit=limit,
                 offset=offset,

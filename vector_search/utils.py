@@ -8,7 +8,7 @@ from django.db.models import Q
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import MarkdownHeaderTextSplitter
-from qdrant_client import QdrantClient, models
+from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
 from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
 from learning_resources.content_summarizer import ContentSummarizer
@@ -62,6 +62,22 @@ def qdrant_client():
     )
 
     return QdrantClient(
+        url=settings.QDRANT_HOST,
+        api_key=settings.QDRANT_API_KEY,
+        grpc_port=6334,
+        prefer_grpc=True,
+        cloud_inference=enable_cloud_inference,
+        timeout=settings.QDRANT_CLIENT_TIMEOUT,
+    )
+
+
+def async_qdrant_client():
+    enable_cloud_inference = (
+        dense_encoder().requires_cloud_inferencing
+        or sparse_encoder().requires_cloud_inferencing
+    )
+
+    return AsyncQdrantClient(
         url=settings.QDRANT_HOST,
         api_key=settings.QDRANT_API_KEY,
         grpc_port=6334,
@@ -226,11 +242,9 @@ def embed_topics():
     )
 
     if indexed_count > 0:
-        existing = vector_search(
-            query_string="",
+        existing = retrieve_points_matching_params(
             params={},
-            search_collection=TOPICS_COLLECTION_NAME,
-            limit=indexed_count,
+            collection_name=TOPICS_COLLECTION_NAME,
         )
         indexed_topic_names = {hit["name"] for hit in existing["hits"]}
     else:
@@ -943,116 +957,6 @@ def vector_point_key(
     else:
         msg = "Invalid document type for vector point key"
         raise ValueError(msg)
-
-
-def vector_search(  # noqa: PLR0913
-    query_string: str,
-    params: dict,
-    limit: int = 10,
-    offset: int = 10,
-    search_collection=RESOURCES_COLLECTION_NAME,
-    *,
-    hybrid_search: bool = False,
-):
-    """
-    Perform a vector search given a query string
-
-    Args:
-        query_string (str): Query string to search
-        params (dict): Additional search filters
-        limit (int): Max number of results to return
-        offset (int): Offset to start from
-        search_collection (str): name of the collection to search
-    Returns:
-        dict:
-            Response dict containing "hits" with search results
-            and "total" with total count
-    """
-
-    client = qdrant_client()
-    encoder_dense = dense_encoder()
-    encoder_sparse = sparse_encoder()
-
-    search_filter = qdrant_query_conditions(params, collection_name=search_collection)
-
-    prefetch_multiplier = settings.VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER
-    prefetch_max_limit = settings.VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT
-    prefetch_limit = min((offset + limit) * prefetch_multiplier, prefetch_max_limit)
-
-    if query_string:
-        search_params = {
-            "collection_name": search_collection,
-            "query_filter": search_filter,
-            "with_vectors": False,
-            "with_payload": True,
-            "search_params": models.SearchParams(indexed_only=True, exact=False),
-            "limit": limit,
-        }
-
-        if hybrid_search:
-            search_params["prefetch"] = [
-                models.Prefetch(
-                    query=encoder_sparse.embed(query_string),
-                    using=encoder_sparse.model_short_name(),
-                    limit=prefetch_limit,
-                ),
-                models.Prefetch(
-                    query=encoder_dense.embed_query(query_string),  # <-- dense vector
-                    using=encoder_dense.model_short_name(),
-                    limit=prefetch_limit,
-                ),
-            ]
-            search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
-        else:
-            # fallback to dense only search
-            search_params["using"] = encoder_dense.model_short_name()
-            search_params["query"] = encoder_dense.embed_query(query_string)
-
-        if "group_by" in params:
-            search_params.pop("search_params", None)
-            search_params["group_by"] = params.get("group_by")
-            search_params["group_size"] = params.get("group_size", 1)
-            group_result = client.query_points_groups(**search_params)
-            search_result = []
-            for group in group_result.groups:
-                payloads = [hit.payload for hit in group.hits]
-                response_hit = _merge_dicts(payloads)
-                chunks = [payload.get("chunk_content") for payload in payloads]
-                response_hit["chunk_content"] = None
-                response_hit["chunks"] = chunks
-                response_row = {
-                    "id": response_hit[search_params["group_by"]],
-                    "payload": response_hit,
-                    "vector": [],
-                }
-                search_result.append(models.PointStruct(**response_row))
-
-        else:
-            search_params["offset"] = offset
-            search_result = client.query_points(**search_params).points
-    else:
-        search_result = client.scroll(
-            collection_name=search_collection,
-            scroll_filter=search_filter,
-            limit=limit,
-            offset=offset,
-            with_vectors=False,
-        )[0]
-
-    if search_collection == RESOURCES_COLLECTION_NAME:
-        hits = _resource_vector_hits(search_result)
-    else:
-        hits = _content_file_vector_hits(search_result)
-    count_result = client.count(
-        collection_name=search_collection,
-        count_filter=search_filter,
-        exact=False,
-    )
-
-    return {
-        "hits": hits,
-        "total": {"value": count_result.count},
-    }
 
 
 def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
