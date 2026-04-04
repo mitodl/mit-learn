@@ -406,6 +406,12 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
         }
 
 
+def test_get_user_by_me_sets_csrf_cookie(client):
+    """Test that GET /users/me/ sets the CSRF cookie in the response"""
+    resp = client.get(reverse("profile:v0:users_api-me"))
+    assert settings.CSRF_COOKIE_NAME in resp.cookies
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_letter_intercept_view_generates_program_letter(
     mocker, client, user, is_anonymous, settings
