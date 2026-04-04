@@ -14,33 +14,48 @@ const BannerContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: "24px",
+  marginTop: "48px",
 }))
 
 const BannerContent = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
+  fontSize: "12px",
+  lineHeight: "16px",
 })
 
 const BannerLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
-  fontSize: "12px",
-  letterSpacing: "1px",
   textTransform: "uppercase",
+  fontSize: "10px",
+  lineHeight: "14px",
+  fontWeight: theme.typography.fontWeightMedium,
 }))
 
 const BannerTitle = styled(Typography)(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
+  fontSize: "16px",
+  lineHeight: "20px",
 }))
 
 const BannerLink = styled.a(({ theme }) => ({
-  color: theme.palette.text.primary,
+  color: theme.custom.colors.silverGrayDark,
+  fontWeight: theme.typography.fontWeightMedium,
+  fontSize: "12px",
   whiteSpace: "nowrap",
   textDecoration: "none",
+  padding: "8px 16px",
+  borderRadius: "4px",
   "&:hover": {
-    textDecoration: "underline",
+    backgroundColor: theme.custom.colors.lightGray1,
   },
+}))
+
+const BannerDescription = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+  fontSize: "12px",
+  lineHeight: "16px",
 }))
 
 interface UniversalAIBannerProps {
@@ -74,12 +89,12 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
     <BannerContainer>
       <BannerContent>
         <BannerLabel>New on MIT Learn</BannerLabel>
-        <BannerTitle variant="h5">Universal AI</BannerTitle>
-        <Typography variant="body2">
+        <BannerTitle>Universal AI</BannerTitle>
+        <BannerDescription>
           A self-paced program that takes learners from AI fundamentals to
           practical, industry-relevant applications. No technical background
           required.
-        </Typography>
+        </BannerDescription>
       </BannerContent>
       <BannerLink href={ctaHref}>Learn More</BannerLink>
     </BannerContainer>
