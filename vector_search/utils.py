@@ -71,24 +71,6 @@ def qdrant_client():
     )
 
 
-def async_qdrant_client():
-    from qdrant_client import AsyncQdrantClient
-
-    enable_cloud_inference = (
-        dense_encoder().requires_cloud_inferencing
-        or sparse_encoder().requires_cloud_inferencing
-    )
-
-    return AsyncQdrantClient(
-        url=settings.QDRANT_HOST,
-        api_key=settings.QDRANT_API_KEY,
-        grpc_port=6334,
-        prefer_grpc=True,
-        cloud_inference=enable_cloud_inference,
-        timeout=settings.QDRANT_CLIENT_TIMEOUT,
-    )
-
-
 def points_generator(
     ids,
     metadata,
@@ -961,105 +943,6 @@ def vector_point_key(
     else:
         msg = "Invalid document type for vector point key"
         raise ValueError(msg)
-
-
-async def async_vector_search(  # noqa: PLR0913
-    query_string: str,
-    params: dict,
-    limit: int = 10,
-    offset: int = 10,
-    search_collection=RESOURCES_COLLECTION_NAME,
-    *,
-    hybrid_search: bool = False,
-):
-    from asgiref.sync import sync_to_async
-
-    client = async_qdrant_client()
-    encoder_dense = dense_encoder()
-    encoder_sparse = sparse_encoder()
-
-    search_filter = qdrant_query_conditions(params, collection_name=search_collection)
-    prefetch_multiplier = 20
-    prefetch_limit = (offset + limit) * prefetch_multiplier
-    if query_string:
-        search_params = {
-            "collection_name": search_collection,
-            "query_filter": search_filter,
-            "with_vectors": False,
-            "with_payload": True,
-            "search_params": models.SearchParams(indexed_only=True, exact=False),
-            "limit": limit,
-        }
-
-        if hybrid_search:
-            sparse_query = await sync_to_async(encoder_sparse.embed)(query_string)
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
-            search_params["prefetch"] = [
-                models.Prefetch(
-                    query=sparse_query,
-                    using=encoder_sparse.model_short_name(),
-                    limit=prefetch_limit,
-                ),
-                models.Prefetch(
-                    query=dense_query,
-                    using=encoder_dense.model_short_name(),
-                    limit=prefetch_limit,
-                ),
-            ]
-            search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
-        else:
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
-            search_params["using"] = encoder_dense.model_short_name()
-            search_params["query"] = dense_query
-
-        if "group_by" in params:
-            search_params.pop("search_params", None)
-            search_params["group_by"] = params.get("group_by")
-            search_params["group_size"] = params.get("group_size", 1)
-            group_result = await client.query_points_groups(**search_params)
-            search_result = []
-            for group in group_result.groups:
-                payloads = [hit.payload for hit in group.hits]
-                response_hit = _merge_dicts(payloads)
-                chunks = [payload.get("chunk_content") for payload in payloads]
-                response_hit["chunk_content"] = None
-                response_hit["chunks"] = chunks
-                response_row = {
-                    "id": response_hit[search_params["group_by"]],
-                    "payload": response_hit,
-                    "vector": [],
-                }
-                search_result.append(models.PointStruct(**response_row))
-
-        else:
-            search_params["offset"] = offset
-            result_obj = await client.query_points(**search_params)
-            search_result = result_obj.points
-    else:
-        scroll_res = await client.scroll(
-            collection_name=search_collection,
-            scroll_filter=search_filter,
-            limit=limit,
-            offset=offset,
-            with_vectors=False,
-        )
-        search_result = scroll_res[0]
-
-    if search_collection == RESOURCES_COLLECTION_NAME:
-        hits = await sync_to_async(_resource_vector_hits)(search_result)
-    else:
-        hits = await sync_to_async(_content_file_vector_hits)(search_result)
-
-    count_result = await client.count(
-        collection_name=search_collection,
-        count_filter=search_filter,
-        exact=False,
-    )
-
-    return {
-        "hits": hits,
-        "total": {"value": count_result.count},
-    }
 
 
 def vector_search(  # noqa: PLR0913
