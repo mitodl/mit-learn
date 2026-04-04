@@ -14,7 +14,14 @@ const BannerContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginTop: "48px",
+  [theme.breakpoints.up("md")]: {
+    marginTop: "48px",
+  },
+  [theme.breakpoints.down("md")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "12px",
+  },
 }))
 
 const BannerContent = styled.div({
@@ -47,8 +54,10 @@ const BannerLink = styled.a(({ theme }) => ({
   textDecoration: "none",
   padding: "8px 16px",
   borderRadius: "4px",
+  marginRight: "-16px",
   "&:hover": {
     backgroundColor: theme.custom.colors.lightGray1,
+    fontWeight: theme.typography.fontWeightBold,
   },
 }))
 
