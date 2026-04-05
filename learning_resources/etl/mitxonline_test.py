@@ -5,7 +5,7 @@ import json
 # pylint: disable=redefined-outer-name
 from datetime import UTC, datetime
 from unittest.mock import ANY
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -23,6 +23,8 @@ from learning_resources.etl.mitxonline import (
     OFFERED_BY,
     _fetch_courses_by_ids,
     _fetch_data,
+    _learn_product_url_for_mitx_course,
+    _learn_product_url_for_mitx_program,
     _parse_datetime,
     _transform_image,
     _transform_run,
@@ -582,7 +584,12 @@ def test_mitxonline_transform_programs(
                     )
                     if has_certification
                     else CertificationType.none.name,
-                    "url": parse_page_attribute(course_data, "page_url", is_url=True),
+                    "url": _learn_product_url_for_mitx_course(
+                        course_data["readable_id"],
+                        has_product_page=bool(
+                            parse_page_attribute(course_data, "page_url")
+                        ),
+                    ),
                     "availability": course_data["availability"],
                     "format": [Format.asynchronous.name],
                     "pace": [Pace.instructor_paced.name],
@@ -632,7 +639,13 @@ def test_mitxonline_transform_programs(
                     program_data.get("page", {}).get("page_url", None) is not None
                     and program_data.get("page", {}).get("live", None)
                 ),
-                "url": parse_page_attribute(program_data, "page_url", is_url=True),
+                "url": _learn_product_url_for_mitx_program(
+                    program_data["readable_id"],
+                    program_data.get("display_mode"),
+                    has_product_page=bool(
+                        parse_page_attribute(program_data, "page_url")
+                    ),
+                ),
                 "availability": program_data["availability"],
                 "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
                 "format": [Format.asynchronous.name],
@@ -658,8 +671,12 @@ def test_mitxonline_transform_programs(
                         "description": clean_data(
                             program_data.get("page", {}).get("description", None)
                         ),
-                        "url": parse_page_attribute(
-                            program_data, "page_url", is_url=True
+                        "url": _learn_product_url_for_mitx_program(
+                            program_data["readable_id"],
+                            program_data.get("display_mode"),
+                            has_product_page=bool(
+                                parse_page_attribute(program_data, "page_url")
+                            ),
                         ),
                         "status": RunStatus.current.value
                         if parse_page_attribute(program_data, "page_url")
@@ -688,7 +705,7 @@ def test_mitxonline_transform_programs(
     assert result == expected
 
 
-def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mocker):
+def test_mitxonline_transform_courses(mock_mitxonline_courses_data, mocker):
     """Test that mitxonline courses data is correctly transformed into our normalized structure"""
     set_up_topics(is_mitx=True)
 
@@ -744,13 +761,9 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
                 if has_certification
                 else CertificationType.none.name,
                 "topics": transform_topics(course_data["topics"], OFFERED_BY["code"]),
-                "url": (
-                    urljoin(
-                        settings.MITX_ONLINE_BASE_URL,
-                        course_data["page"]["page_url"],
-                    )
-                    if course_data.get("page", {}).get("page_url")
-                    else None
+                "url": _learn_product_url_for_mitx_course(
+                    course_data["readable_id"],
+                    has_product_page=bool(course_data.get("page", {}).get("page_url")),
                 ),
                 "runs": runs,
                 "course": {

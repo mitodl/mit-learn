@@ -1817,10 +1817,13 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
     """
     Minimal serializer for LearningResource - returns only essential fields
     for sitemap generation and other use cases requiring minimal data transfer.
+
+    ``url`` is typically the public Learn product page URL when set by ETL (e.g.
+    MITx Online resources); consumers such as the product sitemap rely on it.
     """
 
     class Meta:
         """Meta configuration for LearningResourceSummarySerializer"""
 
         model = models.LearningResource
-        fields = ("id", "last_modified")
+        fields = ("id", "last_modified", "url")
