@@ -28,11 +28,13 @@ def s3_objects(mock_s3_bucket):
         ("/shorts/test_vid_001/test_vid_001.mp4", True),
         ("", False),
         ("/videos/test_vid_001/test_vid_001.mp4", False),
+        ("/shorts/", False),
     ],
     ids=[
         "valid-url-deletes-objects",
         "empty-url-skips",
         "non-shorts-path-skips",
+        "bare-shorts-prefix-skips",
     ],
 )
 def test_delete_video_short_from_s3(
