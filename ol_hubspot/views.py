@@ -251,15 +251,18 @@ def hubspot_form_submit_view(request, form_id: str):
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
         return _missing_token_response()
 
-    serializer = HubspotFormSubmitRequestSerializer(data=request.data)
+    data = request.data
+    if not data.get("page_uri"):
+        referer = request.META.get("HTTP_REFERER")
+        if referer:
+            data = {**data, "page_uri": referer}
+
+    serializer = HubspotFormSubmitRequestSerializer(data=data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         payload = dict(serializer.validated_data)
-        referer = request.META.get("HTTP_REFERER")
-        if payload.get("page_uri") is None and referer:
-            payload["page_uri"] = referer
 
         hubspotutk_cookie = request.COOKIES.get("hubspotutk")
         if payload.get("hutk") is None and hubspotutk_cookie:
