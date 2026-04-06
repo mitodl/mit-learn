@@ -23,12 +23,22 @@ def delete_video_short_from_s3(video_url: str) -> None:
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
     )
     bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-    objects = list(bucket.objects.filter(Prefix=prefix))
-    if objects:
-        bucket.delete_objects(Delete={"Objects": [{"Key": obj.key} for obj in objects]})
+    batch_size = 1000
+    batch = []
+    deleted_count = 0
+    for obj in bucket.objects.filter(Prefix=prefix):
+        batch.append({"Key": obj.key})
+        if len(batch) == batch_size:
+            bucket.delete_objects(Delete={"Objects": batch})
+            deleted_count += len(batch)
+            batch = []
+    if batch:
+        bucket.delete_objects(Delete={"Objects": batch})
+        deleted_count += len(batch)
+    if deleted_count:
         log.info(
             "Deleted %d objects from s3://%s/%s",
-            len(objects),
+            deleted_count,
             settings.AWS_STORAGE_BUCKET_NAME,
             prefix,
         )

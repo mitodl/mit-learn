@@ -27,13 +27,11 @@ def s3_objects(mock_s3_bucket):
     [
         ("/shorts/test_vid_001/test_vid_001.mp4", True),
         ("", False),
-        (None, False),
         ("/no_shorts_here/test_vid_001.mp4", False),
     ],
     ids=[
         "valid-url-deletes-objects",
         "empty-url-skips",
-        "none-url-skips",
         "no-shorts-in-prefix-skips",
     ],
 )
@@ -41,7 +39,7 @@ def test_delete_video_short_from_s3(
     mock_s3_bucket, s3_objects, video_url, should_delete
 ):
     """Test that S3 objects are deleted only for valid shorts prefixes."""
-    delete_video_short_from_s3(video_url or "")
+    delete_video_short_from_s3(video_url)
 
     remaining = list(mock_s3_bucket.objects.all())
     if should_delete:

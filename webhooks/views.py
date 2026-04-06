@@ -132,8 +132,8 @@ class VideoShortWebhookView(BaseWebhookView):
         try:
             data = self.get_data(request)
             video_data = data.get("video_metadata")
-            video_id = video_data.get("video_id")
             if video_data.get("delete", False):
+                video_id = data.get("video_id")
                 delete_video_short(video_id)
             else:
                 upsert_video_short(video_data)

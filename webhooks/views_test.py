@@ -8,6 +8,8 @@ from django.urls import reverse
 from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import LearningResourceFactory
 from learning_resources.models import LearningResource
+from video_shorts.factories import VideoShortFactory
+from video_shorts.models import VideoShort
 
 
 def get_secret(data, settings):
@@ -247,8 +249,6 @@ def test_content_file_webhook_view_invalid_json(settings, client):
 @pytest.mark.django_db
 def test_video_short_webhook_view_creates_new(settings, client, sample_video_metadata):
     """Test VideoShortWebhookView creates a new VideoShort"""
-    from video_shorts.models import VideoShort
-
     url = reverse("webhooks:v1:video_short_webhook")
     data = {
         "video_id": "k_AA4_fQIHc",
@@ -284,8 +284,6 @@ def test_video_short_webhook_view_updates_existing(
     settings, client, sample_video_metadata
 ):
     """Test VideoShortWebhookView updates existing VideoShort"""
-    from video_shorts.factories import VideoShortFactory
-    from video_shorts.models import VideoShort
 
     settings.APP_BASE_URL = "https://learn.mit.edu/"
 
@@ -393,8 +391,6 @@ def test_video_short_webhook_view_invalid_video_metadata(settings, client):
 @pytest.mark.django_db
 def test_video_short_webhook_view_deletes_existing(settings, client, mocker):
     """Test VideoShortWebhookView deletes an existing VideoShort"""
-    from video_shorts.factories import VideoShortFactory
-    from video_shorts.models import VideoShort
 
     VideoShortFactory.create(video_id="delete_me")
     assert VideoShort.objects.count() == 1
@@ -424,8 +420,6 @@ def test_video_short_webhook_view_deletes_existing(settings, client, mocker):
 @pytest.mark.django_db
 def test_video_short_webhook_view_delete_nonexistent(settings, client, mocker):
     """Test VideoShortWebhookView delete for a nonexistent video is a no-op"""
-    from video_shorts.models import VideoShort
-
     mock_s3_task = mocker.patch("video_shorts.api.delete_video_short_from_s3")
 
     url = reverse("webhooks:v1:video_short_webhook")
