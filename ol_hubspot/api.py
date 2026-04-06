@@ -70,7 +70,8 @@ def submit_form(
     if context:
         hubspot_payload["context"] = context
 
-    if submitted_at := payload.get("submitted_at"):
+    submitted_at = payload.get("submitted_at")
+    if submitted_at is not None:
         hubspot_payload["submittedAt"] = submitted_at
 
     response = requests.post(
