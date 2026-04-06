@@ -354,9 +354,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       <EnrollButton>{enrollmentAction}</EnrollButton>
                       <StayUpdatedButton
                         variant="secondary"
-                        onClick={() =>
-                          NiceModal.show(StayUpdatedModal, { title: title })
-                        }
+                        onClick={() => NiceModal.show(StayUpdatedModal)}
                       >
                         Stay Updated
                       </StayUpdatedButton>
