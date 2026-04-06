@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.62.0
+Version 0.62.0 (Released April 06, 2026)
 --------------
 
 - Add index to ContentFile.edx_module_id (#3160)
