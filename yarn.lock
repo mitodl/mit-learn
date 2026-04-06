@@ -13115,6 +13115,7 @@ __metadata:
     "@testing-library/user-event": "npm:^14.5.2"
     "@types/jest": "npm:^29.5.12"
     "@types/jest-when": "npm:^3.5.2"
+    "@types/react-google-recaptcha": "npm:^2.1.9"
     "@typescript-eslint/eslint-plugin": "npm:^8.0.0"
     "@typescript-eslint/typescript-estree": "npm:^8.0.0"
     cross-fetch: "npm:^4.0.0"
@@ -13138,6 +13139,7 @@ __metadata:
     postcss-styled-syntax: "npm:^0.7.0"
     prettier: "npm:^3.3.3"
     prettier-plugin-django-alpine: "npm:^1.2.6"
+    react-google-recaptcha: "npm:^3.1.0"
     stylelint: "npm:^16.18.0"
     stylelint-config-standard-scss: "npm:^15.0.0"
     syncpack: "npm:14.0.0-alpha.40"
@@ -17270,9 +17272,7 @@ __metadata:
   resolution: "mit-learn@workspace:."
   dependencies:
     "@playwright/test": "npm:^1.58.1"
-    "@types/react-google-recaptcha": "npm:^2.1.9"
     frontends: "workspace:^"
-    react-google-recaptcha: "npm:^3.1.0"
     type-fest: "npm:^5.4.3"
   languageName: unknown
   linkType: soft

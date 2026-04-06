@@ -9,12 +9,21 @@ import {
   Typography,
   HEADER_HEIGHT,
   Grid2,
+  HubspotForm,
+  Dialog,
+  type HubspotFormValue,
 } from "ol-components"
-import { convertToEmbedUrl } from "@/common/utils"
+import { convertToEmbedUrl, hexToRgba } from "@/common/utils"
 import { HOME } from "@/common/urls"
-import { styled } from "@mitodl/smoot-design"
+import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
+import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
+import {
+  useHubspotFormDetail,
+  useHubspotFormSubmit,
+  type HubspotSubmitField,
+} from "api/hooks/hubspot"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -47,6 +56,19 @@ const ContentStack = styled(Stack)(({ theme }) => ({
 const EnrollButton = styled.div(({ theme }) => ({
   width: "240px",
 
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
+const StayUpdatedButton = styled(Button)(({ theme }) => ({
+  color: theme.custom.colors.white,
+  borderColor: theme.custom.colors.lightGray2,
+  width: "200px",
+
+  "&&:hover": {
+    backgroundColor: hexToRgba(theme.custom.colors.white, 0.2),
+  },
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -233,6 +255,58 @@ const SidebarMedia: React.FC<{
   )
 }
 
+const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
+
+const mapValuesToFields = (
+  values: Record<string, HubspotFormValue>,
+): HubspotSubmitField[] => {
+  return Object.entries(values)
+    .filter(
+      (entry): entry is [string, Exclude<HubspotFormValue, File>] =>
+        !(entry[1] instanceof File),
+    )
+    .map(([name, value]) => ({ name, value }))
+}
+
+type StayUpdatedDialogProps = {
+  title: string
+}
+
+const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
+  title,
+}) => {
+  const modal = NiceModal.useModal()
+  const { data: hubspotForm, isLoading } = useHubspotFormDetail({
+    form_id: STAY_UPDATED_FORM_ID,
+  })
+  const { mutate: submitForm, isPending } = useHubspotFormSubmit()
+
+  return (
+    <Dialog {...muiDialogV5(modal)} title={title} actions={null}>
+      <HubspotForm
+        form={hubspotForm}
+        recaptchaEnabled
+        isLoading={isLoading}
+        isSubmitting={isPending}
+        submitLabel="Notify Me"
+        actions={
+          <Button variant="text" type="button" onClick={modal.hide}>
+            Cancel
+          </Button>
+        }
+        onSubmit={(values, _event, recaptchaToken) => {
+          const fields = mapValuesToFields(values)
+          submitForm(
+            { formId: STAY_UPDATED_FORM_ID, fields, recaptchaToken },
+            { onSuccess: () => modal.hide() },
+          )
+        }}
+      />
+    </Dialog>
+  )
+}
+const StayUpdatedModal = NiceModal.create(StayUpdatedDialogInner)
+
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
   title: string
@@ -282,7 +356,17 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {title}
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
-                    <EnrollButton>{enrollmentAction}</EnrollButton>
+                    <Stack direction="row" gap="16px" flexWrap="wrap">
+                      <EnrollButton>{enrollmentAction}</EnrollButton>
+                      <StayUpdatedButton
+                        variant="secondary"
+                        onClick={() =>
+                          NiceModal.show(StayUpdatedModal, { title: title })
+                        }
+                      >
+                        Stay Updated
+                      </StayUpdatedButton>
+                    </Stack>
                   </ContentStack>
                 </TitleBox>
               </MainCol>
