@@ -1,0 +1,128 @@
+import React from "react"
+import * as NiceModal from "@ebay/nice-modal-react"
+import { HubspotForm, type HubspotFormProps } from "ol-components"
+import { setMockResponse, urls } from "api/test-utils"
+import { renderWithProviders, screen, user, act } from "@/test-utils"
+import { StayUpdatedModal } from "./StayUpdatedModal"
+
+jest.mock("ol-components", () => ({
+  ...jest.requireActual("ol-components"),
+  HubspotForm: jest.fn(),
+}))
+
+const mockedHubspotForm = jest.mocked(HubspotForm)
+
+const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
+const TEST_EMAIL = "user@test.edu"
+
+const setupApis = () => {
+  setMockResponse.get(urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }), {
+    id: STAY_UPDATED_FORM_ID,
+    name: "Stay Updated",
+    form_type: "hubspot",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+    archived: false,
+    field_groups: [],
+  })
+  setMockResponse.post(urls.hubspot.submit(STAY_UPDATED_FORM_ID), {})
+}
+
+describe("StayUpdatedModal", () => {
+  beforeEach(() => {
+    mockedHubspotForm.mockImplementation((props: HubspotFormProps) => (
+      <div>
+        <button
+          type="button"
+          onClick={(e) =>
+            props.onSubmit?.(
+              { email: TEST_EMAIL },
+              e as unknown as React.FormEvent<HTMLFormElement>,
+              null,
+            )
+          }
+        >
+          Notify Me
+        </button>
+        {props.actions}
+      </div>
+    ))
+  })
+
+  it("shows the form view when the modal is opened", async () => {
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    expect(
+      screen.getByRole("button", { name: "Notify Me" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
+  })
+
+  it("shows the success view with the submitted email after form submission", async () => {
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    await screen.findByText(TEST_EMAIL)
+    expect(screen.getByText(/we'll keep you updated at/)).toBeInTheDocument()
+  })
+
+  it("replaces the form with the success view after submission", async () => {
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    await screen.findByRole("button", { name: "Done" })
+    expect(
+      screen.queryByRole("button", { name: "Notify Me" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("closes the dialog when 'Done' is clicked in the success view", async () => {
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    const doneButton = await screen.findByRole("button", { name: "Done" })
+    await user.click(doneButton)
+
+    expect(
+      screen.queryByRole("dialog", { name: "Stay Updated" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("closes the dialog when 'Cancel' is clicked in the form view", async () => {
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(
+      screen.queryByRole("dialog", { name: "Stay Updated" }),
+    ).not.toBeInTheDocument()
+  })
+})

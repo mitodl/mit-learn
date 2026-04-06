@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import {
   Container,
   Stack,
@@ -9,23 +9,14 @@ import {
   Typography,
   HEADER_HEIGHT,
   Grid2,
-  HubspotForm,
-  Dialog,
-  DialogActions,
-  type HubspotFormValue,
 } from "ol-components"
 import { convertToEmbedUrl, hexToRgba } from "@/common/utils"
 import { HOME } from "@/common/urls"
 import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
-import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
-import IconCheck from "@/public/images/product/icon_check.svg"
-import {
-  useHubspotFormDetail,
-  useHubspotFormSubmit,
-  type HubspotSubmitField,
-} from "api/hooks/hubspot"
+import NiceModal from "@ebay/nice-modal-react"
+import { StayUpdatedModal } from "./StayUpdatedModal"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -75,21 +66,6 @@ const StayUpdatedButton = styled(Button)(({ theme }) => ({
     width: "100%",
   },
 }))
-
-const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
-  minWidth: "516px",
-  padding: "24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "24px",
-  [theme.breakpoints.down("sm")]: {
-    minWidth: "100%",
-  },
-}))
-
-const DialogSuccessCheck = styled(Image)({
-  alignSelf: "center",
-})
 
 const Page = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -271,90 +247,6 @@ const SidebarMedia: React.FC<{
     />
   )
 }
-
-const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
-
-const mapValuesToFields = (
-  values: Record<string, HubspotFormValue>,
-): HubspotSubmitField[] => {
-  return Object.entries(values)
-    .filter(
-      (entry): entry is [string, Exclude<HubspotFormValue, File>] =>
-        !(entry[1] instanceof File),
-    )
-    .map(([name, value]) => ({ name, value }))
-}
-
-const StayUpdatedDialogInner: React.FC = () => {
-  const modal = NiceModal.useModal()
-  const { data: hubspotForm, isLoading } = useHubspotFormDetail({
-    form_id: STAY_UPDATED_FORM_ID,
-  })
-  const { mutate: submitForm, isPending } = useHubspotFormSubmit()
-  const [email, setEmail] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-  const doneButton = (
-    <DialogActions>
-      <Button variant="primary" onClick={() => modal.hide()}>
-        Done
-      </Button>
-    </DialogActions>
-  )
-
-  return (
-    <Dialog
-      {...muiDialogV5(modal)}
-      title={"Stay Updated"}
-      actions={submitted ? doneButton : null}
-      contentCss={{ margin: 0 }}
-    >
-      {!submitted && (
-        <StayUpdatedDialogContainer>
-          <HubspotForm
-            form={hubspotForm}
-            recaptchaEnabled
-            isLoading={isLoading}
-            isSubmitting={isPending}
-            submitLabel="Notify Me"
-            actions={
-              <Button variant="text" type="button" onClick={modal.hide}>
-                Cancel
-              </Button>
-            }
-            onSubmit={(values, _event, recaptchaToken) => {
-              const fields = mapValuesToFields(values)
-              const emailField = fields.find((field) => field.name === "email")
-              if (emailField && typeof emailField.value === "string") {
-                setEmail(emailField.value)
-              }
-              submitForm(
-                { formId: STAY_UPDATED_FORM_ID, fields, recaptchaToken },
-                { onSuccess: () => setSubmitted(true) },
-              )
-            }}
-          />
-        </StayUpdatedDialogContainer>
-      )}
-      {submitted && (
-        <StayUpdatedDialogContainer>
-          <Stack alignItems="center">
-            <DialogSuccessCheck
-              src={IconCheck}
-              width="64"
-              height="64"
-              alt=""
-              aria-hidden
-            />
-            <Typography variant="body1" color="black" align="center">
-              Thanks! we&apos;ll keep you updated at <strong>{email}</strong>
-            </Typography>
-          </Stack>
-        </StayUpdatedDialogContainer>
-      )}
-    </Dialog>
-  )
-}
-const StayUpdatedModal = NiceModal.create(StayUpdatedDialogInner)
 
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
