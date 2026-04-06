@@ -11,13 +11,17 @@ from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 def test_vector_search_filters(mocker, client):
     """Test vector search with query uses query filters"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant.scroll.return_value = [[]]
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     params = {
         "q": "test",
         "topic": ["test"],
@@ -56,11 +60,15 @@ def test_vector_search_filters(mocker, client):
 def test_vector_search_filters_empty_query(mocker, client):
     """Test vector search filters with empty query uses scroll filters"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant.scroll.return_value = [[]]
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
 
@@ -113,13 +121,17 @@ def test_content_file_vector_search_filters(
 ):
     """Test content file vector search with query uses query filters"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant.scroll.return_value = [[]]
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     params = {
         "q": "test",
         "offered_by": ["ocw"],
@@ -193,13 +205,17 @@ def test_content_file_vector_search_filters_empty_query(
 ):
     """Test content file vector search with query uses query filters"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant.scroll.return_value = [[]]
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     # omit the q param
     params = {
         "offered_by": ["ocw"],
@@ -248,14 +264,18 @@ def test_content_file_vector_search_filters_custom_collection(
 ):
     """Test content file vector search uses custom collection if specified"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
     custom_collection_name = "foo_bar_collection"
-    mock_qdrant.scroll.return_value = [[]]
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
 
     params = {
         "offered_by": ["ocw"],
@@ -288,14 +308,19 @@ def test_content_file_vector_search_filters_custom_collection(
 def test_content_file_vector_search_group_parameters(mocker, client, django_user_model):
     """Test content file vector search uses custom collection if specified"""
 
-    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
     custom_collection_name = "foo_bar_collection"
 
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
-        "vector_search.utils.qdrant_client",
+        "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
-    mock_qdrant.count.return_value = CountResult(count=10)
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     contentfile_keys = ["somefile.pdf", "trest.csv", "newfile.txt", "presentation.pptx"]
 
     mock_groups = []
@@ -322,7 +347,7 @@ def test_content_file_vector_search_group_parameters(mocker, client, django_user
         mock_groups.append(mock_group)
     mock_group_result = mocker.MagicMock()
     mock_group_result.groups = mock_groups
-    mock_qdrant.query_points_groups.return_value = mock_group_result
+    mock_qdrant.query_points_groups = mocker.AsyncMock(return_value=mock_group_result)
     params = {
         "group_by": "key",
         "resource_readable_id": ["test_resource_id_1", "test_resource_id_2"],
