@@ -74,6 +74,13 @@ const StayUpdatedButton = styled(Button)(({ theme }) => ({
   },
 }))
 
+const HubspotFormContainer = styled.div(({ theme }) => ({
+  minWidth: "516px",
+  [theme.breakpoints.down("sm")]: {
+    minWidth: "100%",
+  },
+}))
+
 const Page = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   paddingBottom: "80px",
@@ -277,25 +284,27 @@ const StayUpdatedDialogInner: React.FC = () => {
 
   return (
     <Dialog {...muiDialogV5(modal)} title={"Stay Updated"} actions={null}>
-      <HubspotForm
-        form={hubspotForm}
-        recaptchaEnabled
-        isLoading={isLoading}
-        isSubmitting={isPending}
-        submitLabel="Notify Me"
-        actions={
-          <Button variant="text" type="button" onClick={modal.hide}>
-            Cancel
-          </Button>
-        }
-        onSubmit={(values, _event, recaptchaToken) => {
-          const fields = mapValuesToFields(values)
-          submitForm(
-            { formId: STAY_UPDATED_FORM_ID, fields, recaptchaToken },
-            { onSuccess: () => modal.hide() },
-          )
-        }}
-      />
+      <HubspotFormContainer>
+        <HubspotForm
+          form={hubspotForm}
+          recaptchaEnabled
+          isLoading={isLoading}
+          isSubmitting={isPending}
+          submitLabel="Notify Me"
+          actions={
+            <Button variant="text" type="button" onClick={modal.hide}>
+              Cancel
+            </Button>
+          }
+          onSubmit={(values, _event, recaptchaToken) => {
+            const fields = mapValuesToFields(values)
+            submitForm(
+              { formId: STAY_UPDATED_FORM_ID, fields, recaptchaToken },
+              { onSuccess: () => modal.hide() },
+            )
+          }}
+        />
+      </HubspotFormContainer>
     </Dialog>
   )
 }
