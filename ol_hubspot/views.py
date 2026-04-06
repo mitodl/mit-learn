@@ -63,7 +63,6 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
     # Backward-compatible aliases
     page_title = serializers.CharField(required=False, allow_blank=True)
     timestamp = serializers.IntegerField(required=False, min_value=0)
-    ip_address = serializers.IPAddressField(required=False)
 
 
 def _extract_client_ip(request) -> str | None:
@@ -166,10 +165,6 @@ def _enrich_submit_request_data(request) -> dict:
         referer = request.META.get("HTTP_REFERER")
         if referer:
             data["page_uri"] = referer
-    if not data.get("ip_address"):
-        client_ip = _extract_client_ip(request)
-        if client_ip:
-            data["ip_address"] = client_ip
     if not data.get("hutk"):
         hutk_cookie = request.COOKIES.get("hubspotutk")
         if hutk_cookie:
@@ -286,6 +281,9 @@ def hubspot_form_submit_view(request, form_id: str):
 
     try:
         payload = _resolve_payload_aliases(dict(serializer.validated_data))
+        client_ip = _extract_client_ip(request)
+        if client_ip:
+            payload["ip_address"] = client_ip
         submit_form(form_id=form_id, payload=payload)
         return Response(
             HubspotFormSubmitResponseSerializer({"status": "submitted"}).data,

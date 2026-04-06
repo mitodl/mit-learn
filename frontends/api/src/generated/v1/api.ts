@@ -3134,12 +3134,6 @@ export interface HubspotFormSubmitRequestRequest {
    * @memberof HubspotFormSubmitRequestRequest
    */
   timestamp?: number
-  /**
-   *
-   * @type {string}
-   * @memberof HubspotFormSubmitRequestRequest
-   */
-  ip_address?: string
 }
 /**
  * Serializer for HubSpot form submission response.

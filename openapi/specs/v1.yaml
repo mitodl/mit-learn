@@ -11940,9 +11940,6 @@ components:
         timestamp:
           type: integer
           minimum: 0
-        ip_address:
-          type: string
-          minLength: 1
       required:
       - fields
     HubspotFormSubmitResponse:
