@@ -276,9 +276,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   const { data: stayUpdatedForm } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
-  const shouldShowStayUpdatedButton = Boolean(
-    stayUpdatedFormId && stayUpdatedForm,
-  )
+  const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId)
+  const hasStayUpdatedFormData = Boolean(stayUpdatedForm)
 
   return (
     <Page>
@@ -314,7 +313,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
                           variant="secondary"
-                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                          onClick={
+                            hasStayUpdatedFormData
+                              ? () => NiceModal.show(StayUpdatedModal)
+                              : undefined
+                          }
                         >
                           Stay Updated
                         </StayUpdatedButton>

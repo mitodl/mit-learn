@@ -3,13 +3,29 @@ import { setMockResponse, urls } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
+import NiceModal from "@ebay/nice-modal-react"
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
   useHubspotFormDetail: jest.fn(),
 }))
 
+jest.mock("@ebay/nice-modal-react", () => {
+  const actual = jest.requireActual("@ebay/nice-modal-react")
+  return {
+    ...actual,
+    __esModule: true,
+    default: {
+      ...actual.default,
+      show: jest.fn(),
+    },
+  }
+})
+
 const mockedUseHubspotFormDetail = jest.mocked(useHubspotFormDetail)
+const mockedNiceModalShow = NiceModal.show as jest.MockedFunction<
+  typeof NiceModal.show
+>
 
 const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
 
@@ -47,7 +63,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined)
   })
 
-  it("hides the trigger button when the configured form is not returned", () => {
+  it("shows the trigger button but click handler is not attached when form not yet fetched", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
@@ -55,15 +71,29 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     renderProductPageTemplate()
 
-    expect(
-      screen.queryByRole("button", { name: "Stay Updated" }),
-    ).not.toBeInTheDocument()
-    expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith({
-      form_id: STAY_UPDATED_FORM_ID,
-    })
+    const button = screen.getByRole("button", { name: "Stay Updated" })
+    expect(button).toBeInTheDocument()
+
+    button.click()
+    expect(mockedNiceModalShow).not.toHaveBeenCalled()
   })
 
-  it("shows the trigger button when form id is configured and form data exists", () => {
+  it("shows the trigger button but click handler is not attached when form fetch errors", () => {
+    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
+    mockedUseHubspotFormDetail.mockReturnValue({
+      data: undefined,
+    } as ReturnType<typeof useHubspotFormDetail>)
+
+    renderProductPageTemplate()
+
+    const button = screen.getByRole("button", { name: "Stay Updated" })
+    expect(button).toBeInTheDocument()
+
+    button.click()
+    expect(mockedNiceModalShow).not.toHaveBeenCalled()
+  })
+
+  it("attaches click handler when form id is configured and form data exists", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
       data: {
@@ -79,8 +109,10 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     renderProductPageTemplate()
 
-    expect(
-      screen.getByRole("button", { name: "Stay Updated" }),
-    ).toBeInTheDocument()
+    const button = screen.getByRole("button", { name: "Stay Updated" })
+    expect(button).toBeInTheDocument()
+
+    button.click()
+    expect(mockedNiceModalShow).toHaveBeenCalled()
   })
 })
