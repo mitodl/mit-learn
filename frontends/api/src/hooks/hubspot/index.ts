@@ -122,7 +122,7 @@ const useHubspotFormSubmit = () => {
             ...(resolvedPageUri ? { page_uri: resolvedPageUri } : {}),
             ...(resolvedHutk ? { hutk: resolvedHutk } : {}),
             ...(resolvedPageName ? { page_name: resolvedPageName } : {}),
-            ...(resolvedSubmittedAt
+            ...(resolvedSubmittedAt !== undefined
               ? { submitted_at: resolvedSubmittedAt }
               : {}),
           },
