@@ -67,6 +67,7 @@ import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
+import UniversalAIBanner from "./UniversalAIBanner"
 
 const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
   margin-top: 0;
@@ -976,6 +977,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 ? ""
                 : `${data?.count} results`}
             </VisuallyHidden>
+            <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">
               <StyledResourceTabs
                 setSearchParams={setSearchParams}
