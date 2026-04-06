@@ -268,13 +268,7 @@ const mapValuesToFields = (
     .map(([name, value]) => ({ name, value }))
 }
 
-type StayUpdatedDialogProps = {
-  title: string
-}
-
-const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
-  title,
-}) => {
+const StayUpdatedDialogInner: React.FC = () => {
   const modal = NiceModal.useModal()
   const { data: hubspotForm, isLoading } = useHubspotFormDetail({
     form_id: STAY_UPDATED_FORM_ID,
@@ -282,7 +276,7 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
   const { mutate: submitForm, isPending } = useHubspotFormSubmit()
 
   return (
-    <Dialog {...muiDialogV5(modal)} title={title} actions={null}>
+    <Dialog {...muiDialogV5(modal)} title={"Stay Updated"} actions={null}>
       <HubspotForm
         form={hubspotForm}
         recaptchaEnabled
