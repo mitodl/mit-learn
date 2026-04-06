@@ -34,7 +34,8 @@ const DialogSuccessCheck = styled(Image)({
   alignSelf: "center",
 })
 
-const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
+const getStayUpdatedHubspotFormId = () =>
+  (process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID ?? "").trim()
 
 const mapValuesToFields = (
   values: Record<string, HubspotFormValue>,
@@ -49,9 +50,10 @@ const mapValuesToFields = (
 
 const StayUpdatedDialogInner: React.FC = () => {
   const modal = NiceModal.useModal()
-  const { data: hubspotForm, isLoading } = useHubspotFormDetail({
-    form_id: STAY_UPDATED_FORM_ID,
-  })
+  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const { data: hubspotForm, isLoading } = useHubspotFormDetail(
+    stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
+  )
   const { mutate: submitForm, isPending } = useHubspotFormSubmit()
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
@@ -90,7 +92,7 @@ const StayUpdatedDialogInner: React.FC = () => {
                 setEmail(emailField.value)
               }
               submitForm(
-                { formId: STAY_UPDATED_FORM_ID, fields, recaptchaToken },
+                { formId: stayUpdatedFormId, fields, recaptchaToken },
                 { onSuccess: () => setSubmitted(true) },
               )
             }}
@@ -118,3 +120,4 @@ const StayUpdatedDialogInner: React.FC = () => {
 }
 
 export const StayUpdatedModal = NiceModal.create(StayUpdatedDialogInner)
+export { getStayUpdatedHubspotFormId }

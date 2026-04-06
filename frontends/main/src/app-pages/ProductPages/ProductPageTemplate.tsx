@@ -16,7 +16,11 @@ import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
 import NiceModal from "@ebay/nice-modal-react"
-import { StayUpdatedModal } from "./StayUpdatedModal"
+import { useHubspotFormDetail } from "api/hooks/hubspot"
+import {
+  StayUpdatedModal,
+  getStayUpdatedHubspotFormId,
+} from "./StayUpdatedModal"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -268,6 +272,14 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollmentAction,
 }) => {
+  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const { data: stayUpdatedForm } = useHubspotFormDetail(
+    stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
+  )
+  const shouldShowStayUpdatedButton = Boolean(
+    stayUpdatedFormId && stayUpdatedForm,
+  )
+
   return (
     <Page>
       <GradientBanner>
@@ -299,12 +311,14 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     <ShortDescription>{shortDescription}</ShortDescription>
                     <Stack direction="row" gap="16px" flexWrap="wrap">
                       <EnrollButton>{enrollmentAction}</EnrollButton>
-                      <StayUpdatedButton
-                        variant="secondary"
-                        onClick={() => NiceModal.show(StayUpdatedModal)}
-                      >
-                        Stay Updated
-                      </StayUpdatedButton>
+                      {shouldShowStayUpdatedButton ? (
+                        <StayUpdatedButton
+                          variant="secondary"
+                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                        >
+                          Stay Updated
+                        </StayUpdatedButton>
+                      ) : null}
                     </Stack>
                   </ContentStack>
                 </TitleBox>

@@ -30,6 +30,8 @@ const setupApis = () => {
 
 describe("StayUpdatedModal", () => {
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
+
     mockedHubspotForm.mockImplementation((props: HubspotFormProps) => (
       <div>
         <button
@@ -47,6 +49,10 @@ describe("StayUpdatedModal", () => {
         {props.actions}
       </div>
     ))
+  })
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
   })
 
   it("shows the form view when the modal is opened", async () => {
