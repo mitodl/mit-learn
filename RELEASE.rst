@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.62.0
+--------------
+
+- fix: render issue date and remove the others like start and end date (#3150)
+- Skip PostHog capture when API key is not configured (#3158)
+- fix: migrate client Sentry init to instrumentation-client.ts (#3147)
+- Fix template variable syntax in TermsPage (#3149)
+- chore: add drf-lint pre-commit hook with baseline (#3146)
+
 Version 0.61.1 (Released April 02, 2026)
 --------------
 
