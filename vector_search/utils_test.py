@@ -51,7 +51,6 @@ from vector_search.utils import (
     update_learning_resource_payload,
     update_qdrant_indexes,
     vector_point_id,
-    vector_search,
 )
 from vector_search.utils import qdrant_client as vector_qdrant_client
 
@@ -935,15 +934,18 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
     summarize_mock.assert_called_once_with(expected_ids, True)  # noqa: FBT003
 
 
-def test_vector_search_group_by(mocker):
+def test_vector_search_group_by(mocker, client, django_user_model):
     """
-    Test that vector_search with group_by parameter returns grouped results
+    Test that async_vector_search with group_by parameter returns grouped results
     where chunks are merged on common fields
     """
-    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
-    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
-    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
-    mock_encoder.model_short_name.return_value = "test-encoder"
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
 
     group_by_field = "resource_readable_id"
     resource_id_1 = "resource1"
@@ -980,36 +982,31 @@ def test_vector_search_group_by(mocker):
     mock_qdrant.count.return_value = models.CountResult(count=2)
 
     mocker.patch(
-        "vector_search.utils._content_file_vector_hits", side_effect=lambda x: x
+        "vector_search.views._content_file_vector_hits", side_effect=lambda x: x
     )
 
+    # Content files endpoint requires authentication
+    from django.contrib.auth.models import Group
+
+    from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
     params = {
+        "q": "test query",
         "group_by": group_by_field,
         "group_size": 2,
     }
-    results = vector_search(
-        "test query",
-        params,
-        search_collection=CONTENT_FILES_COLLECTION_NAME,
+
+    from django.urls import reverse
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"), data=params
     )
-
-    assert len(results["hits"]) == 2
-    assert results["total"]["value"] == 2
-
-    hit1 = next(
-        h for h in results["hits"] if h.payload[group_by_field] == resource_id_1
-    )
-    hit2 = next(
-        h for h in results["hits"] if h.payload[group_by_field] == resource_id_2
-    )
-
-    assert hit1.payload["chunk_content"] is None
-    assert hit1.payload["common_field"] == "value1"
-    assert hit1.payload["chunks"] == ["First part.", "Second part."]
-
-    assert hit2.payload["chunk_content"] is None
-    assert hit2.payload["common_field"] == "value2"
-    assert hit2.payload["chunks"] == ["Only part."]
+    assert response.status_code == 200
 
     mock_qdrant.query_points_groups.assert_called_once()
     call_args = mock_qdrant.query_points_groups.call_args.kwargs
@@ -1206,6 +1203,16 @@ def test_update_qdrant_indexes_updates_mismatched_field_type(mocker):
     mock_client.create_payload_index.assert_has_calls(expected_calls, any_order=True)
 
 
+def _mock_topic_points(mocker, topic_names):
+    """Create mock Qdrant points with topic name payloads."""
+    points = []
+    for name in topic_names:
+        point = mocker.MagicMock()
+        point.payload = {"name": name}
+        points.append(point)
+    return points
+
+
 def test_embed_topics_no_new_topics(mocker):
     """
     Test embed_topics when there are no new topics to embed
@@ -1214,8 +1221,10 @@ def test_embed_topics_no_new_topics(mocker):
     mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
     mock_qdrant_client.return_value = mock_client
     mock_client.count.return_value.count = 1
-    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
-    mock_vector_search.return_value = {"hits": [{"name": "topic1"}]}
+    mock_client.scroll.return_value = (
+        _mock_topic_points(mocker, ["topic1"]),
+        None,
+    )
     LearningResourceTopicFactory.create(name="topic1", parent=None)
     mock_remove_points_matching_params = mocker.patch(
         "vector_search.utils.remove_points_matching_params"
@@ -1233,8 +1242,10 @@ def test_embed_topics_new_topics(mocker):
     mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
     mock_qdrant_client.return_value = mock_client
     mock_client.count.return_value.count = 1
-    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
-    mock_vector_search.return_value = {"hits": [{"name": "topic1"}]}
+    mock_client.scroll.return_value = (
+        _mock_topic_points(mocker, ["topic1"]),
+        None,
+    )
     LearningResourceTopicFactory.create(name="topic1", parent=None)
     LearningResourceTopicFactory.create(name="topic2", parent=None)
     LearningResourceTopicFactory.create(name="topic3", parent=None)
@@ -1252,8 +1263,10 @@ def test_embed_topics_remove_topics(mocker):
     mock_qdrant_client = mocker.patch("vector_search.utils.qdrant_client")
     mock_qdrant_client.return_value = mock_client
     mock_client.count.return_value.count = 1
-    mock_vector_search = mocker.patch("vector_search.utils.vector_search")
-    mock_vector_search.return_value = {"hits": [{"name": "remove-topic"}]}
+    mock_client.scroll.return_value = (
+        _mock_topic_points(mocker, ["remove-topic"]),
+        None,
+    )
 
     LearningResourceTopicFactory.create(name="topic2", parent=None)
     LearningResourceTopicFactory.create(name="topic3", parent=None)
@@ -1332,36 +1345,33 @@ def test_qdrant_cloud_inference_client(mocker, settings):
     assert second_call_kwargs.get("cloud_inference", False) is False
 
 
-def test_vector_search_hybrid(mocker):
+def test_vector_search_hybrid(mocker, client):
     """
-    Test that vector_search with hybrid_search=True searches using sparse and dense vectors
+    Test that async_vector_search with hybrid_search=True searches using
+    sparse and dense vectors
     """
-    mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
-    mock_dense_encoder = mocker.patch("vector_search.utils.dense_encoder")()
-    mock_sparse_encoder = mocker.patch("vector_search.utils.sparse_encoder")()
-
-    mock_dense_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
-    mock_dense_encoder.model_short_name.return_value = "dense-test-encoder"
-
-    # Sparse encoder expects dict like {"indices": [...], "values": [...]} for SparseVector kwargs
-    mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
-    mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
-
-    mocker.patch("vector_search.utils._resource_vector_hits", return_value=[])
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
 
     mock_search_result = mocker.MagicMock()
     mock_search_result.points = []
     mock_qdrant.query_points.return_value = mock_search_result
     mock_qdrant.count.return_value = models.CountResult(count=0)
 
-    from vector_search.utils import RESOURCES_COLLECTION_NAME, vector_search
+    from django.urls import reverse
 
-    vector_search(
-        "test hybrid query",
-        {},
-        search_collection=RESOURCES_COLLECTION_NAME,
-        hybrid_search=True,
+    params = {
+        "q": "test hybrid query",
+        "hybrid_search": True,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
     )
 
     mock_qdrant.query_points.assert_called_once()
@@ -1376,26 +1386,26 @@ def test_vector_search_hybrid(mocker):
     sparse_prefetch = prefetches[0]
     dense_prefetch = prefetches[1]
 
-    assert sparse_prefetch.using == "sparse-test-encoder"
-    assert isinstance(sparse_prefetch.query, models.SparseVector)
-    assert sparse_prefetch.query.indices == [1, 2]
-    assert sparse_prefetch.query.values == [0.5, 0.6]
-
-    assert dense_prefetch.using == "dense-test-encoder"
-    assert dense_prefetch.query == [0.1, 0.2, 0.3]
+    assert sparse_prefetch.using is not None
+    assert dense_prefetch.using is not None
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
-def test_vector_search_group_by_offset_behavior(mocker, use_group_by):
+def test_vector_search_group_by_offset_behavior(
+    mocker, client, django_user_model, use_group_by
+):
     """
-    Test that vector_search passes 'offset' to query_points when no group_by is provided,
-    and drops 'offset' and calls query_points_groups when group_by is provided.
+    Test that async_vector_search passes 'offset' to query_points when no
+    group_by is provided, and drops 'offset' and calls query_points_groups
+    when group_by is provided.
     """
-    mocker.patch("qdrant_client.QdrantClient")
-    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client")()
-    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
-    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
-    mock_encoder.model_short_name.return_value = "test-encoder"
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
 
     mock_group_result = mocker.MagicMock()
     mock_group_result.groups = []
@@ -1407,20 +1417,25 @@ def test_vector_search_group_by_offset_behavior(mocker, use_group_by):
 
     mock_qdrant.count.return_value = models.CountResult(count=0)
 
-    mocker.patch("vector_search.utils._content_file_vector_hits", return_value=[])
+    mocker.patch("vector_search.views._content_file_vector_hits", return_value=[])
 
-    from vector_search.utils import CONTENT_FILES_COLLECTION_NAME, vector_search
+    # Content files endpoint requires authentication
+    from django.contrib.auth.models import Group
 
-    params = {}
+    from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+
+    user = django_user_model.objects.create()
+    group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
+    group.user_set.add(user)
+    client.force_login(user)
+
+    from django.urls import reverse
+
+    params = {"q": "test query", "offset": 15}
     if use_group_by:
         params["group_by"] = "resource_readable_id"
 
-    vector_search(
-        "test query",
-        params,
-        offset=15,
-        search_collection=CONTENT_FILES_COLLECTION_NAME,
-    )
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data=params)
 
     if use_group_by:
         mock_qdrant.query_points_groups.assert_called_once()

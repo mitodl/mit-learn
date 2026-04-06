@@ -242,11 +242,17 @@ def embed_topics():
     )
 
     if indexed_count > 0:
-        existing = retrieve_points_matching_params(
-            params={},
-            collection_name=TOPICS_COLLECTION_NAME,
-        )
-        indexed_topic_names = {hit["name"] for hit in existing["hits"]}
+        existing_points = []
+        next_page_offset = None
+        while True:
+            points, next_page_offset = client.scroll(
+                collection_name=TOPICS_COLLECTION_NAME,
+                offset=next_page_offset,
+            )
+            existing_points.extend(points)
+            if not next_page_offset:
+                break
+        indexed_topic_names = {point.payload["name"] for point in existing_points}
     else:
         indexed_topic_names = set()
 
