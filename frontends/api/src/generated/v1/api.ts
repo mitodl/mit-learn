@@ -3098,6 +3098,42 @@ export interface HubspotFormSubmitRequestRequest {
    * @memberof HubspotFormSubmitRequestRequest
    */
   fields: Array<HubspotFormFieldValueRequest>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_uri?: string
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  hutk?: string
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_name?: string
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  submitted_at?: number
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_title?: string
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  timestamp?: number
 }
 /**
  * Serializer for HubSpot form submission response.

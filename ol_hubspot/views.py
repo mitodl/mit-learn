@@ -7,6 +7,7 @@ from django.urls import reverse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from hubspot.marketing.forms.exceptions import ApiException
+from ipware import get_client_ip
 from rest_framework import permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -55,6 +56,37 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
         child=HubspotFormFieldValueSerializer(),
         required=True,
     )
+    page_uri = serializers.URLField(required=False)
+    hutk = serializers.CharField(required=False, allow_blank=True)
+    page_name = serializers.CharField(required=False, allow_blank=True)
+    submitted_at = serializers.IntegerField(required=False, min_value=0)
+    # Backward-compatible aliases
+    page_title = serializers.CharField(required=False, allow_blank=True)
+    timestamp = serializers.IntegerField(required=False, min_value=0)
+
+
+def _extract_client_ip(request) -> str | None:
+    """Best-effort extraction of client IP across local/proxy setups."""
+    client_ip, _ = get_client_ip(request)
+    if client_ip:
+        return client_ip
+
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+
+    real_ip = request.META.get("HTTP_X_REAL_IP")
+    if real_ip:
+        return real_ip
+
+    cf_connecting_ip = request.META.get("HTTP_CF_CONNECTING_IP")
+    if cf_connecting_ip:
+        return cf_connecting_ip
+
+    remote_addr = request.META.get("REMOTE_ADDR")
+    return remote_addr or None
 
 
 class HubspotFormSubmitResponseSerializer(serializers.Serializer):
@@ -124,6 +156,29 @@ def _normalize_forms_paging(request, payload: dict) -> dict:
 
 def _missing_token_response() -> Response:
     return Response({}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+def _enrich_submit_request_data(request) -> dict:
+    """Inject server-side context into the raw submission data before validation."""
+    data = dict(request.data)
+    if not data.get("page_uri"):
+        referer = request.META.get("HTTP_REFERER")
+        if referer:
+            data["page_uri"] = referer
+    if not data.get("hutk"):
+        hutk_cookie = request.COOKIES.get("hubspotutk")
+        if hutk_cookie:
+            data["hutk"] = hutk_cookie
+    return data
+
+
+def _resolve_payload_aliases(payload: dict) -> dict:
+    """Resolve backward-compatible field aliases in the validated payload."""
+    if payload.get("page_name") is None and payload.get("page_title") is not None:
+        payload["page_name"] = payload["page_title"]
+    if payload.get("submitted_at") is None and payload.get("timestamp") is not None:
+        payload["submitted_at"] = payload["timestamp"]
+    return payload
 
 
 @extend_schema(
@@ -218,20 +273,22 @@ def hubspot_form_submit_view(request, form_id: str):
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
         return _missing_token_response()
 
-    serializer = HubspotFormSubmitRequestSerializer(data=request.data)
+    serializer = HubspotFormSubmitRequestSerializer(
+        data=_enrich_submit_request_data(request)
+    )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payload = serializer.validated_data
-        submit_form(
-            form_id=form_id,
-            payload=payload,
+        payload = _resolve_payload_aliases(dict(serializer.validated_data))
+        client_ip = _extract_client_ip(request)
+        if client_ip:
+            payload["ip_address"] = client_ip
+        submit_form(form_id=form_id, payload=payload)
+        return Response(
+            HubspotFormSubmitResponseSerializer({"status": "submitted"}).data,
+            status=status.HTTP_200_OK,
         )
-        response_serializer = HubspotFormSubmitResponseSerializer(
-            {"status": "submitted"}
-        )
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
     except ApiException as exc:
         status_code = exc.status if isinstance(exc.status, int) else 502
         return Response({"detail": "HubSpot request failed"}, status=status_code)
