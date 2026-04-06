@@ -70,7 +70,7 @@ def upsert_video_short(data: dict) -> VideoShort:
     return video_short_serializer.save()
 
 
-def delete_video_short(video_id) -> None:
+def delete_video_short(video_id: str) -> None:
     """Delete a video short based on Youtube metadata"""
     video = VideoShort.objects.filter(video_id=video_id).first()
     if video:

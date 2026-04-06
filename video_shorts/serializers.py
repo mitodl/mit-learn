@@ -28,7 +28,6 @@ class VideoShortWebhookSerializer(serializers.ModelSerializer):
     Serializer to transform webhook metadata to VideoShort objects.
     """
 
-    video_id = serializers.CharField()
     video_url = serializers.CharField()
     thumbnail_small_url = serializers.CharField()
     thumbnail_large_url = serializers.CharField()
