@@ -9,15 +9,11 @@ const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 
 const VideoCardItem = styled.div({
   display: "flex",
-  gap: "20px",
-  padding: "20px 0",
+  gap: "24px",
+  padding: "24px 0",
   alignItems: "flex-start",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   cursor: "pointer",
-
-  "&:last-child": {
-    borderBottom: "none",
-  },
 
   "&:hover .play-overlay": {
     opacity: 1,
@@ -33,7 +29,6 @@ const ThumbnailWrapper = styled.div({
   flexShrink: 0,
   width: 200,
   aspectRatio: "16/9",
-  borderRadius: "6px",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.black,
 
@@ -46,23 +41,23 @@ const ThumbnailImage = styled(Image)({
   objectFit: "cover",
 })
 
-const DurationBadge = styled.span({
+const DurationBadge = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
   position: "absolute",
-  bottom: 6,
-  right: 6,
-  backgroundColor: "rgba(0,0,0,0.75)",
+  bottom: 0,
+  right: 0,
+  backgroundColor: theme.custom.colors.darkGray2,
   color: "#fff",
-  fontSize: "11px",
   fontWeight: theme.typography.fontWeightMedium,
-  padding: "2px 6px",
-  borderRadius: "3px",
-})
+  padding: "8px",
+  zIndex: 1,
+}))
 
 const CardContent = styled.div({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
+  gap: "8px",
 })
 
 const CardTitleRow = styled.div({
@@ -74,8 +69,9 @@ const CardTitleRow = styled.div({
 
 const CardTitle = styled(Typography)({
   ...theme.typography.subtitle1,
+  fontSize: "20px",
   fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.black,
+  color: theme.custom.colors.darkGray2,
 })
 
 const CardMetaRow = styled.div({
@@ -83,7 +79,6 @@ const CardMetaRow = styled.div({
   alignItems: "flex-start",
   gap: "128px",
   flexWrap: "wrap",
-  marginTop: "4px",
 })
 
 const CardMetaGroup = styled.div({
@@ -92,14 +87,10 @@ const CardMetaGroup = styled.div({
   gap: "3px",
 })
 
-const CardMetaValue = styled(Typography)({
-  fontSize: "13px",
-  color: theme.custom.colors.darkGray1,
-})
-
-// ---------------------------------------------------------------------------
-// VideoCard component
-// ---------------------------------------------------------------------------
+const CardMetaValue = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
 type VideoCardProps = {
   resource: VideoResource

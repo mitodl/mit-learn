@@ -7,19 +7,22 @@ import { VideoCard, VideoCardSkeleton } from "./VideoCard"
 // Styled components
 // ---------------------------------------------------------------------------
 
-const CollectionSection = styled.div({
-  padding: "32px 0 64px",
+const CollectionSection = styled.div({})
+
+const StyledContainer = styled(Container)({
+  padding: "0 48px !important",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
 })
 
 const CollectionHeader = styled.div({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "24px",
+  margin: "32px 0 8px 0",
 })
 
 const CollectionTitle = styled(Typography)({
-  ...theme.typography.h5,
+  ...theme.typography.body1,
   fontWeight: theme.typography.fontWeightMedium,
   color: theme.custom.colors.black,
 })
@@ -47,9 +50,9 @@ const VideoCollection: React.FC<VideoCollectionProps> = ({
 }) => {
   return (
     <CollectionSection>
-      <Container>
+      <StyledContainer>
         <CollectionHeader>
-          <CollectionTitle>Collection Browser</CollectionTitle>
+          <CollectionTitle>{videos.length} Videos</CollectionTitle>
         </CollectionHeader>
 
         <VideoCardList>
@@ -65,7 +68,7 @@ const VideoCollection: React.FC<VideoCollectionProps> = ({
                 />
               ))}
         </VideoCardList>
-      </Container>
+      </StyledContainer>
     </CollectionSection>
   )
 }

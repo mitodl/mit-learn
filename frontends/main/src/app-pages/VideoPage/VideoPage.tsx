@@ -10,18 +10,36 @@ import {
   learningResourceQueries,
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
-import type { VideoResource, VideoPlaylistResource } from "api/v1"
-import { VideoResourceResourceTypeEnum } from "api/v1"
+import type {
+  LearningResource,
+  PaginatedLearningResourceList,
+  VideoResource,
+  VideoPlaylistResource,
+} from "api/v1"
+import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
 import VideoPageHeader from "./VideoPageHeader"
 import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
+import OtherCollections from "./OtherCollections"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
-const Page = styled.div({
-  backgroundColor: "#fff",
+const Page = styled.div(({ theme }) => ({
+  backgroundColor: theme.custom.colors.lightGray1,
   minHeight: "100vh",
-})
+}))
+
+const getResults = (
+  data: PaginatedLearningResourceList | LearningResource[] | undefined,
+) => {
+  if (!data) {
+    return []
+  }
+  if ("results" in data) {
+    return data.results
+  }
+  return data
+}
 
 type VideoPageProps = {
   playlistId: number
@@ -53,7 +71,11 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
     }),
   )
 
-  if (!showVideoPlaylistPage) {
+  const { data: similarData, isLoading: similarLoading } = useQuery(
+    learningResourceQueries.vectorSimilar(playlistId),
+  )
+
+  if (showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
   const isLoading = playlistLoading || itemsLoading
@@ -61,8 +83,13 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
     (item): item is VideoResource =>
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
-  const featuredVideo = videos[0] ?? null
   const collectionVideos = videos.slice(1)
+
+  const otherCollections = getResults(similarData).filter(
+    (resource): resource is VideoPlaylistResource =>
+      resource.resource_type === ResourceTypeEnum.VideoPlaylist &&
+      resource.id !== playlistId,
+  )
 
   return (
     <Page>
@@ -70,14 +97,19 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
-      ) : featuredVideo ? (
-        <FeaturedVideo video={featuredVideo} onPlay={navigateToVideo} />
+      ) : videos.length > 0 ? (
+        <FeaturedVideo videos={videos} onPlay={navigateToVideo} />
       ) : null}
 
       <VideoCollection
         videos={collectionVideos}
         isLoading={isLoading}
         onPlay={navigateToVideo}
+      />
+
+      <OtherCollections
+        collections={otherCollections.slice(0, 6)}
+        isLoading={similarLoading}
       />
     </Page>
   )

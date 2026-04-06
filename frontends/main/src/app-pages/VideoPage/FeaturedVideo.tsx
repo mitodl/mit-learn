@@ -1,227 +1,122 @@
-import React from "react"
+import React, { useState } from "react"
 import Image from "next/image"
-import { Container, Typography, styled } from "ol-components"
-import { RiPlayFill } from "@remixicon/react"
-import type { VideoResource, LearningResourceTopic } from "api/v1"
+import { Container, styled } from "ol-components"
+import { formatDurationClockTime } from "ol-utilities"
+import type { VideoResource } from "api/v1"
 
-const FeaturedSection = styled.button({
-  cursor: "pointer",
-  borderRadius: "6px",
-  overflow: "hidden",
-  display: "block",
-  width: "100%",
-  background: "none",
-  border: "none",
-  padding: 0,
-  textAlign: "left",
+const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
+
+const Section = styled.div({
+  padding: "0 0 56px 0",
 })
 
-const FeaturedImageWrapper = styled.div(({ theme }) => ({
+const FeaturedGrid = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "2fr 3fr",
+  columnGap: "40px",
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr",
+  },
+}))
+
+const ImageWrapper = styled.div({
   position: "relative",
   width: "100%",
-  paddingTop: "52%",
-  overflow: "hidden",
+  aspectRatio: "16/9",
   backgroundColor: "#111",
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: "80%",
-  },
-}))
-
-const FeaturedGradient = styled.div({
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  background:
-    "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.10) 65%, transparent 100%)",
+  overflow: "hidden",
+  cursor: "pointer",
 })
 
-const FeaturedOverlayContent = styled.div(({ theme }) => ({
+const DurationBadge = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
   position: "absolute",
   bottom: 0,
-  left: 0,
   right: 0,
-  padding: "28px 24px",
-  [theme.breakpoints.down("sm")]: {
-    padding: "16px",
-  },
-}))
-
-const FeaturedPlayRow = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  marginBottom: "8px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "4px",
-  },
-}))
-
-const FeaturedPlayBtn = styled.div({
-  width: 44,
-  height: 44,
-  borderRadius: "6px",
-  backgroundColor: "#A31F34",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  backgroundColor: theme.custom.colors.darkGray2,
   color: "#fff",
-  flexShrink: 0,
-  svg: { width: 18, height: 18 },
-})
-
-const FeaturedInterviewLabel = styled(Typography)(({ theme }) => ({
-  textTransform: "uppercase",
-  ...theme.typography.body4,
-  letterSpacing: "0.12em",
-  color: "rgba(255,255,255,0.75)",
   fontWeight: theme.typography.fontWeightMedium,
-  marginBottom: "4px",
-  display: "block",
+  padding: "8px",
+  zIndex: 1,
 }))
 
-const FeaturedTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h5,
-  color: "#fff",
+const TextSide = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("md")]: {
+    padding: "0 0 0 36px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "24px 0 0",
+  },
+}))
+
+const FeaturedTitle = styled.h2(({ theme }) => ({
+  ...theme.typography.h1,
   fontWeight: theme.typography.fontWeightBold,
-  lineHeight: 1.2,
-  [theme.breakpoints.down("sm")]: {
-    fontSize: "1rem",
+  color: theme.custom.colors.darkGray2,
+  letterSpacing: "-1.28px",
+  lineHeight: "120%",
+  margin: "0 0 16px",
+  cursor: "pointer",
+  transition: "color 0.2s",
+  "&:hover": {
+    color: theme.custom.colors.red,
+  },
+  [theme.breakpoints.down("md")]: {
+    ...theme.typography.h3,
+    fontWeight: theme.typography.fontWeightBold,
+    margin: "0 0 16px",
   },
 }))
 
-const FeaturedInfoStrip = styled.div(({ theme }) => ({
-  backgroundColor: "transparent",
-  borderTop: "1px solid rgba(255,255,255,0.20)",
-  marginTop: "16px",
-  paddingTop: "14px",
-  [theme.breakpoints.down("sm")]: {
-    marginTop: "10px",
-    paddingTop: "10px",
-  },
-}))
-
-const FeaturedInfoInner = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "48px",
-  flexWrap: "wrap",
-  [theme.breakpoints.down("sm")]: {
-    gap: "12px",
-  },
-}))
-
-const FeaturedInfoItem = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  gap: "3px",
-})
-
-const FeaturedInfoLabel = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body4,
-  textTransform: "uppercase",
-  letterSpacing: "0.08em",
-  color: "rgba(255,255,255,0.5)",
-  fontWeight: theme.typography.fontWeightMedium,
-}))
-
-const FeaturedInfoValue = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: "#fff",
-  fontWeight: theme.typography.fontWeightBold,
-}))
-
-const FeaturedInfoValueContainer = styled.div({
-  display: "flex",
-})
-
-const FeaturedInfoTags = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "8px",
-  flexWrap: "wrap",
-  marginLeft: "auto",
-  [theme.breakpoints.down("sm")]: { marginLeft: 0 },
-}))
-
-const FeaturedInfoTag = styled.span(({ theme }) => ({
-  display: "inline-block",
-  border: "1px solid rgba(255,255,255,0.40)",
-  color: "#fff",
-  ...theme.typography.body3,
-  padding: "4px 10px",
-  borderRadius: "4px",
-  backgroundColor: "transparent",
+const FeaturedDescription = styled.p(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.darkGray1,
+  margin: 0,
 }))
 
 type FeaturedVideoProps = {
-  video: VideoResource
+  videos: VideoResource[]
   onPlay: (video: VideoResource) => void
 }
 
-const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, onPlay }) => {
+const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
+  const [currentIndex] = useState(0)
+  const video = videos[currentIndex]
+  if (!video) return null
+
   const imageUrl = video.image?.url ?? null
-  const topics: LearningResourceTopic[] = video.topics?.slice(0, 4) ?? []
+  const duration = video.video?.duration
+    ? formatDurationClockTime(video.video.duration)
+    : null
+  const description = video.description ?? ""
 
   return (
-    <div style={{ padding: "24px 0 0" }}>
+    <Section>
       <Container>
-        <FeaturedSection type="button" onClick={() => onPlay(video)}>
-          <FeaturedImageWrapper>
-            {imageUrl ? (
-              <Image
-                src={imageUrl}
-                alt={video.title}
-                fill
-                sizes="100vw"
-                style={{ objectFit: "cover", opacity: 0.85 }}
-              />
-            ) : (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundColor: "#1a1a2e",
-                }}
-              />
-            )}
-            <FeaturedGradient />
-            <FeaturedOverlayContent>
-              <FeaturedPlayRow>
-                <FeaturedPlayBtn>
-                  <RiPlayFill />
-                </FeaturedPlayBtn>
-                <div>
-                  <FeaturedInterviewLabel>
-                    Featured Interview
-                  </FeaturedInterviewLabel>
-                  <FeaturedTitle>{video.title}</FeaturedTitle>
-                </div>
-              </FeaturedPlayRow>
+        <FeaturedGrid>
+          <ImageWrapper onClick={() => onPlay(video)}>
+            <Image
+              src={imageUrl ?? PLACEHOLDER_IMG}
+              alt={video.title}
+              fill
+              sizes="(max-width: 600px) 100vw, 50vw"
+              style={{ objectFit: "cover" }}
+            />
+            {duration && <DurationBadge>{duration}</DurationBadge>}
+          </ImageWrapper>
 
-              <FeaturedInfoStrip>
-                <FeaturedInfoInner>
-                  <FeaturedInfoItem>
-                    <FeaturedInfoLabel>Topics</FeaturedInfoLabel>
-                    <FeaturedInfoValueContainer>
-                      {topics.map((topic: LearningResourceTopic) => (
-                        <FeaturedInfoValue key={topic.id}>
-                          {topic.name}
-                        </FeaturedInfoValue>
-                      ))}
-                    </FeaturedInfoValueContainer>
-                  </FeaturedInfoItem>
-                  {topics.length > 0 && (
-                    <FeaturedInfoTags>
-                      <FeaturedInfoTag>Governance</FeaturedInfoTag>
-                      <FeaturedInfoTag>AI Ethics</FeaturedInfoTag>
-                    </FeaturedInfoTags>
-                  )}
-                </FeaturedInfoInner>
-              </FeaturedInfoStrip>
-            </FeaturedOverlayContent>
-          </FeaturedImageWrapper>
-        </FeaturedSection>
+          <TextSide>
+            <FeaturedTitle onClick={() => onPlay(video)}>
+              {video.title}
+            </FeaturedTitle>
+            {description && (
+              <FeaturedDescription>{description}</FeaturedDescription>
+            )}
+          </TextSide>
+        </FeaturedGrid>
       </Container>
-    </div>
+    </Section>
   )
 }
 

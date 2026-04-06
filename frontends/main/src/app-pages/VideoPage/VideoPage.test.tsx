@@ -35,10 +35,12 @@ const setupApis = ({
   playlistId,
   videos,
   playlist = makePlaylist(),
+  similarCollections = [],
 }: {
   playlistId: number
   videos: ReturnType<typeof makeVideo>[]
   playlist?: ReturnType<typeof makePlaylist>
+  similarCollections?: ReturnType<typeof makePlaylist>[]
 }) => {
   // Playlist detail endpoint: /api/v1/video_playlists/{id}/
   setMockResponse.get(
@@ -59,6 +61,13 @@ const setupApis = ({
     next: null,
     previous: null,
     results: itemRelationships,
+  })
+
+  setMockResponse.get(urls.learningResources.similar({ id: playlistId }), {
+    count: similarCollections.length,
+    next: null,
+    previous: null,
+    results: similarCollections,
   })
 }
 
@@ -111,7 +120,7 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      await screen.findByText(playlist.title)
+      await screen.findByRole("heading", { name: playlist.title })
     })
 
     test("renders the playlist description once data is loaded", async () => {
@@ -141,8 +150,9 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      await screen.findByText(playlist.title)
-      expect(screen.queryByText("Featured Interview")).not.toBeInTheDocument()
+      await screen.findByRole("heading", { name: playlist.title })
+      // With no videos the featured video grid should be absent
+      expect(screen.queryByRole("img")).not.toBeInTheDocument()
     })
   })
 
@@ -188,6 +198,39 @@ describe("VideoPage", () => {
       // appears only once (not duplicated in the collection list)
       const allFeatured = screen.getAllByText(featured.title)
       expect(allFeatured).toHaveLength(1)
+    })
+  })
+
+  describe("other collections", () => {
+    test("renders other collections from similar resources", async () => {
+      const playlist = makePlaylist()
+      const similarCollections = [
+        factories.learningResources.videoPlaylist({
+          title: "MIT Research Highlights",
+          resource_category: "Collection",
+          video_playlist: {
+            video_count: 22,
+            channel: {
+              channel_id: "101",
+              title: "MIT Open Learning",
+            },
+          },
+          duration: "PT8H24M",
+        }),
+      ]
+
+      setupApis({
+        playlistId: playlist.id,
+        videos: [makeVideo({ title: "Featured Video" })],
+        playlist,
+        similarCollections,
+      })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByText("Other Collections")
+      await screen.findByText("MIT Research Highlights")
+      await screen.findByText("22 videos · 8h 24m")
     })
   })
 
