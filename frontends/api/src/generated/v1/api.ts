@@ -4831,7 +4831,7 @@ export interface LearningResourceSchool {
     'departments': Array<LearningResourceBaseDepartment>;
 }
 /**
- * Minimal serializer for LearningResource - returns only essential fields for sitemap generation and other use cases requiring minimal data transfer.  ``url`` is typically the public Learn product page URL when set by ETL (e.g. MITx Online resources); consumers such as the product sitemap rely on it.
+ * Minimal serializer for LearningResource - returns only essential fields for sitemap generation and other use cases requiring minimal data transfer.
  * @export
  * @interface LearningResourceSummary
  */
@@ -14752,7 +14752,7 @@ export const LearningResourcesApiAxiosParamCreator = function (configuration?: C
             };
         },
         /**
-         * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
+         * Get a paginated list of learning resources with summary fields
          * @summary Get learning resources summary
          * @param {boolean} [certification] 
          * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -15197,7 +15197,7 @@ export const LearningResourcesApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, operationBasePath || basePath);
         },
         /**
-         * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
+         * Get a paginated list of learning resources with summary fields
          * @summary Get learning resources summary
          * @param {boolean} [certification] 
          * @param {Array<LearningResourcesSummaryListCertificationTypeEnum>} [certification_type] The type of certification offered  * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
@@ -15362,7 +15362,7 @@ export const LearningResourcesApiFactory = function (configuration?: Configurati
             return localVarFp.learningResourcesSimilarList(requestParameters.id, requestParameters.certification, requestParameters.certification_type, requestParameters.course_feature, requestParameters.delivery, requestParameters.department, requestParameters.free, requestParameters.level, requestParameters.limit, requestParameters.offered_by, requestParameters.platform, requestParameters.professional, requestParameters.readable_id, requestParameters.resource_id, requestParameters.resource_type, requestParameters.resource_type_group, requestParameters.sortby, requestParameters.topic, options).then((request) => request(axios, basePath));
         },
         /**
-         * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
+         * Get a paginated list of learning resources with summary fields
          * @summary Get learning resources summary
          * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
@@ -16247,7 +16247,7 @@ export class LearningResourcesApi extends BaseAPI {
     }
 
     /**
-     * Get a paginated list of learning resources with summary fields (id, last_modified, url). Includes ``url`` for sitemap and similar uses when ETL has populated the public product URL.
+     * Get a paginated list of learning resources with summary fields
      * @summary Get learning resources summary
      * @param {LearningResourcesApiLearningResourcesSummaryListRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
