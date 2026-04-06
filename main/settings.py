@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.60.0"
+VERSION = "0.61.1"
 
 log = logging.getLogger()
 
@@ -137,6 +137,7 @@ INSTALLED_APPS = (
     "data_fixtures",
     "vector_search",
     "video_shorts",
+    "ol_hubspot",
     "mitol.scim.apps.ScimApp",
     "health_check",
     "health_check.cache",
@@ -827,6 +828,7 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
 )
+WEBDRIVER_WAIT_SECONDS = get_int(name="WEBDRIVER_WAIT_SECONDS", default=10)
 LITELLM_TOKEN_ENCODING_NAME = get_string(
     name="LITELLM_TOKEN_ENCODING_NAME", default=None
 )
@@ -916,3 +918,6 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 # Video Shorts settings
 VIDEO_SHORTS_S3_PREFIX = get_string("VIDEO_SHORTS_S3_PREFIX", "shorts/")
 VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
+
+# Hubspot settings
+MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)

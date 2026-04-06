@@ -170,6 +170,9 @@ def load_posthog_lrd_view_events(
             id=resource_id, published=True
         ).first()
         if learning_resource:
+            learning_resource.view_count = learning_resource.views.count()
+            learning_resource.save(update_fields=["view_count"])
+
             resource_upserted_actions(
                 learning_resource, percolate=False, generate_embeddings=False
             )

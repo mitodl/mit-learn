@@ -9,6 +9,7 @@ import type {
   NewsEventsApiNewsEventsListRequest,
   TestimonialsApi,
   ChannelsApi,
+  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRequest,
 } from "../generated/v0"
 import type {
   LearningResourcesApi as LRApi,
@@ -16,6 +17,7 @@ import type {
   TopicsApi,
   LearningpathsApi,
   ArticlesApi,
+  HubspotApi,
   UserlistsApi,
   OfferorsApi,
   PlatformsApi,
@@ -157,6 +159,15 @@ const articles = {
     `${API_BASE_URL}/api/v1/articles/detail/${identifier}/`,
 }
 
+const hubspot = {
+  list: (params?: Params<HubspotApi, "hubspotFormsList">) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${query(params)}`,
+  details: (params: Params<HubspotApi, "hubspotFormsDetailRetrieve">) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${params.form_id}/`,
+  submit: (formId: string) =>
+    `${API_BASE_URL}/api/v1/hubspot/forms/${formId}/submit/`,
+}
+
 const userSubscription = {
   list: (
     params?: Params<SubscriptionApi, "learningResourcesUserSubscriptionList">,
@@ -202,6 +213,8 @@ const testimonials = {
 const search = {
   resources: (params?: LearningResourcesSearchRequest) =>
     `${API_BASE_URL}/api/v1/learning_resources_search/${queryify(params)}`,
+  vectorResources: (params?: VectorLearningResourcesSearchRequest) =>
+    `${API_BASE_URL}/api/v0/vector_learning_resources_search/${queryify(params)}`,
 }
 
 const userMe = {
@@ -227,6 +240,7 @@ export {
   topics,
   learningPaths,
   articles,
+  hubspot,
   search,
   userLists,
   programLetters,

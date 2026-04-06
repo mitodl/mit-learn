@@ -10,8 +10,7 @@ import {
 import type { User } from "api/hooks/user"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { ResourceCard } from "./ResourceCard"
-import { getReadableResourceType } from "ol-utilities"
-import { ResourceTypeEnum, MicroUserListRelationship } from "api"
+import { MicroUserListRelationship } from "api"
 import {
   AddToLearningPathDialog,
   AddToUserListDialog,
@@ -111,7 +110,7 @@ describe.each([
     async ({ user, expectAddToLearningPathButton }) => {
       const { resource } = setup({ user })
       await screen.findByRole("button", {
-        name: `Bookmark ${getReadableResourceType(resource?.resource_type as ResourceTypeEnum)}`,
+        name: `Bookmark ${resource?.resource_category}`,
       })
 
       const addToLearningPathButton = screen.queryByRole("button", {
@@ -182,7 +181,7 @@ describe.each([
       user: { is_learning_path_editor: true, is_authenticated: true },
     })
     const addToUserListButton = await screen.findByRole("button", {
-      name: `Bookmark ${getReadableResourceType(resource?.resource_type as ResourceTypeEnum)}`,
+      name: `Bookmark ${resource?.resource_category}`,
     })
     const addToLearningPathButton = await screen.findByRole("button", {
       name: "Add to Learning Path",
@@ -205,7 +204,7 @@ describe.each([
       user: { is_authenticated: false },
     })
     const addToUserListButton = await screen.findByRole("button", {
-      name: `Bookmark ${getReadableResourceType(resource?.resource_type as ResourceTypeEnum)}`,
+      name: `Bookmark ${resource?.resource_category}`,
     })
     await user.click(addToUserListButton)
     const dialog = screen.getByRole("dialog")

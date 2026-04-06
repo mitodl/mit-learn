@@ -75,7 +75,7 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
     learningResourceQueries.vectorSimilar(playlistId),
   )
 
-  if (showVideoPlaylistPage) {
+  if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
   const isLoading = playlistLoading || itemsLoading

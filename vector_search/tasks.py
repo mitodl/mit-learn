@@ -22,6 +22,7 @@ from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_RESOURCE_TYPES,
+    PROGRAM_TYPE,
     SEARCH_CONN_EXCEPTIONS,
 )
 from learning_resources_search.exceptions import RetryError
@@ -48,6 +49,30 @@ from vector_search.utils import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwrite):
+    """Queue content file embedding tasks for programs using a single bulk query."""
+    if not program_ids:
+        return
+
+    contentfile_ids = (
+        ContentFile.objects.filter(
+            learning_resource_id__in=program_ids,
+            published=True,
+        )
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+    index_tasks.extend(
+        [
+            generate_embeddings.si(ids, CONTENT_FILE_TYPE, overwrite)
+            for ids in chunks(
+                contentfile_ids,
+                chunk_size=settings.QDRANT_CHUNK_SIZE,
+            )
+        ]
+    )
 
 
 @app.task(
@@ -109,7 +134,7 @@ def remove_embeddings(ids, resource_type):
 
 
 @app.task(bind=True)
-def start_embed_resources(self, indexes, skip_content_files, overwrite):
+def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa: C901
     """
     Celery task to embed all learning resources for given indexes
 
@@ -176,17 +201,41 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):
                     ]
         for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
             if resource_type in indexes:
-                for ids in chunks(
+                resource_filter = Q(published=True)
+                if resource_type == PROGRAM_TYPE:
+                    resource_filter = Q(published=True) | Q(test_mode=True)
+
+                resource_ids = (
                     LearningResource.objects.filter(
-                        published=True, resource_type=resource_type
+                        resource_filter,
+                        resource_type=resource_type,
                     )
                     .order_by("id")
-                    .values_list("id", flat=True),
+                    .values_list("id", flat=True)
+                )
+                for ids in chunks(
+                    resource_ids,
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 ):
                     index_tasks.append(
                         generate_embeddings.si(ids, resource_type, overwrite)
                     )
+            if not skip_content_files and resource_type == PROGRAM_TYPE:
+                # Programs have marketing_page and metadata content files
+                # that also need to be embedded.
+                program_ids = list(
+                    LearningResource.objects.filter(
+                        Q(published=True) | Q(test_mode=True),
+                        resource_type=PROGRAM_TYPE,
+                    )
+                    .order_by("id")
+                    .values_list("id", flat=True)
+                )
+                _queue_program_content_file_embedding_tasks(
+                    index_tasks,
+                    program_ids,
+                    overwrite,
+                )
     except:  # noqa: E722
         error = "start_embed_resources threw an error"
         log.exception(error)
@@ -228,8 +277,13 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
                 )
             ]
-
-            if not skip_content_files and resource_type == COURSE_TYPE:
+            if not skip_content_files and resource_type == PROGRAM_TYPE:
+                _queue_program_content_file_embedding_tasks(
+                    index_tasks,
+                    list(embed_resources.order_by("id").values_list("id", flat=True)),
+                    overwrite,
+                )
+            elif not skip_content_files and resource_type == COURSE_TYPE:
                 for course in embed_resources.order_by("id"):
                     run = (
                         course.best_run

@@ -12,7 +12,6 @@ import {
   getResourceLanguage,
   formattedParentCourseName,
   resourceContentFilesImageSrc,
-  getReadableResourceType,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -162,7 +161,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     return null
   }
 
-  const readableType = getReadableResourceType(resource.resource_type)
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
@@ -184,7 +182,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (onAddToUserListClick) {
     actions.push({
       onClick: (event) => onAddToUserListClick(event, resource.id),
-      "aria-label": `Bookmark ${readableType}`,
+      "aria-label": `Bookmark ${resource.resource_category}`,
       filled: inUserList,
       icon: inUserList ? (
         <RiBookmarkFill aria-hidden />

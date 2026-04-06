@@ -503,8 +503,7 @@ const Certificate = ({
   userName,
   ceus,
   signatories,
-  startDate,
-  endDate,
+  validFrom,
   uuid,
 }: {
   title: string
@@ -512,8 +511,7 @@ const Certificate = ({
   userName?: string
   ceus?: string
   signatories: SignatoryItem[]
-  startDate?: string | null
-  endDate?: string | null
+  validFrom?: string | null
   uuid: string
 }) => {
   return (
@@ -538,11 +536,9 @@ const Certificate = ({
               Awarded {ceus} Continuing Education Units (CEUs)
             </Typography>
           ) : null}
-          {startDate && endDate && (
+          {validFrom && (
             <Typography variant="h4">
-              <NoSSR>
-                {formatDate(startDate)} - {formatDate(endDate)}
-              </NoSSR>
+              <NoSSR>{formatDate(validFrom)}</NoSSR>
             </Typography>
           )}
           {ceus ? null : <Spacer />}
@@ -596,10 +592,7 @@ const CourseCertificate = ({
 
   const { displayType } = getCertificateInfo()
   const signatories = certificate.certificate_page.signatory_items
-
-  const startDate = certificate.course_run.start_date
-
-  const endDate = certificate.course_run.end_date
+  const validFrom = certificate?.verifiable_credential_json?.validFrom
 
   return (
     <Certificate
@@ -607,8 +600,7 @@ const CourseCertificate = ({
       displayType={displayType}
       userName={userName}
       signatories={signatories}
-      startDate={startDate}
-      endDate={endDate}
+      validFrom={validFrom}
       uuid={certificate.uuid}
     />
   )
@@ -629,9 +621,7 @@ const ProgramCertificate = ({
 
   const signatories = certificate.certificate_page.signatory_items
 
-  const startDate = certificate.program.start_date
-
-  const endDate = certificate.program.end_date
+  const validFrom = certificate?.verifiable_credential_json?.validFrom
 
   return (
     <Certificate
@@ -640,8 +630,7 @@ const ProgramCertificate = ({
       userName={userName}
       ceus={ceus}
       signatories={signatories}
-      startDate={startDate}
-      endDate={endDate}
+      validFrom={validFrom}
       uuid={certificate.uuid}
     />
   )

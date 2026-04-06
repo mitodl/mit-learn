@@ -233,8 +233,7 @@ const CertificateDoc = ({
   userName,
   ceus,
   signatories,
-  startDate,
-  endDate,
+  validFrom,
 }: {
   uuid: string
   title: string
@@ -242,8 +241,7 @@ const CertificateDoc = ({
   userName: string
   ceus?: string | null
   signatories: SignatoryItem[]
-  startDate?: string | null
-  endDate?: string | null
+  validFrom?: string | null
 }) => {
   return (
     <Document
@@ -335,7 +333,7 @@ const CertificateDoc = ({
             >
               {title}
             </Text>
-            {startDate && endDate && (
+            {validFrom && (
               <Text
                 style={{
                   position: "absolute",
@@ -346,8 +344,7 @@ const CertificateDoc = ({
                   fontFamily: "Neue Haas Grotesk Text 400",
                 }}
               >
-                {moment(startDate).format("MMM D, YYYY")} -{" "}
-                {moment(endDate).format("MMM D, YYYY")}
+                {moment(validFrom).format("MMM D, YYYY")}
               </Text>
             )}
             {ceus ? (
@@ -479,9 +476,7 @@ const CourseCertificate = ({
 
   const signatories = certificate?.certificate_page?.signatory_items
 
-  const startDate = certificate?.course_run?.start_date
-
-  const endDate = certificate?.course_run?.end_date
+  const validFrom = certificate?.verifiable_credential_json?.validFrom
 
   return (
     <CertificateDoc
@@ -490,8 +485,7 @@ const CourseCertificate = ({
       userName={userName!}
       ceus={ceus}
       signatories={signatories}
-      startDate={startDate}
-      endDate={endDate}
+      validFrom={validFrom}
       uuid={certificate.uuid}
     />
   )
@@ -512,9 +506,7 @@ const ProgramCertificate = ({
 
   const signatories = certificate?.certificate_page?.signatory_items
 
-  const startDate = certificate?.program?.start_date
-
-  const endDate = certificate?.program?.end_date
+  const validFrom = certificate?.verifiable_credential_json?.validFrom
 
   return (
     <CertificateDoc
@@ -524,8 +516,7 @@ const ProgramCertificate = ({
       userName={userName!}
       ceus={ceus}
       signatories={signatories}
-      startDate={startDate}
-      endDate={endDate}
+      validFrom={validFrom}
     />
   )
 }

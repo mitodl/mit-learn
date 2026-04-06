@@ -13,6 +13,7 @@ import {
   FeaturedApi,
   MediaApi,
   VideoPlaylistsApi,
+  HubspotApi,
 } from "./generated/v1/api"
 
 import {
@@ -24,6 +25,7 @@ import {
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
   VideoShortsApi,
+  VectorLearningResourcesSearchApi,
 } from "./generated/v0/api"
 
 import axiosInstance from "./axios"
@@ -71,6 +73,7 @@ const topicsApi = new TopicsApi(undefined, BASE_PATH, axiosInstance)
 
 const articlesApi = new ArticlesApi(undefined, BASE_PATH, axiosInstance)
 const mediaApi = new MediaApi(undefined, BASE_PATH, axiosInstance)
+const hubspotApi = new HubspotApi(undefined, BASE_PATH, axiosInstance)
 
 const programLettersApi = new ProgramLettersApi(
   undefined,
@@ -104,6 +107,11 @@ const videoPlaylistsApi = new VideoPlaylistsApi(
   BASE_PATH,
   axiosInstance,
 )
+const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 
 export {
   learningResourcesApi,
@@ -112,6 +120,7 @@ export {
   topicsApi,
   articlesApi,
   mediaApi,
+  hubspotApi,
   offerorsApi,
   programLettersApi,
   learningResourcesSearchApi,
@@ -128,4 +137,5 @@ export {
   learningResourcesSearchAdminParamsApi,
   videoShortsApi,
   videoPlaylistsApi,
+  vectorLearningResourcesSearchApi,
 }

@@ -63,12 +63,15 @@ const setupApis = ({
     results: itemRelationships,
   })
 
-  setMockResponse.get(urls.learningResources.similar({ id: playlistId }), {
-    count: similarCollections.length,
-    next: null,
-    previous: null,
-    results: similarCollections,
-  })
+  setMockResponse.get(
+    urls.learningResources.vectorSimilar({ id: playlistId }),
+    {
+      count: similarCollections.length,
+      next: null,
+      previous: null,
+      results: similarCollections,
+    },
+  )
 }
 
 describe("VideoPage", () => {

@@ -13,6 +13,7 @@ import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import {
   canPurchaseRun,
   getEnrollmentType,
+  getCourseEnrollmentAction,
   priceWithDiscount,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
@@ -61,9 +62,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const router = useRouter()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
-
-  const enrollableRuns = course.courseruns.filter((run) => run.is_enrollable)
-  const hasMultipleRuns = enrollableRuns.length > 1
+  const enrollmentDecision = getCourseEnrollmentAction(course)
 
   const enrollmentType = getEnrollmentType(nextRun?.enrollment_modes)
   const product = nextRun?.products[0]
@@ -92,15 +91,17 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
-      if (enrollmentType === "both" || hasMultipleRuns) {
+      if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
-      } else if (enrollmentType === "paid" && product) {
-        replaceBasketItem.mutate(product.id)
-      } else if (nextRun) {
+      } else if (enrollmentDecision.type === "checkout") {
+        replaceBasketItem.mutate(enrollmentDecision.product.id)
+      } else if (enrollmentDecision.type === "audit") {
         createEnrollment.mutate(
-          { run_id: nextRun.id },
+          { run_id: enrollmentDecision.run.id },
           { onSuccess: () => router.push(DASHBOARD_HOME) },
         )
+      } else {
+        NiceModal.show(CourseEnrollmentDialog, { course })
       }
     } else {
       setAnchor(e.currentTarget)

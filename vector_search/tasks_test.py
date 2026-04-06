@@ -19,8 +19,10 @@ from learning_resources.factories import (
 )
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_RESOURCE_TYPES,
+    PROGRAM_TYPE,
 )
 from main.utils import now_in_utc
 from vector_search.tasks import (
@@ -359,6 +361,136 @@ def test_embedded_content_file_without_runs(mocker, mocked_celery):
 
     for contentfile_id in contentfiles_with_no_run:
         assert contentfile_id in embedded_ids
+
+
+def test_start_embed_resources_program_content_files(mocker, mocked_celery):
+    """
+    start_embed_resources should embed content files for programs
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    programs = ProgramFactory.create_batch(2)
+    content_ids = []
+    for program in programs:
+        cf = ContentFileFactory.create(
+            learning_resource=program.learning_resource,
+            published=True,
+        )
+        content_ids.append(cf.id)
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        start_embed_resources.delay(
+            [PROGRAM_TYPE], skip_content_files=False, overwrite=True
+        )
+
+    content_file_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == "content_file"
+    ]
+    embedded_content_ids = []
+    for call in content_file_calls:
+        embedded_content_ids.extend(call.args[0])
+    assert sorted(content_ids) == sorted(embedded_content_ids)
+
+
+def test_embed_learning_resources_by_id_program_content_files(mocker, mocked_celery):
+    """
+    embed_learning_resources_by_id should embed content files for programs
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    programs = ProgramFactory.create_batch(2)
+    resource_ids = [p.learning_resource.id for p in programs]
+    content_ids = []
+    for program in programs:
+        cf = ContentFileFactory.create(
+            learning_resource=program.learning_resource,
+            published=True,
+        )
+        content_ids.append(cf.id)
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_learning_resources_by_id.delay(
+            resource_ids, skip_content_files=False, overwrite=True
+        )
+
+    content_file_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == "content_file"
+    ]
+    embedded_content_ids = []
+    for call in content_file_calls:
+        embedded_content_ids.extend(call.args[0])
+    assert sorted(content_ids) == sorted(embedded_content_ids)
+
+
+def test_program_embedding_includes_test_mode_unpublished_programs(
+    mocker, mocked_celery
+):
+    """Program embedding should include test-mode unpublished resources in both flows."""
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+
+    program = ProgramFactory.create(
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+    )
+    resource_id = program.learning_resource.id
+    content_file = ContentFileFactory.create(
+        learning_resource=program.learning_resource,
+        published=True,
+    )
+
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        start_embed_resources.delay(
+            [PROGRAM_TYPE], skip_content_files=False, overwrite=True
+        )
+
+    program_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == PROGRAM_TYPE
+    ]
+    content_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == CONTENT_FILE_TYPE
+    ]
+    assert any(resource_id in call.args[0] for call in program_calls)
+    assert any(content_file.id in call.args[0] for call in content_calls)
+
+    generate_embeddings_mock.reset_mock()
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_learning_resources_by_id.delay(
+            [resource_id], skip_content_files=False, overwrite=True
+        )
+
+    program_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == PROGRAM_TYPE
+    ]
+    content_calls = [
+        call
+        for call in generate_embeddings_mock.si.mock_calls
+        if call.args[1] == CONTENT_FILE_TYPE
+    ]
+    assert any(resource_id in call.args[0] for call in program_calls)
+    assert any(content_file.id in call.args[0] for call in content_calls)
 
 
 def test_embed_new_content_files_without_runs(mocker, mocked_celery):

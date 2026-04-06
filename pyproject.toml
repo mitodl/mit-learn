@@ -47,6 +47,7 @@ dependencies = [
     "drf-spectacular>=0.28.0,<0.29",
     "feedparser>=6.0.10,<7",
     "google-api-python-client>=2.89.0,<3",
+    "hubspot-api-client>=12.0.0,<13",
     "granian[reload]>=2.5.4,<3",
     "html2text>=2025.0.0,<2026",
     "html5lib>=1.1,<2",
@@ -142,6 +143,7 @@ dev = [
     "anys>=0.3.0,<0.4",
     "locust>=2.31.2,<3",
     "traceback-with-variables>=2.1.1,<3",
+    "mitol-drf-lint==2026.4.2",
 ]
 
 [tool.uv]

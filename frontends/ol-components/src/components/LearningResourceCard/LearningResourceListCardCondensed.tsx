@@ -1,7 +1,6 @@
 import React from "react"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import {
-  getReadableResourceType,
   getLearningResourcePrices,
   getResourceLanguage,
   getBestResourceStartDate,
@@ -49,7 +48,6 @@ const LearningResourceListCardCondensed: React.FC<
     return null
   }
 
-  const readableType = getReadableResourceType(resource.resource_type)
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
@@ -71,7 +69,7 @@ const LearningResourceListCardCondensed: React.FC<
   if (onAddToUserListClick) {
     actions.push({
       onClick: (event) => onAddToUserListClick(event, resource.id),
-      "aria-label": `Bookmark ${readableType}`,
+      "aria-label": `Bookmark ${resource.resource_category}`,
       filled: inUserList,
       icon: inUserList ? (
         <RiBookmarkFill aria-hidden />
@@ -98,7 +96,7 @@ const LearningResourceListCardCondensed: React.FC<
       onClick={onClick}
       headingLevel={headingLevel}
       title={resource.title}
-      resourceType={readableType}
+      resourceType={resource.resource_category}
       resourcePrice={prices.course.display}
       certificatePrice={prices.certificate.display}
       hasCertificate={resource.certification}
@@ -107,7 +105,7 @@ const LearningResourceListCardCondensed: React.FC<
       startDate={formattedDate}
       actions={actions}
       lang={getResourceLanguage(resource)}
-      ariaLabel={`${readableType}: ${resource.title}`}
+      ariaLabel={`${resource.resource_category}: ${resource.title}`}
       footerContent={footerContent}
       draggable={draggable}
       editMenu={editMenu}
