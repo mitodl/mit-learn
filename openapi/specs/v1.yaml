@@ -3834,8 +3834,6 @@ paths:
     get:
       operationId: learning_resources_summary_list
       description: Get a paginated list of learning resources with summary fields
-        (id, last_modified, url). Includes ``url`` for sitemap and similar uses when
-        ETL has populated the public product URL.
       summary: Get learning resources summary
       parameters:
       - in: query

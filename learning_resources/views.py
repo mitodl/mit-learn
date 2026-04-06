@@ -316,11 +316,7 @@ class LearningResourceViewSet(
 
     @extend_schema(
         summary="Get learning resources summary",
-        description=(
-            "Get a paginated list of learning resources with summary fields "
-            "(id, last_modified, url). Includes ``url`` for sitemap and similar "
-            "uses when ETL has populated the public product URL."
-        ),
+        description="Get a paginated list of learning resources with summary fields",
         responses=LearningResourceSummarySerializer(many=True),
     )
     @action(
@@ -334,9 +330,8 @@ class LearningResourceViewSet(
         Get learning resources summary data.
 
         Returns:
-            Paginated list of learning resources with summary fields only
-            (id, last_modified, url), including ``url`` for sitemap generation
-            when set by ETL. Intended to be performant with large page sizes.
+        Paginated list of learning resources with summary fields only.
+        Intended to be performant with large page sizes.
         """
         queryset = self.filter_queryset(
             self.get_queryset().values(
