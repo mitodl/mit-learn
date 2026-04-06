@@ -40,6 +40,7 @@ from vector_search.utils import (
     _generate_content_file_points,
     _get_text_splitter,
     _is_markdown_content,
+    _resource_vector_hits,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -1434,3 +1435,21 @@ def test_vector_search_group_by_offset_behavior(mocker, use_group_by):
         call_args = mock_qdrant.query_points.call_args.kwargs
         assert call_args.get("offset") == 15
         assert "group_by" not in call_args
+
+
+def test_resource_vector_hits_preserves_qdrant_score_order():
+    """Results should be returned in the same order as the search_result (qdrant score order)."""
+    resources = LearningResourceFactory.create_batch(5)
+    # Shuffle to create a non-alphabetical, non-pk order (simulating qdrant ranking)
+    shuffled = random.sample(resources, len(resources))
+
+    # Build mock ScoredPoints with readable_ids in the shuffled order
+    search_result = [
+        MagicMock(payload={"readable_id": r.readable_id}) for r in shuffled
+    ]
+
+    result = _resource_vector_hits(search_result)
+
+    expected_readable_ids = [r.readable_id for r in shuffled]
+    actual_readable_ids = [r["readable_id"] for r in result]
+    assert actual_readable_ids == expected_readable_ids

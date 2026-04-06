@@ -834,31 +834,6 @@ paths:
           minLength: 1
         description: Manually specify the name of the Qdrant collection to query
       - in: query
-        name: content_feature_type
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: The feature type of the content file. Possible options are at
-          api/v1/course_features/
-      - in: query
-        name: course_number
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: Course number of the content file
-      - in: query
-        name: edx_module_id
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: The edx_module_id of the content file
-      - in: query
         name: file_extension
         schema:
           type: array
@@ -960,27 +935,11 @@ paths:
           * `resource_readable_id` - resource_readable_id
           * `-resource_readable_id` - -resource_readable_id
       - in: query
-        name: title
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: 'The title of the content file. '
-      - in: query
         name: title__isnull
         schema:
           type: boolean
           nullable: true
         description: Filter to content files where title is null/not null
-      - in: query
-        name: url
-        schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
-        description: 'The url of the content file. '
       - in: query
         name: url__isnull
         schema:

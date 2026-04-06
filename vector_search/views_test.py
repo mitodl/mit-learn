@@ -46,7 +46,7 @@ def test_vector_search_filters(mocker, client):
             ),
             models.FieldCondition(key="free", match=models.MatchValue(value=True)),
             models.FieldCondition(
-                key="departments.department_id",
+                key="departments[].department_id",
                 match=models.MatchAny(any=["6", "7"]),
             ),
         ]
@@ -92,7 +92,7 @@ def test_vector_search_filters_empty_query(mocker, client):
             ),
             models.FieldCondition(key="free", match=models.MatchValue(value=True)),
             models.FieldCondition(
-                key="departments.department_id",
+                key="departments[].department_id",
                 match=models.MatchAny(any=["6", "7"]),
             ),
         ]
@@ -158,14 +158,7 @@ def test_content_file_vector_search_filters(
                     key="platform.code", match=models.MatchAny(any=["edx"])
                 ),
                 models.FieldCondition(
-                    key="course_number", match=models.MatchAny(any=["test"])
-                ),
-                models.FieldCondition(
                     key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
-                ),
-                models.FieldCondition(
-                    key="content_feature_type",
-                    match=models.MatchAny(any=["test_feature"]),
                 ),
                 models.FieldCondition(
                     key="resource_readable_id",
@@ -227,13 +220,7 @@ def test_content_file_vector_search_filters_empty_query(
                 key="platform.code", match=models.MatchAny(any=["edx"])
             ),
             models.FieldCondition(
-                key="course_number", match=models.MatchAny(any=["test"])
-            ),
-            models.FieldCondition(
                 key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
-            ),
-            models.FieldCondition(
-                key="content_feature_type", match=models.MatchAny(any=["test_feature"])
             ),
             models.FieldCondition(
                 key="resource_readable_id",
