@@ -159,6 +159,33 @@ def _missing_token_response() -> Response:
     return Response({}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
+def _enrich_submit_request_data(request) -> dict:
+    """Inject server-side context into the raw submission data before validation."""
+    data = dict(request.data)
+    if not data.get("page_uri"):
+        referer = request.META.get("HTTP_REFERER")
+        if referer:
+            data["page_uri"] = referer
+    if not data.get("ip_address"):
+        client_ip = _extract_client_ip(request)
+        if client_ip:
+            data["ip_address"] = client_ip
+    if not data.get("hutk"):
+        hutk_cookie = request.COOKIES.get("hubspotutk")
+        if hutk_cookie:
+            data["hutk"] = hutk_cookie
+    return data
+
+
+def _resolve_payload_aliases(payload: dict) -> dict:
+    """Resolve backward-compatible field aliases in the validated payload."""
+    if payload.get("page_name") is None and payload.get("page_title"):
+        payload["page_name"] = payload["page_title"]
+    if payload.get("submitted_at") is None and payload.get("timestamp") is not None:
+        payload["submitted_at"] = payload["timestamp"]
+    return payload
+
+
 @extend_schema(
     operation_id="hubspot_forms_list",
     responses={200: hubspot_forms_list_response_schema, **hubspot_error_responses},
@@ -251,35 +278,19 @@ def hubspot_form_submit_view(request, form_id: str):
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
         return _missing_token_response()
 
-    data = request.data
-    if not data.get("page_uri"):
-        referer = request.META.get("HTTP_REFERER")
-        if referer:
-            data = {**data, "page_uri": referer}
-
-    serializer = HubspotFormSubmitRequestSerializer(data=data)
+    serializer = HubspotFormSubmitRequestSerializer(
+        data=_enrich_submit_request_data(request)
+    )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payload = dict(serializer.validated_data)
-
-        hubspotutk_cookie = request.COOKIES.get("hubspotutk")
-        if payload.get("hutk") is None and hubspotutk_cookie:
-            payload["hutk"] = hubspotutk_cookie
-        if payload.get("page_name") is None and payload.get("page_title"):
-            payload["page_name"] = payload["page_title"]
-        if payload.get("submitted_at") is None and payload.get("timestamp") is not None:
-            payload["submitted_at"] = payload["timestamp"]
-        payload.setdefault("ip_address", _extract_client_ip(request))
-        submit_form(
-            form_id=form_id,
-            payload=payload,
+        payload = _resolve_payload_aliases(dict(serializer.validated_data))
+        submit_form(form_id=form_id, payload=payload)
+        return Response(
+            HubspotFormSubmitResponseSerializer({"status": "submitted"}).data,
+            status=status.HTTP_200_OK,
         )
-        response_serializer = HubspotFormSubmitResponseSerializer(
-            {"status": "submitted"}
-        )
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
     except ApiException as exc:
         status_code = exc.status if isinstance(exc.status, int) else 502
         return Response({"detail": "HubSpot request failed"}, status=status_code)
