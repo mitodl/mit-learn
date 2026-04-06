@@ -16,8 +16,8 @@ describe("Footer", () => {
       Home: urls.HOME,
       "About Us": urls.ABOUT,
       Accessibility: urls.ACCESSIBILITY,
-      "Privacy Policy": urls.PRIVACY,
-      "Contact Us": urls.CONTACT,
+      "Terms of Service": urls.TERMS,
+      Help: urls.CONTACT,
     }
     const footer = screen.getByRole("contentinfo")
     const address = screen.getByTestId("footer-address")

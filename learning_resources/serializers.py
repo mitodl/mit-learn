@@ -1823,4 +1823,4 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
         """Meta configuration for LearningResourceSummarySerializer"""
 
         model = models.LearningResource
-        fields = ("id", "last_modified")
+        fields = ("id", "last_modified", "url")

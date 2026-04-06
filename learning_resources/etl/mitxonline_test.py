@@ -5,7 +5,7 @@ import json
 # pylint: disable=redefined-outer-name
 from datetime import UTC, datetime
 from unittest.mock import ANY
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -23,6 +23,8 @@ from learning_resources.etl.mitxonline import (
     OFFERED_BY,
     _fetch_courses_by_ids,
     _fetch_data,
+    _learn_product_url_for_mitx_course,
+    _learn_product_url_for_mitx_program,
     _parse_datetime,
     _transform_image,
     _transform_run,
@@ -523,6 +525,7 @@ def test_mitxonline_transform_programs(
 
     settings.MITX_ONLINE_PROGRAMS_API_URL = "http://localhost/test/programs/api"
     settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
+    settings.APP_BASE_URL = "https://learn.example.test/"
     mocker.patch(
         "learning_resources.etl.mitxonline._fetch_data",
         return_value=mock_mitxonline_courses_data["results"],
@@ -538,6 +541,9 @@ def test_mitxonline_transform_programs(
         ):
             if "PROCTORED EXAM" in course_data["title"]:
                 continue
+            has_course_product_page = bool(
+                parse_page_attribute(course_data, "page_url")
+            )
             runs = [
                 _transform_run(course_run, course_data)
                 for course_run in course_data["courseruns"]
@@ -582,7 +588,11 @@ def test_mitxonline_transform_programs(
                     )
                     if has_certification
                     else CertificationType.none.name,
-                    "url": parse_page_attribute(course_data, "page_url", is_url=True),
+                    "url": (
+                        f"{settings.APP_BASE_URL.rstrip('/')}/courses/{course_data['readable_id']}"
+                        if has_course_product_page
+                        else None
+                    ),
                     "availability": course_data["availability"],
                     "format": [Format.asynchronous.name],
                     "pace": [Pace.instructor_paced.name],
@@ -603,6 +613,19 @@ def test_mitxonline_transform_programs(
                     },
                 }
             )
+        has_program_product_page = bool(parse_page_attribute(program_data, "page_url"))
+        expected_program_url = (
+            f"{settings.APP_BASE_URL.rstrip('/')}/courses/p/{program_data['readable_id']}"
+            if (
+                has_program_product_page
+                and program_data.get("display_mode") == "course"
+            )
+            else (
+                f"{settings.APP_BASE_URL.rstrip('/')}/programs/{program_data['readable_id']}"
+                if has_program_product_page
+                else None
+            )
+        )
         expected.append(
             {
                 "readable_id": program_data["readable_id"],
@@ -632,7 +655,7 @@ def test_mitxonline_transform_programs(
                     program_data.get("page", {}).get("page_url", None) is not None
                     and program_data.get("page", {}).get("live", None)
                 ),
-                "url": parse_page_attribute(program_data, "page_url", is_url=True),
+                "url": expected_program_url,
                 "availability": program_data["availability"],
                 "topics": transform_topics(program_data["topics"], OFFERED_BY["code"]),
                 "format": [Format.asynchronous.name],
@@ -658,11 +681,9 @@ def test_mitxonline_transform_programs(
                         "description": clean_data(
                             program_data.get("page", {}).get("description", None)
                         ),
-                        "url": parse_page_attribute(
-                            program_data, "page_url", is_url=True
-                        ),
+                        "url": expected_program_url,
                         "status": RunStatus.current.value
-                        if parse_page_attribute(program_data, "page_url")
+                        if has_program_product_page
                         else RunStatus.archived.value,
                         "availability": program_data["availability"],
                         "format": [Format.asynchronous.name],
@@ -688,19 +709,21 @@ def test_mitxonline_transform_programs(
     assert result == expected
 
 
-def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mocker):
+def test_mitxonline_transform_courses(mock_mitxonline_courses_data, mocker, settings):
     """Test that mitxonline courses data is correctly transformed into our normalized structure"""
     set_up_topics(is_mitx=True)
 
     # Mock now_in_utc to return a date before the test data's end dates
     mock_now = datetime(2023, 1, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    settings.APP_BASE_URL = "https://learn.example.test/"
 
     result = transform_courses(mock_mitxonline_courses_data["results"])
     expected = []
     for course_data in mock_mitxonline_courses_data["results"]:
         if "PROCTORED EXAM" in course_data["title"]:
             continue
+        has_course_product_page = bool(parse_page_attribute(course_data, "page_url"))
         runs = [
             _transform_run(course_run, course_data)
             for course_run in course_data["courseruns"]
@@ -745,11 +768,8 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
                 else CertificationType.none.name,
                 "topics": transform_topics(course_data["topics"], OFFERED_BY["code"]),
                 "url": (
-                    urljoin(
-                        settings.MITX_ONLINE_BASE_URL,
-                        course_data["page"]["page_url"],
-                    )
-                    if course_data.get("page", {}).get("page_url")
+                    f"{settings.APP_BASE_URL.rstrip('/')}/courses/{course_data['readable_id']}"
+                    if has_course_product_page
                     else None
                 ),
                 "runs": runs,
@@ -770,6 +790,69 @@ def test_mitxonline_transform_courses(settings, mock_mitxonline_courses_data, mo
             }
         )
     assert expected == result
+
+
+@pytest.mark.parametrize(
+    ("readable_id", "has_product_page", "expected"),
+    [
+        (
+            "course-v1:MITx+1+2T2025",
+            True,
+            "https://learn.example.test/courses/course-v1:MITx+1+2T2025",
+        ),
+        ("course-v1:MITx+1+2T2025", False, None),
+        (None, True, None),
+    ],
+)
+def test_learn_product_url_for_mitx_course(
+    settings, readable_id, has_product_page, expected
+):
+    """Test Learn URL mapping for MITx Online courses."""
+    settings.APP_BASE_URL = "https://learn.example.test/"
+    assert (
+        _learn_product_url_for_mitx_course(
+            readable_id, has_product_page=has_product_page
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("readable_id", "display_mode", "has_product_page", "expected"),
+    [
+        (
+            "program-v1:MITx+abc",
+            "course",
+            True,
+            "https://learn.example.test/courses/p/program-v1:MITx+abc",
+        ),
+        (
+            "program-v1:MITx+abc",
+            "certificate",
+            True,
+            "https://learn.example.test/programs/program-v1:MITx+abc",
+        ),
+        (
+            "program-v1:MITx+abc",
+            None,
+            True,
+            "https://learn.example.test/programs/program-v1:MITx+abc",
+        ),
+        ("program-v1:MITx+abc", "course", False, None),
+        (None, "course", True, None),
+    ],
+)
+def test_learn_product_url_for_mitx_program(
+    settings, readable_id, display_mode, has_product_page, expected
+):
+    """Test Learn URL mapping for MITx Online programs."""
+    settings.APP_BASE_URL = "https://learn.example.test/"
+    assert (
+        _learn_product_url_for_mitx_program(
+            readable_id, display_mode, has_product_page=has_product_page
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize("include_in_learn_catalog", [True, False, None])

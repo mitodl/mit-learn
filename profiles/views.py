@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.cache import cache_page
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -37,13 +38,14 @@ class UserViewSet(viewsets.ModelViewSet):
     """View for users"""
 
     permission_classes = (IsAuthenticated, IsStaffPermission)
-
+    pagination_class = None
     serializer_class = UserSerializer
 
     queryset = get_user_model().objects.filter(is_active=True)
     lookup_field = "username"
 
 
+@method_decorator(ensure_csrf_cookie, name="retrieve")
 class CurrentUserRetrieveViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """User retrieve and update viewsets for the current user"""
 

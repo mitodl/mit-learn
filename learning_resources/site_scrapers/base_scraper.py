@@ -2,6 +2,7 @@ import logging
 
 import requests
 from django.conf import settings
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 
 from learning_resources.utils import get_web_driver
@@ -10,23 +11,28 @@ logger = logging.getLogger(__name__)
 
 
 class BaseScraper:
-    use_webdriver = settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER
     driver = None
 
     def __init__(self, start_url):
         self.start_url = start_url
-        if self.use_webdriver:
+        if settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER:
             self.driver = get_web_driver()
 
     def fetch_page(self, url):
         if url:
             if self.driver:
-                self.driver.get(url)
-                WebDriverWait(self.driver, 10).until(
-                    lambda d: (
-                        d.execute_script("return document.readyState") == "complete"
+                try:
+                    self.driver.get(url)
+                    WebDriverWait(self.driver, settings.WEBDRIVER_WAIT_SECONDS).until(
+                        lambda d: (
+                            d.execute_script("return document.readyState") == "complete"
+                        )
                     )
-                )
+                except TimeoutException:
+                    logger.warning(
+                        "Timed out waiting for page readiness at %s",
+                        url,
+                    )
                 return self.driver.execute_script("return document.body.innerHTML")
             else:
                 try:

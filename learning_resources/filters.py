@@ -210,7 +210,7 @@ class ContentFileFilter(FilterSet):
 
     edx_module_id = CharInFilter(
         label="The edx module id of the content file",
-        field_name="edx_module_id__iexact",
+        field_name="edx_module_id__exact",
     )
 
     offered_by = MultipleChoiceFilter(

@@ -2101,6 +2101,25 @@ wheels = [
 ]
 
 [[package]]
+name = "libcst"
+version = "1.8.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/cd/337df968b38d94c5aabd3e1b10630f047a2b345f6e1d4456bd9fe7417537/libcst-1.8.6.tar.gz", hash = "sha256:f729c37c9317126da9475bdd06a7208eb52fcbd180a6341648b45a56b4ba708b", size = 891354, upload-time = "2025-11-03T22:33:30.621Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/3c/93365c17da3d42b055a8edb0e1e99f1c60c776471db6c9b7f1ddf6a44b28/libcst-1.8.6-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:0c13d5bd3d8414a129e9dccaf0e5785108a4441e9b266e1e5e9d1f82d1b943c9", size = 2206166, upload-time = "2025-11-03T22:32:16.012Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/cb/7530940e6ac50c6dd6022349721074e19309eb6aa296e942ede2213c1a19/libcst-1.8.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f1472eeafd67cdb22544e59cf3bfc25d23dc94058a68cf41f6654ff4fcb92e09", size = 2083726, upload-time = "2025-11-03T22:32:17.312Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/cf/7e5eaa8c8f2c54913160671575351d129170db757bb5e4b7faffed022271/libcst-1.8.6-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:089c58e75cb142ec33738a1a4ea7760a28b40c078ab2fd26b270dac7d2633a4d", size = 2235755, upload-time = "2025-11-03T22:32:18.859Z" },
+    { url = "https://files.pythonhosted.org/packages/55/54/570ec2b0e9a3de0af9922e3bb1b69a5429beefbc753a7ea770a27ad308bd/libcst-1.8.6-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:c9d7aeafb1b07d25a964b148c0dda9451efb47bbbf67756e16eeae65004b0eb5", size = 2301473, upload-time = "2025-11-03T22:32:20.499Z" },
+    { url = "https://files.pythonhosted.org/packages/11/4c/163457d1717cd12181c421a4cca493454bcabd143fc7e53313bc6a4ad82a/libcst-1.8.6-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:207481197afd328aa91d02670c15b48d0256e676ce1ad4bafb6dc2b593cc58f1", size = 2298899, upload-time = "2025-11-03T22:32:21.765Z" },
+    { url = "https://files.pythonhosted.org/packages/35/1d/317ddef3669883619ef3d3395ea583305f353ef4ad87d7a5ac1c39be38e3/libcst-1.8.6-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:375965f34cc6f09f5f809244d3ff9bd4f6cb6699f571121cebce53622e7e0b86", size = 2408239, upload-time = "2025-11-03T22:32:23.275Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/a1/f47d8cccf74e212dd6044b9d6dbc223636508da99acff1d54786653196bc/libcst-1.8.6-cp312-cp312-win_amd64.whl", hash = "sha256:da95b38693b989eaa8d32e452e8261cfa77fe5babfef1d8d2ac25af8c4aa7e6d", size = 2119660, upload-time = "2025-11-03T22:32:24.822Z" },
+    { url = "https://files.pythonhosted.org/packages/19/d0/dd313bf6a7942cdf951828f07ecc1a7695263f385065edc75ef3016a3cb5/libcst-1.8.6-cp312-cp312-win_arm64.whl", hash = "sha256:bff00e1c766658adbd09a175267f8b2f7616e5ee70ce45db3d7c4ce6d9f6bec7", size = 1999824, upload-time = "2025-11-03T22:32:26.131Z" },
+]
+
+[[package]]
 name = "litellm"
 version = "1.81.13"
 source = { registry = "https://pypi.org/simple" }
@@ -2591,6 +2610,7 @@ dev = [
     { name = "freezegun" },
     { name = "ipdb" },
     { name = "locust" },
+    { name = "mitol-drf-lint" },
     { name = "moto" },
     { name = "nplusone" },
     { name = "pdbpp" },
@@ -2727,6 +2747,7 @@ dev = [
     { name = "freezegun", specifier = ">=1.4.0,<2" },
     { name = "ipdb", specifier = ">=0.13.13,<0.14" },
     { name = "locust", specifier = ">=2.31.2,<3" },
+    { name = "mitol-drf-lint", specifier = "==2026.4.2" },
     { name = "moto", specifier = ">=5.0.0,<6" },
     { name = "nplusone", specifier = ">=1.0.0,<2" },
     { name = "pdbpp", specifier = ">=0.11.6,<0.12" },
@@ -2799,6 +2820,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/10/d0/a0b7b3790a34cf7efd49c7490d7d5c056b5840f986113e0343cab0e63e5f/mitol_django_scim-2025.7.29.tar.gz", hash = "sha256:d9470c0b6293f3030229a2e495b249cad5b96f1cdc4b932a8dc67f9c433bd739", size = 15087, upload-time = "2025-07-29T16:01:42.316Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/71/5e/1889d00cf93919d6b34f4638b35a930942cfa95b64c3d005d22a3ea0dd5a/mitol_django_scim-2025.7.29-py3-none-any.whl", hash = "sha256:aa10c93756d15a2fd8e8f747095e53d0c9aa7510d6fad8ce559db5ad67acfb87", size = 21390, upload-time = "2025-07-29T16:01:41.267Z" },
+]
+
+[[package]]
+name = "mitol-drf-lint"
+version = "2026.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "libcst" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7f/f3/a4f6c2556efd3605425be21f71c8b27a4cafebebb269875b607faaefb285/mitol_drf_lint-2026.4.2.tar.gz", hash = "sha256:c8e4ba0e518f0f37016a00e9ed6b72e2d1645b750d79da695192a8ef49460c37", size = 7113, upload-time = "2026-04-02T18:44:36.763Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/5c/0d25ae042b082a404eaef88ae8f177b2c5d570121f3bc575636e280a6016/mitol_drf_lint-2026.4.2-py3-none-any.whl", hash = "sha256:dec795ab47ba0f983e13b2af19eb6842a6c6fd24c244fbd20be68a6211f21588", size = 11550, upload-time = "2026-04-02T18:44:35.968Z" },
 ]
 
 [[package]]

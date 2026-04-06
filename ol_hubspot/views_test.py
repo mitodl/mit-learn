@@ -205,8 +205,10 @@ def test_submit_form_success(client, settings, mocker):
             {"name": "email", "value": "test@example.com"},
             {"name": "agree", "value": True},
             {"name": "tags", "value": ["tag1", "tag2"]},
-        ]
+        ],
+        "page_uri": "https://learn.mit.edu/programs/test-program/",
     }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
     submit_stub = mocker.patch("ol_hubspot.views.submit_form")
 
     response = client.post(submit_url, payload, format="json")
@@ -215,7 +217,123 @@ def test_submit_form_success(client, settings, mocker):
     assert response.json() == {"status": "submitted"}
     submit_stub.assert_called_once_with(
         form_id="form-123",
-        payload=payload,
+        payload={
+            **payload,
+            "ip_address": "1.2.3.4",
+        },
+    )
+
+
+def test_submit_form_uses_referer_when_page_uri_missing(client, settings, mocker):
+    """Submit endpoint falls back to Referer when page_uri is not provided."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(
+        submit_url,
+        payload,
+        format="json",
+        HTTP_REFERER="https://learn.mit.edu/programs/from-referer/",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            "fields": [{"name": "email", "value": "test@example.com"}],
+            "page_uri": "https://learn.mit.edu/programs/from-referer/",
+            "ip_address": "1.2.3.4",
+        },
+    )
+
+
+def test_submit_form_uses_hutk_cookie_when_payload_missing(client, settings, mocker):
+    """Submit endpoint falls back to hubspotutk cookie when hutk is omitted."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+    client.cookies["hubspotutk"] = "abc123def456"
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            "fields": [{"name": "email", "value": "test@example.com"}],
+            "hutk": "abc123def456",
+            "ip_address": "1.2.3.4",
+        },
+    )
+
+
+def test_extract_client_ip_uses_x_real_ip_fallback(client, settings, mocker):
+    """Submit endpoint uses X-Real-IP when ipware returns no IP."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    mocker.patch("ol_hubspot.views.get_client_ip", return_value=(None, False))
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(
+        submit_url,
+        payload,
+        format="json",
+        HTTP_X_REAL_IP="203.0.113.9",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            "fields": [{"name": "email", "value": "test@example.com"}],
+            "ip_address": "203.0.113.9",
+        },
+    )
+
+
+def test_submit_form_with_all_context_properties(client, settings, mocker):
+    """Submit endpoint successfully includes all context properties."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    timestamp = 1701234567890
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "page_uri": "https://learn.mit.edu/programs/test-program/",
+        "hutk": "abc123def456",
+        "page_name": "MIT Learn - Test Program",
+        "submitted_at": timestamp,
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "submitted"}
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            **payload,
+            "ip_address": "1.2.3.4",
+        },
     )
 
 

@@ -16,13 +16,21 @@ import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
 import { assertHeadings, ControlledPromise } from "ol-test-utilities"
 import { act } from "@testing-library/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+  usePostHog: jest.fn(() => ({ capture: jest.fn() })),
+}))
+
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
   next: null,
   previous: null,
   results: [],
-  promoted_results: [],
   metadata: {
     aggregations: {},
     suggestions: [],
@@ -72,9 +80,6 @@ describe("SearchPage", () => {
     const resources = factories.learningResources.resources({
       count: 10,
     }).results
-    const promotedResources = factories.learningResources.resources({
-      count: 2,
-    }).results
     setMockApiResponses({
       search: {
         count: 1000,
@@ -90,7 +95,6 @@ describe("SearchPage", () => {
           suggestions: [],
         },
         results: resources,
-        promoted_results: promotedResources,
       },
     })
     renderWithProviders(<SearchPage />)
@@ -98,12 +102,6 @@ describe("SearchPage", () => {
     const tabpanel = await screen.findByRole("tabpanel")
     for (const resource of resources) {
       await within(tabpanel).findByText(resource.title)
-    }
-    for (const resource of promotedResources) {
-      await within(tabpanel).findByText(resource.title)
-      await within(tabpanel).findByText(
-        `Promoted ${resource.resource_category}`,
-      )
     }
   })
 
@@ -955,5 +953,73 @@ test("changing a facet resets unsubmitted text", async () => {
 
   await waitFor(() => {
     expect(textInput).toHaveValue("")
+  })
+})
+
+describe("UniversalAIBanner", () => {
+  beforeEach(() => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  test("shows banner for blank search when feature flag is enabled", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />)
+
+    await screen.findByText("Universal AI")
+    expect(screen.getByText("New on MIT Learn")).toBeVisible()
+    expect(screen.getByText("Learn More")).toBeVisible()
+  })
+
+  test.each([
+    "ai",
+    "AI",
+    "machine learning",
+    "artificial intelligence",
+    "deep learning",
+    "python",
+  ])(
+    "shows banner for search term '%s' matching regex when feature flag is enabled",
+    async (searchTerm) => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockApiResponses({ search: { count: 10 } })
+      renderWithProviders(<SearchPage />, {
+        url: `?q=${encodeURIComponent(searchTerm)}`,
+      })
+
+      await screen.findByText("Universal AI")
+      expect(screen.getByText("New on MIT Learn")).toBeVisible()
+    },
+  )
+
+  test.each(["biology", "history", "cooking", "random search"])(
+    "does not show banner for search term '%s' not matching regex",
+    async (searchTerm) => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockApiResponses({ search: { count: 10 } })
+      renderWithProviders(<SearchPage />, {
+        url: `?q=${encodeURIComponent(searchTerm)}`,
+      })
+
+      await screen.findByRole("tabpanel")
+
+      expect(screen.queryByText("Universal AI")).not.toBeInTheDocument()
+      expect(screen.queryByText("New on MIT Learn")).not.toBeInTheDocument()
+    },
+  )
+
+  test("does not show banner when feature flag is disabled", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />)
+
+    await screen.findByRole("tabpanel")
+
+    expect(screen.queryByText("Universal AI")).not.toBeInTheDocument()
+    expect(screen.queryByText("New on MIT Learn")).not.toBeInTheDocument()
   })
 })

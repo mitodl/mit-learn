@@ -3098,6 +3098,42 @@ export interface HubspotFormSubmitRequestRequest {
    * @memberof HubspotFormSubmitRequestRequest
    */
   fields: Array<HubspotFormFieldValueRequest>
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_uri?: string
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  hutk?: string
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_name?: string
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  submitted_at?: number
+  /**
+   *
+   * @type {string}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  page_title?: string
+  /**
+   *
+   * @type {number}
+   * @memberof HubspotFormSubmitRequestRequest
+   */
+  timestamp?: number
 }
 /**
  * Serializer for HubSpot form submission response.
@@ -4875,6 +4911,12 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   last_modified?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  url?: string | null
 }
 /**
  * Serializer for LearningResourceTopic model
@@ -4949,12 +4991,6 @@ export interface LearningResourcesSearchResponse {
    * @memberof LearningResourcesSearchResponse
    */
   metadata: ContentFileSearchResponseMetadata
-  /**
-   *
-   * @type {Array<LearningResource>}
-   * @memberof LearningResourcesSearchResponse
-   */
-  promoted_results: Array<LearningResource>
 }
 /**
  * * `undergraduate` - Undergraduate * `graduate` - Graduate * `high_school` - High School * `noncredit` - Non-Credit * `advanced` - Advanced * `intermediate` - Intermediate * `introductory` - Introductory

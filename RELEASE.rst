@@ -1,6 +1,39 @@
 Release Notes
 =============
 
+Version 0.62.0 (Released April 06, 2026)
+--------------
+
+- Add index to ContentFile.edx_module_id (#3160)
+- uai banner (#3161)
+- fix: added seo sitemap for product pages (#3151)
+- fix: render issue date and remove the others like start and end date (#3150)
+- Skip PostHog capture when API key is not configured (#3158)
+- fix: migrate client Sentry init to instrumentation-client.ts (#3147)
+- Fix template variable syntax in TermsPage (#3149)
+- chore: add drf-lint pre-commit hook with baseline (#3146)
+
+Version 0.61.1 (Released April 02, 2026)
+--------------
+
+- Fix scrape results for mitxonline (#3143)
+
+Version 0.61.0 (Released April 02, 2026)
+--------------
+
+- revert (#3155)
+- Rename footer "Contact Us" link to "Help" (#3148)
+- product page design updates (#3145)
+- copy edits for how-youll-learn (#3138)
+- hubspot api (#3096)
+- resource type in carusel (#3140)
+- promoted resources (#3144)
+- feat: add OpenTelemetry tracing to Next.js server runtime (#3136)
+- Add LearningResource.view_count (#3139)
+- improve retry logging (#3137)
+- Learning Resource Hybrid Search (#3130)
+- fix dim() (embedding dimensions) method for qdrant cloud dense encoders (#3079)
+
 Version 0.60.2 (Released April 01, 2026)
 --------------
 
