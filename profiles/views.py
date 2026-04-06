@@ -37,7 +37,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """View for users"""
 
     permission_classes = (IsAuthenticated, IsStaffPermission)
-
+    pagination_class = None
     serializer_class = UserSerializer
 
     queryset = get_user_model().objects.filter(is_active=True)
