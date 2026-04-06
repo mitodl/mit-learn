@@ -179,7 +179,7 @@ def _enrich_submit_request_data(request) -> dict:
 
 def _resolve_payload_aliases(payload: dict) -> dict:
     """Resolve backward-compatible field aliases in the validated payload."""
-    if payload.get("page_name") is None and payload.get("page_title"):
+    if payload.get("page_name") is None and payload.get("page_title") is not None:
         payload["page_name"] = payload["page_title"]
     if payload.get("submitted_at") is None and payload.get("timestamp") is not None:
         payload["submitted_at"] = payload["timestamp"]
