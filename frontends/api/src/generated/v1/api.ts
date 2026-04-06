@@ -4875,6 +4875,12 @@ export interface LearningResourceSummary {
    * @memberof LearningResourceSummary
    */
   last_modified?: string | null
+  /**
+   *
+   * @type {string}
+   * @memberof LearningResourceSummary
+   */
+  url?: string | null
 }
 /**
  * Serializer for LearningResourceTopic model

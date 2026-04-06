@@ -13372,6 +13372,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
       required:
       - id
     LearningResourceTopic:

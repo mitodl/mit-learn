@@ -121,6 +121,36 @@ def parse_page_attribute(
     return default_value
 
 
+def _learn_product_url_for_mitx_course(
+    readable_id: str | None, *, has_product_page: bool
+) -> str | None:
+    """
+    Learn product URL for an MITx Online course with a Wagtail product page.
+    """
+    if not has_product_page or not readable_id:
+        return None
+    base = settings.APP_BASE_URL.rstrip("/")
+    return f"{base}/courses/{readable_id}"
+
+
+def _learn_product_url_for_mitx_program(
+    readable_id: str | None,
+    display_mode: str | None,
+    *,
+    has_product_page: bool,
+) -> str | None:
+    """
+    Learn product URL for an MITx Online program with a Wagtail product page.
+    display_mode "course" uses /courses/p/; otherwise /programs/.
+    """
+    if not has_product_page or not readable_id:
+        return None
+    base = settings.APP_BASE_URL.rstrip("/")
+    if display_mode == "course":
+        return f"{base}/courses/p/{readable_id}"
+    return f"{base}/programs/{readable_id}"
+
+
 def extract_programs():
     """Loads the MITx Online catalog data"""  # noqa: D401
     if settings.MITX_ONLINE_PROGRAMS_API_URL:
@@ -255,6 +285,7 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         dict: normalized course run data
     """  # noqa: D401
     fully_enrollable = is_fully_enrollable(course_run)
+    has_product_page = bool(parse_page_attribute(course, "page_url"))
     return {
         "title": course_run["title"],
         "run_id": course_run["courseware_id"],
@@ -264,7 +295,9 @@ def _transform_run(course_run: dict, course: dict) -> dict:
         "end_date": _parse_datetime(course_run.get("end_date")),
         "enrollment_start": _parse_datetime(course_run.get("enrollment_start")),
         "enrollment_end": _parse_datetime(course_run.get("enrollment_end")),
-        "url": parse_page_attribute(course, "page_url", is_url=True),
+        "url": _learn_product_url_for_mitx_course(
+            course.get("readable_id"), has_product_page=has_product_page
+        ),
         "published": bool(
             course_run.get("is_enrollable", False)
             and (course.get("page") or {}).get("live", False)
@@ -347,7 +380,10 @@ def _transform_course(course):
         if has_certification
         else CertificationType.none.name,
         "image": _transform_image(course),
-        "url": parse_page_attribute(course, "page_url", is_url=True),
+        "url": _learn_product_url_for_mitx_course(
+            course["readable_id"],
+            has_product_page=bool(parse_page_attribute(course, "page_url")),
+        ),
         "description": clean_data(parse_page_attribute(course, "description")),
         "availability": course.get("availability"),
         "format": [Format.asynchronous.name],
@@ -526,6 +562,12 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
         pace = sorted(
             {course_pace for course in courses for course_pace in course["pace"]}
         )
+        has_product_page = bool(parse_page_attribute(program, "page_url"))
+        learn_program_url = _learn_product_url_for_mitx_program(
+            program["readable_id"],
+            program.get("display_mode"),
+            has_product_page=has_product_page,
+        )
         run = {
             "run_id": program["readable_id"],
             "enrollment_start": _parse_datetime(program.get("enrollment_start")),
@@ -536,9 +578,9 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             "end_date": _parse_datetime(program.get("end_date")),
             "title": program["title"],
             "published": bool(
-                parse_page_attribute(program, "page_url")
+                has_product_page
             ),  # program only considered published if it has a product/price
-            "url": parse_page_attribute(program, "page_url", is_url=True),
+            "url": learn_program_url,
             "image": _transform_image(program),
             "description": clean_data(parse_page_attribute(program, "description")),
             "enrollment_modes": program.get("enrollment_modes", []),
@@ -548,7 +590,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
                 fully_enrollable=True,
             ),
             "status": RunStatus.current.value
-            if parse_page_attribute(program, "page_url")
+            if has_product_page
             else RunStatus.archived.value,
             "availability": program.get("availability"),
             "format": [Format.asynchronous.name],
@@ -601,12 +643,11 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             else CertificationType.none.name,
             "topics": transform_topics(program.get("topics", []), OFFERED_BY["code"]),
             "description": clean_data(parse_page_attribute(program, "description")),
-            "url": parse_page_attribute(program, "page_url", is_url=True),
+            "url": learn_program_url,
             "image": _transform_image(program),
             "availability": program.get("availability"),
             "published": bool(
-                parse_page_attribute(program, "page_url")
-                and parse_page_attribute(program, "live")
+                has_product_page and parse_page_attribute(program, "live")
             ),  # a program is only considered published if it has a page url
             "format": [Format.asynchronous.name],
             "pace": pace,

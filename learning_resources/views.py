@@ -330,11 +330,15 @@ class LearningResourceViewSet(
         Get learning resources summary data.
 
         Returns:
-            Paginated list of learning resources with summary fields only.
-            Intended to be performant with large page sizes.
+        Paginated list of learning resources with summary fields only.
+        Intended to be performant with large page sizes.
         """
         queryset = self.filter_queryset(
-            self.get_queryset().values("id", "last_modified")
+            self.get_queryset().values(
+                "id",
+                "last_modified",
+                "url",
+            )
         )
         page = self.paginate_queryset(queryset)
 

@@ -4,6 +4,7 @@ import random
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.utils import timezone
 from opensearch_dsl import response
@@ -1396,12 +1397,18 @@ def test_learning_resources_display_info_detail_view(mocker, client):
 
 
 def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, client):
+    mitxonline_platform = LearningResourcePlatformFactory.create(
+        code=PlatformType.mitxonline.name
+    )
     published = sorted(
         [
             # Some of the factories create multiple resources (e.g., program creates courses, too)
             # We want to create a specific number, so use courses/videos only
             *LearningResourceFactory.create_batch(
-                10, published=True, resource_type="course"
+                10,
+                published=True,
+                resource_type="course",
+                platform=mitxonline_platform,
             ),
             *LearningResourceFactory.create_batch(
                 5, published=True, resource_type="video"
@@ -1423,6 +1430,7 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
         {
             "id": lr.id,
             "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
+            "url": lr.url,
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
@@ -1444,6 +1452,39 @@ def test_learning_resources_summary_listing_endpoint_large_pagesize():
     )
     pagination = action.kwargs["pagination_class"]
     assert pagination.max_limit >= 1000
+
+
+def test_learning_resources_summary_includes_stored_url(client):
+    mitxonline_platform = LearningResourcePlatformFactory.create(
+        code=PlatformType.mitxonline.name
+    )
+    edx_platform = LearningResourcePlatformFactory.create(code=PlatformType.edx.name)
+
+    mitx_course = LearningResourceFactory.create(
+        published=True,
+        resource_type=LearningResourceType.course.name,
+        platform=mitxonline_platform,
+    )
+    mitx_learn_url = (
+        f"{settings.APP_BASE_URL.rstrip('/')}/courses/{mitx_course.readable_id}"
+    )
+    mitx_course.url = mitx_learn_url
+    mitx_course.save(update_fields=["url"])
+
+    edx_course = LearningResourceFactory.create(
+        published=True,
+        resource_type=LearningResourceType.course.name,
+        platform=edx_platform,
+    )
+    edx_url = "https://learning.edx.org/course"
+    edx_course.url = edx_url
+    edx_course.save(update_fields=["url"])
+
+    resp = client.get(reverse("lr:v1:learning_resources_api-summary"))
+    by_id = {item["id"]: item for item in resp.data["results"]}
+
+    assert by_id[mitx_course.id]["url"] == mitx_learn_url
+    assert by_id[edx_course.id]["url"] == edx_url
 
 
 @pytest.mark.parametrize(
