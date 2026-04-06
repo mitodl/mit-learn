@@ -266,7 +266,7 @@ def hubspot_form_submit_view(request, form_id: str):
             payload["hutk"] = hubspotutk_cookie
         if payload.get("page_name") is None and payload.get("page_title"):
             payload["page_name"] = payload["page_title"]
-        if payload.get("submitted_at") is None and payload.get("timestamp"):
+        if payload.get("submitted_at") is None and payload.get("timestamp") is not None:
             payload["submitted_at"] = payload["timestamp"]
         payload.setdefault("ip_address", _extract_client_ip(request))
         submit_form(
