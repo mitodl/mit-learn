@@ -578,7 +578,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             "end_date": _parse_datetime(program.get("end_date")),
             "title": program["title"],
             "published": bool(
-                parse_page_attribute(program, "page_url")
+                has_product_page
             ),  # program only considered published if it has a product/price
             "url": learn_program_url,
             "image": _transform_image(program),
@@ -590,7 +590,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
                 fully_enrollable=True,
             ),
             "status": RunStatus.current.value
-            if parse_page_attribute(program, "page_url")
+            if has_product_page
             else RunStatus.archived.value,
             "availability": program.get("availability"),
             "format": [Format.asynchronous.name],
@@ -647,8 +647,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             "image": _transform_image(program),
             "availability": program.get("availability"),
             "published": bool(
-                parse_page_attribute(program, "page_url")
-                and parse_page_attribute(program, "live")
+                has_product_page and parse_page_attribute(program, "live")
             ),  # a program is only considered published if it has a page url
             "format": [Format.asynchronous.name],
             "pace": pace,
