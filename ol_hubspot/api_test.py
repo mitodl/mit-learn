@@ -16,6 +16,7 @@ def test_get_form(mocker, settings):
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
     response = mocker.Mock()
+    response.status_code = 200
     response.content = b'{"id":"form-123"}'
     response.json.return_value = {"id": "form-123"}
     client.api_request.return_value = response
@@ -36,14 +37,15 @@ def test_get_form(mocker, settings):
 
 
 def test_get_form_raises_api_exception_for_error_response(mocker, settings):
-    """Test fetching a single form passes through SDK ApiException."""
+    """Test fetching a single form raises ApiException for non-2xx HTTP responses."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
     form_id = "form-123"
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
-    client.api_request.side_effect = ApiException(
-        status=404, reason='{"message":"Not Found"}'
-    )
+    response = mocker.Mock()
+    response.status_code = 404
+    response.text = '{"message":"Not Found"}'
+    client.api_request.return_value = response
 
     with pytest.raises(ApiException) as exc_info:
         get_form(form_id=form_id, archived=False)

@@ -29,6 +29,8 @@ def get_form(*, form_id: str, archived: bool | None = None):
             "query_params": query_params,
         }
     )
+    if response.status_code >= HTTPStatus.BAD_REQUEST:
+        raise ApiException(status=response.status_code, reason=response.text)
     return response.json() if response.content else {}
 
 
