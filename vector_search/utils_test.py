@@ -4,9 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 from django.conf import settings
+from django.contrib.auth.models import Group
+from django.urls import reverse
 from qdrant_client import models
 from qdrant_client.models import PointStruct
 
+from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -946,6 +949,9 @@ def test_vector_search_group_by(mocker, client, django_user_model):
         "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
     )
+    mock_encoder = mocker.patch("vector_search.utils.dense_encoder")()
+    mock_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_encoder.model_short_name.return_value = "test-encoder"
 
     group_by_field = "resource_readable_id"
     resource_id_1 = "resource1"
@@ -982,14 +988,10 @@ def test_vector_search_group_by(mocker, client, django_user_model):
     mock_qdrant.count.return_value = models.CountResult(count=2)
 
     mocker.patch(
-        "vector_search.views._content_file_vector_hits", side_effect=lambda x: x
+        "vector_search.utils._content_file_vector_hits", side_effect=lambda x: x
     )
 
     # Content files endpoint requires authentication
-    from django.contrib.auth.models import Group
-
-    from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
-
     user = django_user_model.objects.create()
     group, _ = Group.objects.get_or_create(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS)
     group.user_set.add(user)
@@ -999,14 +1001,46 @@ def test_vector_search_group_by(mocker, client, django_user_model):
         "q": "test query",
         "group_by": group_by_field,
         "group_size": 2,
+        "offset": 0,
     }
-
-    from django.urls import reverse
 
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"), data=params
     )
+
     assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["count"] == 2
+    assert len(response_json["results"]) == 2
+    grouped_results = {
+        result[group_by_field]: result for result in response_json["results"]
+    }
+    assert grouped_results[resource_id_1] == {
+        group_by_field: resource_id_1,
+        "common_field": "value1",
+        "chunks": ["First part.", "Second part."],
+        "chunk_content": None,
+    }
+    assert grouped_results[resource_id_2] == {
+        group_by_field: resource_id_2,
+        "common_field": "value2",
+        "chunks": ["Only part."],
+        "chunk_content": None,
+    }
+    hit1 = next(
+        h for h in response_json["results"] if h[group_by_field] == resource_id_1
+    )
+    hit2 = next(
+        h for h in response_json["results"] if h[group_by_field] == resource_id_2
+    )
+
+    assert hit1["chunk_content"] is None
+    assert hit1["common_field"] == "value1"
+    assert hit1["chunks"] == ["First part.", "Second part."]
+
+    assert hit2["chunk_content"] is None
+    assert hit2["common_field"] == "value2"
+    assert hit2["chunks"] == ["Only part."]
 
     mock_qdrant.query_points_groups.assert_called_once()
     call_args = mock_qdrant.query_points_groups.call_args.kwargs
