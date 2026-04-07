@@ -21,6 +21,7 @@ const VideoCardItem = styled.div({
 
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    padding: "24px 0 24px 0",
   },
 })
 
@@ -37,11 +38,14 @@ const ThumbnailWrapper = styled.div({
   },
 })
 
-const ThumbnailImage = styled(Image)({
+const ThumbnailImage = styled(Image)(({ theme }) => ({
   objectFit: "cover",
   width: "160px",
   height: "90px",
-})
+  [theme.breakpoints.down("sm")]: {
+    height: "201.375px",
+  },
+}))
 
 const DurationBadge = styled.span(({ theme }) => ({
   ...theme.typography.body3,
@@ -69,14 +73,17 @@ const CardTitleRow = styled.div({
   gap: "12px",
 })
 
-const CardTitle = styled(Typography)({
+const CardTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
   fontSize: "20px",
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
   lineHeight: "26px" /* 130% */,
   marginTop: "6px",
-})
+  [theme.breakpoints.down("sm")]: {
+    marginTop: 0,
+  },
+}))
 
 const CardMetaRow = styled.div({
   display: "flex",
@@ -95,6 +102,10 @@ const CardMetaValue = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   lineHeight: "22px",
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
 }))
 
 type VideoCardProps = {

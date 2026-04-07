@@ -4,11 +4,14 @@ import { Skeleton, Typography, styled, theme } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import type { VideoPlaylistResource } from "api/v1"
 
-const Section = styled.section({
+const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "38px 0",
+  },
+}))
 
-const Heading = styled(Typography)({
+const Heading = styled(Typography)(({ theme }) => ({
   ...theme.typography.h4,
   fontWeight: theme.typography.fontWeightBold,
   textTransform: "uppercase",
@@ -16,7 +19,14 @@ const Heading = styled(Typography)({
   marginBottom: "32px",
   lineHeight: "36px" /* 150% */,
   letterSpacing: "1.92px",
-})
+  [theme.breakpoints.down("sm")]: {
+    fontSize: "22px",
+    fontStyle: "normal",
+    lineHeight: "36px" /* 163.636% */,
+    letterSpacing: "1.76px",
+    textTransform: "uppercase",
+  },
+}))
 
 const Grid = styled.div({
   display: "grid",
@@ -31,15 +41,22 @@ const Grid = styled.div({
 
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "1fr",
-    rowGap: "22px",
+    rowGap: "0",
   },
 })
 
-const CollectionLink = styled(Link)({
+const CollectionLink = styled(Link)(({ theme }) => ({
   display: "block",
   textDecoration: "none",
   color: "inherit",
-})
+  [theme.breakpoints.down("sm")]: {
+    borderBottom: "1px solid #DDE1E6",
+    padding: "16px 0",
+    "&:last-child": {
+      borderBottom: "none",
+    },
+  },
+}))
 
 const CollectionType = styled(Typography)({
   ...theme.typography.body3,

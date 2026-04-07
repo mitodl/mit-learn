@@ -10,17 +10,23 @@ import { VideoCard, VideoCardSkeleton } from "./VideoCard"
 
 const CollectionSection = styled.div({})
 
-const StyledContainer = styled(VideoContainer)({
-  padding: "0 48px !important",
+const StyledContainer = styled(VideoContainer)(({ theme }) => ({
+  // On desktop keep the wider inset; on mobile VideoContainer's 24px is enough.
+  [theme.breakpoints.up("sm")]: {
+    padding: "0 48px !important",
+  },
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-})
+}))
 
-const CollectionHeader = styled.div({
+const CollectionHeader = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   margin: "32px 0 8px 0",
-})
+  [theme.breakpoints.down("sm")]: {
+    margin: "24px 0 0 0",
+  },
+}))
 
 const CollectionTitle = styled(Typography)({
   ...theme.typography.body1,
@@ -28,11 +34,14 @@ const CollectionTitle = styled(Typography)({
   color: theme.custom.colors.black,
 })
 
-const VideoCardList = styled.div({
+const VideoCardList = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "0",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "8px",
+  },
+}))
 
 // ---------------------------------------------------------------------------
 // Component

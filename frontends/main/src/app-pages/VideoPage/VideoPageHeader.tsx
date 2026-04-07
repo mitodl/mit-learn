@@ -1,12 +1,15 @@
 import React from "react"
-import { Breadcrumbs, Skeleton, Typography, styled, theme } from "ol-components"
+import { Breadcrumbs, Skeleton, Typography, styled } from "ol-components"
 import type { VideoPlaylistResource } from "api/v1"
 import VideoContainer from "./VideoContainer"
 
-const BreadcrumbBar = styled.div({
+const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "32px 0 16px 0",
   borderBottom: `2px solid ${theme.custom.colors.red}`,
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "16px 0 0px 0",
+  },
+}))
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
   "& > span": {
@@ -14,9 +17,12 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
   },
 }))
 
-const HeaderSection = styled.div({
+const HeaderSection = styled.div(({ theme }) => ({
   padding: "56px 0 72px",
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 0 40px",
+  },
+}))
 
 const CollectionLabel = styled.span(({ theme }) => ({
   display: "block",
@@ -43,8 +49,9 @@ const PageTitle = styled.h1(({ theme }) => ({
     margin: "0 0 18px",
   },
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h4,
-    margin: "0 0 14px",
+    ...theme.typography.h3,
+    margin: "0 0 8px",
+    letterSpacing: "inherit",
   },
 }))
 
@@ -53,6 +60,10 @@ const PageDescription = styled(Typography)(({ theme }) => ({
   maxWidth: "640px",
   ...theme.typography.body1,
   lineHeight: "26px",
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
 }))
 
 type VideoPageHeaderProps = {

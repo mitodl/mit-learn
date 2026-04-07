@@ -144,7 +144,7 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      await screen.findByText(featured.title)
+      await screen.findAllByText(featured.title)
     })
 
     test("does not render featured video section when there are no videos", async () => {
@@ -198,9 +198,9 @@ describe("VideoPage", () => {
       await screen.findByText(collection1.title)
 
       // Collection should contain Collection Video A and B, but featured
-      // appears only once (not duplicated in the collection list)
+      // appears only in the featured section (desktop-title + mobile-title spans), not in the collection list
       const allFeatured = screen.getAllByText(featured.title)
-      expect(allFeatured).toHaveLength(1)
+      expect(allFeatured).toHaveLength(2)
     })
   })
 
