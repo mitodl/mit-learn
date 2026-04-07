@@ -1,3 +1,6 @@
+from django.conf import settings
+from django.core.management.base import CommandError
+
 from learning_resources.models import LearningResource, LearningResourceRun
 
 
@@ -19,6 +22,24 @@ class TestResourceConfigurationMixin:
             LearningResource.objects.filter(id__in=test_ids).update(
                 test_mode=True, published=False
             )
+
+
+class ConfirmDeleteMixin:
+    """
+    Mixin that prompts the user to confirm deletion when --delete is passed
+    to a management command. The command class must define a --delete option.
+    """
+
+    def execute(self, *args, **options):
+        if options.get("delete"):
+            answer = input(
+                f"Are you sure you want to use the --delete option in "
+                f"{settings.ENVIRONMENT}? [y/N]: "
+            )
+            if answer.strip().lower() not in ("y", "yes"):
+                msg = "Aborted."
+                raise CommandError(msg)
+        return super().execute(*args, **options)
 
 
 class TestResourceIdMixin(TestResourceConfigurationMixin):
