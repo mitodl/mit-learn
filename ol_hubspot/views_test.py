@@ -402,14 +402,10 @@ def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
     submit_stub.assert_not_called()
 
 
-def test_submit_form_allows_missing_token_when_secret_configured(
+def test_submit_form_rejects_missing_token_when_secret_configured(
     client, settings, mocker
 ):
-    """Submissions without tokens are allowed when secret is configured.
-
-    This handles frontend misconfiguration (NEXT_PUBLIC_RECAPTCHA_SITE_KEY not set).
-    Only reject if a token IS provided but is invalid.
-    """
+    """Submissions without a token are rejected when RECAPTCHA_SECRET_KEY is set."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
     submit_url = reverse(
@@ -421,9 +417,9 @@ def test_submit_form_allows_missing_token_when_secret_configured(
 
     response = client.post(submit_url, payload, format="json")
 
-    # Token is missing but allowed (frontend may not be configured for reCAPTCHA)
-    assert response.status_code == status.HTTP_200_OK
-    submit_stub.assert_called_once()
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"recaptcha_token": ["reCAPTCHA verification failed."]}
+    submit_stub.assert_not_called()
 
 
 def test_submit_form_rejects_invalid_token_when_secret_configured(
