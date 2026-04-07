@@ -3,6 +3,7 @@
 from uuid import uuid4
 
 import pytest
+import requests
 from hubspot.marketing.forms.exceptions import ApiException
 
 from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
@@ -210,5 +211,28 @@ def test_verify_recaptcha_success(mocker, settings):
 def test_verify_recaptcha_failure_without_secret(settings):
     """ReCAPTCHA verification returns False when no secret is configured."""
     settings.RECAPTCHA_SECRET_KEY = ""
+
+    assert verify_recaptcha("captcha-token") is False
+
+
+def test_verify_recaptcha_returns_false_on_network_error(mocker, settings):
+    """ReCAPTCHA verification fails closed when the request raises a network error."""
+    settings.RECAPTCHA_SECRET_KEY = uuid4().hex
+    mocker.patch(
+        "ol_hubspot.api.requests.post",
+        side_effect=requests.RequestException("timeout"),
+    )
+
+    assert verify_recaptcha("captcha-token") is False
+
+
+def test_verify_recaptcha_returns_false_on_invalid_json(mocker, settings):
+    """ReCAPTCHA verification fails closed when Google returns malformed JSON."""
+    settings.RECAPTCHA_SECRET_KEY = uuid4().hex
+    response = mocker.Mock()
+    response.status_code = 200
+    response.content = b"not-json"
+    response.json.side_effect = ValueError("No JSON")
+    mocker.patch("ol_hubspot.api.requests.post", return_value=response)
 
     assert verify_recaptcha("captcha-token") is False

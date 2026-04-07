@@ -54,15 +54,18 @@ def verify_recaptcha(response_token: str, remote_ip: str | None = None) -> bool:
     if remote_ip:
         payload["remoteip"] = remote_ip
 
-    response = requests.post(
-        RECAPTCHA_VERIFY_URL,
-        data=payload,
-        timeout=30,
-    )
-    if response.status_code >= HTTPStatus.BAD_REQUEST:
+    try:
+        response = requests.post(
+            RECAPTCHA_VERIFY_URL,
+            data=payload,
+            timeout=30,
+        )
+        if response.status_code >= HTTPStatus.BAD_REQUEST:
+            return False
+        body = response.json() if response.content else {}
+    except (requests.RequestException, ValueError):
         return False
 
-    body = response.json() if response.content else {}
     return bool(body.get("success"))
 
 
