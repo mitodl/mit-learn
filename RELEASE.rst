@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.62.1
+Version 0.62.1 (Released April 07, 2026)
 --------------
 
 - removing unused payload fields (#3154)
