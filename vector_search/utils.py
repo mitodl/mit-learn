@@ -71,6 +71,7 @@ def qdrant_client():
     )
 
 
+@cache
 def async_qdrant_client():
     enable_cloud_inference = (
         dense_encoder().requires_cloud_inferencing
