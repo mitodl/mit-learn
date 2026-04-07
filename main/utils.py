@@ -76,14 +76,14 @@ def _cache_page_ignoring_cookies(  # noqa: C901
 
                 cache_backend = caches[cache]
 
-                cached_data = cache_backend.get(cache_key)
+                cached_data = await cache_backend.aget(cache_key)
                 if cached_data is not None:
                     return Response(cached_data)
 
                 response = await func(request, *args, **kwargs)
 
                 if response.status_code == 200:  # noqa: PLR2004
-                    cache_backend.set(cache_key, response.data, timeout)
+                    await cache_backend.aset(cache_key, response.data, timeout)
 
                 return response
 
