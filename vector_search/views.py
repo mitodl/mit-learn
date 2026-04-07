@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from functools import wraps
 from itertools import chain
 
 from asgiref.sync import sync_to_async
@@ -45,8 +47,6 @@ class QdrantView(APIView):
     def as_view(cls, **initkwargs):
         view = super().as_view(**initkwargs)
 
-        from functools import wraps
-
         @wraps(view)
         async def async_view(*args, **kwargs):
             return await view(*args, **kwargs)
@@ -72,7 +72,6 @@ class QdrantView(APIView):
                 handler = self.http_method_not_allowed
 
             response = handler(request, *args, **kwargs)
-            import asyncio
 
             if asyncio.iscoroutine(response):
                 response = await response
@@ -120,9 +119,13 @@ class QdrantView(APIView):
             }
 
             if hybrid_search:
-                sparse_query = await sync_to_async(encoder_sparse.embed)(query_string)
-                dense_query = await sync_to_async(encoder_dense.embed_query)(
-                    query_string
+                sparse_query, dense_query = await asyncio.gather(
+                    sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
+                        query_string
+                    ),
+                    sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
+                        query_string
+                    ),
                 )
                 search_params["prefetch"] = [
                     models.Prefetch(
