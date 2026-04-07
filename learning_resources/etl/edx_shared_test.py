@@ -13,6 +13,7 @@ from learning_resources.etl.edx_shared import (
     extract_run_id_from_key,
     get_most_recent_course_archives,
     normalize_run_id,
+    process_course_archive,
     sync_edx_course_files,
 )
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -1239,3 +1240,78 @@ def test_build_run_lookup_cross_format_prefix_match():
     normalized_key = normalize_run_id(ETLSource.mit_edx.name, "MITx-12.345x-3T2022")
     assert normalized_key in lookup
     assert lookup[normalized_key][0].id == run.id
+
+
+def test_process_course_archive_does_not_set_checksum_on_empty_ingest(mocker):
+    """process_course_archive should not update run.checksum if load_content_files returns empty list"""
+    run = LearningResourceRunFactory.create(published=True, checksum=None)
+    bucket = mocker.MagicMock()
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum",
+        return_value="newchecksum",
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
+        return_value=[],
+    )
+
+    process_course_archive(bucket, key, run)
+
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
+def test_process_course_archive_sets_checksum_on_successful_ingest(mocker):
+    """process_course_archive should update run.checksum when load_content_files returns non-empty list"""
+    run = LearningResourceRunFactory.create(published=True, checksum=None)
+    bucket = mocker.MagicMock()
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum",
+        return_value="newchecksum",
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
+        return_value=[1, 2, 3],
+    )
+
+    process_course_archive(bucket, key, run)
+
+    run.refresh_from_db()
+    assert run.checksum == "newchecksum"
+
+
+def test_process_course_archive_does_not_set_checksum_on_exception(mocker):
+    """process_course_archive should not persist checksum if load_content_files raises"""
+    run = LearningResourceRunFactory.create(published=True, checksum="oldchecksum")
+    bucket = mocker.MagicMock()
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum",
+        return_value="newchecksum",
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files",
+        side_effect=RuntimeError("ingest failed"),
+    )
+
+    process_course_archive(bucket, key, run)
+
+    run.refresh_from_db()
+    assert run.checksum == "oldchecksum"

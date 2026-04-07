@@ -548,6 +548,19 @@ def deindex_run_content_files(run_id, unpublished_only):
         return error
 
 
+@app.task(rate_limit=settings.CELERY_SEARCH_RATE_LIMIT)
+def cleanup_deleted_content_files():
+    """
+    Physically delete ContentFile records that have been soft-deleted
+    (published=False) for more than 14 days.
+    """
+    cutoff = now_in_utc() - datetime.timedelta(days=14)
+    deleted_count, _ = ContentFile.objects.filter(
+        published=False, updated_on__lt=cutoff
+    ).delete()
+    log.info("cleanup_deleted_content_files: deleted %d content files", deleted_count)
+
+
 @contextmanager
 def wrap_retry_exception(*exception_classes):
     """

@@ -665,6 +665,56 @@ def test_load_course_bad_platform(mocker):
     )
 
 
+def test_load_course_prune_clears_checksum_on_unpublished_runs():
+    """Runs pruned from course data should have checksum reset."""
+    platform = LearningResourcePlatformFactory.create()
+    course = CourseFactory.create(
+        learning_resource__runs=[],
+        platform=platform.code,
+    )
+    learning_resource = course.learning_resource
+
+    retained_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="retain_checksum",
+    )
+    pruned_run = LearningResourceRunFactory.create(
+        learning_resource=learning_resource,
+        published=True,
+        checksum="pruned_checksum",
+    )
+
+    props = {
+        "readable_id": learning_resource.readable_id,
+        "platform": platform.code,
+        "professional": True,
+        "title": learning_resource.title,
+        "image": {"url": learning_resource.image.url},
+        "description": learning_resource.description,
+        "url": learning_resource.url,
+        "published": True,
+        "runs": [
+            {
+                "run_id": retained_run.run_id,
+                "enrollment_start": retained_run.enrollment_start,
+                "start_date": retained_run.start_date,
+                "end_date": retained_run.end_date,
+                "prices": [],
+            }
+        ],
+    }
+
+    load_course(props, [], [], config=CourseLoaderConfig(prune=True))
+
+    retained_run.refresh_from_db()
+    pruned_run.refresh_from_db()
+    assert retained_run.published is True
+    assert retained_run.checksum == "retain_checksum"
+    assert pruned_run.published is False
+    assert pruned_run.checksum is None
+
+
 @pytest.mark.parametrize("course_exists", [True, False])
 @pytest.mark.parametrize("course_id_is_duplicate", [True, False])
 @pytest.mark.parametrize("duplicate_course_exists", [True, False])
@@ -1516,6 +1566,77 @@ def test_load_content_files(mocker, is_published, calc_score):
 
     assert not deleted_content_file.published
     assert not deleted_content_file_learning_resource.published
+
+
+def test_load_content_files_empty_input_preserves_existing_files(mocker):
+    """Empty ingests should not unpublish or delete existing content files."""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    existing_content_file = ContentFileFactory.create(run=course_run, published=True)
+    existing_direct_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.value,
+        published=True,
+    )
+    existing_content_file.direct_learning_resource = existing_direct_resource
+    existing_content_file.save()
+
+    mock_log_error = mocker.patch("learning_resources.etl.loaders.log.error")
+    mock_content_files_loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(course_run, [], calc_completeness=False)
+
+    assert result == []
+    mock_log_error.assert_called_once()
+    mock_content_files_loaded_actions.assert_not_called()
+
+    existing_content_file.refresh_from_db()
+    existing_direct_resource.refresh_from_db()
+    assert existing_content_file.published
+    assert existing_direct_resource.published
+
+
+def test_load_content_files_does_not_update_already_unpublished_stale_files(mocker):
+    """Already-unpublished stale files should be left untouched so updated_on retention clock is preserved."""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+
+    kept_content_file = ContentFileFactory.create(run=course_run, published=True)
+    stale_published_file = ContentFileFactory.create(run=course_run, published=True)
+    stale_unpublished_file = ContentFileFactory.create(run=course_run, published=False)
+
+    old_timestamp = now_in_utc() - timedelta(days=20)
+    ContentFile.objects.filter(id=stale_unpublished_file.id).update(
+        updated_on=old_timestamp
+    )
+
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=kept_content_file.id,
+        autospec=True,
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(
+        course_run, [{"title": "kept"}], calc_completeness=False
+    )
+
+    assert result == [kept_content_file.id]
+
+    stale_published_file.refresh_from_db()
+    stale_unpublished_file.refresh_from_db()
+    assert stale_published_file.published is False
+    assert stale_unpublished_file.published is False
+    assert stale_unpublished_file.updated_on == old_timestamp
 
 
 @pytest.mark.parametrize("test_mode", [True, False])

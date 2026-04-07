@@ -533,7 +533,7 @@ def test_bulk_content_file_deindex_on_course_deletion(mocker):
 
 
 def test_deindex_run_content_files(mocker):
-    """deindex_run_content_files should remove them from index and db"""
+    """deindex_run_content_files should soft-delete files and keep DB records"""
     mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")
     run = LearningResourceRunFactory.create(published=True)
     ContentFileFactory.create_batch(3, run=run, published=True)
@@ -541,7 +541,19 @@ def test_deindex_run_content_files(mocker):
     deindex_run_content_files(run.id, unpublished_only=False)
     mock_deindex.assert_called_once()
     run.refresh_from_db()
-    assert ContentFile.objects.count() == 0
+    assert ContentFile.objects.count() == 3
+    assert ContentFile.objects.filter(published=False).count() == 3
+
+
+def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker):
+    """deindex_run_content_files with unpublished_only=True should deindex but not hard-delete"""
+    mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")
+    run = LearningResourceRunFactory.create(published=True)
+    ContentFileFactory.create_batch(2, run=run, published=False)
+    ContentFileFactory.create_batch(1, run=run, published=True)
+    deindex_run_content_files(run.id, unpublished_only=True)
+    mock_deindex.assert_called_once()
+    assert ContentFile.objects.count() == 3
 
 
 def test_index_course_content_files(mocker):

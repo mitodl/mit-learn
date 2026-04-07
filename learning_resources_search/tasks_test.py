@@ -1,6 +1,7 @@
 """Search task tests"""
 
 from collections import OrderedDict
+from datetime import timedelta
 
 import pytest
 from celery.exceptions import Ignore, Retry
@@ -16,10 +17,11 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
+    LearningResourceRunFactory,
     LearningResourceTopicFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
@@ -43,6 +45,7 @@ from learning_resources_search.tasks import (
     _group_percolated_rows,
     _infer_percolate_group,
     bulk_deindex_learning_resources,
+    cleanup_deleted_content_files,
     deindex_document,
     deindex_run_content_files,
     finish_recreate_index,
@@ -59,6 +62,7 @@ from learning_resources_search.tasks import (
 )
 from main.factories import UserFactory
 from main.test_utils import assert_not_raises
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -1262,3 +1266,33 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
     with pytest.raises(Ignore):
         start_update_index.run(["course"], None)
     assert mocked_clear_views_cache.call_count == 1
+
+
+def test_cleanup_deleted_content_files_respects_retention_window():
+    """cleanup_deleted_content_files should only delete files soft-deleted more than 14 days ago"""
+    run = LearningResourceRunFactory.create(published=True)
+
+    old_cutoff = now_in_utc() - timedelta(days=15)
+    recent_cutoff = now_in_utc() - timedelta(days=1)
+
+    old_unpublished = ContentFileFactory.create_batch(2, run=run, published=False)
+    recent_unpublished = ContentFileFactory.create_batch(1, run=run, published=False)
+    still_published = ContentFileFactory.create_batch(1, run=run, published=True)
+
+    # Force updated_on values so this test is deterministic around the 14-day threshold.
+    ContentFile.objects.filter(id__in=[f.id for f in old_unpublished]).update(
+        updated_on=old_cutoff
+    )
+    ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
+        updated_on=recent_cutoff
+    )
+
+    cleanup_deleted_content_files()
+
+    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
+    for file in old_unpublished:
+        assert file.id not in remaining_ids
+    for file in recent_unpublished:
+        assert file.id in remaining_ids
+    for file in still_published:
+        assert file.id in remaining_ids

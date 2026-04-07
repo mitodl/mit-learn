@@ -590,6 +590,7 @@ def load_course(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
+                run.checksum = None
                 run.save()
                 resource_run_unpublished_actions(run)
 
@@ -723,6 +724,7 @@ def load_program(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
+                run.checksum = None
                 run.save()
 
         load_run_dependent_values(learning_resource)
@@ -985,19 +987,32 @@ def load_content_files(
         for content_file in content_files_data:
             content_tags.append(content_file.get("content_tags") or [])
             content_files_ids.append(load_content_file(course_run, content_file))
-        for file in (
-            ContentFile.objects.filter(run=course_run)
+
+        if not content_files_ids:
+            log.error(
+                "No content files were ingested for run %s from archive payload; "
+                "preserving existing content files",
+                course_run.run_id,
+            )
+            return content_files_ids
+
+        stale_published_files = (
+            ContentFile.objects.filter(run=course_run, published=True)
             .exclude(id__in=content_files_ids)
-            .all()
+            .select_related("direct_learning_resource")
+        )
+        for file in stale_published_files.filter(
+            direct_learning_resource__isnull=False
         ):
             file.published = False
             file.save()
-
-            if file.direct_learning_resource:
-                resource = file.direct_learning_resource
-                resource.published = False
-                resource.save()
-                update_index(resource, newly_created=False)
+            resource = file.direct_learning_resource
+            resource.published = False
+            resource.save()
+            update_index(resource, newly_created=False)
+        stale_published_files.filter(direct_learning_resource__isnull=True).update(
+            published=False
+        )
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)

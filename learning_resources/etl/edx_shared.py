@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from django.conf import settings
 from django.core.cache import caches
+from django.db import transaction
 from django.db.models import Prefetch, Q
 
 from learning_resources.etl.constants import ETLSource
@@ -138,12 +139,14 @@ def process_course_archive(
             log.info("Checksums match for %s, skipping load", key)
             return False
         try:
-            load_content_files(
-                run,
-                transform_content_files(course_tarpath, run, overwrite=overwrite),
-            )
-            run.checksum = checksum
-            run.save()
+            with transaction.atomic():
+                content_files_ids = load_content_files(
+                    run,
+                    transform_content_files(course_tarpath, run, overwrite=overwrite),
+                )
+                if content_files_ids:
+                    run.checksum = checksum
+                    run.save()
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
 

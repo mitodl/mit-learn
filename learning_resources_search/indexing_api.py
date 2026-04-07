@@ -516,17 +516,20 @@ def deindex_content_files(content_file_ids, learning_resource_id):
 
 def deindex_run_content_files(run_id, unpublished_only):
     """
-    Deindex and delete a list of content files by run from the index
+    Deindex a list of content files by run from the index.
+    Files are soft-deleted (published=False) and will be physically deleted
+    by the cleanup_deleted_content_files task after the retention period.
 
     Args:
         run_id(int): Course run id
-        unpublished_only(bool): if true only delete  files with published=False
+        unpublished_only(bool): if true only deindex files with published=False
 
     """
     run = LearningResourceRun.objects.get(id=run_id)
     if unpublished_only:
         content_files = run.content_files.filter(published=False).all()
     else:
+        run.content_files.filter(published=True).update(published=False)
         content_files = run.content_files.all()
 
     if not content_files.exists():
@@ -543,10 +546,6 @@ def deindex_run_content_files(run_id, unpublished_only):
         index_types=IndexestoUpdate.all_indexes.value,
         routing=run.learning_resource_id,
     )
-    # Delete the content files now that they are deindexed
-    ContentFile.objects.filter(
-        pk__in=content_files.values_list("id", flat=True)
-    ).delete()
 
 
 def deindex_document(doc_id, object_type, **kwargs):
