@@ -20,13 +20,14 @@ class Command(ConfirmDeleteMixin, BaseCommand):
 
     def add_arguments(self, parser):
         """Configure arguments for this command"""
-        parser.add_argument(
+        mode_group = parser.add_mutually_exclusive_group()
+        mode_group.add_argument(
             "--delete",
             dest="delete",
             action="store_true",
             help="Delete all existing records first",
         )
-        parser.add_argument(
+        mode_group.add_argument(
             "--transcripts",
             dest="transcripts",
             action="store_true",

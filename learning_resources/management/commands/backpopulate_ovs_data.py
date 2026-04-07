@@ -16,13 +16,14 @@ class Command(ConfirmDeleteMixin, BaseCommand):
     help = "Populate OVS videos and transcripts"
 
     def add_arguments(self, parser):
-        parser.add_argument(
+        mode_group = parser.add_mutually_exclusive_group()
+        mode_group.add_argument(
             "--delete",
             dest="delete",
             action="store_true",
             help="Delete all existing OVS video records",
         )
-        parser.add_argument(
+        mode_group.add_argument(
             "--transcripts",
             dest="transcripts",
             action="store_true",
