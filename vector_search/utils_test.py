@@ -1362,6 +1362,18 @@ def test_vector_search_hybrid(mocker, client):
     mock_search_result.points = []
     mock_qdrant.query_points.return_value = mock_search_result
     mock_qdrant.count.return_value = models.CountResult(count=0)
+    mock_dense_encoder = mocker.patch("vector_search.views.dense_encoder")()
+    mock_dense_encoder.clear_cache()
+
+    mock_sparse_encoder = mocker.patch("vector_search.views.sparse_encoder")()
+    mock_sparse_encoder.clear_cache()
+
+    mock_dense_encoder.embed_query.return_value = [0.1, 0.2, 0.3]
+    mock_dense_encoder.model_short_name.return_value = "dense-test-encoder"
+
+    # Sparse encoder expects dict like {"indices": [...], "values": [...]} for SparseVector kwargs
+    mock_sparse_encoder.embed.return_value = {"indices": [1, 2], "values": [0.5, 0.6]}
+    mock_sparse_encoder.model_short_name.return_value = "sparse-test-encoder"
 
     from django.urls import reverse
 
@@ -1386,8 +1398,13 @@ def test_vector_search_hybrid(mocker, client):
     sparse_prefetch = prefetches[0]
     dense_prefetch = prefetches[1]
 
-    assert sparse_prefetch.using is not None
-    assert dense_prefetch.using is not None
+    assert sparse_prefetch.using == "sparse-test-encoder"
+    assert isinstance(sparse_prefetch.query, models.SparseVector)
+    assert sparse_prefetch.query.indices == [1, 2]
+    assert sparse_prefetch.query.values == [0.5, 0.6]
+
+    assert dense_prefetch.using == "dense-test-encoder"
+    assert dense_prefetch.query == [0.1, 0.2, 0.3]
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
