@@ -552,13 +552,31 @@ def deindex_run_content_files(run_id, unpublished_only):
 def cleanup_deleted_content_files():
     """
     Physically delete ContentFile records that have been soft-deleted
-    (published=False) for more than 14 days.
+    (published=False) for longer than settings.CONTENT_FILE_RETENTION_DAYS.
+
+    Scoped to ETL sources whose contentfiles are managed by the soft-delete
+    flow (RESOURCE_FILE_ETL_SOURCES) so that contentfiles owned by other
+    sources are not affected.
     """
-    cutoff = now_in_utc() - datetime.timedelta(days=14)
-    deleted_count, _ = ContentFile.objects.filter(
-        published=False, updated_on__lt=cutoff
-    ).delete()
-    log.info("cleanup_deleted_content_files: deleted %d content files", deleted_count)
+    cutoff = now_in_utc() - datetime.timedelta(
+        days=settings.CONTENT_FILE_RETENTION_DAYS
+    )
+    eligible_ids = ContentFile.objects.filter(
+        published=False,
+        updated_on__lt=cutoff,
+        run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
+    ).values_list("id", flat=True)
+
+    total_deleted = 0
+    chunk_size = settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE
+    while True:
+        chunk = list(eligible_ids[:chunk_size])
+        if not chunk:
+            break
+        deleted_count, _ = ContentFile.objects.filter(id__in=chunk).delete()
+        total_deleted += deleted_count
+
+    log.info("cleanup_deleted_content_files: deleted %d content files", total_deleted)
 
 
 @contextmanager
