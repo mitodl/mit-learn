@@ -55,10 +55,7 @@ const ReCaptcha = React.forwardRef<GoogleReCAPTCHA, ReCaptchaProps>(
             sitekey={siteKey}
             theme="light"
             onChange={(token: string | null) => onChange(token)}
-            onExpired={() => {
-              onExpired?.()
-              onChange(null)
-            }}
+            onExpired={onExpired}
           />
           {error && helperText && <ErrorText>{helperText}</ErrorText>}
         </div>
