@@ -1,6 +1,7 @@
 import React from "react"
 import Link from "next/link"
-import { Container, Skeleton, Typography, styled, theme } from "ol-components"
+import { Skeleton, Typography, styled, theme } from "ol-components"
+import VideoContainer from "./VideoContainer"
 import type { VideoPlaylistResource } from "api/v1"
 
 const Section = styled.section({
@@ -13,6 +14,8 @@ const Heading = styled(Typography)({
   textTransform: "uppercase",
   color: theme.custom.colors.black,
   marginBottom: "32px",
+  lineHeight: "36px" /* 150% */,
+  letterSpacing: "1.92px",
 })
 
 const Grid = styled.div({
@@ -44,6 +47,7 @@ const CollectionType = styled(Typography)({
   letterSpacing: "0.04em",
   color: theme.custom.colors.silverGrayDark,
   marginBottom: "8px",
+  lineHeight: "16px" /* 133.333% */,
 })
 
 const CollectionTitle = styled(Typography)({
@@ -52,7 +56,7 @@ const CollectionTitle = styled(Typography)({
   color: theme.custom.colors.darkGray2,
   marginBottom: "8px",
   transition: "color 0.15s",
-
+  lineHeight: "150%" /* 150% */,
   "a:hover &": {
     color: theme.custom.colors.red,
   },
@@ -61,6 +65,7 @@ const CollectionTitle = styled(Typography)({
 const CollectionMeta = styled(Typography)({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
+  lineHeight: "16px" /* 133.333% */,
 })
 
 const parseDurationToHoursAndMinutes = (duration?: string): string | null => {
@@ -131,7 +136,7 @@ const OtherCollections: React.FC<OtherCollectionsProps> = ({
 
   return (
     <Section>
-      <Container>
+      <VideoContainer>
         <Heading>Other Collections</Heading>
 
         <Grid>
@@ -156,7 +161,7 @@ const OtherCollections: React.FC<OtherCollectionsProps> = ({
                 </CollectionLink>
               ))}
         </Grid>
-      </Container>
+      </VideoContainer>
     </Section>
   )
 }

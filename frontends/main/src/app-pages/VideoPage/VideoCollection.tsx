@@ -1,5 +1,6 @@
 import React from "react"
-import { Container, Typography, styled, theme } from "ol-components"
+import { Typography, styled, theme } from "ol-components"
+import VideoContainer from "./VideoContainer"
 import type { VideoResource } from "api/v1"
 import { VideoCard, VideoCardSkeleton } from "./VideoCard"
 
@@ -9,7 +10,7 @@ import { VideoCard, VideoCardSkeleton } from "./VideoCard"
 
 const CollectionSection = styled.div({})
 
-const StyledContainer = styled(Container)({
+const StyledContainer = styled(VideoContainer)({
   padding: "0 48px !important",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
 })

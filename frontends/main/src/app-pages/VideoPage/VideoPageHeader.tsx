@@ -1,13 +1,7 @@
 import React from "react"
-import {
-  Breadcrumbs,
-  Container,
-  Skeleton,
-  Typography,
-  styled,
-  theme,
-} from "ol-components"
+import { Breadcrumbs, Skeleton, Typography, styled, theme } from "ol-components"
 import type { VideoPlaylistResource } from "api/v1"
+import VideoContainer from "./VideoContainer"
 
 const BreadcrumbBar = styled.div({
   padding: "32px 0 16px 0",
@@ -31,6 +25,8 @@ const CollectionLabel = styled.span(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.black,
   marginBottom: "8px",
+  lineHeight: "150%" /* 18px */,
+  letterSpacing: "1.92px",
 }))
 
 const PageTitle = styled.h1(({ theme }) => ({
@@ -41,6 +37,7 @@ const PageTitle = styled.h1(({ theme }) => ({
   margin: "0 0 24px",
   lineHeight: "120%",
   marginBottom: "18px",
+  letterSpacing: "-0.88px",
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h3,
     margin: "0 0 18px",
@@ -55,6 +52,7 @@ const PageDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
   maxWidth: "640px",
   ...theme.typography.body1,
+  lineHeight: "26px",
 }))
 
 type VideoPageHeaderProps = {
@@ -69,7 +67,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
   return (
     <>
       <BreadcrumbBar>
-        <Container>
+        <VideoContainer>
           <StyledBreadcrumbs
             variant="light"
             ancestors={[
@@ -78,11 +76,11 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
             ]}
             current={playlist?.title}
           />
-        </Container>
+        </VideoContainer>
       </BreadcrumbBar>
 
       <HeaderSection>
-        <Container>
+        <VideoContainer>
           {collectionLabel === null ? (
             <Skeleton width={140} height={24} style={{ marginBottom: 18 }} />
           ) : (
@@ -90,7 +88,6 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
           )}
 
           <PageTitle>{playlist?.title ?? <Skeleton width={380} />}</PageTitle>
-
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (
@@ -99,7 +96,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
                 "Conversations with MIT faculty on the future of science, technology, and society."}
             </PageDescription>
           )}
-        </Container>
+        </VideoContainer>
       </HeaderSection>
     </>
   )

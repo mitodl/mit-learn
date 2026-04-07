@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import Image from "next/image"
-import { Container, styled } from "ol-components"
+import { styled } from "ol-components"
+import VideoContainer from "./VideoContainer"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 
@@ -12,9 +13,9 @@ const Section = styled.div({
 
 const FeaturedGrid = styled.div(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "2fr 3fr",
+  gridTemplateColumns: "3.95fr 4.6fr",
   columnGap: "40px",
-  alignItems: "center",
+  alignItems: "flex-start",
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "1fr",
   },
@@ -58,6 +59,7 @@ const FeaturedTitle = styled.h2(({ theme }) => ({
   lineHeight: "120%",
   margin: "0 0 16px",
   cursor: "pointer",
+  fontSize: "64px",
   transition: "color 0.2s",
   "&:hover": {
     color: theme.custom.colors.red,
@@ -93,7 +95,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
 
   return (
     <Section>
-      <Container>
+      <VideoContainer>
         <FeaturedGrid>
           <ImageWrapper onClick={() => onPlay(video)}>
             <Image
@@ -115,7 +117,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
             )}
           </TextSide>
         </FeaturedGrid>
-      </Container>
+      </VideoContainer>
     </Section>
   )
 }

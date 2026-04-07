@@ -10,7 +10,7 @@ const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 const VideoCardItem = styled.div({
   display: "flex",
   gap: "24px",
-  padding: "24px 0",
+  padding: "24px 0 23px 0",
   alignItems: "flex-start",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   cursor: "pointer",
@@ -27,7 +27,7 @@ const VideoCardItem = styled.div({
 const ThumbnailWrapper = styled.div({
   position: "relative",
   flexShrink: 0,
-  width: 200,
+  width: 160,
   aspectRatio: "16/9",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.black,
@@ -39,6 +39,8 @@ const ThumbnailWrapper = styled.div({
 
 const ThumbnailImage = styled(Image)({
   objectFit: "cover",
+  width: "160px",
+  height: "90px",
 })
 
 const DurationBadge = styled.span(({ theme }) => ({
@@ -72,6 +74,8 @@ const CardTitle = styled(Typography)({
   fontSize: "20px",
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
+  lineHeight: "26px" /* 130% */,
+  marginTop: "6px",
 })
 
 const CardMetaRow = styled.div({
@@ -90,6 +94,7 @@ const CardMetaGroup = styled.div({
 const CardMetaValue = styled(Typography)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
+  lineHeight: "22px",
 }))
 
 type VideoCardProps = {
@@ -125,7 +130,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
           src={imageUrl}
           alt={resource.title}
           fill
-          sizes="200px"
+          sizes="160px"
           onError={() => setImgError(true)}
         />
         {duration && <DurationBadge>{duration}</DurationBadge>}
