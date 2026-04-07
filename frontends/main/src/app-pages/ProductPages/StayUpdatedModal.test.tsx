@@ -103,7 +103,7 @@ describe("StayUpdatedModal", () => {
     await user.click(screen.getByRole("button", { name: "Notify Me" }))
 
     await screen.findByText(TEST_EMAIL)
-    expect(screen.getByText(/we'll keep you updated at/)).toBeInTheDocument()
+    expect(screen.getByText(/we'll keep you updated at/i)).toBeInTheDocument()
   })
 
   it("replaces the form with the success view after submission", async () => {
@@ -153,5 +153,40 @@ describe("StayUpdatedModal", () => {
     expect(
       screen.queryByRole("dialog", { name: "Stay Updated" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("shows error message when form submission fails", async () => {
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
+      {
+        id: STAY_UPDATED_FORM_ID,
+        name: "Stay Updated",
+        form_type: "hubspot",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+        archived: false,
+        field_groups: [],
+      },
+    )
+    setMockResponse.post(
+      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    // Error message should be displayed
+    expect(await screen.findByRole("alert")).toBeInTheDocument()
+    // Form should still be visible (not replaced with success view)
+    expect(
+      screen.getByRole("button", { name: "Notify Me" }),
+    ).toBeInTheDocument()
   })
 })

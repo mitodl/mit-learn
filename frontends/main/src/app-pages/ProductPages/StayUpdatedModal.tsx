@@ -59,6 +59,7 @@ const StayUpdatedDialogInner: React.FC = () => {
   const { mutate: submitForm, isPending } = useHubspotFormSubmit()
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
   const doneButton = (
     <DialogActions>
       <Button variant="primary" onClick={() => modal.hide()}>
@@ -76,6 +77,16 @@ const StayUpdatedDialogInner: React.FC = () => {
     >
       {!submitted && (
         <StayUpdatedDialogContainer>
+          {submissionError && (
+            <Typography
+              variant="body2"
+              color="error"
+              align="center"
+              role="alert"
+            >
+              {submissionError}
+            </Typography>
+          )}
           <HubspotForm
             form={hubspotForm}
             recaptchaEnabled={Boolean(recaptchaSiteKey)}
@@ -89,6 +100,8 @@ const StayUpdatedDialogInner: React.FC = () => {
               </Button>
             }
             onSubmit={(values, _event, recaptchaToken) => {
+              // Clear previous errors when user retries
+              setSubmissionError(null)
               const fields = mapValuesToFields(values)
               const emailField = fields.find((field) => field.name === "email")
               if (emailField && typeof emailField.value === "string") {
@@ -96,7 +109,19 @@ const StayUpdatedDialogInner: React.FC = () => {
               }
               submitForm(
                 { formId: stayUpdatedFormId, fields, recaptchaToken },
-                { onSuccess: () => setSubmitted(true) },
+                {
+                  onSuccess: () => {
+                    setSubmissionError(null)
+                    setSubmitted(true)
+                  },
+                  onError: (error) => {
+                    const errorMessage =
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to submit form. Please try again."
+                    setSubmissionError(errorMessage)
+                  },
+                },
               )
             }}
           />
