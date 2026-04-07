@@ -95,14 +95,7 @@ function convertToEmbedUrl(url: string): string | null {
   return null
 }
 
-function hexToRgba(
-  hex: string,
-  alpha: number,
-):
-  | readonly string[]
-  | import("csstype").Property.BackgroundColor
-  | readonly import("csstype").Property.BackgroundColor[]
-  | undefined {
+function hexToRgba(hex: string, alpha: number): string | undefined {
   const normalized = hex.trim().replace(/^#/, "")
 
   if (![3, 4, 6, 8].includes(normalized.length)) {
