@@ -46,6 +46,11 @@ const renderProductPageTemplate = () => {
 }
 
 describe("ProductPageTemplate stay-updated trigger", () => {
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+    mockedUseHubspotFormDetail.mockReset()
+  })
+
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
   })

@@ -89,6 +89,22 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+  const stayUpdatedFormId =
+    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  if (stayUpdatedFormId) {
+    setMockResponse.get(
+      learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
+      {
+        id: stayUpdatedFormId,
+        name: "Stay Updated",
+        form_type: "hubspot",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+        archived: false,
+        field_groups: [],
+      },
+    )
+  }
   setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
   return { courses, childPrograms }
