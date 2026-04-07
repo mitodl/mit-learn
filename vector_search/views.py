@@ -100,8 +100,15 @@ class QdrantView(APIView):
         search_filter = qdrant_query_conditions(
             params, collection_name=search_collection
         )
-        prefetch_multiplier = 20
+        prefetch_multiplier = getattr(
+            settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", 20
+        )
         prefetch_limit = (offset + limit) * prefetch_multiplier
+        prefetch_max_limit = getattr(
+            settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", None
+        )
+        if prefetch_max_limit is not None:
+            prefetch_limit = min(prefetch_limit, prefetch_max_limit)
         if query_string:
             search_params = {
                 "collection_name": search_collection,
