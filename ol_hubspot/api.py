@@ -17,12 +17,19 @@ def get_hubspot_client() -> HubSpot:
 
 
 def get_form(*, form_id: str, archived: bool | None = None):
-    """Fetch a single HubSpot form definition."""
+    """Fetch a single HubSpot form definition, preserving raw JSON shape."""
     client = get_hubspot_client()
-    return client.marketing.forms.forms_api.get_by_id(
-        form_id=form_id,
-        archived=archived,
+    query_params = {}
+    if archived is not None:
+        query_params["archived"] = str(archived).lower()
+    response = client.api_request(
+        {
+            "path": f"/marketing/v3/forms/{form_id}",
+            "method": "GET",
+            "query_params": query_params,
+        }
     )
+    return response.json() if response.content else {}
 
 
 def list_forms(
@@ -81,7 +88,16 @@ def submit_form(
     )
     portal_id = account_response.json()["portalId"]
 
-    fields = payload.get("fields", [])
+    raw_fields = payload.get("fields", [])
+    fields = [
+        {
+            **f,
+            "value": ";".join(f["value"])
+            if isinstance(f.get("value"), list)
+            else f.get("value"),
+        }
+        for f in raw_fields
+    ]
     hubspot_payload = {"fields": fields}
 
     # Build context object using documented HubSpot keys.

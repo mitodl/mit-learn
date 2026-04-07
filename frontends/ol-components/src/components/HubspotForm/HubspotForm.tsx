@@ -82,11 +82,28 @@ const normalizeField = (
 ): HubspotFormField | null => {
   const name = field.name?.trim()
   const label = field.label?.trim()
-  const fieldType = field.field_type
+  const fieldType = field.fieldType ?? field.field_type
 
   if (!name || !label || !fieldType) {
     return null
   }
+
+  const rawDefaultValue =
+    field.defaultValues ??
+    field.default_values ??
+    field.defaultValue ??
+    field.default_value
+
+  const normalizedDefaultValue =
+    rawDefaultValue === null
+      ? undefined
+      : fieldType === "multiple_checkboxes"
+        ? Array.isArray(rawDefaultValue)
+          ? rawDefaultValue
+          : typeof rawDefaultValue === "string"
+            ? [rawDefaultValue]
+            : undefined
+        : rawDefaultValue
 
   return {
     name,
@@ -96,7 +113,7 @@ const normalizeField = (
     hidden: field.hidden ?? undefined,
     description: field.description ?? undefined,
     placeholder: field.placeholder ?? undefined,
-    defaultValue: field.defaultValue ?? field.default_value,
+    defaultValue: normalizedDefaultValue,
     options: field.options
       ?.map((option) => {
         if (!option.value || !option.label) {

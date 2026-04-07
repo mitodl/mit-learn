@@ -10,22 +10,46 @@ from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
 
 
 def test_get_form(mocker, settings):
-    """Test fetching a single form uses the SDK method and args."""
+    """Test fetching a single form uses SDK api_request and returns JSON."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
     form_id = "form-123"
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    response = mocker.Mock()
+    response.content = b'{"id":"form-123"}'
+    response.json.return_value = {"id": "form-123"}
+    client.api_request.return_value = response
 
-    get_form(form_id=form_id, archived=True)
+    result = get_form(form_id=form_id, archived=True)
 
     hubspot_class.assert_called_once_with(
         access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN
     )
-
-    client.marketing.forms.forms_api.get_by_id.assert_called_once_with(
-        form_id=form_id,
-        archived=True,
+    client.api_request.assert_called_once_with(
+        {
+            "path": f"/marketing/v3/forms/{form_id}",
+            "method": "GET",
+            "query_params": {"archived": "true"},
+        }
     )
+    assert result == {"id": "form-123"}
+
+
+def test_get_form_raises_api_exception_for_error_response(mocker, settings):
+    """Test fetching a single form passes through SDK ApiException."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    form_id = "form-123"
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+    client.api_request.side_effect = ApiException(
+        status=404, reason='{"message":"Not Found"}'
+    )
+
+    with pytest.raises(ApiException) as exc_info:
+        get_form(form_id=form_id, archived=False)
+
+    assert exc_info.value.status == 404
+    assert exc_info.value.reason == '{"message":"Not Found"}'
 
 
 def test_list_forms(mocker, settings):

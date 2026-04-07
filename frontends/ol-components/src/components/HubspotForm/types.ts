@@ -51,13 +51,16 @@ interface HubspotFormField {
 interface HubspotFormFieldInput {
   name?: string | null
   label?: string | null
+  fieldType?: HubspotFieldType | null
   field_type?: HubspotFieldType | null
   required?: boolean | null
   hidden?: boolean | null
   description?: string | null
   placeholder?: string | null
   defaultValue?: HubspotFormValue
+  defaultValues?: string[] | null
   default_value?: HubspotFormValue
+  default_values?: string[] | null
   options?: HubspotFormOptionInput[]
 }
 
