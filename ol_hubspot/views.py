@@ -286,9 +286,12 @@ def hubspot_form_submit_view(request, form_id: str):
         if client_ip:
             payload["ip_address"] = client_ip
         recaptcha_token = payload.pop("recaptcha_token", None)
-        if recaptcha_token and not verify_recaptcha(
-            recaptcha_token,
-            remote_ip=payload.get("ip_address"),
+        if settings.RECAPTCHA_SECRET_KEY and (
+            not recaptcha_token
+            or not verify_recaptcha(
+                recaptcha_token,
+                remote_ip=payload.get("ip_address"),
+            )
         ):
             return Response(
                 {"recaptcha_token": ["reCAPTCHA verification failed."]},
