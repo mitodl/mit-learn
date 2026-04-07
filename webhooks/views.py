@@ -19,7 +19,7 @@ from learning_resources.utils import (
     resource_delete_actions,
 )
 from main.utils import clear_views_cache
-from video_shorts.api import upsert_video_short
+from video_shorts.api import delete_video_short, upsert_video_short
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
@@ -132,7 +132,11 @@ class VideoShortWebhookView(BaseWebhookView):
         try:
             data = self.get_data(request)
             video_data = data.get("video_metadata")
-            upsert_video_short(video_data)
+            if video_data.get("delete", False):
+                video_id = data.get("video_id")
+                delete_video_short(video_id)
+            else:
+                upsert_video_short(video_data)
             clear_views_cache()
             return self.success()
         except json.JSONDecodeError:

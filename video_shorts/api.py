@@ -10,6 +10,7 @@ from django.conf import settings
 
 from video_shorts.models import VideoShort
 from video_shorts.serializers import VideoShortWebhookSerializer
+from video_shorts.tasks import delete_video_short_from_s3
 
 log = logging.getLogger(__name__)
 
@@ -67,3 +68,12 @@ def upsert_video_short(data: dict) -> VideoShort:
     )
     video_short_serializer.is_valid(raise_exception=True)
     return video_short_serializer.save()
+
+
+def delete_video_short(video_id: str) -> None:
+    """Delete a video short based on Youtube metadata"""
+    video = VideoShort.objects.filter(video_id=video_id).first()
+    if video:
+        video_url = video.video_url
+        video.delete()
+        delete_video_short_from_s3.delay(video_url)
