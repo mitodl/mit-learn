@@ -320,6 +320,11 @@ const _learningResourceShared = (): Partial<
     published: faker.datatype.boolean(),
     title: startCase(faker.lorem.words()),
     topics: repeat(learningResourceTopic),
+    /**
+     * In practice this is something like "Course", "Program", or "Podcast Episode",
+     * but it's just a string as far as the frontend is concerned.
+     */
+    resource_category: faker.lorem.word(),
     url: faker.internet.url(),
   }
 }
@@ -376,6 +381,7 @@ const program: PartialFactory<ProgramResource> = (overrides = {}) => {
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Program,
+
       resource_type_group: faker.helpers.arrayElement([
         ResourceTypeGroupEnum.Program,
         // some programs ingested from mitxonline have resource_type_group: course
@@ -415,6 +421,7 @@ const course: LearningResourceFactory<CourseResource> = (overrides = {}) => {
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Course,
+
       resource_type_group: ResourceTypeGroupEnum.Course,
     },
     {
@@ -451,6 +458,7 @@ const learningPath: LearningResourceFactory<LearningPathResource> = (
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.LearningPath,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {
@@ -567,6 +575,7 @@ const podcast: LearningResourceFactory<PodcastResource> = (overrides = {}) => {
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Podcast,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {
@@ -587,6 +596,7 @@ const document: LearningResourceFactory<DocumentResource> = (
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Document,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {},
@@ -601,6 +611,7 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.PodcastEpisode,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {
@@ -622,6 +633,7 @@ const video: LearningResourceFactory<VideoResource> = (overrides = {}) => {
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.Video,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {
@@ -641,6 +653,7 @@ const videoPlaylist: LearningResourceFactory<VideoPlaylistResource> = (
     _learningResourceShared(),
     {
       resource_type: ResourceTypeEnum.VideoPlaylist,
+
       resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
     },
     {

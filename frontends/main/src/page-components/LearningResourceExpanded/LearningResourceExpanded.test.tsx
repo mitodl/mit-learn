@@ -11,6 +11,7 @@ import user from "@testing-library/user-event"
 import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { kebabCase } from "lodash"
+import { faker } from "@faker-js/faker/locale/en"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -395,7 +396,7 @@ describe.each([true, false])(
         setup({ resource })
 
         const chatButton = screen.queryByRole("button", {
-          name: "Ask TIM about this course",
+          name: /Ask\sTIM/,
         })
         const shouldBeVisible =
           enabled &&
@@ -405,6 +406,21 @@ describe.each([true, false])(
         expect(!!chatButton).toBe(shouldBeVisible)
       },
     )
+
+    test("Chat button label includes resource category", () => {
+      if (!enabled) return
+      const resource = factories.learningResources.resource({
+        resource_type: faker.helpers.arrayElement([
+          ResourceTypeEnum.Course,
+          ResourceTypeEnum.Program,
+        ]),
+      })
+      setup({ resource })
+
+      screen.getByRole("button", {
+        name: `Ask TIM about this ${resource.resource_category.toLocaleLowerCase()}`,
+      })
+    })
 
     test("Rerendering with a new resource keeps drawer open if and only if AiChat is enabled", async () => {
       if (!enabled) return
