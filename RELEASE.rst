@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.62.2
+--------------
+
+- Async vector/qdrant search (#3167)
+- 10735 add hubspot tracking code to the learn front end (#3152)
+- Video short webhook deletion requests (#3159)
+- Fix AskTim label for programs (#3134)
+
 Version 0.62.1 (Released April 07, 2026)
 --------------
 
