@@ -31,6 +31,7 @@ const setupApis = () => {
 describe("StayUpdatedModal", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = "test-site-key"
 
     mockedHubspotForm.mockImplementation((props: HubspotFormProps) => (
       <div>
@@ -53,6 +54,7 @@ describe("StayUpdatedModal", () => {
 
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+    delete process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
   })
 
   it("shows the form view when the modal is opened", async () => {
@@ -67,6 +69,27 @@ describe("StayUpdatedModal", () => {
       screen.getByRole("button", { name: "Notify Me" }),
     ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
+    const lastHubspotFormProps = mockedHubspotForm.mock.calls.at(
+      -1,
+    )?.[0] as HubspotFormProps
+    expect(lastHubspotFormProps.recaptchaEnabled).toBe(true)
+    expect(lastHubspotFormProps.recaptchaSiteKey).toBe("test-site-key")
+  })
+
+  it("disables recaptcha when no frontend site key is configured", async () => {
+    delete process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    setupApis()
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal)
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    const lastHubspotFormProps = mockedHubspotForm.mock.calls.at(
+      -1,
+    )?.[0] as HubspotFormProps
+    expect(lastHubspotFormProps.recaptchaEnabled).toBe(false)
+    expect(lastHubspotFormProps.recaptchaSiteKey).toBeUndefined()
   })
 
   it("shows the success view with the submitted email after form submission", async () => {

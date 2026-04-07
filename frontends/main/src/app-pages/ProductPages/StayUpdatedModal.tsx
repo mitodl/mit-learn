@@ -51,6 +51,8 @@ const mapValuesToFields = (
 const StayUpdatedDialogInner: React.FC = () => {
   const modal = NiceModal.useModal()
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const recaptchaSiteKey =
+    (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "").trim() || undefined
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
@@ -76,7 +78,8 @@ const StayUpdatedDialogInner: React.FC = () => {
         <StayUpdatedDialogContainer>
           <HubspotForm
             form={hubspotForm}
-            recaptchaEnabled
+            recaptchaEnabled={Boolean(recaptchaSiteKey)}
+            recaptchaSiteKey={recaptchaSiteKey}
             isLoading={isLoading}
             isSubmitting={isPending}
             submitLabel="Notify Me"
