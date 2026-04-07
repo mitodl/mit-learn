@@ -453,6 +453,25 @@ def test_submit_form_invalid_field_value_type(client, settings):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+def test_submit_form_rejects_empty_recaptcha_token(client, settings):
+    """Submit endpoint rejects blank recaptcha_token strings."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    # Empty string should be rejected by serializer
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "",
+    }
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "recaptcha_token" in response.json()
+
+
 def test_submit_form_missing_token_returns_503(client, settings):
     """Submit endpoint returns 503 if token is not configured."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = None

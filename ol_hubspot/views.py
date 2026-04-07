@@ -60,7 +60,7 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
     hutk = serializers.CharField(required=False, allow_blank=True)
     page_name = serializers.CharField(required=False, allow_blank=True)
     submitted_at = serializers.IntegerField(required=False, min_value=0)
-    recaptcha_token = serializers.CharField(required=False, allow_blank=True)
+    recaptcha_token = serializers.CharField(required=False, allow_blank=False)
     # Backward-compatible aliases
     page_title = serializers.CharField(required=False, allow_blank=True)
     timestamp = serializers.IntegerField(required=False, min_value=0)
