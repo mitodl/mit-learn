@@ -402,17 +402,45 @@ def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
     submit_stub.assert_not_called()
 
 
-def test_submit_form_rejects_missing_recaptcha_when_configured(
+def test_submit_form_allows_missing_token_when_secret_configured(
     client, settings, mocker
 ):
-    """Anonymous callers cannot bypass reCAPTCHA by omitting the token."""
+    """Submissions without tokens are allowed when secret is configured.
+
+    This handles frontend misconfiguration (NEXT_PUBLIC_RECAPTCHA_SITE_KEY not set).
+    Only reject if a token IS provided but is invalid.
+    """
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
     )
-    # Omit recaptcha_token entirely — should be rejected, not silently skipped
     payload = {"fields": [{"name": "email", "value": "anon@example.com"}]}
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    # Token is missing but allowed (frontend may not be configured for reCAPTCHA)
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once()
+
+
+def test_submit_form_rejects_invalid_token_when_secret_configured(
+    client, settings, mocker
+):
+    """Invalid tokens are still rejected when secret is configured."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "invalid-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
     submit_stub = mocker.patch("ol_hubspot.views.submit_form")
 
     response = client.post(submit_url, payload, format="json")
