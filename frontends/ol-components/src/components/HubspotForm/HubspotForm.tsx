@@ -439,7 +439,9 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
     const handleRecaptchaChange = React.useCallback(
       (token: string | null) => {
         setRecaptchaToken(token)
-        setRecaptchaError(null)
+        if (token) {
+          setRecaptchaError(null)
+        }
         onRecaptchaChange?.(token)
       },
       [onRecaptchaChange],
