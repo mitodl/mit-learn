@@ -113,7 +113,7 @@ const StayUpdatedDialogInner: React.FC = () => {
               aria-hidden
             />
             <Typography variant="body1" color="black" align="center">
-              Thanks! we&apos;ll keep you updated at <strong>{email}</strong>
+              Thanks! We&apos;ll keep you updated at <strong>{email}</strong>
             </Typography>
           </Stack>
         </StayUpdatedDialogContainer>
