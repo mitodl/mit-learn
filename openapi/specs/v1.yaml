@@ -11941,6 +11941,7 @@ components:
           minimum: 0
         recaptcha_token:
           type: string
+          minLength: 1
         page_title:
           type: string
         timestamp:
