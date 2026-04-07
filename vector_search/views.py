@@ -320,6 +320,7 @@ class ContentFilesVectorSearchView(QdrantView):
             if request_data.data.get("dev_mode"):
                 return Response(response)
             else:
+
                 def serialize():
                     return ContentFileVectorSearchResponseSerializer(
                         response, context={"request": request}
