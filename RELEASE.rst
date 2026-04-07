@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.62.1 (Released April 07, 2026)
+--------------
+
+- removing unused payload fields (#3154)
+- Set CSRF cookie on GET /api/v0/users/me/ (#3162)
+- HubSpot API form context (#3165)
+- Update DRF pagination to only use limited fields (#3106)
+
 Version 0.62.0 (Released April 06, 2026)
 --------------
 
