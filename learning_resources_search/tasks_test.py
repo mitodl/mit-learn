@@ -296,6 +296,7 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
 def test_start_recreate_index_existing_reindexing_index(
     mocker, mocked_celery, user, remove_existing_reindexing_tags
 ):
+    """start_recreate_index should stop when reindexing indexes already exist."""
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
     indexes = ["program"]
@@ -1308,10 +1309,59 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
         updated_on=recent_cutoff
     )
 
-    cleanup_deleted_content_files()
+    result = cleanup_deleted_content_files()
+    assert result == 3
 
     remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
     for file in old_unpublished:
         assert file.id not in remaining_ids
     for file in recent_unpublished + still_published + ineligible_old_unpublished:
         assert file.id in remaining_ids
+
+
+def test_cleanup_deleted_content_files_logs_context(mocker, settings):
+    """cleanup_deleted_content_files should log start and finish context."""
+    settings.CONTENT_FILE_RETENTION_DAYS = 14
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
+    )
+    files = ContentFileFactory.create_batch(3, run=run, published=False)
+    old_cutoff = now_in_utc() - timedelta(days=15)
+    ContentFile.objects.filter(id__in=[f.id for f in files]).update(
+        updated_on=old_cutoff
+    )
+
+    mocker.patch("learning_resources_search.tasks.log.info")
+
+    deleted_count = cleanup_deleted_content_files()
+
+    assert deleted_count == 3
+
+
+def test_cleanup_deleted_content_files_no_eligible_returns_zero(mocker, settings):
+    """cleanup_deleted_content_files should no-op and return 0 when nothing is eligible."""
+    settings.CONTENT_FILE_RETENTION_DAYS = 14
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
+    )
+    ContentFileFactory.create_batch(2, run=run, published=True)
+
+    mocker.patch("learning_resources_search.tasks.log.info")
+
+    deleted_count = cleanup_deleted_content_files()
+
+    assert deleted_count == 0
+
+
+def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(mocker):
+    """cleanup_deleted_content_files should return an error string for non-retry exceptions."""
+    mocker.patch(
+        "learning_resources_search.tasks.ContentFile.objects.filter",
+        side_effect=RuntimeError("boom"),
+    )
+
+    result = cleanup_deleted_content_files()
+
+    assert result == "cleanup_deleted_content_files threw an error"

@@ -1005,10 +1005,11 @@ def load_content_files(
             direct_learning_resource__isnull=False
         ):
             file.published = False
-            file.save()
+            file.save(update_fields=["published"])
             resource = file.direct_learning_resource
-            resource.published = False
-            resource.save()
+            if resource.published:
+                resource.published = False
+                resource.save(update_fields=["published"])
             update_index(resource, newly_created=False)
         stale_published_files.filter(direct_learning_resource__isnull=True).update(
             published=False
