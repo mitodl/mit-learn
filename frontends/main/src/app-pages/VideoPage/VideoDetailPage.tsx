@@ -104,6 +104,12 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     top: 0,
     left: 0,
   },
+  ".vjs-big-play-button": {
+    width: "64px !important",
+    height: "64px !important",
+    lineHeight: "64px !important",
+    borderRadius: "50% !important",
+  },
 }))
 
 const NoVideoMessage = styled.div({
@@ -410,15 +416,14 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               style={{ marginBottom: 12 }}
             />
           ) : (
-            <VideoTitle>The Roboticist Who Builds Trust</VideoTitle>
+            <VideoTitle>{video?.title}</VideoTitle>
           )}
 
           {/* Meta: duration  topic1 · topic2 */}
           {!isLoading && (duration || topicNames) && (
             <MetaRow>
               <DurationText>{duration && <span>{duration}</span>}</DurationText>
-              {/* <TopicText>{topicNames && <span>{topicNames}</span>}</TopicText> */}
-              <TopicText>Robotics - AI - Human-Machine Interaction</TopicText>
+              <TopicText>{topicNames}</TopicText>
             </MetaRow>
           )}
 
@@ -460,13 +465,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {/* Description */}
           {!isLoading && video?.description && (
-            <DescriptionText>
-              Most robotics labs optimize for speed or strength. Rus optimizes
-              for trust. Her work on soft robots, self-assembling machines, and
-              programmable matter starts from a different premise: that the
-              hardest problem isn’t making a robot that works, it’s making one
-              that people are willing to work alongside.
-            </DescriptionText>
+            <DescriptionText>{video?.description}</DescriptionText>
           )}
 
           {/* Share button */}
@@ -516,7 +515,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 <>
                   <MoreFromTitle>More from {playlistLabel}</MoreFromTitle>
                   <MoreFromList>
-                    {otherVideos.splice(0, 3).map((item) => {
+                    {otherVideos.map((item) => {
                       const itemDuration = item.video?.duration
                         ? formatDurationClockTime(item.video.duration)
                         : null
@@ -543,12 +542,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                             </MoreFromThumbnailWrapper>
                             <MoreFromTextSide>
                               <MoreFromItemTitle className="mf-title">
-                                Decoding Climate from Ancient Ice
+                                {item.title}
                               </MoreFromItemTitle>
                               {item.description && (
                                 <MoreFromItemMeta>
-                                  What 800,000-year-old ice cores reveal about
-                                  the climate we're building now.
+                                  {item.description}
                                 </MoreFromItemMeta>
                               )}
                             </MoreFromTextSide>
