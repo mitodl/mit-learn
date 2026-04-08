@@ -25,44 +25,41 @@ type ReCaptchaProps = {
   error?: boolean
   helperText?: string
   siteKey?: string
+  ref?: React.Ref<GoogleReCAPTCHA>
 }
 
-const ReCaptcha = React.forwardRef<GoogleReCAPTCHA, ReCaptchaProps>(
-  function ReCaptcha(
-    {
-      onChange,
-      onExpired,
-      disabled = false,
-      error = false,
-      helperText,
-      siteKey,
-    },
-    ref,
-  ) {
-    if (!siteKey) {
-      console.warn("ReCaptcha: No siteKey provided, skipping render")
-      return null
-    }
+const ReCaptcha = ({
+  onChange,
+  onExpired,
+  disabled = false,
+  error = false,
+  helperText,
+  siteKey,
+  ref,
+}: ReCaptchaProps) => {
+  if (!siteKey) {
+    console.warn("ReCaptcha: No siteKey provided, skipping render")
+    return null
+  }
 
-    return (
-      <ReCaptchaContainer>
-        <div
-          aria-disabled={disabled}
-          style={disabled ? { opacity: 0.6, pointerEvents: "none" } : undefined}
-        >
-          <GoogleReCAPTCHA
-            ref={ref}
-            sitekey={siteKey}
-            theme="light"
-            onChange={(token: string | null) => onChange(token)}
-            onExpired={onExpired}
-          />
-          {error && helperText && <ErrorText>{helperText}</ErrorText>}
-        </div>
-      </ReCaptchaContainer>
-    )
-  },
-)
+  return (
+    <ReCaptchaContainer>
+      <div
+        aria-disabled={disabled}
+        style={disabled ? { opacity: 0.6, pointerEvents: "none" } : undefined}
+      >
+        <GoogleReCAPTCHA
+          ref={ref}
+          sitekey={siteKey}
+          theme="light"
+          onChange={(token: string | null) => onChange(token)}
+          onExpired={onExpired}
+        />
+        {error && helperText && <ErrorText>{helperText}</ErrorText>}
+      </div>
+    </ReCaptchaContainer>
+  )
+}
 
 export { ReCaptcha }
 export type { ReCaptchaProps }
