@@ -69,7 +69,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined)
   })
 
-  it("shows the trigger button but click handler is not attached when form not yet fetched", () => {
+  it("opens the modal when form id is configured even if the form is not yet fetched", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
@@ -83,7 +83,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(button).toBeEnabled()
 
     button.click()
-    expect(mockedNiceModalShow).not.toHaveBeenCalled()
+    expect(mockedNiceModalShow).toHaveBeenCalled()
   })
 
   it("disables the trigger button when form fetch errors", () => {
