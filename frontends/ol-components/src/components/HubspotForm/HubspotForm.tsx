@@ -416,10 +416,7 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
     },
     ref,
   ) {
-    const [resolvedForm, setResolvedForm] =
-      React.useState<HubspotFormDefinition | null>(
-        form ? normalizeForm(form) : null,
-      )
+    const resolvedForm = form ? normalizeForm(form) : null
     const [values, setValues] = React.useState<
       Record<string, HubspotFormValue>
     >({})
@@ -432,17 +429,13 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
     const recaptchaRef = React.useRef<ReCAPTCHA>(null)
 
     React.useEffect(() => {
-      setResolvedForm(form ? normalizeForm(form) : null)
-    }, [form])
-
-    React.useEffect(() => {
-      if (!resolvedForm) {
+      if (!form) {
         return
       }
-      const nextValues = buildInitialValues(resolvedForm, initialValues)
+      const nextValues = buildInitialValues(normalizeForm(form), initialValues)
       setValues(nextValues)
       onValuesChange?.(nextValues)
-    }, [initialValues, onValuesChange, resolvedForm])
+    }, [form, initialValues, onValuesChange])
 
     const handleChange = React.useCallback(
       (name: string, nextValue: HubspotFormValue) => {
