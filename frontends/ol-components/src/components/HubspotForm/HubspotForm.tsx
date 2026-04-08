@@ -24,7 +24,7 @@ const Form = styled.form({
 
 const Actions = styled.div({
   display: "flex",
-  gap: "8px",
+  gap: "16px",
   justifyContent: "flex-end",
 })
 
