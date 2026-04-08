@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import logging
 import uuid
@@ -979,6 +980,65 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
         count_filter=qdrant_query_conditions(document, collection_name=collection_name),
     )
     return count_result.count > 0
+
+
+async def async_qdrant_aggregations(
+    aggregation_keys: list,
+    facet_filter,
+    collection_name: str = RESOURCES_COLLECTION_NAME,
+) -> dict:
+    """
+    Compute facet aggregations from Qdrant for each requested field.
+    Issues one concurrent facet query per aggregation key and returns results
+    in the same shape used by the OpenSearch aggregation API:
+    ``{"delivery": [{"key": "online", "doc_count": 24}, ...], ...}``
+    Args:
+        aggregation_keys: list of aggregation parameter names.
+            Must be valid keys in the collection's param map
+            (e.g. ``QDRANT_RESOURCE_PARAM_MAP``).
+        search_filter: Qdrant ``models.Filter`` to apply to every facet query,
+            or ``None`` to aggregate over the whole collection.
+        collection_name: name of the Qdrant collection to query.
+    Returns:
+        dict mapping each requested aggregation name to a list of
+        ``{"key": str, "doc_count": int}`` dicts sorted by
+        ``doc_count`` descending.
+    """
+    if not aggregation_keys:
+        return {}
+
+    collection_param_map = {
+        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
+        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
+        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
+    }
+    param_map = collection_param_map.get(collection_name, QDRANT_RESOURCE_PARAM_MAP)
+    client = async_qdrant_client()
+
+    async def _get_facet(agg_key: str):
+        qdrant_field = param_map.get(agg_key)
+        if not qdrant_field:
+            return agg_key, []
+        result = await client.facet(
+            collection_name=collection_name,
+            key=qdrant_field,
+            facet_filter=facet_filter,
+            limit=100,
+        )
+        hits = [
+            {
+                "key": str(hit.value).lower()
+                if isinstance(hit.value, bool)
+                else str(hit.value),
+                "doc_count": hit.count,
+            }
+            for hit in result.hits
+        ]
+        hits.sort(key=lambda x: x["doc_count"], reverse=True)
+        return agg_key, hits
+
+    results = await asyncio.gather(*[_get_facet(key) for key in aggregation_keys])
+    return dict(results)
 
 
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
