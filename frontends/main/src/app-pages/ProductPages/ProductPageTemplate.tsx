@@ -273,10 +273,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   enrollmentAction,
 }) => {
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
-  const stayUpdatedParams = React.useMemo(
-    () => (stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined),
-    [stayUpdatedFormId],
-  )
+  const stayUpdatedParams = stayUpdatedFormId
+    ? { form_id: stayUpdatedFormId }
+    : undefined
   const { data: stayUpdatedForm, isError: stayUpdatedFormRequestFailed } =
     useHubspotFormDetail(stayUpdatedParams)
   const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId)
