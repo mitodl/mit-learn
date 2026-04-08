@@ -95,7 +95,7 @@ const StayUpdatedDialogInner: React.FC = () => {
             isSubmitting={isPending}
             submitLabel="Notify Me"
             actions={
-              <Button variant="text" type="button" onClick={modal.hide}>
+              <Button variant="secondary" type="button" onClick={modal.hide}>
                 Cancel
               </Button>
             }
