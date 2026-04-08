@@ -58,6 +58,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
   it("hides the trigger button when stay-updated form id is missing", () => {
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
+      isError: false,
     } as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate()
@@ -72,30 +73,31 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
+      isError: false,
     } as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate()
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
+    expect(button).toBeEnabled()
 
     button.click()
     expect(mockedNiceModalShow).not.toHaveBeenCalled()
   })
 
-  it("shows the trigger button but click handler is not attached when form fetch errors", () => {
+  it("disables the trigger button when form fetch errors", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
+      isError: true,
     } as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate()
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
-
-    button.click()
-    expect(mockedNiceModalShow).not.toHaveBeenCalled()
+    expect(button).toBeDisabled()
   })
 
   it("attaches click handler when form id is configured and form data exists", () => {
@@ -110,12 +112,14 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         archived: false,
         field_groups: [],
       },
+      isError: false,
     } as unknown as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate()
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
+    expect(button).toBeEnabled()
 
     button.click()
     expect(mockedNiceModalShow).toHaveBeenCalled()
