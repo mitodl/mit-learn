@@ -574,7 +574,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
         <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-          MITx | {program?.program_type}
+          Program{program?.program_type ? `: ${program?.program_type}` : ""}
         </Typography>
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {program?.title}
