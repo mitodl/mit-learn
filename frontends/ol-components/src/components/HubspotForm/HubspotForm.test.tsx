@@ -161,3 +161,32 @@ test("treats null hidden multiple checkbox defaults as empty array", async () =>
     null,
   )
 })
+
+test("renders inline error text in an alert", () => {
+  const form = {
+    id: "test-form",
+    field_groups: [
+      {
+        fields: [
+          {
+            name: "email",
+            label: "Email",
+            field_type: "email",
+            hidden: false,
+          },
+        ],
+      },
+    ],
+  }
+
+  renderWithTheme(
+    <HubspotForm
+      form={form}
+      errorText="Submission failed. Please try again."
+    />,
+  )
+
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Submission failed. Please try again.",
+  )
+})

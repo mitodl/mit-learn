@@ -77,16 +77,6 @@ const StayUpdatedDialogInner: React.FC = () => {
     >
       {!submitted && (
         <StayUpdatedDialogContainer>
-          {submissionError && (
-            <Typography
-              variant="body2"
-              color="error"
-              align="center"
-              role="alert"
-            >
-              {submissionError}
-            </Typography>
-          )}
           <HubspotForm
             form={hubspotForm}
             recaptchaEnabled={Boolean(recaptchaSiteKey)}
@@ -94,6 +84,7 @@ const StayUpdatedDialogInner: React.FC = () => {
             isLoading={isLoading}
             isSubmitting={isPending}
             submitLabel="Notify Me"
+            errorText={submissionError}
             actions={
               <Button variant="secondary" type="button" onClick={modal.hide}>
                 Cancel

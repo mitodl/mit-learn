@@ -45,6 +45,7 @@ describe("StayUpdatedModal", () => {
         >
           Notify Me
         </button>
+        {props.errorText ? <div role="alert">{props.errorText}</div> : null}
         {props.actions}
       </div>
     ))

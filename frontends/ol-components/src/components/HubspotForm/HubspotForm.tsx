@@ -1,7 +1,7 @@
 import React from "react"
 import ReCAPTCHA from "react-google-recaptcha"
 import styled from "@emotion/styled"
-import { Button, Checkbox, TextField } from "@mitodl/smoot-design"
+import { Alert, Button, Checkbox, TextField } from "@mitodl/smoot-design"
 import { ReCaptcha } from "../ReCaptcha"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
 import { Radio } from "../Radio/Radio"
@@ -68,6 +68,7 @@ type HubspotFormProps = {
   recaptchaEnabled?: boolean
   recaptchaSiteKey?: string
   submitLabel?: string
+  errorText?: string | null
   isSubmitting?: boolean
   isLoading?: boolean
   disabled?: boolean
@@ -404,6 +405,7 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
       recaptchaEnabled,
       recaptchaSiteKey,
       submitLabel = "Submit",
+      errorText,
       isSubmitting = false,
       isLoading = false,
       disabled = false,
@@ -530,6 +532,7 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
             helperText={recaptchaError ?? undefined}
           />
         )}
+        {errorText && <Alert severity="error">{errorText}</Alert>}
         {actions || resolvedSubmitButton ? (
           <Actions>
             {actions}
