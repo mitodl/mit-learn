@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 
 import markdown2
 import requests
+from asgiref.sync import iscoroutinefunction, sync_to_async
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import caches
@@ -55,8 +56,6 @@ def _cache_page_ignoring_cookies(  # noqa: C901
     """
 
     def inner_decorator(func):  # noqa: C901
-        from asgiref.sync import iscoroutinefunction
-
         if iscoroutinefunction(func):
 
             @wraps(func)
@@ -64,8 +63,12 @@ def _cache_page_ignoring_cookies(  # noqa: C901
                 if timeout <= 0:
                     return await func(request, *args, **kwargs)
 
-                if only_anonymous and request.user.is_authenticated:
-                    return await func(request, *args, **kwargs)
+                if only_anonymous:
+                    is_authenticated = await sync_to_async(
+                        lambda: request.user.is_authenticated
+                    )()
+                    if is_authenticated:
+                        return await func(request, *args, **kwargs)
 
                 query_string = _sorted_query_string(request.GET)
                 raw_key = f"{key_prefix}:{request.path}:{query_string}"
