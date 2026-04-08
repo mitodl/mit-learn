@@ -1,10 +1,15 @@
 import React from "react"
 import ReCAPTCHA from "react-google-recaptcha"
 import styled from "@emotion/styled"
-import { Alert, Button, Checkbox, TextField } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  Checkbox,
+  RadioChoiceField,
+  TextField,
+} from "@mitodl/smoot-design"
 import { ReCaptcha } from "../ReCaptcha"
 import { FormFieldWrapper } from "../FormHelpers/FormHelpers"
-import { Radio } from "../Radio/Radio"
 import { SimpleSelectField } from "../SimpleSelect/SimpleSelect"
 import type {
   HubspotFieldType,
@@ -253,27 +258,15 @@ const HubspotField: React.FC<{
 
   if (radioFieldTypes.has(field.field_type)) {
     return (
-      <FormFieldWrapper
+      <RadioChoiceField
+        name={field.name}
         label={field.label}
-        required={field.required}
-        helpText={field.description || undefined}
-        fullWidth
-      >
-        {() => (
-          <OptionList>
-            {field.options?.map((option) => (
-              <Radio
-                key={`${field.name}-${option.value}`}
-                name={field.name}
-                value={option.value}
-                checked={value === option.value}
-                label={option.label}
-                onChange={(event) => onChange(field.name, event.target.value)}
-              />
-            ))}
-          </OptionList>
-        )}
-      </FormFieldWrapper>
+        value={typeof value === "string" ? value : ""}
+        choices={
+          field.options?.map((o) => ({ value: o.value, label: o.label })) ?? []
+        }
+        onChange={(_event, val) => onChange(field.name, val)}
+      />
     )
   }
 
