@@ -56,10 +56,23 @@ const StayUpdatedDialogInner: React.FC = () => {
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
-  const { mutate: submitForm, isPending } = useHubspotFormSubmit()
+  const hubspotFormSubmit = useHubspotFormSubmit()
   const [email, setEmail] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const wasVisibleRef = React.useRef(modal.visible)
+
+  React.useEffect(() => {
+    if (wasVisibleRef.current && !modal.visible) {
+      hubspotFormSubmit.reset()
+      setEmail("")
+    }
+    wasVisibleRef.current = modal.visible
+  }, [hubspotFormSubmit, modal.visible])
+
+  const submissionError = hubspotFormSubmit.isError
+    ? hubspotFormSubmit.error instanceof Error
+      ? hubspotFormSubmit.error.message
+      : "Failed to submit form. Please try again."
+    : null
   const doneButton = (
     <DialogActions>
       <Button variant="primary" onClick={() => modal.hide()}>
@@ -72,17 +85,17 @@ const StayUpdatedDialogInner: React.FC = () => {
     <Dialog
       {...muiDialogV5(modal)}
       title={"Stay Updated"}
-      actions={submitted ? doneButton : null}
+      actions={hubspotFormSubmit.isSuccess ? doneButton : null}
       contentCss={{ margin: 0 }}
     >
-      {!submitted && (
+      {!hubspotFormSubmit.isSuccess && (
         <StayUpdatedDialogContainer>
           <HubspotForm
             form={hubspotForm}
             recaptchaEnabled={Boolean(recaptchaSiteKey)}
             recaptchaSiteKey={recaptchaSiteKey}
             isLoading={isLoading}
-            isSubmitting={isPending}
+            isSubmitting={hubspotFormSubmit.isPending}
             submitLabel="Notify Me"
             errorText={submissionError}
             actions={
@@ -91,34 +104,21 @@ const StayUpdatedDialogInner: React.FC = () => {
               </Button>
             }
             onSubmit={(values, _event, recaptchaToken) => {
-              // Clear previous errors when user retries
-              setSubmissionError(null)
               const fields = mapValuesToFields(values)
               const emailField = fields.find((field) => field.name === "email")
               if (emailField && typeof emailField.value === "string") {
                 setEmail(emailField.value)
               }
-              submitForm(
-                { formId: stayUpdatedFormId, fields, recaptchaToken },
-                {
-                  onSuccess: () => {
-                    setSubmissionError(null)
-                    setSubmitted(true)
-                  },
-                  onError: (error) => {
-                    const errorMessage =
-                      error instanceof Error
-                        ? error.message
-                        : "Failed to submit form. Please try again."
-                    setSubmissionError(errorMessage)
-                  },
-                },
-              )
+              hubspotFormSubmit.mutate({
+                formId: stayUpdatedFormId,
+                fields,
+                recaptchaToken,
+              })
             }}
           />
         </StayUpdatedDialogContainer>
       )}
-      {submitted && (
+      {hubspotFormSubmit.isSuccess && (
         <StayUpdatedDialogContainer>
           <Stack alignItems="center">
             <DialogSuccessCheck
