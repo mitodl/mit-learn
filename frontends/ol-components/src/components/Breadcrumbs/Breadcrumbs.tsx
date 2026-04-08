@@ -60,10 +60,11 @@ type BreadcrumbsProps = {
   ancestors: Array<{ href: string; label: string }>
   current?: string | undefined | null
   currentHref?: string | undefined | null
+  style?: React.CSSProperties
 }
 
 const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
-  const { variant, ancestors, current, currentHref } = props
+  const { variant, ancestors, current, currentHref, style } = props
   const linkColor = variant === "light" ? "black" : "white"
   const _Separator = variant === "light" ? LightSeparator : DarkSeparator
   const _Current = variant === "light" ? LightCurrent : DarkCurrent
@@ -81,7 +82,9 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
             >
               <BreadcrumbText>{ancestor.label}</BreadcrumbText>
             </BreadcrumbLink>
-            {!isLast && <_Separator data-testid="breadcrumb-separator" />}
+            {!isLast && (
+              <_Separator data-testid="breadcrumb-separator" style={style} />
+            )}
           </Breadcrumb>
         )
       })}
