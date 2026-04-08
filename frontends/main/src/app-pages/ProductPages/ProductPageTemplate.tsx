@@ -310,7 +310,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {title}
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
-                    <Stack direction="row" gap="16px" flexWrap="wrap">
+                    <Stack direction="row" gap="24px" flexWrap="wrap">
                       <EnrollButton>{enrollmentAction}</EnrollButton>
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
