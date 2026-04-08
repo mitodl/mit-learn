@@ -17,10 +17,8 @@ import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
 import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
-import {
-  StayUpdatedModal,
-  getStayUpdatedHubspotFormId,
-} from "./StayUpdatedModal"
+import { StayUpdatedModal } from "./StayUpdatedModal"
+import { getStayUpdatedHubspotFormId } from "@/common/config"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:

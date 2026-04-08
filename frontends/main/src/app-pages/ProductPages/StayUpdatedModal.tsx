@@ -14,6 +14,10 @@ import Image from "next/image"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import IconCheck from "@/public/images/product/icon_check.svg"
 import {
+  getRecaptchaSiteKey,
+  getStayUpdatedHubspotFormId,
+} from "@/common/config"
+import {
   useHubspotFormDetail,
   useHubspotFormSubmit,
   type HubspotSubmitField,
@@ -34,9 +38,6 @@ const DialogSuccessCheck = styled(Image)({
   alignSelf: "center",
 })
 
-const getStayUpdatedHubspotFormId = () =>
-  (process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID ?? "").trim()
-
 const mapValuesToFields = (
   values: Record<string, HubspotFormValue>,
 ): HubspotSubmitField[] => {
@@ -51,8 +52,7 @@ const mapValuesToFields = (
 const StayUpdatedDialogInner: React.FC = () => {
   const modal = NiceModal.useModal()
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
-  const recaptchaSiteKey =
-    (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "").trim() || undefined
+  const recaptchaSiteKey = getRecaptchaSiteKey()
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
     stayUpdatedFormId ? { form_id: stayUpdatedFormId } : undefined,
   )
@@ -139,4 +139,3 @@ const StayUpdatedDialogInner: React.FC = () => {
 }
 
 export const StayUpdatedModal = NiceModal.create(StayUpdatedDialogInner)
-export { getStayUpdatedHubspotFormId }
