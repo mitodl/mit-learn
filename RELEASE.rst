@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.62.2
+Version 0.62.2 (Released April 08, 2026)
 --------------
 
 - Async vector/qdrant search (#3167)
