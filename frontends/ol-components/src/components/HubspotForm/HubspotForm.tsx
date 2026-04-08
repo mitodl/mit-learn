@@ -466,8 +466,16 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
       [onRecaptchaChange],
     )
 
-    const shouldRenderRecaptcha =
+    const recaptchaRequested =
       recaptchaEnabled ?? resolvedForm?.recaptchaEnabled ?? false
+    if (recaptchaRequested && !recaptchaSiteKey) {
+      console.error(
+        "HubspotForm: recaptchaEnabled is true but no recaptchaSiteKey was provided. " +
+          "The reCAPTCHA widget will not be rendered and the form cannot be submitted.",
+      )
+    }
+    const shouldRenderRecaptcha =
+      recaptchaRequested && Boolean(recaptchaSiteKey)
 
     const handleSubmit = React.useCallback(
       async (event: React.FormEvent<HTMLFormElement>) => {
@@ -518,9 +526,7 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
         {shouldRenderRecaptcha && (
           <ReCaptcha
             ref={recaptchaRef}
-            siteKey={
-              recaptchaSiteKey ?? process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-            }
+            siteKey={recaptchaSiteKey}
             onChange={handleRecaptchaChange}
             onExpired={() => {
               setRecaptchaToken(null)
