@@ -1,5 +1,5 @@
 import React from "react"
-import { setMockResponse, urls } from "api/test-utils"
+import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
@@ -103,15 +103,10 @@ describe("ProductPageTemplate stay-updated trigger", () => {
   it("attaches click handler when form id is configured and form data exists", () => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     mockedUseHubspotFormDetail.mockReturnValue({
-      data: {
+      data: factories.hubspot.form({
         id: STAY_UPDATED_FORM_ID,
         name: "Stay Updated",
-        form_type: "hubspot",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-        archived: false,
-        field_groups: [],
-      },
+      }),
       isError: false,
     } as unknown as ReturnType<typeof useHubspotFormDetail>)
 

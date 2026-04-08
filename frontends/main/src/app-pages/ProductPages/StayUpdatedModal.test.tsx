@@ -1,7 +1,7 @@
 import React from "react"
 import * as NiceModal from "@ebay/nice-modal-react"
 import { HubspotForm, type HubspotFormProps } from "ol-components"
-import { setMockResponse, urls } from "api/test-utils"
+import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen, user, act } from "@/test-utils"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 
@@ -16,15 +16,13 @@ const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
 const TEST_EMAIL = "user@test.edu"
 
 const setupApis = () => {
-  setMockResponse.get(urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }), {
-    id: STAY_UPDATED_FORM_ID,
-    name: "Stay Updated",
-    form_type: "hubspot",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-    archived: false,
-    field_groups: [],
-  })
+  setMockResponse.get(
+    urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
+    factories.hubspot.form({
+      id: STAY_UPDATED_FORM_ID,
+      name: "Stay Updated",
+    }),
+  )
   setMockResponse.post(urls.hubspot.submit(STAY_UPDATED_FORM_ID), {})
 }
 
@@ -158,15 +156,10 @@ describe("StayUpdatedModal", () => {
   it("shows error message when form submission fails", async () => {
     setMockResponse.get(
       urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
-      {
+      factories.hubspot.form({
         id: STAY_UPDATED_FORM_ID,
         name: "Stay Updated",
-        form_type: "hubspot",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-        archived: false,
-        field_groups: [],
-      },
+      }),
     )
     setMockResponse.post(
       urls.hubspot.submit(STAY_UPDATED_FORM_ID),

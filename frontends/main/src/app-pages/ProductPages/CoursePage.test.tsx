@@ -58,15 +58,10 @@ const setupApis = ({
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
-      {
+      learnFactories.hubspot.form({
         id: stayUpdatedFormId,
         name: "Stay Updated",
-        form_type: "hubspot",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-        archived: false,
-        field_groups: [],
-      },
+      }),
     )
   }
 }
