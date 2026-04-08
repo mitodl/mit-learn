@@ -2,12 +2,15 @@
 learning_resources tasks
 """
 
+import datetime as datetime_module
 import logging
 from datetime import UTC, datetime
 
 import boto3
 import celery
+from celery.exceptions import Ignore
 from django.conf import settings
+from django.db import OperationalError
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -17,7 +20,11 @@ from learning_resources.etl import ovs, pipelines, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
-from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
+from learning_resources.etl.constants import (
+    MARKETING_PAGE_FILE_TYPE,
+    RESOURCE_FILE_ETL_SOURCES,
+    ETLSource,
+)
 from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_archive,
@@ -42,13 +49,19 @@ from learning_resources.utils import (
     resource_upserted_actions,
     strip_markdown_images,
 )
-from learning_resources_search.constants import CONTENT_FILE_TYPE, COURSE_TYPE
+from learning_resources_search.constants import (
+    CONTENT_FILE_TYPE,
+    COURSE_TYPE,
+    SEARCH_CONN_EXCEPTIONS,
+)
 from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
-from main.utils import chunks, clear_views_cache
+from main.utils import chunks, clear_views_cache, now_in_utc
 
 log = logging.getLogger(__name__)
+
+CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
 
 @app.task(bind=True)
@@ -751,3 +764,56 @@ def marketing_page_for_resources(resource_ids):
             content_file_ids.append(content_file.id)
     if content_file_ids:
         generate_embeddings.delay(content_file_ids, CONTENT_FILE_TYPE, overwrite=True)
+
+
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
+def cleanup_deleted_content_files():
+    """
+    Physically delete ContentFile records that have been soft-deleted
+    (published=False) for longer than settings.CONTENT_FILE_RETENTION_DAYS.
+
+    Scoped to ETL sources whose contentfiles are managed by the soft-delete
+    flow (RESOURCE_FILE_ETL_SOURCES) so that contentfiles owned by other
+    sources are not affected.
+    """
+    from learning_resources_search.tasks import wrap_retry_exception
+
+    try:
+        with wrap_retry_exception(*CLEANUP_RETRY_EXCEPTIONS):
+            cutoff = now_in_utc() - datetime_module.timedelta(
+                days=settings.CONTENT_FILE_RETENTION_DAYS
+            )
+            eligible_ids = ContentFile.objects.filter(
+                published=False,
+                updated_on__lt=cutoff,
+                run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
+            ).values_list("id", flat=True)
+
+            eligible_count = eligible_ids.count()
+            chunk_size = settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE
+            if eligible_count == 0:
+                log.info(
+                    "cleanup_deleted_content_files: no eligible content files found"
+                )
+                return 0
+
+            total_deleted = 0
+            chunks_processed = 0
+            while True:
+                chunk = list(eligible_ids[:chunk_size])
+                if not chunk:
+                    break
+                ContentFile.objects.filter(id__in=chunk).delete()
+                total_deleted += len(chunk)
+                chunks_processed += 1
+            return total_deleted
+    except (RetryError, Ignore):
+        raise
+    except:  # noqa: E722
+        error = "cleanup_deleted_content_files threw an error"
+        log.exception(error)
+        return error

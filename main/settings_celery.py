@@ -193,7 +193,7 @@ CELERY_BEAT_SCHEDULE = (
             ),  # 2:00am EST on Friday
         },
         "cleanup-deleted-content-files-every-1-days": {
-            "task": "learning_resources_search.tasks.cleanup_deleted_content_files",
+            "task": "learning_resources.tasks.cleanup_deleted_content_files",
             "schedule": crontab(minute=0, hour=4),  # 12:00am EST
         },
     }

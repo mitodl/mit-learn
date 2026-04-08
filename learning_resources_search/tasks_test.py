@@ -1,7 +1,6 @@
 """Search task tests"""
 
 from collections import OrderedDict
-from datetime import timedelta
 
 import pytest
 from celery.exceptions import Ignore, Retry
@@ -17,11 +16,10 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
-    LearningResourceRunFactory,
     LearningResourceTopicFactory,
     ProgramFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import LearningResource
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
@@ -45,7 +43,6 @@ from learning_resources_search.tasks import (
     _group_percolated_rows,
     _infer_percolate_group,
     bulk_deindex_learning_resources,
-    cleanup_deleted_content_files,
     deindex_document,
     deindex_run_content_files,
     finish_recreate_index,
@@ -62,7 +59,6 @@ from learning_resources_search.tasks import (
 )
 from main.factories import UserFactory
 from main.test_utils import assert_not_raises
-from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -1267,101 +1263,3 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
     with pytest.raises(Ignore):
         start_update_index.run(["course"], None)
     assert mocked_clear_views_cache.call_count == 1
-
-
-def test_cleanup_deleted_content_files_respects_retention_window(settings):
-    """
-    cleanup_deleted_content_files should only delete soft-deleted files past
-    the retention window, only for sources in RESOURCE_FILE_ETL_SOURCES, and
-    should chunk its deletes.
-    """
-    settings.CONTENT_FILE_RETENTION_DAYS = 14
-    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
-
-    eligible_run = LearningResourceRunFactory.create(
-        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
-    )
-    ineligible_run = LearningResourceRunFactory.create(
-        published=True, learning_resource__etl_source=ETLSource.youtube.value
-    )
-
-    old_cutoff = now_in_utc() - timedelta(days=15)
-    recent_cutoff = now_in_utc() - timedelta(days=1)
-
-    old_unpublished = ContentFileFactory.create_batch(
-        3, run=eligible_run, published=False
-    )
-    recent_unpublished = ContentFileFactory.create_batch(
-        1, run=eligible_run, published=False
-    )
-    still_published = ContentFileFactory.create_batch(
-        1, run=eligible_run, published=True
-    )
-    ineligible_old_unpublished = ContentFileFactory.create_batch(
-        2, run=ineligible_run, published=False
-    )
-
-    # Force updated_on values so this test is deterministic around the threshold.
-    ContentFile.objects.filter(
-        id__in=[f.id for f in old_unpublished + ineligible_old_unpublished]
-    ).update(updated_on=old_cutoff)
-    ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
-        updated_on=recent_cutoff
-    )
-
-    result = cleanup_deleted_content_files()
-    assert result == 3
-
-    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
-    for file in old_unpublished:
-        assert file.id not in remaining_ids
-    for file in recent_unpublished + still_published + ineligible_old_unpublished:
-        assert file.id in remaining_ids
-
-
-def test_cleanup_deleted_content_files_logs_context(mocker, settings):
-    """cleanup_deleted_content_files should log start and finish context."""
-    settings.CONTENT_FILE_RETENTION_DAYS = 14
-    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
-    run = LearningResourceRunFactory.create(
-        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
-    )
-    files = ContentFileFactory.create_batch(3, run=run, published=False)
-    old_cutoff = now_in_utc() - timedelta(days=15)
-    ContentFile.objects.filter(id__in=[f.id for f in files]).update(
-        updated_on=old_cutoff
-    )
-
-    mocker.patch("learning_resources_search.tasks.log.info")
-
-    deleted_count = cleanup_deleted_content_files()
-
-    assert deleted_count == 3
-
-
-def test_cleanup_deleted_content_files_no_eligible_returns_zero(mocker, settings):
-    """cleanup_deleted_content_files should no-op and return 0 when nothing is eligible."""
-    settings.CONTENT_FILE_RETENTION_DAYS = 14
-    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
-    run = LearningResourceRunFactory.create(
-        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
-    )
-    ContentFileFactory.create_batch(2, run=run, published=True)
-
-    mocker.patch("learning_resources_search.tasks.log.info")
-
-    deleted_count = cleanup_deleted_content_files()
-
-    assert deleted_count == 0
-
-
-def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(mocker):
-    """cleanup_deleted_content_files should return an error string for non-retry exceptions."""
-    mocker.patch(
-        "learning_resources_search.tasks.ContentFile.objects.filter",
-        side_effect=RuntimeError("boom"),
-    )
-
-    result = cleanup_deleted_content_files()
-
-    assert result == "cleanup_deleted_content_files threw an error"

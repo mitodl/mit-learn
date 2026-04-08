@@ -13,7 +13,6 @@ import celery
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import OperationalError
 from django.db.models import Q
 from django.template.defaultfilters import pluralize
 from opensearchpy.exceptions import NotFoundError, RequestError
@@ -76,8 +75,6 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
     "default_retry_delay": 2,
     "rate_limit": settings.CELERY_SEARCH_RATE_LIMIT,
 }
-
-CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -548,57 +545,6 @@ def deindex_run_content_files(run_id, unpublished_only):
         raise
     except:  # noqa: E722
         error = "deindex_run_content_files threw an error"
-        log.exception(error)
-        return error
-
-
-@app.task(
-    autoretry_for=(RetryError,),
-    retry_backoff=True,
-    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
-)
-def cleanup_deleted_content_files():
-    """
-    Physically delete ContentFile records that have been soft-deleted
-    (published=False) for longer than settings.CONTENT_FILE_RETENTION_DAYS.
-
-    Scoped to ETL sources whose contentfiles are managed by the soft-delete
-    flow (RESOURCE_FILE_ETL_SOURCES) so that contentfiles owned by other
-    sources are not affected.
-    """
-    try:
-        with wrap_retry_exception(*CLEANUP_RETRY_EXCEPTIONS):
-            cutoff = now_in_utc() - datetime.timedelta(
-                days=settings.CONTENT_FILE_RETENTION_DAYS
-            )
-            eligible_ids = ContentFile.objects.filter(
-                published=False,
-                updated_on__lt=cutoff,
-                run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
-            ).values_list("id", flat=True)
-
-            eligible_count = eligible_ids.count()
-            chunk_size = settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE
-            if eligible_count == 0:
-                log.info(
-                    "cleanup_deleted_content_files: no eligible content files found"
-                )
-                return 0
-
-            total_deleted = 0
-            chunks_processed = 0
-            while True:
-                chunk = list(eligible_ids[:chunk_size])
-                if not chunk:
-                    break
-                ContentFile.objects.filter(id__in=chunk).delete()
-                total_deleted += len(chunk)
-                chunks_processed += 1
-            return total_deleted
-    except (RetryError, Ignore):
-        raise
-    except:  # noqa: E722
-        error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
 
