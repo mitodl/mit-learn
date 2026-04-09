@@ -209,6 +209,10 @@ class SearchIndexPlugin:
             index_tasks.append(
                 tasks.index_run_content_files.si(run.id),
             )
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                index_tasks.append(
+                    vector_tasks.remove_unpublished_run_content_files.si(run.id),
+                )
             try_with_retry_as_task(chain(*index_tasks))
         else:
             deindex_tasks = [
