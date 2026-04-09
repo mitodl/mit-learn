@@ -47,6 +47,11 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(aggregation_choices)}"
         ),
     )
+    published = serializers.BooleanField(
+        required=False,
+        default=True,
+        help_text="If the resource is published. We default to True unless passed in",
+    )
     readable_id = serializers.CharField(
         required=False, help_text="The readable id of the resource"
     )
