@@ -402,6 +402,7 @@ type CoursewareButtonProps = {
   noun: string
   isProgram?: boolean
   isPending?: boolean
+  isStaff?: boolean
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
@@ -445,6 +446,7 @@ const CoursewareButton = styled(
     isProgram,
     onClick,
     isPending,
+    isStaff,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
@@ -457,7 +459,12 @@ const CoursewareButton = styled(
     const hasEnrolled = enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
     // Programs or enrolled courses with started runs: show link
-    if ((isProgram || hasEnrolled) && (hasStarted || !startDate) && href) {
+    // Staff can access courseware even before the course has started
+    if (
+      (isProgram || hasEnrolled) &&
+      (hasStarted || !startDate || isStaff) &&
+      href
+    ) {
       return (
         <ButtonLink
           size="small"
@@ -473,10 +480,11 @@ const CoursewareButton = styled(
     }
 
     // Determine if button should be disabled
+    // Staff can access courseware even before the course has started
     const isDisabled = Boolean(
       disabled ||
         (!hasEnrolled && !onClick) || // Not enrolled and no click handler
-        (hasEnrolled && !!startDate && !hasStarted), // Enrolled but course hasn't started yet
+        (hasEnrolled && !!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
     )
 
     return (
@@ -664,6 +672,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   onUpgradeError,
 }) => {
   const enrollment = useEnrollmentHandler()
+  const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
   const useProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
@@ -835,6 +844,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         isProgram={false}
         disabled={disableEnrollment}
         isPending={enrollment.isPending}
+        isStaff={mitxOnlineUser?.is_staff}
         onClick={coursewareButtonClick}
       />
     </>
