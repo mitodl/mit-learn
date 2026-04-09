@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Skeleton, Typography, styled, theme } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import type { VideoPlaylistResource } from "api/v1"
+import { formatDurationHuman } from "ol-utilities"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -85,41 +86,13 @@ const CollectionMeta = styled(Typography)({
   lineHeight: "16px" /* 133.333% */,
 })
 
-const parseDurationToHoursAndMinutes = (duration?: string): string | null => {
-  if (!duration) return null
-
-  const match = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/)
-  if (!match) {
-    return duration
-  }
-
-  const hours = Number(match[1] ?? 0)
-  const minutes = Number(match[2] ?? 0)
-  const seconds = Number(match[3] ?? 0)
-
-  const normalizedMinutes = minutes + Math.floor(seconds / 60)
-  const totalHours = hours + Math.floor(normalizedMinutes / 60)
-  const remainingMinutes = normalizedMinutes % 60
-
-  if (totalHours > 0 && remainingMinutes > 0) {
-    return `${totalHours}h ${remainingMinutes}m`
-  }
-  if (totalHours > 0) {
-    return `${totalHours}h`
-  }
-  if (remainingMinutes > 0) {
-    return `${remainingMinutes}m`
-  }
-  return null
-}
-
 const buildMeta = (playlist: VideoPlaylistResource): string => {
   const videoCount = playlist.video_playlist.video_count
   const videoCountLabel =
     videoCount === 1
       ? "1 video"
       : `${playlist.video_playlist.video_count} videos`
-  const durationLabel = parseDurationToHoursAndMinutes(playlist.duration)
+  const durationLabel = formatDurationHuman(`${playlist.duration}`)
 
   if (!durationLabel) {
     return videoCountLabel
@@ -133,7 +106,8 @@ const collectionTypeLabel = (playlist: VideoPlaylistResource): string => {
   if (category) {
     return category
   }
-  return parseDurationToHoursAndMinutes(playlist.duration)
+
+  return formatDurationHuman(`${playlist.duration}`)
     ? "Video Series"
     : "Collection"
 }
@@ -143,14 +117,13 @@ type OtherCollectionsProps = {
   isLoading: boolean
 }
 
-const OtherCollections: React.FC<OtherCollectionsProps> = ({
+const RelatedPlaylist: React.FC<OtherCollectionsProps> = ({
   collections,
   isLoading,
 }) => {
   if (!isLoading && collections.length === 0) {
     return null
   }
-
   return (
     <Section>
       <VideoContainer>
@@ -183,4 +156,4 @@ const OtherCollections: React.FC<OtherCollectionsProps> = ({
   )
 }
 
-export default OtherCollections
+export default RelatedPlaylist

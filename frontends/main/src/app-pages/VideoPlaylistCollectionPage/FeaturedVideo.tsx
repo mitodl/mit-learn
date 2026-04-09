@@ -1,5 +1,6 @@
-import React, { useState } from "react"
+import React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { styled } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { formatDurationClockTime } from "ol-utilities"
@@ -24,13 +25,15 @@ const FeaturedGrid = styled.div(({ theme }) => ({
   },
 }))
 
-const ImageWrapper = styled.div({
+const ImageWrapper = styled(Link)({
   position: "relative",
   width: "100%",
   aspectRatio: "16/9",
   backgroundColor: "#111",
   overflow: "hidden",
   cursor: "pointer",
+  display: "block",
+  textDecoration: "none",
 })
 
 const DurationBadge = styled.span(({ theme }) => ({
@@ -46,12 +49,9 @@ const DurationBadge = styled.span(({ theme }) => ({
 }))
 
 const TextSide = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    padding: "0 0 0 36px",
-  },
   [theme.breakpoints.down("sm")]: {
     padding: "16px 0 0",
-    letteSpacing: "inherit",
+    letterSpacing: "inherit",
   },
 }))
 
@@ -107,13 +107,11 @@ const FeaturedDescription = styled.p(({ theme }) => ({
 }))
 
 type FeaturedVideoProps = {
-  videos: VideoResource[]
-  onPlay: (video: VideoResource) => void
+  video: VideoResource
+  href: string
 }
 
-const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
-  const [currentIndex] = useState(0)
-  const video = videos[currentIndex]
+const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
   if (!video) return null
 
   const imageUrl = video.image?.url ?? null
@@ -131,7 +129,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
     <Section>
       <VideoContainer>
         <FeaturedGrid>
-          <ImageWrapper onClick={() => onPlay(video)}>
+          <ImageWrapper href={href} aria-label={`Play ${video.title}`}>
             <Image
               src={imageUrl ?? PLACEHOLDER_IMG}
               alt={video.title}
@@ -143,9 +141,14 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ videos, onPlay }) => {
           </ImageWrapper>
 
           <TextSide>
-            <FeaturedTitle onClick={() => onPlay(video)}>
-              <span className="desktop-title">{truncatedTitle}</span>
-              <span className="mobile-title">{video.title}</span>
+            <FeaturedTitle>
+              <Link
+                href={href}
+                style={{ color: "inherit", textDecoration: "none" }}
+              >
+                <span className="desktop-title">{truncatedTitle}</span>
+                <span className="mobile-title">{video.title}</span>
+              </Link>
             </FeaturedTitle>
             {description && (
               <FeaturedDescription>{description}</FeaturedDescription>

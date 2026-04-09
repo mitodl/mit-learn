@@ -50,13 +50,13 @@ const VideoCardList = styled.div(({ theme }) => ({
 type VideoCollectionProps = {
   videos: VideoResource[]
   isLoading: boolean
-  onPlay: (video: VideoResource) => void
+  getHref: (video: VideoResource) => string
 }
 
 const VideoCollection: React.FC<VideoCollectionProps> = ({
   videos,
   isLoading,
-  onPlay,
+  getHref,
 }) => {
   return (
     <CollectionSection>
@@ -74,7 +74,7 @@ const VideoCollection: React.FC<VideoCollectionProps> = ({
                 <VideoCard
                   key={resource.id}
                   resource={resource}
-                  onClick={onPlay}
+                  href={getHref(resource)}
                 />
               ))}
         </VideoCardList>

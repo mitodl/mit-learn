@@ -19,6 +19,9 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
 
 const HeaderSection = styled.div(({ theme }) => ({
   padding: "56px 0 72px",
+  [theme.breakpoints.down("md")]: {
+    padding: "32px 0 40px",
+  },
   [theme.breakpoints.down("sm")]: {
     padding: "32px 0 40px",
   },
@@ -102,10 +105,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (
-            <PageDescription>
-              {playlist.description ||
-                "Conversations with MIT faculty on the future of science, technology, and society."}
-            </PageDescription>
+            <PageDescription>{playlist.description}</PageDescription>
           )}
         </VideoContainer>
       </HeaderSection>

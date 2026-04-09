@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from "react"
 import videojs from "video.js"
 import Player from "video.js/dist/types/player"
 import "video.js/dist/video-js.css"
-// Register YouTube tech so video.js can play youtube:// sources
 import "videojs-youtube"
 
 export type VideoJsSource = {

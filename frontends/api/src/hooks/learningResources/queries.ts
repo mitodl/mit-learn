@@ -20,6 +20,7 @@ import type {
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
   VideoPlaylistResource,
+  LearningResourcesApiLearningResourcesVectorSimilarListRequest,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { queryOptions } from "@tanstack/react-query"
@@ -42,10 +43,9 @@ const learningResourceKeys = {
   detailsRoot: () => [...learningResourceKeys.root, "detail"],
   detail: (id: number) => [...learningResourceKeys.detailsRoot(), id],
   similar: (id: number) => [...learningResourceKeys.detail(id), "similar"],
-  vectorSimilar: (id: number) => [
-    ...learningResourceKeys.detail(id),
-    "vector_similar",
-  ],
+  vectorSimilar: (
+    params: LearningResourcesApiLearningResourcesVectorSimilarListRequest,
+  ) => [...learningResourceKeys.detail(params.id), "vector_similar", params],
   itemsRoot: (id: number) => [...learningResourceKeys.detail(id), "items"],
   items: (id: number, params: ItemsListRequest) => [
     ...learningResourceKeys.itemsRoot(id),
@@ -128,12 +128,14 @@ const learningResourceQueries = {
           .learningResourcesSimilarList({ id })
           .then((res) => res.data),
     }),
-  vectorSimilar: (id: number) =>
+  vectorSimilar: (
+    params: LearningResourcesApiLearningResourcesVectorSimilarListRequest,
+  ) =>
     queryOptions({
-      queryKey: learningResourceKeys.vectorSimilar(id),
+      queryKey: learningResourceKeys.vectorSimilar(params),
       queryFn: () =>
         learningResourcesApi
-          .learningResourcesVectorSimilarList({ id })
+          .learningResourcesVectorSimilarList(params)
           .then((res) => res.data),
     }),
   list: (params: LearningResourcesListRequest) =>

@@ -1,26 +1,20 @@
 "use client"
 
-import React, { useCallback } from "react"
+import React from "react"
 import { styled, Skeleton } from "ol-components"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { notFound } from "next/navigation"
-import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
-import type {
-  LearningResource,
-  PaginatedLearningResourceList,
-  VideoResource,
-  VideoPlaylistResource,
-} from "api/v1"
+import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
 import VideoPageHeader from "./VideoPageHeader"
 import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
-import OtherCollections from "./OtherCollections"
+import RelatedPlaylist from "./RelatedPlaylist"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
@@ -29,41 +23,24 @@ const Page = styled.div(({ theme }) => ({
   minHeight: "100vh",
 }))
 
-const getResults = (
-  data: PaginatedLearningResourceList | LearningResource[] | undefined,
-) => {
-  if (!data) {
-    return []
-  }
-  if ("results" in data) {
-    return data.results
-  }
-  return data
-}
-
-type VideoPageProps = {
+type VideoPlaylistCollectionPageProps = {
   playlistId: number
 }
 
-const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
-  const router = useRouter()
-
-  const navigateToVideo = useCallback(
-    (resource: VideoResource) => {
-      router.push(`/playlist/detail/${resource.id}?playlist=${playlistId}`)
-    },
-    [router, playlistId],
-  )
+const VideoPlaylistCollectionPage: React.FC<
+  VideoPlaylistCollectionPageProps
+> = ({ playlistId }) => {
+  const getVideoHref = (resource: VideoResource) =>
+    `/playlist/detail/${resource.id}?playlist=${playlistId}`
 
   const showVideoPlaylistPage = useFeatureFlagEnabled(
     FeatureFlags.VideoPlaylistPage,
   )
   const flagsLoaded = useFeatureFlagsLoaded()
 
-  const { data: playlistData, isLoading: playlistLoading } = useQuery(
+  const { data: playlist, isLoading: playlistLoading } = useQuery(
     videoPlaylistQueries.detail(playlistId),
   )
-  const playlist = playlistData as VideoPlaylistResource | undefined
 
   const { data: items, isLoading: itemsLoading } = useQuery(
     learningResourceQueries.items(playlistId, {
@@ -72,7 +49,11 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
   )
 
   const { data: similarData, isLoading: similarLoading } = useQuery(
-    learningResourceQueries.vectorSimilar(playlistId),
+    learningResourceQueries.vectorSimilar({
+      id: playlistId,
+      resource_type: [ResourceTypeEnum.VideoPlaylist],
+      limit: 6,
+    }),
   )
 
   if (!showVideoPlaylistPage) {
@@ -85,11 +66,9 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
   )
   const collectionVideos = videos.slice(1)
 
-  const otherCollections = getResults(similarData).filter(
-    (resource): resource is VideoPlaylistResource =>
-      resource.resource_type === ResourceTypeEnum.VideoPlaylist &&
-      resource.id !== playlistId,
-  )
+  const otherCollections = (
+    (similarData ?? []) as VideoPlaylistResource[]
+  ).filter((resource) => resource.id !== playlistId)
 
   return (
     <Page>
@@ -98,21 +77,21 @@ const VideoPage: React.FC<VideoPageProps> = ({ playlistId }) => {
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
       ) : videos.length > 0 ? (
-        <FeaturedVideo videos={videos} onPlay={navigateToVideo} />
+        <FeaturedVideo video={videos[0]} href={getVideoHref(videos[0])} />
       ) : null}
 
       <VideoCollection
         videos={collectionVideos}
         isLoading={isLoading}
-        onPlay={navigateToVideo}
+        getHref={getVideoHref}
       />
 
-      <OtherCollections
-        collections={otherCollections.slice(0, 6)}
+      <RelatedPlaylist
+        collections={otherCollections}
         isLoading={similarLoading}
       />
     </Page>
   )
 }
 
-export default VideoPage
+export default VideoPlaylistCollectionPage

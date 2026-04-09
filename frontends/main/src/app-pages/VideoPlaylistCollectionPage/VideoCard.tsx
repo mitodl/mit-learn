@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
 import { RiPlayCircleFill } from "@remixicon/react"
@@ -7,13 +8,14 @@ import type { VideoResource } from "api/v1"
 
 const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 
-const VideoCardItem = styled.div({
+const VideoCardItem = styled(Link)({
   display: "flex",
   gap: "24px",
   padding: "24px 0 23px 0",
   alignItems: "flex-start",
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   cursor: "pointer",
+  textDecoration: "none",
 
   "&:hover .play-overlay": {
     opacity: 1,
@@ -110,10 +112,10 @@ const CardMetaValue = styled(Typography)(({ theme }) => ({
 
 type VideoCardProps = {
   resource: VideoResource
-  onClick: (resource: VideoResource) => void
+  href: string
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
   const [imgError, setImgError] = useState(false)
   const imageUrl =
     !imgError && resource.image?.url ? resource.image.url : PLACEHOLDER_IMG
@@ -123,19 +125,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
     : null
 
   return (
-    <VideoCardItem
-      role="button"
-      tabIndex={0}
-      onClick={() => onClick(resource)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          if (e.key === " ") {
-            e.preventDefault()
-          }
-          onClick(resource)
-        }
-      }}
-    >
+    <VideoCardItem href={href}>
       <ThumbnailWrapper>
         <ThumbnailImage
           src={imageUrl}
@@ -176,12 +166,20 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, onClick }) => {
   )
 }
 
-// ---------------------------------------------------------------------------
-// VideoCardSkeleton component
-// ---------------------------------------------------------------------------
+const VideoCardSkeletonItem = styled.div({
+  display: "flex",
+  gap: "24px",
+  padding: "24px 0 23px 0",
+  alignItems: "flex-start",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    padding: "24px 0 24px 0",
+  },
+})
 
 const VideoCardSkeleton: React.FC = () => (
-  <VideoCardItem>
+  <VideoCardSkeletonItem>
     <ThumbnailWrapper>
       <Skeleton variant="rectangular" width="100%" height="100%" />
     </ThumbnailWrapper>
@@ -190,7 +188,7 @@ const VideoCardSkeleton: React.FC = () => (
       <Skeleton variant="text" width="50%" height={18} />
       <Skeleton variant="text" width="40%" height={16} />
     </CardContent>
-  </VideoCardItem>
+  </VideoCardSkeletonItem>
 )
 
 export { VideoCard, VideoCardSkeleton }

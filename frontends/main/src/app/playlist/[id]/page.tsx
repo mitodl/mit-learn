@@ -7,7 +7,7 @@ import {
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
-import VideoPage from "@/app-pages/VideoPage/VideoPage"
+import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage/VideoPlaylistCollectionPage"
 import { notFound } from "next/navigation"
 
 export const metadata: Metadata = standardizeMetadata({
@@ -33,7 +33,7 @@ const Page: React.FC<PageProps<"/playlist/[id]">> = async ({ params }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <VideoPage playlistId={playlistId} />
+      <VideoPlaylistCollectionPage playlistId={playlistId} />
     </HydrationBoundary>
   )
 }

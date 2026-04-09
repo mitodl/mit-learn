@@ -1,10 +1,10 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { renderWithProviders, screen, user } from "@/test-utils"
+import { renderWithProviders, screen } from "@/test-utils"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import VideoPage from "./VideoPage"
+import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
 
 jest.mock("posthog-js/react")
@@ -12,11 +12,8 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
-const mockPush = jest.fn<void, [string]>()
 jest.mock("next-nprogress-bar", () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+  useRouter: () => ({}),
 }))
 
 const makePlaylist = () =>
@@ -64,13 +61,10 @@ const setupApis = ({
   })
 
   setMockResponse.get(
-    urls.learningResources.vectorSimilar({ id: playlistId }),
-    {
-      count: similarCollections.length,
-      next: null,
-      previous: null,
-      results: similarCollections,
-    },
+    expect.stringContaining(
+      urls.learningResources.vectorSimilar({ id: playlistId }),
+    ),
+    similarCollections,
   )
 }
 
@@ -252,9 +246,9 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      await user.click(await screen.findByText(collection.title))
-
-      expect(mockPush).toHaveBeenCalledWith(
+      const titleEl = await screen.findByText(collection.title)
+      expect(titleEl.closest("a")).toHaveAttribute(
+        "href",
         `/playlist/detail/${collection.id}?playlist=${playlist.id}`,
       )
     })
@@ -270,9 +264,9 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      await user.click(await screen.findByText(featured.title))
-
-      expect(mockPush).toHaveBeenCalledWith(
+      const titleEl = await screen.findByText(featured.title)
+      expect(titleEl.closest("a")).toHaveAttribute(
+        "href",
         `/playlist/detail/${featured.id}?playlist=${playlist.id}`,
       )
     })
