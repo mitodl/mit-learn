@@ -526,6 +526,7 @@ const searchModeDropdownOptions = Object.entries(
 const toVectorSearchParams = (
   params: ReturnType<typeof getSearchParams>,
 ): VectorSearchRequest => ({
+  aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
   certification_type:
     params.certification_type as VectorSearchRequest["certification_type"],
@@ -973,9 +974,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading || isVectorSearch
-                ? ""
-                : `${data?.count} results`}
+              {isFetching || isLoading ? "" : `${data?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">
