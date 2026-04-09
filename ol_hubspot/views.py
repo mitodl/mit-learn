@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from main.permissions import IsSuperuserPermission
-from ol_hubspot.api import get_form, list_forms, submit_form
+from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
 from ol_hubspot.schema import serializer_for_hubspot_model
 
 hubspot_forms_list_response_schema = serializer_for_hubspot_model(
@@ -60,6 +60,7 @@ class HubspotFormSubmitRequestSerializer(serializers.Serializer):
     hutk = serializers.CharField(required=False, allow_blank=True)
     page_name = serializers.CharField(required=False, allow_blank=True)
     submitted_at = serializers.IntegerField(required=False, min_value=0)
+    recaptcha_token = serializers.CharField(required=False, allow_blank=False)
     # Backward-compatible aliases
     page_title = serializers.CharField(required=False, allow_blank=True)
     timestamp = serializers.IntegerField(required=False, min_value=0)
@@ -236,7 +237,7 @@ def hubspot_forms_list_view(request):
     parameters=[OpenApiParameter(name="archived", type=bool, required=False)],
 )
 @api_view(["GET"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def hubspot_form_detail_view(request, form_id: str):
     """Get one HubSpot form by id from the backend."""
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
@@ -267,7 +268,7 @@ def hubspot_form_detail_view(request, form_id: str):
     responses={200: HubspotFormSubmitResponseSerializer(), **hubspot_error_responses},
 )
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def hubspot_form_submit_view(request, form_id: str):
     """Submit a form to HubSpot."""
     if not settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN:
@@ -284,6 +285,18 @@ def hubspot_form_submit_view(request, form_id: str):
         client_ip = _extract_client_ip(request)
         if client_ip:
             payload["ip_address"] = client_ip
+        recaptcha_token = payload.pop("recaptcha_token", None)
+        if settings.RECAPTCHA_SECRET_KEY and (
+            not recaptcha_token
+            or not verify_recaptcha(
+                recaptcha_token,
+                remote_ip=payload.get("ip_address"),
+            )
+        ):
+            return Response(
+                {"recaptcha_token": ["reCAPTCHA verification failed."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         submit_form(form_id=form_id, payload=payload)
         return Response(
             HubspotFormSubmitResponseSerializer({"status": "submitted"}).data,

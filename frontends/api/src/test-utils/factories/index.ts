@@ -1,5 +1,6 @@
 export * as articles from "./articles"
 export * as channels from "./channels"
+export * as hubspot from "./hubspot"
 export * as learningResources from "./learningResources"
 export * as mitxonline from "./mitxonline"
 export * as newsEvents from "./newsEvents"

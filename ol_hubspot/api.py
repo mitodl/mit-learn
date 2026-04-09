@@ -8,6 +8,7 @@ from hubspot import HubSpot
 from hubspot.marketing.forms.exceptions import ApiException
 
 HSFORMS_API_BASE_URL = "https://api.hsforms.com"
+RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 
 
 def get_hubspot_client() -> HubSpot:
@@ -16,12 +17,21 @@ def get_hubspot_client() -> HubSpot:
 
 
 def get_form(*, form_id: str, archived: bool | None = None):
-    """Fetch a single HubSpot form definition."""
+    """Fetch a single HubSpot form definition, preserving raw JSON shape."""
     client = get_hubspot_client()
-    return client.marketing.forms.forms_api.get_by_id(
-        form_id=form_id,
-        archived=archived,
+    query_params = {}
+    if archived is not None:
+        query_params["archived"] = str(archived).lower()
+    response = client.api_request(
+        {
+            "path": f"/marketing/v3/forms/{form_id}",
+            "method": "GET",
+            "query_params": query_params,
+        }
     )
+    if response.status_code >= HTTPStatus.BAD_REQUEST:
+        raise ApiException(status=response.status_code, reason=response.text)
+    return response.json() if response.content else {}
 
 
 def list_forms(
@@ -41,6 +51,33 @@ def list_forms(
     )
 
 
+def verify_recaptcha(response_token: str, remote_ip: str | None = None) -> bool:
+    """Validate a reCAPTCHA token with Google."""
+    if not settings.RECAPTCHA_SECRET_KEY:
+        return False
+
+    payload = {
+        "secret": settings.RECAPTCHA_SECRET_KEY,
+        "response": response_token,
+    }
+    if remote_ip:
+        payload["remoteip"] = remote_ip
+
+    try:
+        response = requests.post(
+            RECAPTCHA_VERIFY_URL,
+            data=payload,
+            timeout=30,
+        )
+        if response.status_code >= HTTPStatus.BAD_REQUEST:
+            return False
+        body = response.json() if response.content else {}
+    except (requests.RequestException, ValueError):
+        return False
+
+    return bool(body.get("success"))
+
+
 def submit_form(
     *,
     form_id: str,
@@ -53,7 +90,16 @@ def submit_form(
     )
     portal_id = account_response.json()["portalId"]
 
-    fields = payload.get("fields", [])
+    raw_fields = payload.get("fields", [])
+    fields = [
+        {
+            **f,
+            "value": ";".join(f["value"])
+            if isinstance(f.get("value"), list)
+            else f.get("value"),
+        }
+        for f in raw_fields
+    ]
     hubspot_payload = {"fields": fields}
 
     # Build context object using documented HubSpot keys.

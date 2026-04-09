@@ -10,11 +10,15 @@ import {
   HEADER_HEIGHT,
   Grid2,
 } from "ol-components"
-import { convertToEmbedUrl } from "@/common/utils"
+import { convertToEmbedUrl, hexToRgba } from "@/common/utils"
 import { HOME } from "@/common/urls"
-import { styled } from "@mitodl/smoot-design"
+import { Button, styled } from "@mitodl/smoot-design"
 import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
+import NiceModal from "@ebay/nice-modal-react"
+import { useHubspotFormDetail } from "api/hooks/hubspot"
+import { StayUpdatedModal } from "./StayUpdatedModal"
+import { getStayUpdatedHubspotFormId } from "@/common/config"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -47,6 +51,19 @@ const ContentStack = styled(Stack)(({ theme }) => ({
 const EnrollButton = styled.div(({ theme }) => ({
   width: "240px",
 
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
+const StayUpdatedButton = styled(Button)(({ theme }) => ({
+  color: theme.custom.colors.white,
+  borderColor: theme.custom.colors.lightGray2,
+  width: "200px",
+
+  "&&:hover": {
+    backgroundColor: hexToRgba(theme.custom.colors.white, 0.2),
+  },
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -253,6 +270,13 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollmentAction,
 }) => {
+  const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const stayUpdatedParams = stayUpdatedFormId
+    ? { form_id: stayUpdatedFormId }
+    : undefined
+  const formQuery = useHubspotFormDetail(stayUpdatedParams)
+  const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId)
+
   return (
     <Page>
       <GradientBanner>
@@ -282,7 +306,27 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {title}
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
-                    <EnrollButton>{enrollmentAction}</EnrollButton>
+                    <Stack
+                      direction="row"
+                      gap="24px"
+                      flexWrap="wrap"
+                      sx={(theme) => ({
+                        [theme.breakpoints.down("sm")]: {
+                          width: "100%",
+                        },
+                      })}
+                    >
+                      <EnrollButton>{enrollmentAction}</EnrollButton>
+                      {shouldShowStayUpdatedButton ? (
+                        <StayUpdatedButton
+                          variant="secondary"
+                          disabled={formQuery.isError}
+                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                        >
+                          Stay Updated
+                        </StayUpdatedButton>
+                      ) : null}
+                    </Stack>
                   </ContentStack>
                 </TitleBox>
               </MainCol>

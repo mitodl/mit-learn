@@ -95,10 +95,48 @@ function convertToEmbedUrl(url: string): string | null {
   return null
 }
 
+function hexToRgba(hex: string, alpha: number): string | undefined {
+  const normalized = hex.trim().replace(/^#/, "")
+
+  if (![3, 4, 6, 8].includes(normalized.length)) {
+    return undefined
+  }
+
+  const expanded =
+    normalized.length === 3 || normalized.length === 4
+      ? normalized
+          .split("")
+          .map((char) => char + char)
+          .join("")
+      : normalized
+
+  const hasAlpha = expanded.length === 8
+  const r = Number.parseInt(expanded.slice(0, 2), 16)
+  const g = Number.parseInt(expanded.slice(2, 4), 16)
+  const b = Number.parseInt(expanded.slice(4, 6), 16)
+
+  if ([r, g, b].some(Number.isNaN)) {
+    return undefined
+  }
+
+  const hexAlpha = hasAlpha
+    ? Number.parseInt(expanded.slice(6, 8), 16) / 255
+    : 1
+
+  if (Number.isNaN(hexAlpha)) {
+    return undefined
+  }
+
+  const clampedAlpha = Math.max(0, Math.min(1, alpha * hexAlpha))
+
+  return `rgba(${r}, ${g}, ${b}, ${clampedAlpha})`
+}
+
 export {
   isInEnum,
   matchOrganizationBySlug,
   collapseWhitespace,
   linkifyText,
   convertToEmbedUrl,
+  hexToRgba,
 }

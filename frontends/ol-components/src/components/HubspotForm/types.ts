@@ -51,13 +51,16 @@ interface HubspotFormField {
 interface HubspotFormFieldInput {
   name?: string | null
   label?: string | null
+  fieldType?: HubspotFieldType | null
   field_type?: HubspotFieldType | null
   required?: boolean | null
   hidden?: boolean | null
   description?: string | null
   placeholder?: string | null
   defaultValue?: HubspotFormValue
+  defaultValues?: string[] | null
   default_value?: HubspotFormValue
+  default_values?: string[] | null
   options?: HubspotFormOptionInput[]
 }
 
@@ -75,7 +78,12 @@ interface HubspotFormDefinition {
   formId: string
   name?: string
   submitText?: string
+  recaptchaEnabled?: boolean
   fieldGroups: HubspotFormFieldGroup[]
+}
+
+interface HubspotFormInputConfiguration {
+  recaptcha_enabled?: boolean | null
 }
 
 interface HubspotFormInput {
@@ -84,6 +92,7 @@ interface HubspotFormInput {
   name?: string | null
   submitText?: string | null
   submit_text?: string | null
+  configuration?: HubspotFormInputConfiguration | null
   fieldGroups?: HubspotFormFieldGroupInput[] | null
   field_groups?: HubspotFormFieldGroupInput[] | null
 }
@@ -100,4 +109,5 @@ export type {
   HubspotFormFieldGroupInput,
   HubspotFormDefinition,
   HubspotFormInput,
+  HubspotFormInputConfiguration,
 }

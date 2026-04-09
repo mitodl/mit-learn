@@ -13,6 +13,10 @@ def _mock_hubspot_secret() -> str:
     return uuid4().hex
 
 
+def _mock_recaptcha_secret() -> str:
+    return uuid4().hex
+
+
 def test_list_forms(client, settings, mocker):
     """List endpoint relays data from HubSpot API helper."""
     mock_secret = _mock_hubspot_secret()
@@ -180,22 +184,27 @@ def test_list_forms_requires_superuser(client, settings):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_detail_requires_authenticated_user(client, settings):
-    """Detail endpoint requires authentication."""
+def test_detail_allows_anonymous_user(client, settings, mocker):
+    """Detail endpoint allows anonymous access."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
     detail_url = reverse(
         "ol_hubspot:v1:hubspot-forms-detail", kwargs={"form_id": "abc"}
     )
+    expected = {"id": "abc", "name": "Test Form"}
+    get_stub = mocker.patch("ol_hubspot.views.get_form")
+    get_stub.return_value = mocker.Mock(to_dict=mocker.Mock(return_value=expected))
 
     response = client.get(detail_url)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected
 
 
 def test_submit_form_success(client, settings, mocker):
     """Submit endpoint successfully submits form data."""
     mock_secret = _mock_hubspot_secret()
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
@@ -227,6 +236,7 @@ def test_submit_form_success(client, settings, mocker):
 def test_submit_form_uses_referer_when_page_uri_missing(client, settings, mocker):
     """Submit endpoint falls back to Referer when page_uri is not provided."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
@@ -256,6 +266,7 @@ def test_submit_form_uses_referer_when_page_uri_missing(client, settings, mocker
 def test_submit_form_uses_hutk_cookie_when_payload_missing(client, settings, mocker):
     """Submit endpoint falls back to hubspotutk cookie when hutk is omitted."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
@@ -281,6 +292,7 @@ def test_submit_form_uses_hutk_cookie_when_payload_missing(client, settings, moc
 def test_extract_client_ip_uses_x_real_ip_fallback(client, settings, mocker):
     """Submit endpoint uses X-Real-IP when ipware returns no IP."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
@@ -309,6 +321,7 @@ def test_extract_client_ip_uses_x_real_ip_fallback(client, settings, mocker):
 def test_submit_form_with_all_context_properties(client, settings, mocker):
     """Submit endpoint successfully includes all context properties."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
@@ -335,6 +348,102 @@ def test_submit_form_with_all_context_properties(client, settings, mocker):
             "ip_address": "1.2.3.4",
         },
     )
+
+
+def test_submit_form_verifies_recaptcha_before_forwarding(client, settings, mocker):
+    """Submit endpoint verifies reCAPTCHA and does not forward the raw token."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    verify_stub = mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=True)
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    verify_stub.assert_called_once_with("captcha-token", remote_ip="1.2.3.4")
+    submit_stub.assert_called_once_with(
+        form_id="form-123",
+        payload={
+            "fields": [{"name": "email", "value": "test@example.com"}],
+            "ip_address": "1.2.3.4",
+        },
+    )
+
+
+def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
+    """Submit endpoint returns 400 when reCAPTCHA verification fails."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"recaptcha_token": ["reCAPTCHA verification failed."]}
+    submit_stub.assert_not_called()
+
+
+def test_submit_form_rejects_missing_token_when_secret_configured(
+    client, settings, mocker
+):
+    """Submissions without a token are rejected when RECAPTCHA_SECRET_KEY is set."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "anon@example.com"}]}
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"recaptcha_token": ["reCAPTCHA verification failed."]}
+    submit_stub.assert_not_called()
+
+
+def test_submit_form_rejects_invalid_token_when_secret_configured(
+    client, settings, mocker
+):
+    """Invalid tokens are still rejected when secret is configured."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "invalid-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"recaptcha_token": ["reCAPTCHA verification failed."]}
+    submit_stub.assert_not_called()
 
 
 def test_submit_form_invalid_payload(client, settings):
@@ -368,6 +477,25 @@ def test_submit_form_invalid_field_value_type(client, settings):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+def test_submit_form_rejects_empty_recaptcha_token(client, settings):
+    """Submit endpoint rejects blank recaptcha_token strings."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    # Empty string should be rejected by serializer
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "",
+    }
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "recaptcha_token" in response.json()
+
+
 def test_submit_form_missing_token_returns_503(client, settings):
     """Submit endpoint returns 503 if token is not configured."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = None
@@ -382,16 +510,24 @@ def test_submit_form_missing_token_returns_503(client, settings):
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
-def test_submit_form_requires_authenticated_user(client, settings):
-    """Submit endpoint requires authentication."""
+def test_submit_form_allows_anonymous_user(client, settings, mocker):
+    """Submit endpoint allows anonymous access."""
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
     )
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
 
-    response = client.post(submit_url, {"fields": []}, format="json")
+    response = client.post(
+        submit_url,
+        {"fields": [{"name": "email", "value": "anon@example.com"}]},
+        format="json",
+    )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_200_OK
+    submit_stub.assert_called_once()
 
 
 def test_submit_form_hubspot_failure(client, settings, mocker):
@@ -400,6 +536,7 @@ def test_submit_form_hubspot_failure(client, settings, mocker):
 
     mock_secret = _mock_hubspot_secret()
     settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = mock_secret
+    settings.RECAPTCHA_SECRET_KEY = ""
     client.force_login(UserFactory.create())
     submit_url = reverse(
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
