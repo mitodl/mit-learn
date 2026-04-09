@@ -13,8 +13,11 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
-import { DASHBOARD_HOME } from "@/common/urls"
-import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import {
+  dashboardEnrollmentSuccessUrl,
+  mitxonlineLegacyUrl,
+  readDashboardEnrollmentStorage,
+} from "@/common/mitxonline"
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -28,6 +31,10 @@ describe("CourseEnrollmentButton", () => {
   const ACCESS_MATERIALS = "Access Course Materials"
 
   setupLocationMock()
+
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
 
   test.each([
     { isArchived: true, expectedText: ACCESS_MATERIALS },
@@ -417,14 +424,20 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      expect(`${location.current.pathname}${location.current.search}`).toBe(
+        dashboardEnrollmentSuccessUrl(),
+      )
+    })
+    expect(readDashboardEnrollmentStorage()).toEqual({
+      title: course.title,
+      orgId: null,
     })
 
     // No dialog should have opened despite 2 total runs
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Free-only, 1 run: clicking enrolls directly and redirects to dashboard home", async () => {
+  test("Free-only, 1 run: clicking enrolls directly, stores the title, and redirects to the dashboard success URL", async () => {
     const run = makeRun({
       is_archived: false,
       is_enrollable: true,
@@ -444,7 +457,13 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      expect(`${location.current.pathname}${location.current.search}`).toBe(
+        dashboardEnrollmentSuccessUrl(),
+      )
+    })
+    expect(readDashboardEnrollmentStorage()).toEqual({
+      title: course.title,
+      orgId: null,
     })
 
     // No dialog should have opened

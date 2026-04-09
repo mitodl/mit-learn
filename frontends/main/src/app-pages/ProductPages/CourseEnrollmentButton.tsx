@@ -12,15 +12,16 @@ import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import {
   canPurchaseRun,
+  dashboardEnrollmentSuccessUrl,
   getEnrollmentType,
   getCourseEnrollmentAction,
   priceWithDiscount,
+  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME } from "@/common/urls"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -98,7 +99,12 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
       } else if (enrollmentDecision.type === "audit") {
         createEnrollment.mutate(
           { run_id: enrollmentDecision.run.id },
-          { onSuccess: () => router.push(DASHBOARD_HOME) },
+          {
+            onSuccess: () => {
+              storeDashboardEnrollmentStorage({ title: course.title })
+              router.push(dashboardEnrollmentSuccessUrl())
+            },
+          },
         )
       } else {
         NiceModal.show(CourseEnrollmentDialog, { course })
