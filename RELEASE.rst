@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.62.4
+Version 0.62.4 (Released April 09, 2026)
 --------------
 
 - add margin (#3180)
