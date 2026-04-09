@@ -17,8 +17,11 @@ import NiceModal from "@ebay/nice-modal-react"
 import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { DASHBOARD_HOME } from "@/common/urls"
-import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import {
+  dashboardEnrollmentSuccessUrl,
+  mitxonlineLegacyUrl,
+  readDashboardEnrollmentStorage,
+} from "@/common/mitxonline"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -61,6 +64,10 @@ describe("CourseEnrollmentDialog", () => {
   }
 
   setupLocationMock()
+
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
 
   describe("Course run dropdown", () => {
     test("Shows one entry for each enrollable course run", async () => {
@@ -400,7 +407,7 @@ describe("CourseEnrollmentDialog", () => {
       expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
     })
 
-    test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
+    test("Default behavior: stores dashboard enrollment data and redirects to the dashboard success URL after successful enrollment", async () => {
       const run = enrollableRun()
       const course = makeCourse({ courseruns: [run] })
 
@@ -415,14 +422,20 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       await waitFor(() => {
-        expect(location.current.pathname).toBe(DASHBOARD_HOME)
+        expect(`${location.current.pathname}${location.current.search}`).toBe(
+          dashboardEnrollmentSuccessUrl(),
+        )
+      })
+      expect(readDashboardEnrollmentStorage()).toEqual({
+        title: course.title,
+        orgId: null,
       })
 
       // Verify dialog has closed
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
 
-    test("Custom onCourseEnroll: calls callback instead of redirecting", async () => {
+    test("Custom onCourseEnroll: calls callback instead of redirecting or storing dashboard enrollment data", async () => {
       const run = enrollableRun()
       const course = makeCourse({ courseruns: [run] })
       const onCourseEnroll = jest.fn()
@@ -432,6 +445,7 @@ describe("CourseEnrollmentDialog", () => {
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       })
       await screen.findByRole("dialog")
+      const initialLocation = `${location.current.pathname}${location.current.search}`
 
       const enrollButton = screen.getByRole("button", {
         name: /Enroll for Free without a certificate/i,
@@ -444,8 +458,10 @@ describe("CourseEnrollmentDialog", () => {
         expect(onCourseEnroll).toHaveBeenCalledWith(run)
       })
 
-      // Should NOT redirect to dashboard
-      expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
+      expect(`${location.current.pathname}${location.current.search}`).toBe(
+        initialLocation,
+      )
+      expect(readDashboardEnrollmentStorage()).toBeNull()
 
       // Verify dialog has closed
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

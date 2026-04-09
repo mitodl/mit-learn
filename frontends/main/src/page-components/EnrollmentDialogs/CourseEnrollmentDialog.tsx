@@ -19,15 +19,16 @@ import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canPurchaseRun,
+  dashboardEnrollmentSuccessUrl,
   getEnrollmentType,
   mitxonlineLegacyUrl,
   PriceWithDiscount,
   priceWithDiscount,
+  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME } from "@/common/urls"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
 
@@ -342,7 +343,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
               if (onCourseEnroll) {
                 onCourseEnroll(run)
               } else {
-                router.push(DASHBOARD_HOME)
+                storeDashboardEnrollmentStorage({
+                  title: course.title ?? "",
+                  orgId: null,
+                })
+                router.push(dashboardEnrollmentSuccessUrl())
               }
               modal.hide()
             },
