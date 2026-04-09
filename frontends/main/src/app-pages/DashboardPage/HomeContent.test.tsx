@@ -257,6 +257,27 @@ describe("HomeContent", () => {
     expect(screen.queryByText(/Enrollment Error/)).not.toBeInTheDocument()
   })
 
+  test("displays free enrollment success alert when dashboard success param is present", async () => {
+    setupAPIs()
+    sessionStorage.setItem("dashboard_enrollment_title", "Linear Algebra")
+    const mockReplace = jest.fn()
+    jest.spyOn(NextProgressBar, "useRouter").mockReturnValue({
+      replace: mockReplace,
+    } as Partial<ReturnType<typeof NextProgressBar.useRouter>> as ReturnType<
+      typeof NextProgressBar.useRouter
+    >)
+
+    renderWithProviders(<HomeContent />, {
+      url: "/dashboard?enrollment_success=1",
+    })
+
+    expect(
+      await screen.findByText(
+        /You have successfully enrolled in Linear Algebra\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+
   test("Displays enrollment error alert when query param is present and then clears it", async () => {
     setupAPIs()
     const mockReplace = jest.fn()

@@ -1,9 +1,9 @@
 "use client"
 import React, { Suspense } from "react"
-import { Alert, ButtonLink } from "@mitodl/smoot-design"
+import { ButtonLink } from "@mitodl/smoot-design"
 import { ResourceTypeEnum } from "api"
-import { Link, styled, Typography } from "ol-components"
-import { PROFILE, ENROLLMENT_ERROR_QUERY_PARAM } from "@/common/urls"
+import { styled, Typography } from "ol-components"
+import { PROFILE } from "@/common/urls"
 import {
   TopPicksCarouselConfig,
   TopicCarouselConfig,
@@ -18,8 +18,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useUserMe } from "api/hooks/user"
 import { OrganizationCards } from "./CoursewareDisplay/OrganizationCards"
-import { useSearchParams } from "next/navigation"
-import { useRouter } from "next-nprogress-bar"
+import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 
 const SubTitleText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -68,35 +67,20 @@ const TitleText = styled(Typography)(({ theme }) => ({
   },
 })) as typeof Typography
 
-const AlertBanner = styled(Alert)({
+const EnrollmentRedirectAlertContainer = styled.div({
   marginTop: "32px",
+  "&:empty": {
+    display: "none",
+  },
 })
 
 const HomeContent: React.FC = () => {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
-  const [showEnrollmentError, setShowEnrollmentError] = React.useState(false)
   const { isLoading: isLoadingProfile, data: user } = useUserMe()
   const topics = user?.profile?.preference_search_filters.topic
   const certification = user?.profile?.preference_search_filters.certification
   const showEnrollments = useFeatureFlagEnabled(
     FeatureFlags.EnrollmentDashboard,
   )
-  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
-
-  // Show error and clear the query param
-  React.useEffect(() => {
-    if (enrollmentError) {
-      setShowEnrollmentError(true)
-      const newParams = new URLSearchParams(searchParams.toString())
-      newParams.delete(ENROLLMENT_ERROR_QUERY_PARAM)
-      const newUrl = newParams.toString()
-        ? `${window.location.pathname}?${newParams.toString()}`
-        : window.location.pathname
-      router.replace(newUrl)
-    }
-  }, [enrollmentError, searchParams, router])
 
   return (
     <>
@@ -113,19 +97,9 @@ const HomeContent: React.FC = () => {
           </ButtonLink>
         </HomeHeaderRight>
       </HomeHeader>
-      {showEnrollmentError && (
-        <AlertBanner
-          severity="error"
-          closable={true}
-          label="Enrollment Error - "
-        >
-          The Enrollment Code is incorrect or no longer available.{" "}
-          <Link color="red" href={`mailto:${supportEmail}`}>
-            Contact Support
-          </Link>{" "}
-          for assistance.
-        </AlertBanner>
-      )}
+      <EnrollmentRedirectAlertContainer>
+        <EnrollmentRedirectAlert />
+      </EnrollmentRedirectAlertContainer>
       <OrganizationCards />
       {showEnrollments ? <EnrollmentDisplay /> : null}
       <Suspense>
