@@ -50,7 +50,8 @@ const mapValuesToFields = (
 }
 
 const StayUpdatedDialogInner: React.FC = () => {
-  const modal = NiceModal.useModal()
+  const modalState = NiceModal.useModal()
+  const modal = muiDialogV5(modalState)
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
   const recaptchaSiteKey = getRecaptchaSiteKey()
   const { data: hubspotForm, isLoading } = useHubspotFormDetail(
@@ -58,15 +59,6 @@ const StayUpdatedDialogInner: React.FC = () => {
   )
   const hubspotFormSubmit = useHubspotFormSubmit()
   const [email, setEmail] = useState("")
-  const wasVisibleRef = React.useRef(modal.visible)
-
-  React.useEffect(() => {
-    if (wasVisibleRef.current && !modal.visible) {
-      hubspotFormSubmit.reset()
-      setEmail("")
-    }
-    wasVisibleRef.current = modal.visible
-  }, [hubspotFormSubmit, modal.visible])
 
   const submissionError = hubspotFormSubmit.isError
     ? hubspotFormSubmit.error instanceof Error
@@ -75,7 +67,7 @@ const StayUpdatedDialogInner: React.FC = () => {
     : null
   const doneButton = (
     <DialogActions>
-      <Button variant="primary" onClick={() => modal.hide()}>
+      <Button variant="primary" onClick={() => modalState.hide()}>
         Done
       </Button>
     </DialogActions>
@@ -83,7 +75,12 @@ const StayUpdatedDialogInner: React.FC = () => {
 
   return (
     <Dialog
-      {...muiDialogV5(modal)}
+      {...modal}
+      onClose={() => {
+        modal.onClose?.()
+        hubspotFormSubmit.reset()
+        setEmail("")
+      }}
       title={"Stay Updated"}
       actions={hubspotFormSubmit.isSuccess ? doneButton : null}
       contentCss={{ margin: 0 }}
@@ -99,7 +96,11 @@ const StayUpdatedDialogInner: React.FC = () => {
             submitLabel="Notify Me"
             errorText={submissionError}
             actions={
-              <Button variant="secondary" type="button" onClick={modal.hide}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={modalState.hide}
+              >
                 Cancel
               </Button>
             }
