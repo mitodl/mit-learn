@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.62.4
+--------------
+
+- add margin (#3180)
+- Stay Informed Modal (#3170)
+
 Version 0.62.2 (Released April 08, 2026)
 --------------
 
