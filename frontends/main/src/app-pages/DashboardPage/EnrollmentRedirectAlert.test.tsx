@@ -1,5 +1,10 @@
 import React from "react"
-import { renderWithProviders, screen, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  setMockResponse,
+  waitFor,
+} from "@/test-utils"
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 import * as mitxonline from "api/mitxonline-test-utils"
 
@@ -87,6 +92,50 @@ describe("EnrollmentRedirectAlert", () => {
     ).toBeInTheDocument()
   })
 
+  test("waits for org data before showing contract success copy", async () => {
+    sessionStorage.setItem(
+      "dashboard_enrollment_title",
+      "Professional Certificate",
+    )
+    sessionStorage.setItem("dashboard_enrollment_org_id", "77")
+
+    const mitxUser = mitxonline.factories.user.user({
+      b2b_organizations: [
+        mitxonline.factories.organizations.organization({
+          id: 77,
+          name: "MIT xPRO",
+          contracts: [],
+        }),
+      ],
+    })
+    let resolveMitxUser!: (value: typeof mitxUser) => void
+    const pendingMitxUser = new Promise<typeof mitxUser>((resolve) => {
+      resolveMitxUser = resolve
+    })
+    setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_success=1",
+    })
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    })
+    expect(
+      screen.queryByText(
+        /You have successfully enrolled in Professional Certificate\. It has been added to My Learning\./i,
+      ),
+    ).not.toBeInTheDocument()
+
+    resolveMitxUser(mitxUser)
+
+    expect(
+      await screen.findByText(
+        /You have successfully enrolled in Professional Certificate from MIT xPRO\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+
   test("shows paid success alert from order receipt data", async () => {
     setMockResponse.get(
       mitxonline.urls.orders.receipt(17),
@@ -124,5 +173,21 @@ describe("EnrollmentRedirectAlert", () => {
         /Your enrollment is confirmed\. It has been added to My Learning\./i,
       ),
     ).toBeInTheDocument()
+  })
+
+  test("clears malformed paid redirect params without showing an alert", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=not-a-number",
+    })
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    })
+    expect(
+      screen.queryByText(/Your enrollment is confirmed\./i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/You have successfully enrolled in /i),
+    ).not.toBeInTheDocument()
   })
 })

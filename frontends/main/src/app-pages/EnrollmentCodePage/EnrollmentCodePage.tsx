@@ -2,6 +2,7 @@
 import React from "react"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import {
+  clearDashboardEnrollmentStorage,
   dashboardEnrollmentSuccessUrl,
   storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
@@ -48,9 +49,13 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
               title: contract.name,
               orgId: contract.organization,
             })
+
+            router.push(dashboardEnrollmentSuccessUrl())
+            return
           }
 
-          router.push(dashboardEnrollmentSuccessUrl())
+          clearDashboardEnrollmentStorage()
+          router.push(urls.DASHBOARD_HOME)
         },
         onError: () => {
           router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)

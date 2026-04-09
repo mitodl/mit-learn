@@ -41,8 +41,10 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     if (enrollmentError) {
       setRequest({ kind: "error" })
-    } else if (orderStatus === "fulfilled" && Number.isFinite(parsedOrderId)) {
-      setRequest({ kind: "paid", orderId: parsedOrderId })
+    } else if (orderStatus === "fulfilled") {
+      if (Number.isFinite(parsedOrderId)) {
+        setRequest({ kind: "paid", orderId: parsedOrderId })
+      }
     } else if (enrollmentSuccess) {
       const stored = readDashboardEnrollmentStorage()
       if (stored) {
@@ -70,7 +72,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
     router.replace(newUrl)
   }, [router, searchParams])
 
-  const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
+  const mitxOnlineUserQuery = useQuery(mitxUserQueries.me())
   const paidReceipt = useQuery({
     ...orderQueries.receipt(request?.kind === "paid" ? request.orderId : 0),
     enabled: request?.kind === "paid",
@@ -89,10 +91,14 @@ const EnrollmentRedirectAlert: React.FC = () => {
   }
 
   if (request?.kind === "free") {
+    if (request.orgId !== null && mitxOnlineUserQuery.isPending) {
+      return null
+    }
+
     const orgName =
       request.orgId === null
         ? null
-        : (mitxOnlineUser?.b2b_organizations.find(
+        : (mitxOnlineUserQuery.data?.b2b_organizations.find(
             (org) => org.id === request.orgId,
           )?.name ?? null)
 

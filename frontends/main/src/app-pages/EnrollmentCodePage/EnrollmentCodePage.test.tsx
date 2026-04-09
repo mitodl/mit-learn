@@ -105,7 +105,10 @@ describe("EnrollmentCodePage", () => {
     })
 
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("already-used-code")
-    // 200 status indicates user already attached to all contracts - still redirect to dashboard without error
+    sessionStorage.setItem("dashboard_enrollment_title", "Stale Title")
+    sessionStorage.setItem("dashboard_enrollment_org_id", "99")
+
+    // 200 status indicates user already attached to all contracts - redirect home without success state
     setMockResponse.post(attachUrl, [], { code: 200 })
 
     renderWithProviders(<EnrollmentCodePage code="already-used-code" />, {
@@ -117,8 +120,10 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(dashboardEnrollmentSuccessUrl())
+      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
     })
+    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBeNull()
+    expect(sessionStorage.getItem("dashboard_enrollment_org_id")).toBeNull()
   })
 
   test("Redirects to dashboard with error for invalid code (404 status)", async () => {
