@@ -19,4 +19,9 @@ class GensimEncoder(BaseEncoder):
     def embed(self, text):
         words = text.lower().split()
         vectors = [self.model[w] for w in words if w in self.model]
+        if not vectors:
+            return np.zeros(self.dim())
         return np.mean(vectors, axis=0)
+
+    def dim(self):
+        return self.model.vector_size
