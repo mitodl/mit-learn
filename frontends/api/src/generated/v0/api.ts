@@ -11991,7 +11991,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12006,6 +12006,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
@@ -12032,6 +12033,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       offset?: number,
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
+      published?: boolean,
       q?: string,
       readable_id?: string,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
@@ -12117,6 +12119,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["professional"] = professional
       }
 
+      if (published !== undefined) {
+        localVarQueryParameter["published"] = published
+      }
+
       if (q !== undefined) {
         localVarQueryParameter["q"] = q
       }
@@ -12175,7 +12181,7 @@ export const VectorLearningResourcesSearchApiFp = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12190,6 +12196,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
@@ -12216,6 +12223,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       offset?: number,
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
+      published?: boolean,
       q?: string,
       readable_id?: string,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
@@ -12247,6 +12255,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           offset,
           platform,
           professional,
+          published,
           q,
           readable_id,
           resource_type,
@@ -12311,6 +12320,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.offset,
           requestParameters.platform,
           requestParameters.professional,
+          requestParameters.published,
           requestParameters.q,
           requestParameters.readable_id,
           requestParameters.resource_type,
@@ -12332,8 +12342,8 @@ export const VectorLearningResourcesSearchApiFactory = function (
  */
 export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
   /**
-   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
-   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category'>}
+   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
+   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category' | 'published'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>
@@ -12437,6 +12447,13 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly professional?: boolean | null
 
   /**
+   * If the resource is published. We default to True unless passed in
+   * @type {boolean}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly published?: boolean
+
+  /**
    * The search text
    * @type {string}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
@@ -12522,6 +12539,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.offset,
         requestParameters.platform,
         requestParameters.professional,
+        requestParameters.published,
         requestParameters.q,
         requestParameters.readable_id,
         requestParameters.resource_type,
@@ -12557,6 +12575,7 @@ export const VectorLearningResourcesSearchRetrieveAggregationsEnum = {
   Url: "url",
   ResourceTypeGroup: "resource_type_group",
   ResourceCategory: "resource_category",
+  Published: "published",
 } as const
 export type VectorLearningResourcesSearchRetrieveAggregationsEnum =
   (typeof VectorLearningResourcesSearchRetrieveAggregationsEnum)[keyof typeof VectorLearningResourcesSearchRetrieveAggregationsEnum]
