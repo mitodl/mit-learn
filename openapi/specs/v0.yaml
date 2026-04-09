@@ -962,6 +962,58 @@ paths:
       summary: Vector Search
       parameters:
       - in: query
+        name: aggregations
+        schema:
+          type: array
+          items:
+            enum:
+            - readable_id
+            - resource_type
+            - certification
+            - certification_type
+            - professional
+            - free
+            - course_feature
+            - topic
+            - ocw_topic
+            - level
+            - department
+            - platform
+            - offered_by
+            - delivery
+            - title
+            - url
+            - resource_type_group
+            - resource_category
+            type: string
+            description: |-
+              * `readable_id` - Readable Id
+              * `resource_type` - Resource Type
+              * `certification` - Certification
+              * `certification_type` - Certification Type
+              * `professional` - Professional
+              * `free` - Free
+              * `course_feature` - Course Feature
+              * `topic` - Topic
+              * `ocw_topic` - Ocw Topic
+              * `level` - Level
+              * `department` - Department
+              * `platform` - Platform
+              * `offered_by` - Offered By
+              * `delivery` - Delivery
+              * `title` - Title
+              * `url` - Url
+              * `resource_type_group` - Resource Type Group
+              * `resource_category` - Resource Category
+        description: "aggregations for facet counts             \n\n* `readable_id`\
+          \ - Readable Id\n* `resource_type` - Resource Type\n* `certification` -\
+          \ Certification\n* `certification_type` - Certification Type\n* `professional`\
+          \ - Professional\n* `free` - Free\n* `course_feature` - Course Feature\n\
+          * `topic` - Topic\n* `ocw_topic` - Ocw Topic\n* `level` - Level\n* `department`\
+          \ - Department\n* `platform` - Platform\n* `offered_by` - Offered By\n*\
+          \ `delivery` - Delivery\n* `title` - Title\n* `url` - Url\n* `resource_type_group`\
+          \ - Resource Type Group\n* `resource_category` - Resource Category"
+      - in: query
         name: certification
         schema:
           type: boolean

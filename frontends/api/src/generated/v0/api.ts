@@ -11991,6 +11991,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12016,6 +12017,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @throws {RequiredError}
      */
     vectorLearningResourcesSearchRetrieve: async (
+      aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>,
       certification?: boolean | null,
       certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
       course_feature?: Array<string>,
@@ -12054,6 +12056,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
+
+      if (aggregations) {
+        localVarQueryParameter["aggregations"] = aggregations
+      }
 
       if (certification !== undefined) {
         localVarQueryParameter["certification"] = certification
@@ -12169,6 +12175,7 @@ export const VectorLearningResourcesSearchApiFp = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12194,6 +12201,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @throws {RequiredError}
      */
     async vectorLearningResourcesSearchRetrieve(
+      aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>,
       certification?: boolean | null,
       certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
       course_feature?: Array<string>,
@@ -12224,6 +12232,7 @@ export const VectorLearningResourcesSearchApiFp = function (
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.vectorLearningResourcesSearchRetrieve(
+          aggregations,
           certification,
           certification_type,
           course_feature,
@@ -12287,6 +12296,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
     ): AxiosPromise<LearningResourcesVectorSearchResponse> {
       return localVarFp
         .vectorLearningResourcesSearchRetrieve(
+          requestParameters.aggregations,
           requestParameters.certification,
           requestParameters.certification_type,
           requestParameters.course_feature,
@@ -12321,6 +12331,13 @@ export const VectorLearningResourcesSearchApiFactory = function (
  * @interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest
  */
 export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
+  /**
+   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category
+   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category'>}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>
+
   /**
    * True if the learning resource offers a certificate
    * @type {boolean}
@@ -12490,6 +12507,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
   ) {
     return VectorLearningResourcesSearchApiFp(this.configuration)
       .vectorLearningResourcesSearchRetrieve(
+        requestParameters.aggregations,
         requestParameters.certification,
         requestParameters.certification_type,
         requestParameters.course_feature,
@@ -12517,6 +12535,31 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
   }
 }
 
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveAggregationsEnum = {
+  ReadableId: "readable_id",
+  ResourceType: "resource_type",
+  Certification: "certification",
+  CertificationType: "certification_type",
+  Professional: "professional",
+  Free: "free",
+  CourseFeature: "course_feature",
+  Topic: "topic",
+  OcwTopic: "ocw_topic",
+  Level: "level",
+  Department: "department",
+  Platform: "platform",
+  OfferedBy: "offered_by",
+  Delivery: "delivery",
+  Title: "title",
+  Url: "url",
+  ResourceTypeGroup: "resource_type_group",
+  ResourceCategory: "resource_category",
+} as const
+export type VectorLearningResourcesSearchRetrieveAggregationsEnum =
+  (typeof VectorLearningResourcesSearchRetrieveAggregationsEnum)[keyof typeof VectorLearningResourcesSearchRetrieveAggregationsEnum]
 /**
  * @export
  */
