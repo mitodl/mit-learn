@@ -17,6 +17,12 @@ from rest_framework.views import APIView
 from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
+    RESOURCES_COLLECTION_NAME,
+    RESOURCES_RETRIEVE_PAYLOAD,
+)
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     ContentFileVectorSearchResponseSerializer,
@@ -24,11 +30,10 @@ from vector_search.serializers import (
     LearningResourcesVectorSearchResponseSerializer,
 )
 from vector_search.utils import (
-    CONTENT_FILES_COLLECTION_NAME,
-    RESOURCES_COLLECTION_NAME,
     _content_file_vector_hits,
     _merge_dicts,
     _resource_vector_hits,
+    async_qdrant_aggregations,
     async_qdrant_client,
     dense_encoder,
     qdrant_query_conditions,
@@ -113,8 +118,19 @@ class QdrantView(APIView):
                 "collection_name": search_collection,
                 "query_filter": search_filter,
                 "with_vectors": False,
-                "with_payload": True,
-                "search_params": models.SearchParams(indexed_only=True, exact=False),
+                "with_payload": RESOURCES_RETRIEVE_PAYLOAD
+                if search_collection == RESOURCES_COLLECTION_NAME
+                else CONTENT_FILES_RETRIEVE_PAYLOAD,
+                "search_params": models.SearchParams(
+                    quantization=models.QuantizationSearchParams(
+                        ignore=False,
+                        rescore=True,
+                        oversampling=1,
+                    ),
+                    hnsw_ef=64,
+                    indexed_only=True,
+                    exact=False,
+                ),
                 "limit": limit,
             }
 
@@ -185,15 +201,24 @@ class QdrantView(APIView):
         else:
             hits = await sync_to_async(_content_file_vector_hits)(search_result)
 
-        count_result = await client.count(
-            collection_name=search_collection,
-            count_filter=search_filter,
-            exact=False,
+        aggregation_keys = params.get("aggregations") or []
+        count_result, aggregations = await asyncio.gather(
+            client.count(
+                collection_name=search_collection,
+                count_filter=search_filter,
+                exact=False,
+            ),
+            async_qdrant_aggregations(
+                aggregation_keys,
+                search_filter,
+                collection_name=search_collection,
+            ),
         )
 
         return {
             "hits": hits,
             "total": {"value": count_result.count},
+            "aggregations": aggregations,
         }
 
     def handle_exception(self, exc):

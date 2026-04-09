@@ -45,6 +45,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "title": "title",
     "url": "url",
     "resource_type_group": "resource_type_group",
+    "resource_category": "resource_category",
 }
 
 
@@ -71,6 +72,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "url": models.PayloadSchemaType.KEYWORD,
     "title": models.PayloadSchemaType.KEYWORD,
     "resource_type_group": models.PayloadSchemaType.KEYWORD,
+    "resource_category": models.PayloadSchemaType.KEYWORD,
 }
 
 """
@@ -92,3 +94,7 @@ QDRANT_CONTENT_FILE_INDEXES = {
 QDRANT_TOPIC_INDEXES = {
     "name": models.PayloadSchemaType.KEYWORD,
 }
+
+
+CONTENT_FILES_RETRIEVE_PAYLOAD = ["key", "run_readable_id"]
+RESOURCES_RETRIEVE_PAYLOAD = ["readable_id"]
