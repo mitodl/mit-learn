@@ -1603,9 +1603,9 @@ def test_load_content_files_empty_input_preserves_existing_files(mocker):
 def test_load_content_files_all_none_ids_preserves_existing_files(mocker):
     """
     If every load_content_file call swallows an exception and returns None,
-    the resulting id list is [None, None, ...] -- still non-empty but with
-    no valid ids. load_content_files must treat that as an empty ingest
-    and preserve the existing published content files.
+    those None ids are skipped and the resulting id list is empty.
+    load_content_files must treat that as an empty ingest and preserve
+    the existing published content files.
     """
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     course_run = LearningResourceRunFactory.create(
