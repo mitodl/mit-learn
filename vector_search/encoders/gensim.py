@@ -6,7 +6,7 @@ from vector_search.encoders.base import BaseEncoder
 
 class GensimEncoder(BaseEncoder):
     """
-    Dummy Encoder
+    Lightweight local embedding encoder backed by gensim pretrained vectors.
     """
 
     def __init__(self, model_name="glove/glove-wiki-gigaword-50"):
