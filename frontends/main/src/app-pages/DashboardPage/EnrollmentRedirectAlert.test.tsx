@@ -1,0 +1,128 @@
+import React from "react"
+import { renderWithProviders, screen, setMockResponse } from "@/test-utils"
+import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
+import * as mitxonline from "api/mitxonline-test-utils"
+
+jest.mock("next-nprogress-bar", () => ({
+  useRouter: jest.fn(),
+}))
+
+const mockReplace = jest.fn()
+
+const { useRouter } = jest.requireMock("next-nprogress-bar")
+
+describe("EnrollmentRedirectAlert", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    sessionStorage.clear()
+    useRouter.mockReturnValue({
+      replace: mockReplace,
+    })
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        b2b_organizations: [],
+      }),
+    )
+  })
+
+  test("shows enrollment error alert and clears query params", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_error=1",
+    })
+
+    expect(
+      await screen.findByText(
+        /The Enrollment Code is incorrect or no longer available\./i,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Contact Support")).toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+  })
+
+  test("shows free success alert from stored dashboard enrollment data", async () => {
+    sessionStorage.setItem("dashboard_enrollment_title", "Data Science")
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_success=1",
+    })
+
+    expect(
+      await screen.findByText(
+        /You have successfully enrolled in Data Science\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBeNull()
+  })
+
+  test("shows contract success alert with org name when org id matches MITxOnline user data", async () => {
+    sessionStorage.setItem(
+      "dashboard_enrollment_title",
+      "Professional Certificate",
+    )
+    sessionStorage.setItem("dashboard_enrollment_org_id", "77")
+
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        b2b_organizations: [
+          mitxonline.factories.organizations.organization({
+            id: 77,
+            name: "MIT xPRO",
+            contracts: [],
+          }),
+        ],
+      }),
+    )
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_success=1",
+    })
+
+    expect(
+      await screen.findByText(
+        /You have successfully enrolled in Professional Certificate from MIT xPRO\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("shows paid success alert from order receipt data", async () => {
+    setMockResponse.get(
+      mitxonline.urls.orders.receipt(17),
+      mitxonline.factories.orders.receipt({
+        lines: [
+          mitxonline.factories.orders.receiptLine({
+            item_description: "Machine Learning with Python",
+          }),
+        ],
+      }),
+    )
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=17",
+    })
+
+    expect(
+      await screen.findByText(
+        /You have successfully enrolled in Machine Learning with Python\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("falls back to generic paid success copy when receipt loading fails", async () => {
+    setMockResponse.get(mitxonline.urls.orders.receipt(18), "Server error", {
+      code: 500,
+    })
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=18",
+    })
+
+    expect(
+      await screen.findByText(
+        /Your enrollment is confirmed\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+  })
+})
