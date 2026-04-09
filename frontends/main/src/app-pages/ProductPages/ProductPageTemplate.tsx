@@ -274,22 +274,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   const stayUpdatedParams = stayUpdatedFormId
     ? { form_id: stayUpdatedFormId }
     : undefined
-  const { data: stayUpdatedForm, isError: stayUpdatedFormRequestFailed } =
-    useHubspotFormDetail(stayUpdatedParams)
+  const formQuery = useHubspotFormDetail(stayUpdatedParams)
   const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId)
-  const [hasStayUpdatedFormError, setHasStayUpdatedFormError] =
-    React.useState(false)
-
-  React.useEffect(() => {
-    if (stayUpdatedForm) {
-      setHasStayUpdatedFormError(false)
-      return
-    }
-
-    if (stayUpdatedFormRequestFailed) {
-      setHasStayUpdatedFormError(true)
-    }
-  }, [stayUpdatedForm, stayUpdatedFormRequestFailed])
 
   return (
     <Page>
@@ -325,7 +311,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
                           variant="secondary"
-                          disabled={hasStayUpdatedFormError}
+                          disabled={formQuery.isError}
                           onClick={() => NiceModal.show(StayUpdatedModal)}
                         >
                           Stay Updated
