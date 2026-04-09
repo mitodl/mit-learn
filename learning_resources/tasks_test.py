@@ -1000,24 +1000,45 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
         assert file.id in remaining_ids
 
 
-def test_cleanup_deleted_content_files_logs_context(mocker, settings):
-    """cleanup_deleted_content_files should log start and finish context."""
+def test_cleanup_deleted_content_files_skips_republished_rows(mocker, settings):
+    """
+    If a content file picked up in the eligible id list gets republished
+    before the chunked delete runs, it should be skipped instead of
+    hard-deleted (the delete re-applies the eligibility filter).
+    """
     settings.CONTENT_FILE_RETENTION_DAYS = 14
-    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 10
+
     run = LearningResourceRunFactory.create(
         published=True, learning_resource__etl_source=ETLSource.mitxonline.value
     )
-    files = ContentFileFactory.create_batch(3, run=run, published=False)
     old_cutoff = now_in_utc() - timedelta(days=15)
-    ContentFile.objects.filter(id__in=[f.id for f in files]).update(
+    doomed = ContentFileFactory.create_batch(2, run=run, published=False)
+    survivor = ContentFileFactory.create(run=run, published=False)
+    ContentFile.objects.filter(id__in=[f.id for f in [*doomed, survivor]]).update(
         updated_on=old_cutoff
     )
 
-    mocker.patch("learning_resources.tasks.log.info")
+    # Wrap `list` inside the tasks module so that immediately after the
+    # eligible-id list is materialized, we flip `survivor` to published=True
+    # -- simulating a race between selection and the chunked delete. The
+    # delete's re-applied eligibility filter should still spare it.
+    real_list = list
+
+    def racy_list(iterable):
+        result = real_list(iterable)
+        ContentFile.objects.filter(id=survivor.id).update(published=True)
+        return result
+
+    mocker.patch("learning_resources.tasks.list", side_effect=racy_list, create=True)
 
     deleted_count = cleanup_deleted_content_files()
 
-    assert deleted_count == 3
+    assert deleted_count == 2
+    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
+    assert survivor.id in remaining_ids
+    for file in doomed:
+        assert file.id not in remaining_ids
 
 
 def test_cleanup_deleted_content_files_no_eligible_returns_zero(mocker, settings):

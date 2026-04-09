@@ -787,30 +787,40 @@ def cleanup_deleted_content_files():
             cutoff = now_in_utc() - datetime_module.timedelta(
                 days=settings.CONTENT_FILE_RETENTION_DAYS
             )
-            eligible_ids = ContentFile.objects.filter(
-                published=False,
-                updated_on__lt=cutoff,
-                run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
-            ).values_list("id", flat=True)
-
-            eligible_count = eligible_ids.count()
             chunk_size = settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE
-            if eligible_count == 0:
-                log.info(
-                    "cleanup_deleted_content_files: no eligible content files found"
-                )
-                return 0
-
+            content_file_label = ContentFile._meta.label  # noqa: SLF001
             total_deleted = 0
-            chunks_processed = 0
+            found_candidates = False
+            last_id = 0
             while True:
-                chunk = list(eligible_ids[:chunk_size])
+                chunk = list(
+                    ContentFile.objects.filter(
+                        published=False,
+                        updated_on__lt=cutoff,
+                        run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
+                        id__gt=last_id,
+                    )
+                    .order_by("id")
+                    .values_list("id", flat=True)[:chunk_size]
+                )
+
                 if not chunk:
-                    break
-                ContentFile.objects.filter(id__in=chunk).delete()
-                total_deleted += len(chunk)
-                chunks_processed += 1
-            return total_deleted
+                    if not found_candidates:
+                        log.info(
+                            "cleanup_deleted_content_files: "
+                            "no eligible content files found"
+                        )
+                    return total_deleted
+
+                found_candidates = True
+                last_id = chunk[-1]
+                _, per_model = ContentFile.objects.filter(
+                    id__in=chunk,
+                    published=False,
+                    updated_on__lt=cutoff,
+                    run__learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES,
+                ).delete()
+                total_deleted += per_model.get(content_file_label, 0)
     except (RetryError, Ignore):
         raise
     except:  # noqa: E722

@@ -1600,6 +1600,52 @@ def test_load_content_files_empty_input_preserves_existing_files(mocker):
     assert existing_direct_resource.published
 
 
+def test_load_content_files_all_none_ids_preserves_existing_files(mocker):
+    """
+    If every load_content_file call swallows an exception and returns None,
+    the resulting id list is [None, None, ...] -- still non-empty but with
+    no valid ids. load_content_files must treat that as an empty ingest
+    and preserve the existing published content files.
+    """
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    existing_content_file = ContentFileFactory.create(run=course_run, published=True)
+    existing_direct_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.value,
+        published=True,
+    )
+    existing_content_file.direct_learning_resource = existing_direct_resource
+    existing_content_file.save()
+
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=None,
+        autospec=True,
+    )
+    mock_log_error = mocker.patch("learning_resources.etl.loaders.log.error")
+    mock_content_files_loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(
+        course_run,
+        [{"title": "doomed-1"}, {"title": "doomed-2"}],
+        calc_completeness=False,
+    )
+
+    assert result == []
+    mock_log_error.assert_called_once()
+    mock_content_files_loaded_actions.assert_not_called()
+
+    existing_content_file.refresh_from_db()
+    existing_direct_resource.refresh_from_db()
+    assert existing_content_file.published
+    assert existing_direct_resource.published
+
+
 def test_load_content_files_does_not_update_already_unpublished_stale_files(mocker):
     """Already-unpublished stale files should be left untouched so updated_on retention clock is preserved."""
     course = LearningResourceFactory.create(is_course=True, create_runs=False)

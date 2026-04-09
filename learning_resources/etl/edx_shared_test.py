@@ -654,7 +654,8 @@ def test_sync_edx_archive_success(
         return_value='{"key": "data"}',
     )
     mock_load = mocker.patch(
-        "learning_resources.etl.edx_shared.load_content_files", return_value=[]
+        "learning_resources.etl.edx_shared.load_content_files",
+        return_value=[1, 2, 3],
     )
 
     sync_edx_archive(etl_source, s3_key, overwrite=False)
@@ -859,7 +860,8 @@ def test_sync_edx_archive_with_overwrite(
         return_value='{"key": "data"}',
     )
     mock_load = mocker.patch(
-        "learning_resources.etl.edx_shared.load_content_files", return_value=[]
+        "learning_resources.etl.edx_shared.load_content_files",
+        return_value=[1, 2, 3],
     )
 
     sync_edx_archive(etl_source, s3_key, overwrite=True)

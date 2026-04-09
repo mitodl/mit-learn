@@ -986,7 +986,9 @@ def load_content_files(
         content_tags = []
         for content_file in content_files_data:
             content_tags.append(content_file.get("content_tags") or [])
-            content_files_ids.append(load_content_file(course_run, content_file))
+            file_id = load_content_file(course_run, content_file)
+            if file_id is not None:
+                content_files_ids.append(file_id)
 
         if not content_files_ids:
             log.error(
@@ -996,24 +998,23 @@ def load_content_files(
             )
             return content_files_ids
 
-        stale_published_files = (
-            ContentFile.objects.filter(run=course_run, published=True)
-            .exclude(id__in=content_files_ids)
-            .select_related("direct_learning_resource")
+        stale_published_files = ContentFile.objects.filter(
+            run=course_run, published=True
+        ).exclude(id__in=content_files_ids)
+        stale_direct_resource_ids = list(
+            stale_published_files.filter(direct_learning_resource__isnull=False)
+            .values_list("direct_learning_resource_id", flat=True)
+            .distinct()
         )
-        for file in stale_published_files.filter(
-            direct_learning_resource__isnull=False
-        ):
-            file.published = False
-            file.save(update_fields=["published"])
-            resource = file.direct_learning_resource
-            if resource.published:
-                resource.published = False
-                resource.save(update_fields=["published"])
-            update_index(resource, newly_created=False)
-        stale_published_files.filter(direct_learning_resource__isnull=True).update(
-            published=False
-        )
+        stale_published_files.update(published=False)
+        if stale_direct_resource_ids:
+            LearningResource.objects.filter(
+                id__in=stale_direct_resource_ids, published=True
+            ).update(published=False)
+            for resource in LearningResource.objects.filter(
+                id__in=stale_direct_resource_ids
+            ):
+                update_index(resource, newly_created=False)
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)
