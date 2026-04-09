@@ -36,6 +36,7 @@ const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
 
 const DialogSuccessCheck = styled(Image)({
   alignSelf: "center",
+  marginBottom: "24px",
 })
 
 const mapValuesToFields = (
