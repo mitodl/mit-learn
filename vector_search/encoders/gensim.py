@@ -13,6 +13,8 @@ class GensimEncoder(BaseEncoder):
         self.model_name = model_name
         self.model = api.load(self.model_short_name())
 
+    def dim(self):
+        return self.model.vector_size
     def embed_documents(self, documents):
         return [self.embed(doc) for doc in documents]
 
