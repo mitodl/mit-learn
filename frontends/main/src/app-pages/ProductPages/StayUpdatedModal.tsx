@@ -60,6 +60,12 @@ const StayUpdatedDialogInner: React.FC = () => {
   const hubspotFormSubmit = useHubspotFormSubmit()
   const [email, setEmail] = useState("")
 
+  const closeDialog = async () => {
+    await modalState.hide()
+    hubspotFormSubmit.reset()
+    setEmail("")
+  }
+
   const submissionError = hubspotFormSubmit.isError
     ? hubspotFormSubmit.error instanceof Error
       ? hubspotFormSubmit.error.message
@@ -67,7 +73,7 @@ const StayUpdatedDialogInner: React.FC = () => {
     : null
   const doneButton = (
     <DialogActions>
-      <Button variant="primary" onClick={() => modalState.hide()}>
+      <Button variant="primary" onClick={closeDialog}>
         Done
       </Button>
     </DialogActions>
@@ -76,11 +82,6 @@ const StayUpdatedDialogInner: React.FC = () => {
   return (
     <Dialog
       {...modal}
-      onClose={() => {
-        modal.onClose?.()
-        hubspotFormSubmit.reset()
-        setEmail("")
-      }}
       title={"Stay Updated"}
       actions={hubspotFormSubmit.isSuccess ? doneButton : null}
       contentCss={{ margin: 0 }}
@@ -96,11 +97,7 @@ const StayUpdatedDialogInner: React.FC = () => {
             submitLabel="Notify Me"
             errorText={submissionError}
             actions={
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={modalState.hide}
-              >
+              <Button variant="secondary" type="button" onClick={closeDialog}>
                 Cancel
               </Button>
             }

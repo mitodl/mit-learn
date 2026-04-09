@@ -89,6 +89,7 @@ type DialogProps = {
   maxWidth?: MuiDialogProps["maxWidth"]
   disabled?: boolean
   scroll?: MuiDialogProps["scroll"]
+  TransitionProps?: MuiDialogProps["TransitionProps"]
 }
 
 /**
@@ -117,6 +118,7 @@ const Dialog: React.FC<DialogProps> = ({
   maxWidth,
   disabled = false,
   scroll,
+  TransitionProps,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -142,6 +144,7 @@ const Dialog: React.FC<DialogProps> = ({
       disableEnforceFocus={disableEnforceFocus}
       slotProps={{
         paper: PaperProps,
+        transition: TransitionProps,
       }}
       TransitionComponent={Transition}
       aria-labelledby={titleId}
