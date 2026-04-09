@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
   Pagination,
@@ -551,6 +551,7 @@ const toVectorSearchParams = (
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
+  onFetchTimeChange?: (time: number | null) => void
   facetManifest: FacetManifest
   facetNames: UseResourceSearchParamsProps["facets"]
   constantSearchParams: Facets & BooleanFacets
@@ -580,9 +581,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
   filterHeadingEl,
+  onFetchTimeChange,
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
+  const fetchStartRef = useRef<number | null>(null)
 
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions)
@@ -662,6 +665,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
+
+  useEffect(() => {
+    if (isFetching) {
+      fetchStartRef.current = performance.now()
+      if (onFetchTimeChange) onFetchTimeChange(null)
+    } else if (fetchStartRef.current !== null) {
+      const time = performance.now() - fetchStartRef.current
+      if (onFetchTimeChange) onFetchTimeChange(time)
+      fetchStartRef.current = null
+    }
+  }, [isFetching, onFetchTimeChange])
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
