@@ -89,7 +89,7 @@ type DialogProps = {
   maxWidth?: MuiDialogProps["maxWidth"]
   disabled?: boolean
   scroll?: MuiDialogProps["scroll"]
-  TransitionProps?: MuiDialogProps["TransitionProps"]
+  TransitionProps?: NonNullable<MuiDialogProps["slotProps"]>["transition"]
 }
 
 /**
@@ -146,7 +146,9 @@ const Dialog: React.FC<DialogProps> = ({
         paper: PaperProps,
         transition: TransitionProps,
       }}
-      TransitionComponent={Transition}
+      slots={{
+        transition: Transition,
+      }}
       aria-labelledby={titleId}
       maxWidth={maxWidth}
       scroll={scroll}
