@@ -15,6 +15,7 @@ class GensimEncoder(BaseEncoder):
 
     def dim(self):
         return self.model.vector_size
+
     def embed_documents(self, documents):
         return [self.embed(doc) for doc in documents]
 
