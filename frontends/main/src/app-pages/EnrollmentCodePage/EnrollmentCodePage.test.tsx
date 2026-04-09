@@ -1,4 +1,5 @@
 import React from "react"
+import { dashboardEnrollmentSuccessUrl } from "@/common/mitxonline"
 import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
 import { makeRequest, urls } from "api/test-utils"
 import { urls as b2bUrls, factories } from "api/mitxonline-test-utils"
@@ -18,6 +19,7 @@ describe("EnrollmentCodePage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockPush.mockClear()
+    sessionStorage.clear()
   })
 
   test("Redirects to login when not authenticated", async () => {
@@ -67,14 +69,18 @@ describe("EnrollmentCodePage", () => {
     })
   })
 
-  test("Redirects to dashboard on successful attachment (201 status)", async () => {
+  test("Stores contract info and redirects to dashboard success on successful attachment", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
 
+    const contract = factories.contracts.contract({
+      name: "Professional Certificate in AI",
+      organization: 77,
+    })
+
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("test-code")
-    // 201 status indicates successful attachment to new contract(s)
-    setMockResponse.post(attachUrl, {}, { code: 201 })
+    setMockResponse.post(attachUrl, [contract], { code: 201 })
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -85,8 +91,12 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+      expect(mockPush).toHaveBeenCalledWith(dashboardEnrollmentSuccessUrl())
     })
+    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBe(
+      "Professional Certificate in AI",
+    )
+    expect(sessionStorage.getItem("dashboard_enrollment_org_id")).toBe("77")
   })
 
   test("Redirects to dashboard when user already attached to all contracts (200 status)", async () => {
@@ -96,7 +106,7 @@ describe("EnrollmentCodePage", () => {
 
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("already-used-code")
     // 200 status indicates user already attached to all contracts - still redirect to dashboard without error
-    setMockResponse.post(attachUrl, {}, { code: 200 })
+    setMockResponse.post(attachUrl, [], { code: 200 })
 
     renderWithProviders(<EnrollmentCodePage code="already-used-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
@@ -107,7 +117,7 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
+      expect(mockPush).toHaveBeenCalledWith(dashboardEnrollmentSuccessUrl())
     })
   })
 
