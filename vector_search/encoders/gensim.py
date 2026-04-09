@@ -24,4 +24,10 @@ class GensimEncoder(BaseEncoder):
         return np.mean(vectors, axis=0)
 
     def dim(self):
-        return self.model.vector_size
+        if hasattr(self.model, "vector_size"):
+            return self.model.vector_size
+        first_key = next(iter(self.model.index_to_key), None)
+        if first_key is not None:
+            return len(self.model[first_key])
+        msg = "Unable to determine embedding dimension for gensim model"
+        raise ValueError(msg)
