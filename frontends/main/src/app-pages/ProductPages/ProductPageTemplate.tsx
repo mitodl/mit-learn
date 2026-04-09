@@ -306,7 +306,16 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       {title}
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
-                    <Stack direction="row" gap="24px" flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      gap="24px"
+                      flexWrap="wrap"
+                      sx={(theme) => ({
+                        [theme.breakpoints.down("sm")]: {
+                          width: "100%",
+                        },
+                      })}
+                    >
                       <EnrollButton>{enrollmentAction}</EnrollButton>
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
