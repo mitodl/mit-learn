@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { styled } from "ol-components"
@@ -106,12 +106,21 @@ const FeaturedDescription = styled.p(({ theme }) => ({
   },
 }))
 
+const FEATURED_TITLE_MAX_CHARS = 30
+
 type FeaturedVideoProps = {
   video: VideoResource
   href: string
 }
 
 const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
+  const truncatedTitle = useMemo(
+    () =>
+      video?.title.length > FEATURED_TITLE_MAX_CHARS
+        ? `${video.title.slice(0, FEATURED_TITLE_MAX_CHARS).trimEnd()}...`
+        : video?.title,
+    [video?.title],
+  )
   if (!video) return null
 
   const imageUrl = video.image?.url ?? null
@@ -119,11 +128,6 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
     ? formatDurationClockTime(video.video.duration)
     : null
   const description = video.description ?? ""
-  const FEATURED_TITLE_MAX_CHARS = 30
-  const truncatedTitle =
-    video.title.length > FEATURED_TITLE_MAX_CHARS
-      ? `${video.title.slice(0, FEATURED_TITLE_MAX_CHARS).trimEnd()}...`
-      : video.title
 
   return (
     <Section>

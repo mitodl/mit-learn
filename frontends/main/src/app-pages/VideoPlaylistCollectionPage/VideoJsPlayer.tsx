@@ -63,15 +63,22 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     )
 
     playerRef.current = player
-  }, [autoplay, controls, fluid, onReady, poster, sources])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Update sources / poster when props change without re-creating the player
+  // Update sources when they change without re-creating the player
   useEffect(() => {
     const player = playerRef.current
     if (!player) return
     player.src(sources)
-    if (poster) player.poster(poster)
-  }, [sources, poster])
+  }, [sources])
+
+  // Update poster when it changes without re-creating the player
+  useEffect(() => {
+    const player = playerRef.current
+    if (!player || !poster) return
+    player.poster(poster)
+  }, [poster])
 
   // Dispose on unmount
   useEffect(() => {
