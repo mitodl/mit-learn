@@ -26,7 +26,8 @@ const CONSUMED_PARAMS = [
 
 type AlertRequest =
   | { kind: "error" }
-  | { kind: "free"; title: string | null; orgId: number | null }
+  | { kind: "free"; title: string | null }
+  | { kind: "b2b"; title: string; orgId: number }
   | { kind: "paid"; orderId: number }
 
 const BoldTitle = styled.strong(({ theme }) => ({
@@ -37,24 +38,32 @@ const UnderlinedLink = styled(Link)({
   textDecoration: "underline",
 })
 
-const SuccessCopy: React.FC<{ title: string }> = ({ title }) => (
+const MyLearningLink: React.FC = () => (
+  <UnderlinedLink color="red" href={DASHBOARD_MY_LEARNING}>
+    My Learning
+  </UnderlinedLink>
+)
+
+const FreeSuccessCopy: React.FC<{ title: string }> = ({ title }) => (
   <>
     You have successfully enrolled in "<BoldTitle>{title}</BoldTitle>". It has
-    been added to{" "}
-    <UnderlinedLink color="red" href={DASHBOARD_MY_LEARNING}>
-      My Learning
-    </UnderlinedLink>
-    .
+    been added to <MyLearningLink />.
+  </>
+)
+
+const B2bSuccessCopy: React.FC<{ title: string; orgName: string }> = ({
+  title,
+  orgName,
+}) => (
+  <>
+    You have been enrolled in "<BoldTitle>{title}</BoldTitle>" by {orgName}. It
+    has been added to <MyLearningLink />.
   </>
 )
 
 const GenericSuccessCopy: React.FC = () => (
   <>
-    Your enrollment is confirmed. It has been added to{" "}
-    <UnderlinedLink color="red" href={DASHBOARD_MY_LEARNING}>
-      My Learning
-    </UnderlinedLink>
-    .
+    Your enrollment is confirmed. It has been added to <MyLearningLink />.
   </>
 )
 
@@ -72,18 +81,22 @@ const parseAlertRequest = (
     if (Number.isFinite(orderId)) {
       return { kind: "paid", orderId }
     }
-    // Malformed order_id: clean up params but don't show an alert
+    console.warn(
+      "Malformed enrollment redirect: order_status=fulfilled but order_id is not a valid number",
+      params[ORDER_ID_PARAM],
+    )
     return null
   }
 
   if (params[ENROLLMENT_TITLE_PARAM] !== null) {
     const rawOrgId = params[ENROLLMENT_ORG_ID_PARAM]
     const orgId = rawOrgId ? Number(rawOrgId) : null
-    return {
-      kind: "free",
-      title: params[ENROLLMENT_TITLE_PARAM] || null,
-      orgId: orgId !== null && Number.isFinite(orgId) ? orgId : null,
+    const title = params[ENROLLMENT_TITLE_PARAM] || null
+
+    if (title && orgId !== null && Number.isFinite(orgId)) {
+      return { kind: "b2b", title, orgId }
     }
+    return { kind: "free", title }
   }
 
   return null
@@ -95,10 +108,9 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
   const request = consumed ? parseAlertRequest(consumed) : null
 
-  const hasOrgId = request?.kind === "free" && request.orgId !== null
   const mitxOnlineUserQuery = useQuery({
     ...mitxUserQueries.me(),
-    enabled: hasOrgId,
+    enabled: request?.kind === "b2b",
   })
   const paidReceipt = useQuery({
     ...orderQueries.receipt(request?.kind === "paid" ? request.orderId : 0),
@@ -118,29 +130,33 @@ const EnrollmentRedirectAlert: React.FC = () => {
   }
 
   if (request?.kind === "free") {
-    if (request.orgId !== null && mitxOnlineUserQuery.isPending) {
+    return (
+      <Alert severity="success" label="Success!">
+        {request.title ? (
+          <FreeSuccessCopy title={request.title} />
+        ) : (
+          <GenericSuccessCopy />
+        )}
+      </Alert>
+    )
+  }
+
+  if (request?.kind === "b2b") {
+    if (mitxOnlineUserQuery.isPending) {
       return null
     }
 
-    const orgName =
-      request.orgId === null
-        ? null
-        : (mitxOnlineUserQuery.data?.b2b_organizations.find(
-            (org) => org.id === request.orgId,
-          )?.name ?? null)
-
-    if (request.title) {
-      const title = orgName ? `${request.title} from ${orgName}` : request.title
-      return (
-        <Alert severity="success" label="Success!">
-          <SuccessCopy title={title} />
-        </Alert>
-      )
-    }
+    const orgName = mitxOnlineUserQuery.data?.b2b_organizations.find(
+      (org) => org.id === request.orgId,
+    )?.name
 
     return (
       <Alert severity="success" label="Success!">
-        <GenericSuccessCopy />
+        {orgName ? (
+          <B2bSuccessCopy title={request.title} orgName={orgName} />
+        ) : (
+          <FreeSuccessCopy title={request.title} />
+        )}
       </Alert>
     )
   }
@@ -151,7 +167,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     return (
       <Alert severity="success">
-        {title ? <SuccessCopy title={title} /> : <GenericSuccessCopy />}
+        {title ? <FreeSuccessCopy title={title} /> : <GenericSuccessCopy />}
       </Alert>
     )
   }

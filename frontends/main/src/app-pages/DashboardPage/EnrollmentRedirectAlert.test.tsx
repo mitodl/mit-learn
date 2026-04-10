@@ -61,7 +61,7 @@ describe("EnrollmentRedirectAlert", () => {
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
-  test("shows contract success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
+  test("shows B2B success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
     const org = mitxonline.factories.organizations.organization({
       id: 77,
       contracts: [],
@@ -81,15 +81,15 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have successfully enrolled in "Professional Certificate from ${escapeRegExp(org.name)}"`,
+        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}`,
       ),
     )
 
     const bold = alert.querySelector("strong")
-    expect(bold).toHaveTextContent(`Professional Certificate from ${org.name}`)
+    expect(bold).toHaveTextContent("Professional Certificate")
   })
 
-  test("waits for org data before showing contract success copy", async () => {
+  test("waits for org data before showing B2B success copy", async () => {
     const org = mitxonline.factories.organizations.organization({
       id: 77,
       contracts: [],
@@ -117,7 +117,7 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have successfully enrolled in "Professional Certificate from ${escapeRegExp(org.name)}"`,
+        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}`,
       ),
     )
   })
@@ -175,6 +175,8 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("clears malformed paid redirect params without showing an alert", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation()
+
     renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?order_status=fulfilled&order_id=not-a-number",
     })
@@ -183,6 +185,12 @@ describe("EnrollmentRedirectAlert", () => {
       expect(mockReplace).toHaveBeenCalledWith("/dashboard")
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Malformed enrollment redirect"),
+      "not-a-number",
+    )
+
+    warnSpy.mockRestore()
   })
 
   test("renders nothing and does not call replace when no alert params are present", async () => {
