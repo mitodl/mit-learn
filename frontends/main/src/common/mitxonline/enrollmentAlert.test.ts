@@ -2,6 +2,7 @@ import {
   ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
+  EnrollmentErrorType,
   enrollmentAlertSuccessUrl,
   enrollmentAlertErrorUrl,
 } from "./enrollmentAlert"
@@ -32,8 +33,10 @@ describe("enrollmentAlert", () => {
     expect(urlOmitted).toBe("/dashboard?enrollment_title=Signals")
   })
 
-  test("builds an error URL", () => {
-    expect(enrollmentAlertErrorUrl()).toBe("/dashboard?enrollment_error=1")
+  test("builds an error URL with the error type", () => {
+    expect(
+      enrollmentAlertErrorUrl(EnrollmentErrorType.INVALID_ENROLLMENT_CODE),
+    ).toBe("/dashboard?enrollment_error=1&error_type=invalid-enrollment-code")
   })
 
   test("exports the expected param name constants", () => {

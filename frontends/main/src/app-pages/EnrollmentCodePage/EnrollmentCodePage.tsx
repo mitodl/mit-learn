@@ -4,6 +4,7 @@ import { styled, Breadcrumbs, Container, Typography } from "ol-components"
 import {
   enrollmentAlertSuccessUrl,
   enrollmentAlertErrorUrl,
+  EnrollmentErrorType,
 } from "@/common/mitxonline"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
@@ -56,7 +57,11 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
           router.push(urls.DASHBOARD_HOME)
         },
         onError: () => {
-          router.push(enrollmentAlertErrorUrl())
+          router.push(
+            enrollmentAlertErrorUrl(
+              EnrollmentErrorType.INVALID_ENROLLMENT_CODE,
+            ),
+          )
         },
       })
     }

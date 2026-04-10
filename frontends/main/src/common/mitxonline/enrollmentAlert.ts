@@ -5,10 +5,21 @@ import { DASHBOARD_HOME } from "@/common/urls"
  * The alert component reads these on landing; callsites set them before redirecting.
  */
 const ENROLLMENT_ERROR_PARAM = "enrollment_error"
+const ENROLLMENT_ERROR_TYPE_PARAM = "error_type"
 const ENROLLMENT_TITLE_PARAM = "enrollment_title"
 const ENROLLMENT_ORG_ID_PARAM = "enrollment_org_id"
 const ORDER_STATUS_PARAM = "order_status"
 const ORDER_ID_PARAM = "order_id"
+
+/**
+ * Known enrollment error types. Add new values here as new error scenarios arise.
+ */
+const EnrollmentErrorType = {
+  INVALID_ENROLLMENT_CODE: "invalid-enrollment-code",
+} as const
+
+type EnrollmentErrorTypeValue =
+  (typeof EnrollmentErrorType)[keyof typeof EnrollmentErrorType]
 
 type EnrollmentAlertSuccessOpts = {
   title: string
@@ -27,16 +38,22 @@ const enrollmentAlertSuccessUrl = ({
   return `${DASHBOARD_HOME}?${params.toString()}`
 }
 
-const enrollmentAlertErrorUrl = () =>
-  `${DASHBOARD_HOME}?${ENROLLMENT_ERROR_PARAM}=1`
+const enrollmentAlertErrorUrl = (errorType: EnrollmentErrorTypeValue) => {
+  const params = new URLSearchParams()
+  params.set(ENROLLMENT_ERROR_PARAM, "1")
+  params.set(ENROLLMENT_ERROR_TYPE_PARAM, errorType)
+  return `${DASHBOARD_HOME}?${params.toString()}`
+}
 
 export {
   enrollmentAlertSuccessUrl,
   enrollmentAlertErrorUrl,
+  EnrollmentErrorType,
   ENROLLMENT_ERROR_PARAM,
+  ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
   ORDER_ID_PARAM,
 }
-export type { EnrollmentAlertSuccessOpts }
+export type { EnrollmentAlertSuccessOpts, EnrollmentErrorTypeValue }

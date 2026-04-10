@@ -9,15 +9,18 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import {
   ENROLLMENT_ERROR_PARAM,
+  ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
   ORDER_ID_PARAM,
+  EnrollmentErrorType,
 } from "@/common/mitxonline"
 import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
 
 const CONSUMED_PARAMS = [
   ENROLLMENT_ERROR_PARAM,
+  ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
@@ -25,7 +28,7 @@ const CONSUMED_PARAMS = [
 ] as const
 
 type AlertRequest =
-  | { kind: "error" }
+  | { kind: "error"; errorType: string | null }
   | { kind: "free"; title: string | null }
   | { kind: "b2b"; title: string; orgId: number }
   | { kind: "paid"; orderId: number }
@@ -78,7 +81,7 @@ const parseAlertRequest = (
   params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
 ): AlertRequest | null => {
   if (params[ENROLLMENT_ERROR_PARAM]) {
-    return { kind: "error" }
+    return { kind: "error", errorType: params[ENROLLMENT_ERROR_TYPE_PARAM] }
   }
 
   if (params[ORDER_STATUS_PARAM] === "fulfilled") {
@@ -125,9 +128,14 @@ const EnrollmentRedirectAlert: React.FC = () => {
   })
 
   if (request?.kind === "error") {
+    const errorMessage =
+      request.errorType === EnrollmentErrorType.INVALID_ENROLLMENT_CODE
+        ? "The Enrollment Code is incorrect or no longer available."
+        : "Something went wrong processing your enrollment."
+
     return (
       <Alert severity="error" closable label="Enrollment Error - ">
-        The Enrollment Code is incorrect or no longer available.{" "}
+        {errorMessage}{" "}
         <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
           Contact Support
         </UnderlinedLink>{" "}

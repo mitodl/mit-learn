@@ -27,9 +27,9 @@ describe("EnrollmentRedirectAlert", () => {
     })
   })
 
-  test("shows enrollment error alert and clears query params", async () => {
+  test("shows invalid-enrollment-code error alert", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_error=1",
+      url: "/dashboard?enrollment_error=1&error_type=invalid-enrollment-code",
     })
 
     expect(
@@ -39,6 +39,19 @@ describe("EnrollmentRedirectAlert", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+  })
+
+  test("shows generic error alert when error_type is unknown", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_error=1",
+    })
+
+    expect(
+      await screen.findByText(
+        /Something went wrong processing your enrollment\./i,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
   test("shows free success alert with bold title and My Learning link", async () => {
