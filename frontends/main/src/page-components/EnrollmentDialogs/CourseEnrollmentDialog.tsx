@@ -24,7 +24,6 @@ import {
   mitxonlineLegacyUrl,
   PriceWithDiscount,
   priceWithDiscount,
-  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -343,11 +342,11 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
               if (onCourseEnroll) {
                 onCourseEnroll(run)
               } else {
-                storeDashboardEnrollmentStorage({
-                  title: course.title ?? "",
-                  orgId: null,
-                })
-                router.push(dashboardEnrollmentSuccessUrl())
+                router.push(
+                  dashboardEnrollmentSuccessUrl({
+                    title: course.title ?? "your enrollment",
+                  }),
+                )
               }
               modal.hide()
             },

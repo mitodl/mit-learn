@@ -15,18 +15,10 @@ import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import NiceModal from "@ebay/nice-modal-react"
 import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
-import {
-  dashboardEnrollmentSuccessUrl,
-  mitxonlineLegacyUrl,
-  readDashboardEnrollmentStorage,
-} from "@/common/mitxonline"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
-
-  beforeEach(() => {
-    sessionStorage.clear()
-  })
 
   const makeProgram = mitxFactories.programs.program
   const makeProduct = mitxFactories.courses.product
@@ -141,7 +133,7 @@ describe("ProgramEnrollmentDialog", () => {
     )
   })
 
-  test("'Enroll for Free' button stores dashboard enrollment data and redirects to the dashboard success URL", async () => {
+  test("'Enroll for Free' button redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const { location } = renderWithProviders(null)
     await openDialog(program)
@@ -159,18 +151,15 @@ describe("ProgramEnrollmentDialog", () => {
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(`${location.current.pathname}${location.current.search}`).toBe(
-        dashboardEnrollmentSuccessUrl(),
-      )
+      expect(location.current.pathname).toBe("/dashboard")
     })
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: program.title,
-      orgId: null,
-    })
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      program.title,
+    )
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Custom onProgramEnroll: calls callback instead of redirecting or storing dashboard enrollment data", async () => {
+  test("Custom onProgramEnroll: calls callback instead of redirecting", async () => {
     const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const onProgramEnroll = jest.fn()
     const { location } = renderWithProviders(null)
@@ -198,7 +187,6 @@ describe("ProgramEnrollmentDialog", () => {
     expect(`${location.current.pathname}${location.current.search}`).toBe(
       initialLocation,
     )
-    expect(readDashboardEnrollmentStorage()).toBeNull()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 

@@ -259,7 +259,6 @@ describe("HomeContent", () => {
 
   test("displays free enrollment success alert when dashboard success param is present", async () => {
     setupAPIs()
-    sessionStorage.setItem("dashboard_enrollment_title", "Linear Algebra")
     const mockReplace = jest.fn()
     jest.spyOn(NextProgressBar, "useRouter").mockReturnValue({
       replace: mockReplace,
@@ -268,7 +267,7 @@ describe("HomeContent", () => {
     >)
 
     renderWithProviders(<HomeContent />, {
-      url: "/dashboard?enrollment_success=1",
+      url: "/dashboard?enrollment_title=Linear+Algebra",
     })
 
     expect(

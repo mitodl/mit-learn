@@ -9,7 +9,6 @@ import {
   dashboardEnrollmentSuccessUrl,
   formatPrice,
   getEnrollmentType,
-  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import {
   BigButton,
@@ -113,11 +112,11 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           if (onProgramEnroll) {
             onProgramEnroll()
           } else {
-            storeDashboardEnrollmentStorage({
-              title: program.title,
-              orgId: null,
-            })
-            router.push(dashboardEnrollmentSuccessUrl())
+            router.push(
+              dashboardEnrollmentSuccessUrl({
+                title: program.title ?? "your enrollment",
+              }),
+            )
           }
           modal.hide()
         },

@@ -13,11 +13,7 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
-import {
-  dashboardEnrollmentSuccessUrl,
-  mitxonlineLegacyUrl,
-  readDashboardEnrollmentStorage,
-} from "@/common/mitxonline"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -31,10 +27,6 @@ describe("CourseEnrollmentButton", () => {
   const ACCESS_MATERIALS = "Access Course Materials"
 
   setupLocationMock()
-
-  beforeEach(() => {
-    sessionStorage.clear()
-  })
 
   test.each([
     { isArchived: true, expectedText: ACCESS_MATERIALS },
@@ -424,20 +416,17 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(`${location.current.pathname}${location.current.search}`).toBe(
-        dashboardEnrollmentSuccessUrl(),
-      )
+      expect(location.current.pathname).toBe("/dashboard")
     })
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: course.title,
-      orgId: null,
-    })
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      course.title,
+    )
 
     // No dialog should have opened despite 2 total runs
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Free-only, 1 run: clicking enrolls directly, stores the title, and redirects to the dashboard success URL", async () => {
+  test("Free-only, 1 run: clicking enrolls directly and redirects to the dashboard success URL with title in params", async () => {
     const run = makeRun({
       is_archived: false,
       is_enrollable: true,
@@ -457,14 +446,11 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(`${location.current.pathname}${location.current.search}`).toBe(
-        dashboardEnrollmentSuccessUrl(),
-      )
+      expect(location.current.pathname).toBe("/dashboard")
     })
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: course.title,
-      orgId: null,
-    })
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      course.title,
+    )
 
     // No dialog should have opened
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

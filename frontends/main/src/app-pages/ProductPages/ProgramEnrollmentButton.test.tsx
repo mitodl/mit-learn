@@ -15,11 +15,7 @@ import {
 } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { programView } from "@/common/urls"
-import {
-  dashboardEnrollmentSuccessUrl,
-  mitxonlineLegacyUrl,
-  readDashboardEnrollmentStorage,
-} from "@/common/mitxonline"
+import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -40,7 +36,6 @@ describe("ProgramEnrollmentButton", () => {
 
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
-    sessionStorage.clear()
   })
 
   test("Shows loading state while enrollments and user loading", async () => {
@@ -127,7 +122,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
-  test("Free-only: clicking 'Enroll for Free' enrolls immediately, stores the title, and redirects to the dashboard success URL", async () => {
+  test("Free-only: clicking 'Enroll for Free' enrolls and redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
@@ -156,14 +151,11 @@ describe("ProgramEnrollmentButton", () => {
       )
     })
     await waitFor(() => {
-      expect(`${location.current.pathname}${location.current.search}`).toBe(
-        dashboardEnrollmentSuccessUrl(),
-      )
+      expect(location.current.pathname).toBe("/dashboard")
     })
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: program.title,
-      orgId: null,
-    })
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      program.title,
+    )
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 

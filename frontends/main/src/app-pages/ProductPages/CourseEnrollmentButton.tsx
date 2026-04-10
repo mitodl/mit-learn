@@ -16,7 +16,6 @@ import {
   getEnrollmentType,
   getCourseEnrollmentAction,
   priceWithDiscount,
-  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import { productQueries } from "api/mitxonline-hooks/products"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -101,8 +100,11 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
           { run_id: enrollmentDecision.run.id },
           {
             onSuccess: () => {
-              storeDashboardEnrollmentStorage({ title: course.title })
-              router.push(dashboardEnrollmentSuccessUrl())
+              router.push(
+                dashboardEnrollmentSuccessUrl({
+                  title: course.title ?? "your enrollment",
+                }),
+              )
             },
           },
         )

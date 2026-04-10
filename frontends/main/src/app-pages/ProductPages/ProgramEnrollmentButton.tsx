@@ -25,7 +25,6 @@ import {
   dashboardEnrollmentSuccessUrl,
   formatPrice,
   getEnrollmentType,
-  storeDashboardEnrollmentStorage,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
@@ -94,8 +93,11 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {
             onSuccess: () => {
-              storeDashboardEnrollmentStorage({ title: program.title })
-              router.push(dashboardEnrollmentSuccessUrl())
+              router.push(
+                dashboardEnrollmentSuccessUrl({
+                  title: program.title ?? "your enrollment",
+                }),
+              )
             },
           },
         )

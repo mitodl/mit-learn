@@ -1,11 +1,7 @@
 "use client"
 import React from "react"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
-import {
-  clearDashboardEnrollmentStorage,
-  dashboardEnrollmentSuccessUrl,
-  storeDashboardEnrollmentStorage,
-} from "@/common/mitxonline"
+import { dashboardEnrollmentSuccessUrl } from "@/common/mitxonline"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 import { userQueries } from "api/hooks/user"
@@ -45,16 +41,15 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
           const contract = response.data[0]
 
           if (contract) {
-            storeDashboardEnrollmentStorage({
-              title: contract.name,
-              orgId: contract.organization,
-            })
-
-            router.push(dashboardEnrollmentSuccessUrl())
+            router.push(
+              dashboardEnrollmentSuccessUrl({
+                title: contract.name,
+                orgId: contract.organization,
+              }),
+            )
             return
           }
 
-          clearDashboardEnrollmentStorage()
           router.push(urls.DASHBOARD_HOME)
         },
         onError: () => {

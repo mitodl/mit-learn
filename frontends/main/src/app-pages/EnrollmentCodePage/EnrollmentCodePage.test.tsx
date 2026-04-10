@@ -1,5 +1,4 @@
 import React from "react"
-import { dashboardEnrollmentSuccessUrl } from "@/common/mitxonline"
 import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
 import { makeRequest, urls } from "api/test-utils"
 import { urls as b2bUrls, factories } from "api/mitxonline-test-utils"
@@ -19,7 +18,6 @@ describe("EnrollmentCodePage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockPush.mockClear()
-    sessionStorage.clear()
   })
 
   test("Redirects to login when not authenticated", async () => {
@@ -91,12 +89,14 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(dashboardEnrollmentSuccessUrl())
+      expect(mockPush).toHaveBeenCalled()
     })
-    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBe(
+    const url = new URL(mockPush.mock.calls[0][0], "http://localhost")
+    expect(url.pathname).toBe("/dashboard")
+    expect(url.searchParams.get("enrollment_title")).toBe(
       "Professional Certificate in AI",
     )
-    expect(sessionStorage.getItem("dashboard_enrollment_org_id")).toBe("77")
+    expect(url.searchParams.get("enrollment_org_id")).toBe("77")
   })
 
   test("Redirects to dashboard when user already attached to all contracts (200 status)", async () => {
@@ -105,8 +105,6 @@ describe("EnrollmentCodePage", () => {
     })
 
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("already-used-code")
-    sessionStorage.setItem("dashboard_enrollment_title", "Stale Title")
-    sessionStorage.setItem("dashboard_enrollment_org_id", "99")
 
     // 200 status indicates user already attached to all contracts - redirect home without success state
     setMockResponse.post(attachUrl, [], { code: 200 })
@@ -122,8 +120,6 @@ describe("EnrollmentCodePage", () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(commonUrls.DASHBOARD_HOME)
     })
-    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBeNull()
-    expect(sessionStorage.getItem("dashboard_enrollment_org_id")).toBeNull()
   })
 
   test("Redirects to dashboard with error for invalid code (404 status)", async () => {
