@@ -257,6 +257,7 @@ describe.each([
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
       grades: [],
+      certificate: null,
       run: {
         ...course.courseruns[0],
         course: course,
