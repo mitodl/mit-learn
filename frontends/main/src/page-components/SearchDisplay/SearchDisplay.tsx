@@ -585,7 +585,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
-  const fetchStartRef = useRef<number | null>(null)
+  const fetchStartRef = useRef<number | null>(
+    typeof performance !== "undefined" ? performance.now() : null,
+  )
 
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions)
@@ -666,16 +668,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     },
   })
 
+  const prevParamsRef = useRef(allParams)
+
   useEffect(() => {
-    if (isFetching) {
+    if (allParams !== prevParamsRef.current) {
       fetchStartRef.current = performance.now()
       if (onFetchTimeChange) onFetchTimeChange(null)
-    } else if (fetchStartRef.current !== null) {
+      prevParamsRef.current = allParams
+    }
+
+    if (!isFetching && fetchStartRef.current !== null) {
       const time = performance.now() - fetchStartRef.current
       if (onFetchTimeChange) onFetchTimeChange(time)
       fetchStartRef.current = null
     }
-  }, [isFetching, onFetchTimeChange])
+  }, [allParams, isFetching, onFetchTimeChange])
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
