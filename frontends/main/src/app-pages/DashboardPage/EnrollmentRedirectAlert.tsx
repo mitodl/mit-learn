@@ -149,13 +149,21 @@ const EnrollmentRedirectAlert: React.FC = () => {
       (org) => org.id === request.orgId,
     )?.name
 
+    if (!orgName) {
+      return (
+        <Alert severity="error" closable label="Enrollment Error - ">
+          Something went wrong processing your enrollment.{" "}
+          <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
+            Contact Support
+          </UnderlinedLink>{" "}
+          for assistance.
+        </Alert>
+      )
+    }
+
     return (
       <Alert severity="success" label="Success!">
-        {orgName ? (
-          <B2bSuccessCopy title={request.title} orgName={orgName} />
-        ) : (
-          <FreeSuccessCopy title={request.title} />
-        )}
+        <B2bSuccessCopy title={request.title} orgName={orgName} />
       </Alert>
     )
   }
