@@ -3,7 +3,7 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Alert } from "@mitodl/smoot-design"
-import { Link, styled } from "ol-components"
+import { Link, Skeleton, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
@@ -71,6 +71,18 @@ const PaidGenericSuccessCopy: React.FC = () => (
     Your certificate track enrollment is confirmed. It has been added to{" "}
     <MyLearningLink />.
   </>
+)
+
+/**
+ * Renders a skeleton that matches the height of a single-line Alert.
+ * MUI Skeleton with children infers dimensions from the (hidden) child.
+ */
+const AlertPlaceholder: React.FC<{ severity: "success" | "error" }> = ({
+  severity,
+}) => (
+  <Skeleton variant="rounded" width="100%">
+    <Alert severity={severity}>&nbsp;</Alert>
+  </Skeleton>
 )
 
 const parseAlertRequest = (
@@ -196,7 +208,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
   if (request?.kind === "b2b") {
     if (mitxOnlineUserQuery.isPending) {
-      return null
+      return <AlertPlaceholder severity="success" />
     }
 
     const orgName = mitxOnlineUserQuery.data?.b2b_organizations.find(
@@ -222,20 +234,23 @@ const EnrollmentRedirectAlert: React.FC = () => {
     )
   }
 
-  if (request?.kind === "paid" && paidReceipt.isSuccess) {
-    const title = paidReceipt.data.lines[0]?.content_title
+  if (request?.kind === "paid") {
+    if (paidReceipt.isPending) {
+      return <AlertPlaceholder severity="success" />
+    }
 
+    if (paidReceipt.isError) {
+      return (
+        <Alert severity="success" label="Success!">
+          <PaidGenericSuccessCopy />
+        </Alert>
+      )
+    }
+
+    const title = paidReceipt.data?.lines[0]?.content_title
     return (
       <Alert severity="success" label="Success!">
         {title ? <PaidSuccessCopy title={title} /> : <PaidGenericSuccessCopy />}
-      </Alert>
-    )
-  }
-
-  if (request?.kind === "paid" && paidReceipt.isError) {
-    return (
-      <Alert severity="success" label="Success!">
-        <PaidGenericSuccessCopy />
       </Alert>
     )
   }

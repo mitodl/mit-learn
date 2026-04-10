@@ -82,12 +82,14 @@ describe("EnrollmentRedirectAlert", () => {
       url: `/dashboard?enrollment_status=success&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
-    const alert = await screen.findByRole("alert")
-    expect(alert).toHaveTextContent(
-      new RegExp(
-        `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
-      ),
+    const orgNamePattern = new RegExp(
+      `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
     )
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(orgNamePattern)
+    })
+
+    const alert = screen.getByRole("alert")
     expect(alert).not.toHaveTextContent("My Learning")
 
     const bolds = alert.querySelectorAll("strong")
@@ -113,11 +115,14 @@ describe("EnrollmentRedirectAlert", () => {
     await waitFor(() => {
       expect(location.current.search).toBe("")
     })
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    // While loading, a hidden placeholder reserves space
+    const placeholder = screen.getByRole("alert", { hidden: true })
+    expect(placeholder).not.toBeVisible()
 
     resolveMitxUser(mitxUser)
 
     const alert = await screen.findByRole("alert")
+    expect(alert).toBeVisible()
     expect(alert).toHaveTextContent(
       new RegExp(
         `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
@@ -137,10 +142,11 @@ describe("EnrollmentRedirectAlert", () => {
       url: "/dashboard?enrollment_status=success&enrollment_title=Some+Course&enrollment_org_id=999",
     })
 
-    const alert = await screen.findByRole("alert")
-    expect(alert).toHaveTextContent(
-      /Something went wrong processing your enrollment/,
-    )
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /Something went wrong processing your enrollment/,
+      )
+    })
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
