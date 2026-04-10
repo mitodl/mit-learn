@@ -9,7 +9,9 @@ class GensimEncoder(BaseEncoder):
     Lightweight local embedding encoder backed by gensim pretrained vectors.
     """
 
-    def __init__(self, model_name="glove/glove-wiki-gigaword-50"):
+    def __init__(self, model_name):
+        if not model_name:
+            model_name = "glove/glove-wiki-gigaword-50"
         self.model_name = model_name
         self.model = api.load(self.model_short_name())
 
