@@ -150,20 +150,20 @@ describe("EnrollmentRedirectAlert", () => {
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
-  test("shows generic free success when enrollment_title param is empty", async () => {
+  test("shows no alert and warns when enrollment_title param is empty", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation()
+
     renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_title=",
     })
 
-    const alert = await screen.findByRole("alert")
-    expect(alert).toHaveTextContent(
-      "Your enrollment is confirmed. It has been added to My Learning.",
-    )
-    expect(screen.getByRole("link", { name: "My Learning" })).toHaveAttribute(
-      "href",
-      DASHBOARD_MY_LEARNING,
-    )
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("empty title"))
+
+    warnSpy.mockRestore()
   })
 
   test("shows paid success alert from order receipt data", async () => {

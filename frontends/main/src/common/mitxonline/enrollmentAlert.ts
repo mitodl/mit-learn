@@ -30,6 +30,9 @@ const enrollmentAlertSuccessUrl = ({
   title,
   orgId,
 }: EnrollmentAlertSuccessOpts) => {
+  if (!title) {
+    console.error("enrollmentAlertSuccessUrl called with empty title")
+  }
   const params = new URLSearchParams()
   params.set(ENROLLMENT_TITLE_PARAM, title)
   if (orgId !== null && orgId !== undefined) {

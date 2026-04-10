@@ -29,7 +29,7 @@ const CONSUMED_PARAMS = [
 
 type AlertRequest =
   | { kind: "error"; errorType: string | null }
-  | { kind: "free"; title: string | null }
+  | { kind: "free"; title: string }
   | { kind: "b2b"; title: string; orgId: number }
   | { kind: "paid"; orderId: number }
 
@@ -99,11 +99,18 @@ const parseAlertRequest = (
   }
 
   if (params[ENROLLMENT_TITLE_PARAM] !== null) {
+    const title = params[ENROLLMENT_TITLE_PARAM]
+    if (!title) {
+      console.warn(
+        "Enrollment success redirect with empty title — not showing alert",
+      )
+      return null
+    }
+
     const rawOrgId = params[ENROLLMENT_ORG_ID_PARAM]
     const orgId = rawOrgId ? Number(rawOrgId) : null
-    const title = params[ENROLLMENT_TITLE_PARAM] || null
 
-    if (title && orgId !== null && Number.isFinite(orgId)) {
+    if (orgId !== null && Number.isFinite(orgId)) {
       return { kind: "b2b", title, orgId }
     }
     return { kind: "free", title }
@@ -147,11 +154,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
   if (request?.kind === "free") {
     return (
       <Alert severity="success" label="Success!">
-        {request.title ? (
-          <FreeSuccessCopy title={request.title} />
-        ) : (
-          <GenericSuccessCopy />
-        )}
+        <FreeSuccessCopy title={request.title} />
       </Alert>
     )
   }
