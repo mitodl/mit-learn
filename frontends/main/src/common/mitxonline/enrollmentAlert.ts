@@ -27,6 +27,10 @@ type EnrollmentAlertSuccessOpts = {
   orgId?: number | null
 }
 
+/**
+ * Build a dashboard URL for frontend-controlled enrollment success redirects
+ * (free and B2B flows). Paid flows use backend-provided order_status/order_id params.
+ */
 const enrollmentAlertSuccessUrl = ({
   title,
   orgId,
