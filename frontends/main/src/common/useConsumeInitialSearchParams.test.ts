@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react"
-import { useConsumeSearchParams } from "./useConsumeSearchParams"
+import { useConsumeInitialSearchParams } from "./useConsumeInitialSearchParams"
 
 jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(),
@@ -14,7 +14,7 @@ const { useRouter } = jest.requireMock("next-nprogress-bar")
 
 const mockReplace = jest.fn()
 
-describe("useConsumeSearchParams", () => {
+describe("useConsumeInitialSearchParams", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     useRouter.mockReturnValue({ replace: mockReplace })
@@ -24,7 +24,9 @@ describe("useConsumeSearchParams", () => {
   test("returns null and does not call replace when none of the params are present", () => {
     useSearchParams.mockReturnValue(new URLSearchParams(""))
 
-    const { result } = renderHook(() => useConsumeSearchParams(["foo", "bar"]))
+    const { result } = renderHook(() =>
+      useConsumeInitialSearchParams(["foo", "bar"]),
+    )
 
     expect(result.current).toBeNull()
     expect(mockReplace).not.toHaveBeenCalled()
@@ -33,7 +35,9 @@ describe("useConsumeSearchParams", () => {
   test("reads matching params into state and clears them from the URL", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=hello&bar=world"))
 
-    const { result } = renderHook(() => useConsumeSearchParams(["foo", "bar"]))
+    const { result } = renderHook(() =>
+      useConsumeInitialSearchParams(["foo", "bar"]),
+    )
 
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "hello", bar: "world" })
@@ -44,7 +48,9 @@ describe("useConsumeSearchParams", () => {
   test("returns null for params in the list that are not in the URL", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=yes"))
 
-    const { result } = renderHook(() => useConsumeSearchParams(["foo", "bar"]))
+    const { result } = renderHook(() =>
+      useConsumeInitialSearchParams(["foo", "bar"]),
+    )
 
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "yes", bar: null })
@@ -54,7 +60,7 @@ describe("useConsumeSearchParams", () => {
   test("preserves unrelated query params when cleaning", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=1&unrelated=keep"))
 
-    const { result } = renderHook(() => useConsumeSearchParams(["foo"]))
+    const { result } = renderHook(() => useConsumeInitialSearchParams(["foo"]))
 
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "1" })

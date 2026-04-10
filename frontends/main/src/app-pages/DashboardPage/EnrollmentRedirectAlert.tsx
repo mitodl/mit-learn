@@ -13,7 +13,7 @@ import {
   ORDER_STATUS_PARAM,
   ORDER_ID_PARAM,
 } from "@/common/mitxonline"
-import { useConsumeSearchParams } from "@/common/useConsumeSearchParams"
+import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
 
 const CONSUMED_PARAMS = [
   ENROLLMENT_ERROR_QUERY_PARAM,
@@ -66,7 +66,7 @@ const parseAlertRequest = (
 }
 
 const EnrollmentRedirectAlert: React.FC = () => {
-  const consumed = useConsumeSearchParams(CONSUMED_PARAMS)
+  const consumed = useConsumeInitialSearchParams(CONSUMED_PARAMS)
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
   const request = consumed ? parseAlertRequest(consumed) : null

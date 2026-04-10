@@ -13,7 +13,7 @@ import { useRouter } from "next-nprogress-bar"
  * params carry a signal (e.g., enrollment success) that should be shown once
  * and then cleared so it doesn't reappear on refresh.
  */
-const useConsumeSearchParams = <T extends string>(
+const useConsumeInitialSearchParams = <T extends string>(
   paramNames: readonly T[],
 ): Readonly<Record<T, string | null>> | null => {
   const searchParams = useSearchParams()
@@ -50,4 +50,4 @@ const useConsumeSearchParams = <T extends string>(
   return consumed
 }
 
-export { useConsumeSearchParams }
+export { useConsumeInitialSearchParams }
