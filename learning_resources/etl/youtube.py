@@ -1,6 +1,7 @@
 """video catalog ETL"""
 
 import logging
+import re
 from collections.abc import Generator
 from datetime import timedelta
 
@@ -37,6 +38,55 @@ YOUTUBE_MAX_RESULTS = 50
 WILDCARD_PLAYLIST_ID = "all"
 
 log = logging.getLogger()
+
+# Regex matching lines starting with known boilerplate keywords
+# followed by a colon
+KEYWORD_COLON_LINE_RE = re.compile(
+    r"^(Instructor|Course|View the complete course|License|YouTube Playlist|"
+    r"Chapters|Watch this video in Chinese|MIT Open Learning|Instructors|"
+    r"Key moments|Speakers):",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+# Regex matching YouTube chapter/timestamp lines,
+# e.g. "0:00 INTRODUCTION", "14:49 begin lecture..", "1:00:57 Scaling..."
+TIMESTAMP_LINE_RE = re.compile(r"^\d+:\d+(?::\d+)?\s", re.MULTILINE)
+
+# Regex matching MIT course title lines, e.g.
+# "MIT 14.310x Data Analysis for Social Scientists, Spring 2023"
+# "MIT 21H.151 Dynastic China, Fall 2024"
+# "MIT 9.35, Spring 2024"
+MIT_COURSE_TITLE_RE = re.compile(
+    r"^MIT\s+[\dA-Za-z]+\.[\dA-Za-z]+\S*\s.+\d{4}\s*$", re.MULTILINE
+)
+
+OCW_BOILERPLATE = (
+    "We encourage constructive comments and discussion on OCW's YouTube and "
+    "other social media channels. Personal attacks, hate speech, trolling, and "
+    "inappropriate comments are not allowed and may be removed."
+)
+
+
+def clean_youtube_description(description: str) -> str:
+    """
+    Remove boilerplate lines from YouTube video descriptions.
+    """
+    if not description:
+        return ""
+
+    description = description.replace(OCW_BOILERPLATE, "")
+    lines = description.split("\n")
+    cleaned = [
+        line
+        for line in lines
+        if not KEYWORD_COLON_LINE_RE.match(line)
+        and not TIMESTAMP_LINE_RE.match(line)
+        and not MIT_COURSE_TITLE_RE.match(line)
+        and "https://" not in line
+        and "http://" not in line
+    ]
+    result = "\n".join(cleaned).strip()
+    return re.sub(r"(\s*\n){3,}", "\n\n", result)
 
 
 def parse_offered_by(offered_by_code: str) -> dict:
@@ -419,7 +469,9 @@ def transform_video(video_data: dict, offered_by_code: str) -> dict:
         "etl_source": ETLSource.youtube.name,
         "resource_type": LearningResourceType.video.name,
         "title": video_data["snippet"]["localized"]["title"],
-        "description": clean_data(video_data["snippet"]["description"]),
+        "description": clean_youtube_description(
+            clean_data(video_data["snippet"]["description"])
+        ),
         "image": {"url": video_data["snippet"]["thumbnails"]["high"]["url"]},
         "last_modified": video_data["snippet"]["publishedAt"],
         "url": f"https://www.youtube.com/watch?v={video_data['id']}",
