@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react"
-import { useConsumeInitialSearchParams } from "./useConsumeInitialSearchParams"
+import { useConsumeSearchParamsOnce } from "./useConsumeSearchParamsOnce"
 
 jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(),
@@ -9,7 +9,7 @@ const { useSearchParams } = jest.requireMock("next/navigation")
 
 let replaceStateSpy: jest.SpyInstance
 
-describe("useConsumeInitialSearchParams", () => {
+describe("useConsumeSearchParamsOnce", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     replaceStateSpy = jest.spyOn(window.history, "replaceState")
@@ -20,22 +20,26 @@ describe("useConsumeInitialSearchParams", () => {
     replaceStateSpy.mockRestore()
   })
 
-  test("returns null and does not modify the URL when none of the params are present", () => {
+  test("returns undefined and does not modify the URL when the parser does not match", () => {
     useSearchParams.mockReturnValue(new URLSearchParams(""))
 
-    const { result } = renderHook(() =>
-      useConsumeInitialSearchParams(["foo", "bar"]),
-    )
+    const { result } = renderHook(() => useConsumeSearchParamsOnce(() => null))
 
-    expect(result.current).toBeNull()
+    expect(result.current).toBeUndefined()
     expect(replaceStateSpy).not.toHaveBeenCalled()
   })
 
-  test("reads matching params into state and clears them from the URL", async () => {
+  test("stores the parsed value and clears only the requested params", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=hello&bar=world"))
 
     const { result } = renderHook(() =>
-      useConsumeInitialSearchParams(["foo", "bar"]),
+      useConsumeSearchParamsOnce((searchParams) => ({
+        value: {
+          foo: searchParams.get("foo"),
+          bar: searchParams.get("bar"),
+        },
+        keysToRemove: ["foo", "bar"],
+      })),
     )
 
     await waitFor(() => {
@@ -44,11 +48,17 @@ describe("useConsumeInitialSearchParams", () => {
     expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/")
   })
 
-  test("returns null for params in the list that are not in the URL", async () => {
+  test("allows the parser to keep missing values in the returned payload", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=yes"))
 
     const { result } = renderHook(() =>
-      useConsumeInitialSearchParams(["foo", "bar"]),
+      useConsumeSearchParamsOnce((searchParams) => ({
+        value: {
+          foo: searchParams.get("foo"),
+          bar: searchParams.get("bar"),
+        },
+        keysToRemove: ["foo"],
+      })),
     )
 
     await waitFor(() => {
@@ -59,7 +69,12 @@ describe("useConsumeInitialSearchParams", () => {
   test("preserves unrelated query params when cleaning", async () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=1&unrelated=keep"))
 
-    const { result } = renderHook(() => useConsumeInitialSearchParams(["foo"]))
+    const { result } = renderHook(() =>
+      useConsumeSearchParamsOnce((searchParams) => ({
+        value: { foo: searchParams.get("foo") },
+        keysToRemove: ["foo"],
+      })),
+    )
 
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "1" })
@@ -71,7 +86,12 @@ describe("useConsumeInitialSearchParams", () => {
     useSearchParams.mockReturnValue(new URLSearchParams("foo=1"))
     window.location.hash = "#section"
 
-    const { result } = renderHook(() => useConsumeInitialSearchParams(["foo"]))
+    const { result } = renderHook(() =>
+      useConsumeSearchParamsOnce((searchParams) => ({
+        value: { foo: searchParams.get("foo") },
+        keysToRemove: ["foo"],
+      })),
+    )
 
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "1" })
@@ -81,22 +101,46 @@ describe("useConsumeInitialSearchParams", () => {
     window.location.hash = ""
   })
 
+  test("supports cleanup-only results by allowing value to be undefined", async () => {
+    useSearchParams.mockReturnValue(new URLSearchParams("foo=1&unrelated=keep"))
+
+    const { result } = renderHook(() =>
+      useConsumeSearchParamsOnce(() => ({
+        value: undefined,
+        keysToRemove: ["foo"],
+      })),
+    )
+
+    await waitFor(() => {
+      expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/?unrelated=keep")
+    })
+    expect(result.current).toBeUndefined()
+  })
+
   test("does not consume params that appear after first render", async () => {
     // First render: no matching params
     useSearchParams.mockReturnValue(new URLSearchParams(""))
 
     const { result, rerender } = renderHook(() =>
-      useConsumeInitialSearchParams(["foo"]),
+      useConsumeSearchParamsOnce((searchParams) => {
+        if (!searchParams.has("foo")) {
+          return null
+        }
+        return {
+          value: { foo: searchParams.get("foo") },
+          keysToRemove: ["foo"],
+        }
+      }),
     )
 
-    expect(result.current).toBeNull()
+    expect(result.current).toBeUndefined()
 
     // Later: params appear (e.g., client-side navigation)
     useSearchParams.mockReturnValue(new URLSearchParams("foo=late"))
     rerender()
 
-    // Should still be null — hook only reads initial params
-    expect(result.current).toBeNull()
+    // Should still be undefined — hook only reads initial params
+    expect(result.current).toBeUndefined()
     expect(replaceStateSpy).not.toHaveBeenCalled()
   })
 })

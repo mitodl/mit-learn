@@ -17,16 +17,10 @@ import {
   EnrollmentAlertStatus,
   EnrollmentErrorType,
 } from "@/common/mitxonline"
-import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
-
-const CONSUMED_PARAMS = [
-  ENROLLMENT_STATUS_PARAM,
-  ENROLLMENT_ERROR_TYPE_PARAM,
-  ENROLLMENT_TITLE_PARAM,
-  ENROLLMENT_ORG_ID_PARAM,
-  ORDER_STATUS_PARAM,
-  ORDER_ID_PARAM,
-] as const
+import {
+  useConsumeSearchParamsOnce,
+  type ConsumedSearchParamsResult,
+} from "@/common/useConsumeSearchParamsOnce"
 
 type AlertRequest =
   | { kind: "error"; errorType: string | null }
@@ -79,58 +73,91 @@ const GenericSuccessCopy: React.FC = () => (
 )
 
 const parseAlertRequest = (
-  params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
-): AlertRequest | null => {
-  const enrollmentStatus = params[ENROLLMENT_STATUS_PARAM]
+  searchParams: URLSearchParams,
+): ConsumedSearchParamsResult<AlertRequest> | null => {
+  const enrollmentStatus = searchParams.get(ENROLLMENT_STATUS_PARAM)
 
   if (enrollmentStatus === EnrollmentAlertStatus.ERROR) {
-    return { kind: "error", errorType: params[ENROLLMENT_ERROR_TYPE_PARAM] }
+    return {
+      value: {
+        kind: "error",
+        errorType: searchParams.get(ENROLLMENT_ERROR_TYPE_PARAM),
+      },
+      keysToRemove: [ENROLLMENT_STATUS_PARAM, ENROLLMENT_ERROR_TYPE_PARAM],
+    }
   }
 
-  if (params[ORDER_STATUS_PARAM] === "fulfilled") {
-    const orderId = params[ORDER_ID_PARAM]
-      ? Number(params[ORDER_ID_PARAM])
-      : Number.NaN
+  if (searchParams.get(ORDER_STATUS_PARAM) === "fulfilled") {
+    const rawOrderId = searchParams.get(ORDER_ID_PARAM)
+    const orderId = rawOrderId ? Number(rawOrderId) : Number.NaN
     if (Number.isFinite(orderId)) {
-      return { kind: "paid", orderId }
+      return {
+        value: { kind: "paid", orderId },
+        keysToRemove: [ORDER_STATUS_PARAM, ORDER_ID_PARAM],
+      }
     }
     console.warn(
       "Malformed enrollment redirect: order_status=fulfilled but order_id is not a valid number",
-      params[ORDER_ID_PARAM],
+      rawOrderId,
     )
-    return null
+    return {
+      value: undefined,
+      keysToRemove: [ORDER_STATUS_PARAM, ORDER_ID_PARAM],
+    }
   }
 
   if (enrollmentStatus === EnrollmentAlertStatus.SUCCESS) {
-    const title = params[ENROLLMENT_TITLE_PARAM]
+    const title = searchParams.get(ENROLLMENT_TITLE_PARAM)
     if (!title) {
       console.warn(
         "enrollment_status=success without enrollment_title — not showing alert",
       )
-      return null
+      return {
+        value: undefined,
+        keysToRemove: [
+          ENROLLMENT_STATUS_PARAM,
+          ENROLLMENT_TITLE_PARAM,
+          ENROLLMENT_ORG_ID_PARAM,
+        ],
+      }
     }
 
-    const rawOrgId = params[ENROLLMENT_ORG_ID_PARAM]
+    const rawOrgId = searchParams.get(ENROLLMENT_ORG_ID_PARAM)
     if (!rawOrgId) {
-      return { kind: "free", title }
+      return {
+        value: { kind: "free", title },
+        keysToRemove: [ENROLLMENT_STATUS_PARAM, ENROLLMENT_TITLE_PARAM],
+      }
     }
 
     const orgId = Number(rawOrgId)
     if (!Number.isFinite(orgId)) {
       console.warn("Malformed enrollment_org_id param:", rawOrgId)
-      return { kind: "error", errorType: null }
+      return {
+        value: { kind: "error", errorType: null },
+        keysToRemove: [
+          ENROLLMENT_STATUS_PARAM,
+          ENROLLMENT_TITLE_PARAM,
+          ENROLLMENT_ORG_ID_PARAM,
+        ],
+      }
     }
-    return { kind: "b2b", title, orgId }
+    return {
+      value: { kind: "b2b", title, orgId },
+      keysToRemove: [
+        ENROLLMENT_STATUS_PARAM,
+        ENROLLMENT_TITLE_PARAM,
+        ENROLLMENT_ORG_ID_PARAM,
+      ],
+    }
   }
 
   return null
 }
 
 const EnrollmentRedirectAlert: React.FC = () => {
-  const consumed = useConsumeInitialSearchParams(CONSUMED_PARAMS)
+  const request = useConsumeSearchParamsOnce(parseAlertRequest)
   const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
-
-  const request = consumed ? parseAlertRequest(consumed) : null
 
   const mitxOnlineUserQuery = useQuery({
     ...mitxUserQueries.me(),

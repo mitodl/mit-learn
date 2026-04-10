@@ -69,7 +69,7 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows B2B success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
-    const org = mitxonline.factories.organizations.organization()
+    const org = mitxonline.factories.organizations.organization({})
 
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
@@ -96,7 +96,7 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("waits for org data before showing B2B success copy", async () => {
-    const org = mitxonline.factories.organizations.organization()
+    const org = mitxonline.factories.organizations.organization({})
     const mitxUser = mitxonline.factories.user.user({
       b2b_organizations: [org],
     })
@@ -181,15 +181,26 @@ describe("EnrollmentRedirectAlert", () => {
     warnSpy.mockRestore()
   })
 
-  test("ignores enrollment_title without enrollment_status signal", async () => {
+  test("preserves enrollment_title without enrollment_status signal", async () => {
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_title=Data+Science",
     })
 
-    // enrollment_title alone is still a consumed param, so the URL gets cleaned,
-    // but no alert is shown because enrollment_success is not present.
     await waitFor(() => {
-      expect(location.current.search).toBe("")
+      expect(location.current.search).toBe("?enrollment_title=Data+Science")
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  test("preserves error_type without enrollment_status signal", async () => {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?error_type=invalid-enrollment-code",
+    })
+
+    await waitFor(() => {
+      expect(location.current.search).toBe(
+        "?error_type=invalid-enrollment-code",
+      )
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
