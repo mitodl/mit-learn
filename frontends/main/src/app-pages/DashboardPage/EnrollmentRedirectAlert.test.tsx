@@ -81,9 +81,10 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}`,
+        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}\\.`,
       ),
     )
+    expect(alert).not.toHaveTextContent("My Learning")
 
     const bold = alert.querySelector("strong")
     expect(bold).toHaveTextContent("Professional Certificate")
@@ -117,7 +118,7 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}`,
+        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}\\.`,
       ),
     )
   })

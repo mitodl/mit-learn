@@ -56,8 +56,7 @@ const B2bSuccessCopy: React.FC<{ title: string; orgName: string }> = ({
   orgName,
 }) => (
   <>
-    You have been enrolled in "<BoldTitle>{title}</BoldTitle>" by {orgName}. It
-    has been added to <MyLearningLink />.
+    You have been enrolled in "<BoldTitle>{title}</BoldTitle>" by {orgName}.
   </>
 )
 
