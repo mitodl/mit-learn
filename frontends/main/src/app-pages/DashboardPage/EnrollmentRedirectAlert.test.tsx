@@ -9,6 +9,8 @@ import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import * as mitxonline from "api/mitxonline-test-utils"
 
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
 jest.mock("next-nprogress-bar", () => ({
   useRouter: jest.fn(),
 }))
@@ -46,7 +48,7 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      "You have successfully enrolled in Data Science. It has been added to My Learning.",
+      /You have successfully enrolled in "Data Science"\. It has been added to My Learning\./,
     )
 
     const bold = alert.querySelector("strong")
@@ -78,7 +80,9 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      `You have successfully enrolled in Professional Certificate from ${org.name}`,
+      new RegExp(
+        `You have successfully enrolled in "Professional Certificate from ${escapeRegExp(org.name)}"`,
+      ),
     )
 
     const bold = alert.querySelector("strong")
@@ -112,7 +116,9 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      `You have successfully enrolled in Professional Certificate from ${org.name}`,
+      new RegExp(
+        `You have successfully enrolled in "Professional Certificate from ${escapeRegExp(org.name)}"`,
+      ),
     )
   })
 
@@ -145,7 +151,9 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      `You have successfully enrolled in ${receipt.lines[0].item_description}`,
+      new RegExp(
+        `You have successfully enrolled in "${escapeRegExp(receipt.lines[0].item_description)}"`,
+      ),
     )
 
     const bold = alert.querySelector("strong")

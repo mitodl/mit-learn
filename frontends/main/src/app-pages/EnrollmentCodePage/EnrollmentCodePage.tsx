@@ -1,7 +1,10 @@
 "use client"
 import React from "react"
 import { styled, Breadcrumbs, Container, Typography } from "ol-components"
-import { dashboardEnrollmentSuccessUrl } from "@/common/mitxonline"
+import {
+  enrollmentAlertSuccessUrl,
+  enrollmentAlertErrorUrl,
+} from "@/common/mitxonline"
 import * as urls from "@/common/urls"
 import { useB2BAttachMutation } from "api/mitxonline-hooks/organizations"
 import { userQueries } from "api/hooks/user"
@@ -42,7 +45,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
 
           if (contract) {
             router.push(
-              dashboardEnrollmentSuccessUrl({
+              enrollmentAlertSuccessUrl({
                 title: contract.name,
                 orgId: contract.organization,
               }),
@@ -53,7 +56,7 @@ const EnrollmentCodePage: React.FC<EnrollmentCodePage> = ({ code }) => {
           router.push(urls.DASHBOARD_HOME)
         },
         onError: () => {
-          router.push(urls.DASHBOARD_HOME_ENROLLMENT_ERROR)
+          router.push(enrollmentAlertErrorUrl())
         },
       })
     }

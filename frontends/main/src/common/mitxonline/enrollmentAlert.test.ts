@@ -1,17 +1,19 @@
 import {
+  ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
-  dashboardEnrollmentSuccessUrl,
-} from "./dashboardEnrollment"
+  enrollmentAlertSuccessUrl,
+  enrollmentAlertErrorUrl,
+} from "./enrollmentAlert"
 
-describe("dashboardEnrollment", () => {
-  test("builds a dashboard success URL with the enrollment title", () => {
-    const url = dashboardEnrollmentSuccessUrl({ title: "Data Science" })
+describe("enrollmentAlert", () => {
+  test("builds a success URL with the enrollment title", () => {
+    const url = enrollmentAlertSuccessUrl({ title: "Data Science" })
     expect(url).toBe("/dashboard?enrollment_title=Data+Science")
   })
 
   test("includes org id when provided", () => {
-    const url = dashboardEnrollmentSuccessUrl({
+    const url = enrollmentAlertSuccessUrl({
       title: "Professional Certificate",
       orgId: 77,
     })
@@ -21,16 +23,21 @@ describe("dashboardEnrollment", () => {
   })
 
   test("omits org id param when orgId is null or undefined", () => {
-    const urlNull = dashboardEnrollmentSuccessUrl({
+    const urlNull = enrollmentAlertSuccessUrl({
       title: "Signals",
       orgId: null,
     })
-    const urlOmitted = dashboardEnrollmentSuccessUrl({ title: "Signals" })
+    const urlOmitted = enrollmentAlertSuccessUrl({ title: "Signals" })
     expect(urlNull).toBe("/dashboard?enrollment_title=Signals")
     expect(urlOmitted).toBe("/dashboard?enrollment_title=Signals")
   })
 
+  test("builds an error URL", () => {
+    expect(enrollmentAlertErrorUrl()).toBe("/dashboard?enrollment_error=1")
+  })
+
   test("exports the expected param name constants", () => {
+    expect(ENROLLMENT_ERROR_PARAM).toBe("enrollment_error")
     expect(ENROLLMENT_TITLE_PARAM).toBe("enrollment_title")
     expect(ENROLLMENT_ORG_ID_PARAM).toBe("enrollment_org_id")
   })

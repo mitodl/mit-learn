@@ -6,7 +6,7 @@ import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
 import {
-  dashboardEnrollmentSuccessUrl,
+  enrollmentAlertSuccessUrl,
   formatPrice,
   getEnrollmentType,
 } from "@/common/mitxonline"
@@ -113,7 +113,7 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
             onProgramEnroll()
           } else {
             router.push(
-              dashboardEnrollmentSuccessUrl({
+              enrollmentAlertSuccessUrl({
                 title: program.title ?? "your enrollment",
               }),
             )

@@ -6,11 +6,9 @@ import { Alert } from "@mitodl/smoot-design"
 import { Link, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import {
-  DASHBOARD_MY_LEARNING,
-  ENROLLMENT_ERROR_QUERY_PARAM,
-} from "@/common/urls"
-import {
+  ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
@@ -19,7 +17,7 @@ import {
 import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
 
 const CONSUMED_PARAMS = [
-  ENROLLMENT_ERROR_QUERY_PARAM,
+  ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
@@ -63,7 +61,7 @@ const GenericSuccessCopy: React.FC = () => (
 const parseAlertRequest = (
   params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
 ): AlertRequest | null => {
-  if (params[ENROLLMENT_ERROR_QUERY_PARAM]) {
+  if (params[ENROLLMENT_ERROR_PARAM]) {
     return { kind: "error" }
   }
 

@@ -12,7 +12,7 @@ import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import {
   canPurchaseRun,
-  dashboardEnrollmentSuccessUrl,
+  enrollmentAlertSuccessUrl,
   getEnrollmentType,
   getCourseEnrollmentAction,
   priceWithDiscount,
@@ -101,7 +101,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
           {
             onSuccess: () => {
               router.push(
-                dashboardEnrollmentSuccessUrl({
+                enrollmentAlertSuccessUrl({
                   title: course.title ?? "your enrollment",
                 }),
               )

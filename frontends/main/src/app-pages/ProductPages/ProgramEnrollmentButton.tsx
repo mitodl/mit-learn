@@ -22,7 +22,7 @@ import { programView } from "@/common/urls"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import {
-  dashboardEnrollmentSuccessUrl,
+  enrollmentAlertSuccessUrl,
   formatPrice,
   getEnrollmentType,
 } from "@/common/mitxonline"
@@ -94,7 +94,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
           {
             onSuccess: () => {
               router.push(
-                dashboardEnrollmentSuccessUrl({
+                enrollmentAlertSuccessUrl({
                   title: program.title ?? "your enrollment",
                 }),
               )

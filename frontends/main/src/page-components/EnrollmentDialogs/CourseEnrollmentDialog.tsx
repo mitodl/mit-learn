@@ -19,7 +19,7 @@ import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canPurchaseRun,
-  dashboardEnrollmentSuccessUrl,
+  enrollmentAlertSuccessUrl,
   getEnrollmentType,
   mitxonlineLegacyUrl,
   PriceWithDiscount,
@@ -343,7 +343,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
                 onCourseEnroll(run)
               } else {
                 router.push(
-                  dashboardEnrollmentSuccessUrl({
+                  enrollmentAlertSuccessUrl({
                     title: course.title ?? "your enrollment",
                   }),
                 )

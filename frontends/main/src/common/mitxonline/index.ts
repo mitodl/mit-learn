@@ -218,7 +218,7 @@ const getIdsFromReqTree = (
   return { courseIds, programIds }
 }
 
-export * from "./dashboardEnrollment"
+export * from "./enrollmentAlert"
 
 /**
  * Returns the best run for a course.

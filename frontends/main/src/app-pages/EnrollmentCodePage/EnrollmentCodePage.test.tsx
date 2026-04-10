@@ -7,6 +7,7 @@ import {
 } from "@/test-utils"
 import { makeRequest, urls } from "api/test-utils"
 import { urls as b2bUrls, factories } from "api/mitxonline-test-utils"
+import { enrollmentAlertErrorUrl } from "@/common/mitxonline"
 import * as commonUrls from "@/common/urls"
 import { Permission } from "api/hooks/user"
 import EnrollmentCodePage from "./EnrollmentCodePage"
@@ -145,9 +146,7 @@ describe("EnrollmentCodePage", () => {
     })
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        commonUrls.DASHBOARD_HOME_ENROLLMENT_ERROR,
-      )
+      expect(mockPush).toHaveBeenCalledWith(enrollmentAlertErrorUrl())
     })
   })
 })
