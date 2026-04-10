@@ -625,6 +625,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
 
   const { data, isLoading, isFetching } = useQuery({
+    // @ts-expect-error Typescript has trouble unifying the different query key types
     ...(isVectorSearch
       ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
       : learningResourceQueries.search(allParams as LRSearchRequest)),
