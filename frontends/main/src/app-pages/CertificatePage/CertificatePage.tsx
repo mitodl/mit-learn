@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLink } from "@mitodl/smoot-design"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { useQuery } from "@tanstack/react-query"
@@ -21,7 +21,10 @@ import type {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
-import { getCertificateInfo } from "@/common/certificateUtils"
+import {
+  getCertificateInfo,
+  getVerifiableCredentialLinkedInURL,
+} from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -747,6 +750,13 @@ const CertificatePage: React.FC<{
     ? certificateData?.verifiable_credential_json
     : null
 
+  // TODO: Get the variables set up based on the VC contents.
+  const linkedInAddToProfileUrl = verifiableCredential
+    ? getVerifiableCredentialLinkedInURL(
+        certificateData.verifiable_credential_json,
+      )
+    : null
+
   return (
     <Page>
       <SharePopover
@@ -785,6 +795,17 @@ const CertificatePage: React.FC<{
             >
               Download Digital Credential
             </Button>
+          ) : null}
+          {/*  TODO: No clue what we want this button to look like, or even if we want it right here --> */}
+          {linkedInAddToProfileUrl ? (
+            <ButtonLink
+              variant="bordered"
+              startIcon={<RiShareLine />}
+              href={linkedInAddToProfileUrl}
+              target="_blank"
+            >
+              Upload Digital Credential to LinkedIn
+            </ButtonLink>
           ) : null}
           <Button
             variant="bordered"
