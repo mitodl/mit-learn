@@ -102,7 +102,7 @@ describe("EnrollmentCodePage", () => {
     })
     const url = new URL(mockPush.mock.calls[0][0], "http://localhost")
     expect(url.pathname).toBe("/dashboard")
-    expect(url.searchParams.get("enrollment_success")).toBe("1")
+    expect(url.searchParams.get("enrollment_status")).toBe("success")
     expect(url.searchParams.get("enrollment_title")).toBe(contract.name)
     expect(url.searchParams.get("enrollment_org_id")).toBe(
       String(contract.organization),

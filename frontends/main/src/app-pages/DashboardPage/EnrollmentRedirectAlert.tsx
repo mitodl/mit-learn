@@ -8,20 +8,19 @@ import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import {
-  ENROLLMENT_SUCCESS_PARAM,
-  ENROLLMENT_ERROR_PARAM,
+  ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
   ORDER_STATUS_PARAM,
   ORDER_ID_PARAM,
+  EnrollmentAlertStatus,
   EnrollmentErrorType,
 } from "@/common/mitxonline"
 import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
 
 const CONSUMED_PARAMS = [
-  ENROLLMENT_SUCCESS_PARAM,
-  ENROLLMENT_ERROR_PARAM,
+  ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
@@ -82,7 +81,9 @@ const GenericSuccessCopy: React.FC = () => (
 const parseAlertRequest = (
   params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
 ): AlertRequest | null => {
-  if (params[ENROLLMENT_ERROR_PARAM]) {
+  const enrollmentStatus = params[ENROLLMENT_STATUS_PARAM]
+
+  if (enrollmentStatus === EnrollmentAlertStatus.ERROR) {
     return { kind: "error", errorType: params[ENROLLMENT_ERROR_TYPE_PARAM] }
   }
 
@@ -100,11 +101,11 @@ const parseAlertRequest = (
     return null
   }
 
-  if (params[ENROLLMENT_SUCCESS_PARAM]) {
+  if (enrollmentStatus === EnrollmentAlertStatus.SUCCESS) {
     const title = params[ENROLLMENT_TITLE_PARAM]
     if (!title) {
       console.warn(
-        "enrollment_success=1 without enrollment_title — not showing alert",
+        "enrollment_status=success without enrollment_title — not showing alert",
       )
       return null
     }

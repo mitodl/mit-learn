@@ -19,7 +19,7 @@ describe("EnrollmentRedirectAlert", () => {
 
   test("shows invalid-enrollment-code error alert and clears params", async () => {
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_error=1&error_type=invalid-enrollment-code",
+      url: "/dashboard?enrollment_status=error&error_type=invalid-enrollment-code",
     })
 
     expect(
@@ -35,7 +35,7 @@ describe("EnrollmentRedirectAlert", () => {
 
   test("shows generic error alert when error_type is unknown", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_error=1",
+      url: "/dashboard?enrollment_status=error",
     })
 
     expect(
@@ -48,7 +48,7 @@ describe("EnrollmentRedirectAlert", () => {
 
   test("shows free success alert with bold title and My Learning link", async () => {
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1&enrollment_title=Data+Science",
+      url: "/dashboard?enrollment_status=success&enrollment_title=Data+Science",
     })
 
     const alert = await screen.findByRole("alert")
@@ -79,7 +79,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: `/dashboard?enrollment_success=1&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
+      url: `/dashboard?enrollment_status=success&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     const alert = await screen.findByRole("alert")
@@ -107,7 +107,7 @@ describe("EnrollmentRedirectAlert", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
 
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: `/dashboard?enrollment_success=1&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
+      url: `/dashboard?enrollment_status=success&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     await waitFor(() => {
@@ -134,7 +134,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1&enrollment_title=Some+Course&enrollment_org_id=999",
+      url: "/dashboard?enrollment_status=success&enrollment_title=Some+Course&enrollment_org_id=999",
     })
 
     const alert = await screen.findByRole("alert")
@@ -148,7 +148,7 @@ describe("EnrollmentRedirectAlert", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1&enrollment_title=Some+Course&enrollment_org_id=not-a-number",
+      url: "/dashboard?enrollment_status=success&enrollment_title=Some+Course&enrollment_org_id=not-a-number",
     })
 
     const alert = await screen.findByRole("alert")
@@ -163,11 +163,11 @@ describe("EnrollmentRedirectAlert", () => {
     warnSpy.mockRestore()
   })
 
-  test("shows no alert and warns when enrollment_success=1 but title is missing", async () => {
+  test("shows no alert and warns when enrollment_status=success but title is missing", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1",
+      url: "/dashboard?enrollment_status=success",
     })
 
     await waitFor(() => {
@@ -181,7 +181,7 @@ describe("EnrollmentRedirectAlert", () => {
     warnSpy.mockRestore()
   })
 
-  test("ignores enrollment_title without enrollment_success signal", async () => {
+  test("ignores enrollment_title without enrollment_status signal", async () => {
     const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_title=Data+Science",
     })

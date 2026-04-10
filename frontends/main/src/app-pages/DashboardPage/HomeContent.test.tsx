@@ -259,7 +259,7 @@ describe("HomeContent", () => {
     setupAPIs()
 
     renderWithProviders(<HomeContent />, {
-      url: "/dashboard?enrollment_success=1&enrollment_title=Linear+Algebra",
+      url: "/dashboard?enrollment_status=success&enrollment_title=Linear+Algebra",
     })
 
     const alert = await screen.findByRole("alert")
@@ -273,14 +273,14 @@ describe("HomeContent", () => {
     const replaceStateSpy = jest.spyOn(window.history, "replaceState")
 
     renderWithProviders(<HomeContent />, {
-      url: "/dashboard?enrollment_error=1",
+      url: "/dashboard?enrollment_status=error",
     })
 
     await screen.findByRole("heading", {
       name: "Your MIT Learning Journey",
     })
 
-    // enrollment_error=1 without error_type shows the generic error message
+    // enrollment_status=error without error_type shows the generic error message
     expect(screen.getByText(/Enrollment Error/)).toBeInTheDocument()
     expect(
       screen.getByText(/Something went wrong processing your enrollment/),
