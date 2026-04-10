@@ -48,7 +48,7 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      /You have successfully enrolled in "Data Science"\. It has been added to My Learning\./,
+      /You've enrolled in "Data Science"\. It has been added to My Learning\./,
     )
 
     const bold = alert.querySelector("strong")
@@ -81,13 +81,14 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}\\.`,
+        `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
       ),
     )
     expect(alert).not.toHaveTextContent("My Learning")
 
-    const bold = alert.querySelector("strong")
-    expect(bold).toHaveTextContent("Professional Certificate")
+    const bolds = alert.querySelectorAll("strong")
+    expect(bolds[0]).toHaveTextContent(org.name)
+    expect(bolds[1]).toHaveTextContent("Professional Certificate")
   })
 
   test("waits for org data before showing B2B success copy", async () => {
@@ -118,7 +119,7 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have been enrolled in "Professional Certificate" by ${escapeRegExp(org.name)}\\.`,
+        `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
       ),
     )
   })
@@ -140,8 +141,8 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows paid success alert from order receipt data", async () => {
-    const receipt = mitxonline.factories.orders.receipt({
-      lines: [mitxonline.factories.orders.receiptLine()],
+    const receipt = mitxonline.factories.orders.order({
+      lines: [mitxonline.factories.orders.transactionLine()],
     })
 
     setMockResponse.get(mitxonline.urls.orders.receipt(17), receipt)
@@ -153,12 +154,12 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You have successfully enrolled in "${escapeRegExp(receipt.lines[0].item_description)}"`,
+        `You've enrolled in "${escapeRegExp(receipt.lines[0].content_title)}"`,
       ),
     )
 
     const bold = alert.querySelector("strong")
-    expect(bold).toHaveTextContent(receipt.lines[0].item_description)
+    expect(bold).toHaveTextContent(receipt.lines[0].content_title)
   })
 
   test("falls back to generic paid success copy when receipt loading fails", async () => {

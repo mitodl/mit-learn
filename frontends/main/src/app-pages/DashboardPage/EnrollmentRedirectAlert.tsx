@@ -46,8 +46,8 @@ const MyLearningLink: React.FC = () => (
 
 const FreeSuccessCopy: React.FC<{ title: string }> = ({ title }) => (
   <>
-    You have successfully enrolled in "<BoldTitle>{title}</BoldTitle>". It has
-    been added to <MyLearningLink />.
+    You've enrolled in "<BoldTitle>{title}</BoldTitle>". It has been added to{" "}
+    <MyLearningLink />.
   </>
 )
 
@@ -56,7 +56,8 @@ const B2bSuccessCopy: React.FC<{ title: string; orgName: string }> = ({
   orgName,
 }) => (
   <>
-    You have been enrolled in "<BoldTitle>{title}</BoldTitle>" by {orgName}.
+    As a member of <BoldTitle>{orgName}</BoldTitle>, you have been enrolled in "
+    <BoldTitle>{title}</BoldTitle>".
   </>
 )
 
@@ -169,11 +170,10 @@ const EnrollmentRedirectAlert: React.FC = () => {
   }
 
   if (request?.kind === "paid" && paidReceipt.isSuccess) {
-    const line = paidReceipt.data.lines[0]
-    const title = line?.item_description || line?.product.description || null
+    const title = paidReceipt.data.lines[0]?.content_title
 
     return (
-      <Alert severity="success">
+      <Alert severity="success" label="Success!">
         {title ? <FreeSuccessCopy title={title} /> : <GenericSuccessCopy />}
       </Alert>
     )
