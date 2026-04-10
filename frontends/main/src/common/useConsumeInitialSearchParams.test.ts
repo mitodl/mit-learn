@@ -67,4 +67,37 @@ describe("useConsumeInitialSearchParams", () => {
     })
     expect(mockReplace).toHaveBeenCalledWith("/?unrelated=keep")
   })
+
+  test("preserves hash fragment when cleaning params", async () => {
+    useSearchParams.mockReturnValue(new URLSearchParams("foo=1"))
+    window.location.hash = "#section"
+
+    const { result } = renderHook(() => useConsumeInitialSearchParams(["foo"]))
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ foo: "1" })
+    })
+    expect(mockReplace).toHaveBeenCalledWith("/#section")
+
+    window.location.hash = ""
+  })
+
+  test("does not consume params that appear after first render", async () => {
+    // First render: no matching params
+    useSearchParams.mockReturnValue(new URLSearchParams(""))
+
+    const { result, rerender } = renderHook(() =>
+      useConsumeInitialSearchParams(["foo"]),
+    )
+
+    expect(result.current).toBeNull()
+
+    // Later: params appear (e.g., client-side navigation)
+    useSearchParams.mockReturnValue(new URLSearchParams("foo=late"))
+    rerender()
+
+    // Should still be null — hook only reads initial params
+    expect(result.current).toBeNull()
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
 })

@@ -150,6 +150,25 @@ describe("EnrollmentRedirectAlert", () => {
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
+  test("shows error alert when enrollment_org_id is malformed", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation()
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_title=Some+Course&enrollment_org_id=not-a-number",
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      /Something went wrong processing your enrollment/,
+    )
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Malformed enrollment_org_id"),
+      "not-a-number",
+    )
+
+    warnSpy.mockRestore()
+  })
+
   test("shows no alert and warns when enrollment_title param is empty", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
@@ -231,7 +250,9 @@ describe("EnrollmentRedirectAlert", () => {
       url: "/dashboard",
     })
 
-    // Give it a tick to process
+    // setTimeout is intentional: we're asserting "nothing happens," so there's no
+    // deterministic condition to waitFor. The short delay lets any pending effects
+    // and state updates flush before we assert on absence.
     await new Promise((r) => setTimeout(r, 50))
     expect(mockReplace).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()

@@ -108,12 +108,16 @@ const parseAlertRequest = (
     }
 
     const rawOrgId = params[ENROLLMENT_ORG_ID_PARAM]
-    const orgId = rawOrgId ? Number(rawOrgId) : null
-
-    if (orgId !== null && Number.isFinite(orgId)) {
-      return { kind: "b2b", title, orgId }
+    if (!rawOrgId) {
+      return { kind: "free", title }
     }
-    return { kind: "free", title }
+
+    const orgId = Number(rawOrgId)
+    if (!Number.isFinite(orgId)) {
+      console.warn("Malformed enrollment_org_id param:", rawOrgId)
+      return { kind: "error", errorType: null }
+    }
+    return { kind: "b2b", title, orgId }
   }
 
   return null

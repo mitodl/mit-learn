@@ -9,9 +9,10 @@ import { useRouter } from "next-nprogress-bar"
  * state, and removes them from the URL. Returns `null` if none of the named
  * params were present; otherwise returns a record of their values.
  *
- * This is useful for one-time "redirect with data" patterns where query
- * params carry a signal (e.g., enrollment success) that should be shown once
- * and then cleared so it doesn't reappear on refresh.
+ * Only runs once — subsequent URL changes are ignored. This is useful for
+ * one-time "redirect with data" patterns where query params carry a signal
+ * (e.g., enrollment success) that should be shown once and then cleared so
+ * it doesn't reappear on refresh.
  */
 const useConsumeInitialSearchParams = <T extends string>(
   paramNames: readonly T[],
@@ -26,6 +27,7 @@ const useConsumeInitialSearchParams = <T extends string>(
 
   React.useEffect(() => {
     if (processed.current) return
+    processed.current = true
 
     const hasAny = paramNames.some((name) => searchParams.has(name))
     if (!hasAny) return
@@ -35,15 +37,15 @@ const useConsumeInitialSearchParams = <T extends string>(
       values[name] = searchParams.get(name)
     }
     setConsumed(values)
-    processed.current = true
 
     const newParams = new URLSearchParams(searchParams.toString())
     for (const name of paramNames) {
       newParams.delete(name)
     }
+    const hash = window.location.hash
     const newUrl = newParams.toString()
-      ? `${window.location.pathname}?${newParams.toString()}`
-      : window.location.pathname
+      ? `${window.location.pathname}?${newParams.toString()}${hash}`
+      : `${window.location.pathname}${hash}`
     router.replace(newUrl)
   }, [paramNames, searchParams, router])
 
