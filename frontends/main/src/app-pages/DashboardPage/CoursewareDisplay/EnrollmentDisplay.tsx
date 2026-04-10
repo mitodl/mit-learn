@@ -888,7 +888,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const totalCards = normallyShown.length + maybeShown.length
 
   return totalCards > 0 ? (
-    <Wrapper>
+    <Wrapper id="my-learning">
       <Title variant="h5" component="h2">
         My Learning
       </Title>

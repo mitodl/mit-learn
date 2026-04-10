@@ -3,7 +3,7 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Alert } from "@mitodl/smoot-design"
-import { Link } from "ol-components"
+import { Link, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ENROLLMENT_ERROR_QUERY_PARAM } from "@/common/urls"
@@ -28,11 +28,23 @@ type AlertRequest =
   | { kind: "free"; title: string | null; orgId: number | null }
   | { kind: "paid"; orderId: number }
 
-const successCopy = (title: string) =>
-  `You have successfully enrolled in ${title}. It has been added to My Learning.`
+const BoldTitle = styled.strong(({ theme }) => ({
+  fontWeight: theme.typography.fontWeightBold,
+}))
 
-const genericSuccessCopy =
-  "Your enrollment is confirmed. It has been added to My Learning."
+const SuccessCopy: React.FC<{ title: string }> = ({ title }) => (
+  <>
+    You have successfully enrolled in <BoldTitle>{title}</BoldTitle>. It has
+    been added to <Link href="/dashboard#my-learning">My Learning</Link>.
+  </>
+)
+
+const GenericSuccessCopy: React.FC = () => (
+  <>
+    Your enrollment is confirmed. It has been added to{" "}
+    <Link href="/dashboard#my-learning">My Learning</Link>.
+  </>
+)
 
 const parseAlertRequest = (
   params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
@@ -107,10 +119,18 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     if (request.title) {
       const title = orgName ? `${request.title} from ${orgName}` : request.title
-      return <Alert severity="success">{successCopy(title)}</Alert>
+      return (
+        <Alert severity="success">
+          <SuccessCopy title={title} />
+        </Alert>
+      )
     }
 
-    return <Alert severity="success">{genericSuccessCopy}</Alert>
+    return (
+      <Alert severity="success">
+        <GenericSuccessCopy />
+      </Alert>
+    )
   }
 
   if (request?.kind === "paid" && paidReceipt.isSuccess) {
@@ -119,13 +139,17 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     return (
       <Alert severity="success">
-        {title ? successCopy(title) : genericSuccessCopy}
+        {title ? <SuccessCopy title={title} /> : <GenericSuccessCopy />}
       </Alert>
     )
   }
 
   if (request?.kind === "paid" && paidReceipt.isError) {
-    return <Alert severity="success">{genericSuccessCopy}</Alert>
+    return (
+      <Alert severity="success">
+        <GenericSuccessCopy />
+      </Alert>
+    )
   }
 
   return null

@@ -270,11 +270,10 @@ describe("HomeContent", () => {
       url: "/dashboard?enrollment_title=Linear+Algebra",
     })
 
-    expect(
-      await screen.findByText(
-        /You have successfully enrolled in Linear Algebra\. It has been added to My Learning\./i,
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      "You have successfully enrolled in Linear Algebra. It has been added to My Learning.",
+    )
   })
 
   test("Displays enrollment error alert when query param is present and then clears it", async () => {

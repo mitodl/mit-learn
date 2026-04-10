@@ -38,16 +38,23 @@ describe("EnrollmentRedirectAlert", () => {
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
-  test("shows free success alert from enrollment_title URL param", async () => {
+  test("shows free success alert with bold title and My Learning link", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_title=Data+Science",
     })
 
-    expect(
-      await screen.findByText(
-        /You have successfully enrolled in Data Science\. It has been added to My Learning\./i,
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      "You have successfully enrolled in Data Science. It has been added to My Learning.",
+    )
+
+    const bold = alert.querySelector("strong")
+    expect(bold).toHaveTextContent("Data Science")
+
+    expect(screen.getByRole("link", { name: "My Learning" })).toHaveAttribute(
+      "href",
+      "/dashboard#my-learning",
+    )
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
@@ -68,13 +75,13 @@ describe("EnrollmentRedirectAlert", () => {
       url: `/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
-    expect(
-      await screen.findByText(
-        new RegExp(
-          `You have successfully enrolled in Professional Certificate from ${org.name}`,
-        ),
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      `You have successfully enrolled in Professional Certificate from ${org.name}`,
+    )
+
+    const bold = alert.querySelector("strong")
+    expect(bold).toHaveTextContent(`Professional Certificate from ${org.name}`)
   })
 
   test("waits for org data before showing contract success copy", async () => {
@@ -98,21 +105,14 @@ describe("EnrollmentRedirectAlert", () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/dashboard")
     })
-    expect(
-      screen.queryByText(
-        /You have successfully enrolled in Professional Certificate\. It has been added to My Learning\./i,
-      ),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
     resolveMitxUser(mitxUser)
 
-    expect(
-      await screen.findByText(
-        new RegExp(
-          `You have successfully enrolled in Professional Certificate from ${org.name}`,
-        ),
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      `You have successfully enrolled in Professional Certificate from ${org.name}`,
+    )
   })
 
   test("shows generic free success when enrollment_title param is empty", async () => {
@@ -120,11 +120,14 @@ describe("EnrollmentRedirectAlert", () => {
       url: "/dashboard?enrollment_title=",
     })
 
-    expect(
-      await screen.findByText(
-        /Your enrollment is confirmed\. It has been added to My Learning\./i,
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      "Your enrollment is confirmed. It has been added to My Learning.",
+    )
+    expect(screen.getByRole("link", { name: "My Learning" })).toHaveAttribute(
+      "href",
+      "/dashboard#my-learning",
+    )
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
@@ -139,13 +142,13 @@ describe("EnrollmentRedirectAlert", () => {
       url: "/dashboard?order_status=fulfilled&order_id=17",
     })
 
-    expect(
-      await screen.findByText(
-        new RegExp(
-          `You have successfully enrolled in ${receipt.lines[0].item_description}`,
-        ),
-      ),
-    ).toBeInTheDocument()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      `You have successfully enrolled in ${receipt.lines[0].item_description}`,
+    )
+
+    const bold = alert.querySelector("strong")
+    expect(bold).toHaveTextContent(receipt.lines[0].item_description)
   })
 
   test("falls back to generic paid success copy when receipt loading fails", async () => {
@@ -158,9 +161,7 @@ describe("EnrollmentRedirectAlert", () => {
     })
 
     expect(
-      await screen.findByText(
-        /Your enrollment is confirmed\. It has been added to My Learning\./i,
-      ),
+      await screen.findByText(/Your enrollment is confirmed/i),
     ).toBeInTheDocument()
   })
 
