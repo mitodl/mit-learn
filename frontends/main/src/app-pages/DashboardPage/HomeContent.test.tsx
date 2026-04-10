@@ -267,7 +267,7 @@ describe("HomeContent", () => {
     >)
 
     renderWithProviders(<HomeContent />, {
-      url: "/dashboard?enrollment_title=Linear+Algebra",
+      url: "/dashboard?enrollment_success=1&enrollment_title=Linear+Algebra",
     })
 
     const alert = await screen.findByRole("alert")
@@ -293,12 +293,10 @@ describe("HomeContent", () => {
       name: "Your MIT Learning Journey",
     })
 
-    // Verify the alert was shown
+    // enrollment_error=1 without error_type shows the generic error message
     expect(screen.getByText(/Enrollment Error/)).toBeInTheDocument()
     expect(
-      screen.getByText(
-        /The Enrollment Code is incorrect or no longer available/,
-      ),
+      screen.getByText(/Something went wrong processing your enrollment/),
     ).toBeInTheDocument()
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
 

@@ -1,4 +1,5 @@
 import React from "react"
+import { act } from "@testing-library/react"
 import {
   renderWithProviders,
   screen,
@@ -56,7 +57,7 @@ describe("EnrollmentRedirectAlert", () => {
 
   test("shows free success alert with bold title and My Learning link", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=Data+Science",
+      url: "/dashboard?enrollment_success=1&enrollment_title=Data+Science",
     })
 
     const alert = await screen.findByRole("alert")
@@ -85,7 +86,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: `/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
+      url: `/dashboard?enrollment_success=1&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     const alert = await screen.findByRole("alert")
@@ -113,7 +114,7 @@ describe("EnrollmentRedirectAlert", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: `/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
+      url: `/dashboard?enrollment_success=1&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     await waitFor(() => {
@@ -140,7 +141,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=Some+Course&enrollment_org_id=999",
+      url: "/dashboard?enrollment_success=1&enrollment_title=Some+Course&enrollment_org_id=999",
     })
 
     const alert = await screen.findByRole("alert")
@@ -154,7 +155,7 @@ describe("EnrollmentRedirectAlert", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=Some+Course&enrollment_org_id=not-a-number",
+      url: "/dashboard?enrollment_success=1&enrollment_title=Some+Course&enrollment_org_id=not-a-number",
     })
 
     const alert = await screen.findByRole("alert")
@@ -169,20 +170,35 @@ describe("EnrollmentRedirectAlert", () => {
     warnSpy.mockRestore()
   })
 
-  test("shows no alert and warns when enrollment_title param is empty", async () => {
+  test("shows no alert and warns when enrollment_success=1 but title is missing", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=",
+      url: "/dashboard?enrollment_success=1",
     })
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/dashboard")
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("empty title"))
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("without enrollment_title"),
+    )
 
     warnSpy.mockRestore()
+  })
+
+  test("ignores enrollment_title without enrollment_success signal", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_title=Data+Science",
+    })
+
+    // enrollment_title alone is still a consumed param, so the URL gets cleaned,
+    // but no alert is shown because enrollment_success is not present.
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   test("shows paid success alert from order receipt data", async () => {
@@ -245,16 +261,17 @@ describe("EnrollmentRedirectAlert", () => {
     },
   )
 
-  test("renders nothing and does not call replace when no alert params are present", async () => {
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+  test("renders nothing and does not trigger side effects when no alert params are present", async () => {
+    const { queryClient } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard",
     })
 
-    // setTimeout is intentional: we're asserting "nothing happens," so there's no
-    // deterministic condition to waitFor. The short delay lets any pending effects
-    // and state updates flush before we assert on absence.
-    await new Promise((r) => setTimeout(r, 50))
+    // Flush any pending effects/state transitions before asserting absence.
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    await act(async () => {})
+
     expect(mockReplace).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(queryClient.isFetching()).toBe(0)
   })
 })

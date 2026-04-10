@@ -8,6 +8,7 @@ import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import {
+  ENROLLMENT_SUCCESS_PARAM,
   ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
@@ -19,6 +20,7 @@ import {
 import { useConsumeInitialSearchParams } from "@/common/useConsumeInitialSearchParams"
 
 const CONSUMED_PARAMS = [
+  ENROLLMENT_SUCCESS_PARAM,
   ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
@@ -98,11 +100,11 @@ const parseAlertRequest = (
     return null
   }
 
-  if (params[ENROLLMENT_TITLE_PARAM] !== null) {
+  if (params[ENROLLMENT_SUCCESS_PARAM]) {
     const title = params[ENROLLMENT_TITLE_PARAM]
     if (!title) {
       console.warn(
-        "Enrollment success redirect with empty title — not showing alert",
+        "enrollment_success=1 without enrollment_title — not showing alert",
       )
       return null
     }

@@ -416,6 +416,7 @@ describe("CourseEnrollmentDialog", () => {
       await waitFor(() => {
         expect(location.current.pathname).toBe("/dashboard")
       })
+      expect(location.current.searchParams.get("enrollment_success")).toBe("1")
       expect(location.current.searchParams.get("enrollment_title")).toBe(
         course.title,
       )

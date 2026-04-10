@@ -4,6 +4,7 @@ import { DASHBOARD_HOME } from "@/common/urls"
  * Query-param constants used by enrollment redirect alerts.
  * The alert component reads these on landing; callsites set them before redirecting.
  */
+const ENROLLMENT_SUCCESS_PARAM = "enrollment_success"
 const ENROLLMENT_ERROR_PARAM = "enrollment_error"
 const ENROLLMENT_ERROR_TYPE_PARAM = "error_type"
 const ENROLLMENT_TITLE_PARAM = "enrollment_title"
@@ -34,6 +35,7 @@ const enrollmentAlertSuccessUrl = ({
     console.error("enrollmentAlertSuccessUrl called with empty title")
   }
   const params = new URLSearchParams()
+  params.set(ENROLLMENT_SUCCESS_PARAM, "1")
   params.set(ENROLLMENT_TITLE_PARAM, title)
   if (orgId !== null && orgId !== undefined) {
     params.set(ENROLLMENT_ORG_ID_PARAM, String(orgId))
@@ -52,6 +54,7 @@ export {
   enrollmentAlertSuccessUrl,
   enrollmentAlertErrorUrl,
   EnrollmentErrorType,
+  ENROLLMENT_SUCCESS_PARAM,
   ENROLLMENT_ERROR_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
   ENROLLMENT_TITLE_PARAM,
