@@ -428,7 +428,9 @@ describe("SearchPage", () => {
       is_authenticated: true,
     })
 
-    const { unmount } = renderWithProviders(<SearchPage />)
+    const {
+      view: { unmount },
+    } = renderWithProviders(<SearchPage />)
 
     await screen.findByText(/Search took/i)
 
