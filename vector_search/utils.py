@@ -984,7 +984,7 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
 
 async def async_qdrant_aggregations(
     aggregation_keys: list,
-    facet_filter,
+    params: dict,
     collection_name: str = RESOURCES_COLLECTION_NAME,
 ) -> dict:
     """
@@ -996,8 +996,8 @@ async def async_qdrant_aggregations(
         aggregation_keys: list of aggregation parameter names.
             Must be valid keys in the collection's param map
             (e.g. ``QDRANT_RESOURCE_PARAM_MAP``).
-        search_filter: Qdrant ``models.Filter`` to apply to every facet query,
-            or ``None`` to aggregate over the whole collection.
+        params: dict of all search parameters, which are used to construct
+            a Qdrant ``models.Filter`` for each facet query.
         collection_name: name of the Qdrant collection to query.
     Returns:
         dict mapping each requested aggregation name to a list of
@@ -1019,6 +1019,14 @@ async def async_qdrant_aggregations(
         qdrant_field = param_map.get(agg_key)
         if not qdrant_field:
             return agg_key, []
+
+        filtered_params = {
+            k: v for k, v in params.items() if k.partition("__")[0] != agg_key
+        }
+        facet_filter = qdrant_query_conditions(
+            filtered_params, collection_name=collection_name
+        )
+
         result = await client.facet(
             collection_name=collection_name,
             key=qdrant_field,

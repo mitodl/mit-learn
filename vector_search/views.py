@@ -210,7 +210,7 @@ class QdrantView(APIView):
             ),
             async_qdrant_aggregations(
                 aggregation_keys,
-                search_filter,
+                params,
                 collection_name=search_collection,
             ),
         )
