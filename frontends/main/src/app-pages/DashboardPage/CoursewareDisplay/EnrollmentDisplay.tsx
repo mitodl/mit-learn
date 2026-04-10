@@ -1,4 +1,5 @@
 import React from "react"
+import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
   Collapse,
@@ -888,7 +889,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const totalCards = normallyShown.length + maybeShown.length
 
   return totalCards > 0 ? (
-    <Wrapper id="my-learning">
+    <Wrapper id={DASHBOARD_MY_LEARNING_ID}>
       <Title variant="h5" component="h2">
         My Learning
       </Title>

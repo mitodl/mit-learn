@@ -6,7 +6,10 @@ import { Alert } from "@mitodl/smoot-design"
 import { Link, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { ENROLLMENT_ERROR_QUERY_PARAM } from "@/common/urls"
+import {
+  DASHBOARD_MY_LEARNING,
+  ENROLLMENT_ERROR_QUERY_PARAM,
+} from "@/common/urls"
 import {
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
@@ -32,17 +35,28 @@ const BoldTitle = styled.strong(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
 }))
 
+const UnderlinedLink = styled(Link)({
+  textDecoration: "underline",
+})
+
 const SuccessCopy: React.FC<{ title: string }> = ({ title }) => (
   <>
-    You have successfully enrolled in <BoldTitle>{title}</BoldTitle>. It has
-    been added to <Link href="/dashboard#my-learning">My Learning</Link>.
+    You have successfully enrolled in "<BoldTitle>{title}</BoldTitle>". It has
+    been added to{" "}
+    <UnderlinedLink color="red" href={DASHBOARD_MY_LEARNING}>
+      My Learning
+    </UnderlinedLink>
+    .
   </>
 )
 
 const GenericSuccessCopy: React.FC = () => (
   <>
     Your enrollment is confirmed. It has been added to{" "}
-    <Link href="/dashboard#my-learning">My Learning</Link>.
+    <UnderlinedLink color="red" href={DASHBOARD_MY_LEARNING}>
+      My Learning
+    </UnderlinedLink>
+    .
   </>
 )
 
@@ -97,9 +111,9 @@ const EnrollmentRedirectAlert: React.FC = () => {
     return (
       <Alert severity="error" closable label="Enrollment Error - ">
         The Enrollment Code is incorrect or no longer available.{" "}
-        <Link color="red" href={`mailto:${supportEmail}`}>
+        <UnderlinedLink color="red" href={`mailto:${supportEmail}`}>
           Contact Support
-        </Link>{" "}
+        </UnderlinedLink>{" "}
         for assistance.
       </Alert>
     )
@@ -120,14 +134,14 @@ const EnrollmentRedirectAlert: React.FC = () => {
     if (request.title) {
       const title = orgName ? `${request.title} from ${orgName}` : request.title
       return (
-        <Alert severity="success">
+        <Alert severity="success" label="Success!">
           <SuccessCopy title={title} />
         </Alert>
       )
     }
 
     return (
-      <Alert severity="success">
+      <Alert severity="success" label="Success!">
         <GenericSuccessCopy />
       </Alert>
     )

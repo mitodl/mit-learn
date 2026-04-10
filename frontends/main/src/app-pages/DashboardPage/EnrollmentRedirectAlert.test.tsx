@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@/test-utils"
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
+import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import * as mitxonline from "api/mitxonline-test-utils"
 
 jest.mock("next-nprogress-bar", () => ({
@@ -53,7 +54,7 @@ describe("EnrollmentRedirectAlert", () => {
 
     expect(screen.getByRole("link", { name: "My Learning" })).toHaveAttribute(
       "href",
-      "/dashboard#my-learning",
+      DASHBOARD_MY_LEARNING,
     )
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
@@ -126,7 +127,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
     expect(screen.getByRole("link", { name: "My Learning" })).toHaveAttribute(
       "href",
-      "/dashboard#my-learning",
+      DASHBOARD_MY_LEARNING,
     )
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
