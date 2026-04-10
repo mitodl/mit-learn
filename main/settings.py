@@ -892,6 +892,7 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
         """
         Rules:
+        - Use the same language as the transcript for both questions and answers.
         - Focus ONLY on core concepts, methods, definitions,
           reasoning, and cause-effect relationships.
         - Questions must test understanding or application,
