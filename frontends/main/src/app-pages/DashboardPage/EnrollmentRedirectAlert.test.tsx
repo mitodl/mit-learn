@@ -19,16 +19,9 @@ const { useRouter } = jest.requireMock("next-nprogress-bar")
 describe("EnrollmentRedirectAlert", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    sessionStorage.clear()
     useRouter.mockReturnValue({
       replace: mockReplace,
     })
-    setMockResponse.get(
-      mitxonline.urls.userMe.get(),
-      mitxonline.factories.user.user({
-        b2b_organizations: [],
-      }),
-    )
   })
 
   test("shows enrollment error alert and clears query params", async () => {
@@ -45,11 +38,9 @@ describe("EnrollmentRedirectAlert", () => {
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
-  test("shows free success alert from stored dashboard enrollment data", async () => {
-    sessionStorage.setItem("dashboard_enrollment_title", "Data Science")
-
+  test("shows free success alert from enrollment_title URL param", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1",
+      url: "/dashboard?enrollment_title=Data+Science",
     })
 
     expect(
@@ -58,16 +49,9 @@ describe("EnrollmentRedirectAlert", () => {
       ),
     ).toBeInTheDocument()
     expect(mockReplace).toHaveBeenCalledWith("/dashboard")
-    expect(sessionStorage.getItem("dashboard_enrollment_title")).toBeNull()
   })
 
-  test("shows contract success alert with org name when org id matches MITxOnline user data", async () => {
-    sessionStorage.setItem(
-      "dashboard_enrollment_title",
-      "Professional Certificate",
-    )
-    sessionStorage.setItem("dashboard_enrollment_org_id", "77")
-
+  test("shows contract success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user({
@@ -82,7 +66,7 @@ describe("EnrollmentRedirectAlert", () => {
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1",
+      url: "/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=77",
     })
 
     expect(
@@ -93,12 +77,6 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("waits for org data before showing contract success copy", async () => {
-    sessionStorage.setItem(
-      "dashboard_enrollment_title",
-      "Professional Certificate",
-    )
-    sessionStorage.setItem("dashboard_enrollment_org_id", "77")
-
     const mitxUser = mitxonline.factories.user.user({
       b2b_organizations: [
         mitxonline.factories.organizations.organization({
@@ -115,7 +93,7 @@ describe("EnrollmentRedirectAlert", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_success=1",
+      url: "/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=77",
     })
 
     await waitFor(() => {
@@ -134,6 +112,19 @@ describe("EnrollmentRedirectAlert", () => {
         /You have successfully enrolled in Professional Certificate from MIT xPRO\. It has been added to My Learning\./i,
       ),
     ).toBeInTheDocument()
+  })
+
+  test("shows generic free success when enrollment_title param is empty", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_title=",
+    })
+
+    expect(
+      await screen.findByText(
+        /Your enrollment is confirmed\. It has been added to My Learning\./i,
+      ),
+    ).toBeInTheDocument()
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
   })
 
   test("shows paid success alert from order receipt data", async () => {
@@ -189,5 +180,16 @@ describe("EnrollmentRedirectAlert", () => {
     expect(
       screen.queryByText(/You have successfully enrolled in /i),
     ).not.toBeInTheDocument()
+  })
+
+  test("renders nothing and does not call replace when no alert params are present", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard",
+    })
+
+    // Give it a tick to process
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockReplace).not.toHaveBeenCalled()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })
