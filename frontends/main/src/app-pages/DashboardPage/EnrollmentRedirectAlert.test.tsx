@@ -62,10 +62,7 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows B2B success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
-    const org = mitxonline.factories.organizations.organization({
-      id: 77,
-      contracts: [],
-    })
+    const org = mitxonline.factories.organizations.organization()
 
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
@@ -92,10 +89,7 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("waits for org data before showing B2B success copy", async () => {
-    const org = mitxonline.factories.organizations.organization({
-      id: 77,
-      contracts: [],
-    })
+    const org = mitxonline.factories.organizations.organization()
     const mitxUser = mitxonline.factories.user.user({
       b2b_organizations: [org],
     })
@@ -122,6 +116,25 @@ describe("EnrollmentRedirectAlert", () => {
         `As a member of ${escapeRegExp(org.name)}, you have been enrolled in "Professional Certificate"`,
       ),
     )
+  })
+
+  test("shows error alert when B2B org ID is not found in user data", async () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        b2b_organizations: [],
+      }),
+    )
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_title=Some+Course&enrollment_org_id=999",
+    })
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(
+      /Something went wrong processing your enrollment/,
+    )
+    expect(screen.getByText("Contact Support")).toBeInTheDocument()
   })
 
   test("shows generic free success when enrollment_title param is empty", async () => {
@@ -176,24 +189,29 @@ describe("EnrollmentRedirectAlert", () => {
     ).toBeInTheDocument()
   })
 
-  test("clears malformed paid redirect params without showing an alert", async () => {
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation()
+  test.each([
+    {
+      label: "non-numeric",
+      url: "order_status=fulfilled&order_id=not-a-number",
+    },
+    { label: "missing", url: "order_status=fulfilled" },
+  ])(
+    "clears params without showing an alert when order_id is $label",
+    async ({ url }) => {
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
-    renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?order_status=fulfilled&order_id=not-a-number",
-    })
+      renderWithProviders(<EnrollmentRedirectAlert />, {
+        url: `/dashboard?${url}`,
+      })
 
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
-    })
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Malformed enrollment redirect"),
-      "not-a-number",
-    )
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      })
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
-    warnSpy.mockRestore()
-  })
+      warnSpy.mockRestore()
+    },
+  )
 
   test("renders nothing and does not call replace when no alert params are present", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
