@@ -4,15 +4,24 @@ import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Alert } from "@mitodl/smoot-design"
 import { Link } from "ol-components"
-import { useSearchParams } from "next/navigation"
-import { useRouter } from "next-nprogress-bar"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ENROLLMENT_ERROR_QUERY_PARAM } from "@/common/urls"
 import {
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
+  ORDER_STATUS_PARAM,
+  ORDER_ID_PARAM,
 } from "@/common/mitxonline"
+import { useConsumeSearchParams } from "@/common/useConsumeSearchParams"
+
+const CONSUMED_PARAMS = [
+  ENROLLMENT_ERROR_QUERY_PARAM,
+  ENROLLMENT_TITLE_PARAM,
+  ENROLLMENT_ORG_ID_PARAM,
+  ORDER_STATUS_PARAM,
+  ORDER_ID_PARAM,
+] as const
 
 type AlertRequest =
   | { kind: "error" }
@@ -25,55 +34,42 @@ const successCopy = (title: string) =>
 const genericSuccessCopy =
   "Your enrollment is confirmed. It has been added to My Learning."
 
-const EnrollmentRedirectAlert: React.FC = () => {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
-  const [request, setRequest] = React.useState<AlertRequest | null>(null)
-  const processed = React.useRef(false)
+const parseAlertRequest = (
+  params: Record<(typeof CONSUMED_PARAMS)[number], string | null>,
+): AlertRequest | null => {
+  if (params[ENROLLMENT_ERROR_QUERY_PARAM]) {
+    return { kind: "error" }
+  }
 
-  React.useEffect(() => {
-    if (processed.current) return
-
-    const enrollmentError = searchParams.get(ENROLLMENT_ERROR_QUERY_PARAM)
-    const enrollmentTitle = searchParams.get(ENROLLMENT_TITLE_PARAM)
-    const orderStatus = searchParams.get("order_status")
-    const orderId = searchParams.get("order_id")
-    const parsedOrderId = orderId ? Number(orderId) : Number.NaN
-    const rawOrgId = searchParams.get(ENROLLMENT_ORG_ID_PARAM)
-    const orgId = rawOrgId ? Number(rawOrgId) : null
-
-    if (enrollmentError) {
-      setRequest({ kind: "error" })
-    } else if (orderStatus === "fulfilled") {
-      if (Number.isFinite(parsedOrderId)) {
-        setRequest({ kind: "paid", orderId: parsedOrderId })
-      }
-    } else if (enrollmentTitle !== null) {
-      setRequest({
-        kind: "free",
-        title: enrollmentTitle || null,
-        orgId: orgId !== null && Number.isFinite(orgId) ? orgId : null,
-      })
-    } else {
-      return
+  if (params[ORDER_STATUS_PARAM] === "fulfilled") {
+    const orderId = params[ORDER_ID_PARAM]
+      ? Number(params[ORDER_ID_PARAM])
+      : Number.NaN
+    if (Number.isFinite(orderId)) {
+      return { kind: "paid", orderId }
     }
+    // Malformed order_id: clean up params but don't show an alert
+    return null
+  }
 
-    processed.current = true
+  if (params[ENROLLMENT_TITLE_PARAM] !== null) {
+    const rawOrgId = params[ENROLLMENT_ORG_ID_PARAM]
+    const orgId = rawOrgId ? Number(rawOrgId) : null
+    return {
+      kind: "free",
+      title: params[ENROLLMENT_TITLE_PARAM] || null,
+      orgId: orgId !== null && Number.isFinite(orgId) ? orgId : null,
+    }
+  }
 
-    const newParams = new URLSearchParams(searchParams.toString())
-    newParams.delete(ENROLLMENT_ERROR_QUERY_PARAM)
-    newParams.delete(ENROLLMENT_TITLE_PARAM)
-    newParams.delete(ENROLLMENT_ORG_ID_PARAM)
-    newParams.delete("order_status")
-    newParams.delete("order_id")
+  return null
+}
 
-    const newUrl = newParams.toString()
-      ? `${window.location.pathname}?${newParams.toString()}`
-      : window.location.pathname
+const EnrollmentRedirectAlert: React.FC = () => {
+  const consumed = useConsumeSearchParams(CONSUMED_PARAMS)
+  const supportEmail = process.env.NEXT_PUBLIC_MITOL_SUPPORT_EMAIL || ""
 
-    router.replace(newUrl)
-  }, [router, searchParams])
+  const request = consumed ? parseAlertRequest(consumed) : null
 
   const hasOrgId = request?.kind === "free" && request.orgId !== null
   const mitxOnlineUserQuery = useQuery({

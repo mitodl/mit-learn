@@ -52,39 +52,38 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows contract success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
+    const org = mitxonline.factories.organizations.organization({
+      id: 77,
+      contracts: [],
+    })
+
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user({
-        b2b_organizations: [
-          mitxonline.factories.organizations.organization({
-            id: 77,
-            name: "MIT xPRO",
-            contracts: [],
-          }),
-        ],
+        b2b_organizations: [org],
       }),
     )
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=77",
+      url: `/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     expect(
       await screen.findByText(
-        /You have successfully enrolled in Professional Certificate from MIT xPRO\. It has been added to My Learning\./i,
+        new RegExp(
+          `You have successfully enrolled in Professional Certificate from ${org.name}`,
+        ),
       ),
     ).toBeInTheDocument()
   })
 
   test("waits for org data before showing contract success copy", async () => {
+    const org = mitxonline.factories.organizations.organization({
+      id: 77,
+      contracts: [],
+    })
     const mitxUser = mitxonline.factories.user.user({
-      b2b_organizations: [
-        mitxonline.factories.organizations.organization({
-          id: 77,
-          name: "MIT xPRO",
-          contracts: [],
-        }),
-      ],
+      b2b_organizations: [org],
     })
     let resolveMitxUser!: (value: typeof mitxUser) => void
     const pendingMitxUser = new Promise<typeof mitxUser>((resolve) => {
@@ -93,7 +92,7 @@ describe("EnrollmentRedirectAlert", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=77",
+      url: `/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     await waitFor(() => {
@@ -109,7 +108,9 @@ describe("EnrollmentRedirectAlert", () => {
 
     expect(
       await screen.findByText(
-        /You have successfully enrolled in Professional Certificate from MIT xPRO\. It has been added to My Learning\./i,
+        new RegExp(
+          `You have successfully enrolled in Professional Certificate from ${org.name}`,
+        ),
       ),
     ).toBeInTheDocument()
   })
@@ -128,16 +129,11 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows paid success alert from order receipt data", async () => {
-    setMockResponse.get(
-      mitxonline.urls.orders.receipt(17),
-      mitxonline.factories.orders.receipt({
-        lines: [
-          mitxonline.factories.orders.receiptLine({
-            item_description: "Machine Learning with Python",
-          }),
-        ],
-      }),
-    )
+    const receipt = mitxonline.factories.orders.receipt({
+      lines: [mitxonline.factories.orders.receiptLine()],
+    })
+
+    setMockResponse.get(mitxonline.urls.orders.receipt(17), receipt)
 
     renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?order_status=fulfilled&order_id=17",
@@ -145,7 +141,9 @@ describe("EnrollmentRedirectAlert", () => {
 
     expect(
       await screen.findByText(
-        /You have successfully enrolled in Machine Learning with Python\. It has been added to My Learning\./i,
+        new RegExp(
+          `You have successfully enrolled in ${receipt.lines[0].item_description}`,
+        ),
       ),
     ).toBeInTheDocument()
   })
@@ -174,12 +172,7 @@ describe("EnrollmentRedirectAlert", () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/dashboard")
     })
-    expect(
-      screen.queryByText(/Your enrollment is confirmed\./i),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(/You have successfully enrolled in /i),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   test("renders nothing and does not call replace when no alert params are present", async () => {

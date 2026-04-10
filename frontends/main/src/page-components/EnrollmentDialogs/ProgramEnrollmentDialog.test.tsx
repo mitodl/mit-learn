@@ -40,12 +40,11 @@ describe("ProgramEnrollmentDialog", () => {
 
   test("Dialog opens with program title", async () => {
     const program = makeProgram({
-      title: "Test Program Title",
       enrollment_modes: bothEnrollmentModes(),
     })
     renderWithProviders(null)
     await openDialog(program)
-    expect(screen.getByText("Test Program Title")).toBeInTheDocument()
+    expect(screen.getByText(program.title)).toBeInTheDocument()
   })
 
   test("Shows certificate upsell with price when product is available", async () => {

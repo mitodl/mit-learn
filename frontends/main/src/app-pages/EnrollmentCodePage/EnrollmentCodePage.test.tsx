@@ -1,5 +1,10 @@
 import React from "react"
-import { renderWithProviders, setMockResponse, waitFor } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  setMockResponse,
+  waitFor,
+} from "@/test-utils"
 import { makeRequest, urls } from "api/test-utils"
 import { urls as b2bUrls, factories } from "api/mitxonline-test-utils"
 import * as commonUrls from "@/common/urls"
@@ -52,7 +57,7 @@ describe("EnrollmentCodePage", () => {
     ])
   })
 
-  test("Renders when logged in", async () => {
+  test("Shows validating message when logged in", async () => {
     setMockResponse.get(urls.userMe.get(), {
       [Permission.Authenticated]: true,
     })
@@ -60,11 +65,14 @@ describe("EnrollmentCodePage", () => {
     const mitxUser = factories.user.user()
     setMockResponse.get(b2bUrls.userMe.get(), mitxUser)
 
-    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), [])
+    const { promise } = Promise.withResolvers()
+    setMockResponse.post(b2bUrls.b2bAttach.b2bAttachView("test-code"), promise)
 
     renderWithProviders(<EnrollmentCodePage code="test-code" />, {
       url: commonUrls.B2B_ATTACH_VIEW,
     })
+
+    await screen.findByText('Validating code "test-code"...')
   })
 
   test("Stores contract info and redirects to dashboard success on successful attachment", async () => {
@@ -72,10 +80,7 @@ describe("EnrollmentCodePage", () => {
       [Permission.Authenticated]: true,
     })
 
-    const contract = factories.contracts.contract({
-      name: "Professional Certificate in AI",
-      organization: 77,
-    })
+    const contract = factories.contracts.contract()
 
     const attachUrl = b2bUrls.b2bAttach.b2bAttachView("test-code")
     setMockResponse.post(attachUrl, [contract], { code: 201 })
@@ -93,10 +98,10 @@ describe("EnrollmentCodePage", () => {
     })
     const url = new URL(mockPush.mock.calls[0][0], "http://localhost")
     expect(url.pathname).toBe("/dashboard")
-    expect(url.searchParams.get("enrollment_title")).toBe(
-      "Professional Certificate in AI",
+    expect(url.searchParams.get("enrollment_title")).toBe(contract.name)
+    expect(url.searchParams.get("enrollment_org_id")).toBe(
+      String(contract.organization),
     )
-    expect(url.searchParams.get("enrollment_org_id")).toBe("77")
   })
 
   test("Redirects to dashboard when user already attached to all contracts (200 status)", async () => {

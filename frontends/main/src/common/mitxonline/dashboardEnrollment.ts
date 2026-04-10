@@ -2,6 +2,8 @@ import { DASHBOARD_HOME } from "@/common/urls"
 
 const ENROLLMENT_TITLE_PARAM = "enrollment_title"
 const ENROLLMENT_ORG_ID_PARAM = "enrollment_org_id"
+const ORDER_STATUS_PARAM = "order_status"
+const ORDER_ID_PARAM = "order_id"
 
 type DashboardEnrollmentSuccessOpts = {
   title: string
@@ -24,5 +26,7 @@ export {
   dashboardEnrollmentSuccessUrl,
   ENROLLMENT_TITLE_PARAM,
   ENROLLMENT_ORG_ID_PARAM,
+  ORDER_STATUS_PARAM,
+  ORDER_ID_PARAM,
 }
 export type { DashboardEnrollmentSuccessOpts }
