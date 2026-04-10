@@ -1,48 +1,37 @@
 import {
-  ENROLLMENT_SUCCESS_QUERY_PARAM,
-  clearDashboardEnrollmentStorage,
+  ENROLLMENT_TITLE_PARAM,
+  ENROLLMENT_ORG_ID_PARAM,
   dashboardEnrollmentSuccessUrl,
-  readDashboardEnrollmentStorage,
-  storeDashboardEnrollmentStorage,
 } from "./dashboardEnrollment"
 
 describe("dashboardEnrollment", () => {
-  beforeEach(() => {
-    sessionStorage.clear()
+  test("builds a dashboard success URL with the enrollment title", () => {
+    const url = dashboardEnrollmentSuccessUrl({ title: "Data Science" })
+    expect(url).toBe("/dashboard?enrollment_title=Data+Science")
   })
 
-  test("stores title and optional org id for dashboard success copy", () => {
-    storeDashboardEnrollmentStorage({ title: "Data Science", orgId: 42 })
-
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: "Data Science",
-      orgId: 42,
+  test("includes org id when provided", () => {
+    const url = dashboardEnrollmentSuccessUrl({
+      title: "Professional Certificate",
+      orgId: 77,
     })
-  })
-
-  test("stores title without org id when omitted", () => {
-    storeDashboardEnrollmentStorage({ title: "Data Science" })
-
-    expect(readDashboardEnrollmentStorage()).toEqual({
-      title: "Data Science",
-      orgId: null,
-    })
-  })
-
-  test("clears stored success copy", () => {
-    storeDashboardEnrollmentStorage({
-      title: "Signals and Systems",
-      orgId: null,
-    })
-    clearDashboardEnrollmentStorage()
-
-    expect(readDashboardEnrollmentStorage()).toBeNull()
-  })
-
-  test("builds the dashboard success URL", () => {
-    expect(ENROLLMENT_SUCCESS_QUERY_PARAM).toBe("enrollment_success")
-    expect(dashboardEnrollmentSuccessUrl()).toBe(
-      "/dashboard?enrollment_success=1",
+    expect(url).toBe(
+      "/dashboard?enrollment_title=Professional+Certificate&enrollment_org_id=77",
     )
+  })
+
+  test("omits org id param when orgId is null or undefined", () => {
+    const urlNull = dashboardEnrollmentSuccessUrl({
+      title: "Signals",
+      orgId: null,
+    })
+    const urlOmitted = dashboardEnrollmentSuccessUrl({ title: "Signals" })
+    expect(urlNull).toBe("/dashboard?enrollment_title=Signals")
+    expect(urlOmitted).toBe("/dashboard?enrollment_title=Signals")
+  })
+
+  test("exports the expected param name constants", () => {
+    expect(ENROLLMENT_TITLE_PARAM).toBe("enrollment_title")
+    expect(ENROLLMENT_ORG_ID_PARAM).toBe("enrollment_org_id")
   })
 })

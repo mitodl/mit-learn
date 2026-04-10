@@ -1,58 +1,28 @@
 import { DASHBOARD_HOME } from "@/common/urls"
 
-export const ENROLLMENT_SUCCESS_QUERY_PARAM = "enrollment_success"
+const ENROLLMENT_TITLE_PARAM = "enrollment_title"
+const ENROLLMENT_ORG_ID_PARAM = "enrollment_org_id"
 
-const DASHBOARD_ENROLLMENT_TITLE_KEY = "dashboard_enrollment_title"
-const DASHBOARD_ENROLLMENT_ORG_ID_KEY = "dashboard_enrollment_org_id"
-
-type DashboardEnrollmentStorage = {
-  title: string
-  orgId: number | null
-}
-
-type DashboardEnrollmentStorageInput = {
+type DashboardEnrollmentSuccessOpts = {
   title: string
   orgId?: number | null
 }
 
-const storeDashboardEnrollmentStorage = ({
+const dashboardEnrollmentSuccessUrl = ({
   title,
-  orgId = null,
-}: DashboardEnrollmentStorageInput) => {
-  sessionStorage.setItem(DASHBOARD_ENROLLMENT_TITLE_KEY, title)
-
-  if (orgId === null) {
-    sessionStorage.removeItem(DASHBOARD_ENROLLMENT_ORG_ID_KEY)
-  } else {
-    sessionStorage.setItem(DASHBOARD_ENROLLMENT_ORG_ID_KEY, String(orgId))
+  orgId,
+}: DashboardEnrollmentSuccessOpts) => {
+  const params = new URLSearchParams()
+  params.set(ENROLLMENT_TITLE_PARAM, title)
+  if (orgId !== null && orgId !== undefined) {
+    params.set(ENROLLMENT_ORG_ID_PARAM, String(orgId))
   }
+  return `${DASHBOARD_HOME}?${params.toString()}`
 }
-
-const readDashboardEnrollmentStorage =
-  (): DashboardEnrollmentStorage | null => {
-    const title = sessionStorage.getItem(DASHBOARD_ENROLLMENT_TITLE_KEY)
-    if (!title) return null
-
-    const orgId = sessionStorage.getItem(DASHBOARD_ENROLLMENT_ORG_ID_KEY)
-
-    return {
-      title,
-      orgId: orgId ? Number(orgId) : null,
-    }
-  }
-
-const clearDashboardEnrollmentStorage = () => {
-  sessionStorage.removeItem(DASHBOARD_ENROLLMENT_TITLE_KEY)
-  sessionStorage.removeItem(DASHBOARD_ENROLLMENT_ORG_ID_KEY)
-}
-
-const dashboardEnrollmentSuccessUrl = () =>
-  `${DASHBOARD_HOME}?${ENROLLMENT_SUCCESS_QUERY_PARAM}=1`
 
 export {
-  storeDashboardEnrollmentStorage,
-  readDashboardEnrollmentStorage,
-  clearDashboardEnrollmentStorage,
   dashboardEnrollmentSuccessUrl,
+  ENROLLMENT_TITLE_PARAM,
+  ENROLLMENT_ORG_ID_PARAM,
 }
-export type { DashboardEnrollmentStorage, DashboardEnrollmentStorageInput }
+export type { DashboardEnrollmentSuccessOpts }
