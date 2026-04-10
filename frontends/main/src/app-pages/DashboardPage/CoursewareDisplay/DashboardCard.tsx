@@ -389,6 +389,7 @@ const useEnrollmentHandler = () => {
       createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
+    mitxOnlineUser: mitxOnlineUser.data,
   }
 }
 
@@ -484,6 +485,7 @@ const CoursewareButton = styled(
     const isDisabled = Boolean(
       disabled ||
         (!hasEnrolled && !onClick) || // Not enrolled and no click handler
+        (hasEnrolled && !href && !onClick) || // Enrolled but no action available
         (hasEnrolled && !!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
     )
 
@@ -672,7 +674,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   onUpgradeError,
 }) => {
   const enrollment = useEnrollmentHandler()
-  const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
+  const mitxOnlineUser = enrollment.mitxOnlineUser
   const useProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
