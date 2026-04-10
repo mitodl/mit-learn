@@ -12,24 +12,13 @@ import * as mitxonline from "api/mitxonline-test-utils"
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
-jest.mock("next-nprogress-bar", () => ({
-  useRouter: jest.fn(),
-}))
-
-const mockReplace = jest.fn()
-
-const { useRouter } = jest.requireMock("next-nprogress-bar")
-
 describe("EnrollmentRedirectAlert", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    useRouter.mockReturnValue({
-      replace: mockReplace,
-    })
   })
 
-  test("shows invalid-enrollment-code error alert", async () => {
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+  test("shows invalid-enrollment-code error alert and clears params", async () => {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_error=1&error_type=invalid-enrollment-code",
     })
 
@@ -39,7 +28,9 @@ describe("EnrollmentRedirectAlert", () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByText("Contact Support")).toBeInTheDocument()
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    await waitFor(() => {
+      expect(location.current.search).toBe("")
+    })
   })
 
   test("shows generic error alert when error_type is unknown", async () => {
@@ -56,7 +47,7 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("shows free success alert with bold title and My Learning link", async () => {
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_success=1&enrollment_title=Data+Science",
     })
 
@@ -72,7 +63,9 @@ describe("EnrollmentRedirectAlert", () => {
       "href",
       DASHBOARD_MY_LEARNING,
     )
-    expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+    await waitFor(() => {
+      expect(location.current.search).toBe("")
+    })
   })
 
   test("shows B2B success alert with org name when enrollment_org_id matches MITxOnline user data", async () => {
@@ -113,12 +106,12 @@ describe("EnrollmentRedirectAlert", () => {
     })
     setMockResponse.get(mitxonline.urls.userMe.get(), pendingMitxUser)
 
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: `/dashboard?enrollment_success=1&enrollment_title=Professional+Certificate&enrollment_org_id=${org.id}`,
     })
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(location.current.search).toBe("")
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
@@ -173,12 +166,12 @@ describe("EnrollmentRedirectAlert", () => {
   test("shows no alert and warns when enrollment_success=1 but title is missing", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_success=1",
     })
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(location.current.search).toBe("")
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(warnSpy).toHaveBeenCalledWith(
@@ -189,14 +182,14 @@ describe("EnrollmentRedirectAlert", () => {
   })
 
   test("ignores enrollment_title without enrollment_success signal", async () => {
-    renderWithProviders(<EnrollmentRedirectAlert />, {
+    const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_title=Data+Science",
     })
 
     // enrollment_title alone is still a consumed param, so the URL gets cleaned,
     // but no alert is shown because enrollment_success is not present.
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+      expect(location.current.search).toBe("")
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
@@ -248,12 +241,12 @@ describe("EnrollmentRedirectAlert", () => {
     async ({ url }) => {
       const warnSpy = jest.spyOn(console, "warn").mockImplementation()
 
-      renderWithProviders(<EnrollmentRedirectAlert />, {
+      const { location } = renderWithProviders(<EnrollmentRedirectAlert />, {
         url: `/dashboard?${url}`,
       })
 
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith("/dashboard")
+        expect(location.current.search).toBe("")
       })
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
@@ -270,7 +263,6 @@ describe("EnrollmentRedirectAlert", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {})
 
-    expect(mockReplace).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(queryClient.isFetching()).toBe(0)
   })

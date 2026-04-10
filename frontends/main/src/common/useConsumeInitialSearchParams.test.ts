@@ -5,23 +5,22 @@ jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(),
 }))
 
-jest.mock("next-nprogress-bar", () => ({
-  useRouter: jest.fn(),
-}))
-
 const { useSearchParams } = jest.requireMock("next/navigation")
-const { useRouter } = jest.requireMock("next-nprogress-bar")
 
-const mockReplace = jest.fn()
+let replaceStateSpy: jest.SpyInstance
 
 describe("useConsumeInitialSearchParams", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    useRouter.mockReturnValue({ replace: mockReplace })
+    replaceStateSpy = jest.spyOn(window.history, "replaceState")
     // jsdom sets window.location.pathname to "/"
   })
 
-  test("returns null and does not call replace when none of the params are present", () => {
+  afterEach(() => {
+    replaceStateSpy.mockRestore()
+  })
+
+  test("returns null and does not modify the URL when none of the params are present", () => {
     useSearchParams.mockReturnValue(new URLSearchParams(""))
 
     const { result } = renderHook(() =>
@@ -29,7 +28,7 @@ describe("useConsumeInitialSearchParams", () => {
     )
 
     expect(result.current).toBeNull()
-    expect(mockReplace).not.toHaveBeenCalled()
+    expect(replaceStateSpy).not.toHaveBeenCalled()
   })
 
   test("reads matching params into state and clears them from the URL", async () => {
@@ -42,7 +41,7 @@ describe("useConsumeInitialSearchParams", () => {
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "hello", bar: "world" })
     })
-    expect(mockReplace).toHaveBeenCalledWith("/")
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/")
   })
 
   test("returns null for params in the list that are not in the URL", async () => {
@@ -65,7 +64,7 @@ describe("useConsumeInitialSearchParams", () => {
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "1" })
     })
-    expect(mockReplace).toHaveBeenCalledWith("/?unrelated=keep")
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/?unrelated=keep")
   })
 
   test("preserves hash fragment when cleaning params", async () => {
@@ -77,7 +76,7 @@ describe("useConsumeInitialSearchParams", () => {
     await waitFor(() => {
       expect(result.current).toEqual({ foo: "1" })
     })
-    expect(mockReplace).toHaveBeenCalledWith("/#section")
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/#section")
 
     window.location.hash = ""
   })
@@ -98,6 +97,6 @@ describe("useConsumeInitialSearchParams", () => {
 
     // Should still be null — hook only reads initial params
     expect(result.current).toBeNull()
-    expect(mockReplace).not.toHaveBeenCalled()
+    expect(replaceStateSpy).not.toHaveBeenCalled()
   })
 })

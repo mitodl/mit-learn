@@ -2,7 +2,6 @@
 
 import React from "react"
 import { useSearchParams } from "next/navigation"
-import { useRouter } from "next-nprogress-bar"
 
 /**
  * Reads a set of search params from the URL on first render, stores them in
@@ -18,7 +17,6 @@ const useConsumeInitialSearchParams = <T extends string>(
   paramNames: readonly T[],
 ): Readonly<Record<T, string | null>> | null => {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [consumed, setConsumed] = React.useState<Record<
     T,
     string | null
@@ -46,8 +44,9 @@ const useConsumeInitialSearchParams = <T extends string>(
     const newUrl = newParams.toString()
       ? `${window.location.pathname}?${newParams.toString()}${hash}`
       : `${window.location.pathname}${hash}`
-    router.replace(newUrl)
-  }, [paramNames, searchParams, router])
+
+    window.history.replaceState(null, "", newUrl)
+  }, [paramNames, searchParams])
 
   return consumed
 }
