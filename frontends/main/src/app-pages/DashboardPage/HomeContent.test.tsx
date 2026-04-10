@@ -264,7 +264,7 @@ describe("HomeContent", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      /You've enrolled in "Linear Algebra"\. It has been added to My Learning\./,
+      /You've been enrolled in "Linear Algebra"\. It has been added to My Learning\./,
     )
   })
 

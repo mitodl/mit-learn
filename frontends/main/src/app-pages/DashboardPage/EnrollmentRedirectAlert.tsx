@@ -44,15 +44,15 @@ const MyLearningLink: React.FC = () => (
 
 const FreeSuccessCopy: React.FC<{ title: string }> = ({ title }) => (
   <>
-    You've enrolled in "<BoldTitle>{title}</BoldTitle>". It has been added to{" "}
-    <MyLearningLink />.
+    You've been enrolled in "<BoldTitle>{title}</BoldTitle>". It has been added
+    to <MyLearningLink />.
   </>
 )
 
 const PaidSuccessCopy: React.FC<{ title: string }> = ({ title }) => (
   <>
-    You've enrolled in "<BoldTitle>{title}</BoldTitle>". It has been added to{" "}
-    <MyLearningLink />.
+    You've enrolled in the certificate track for "<BoldTitle>{title}</BoldTitle>
+    ". It has been added to <MyLearningLink />.
   </>
 )
 
@@ -66,9 +66,10 @@ const B2bSuccessCopy: React.FC<{ title: string; orgName: string }> = ({
   </>
 )
 
-const GenericSuccessCopy: React.FC = () => (
+const PaidGenericSuccessCopy: React.FC = () => (
   <>
-    Your enrollment is confirmed. It has been added to <MyLearningLink />.
+    Your certificate track enrollment is confirmed. It has been added to{" "}
+    <MyLearningLink />.
   </>
 )
 
@@ -226,7 +227,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
 
     return (
       <Alert severity="success" label="Success!">
-        {title ? <PaidSuccessCopy title={title} /> : <GenericSuccessCopy />}
+        {title ? <PaidSuccessCopy title={title} /> : <PaidGenericSuccessCopy />}
       </Alert>
     )
   }
@@ -234,7 +235,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
   if (request?.kind === "paid" && paidReceipt.isError) {
     return (
       <Alert severity="success" label="Success!">
-        <GenericSuccessCopy />
+        <PaidGenericSuccessCopy />
       </Alert>
     )
   }

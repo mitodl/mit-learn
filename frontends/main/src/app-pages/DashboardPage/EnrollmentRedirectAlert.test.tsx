@@ -53,7 +53,7 @@ describe("EnrollmentRedirectAlert", () => {
 
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
-      /You've enrolled in "Data Science"\. It has been added to My Learning\./,
+      /You've been enrolled in "Data Science"\. It has been added to My Learning\./,
     )
 
     const bold = alert.querySelector("strong")
@@ -219,7 +219,7 @@ describe("EnrollmentRedirectAlert", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent(
       new RegExp(
-        `You've enrolled in "${escapeRegExp(receipt.lines[0].content_title)}"`,
+        `You've enrolled in the certificate track for "${escapeRegExp(receipt.lines[0].content_title)}"`,
       ),
     )
 
@@ -237,7 +237,9 @@ describe("EnrollmentRedirectAlert", () => {
     })
 
     expect(
-      await screen.findByText(/Your enrollment is confirmed/i),
+      await screen.findByText(
+        /Your certificate track enrollment is confirmed/i,
+      ),
     ).toBeInTheDocument()
   })
 
