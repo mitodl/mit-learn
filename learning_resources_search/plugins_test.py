@@ -89,11 +89,14 @@ def test_search_index_plugin_resource_upserted(
 @pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 @pytest.mark.parametrize("has_content_files", [True, False])
+@pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_unpublished(
-    mocker, mock_search_index_helpers, resource_type, has_content_files
+    mocker, mock_search_index_helpers, resource_type, has_content_files, test_mode
 ):
     """The plugin function should remove a resource from the search index"""
-    resource = LearningResourceFactory.create(resource_type=resource_type)
+    resource = LearningResourceFactory.create(
+        resource_type=resource_type, test_mode=test_mode
+    )
     if resource_type == COURSE_TYPE and has_content_files:
         for run in resource.runs.all():
             ContentFileFactory.create(run=run)
@@ -104,7 +107,7 @@ def test_search_index_plugin_resource_unpublished(
     mock_search_index_helpers.mock_remove_learning_resource_immutable_signature.assert_called_once_with(
         resource.id, resource.resource_type
     )
-    if resource_type == COURSE_TYPE and has_content_files:
+    if resource_type == COURSE_TYPE and has_content_files and not test_mode:
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
             unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)

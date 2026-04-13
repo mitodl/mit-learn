@@ -104,7 +104,7 @@ class SearchIndexPlugin:
             )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
-        if resource.resource_type == COURSE_TYPE:
+        if resource.resource_type == COURSE_TYPE and not resource.test_mode:
             for run in resource.runs.all():
                 self.resource_run_unpublished(run)
 

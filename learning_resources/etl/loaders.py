@@ -80,11 +80,7 @@ def update_index(learning_resource, newly_created):
         learning resource (LearningResource): a learning resource
         newly_created (bool): whether the learning resource has just been created
     """
-    if (
-        not newly_created
-        and not learning_resource.published
-        and not learning_resource.test_mode
-    ):
+    if not newly_created and not learning_resource.published:
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
         resource_upserted_actions(
