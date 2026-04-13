@@ -218,7 +218,7 @@ class QdrantView(APIView):
         return {
             "hits": hits,
             "total": {"value": count_result.count},
-            "aggregations": aggregations,
+            "aggregations": aggregations or {},
         }
 
     def handle_exception(self, exc):
