@@ -806,7 +806,7 @@ QDRANT_CHUNK_SIZE = get_int(
 )
 
 QDRANT_ENCODER = get_string(
-    name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
+    name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
 
 QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
