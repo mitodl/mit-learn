@@ -1319,6 +1319,92 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
 
 
 @pytest.mark.skip_nplusone_check
+def test_vector_similar_passes_resource_type_filter_to_qdrant(mocker, client):
+    """resource_type query param is translated to a Qdrant filter"""
+    from qdrant_client import models as qdrant_models
+
+    from learning_resources.models import LearningResource
+
+    resources = LearningResourceFactory.create_batch(3)
+    similar_for = resources[0].id
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=QdrantClient(
+            host="hidden_port_addr.com",
+            port=None,
+            prefix="custom",
+            check_compatibility=False,
+        ),
+    )
+    mock_similar = mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=[
+            serialize_learning_resource_for_update(lr)
+            for lr in LearningResource.objects.for_search_serialization().filter(
+                id__in=[r.id for r in resources[1:]]
+            )
+        ],
+    )
+
+    client.get(
+        reverse("lr:v1:learning_resources_api-vector-similar", args=[similar_for]),
+        {"resource_type": "video_playlist"},
+    )
+
+    query_filter = mock_similar.call_args.kwargs["query_filter"]
+    assert query_filter is not None
+    assert any(
+        isinstance(c, qdrant_models.FieldCondition)
+        and c.key == "resource_type"
+        and c.match.any == ["video_playlist"]
+        for c in query_filter.must
+    )
+
+
+@pytest.mark.skip_nplusone_check
+def test_vector_similar_rejects_invalid_resource_type(mocker, client):
+    """Unknown resource_type value returns 400"""
+    resource = LearningResourceFactory.create()
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=QdrantClient(
+            host="hidden_port_addr.com",
+            port=None,
+            prefix="custom",
+            check_compatibility=False,
+        ),
+    )
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-vector-similar", args=[resource.id]),
+        {"resource_type": "not_a_real_type"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.skip_nplusone_check
+def test_vector_similar_no_filter_passes_none(mocker, client):
+    """Absence of filter params yields query_filter=None"""
+    resource = LearningResourceFactory.create()
+    mocker.patch(
+        "vector_search.utils.qdrant_client",
+        return_value=QdrantClient(
+            host="hidden_port_addr.com",
+            port=None,
+            prefix="custom",
+            check_compatibility=False,
+        ),
+    )
+    mock_similar = mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=[],
+    )
+    client.get(
+        reverse("lr:v1:learning_resources_api-vector-similar", args=[resource.id])
+    )
+    assert mock_similar.call_args.kwargs["query_filter"] is None
+
+
+@pytest.mark.skip_nplusone_check
 def test_learning_resources_display_info_list_view(mocker, client):
     """Test learning_resources_display_info_list_view returns expected results"""
     from learning_resources.models import LearningResource
