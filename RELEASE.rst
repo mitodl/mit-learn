@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.63.0
+--------------
+
+- feat: video playlist page design implementation (#3135)
+- Switch to lightweight static embeddings model for local development (#3178)
+- clean up hardcoded labels (#3176)
+- clean youtube descriptions (#3183)
+- Add user verification step to all data mgmt commands if --delete option is specified (#3171)
+- feat: use the same language as to transcript (#3177)
+- fix(deps): update dependency django to v4.2.29 [security] (#3016)
+
 Version 0.62.4 (Released April 09, 2026)
 --------------
 
