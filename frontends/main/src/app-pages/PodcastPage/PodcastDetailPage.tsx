@@ -29,8 +29,11 @@ const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   marginBottom: "56px",
   paddingTop: "64px 0",
+  overflow: "hidden",
   [theme.breakpoints.down("sm")]: {
-    paddingBottom: "24px",
+    paddingBottom: "32px",
+    marginBottom: "0",
+    borderBottom: "none",
   },
 }))
 
@@ -39,19 +42,25 @@ const PodcastTitle = styled(Typography)(({ theme }) => ({
   display: "inline-block",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
+    fontSize: "34px",
+    fontStyle: "normal",
+    lineHeight: "40px",
   },
 }))
 
-const StyledHeaderSection = styled.div({
+const StyledHeaderSection = styled.div(({ theme }) => ({
   padding: "64px 0",
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "32px 0 0",
+  },
+}))
 
 const MetaLine = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   marginBottom: "16px",
   display: "block",
-  ...theme.typography.body1,
-  lineHeight: "26px",
+  ...theme.typography.body2,
+  lineHeight: "18px",
 }))
 
 const Description = styled(Typography)(({ theme }) => ({
@@ -60,6 +69,11 @@ const Description = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   ...theme.typography.body1,
   lineHeight: "26px",
+  [theme.breakpoints.down("sm")]: {
+    marginBottom: "8px",
+    ...theme.typography.body2,
+    lineHeight: "22px",
+  },
 }))
 
 const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
@@ -67,15 +81,29 @@ const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   ...theme.typography.body1,
   lineHeight: "26px",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    lineHeight: "22px",
+    marginBottom: "24px",
+  },
 }))
 
-const PodcastImage = styled.img({
+const PodcastImage = styled.img(({ theme }) => ({
   width: "280px",
   height: "280px",
   objectFit: "cover",
   borderRadius: "8px",
   flexShrink: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "calc(100% + 32px)",
+    marginLeft: "-16px",
+    marginRight: "-16px",
+    height: "auto",
+    aspectRatio: "1 / 1",
+    borderRadius: "0px",
+    marginBottom: "-10px",
+  },
+}))
 
 const HeaderContent = styled.div(({ theme }) => ({
   display: "grid",
@@ -84,16 +112,25 @@ const HeaderContent = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     display: "flex",
     flexDirection: "column-reverse",
-    gap: "20px",
+    gap: "0px",
+  },
+}))
+
+const HeaderTextContent = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    paddingTop: "4px",
   },
 }))
 
 /* ── Episodes list ── */
 
-const EpisodesSection = styled.div({
+const EpisodesSection = styled.div(({ theme }) => ({
   paddingBottom: "80px",
   padding: "0 48px",
-})
+  [theme.breakpoints.down("sm")]: {
+    padding: "0 0 48px",
+  },
+}))
 
 const EpisodesHeading = styled(Typography)(({ theme }) => ({
   textTransform: "uppercase" as const,
@@ -101,6 +138,13 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   ...theme.typography.body3,
   marginBottom: "24px",
+
+  [theme.breakpoints.down("sm")]: {
+    fontWeight: theme.typography.fontWeightBold,
+    lineHeight: "150%",
+    letterSpacing: "1.92px",
+    textTransform: "uppercase",
+  },
 }))
 
 const EpisodeList = styled.ul({
@@ -123,16 +167,29 @@ const EpisodeRow = styled.li(({ theme }) => ({
   "&:last-child": {
     boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
   },
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "16px",
+  },
 }))
 
-const EpisodeInfo = styled.div({
+const EpisodeInfo = styled.div(({ theme }) => ({
   flex: 1,
   minWidth: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
 
 const EpisodeLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   marginBottom: "8px",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+    fontWeight: theme.typography.fontWeightMedium,
+    lineHeight: "16px",
+  },
 }))
 
 const EpisodeTitleLink = styled.a(({ theme }) => ({
@@ -157,21 +214,32 @@ const EpisodeDescription = styled(Typography)(({ theme }) => ({
   whiteSpace: "nowrap",
   ...theme.typography.body1,
   lineHeight: "20px",
+  [theme.breakpoints.down("sm")]: {
+    whiteSpace: "normal",
+    overflow: "visible",
+    textOverflow: "unset",
+  },
 }))
 
-const StyledButton = styled(ButtonLink)({
+const StyledButton = styled(ButtonLink)(({ theme }) => ({
   minWidth: "140px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
 
 const StyledShowMoreContainer = styled("div")({
   width: "100%",
   display: "flex",
   justifyContent: "center",
 })
-const StyledShowMore = styled(Button)({
+const StyledShowMore = styled(Button)(({ theme }) => ({
   minWidth: "140px",
-  margin: "40px 0 56px 0"
-})
+  margin: "40px 0 56px 0",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "32px 0 16px 0",
@@ -181,13 +249,19 @@ const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
-const EpisodeRight = styled.div({
+const EpisodeRight = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
   gap: "28px",
   flexShrink: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "8px",
+    width: "100%",
+  },
+}))
 
 const StyledDot = styled.span(({ theme }) => ({
   display: "inline-block",
@@ -220,6 +294,10 @@ const PlayButton = styled.a(({ theme }) => ({
   cursor: "pointer",
   "&:hover": {
     backgroundColor: theme.custom.colors.lightGray2,
+  },
+
+  [theme.breakpoints.down("sm")]: {
+    width: "99%",
   },
 }))
 
@@ -308,7 +386,11 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   const { data: resource } = useLearningResourcesDetail(id)
 
-  const { data: episodesPage, isLoading: episodesLoading, isFetching: episodesFetching } = useQuery({
+  const {
+    data: episodesPage,
+    isLoading: episodesLoading,
+    isFetching: episodesFetching,
+  } = useQuery({
     ...learningResourceQueries.items(id, {
       learning_resource_id: id,
       limit: EPISODES_PAGE_SIZE,
@@ -379,13 +461,12 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
           </BreadcrumbBar>
           <PodcastContainer>
             <StyledHeaderSection>
+              <PodcastTitle variant="h1">
+                {/* {resource?.title ?? ""} */}
+                Chalk Radio
+              </PodcastTitle>
               <HeaderContent>
-                <div>
-                  <PodcastTitle variant="h1">
-                    {/* {resource?.title ?? ""} */}
-                    Chalk Radio
-                  </PodcastTitle>
-
+                <HeaderTextContent>
                   {metaParts.length > 0 && (
                     <MetaLine variant="body3">{metaParts.join(" · ")}</MetaLine>
                   )}
@@ -423,7 +504,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       Subscribe
                     </StyledButton>
                   )}
-                </div>
+                </HeaderTextContent>
 
                 {resource?.image?.url && (
                   <PodcastImage
