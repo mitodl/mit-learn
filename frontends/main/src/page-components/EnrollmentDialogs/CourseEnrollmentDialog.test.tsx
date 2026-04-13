@@ -18,6 +18,7 @@ import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -414,7 +415,7 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       await waitFor(() => {
-        expect(location.current.pathname).toBe("/dashboard")
+        expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
       })
       expect(location.current.searchParams.get("enrollment_status")).toBe(
         "success",

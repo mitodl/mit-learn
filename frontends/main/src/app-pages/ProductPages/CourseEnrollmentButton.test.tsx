@@ -14,6 +14,7 @@ import {
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -416,7 +417,7 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(location.current.pathname).toBe("/dashboard")
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
     expect(location.current.searchParams.get("enrollment_status")).toBe(
       "success",
@@ -449,7 +450,7 @@ describe("CourseEnrollmentButton", () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(location.current.pathname).toBe("/dashboard")
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
     expect(location.current.searchParams.get("enrollment_title")).toBe(
       course.title,

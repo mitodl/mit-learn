@@ -16,6 +16,7 @@ import {
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { programView } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -151,7 +152,7 @@ describe("ProgramEnrollmentButton", () => {
       )
     })
     await waitFor(() => {
-      expect(location.current.pathname).toBe("/dashboard")
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
     expect(location.current.searchParams.get("enrollment_status")).toBe(
       "success",
