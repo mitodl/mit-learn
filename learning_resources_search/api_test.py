@@ -4460,3 +4460,20 @@ def test_get_similar_topics_qdrant_uses_cached_embedding(mocker):
     encoder_instance.embed.assert_not_called()
     # Assert that the result is as expected
     assert result == ["topic1", "topic2"]
+
+
+def test_get_similar_resources_qdrant_passes_query_filter(mocker):
+    """query_filter argument is forwarded to _qdrant_similar_results"""
+    from learning_resources_search.api import get_similar_resources_qdrant
+
+    mock_similar = mocker.patch(
+        "learning_resources_search.api._qdrant_similar_results",
+        return_value=[],
+    )
+    sentinel_filter = object()
+    get_similar_resources_qdrant(
+        value_doc={"id": 1, "readable_id": "abc", "platform": {"code": "ocw"}},
+        num_resources=5,
+        query_filter=sentinel_filter,
+    )
+    assert mock_similar.call_args.kwargs["query_filter"] is sentinel_filter

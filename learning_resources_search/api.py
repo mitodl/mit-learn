@@ -1079,12 +1079,13 @@ def get_similar_topics(
     return list(dict(counter.most_common(num_topics)).keys())
 
 
-def get_similar_resources(
+def get_similar_resources(  # noqa: PLR0913
     value_doc: dict,
     num_resources: int,
     min_term_freq: int,
     min_doc_freq: int,
     use_embeddings,
+    query_filter=None,
 ) -> list[str]:
     """
     Get a list of similar resources based on another resource
@@ -1100,13 +1101,17 @@ def get_similar_resources(
             minimum times a term needs to show up in docs
         use_embeddings (bool):
             use vector embeddings to retrieve results
+        query_filter:
+            optional Qdrant filter (qdrant path only); ignored for opensearch
 
     Returns:
         list of str:
             list of topic values
     """
     if use_embeddings:
-        return get_similar_resources_qdrant(value_doc, num_resources)
+        return get_similar_resources_qdrant(
+            value_doc, num_resources, query_filter=query_filter
+        )
     return get_similar_resources_opensearch(
         value_doc, num_resources, min_term_freq, min_doc_freq
     )
@@ -1117,15 +1122,22 @@ def _qdrant_similar_results(
     num_resources=6,
     collection_name=RESOURCES_COLLECTION_NAME,
     score_threshold=0,
+    query_filter=None,
 ):
     """
     Get similar resources from qdrant
 
     Args:
-        doc (dict):
-            a document representing the data fields we want to search with
+        input_query:
+            point id to query with
         num_resources (int):
             number of resources to return
+        collection_name (str):
+            qdrant collection name
+        score_threshold (float):
+            minimum similarity score
+        query_filter:
+            optional Qdrant filter to apply alongside the similarity search
 
     Returns:
         list of dict:
@@ -1145,11 +1157,14 @@ def _qdrant_similar_results(
             limit=num_resources,
             using=encoder.model_short_name(),
             score_threshold=score_threshold,
+            query_filter=query_filter,
         ).points
     ]
 
 
-def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
+def get_similar_resources_qdrant(
+    value_doc: dict, num_resources: int, query_filter=None
+):
     """
     Get a list of similar resources from qdrant
 
@@ -1158,6 +1173,8 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
             a document representing the data fields we want to search with
         num_resources (int):
             number of resources to return
+        query_filter:
+            optional Qdrant filter to narrow the similarity search
 
     Returns:
         list of str:
@@ -1168,6 +1185,7 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
     hits = _qdrant_similar_results(
         input_query=vector_point_id(vector_point_key(value_doc)),
         num_resources=num_resources,
+        query_filter=query_filter,
     )
     return (
         LearningResource.objects.for_search_serialization()
