@@ -22,19 +22,15 @@ from learning_resources_search.serializers import (
 )
 
 
-class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
+class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
     """
-    Request serializer for vector based search
-    instead of id we use readable_id in case we upload qdrant snapshots
+    Shared filter fields for Qdrant-backed learning resource queries.
+
+    Every field here must have a corresponding entry in
+    vector_search.constants.QDRANT_RESOURCE_PARAM_MAP so it can be translated
+    to a Qdrant filter by qdrant_query_conditions().
     """
 
-    q = serializers.CharField(required=False, help_text="The search text")
-    offset = serializers.IntegerField(
-        required=False, help_text="The initial index from which to return the results"
-    )
-    limit = serializers.IntegerField(
-        required=False, help_text="Number of results to return per page"
-    )
     readable_id = serializers.CharField(
         required=False, help_text="The readable id of the resource"
     )
@@ -159,6 +155,23 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
         default=None,
         allow_null=True,
         help_text="Filter to learning resources where title is null/not null",
+    )
+
+
+class LearningResourcesVectorSearchRequestSerializer(
+    LearningResourcesSearchFiltersSerializer
+):
+    """
+    Request serializer for vector based search
+    instead of id we use readable_id in case we upload qdrant snapshots
+    """
+
+    q = serializers.CharField(required=False, help_text="The search text")
+    offset = serializers.IntegerField(
+        required=False, help_text="The initial index from which to return the results"
+    )
+    limit = serializers.IntegerField(
+        required=False, help_text="Number of results to return per page"
     )
     hybrid_search = serializers.BooleanField(
         required=False,
