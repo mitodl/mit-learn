@@ -59,6 +59,7 @@ const EnrollButton = styled.div(({ theme }) => ({
 const StayUpdatedButton = styled(Button)(({ theme }) => ({
   color: theme.custom.colors.white,
   borderColor: theme.custom.colors.lightGray2,
+  borderWidth: "1px",
   width: "200px",
 
   "&&:hover": {
