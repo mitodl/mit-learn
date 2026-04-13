@@ -17,8 +17,8 @@ import NiceModal from "@ebay/nice-modal-react"
 import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { DASHBOARD_HOME } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -400,7 +400,7 @@ describe("CourseEnrollmentDialog", () => {
       expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
     })
 
-    test("Default behavior: redirects to dashboard home after successful enrollment", async () => {
+    test("Default behavior: redirects to the dashboard success URL with title in params after enrollment", async () => {
       const run = enrollableRun()
       const course = makeCourse({ courseruns: [run] })
 
@@ -415,8 +415,14 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       await waitFor(() => {
-        expect(location.current.pathname).toBe(DASHBOARD_HOME)
+        expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
       })
+      expect(location.current.searchParams.get("enrollment_status")).toBe(
+        "success",
+      )
+      expect(location.current.searchParams.get("enrollment_title")).toBe(
+        course.title,
+      )
 
       // Verify dialog has closed
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -432,6 +438,7 @@ describe("CourseEnrollmentDialog", () => {
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       })
       await screen.findByRole("dialog")
+      const initialLocation = `${location.current.pathname}${location.current.search}`
 
       const enrollButton = screen.getByRole("button", {
         name: /Enroll for Free without a certificate/i,
@@ -444,8 +451,9 @@ describe("CourseEnrollmentDialog", () => {
         expect(onCourseEnroll).toHaveBeenCalledWith(run)
       })
 
-      // Should NOT redirect to dashboard
-      expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
+      expect(`${location.current.pathname}${location.current.search}`).toBe(
+        initialLocation,
+      )
 
       // Verify dialog has closed
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

@@ -95,6 +95,11 @@ const baskets = {
   clear: () => `${API_BASE_URL}/api/v0/baskets/clear/`,
 }
 
+const orders = {
+  receipt: (orderId: number) =>
+    `${API_BASE_URL}/api/v0/orders/receipt/${orderId}/`,
+}
+
 const verifiedProgramEnrollments = {
   create: (courserunId: string) =>
     `${API_BASE_URL}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
@@ -116,5 +121,6 @@ export {
   certificates,
   products,
   baskets,
+  orders,
   verifiedProgramEnrollments,
 }

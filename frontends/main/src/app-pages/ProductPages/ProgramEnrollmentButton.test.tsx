@@ -14,8 +14,9 @@ import {
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { programView, DASHBOARD_HOME } from "@/common/urls"
+import { programView } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
@@ -122,7 +123,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
-  test("Free-only: clicking 'Enroll for Free' enrolls immediately (no dialog)", async () => {
+  test("Free-only: clicking 'Enroll for Free' enrolls and redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
@@ -150,10 +151,16 @@ describe("ProgramEnrollmentButton", () => {
         { program_id: program.id },
       )
     })
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     await waitFor(() => {
-      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
+    expect(location.current.searchParams.get("enrollment_status")).toBe(
+      "success",
+    )
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      program.title,
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   test("Both: clicking 'Enroll for Free' opens enrollment dialog", async () => {
