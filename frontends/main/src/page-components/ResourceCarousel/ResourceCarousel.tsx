@@ -198,9 +198,9 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
         tab.data.params.id,
       ) as CarouselQuery
     case "lr_vector_similar":
-      return learningResourceQueries.vectorSimilar({
-        id: tab.data.params.id,
-      }) as CarouselQuery
+      return learningResourceQueries.vectorSimilar(
+        tab.data.params.id,
+      ) as CarouselQuery
   }
 }
 

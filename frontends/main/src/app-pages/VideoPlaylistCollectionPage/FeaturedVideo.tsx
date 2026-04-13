@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { styled } from "ol-components"
@@ -64,6 +64,10 @@ const FeaturedTitle = styled.h2(({ theme }) => ({
   margin: "0 0 16px",
   cursor: "pointer",
   fontSize: "64px",
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
   transition: "color 0.2s",
   "& .mobile-title": {
     display: "none",
@@ -106,23 +110,12 @@ const FeaturedDescription = styled.p(({ theme }) => ({
   },
 }))
 
-const FEATURED_TITLE_MAX_CHARS = 30
-
 type FeaturedVideoProps = {
   video: VideoResource
   href: string
 }
 
 const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
-  const truncatedTitle = useMemo(
-    () =>
-      video?.title.length > FEATURED_TITLE_MAX_CHARS
-        ? `${video.title.slice(0, FEATURED_TITLE_MAX_CHARS).trimEnd()}...`
-        : video?.title,
-    [video?.title],
-  )
-  if (!video) return null
-
   const imageUrl = video.image?.url ?? null
   const duration = video.video?.duration
     ? formatDurationClockTime(video.video.duration)
@@ -150,7 +143,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
                 href={href}
                 style={{ color: "inherit", textDecoration: "none" }}
               >
-                <span className="desktop-title">{truncatedTitle}</span>
+                <span className="desktop-title">{video.title}</span>
                 <span className="mobile-title">{video.title}</span>
               </Link>
             </FeaturedTitle>

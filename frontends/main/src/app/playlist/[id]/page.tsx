@@ -12,6 +12,7 @@ import { notFound } from "next/navigation"
 
 export const metadata: Metadata = standardizeMetadata({
   title: "Video Playlist",
+  robots: "noindex, nofollow",
 })
 
 const Page: React.FC<PageProps<"/playlist/[id]">> = async ({ params }) => {

@@ -264,8 +264,8 @@ describe("VideoPage", () => {
 
       renderWithProviders(<VideoPage playlistId={playlist.id} />)
 
-      const titleEl = await screen.findByText(featured.title)
-      expect(titleEl.closest("a")).toHaveAttribute(
+      const titleEls = await screen.findAllByText(featured.title)
+      expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
         `/playlist/detail/${featured.id}?playlist=${playlist.id}`,
       )

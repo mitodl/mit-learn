@@ -10,7 +10,7 @@ import {
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
-import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
+import { VideoResourceResourceTypeEnum } from "api/v1"
 import VideoPageHeader from "./VideoPageHeader"
 import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
@@ -49,11 +49,7 @@ const VideoPlaylistCollectionPage: React.FC<
   )
 
   const { data: similarData, isLoading: similarLoading } = useQuery(
-    learningResourceQueries.vectorSimilar({
-      id: playlistId,
-      resource_type: [ResourceTypeEnum.VideoPlaylist],
-      limit: 6,
-    }),
+    learningResourceQueries.vectorSimilar(playlistId),
   )
 
   if (!showVideoPlaylistPage) {
@@ -66,9 +62,9 @@ const VideoPlaylistCollectionPage: React.FC<
   )
   const collectionVideos = videos.slice(1)
 
-  const otherCollections = (
-    (similarData ?? []) as VideoPlaylistResource[]
-  ).filter((resource) => resource.id !== playlistId)
+  const otherCollections = ((similarData ?? []) as VideoPlaylistResource[])
+    .filter((resource) => resource.id !== playlistId)
+    .slice(0, 6)
 
   return (
     <Page>

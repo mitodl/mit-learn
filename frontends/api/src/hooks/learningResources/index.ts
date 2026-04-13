@@ -196,7 +196,7 @@ const useVectorSimilarLearningResources = (
   opts?: { enabled?: boolean },
 ) => {
   return useQuery({
-    ...learningResourceQueries.vectorSimilar({ id }),
+    ...learningResourceQueries.vectorSimilar(id),
     ...opts,
   })
 }
