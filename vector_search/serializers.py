@@ -198,7 +198,7 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
 
     def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
-            "aggregations": instance.get("aggregations", []),
+            "aggregations": instance.get("aggregations", {}),
             "suggest": [],
         }
 
