@@ -64,6 +64,9 @@ const StayUpdatedButton = styled(Button)(({ theme }) => ({
   "&&:hover": {
     backgroundColor: hexToRgba(theme.custom.colors.white, 0.2),
   },
+  [theme.breakpoints.between("sm", "md")]: {
+    width: "240px",
+  },
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -307,9 +310,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
                     <Stack
-                      direction="row"
+                      direction={{ xs: "column", md: "row" }}
                       gap="24px"
-                      flexWrap="wrap"
                       sx={(theme) => ({
                         [theme.breakpoints.down("sm")]: {
                           width: "100%",
