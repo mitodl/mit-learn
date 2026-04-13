@@ -37,6 +37,33 @@ def test_create_user(profile_data):
         assert user.profile.name is None
 
 
+def test_create_user_triggers_plugins_for_new_users(mocker):
+    """create_user should trigger user_created plugins for brand new users."""
+    mock_pm = mocker.Mock()
+    mocker.patch("authentication.api.get_plugin_manager", return_value=mock_pm)
+
+    user = api.create_user("new-user", "new@localhost", {"name": "New User"})
+
+    mock_pm.hook.user_created.assert_called_once_with(
+        user=user,
+        user_data={"profile": {"name": "New User"}},
+    )
+
+
+def test_create_user_does_not_retrigger_plugins_for_existing_users(mocker):
+    """create_user should not trigger user_created plugins for existing users."""
+    user = UserFactory.create(email="existing@localhost")
+    mock_pm = mocker.Mock()
+    mocker.patch("authentication.api.get_plugin_manager", return_value=mock_pm)
+
+    resolved = api.create_user(
+        "another-username", user.email, {"name": "Existing User"}
+    )
+
+    assert resolved.id == user.id
+    mock_pm.hook.user_created.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "mock_method",
     ["profiles.api.ensure_profile"],

@@ -1,0 +1,96 @@
+{% extends "email/email_base.html" %}
+
+{% block content %}
+<tr>
+  <td
+    style="
+      padding: 5px 20px 0;
+      font-family: sans-serif;
+      font-size: 15px;
+      line-height: 20px;
+      color: #000;
+    "
+  >
+    <p style="margin: 0 0 12px">
+      Hi
+      {{ display_name }}
+    </p>
+    <p style="margin: 0 0 12px">
+      Welcome to MIT Learn. We're glad you're here!
+    </p>
+    <p style="margin: 0 0 12px">
+      You now have access to MIT's growing collection of 12,700+ online learning
+      experiences, designed to help you build new skills, explore emerging
+      technologies, and even advance your career.
+    </p>
+    <p style="margin: 0 0 12px">
+      Here's what you can do with your new account:
+    </p>
+    <ul style="margin: 0 0 12px 20px; padding: 0">
+      <li style="margin: 0 0 12px">
+        <strong>Explore thousands of resources</strong><br />
+        Browse MIT-designed courses, videos, podcasts, and learning materials
+        across almost every field. You'll find free content, professional
+        certificates, and advanced programs as you're ready for them.
+      </li>
+      <li style="margin: 0 0 12px">
+        <strong>Use AskTIM to guide you</strong><br />
+        AskTIM - your AI assistant - helps you find resources aligned with your
+        interests. In select offerings, it can summarize lessons, reinforce key
+        concepts, and support you as you work through material.
+      </li>
+      <li style="margin: 0 0 12px">
+        <strong>Stay organized and up to date</strong><br />
+        Follow topics that interest you, save resources for later, and receive
+        updates when new opportunities launch.
+      </li>
+    </ul>
+    <p style="margin: 0 0 12px">
+      MIT has a long tradition of opening doors to learners everywhere. With MIT
+      Learn, it's all in one place, and you can learn on your own terms.
+    </p>
+    <table
+      align="left"
+      role="presentation"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="float: left"
+    >
+      <tr>
+        <td
+          align="left"
+          style="border-radius: 4px; background: #a31f34; text-align: left"
+        >
+          <a
+            class="button-a button-a-primary"
+            href="{{ APP_BASE_URL }}/search"
+            align="left"
+            style="
+              background: #a31f34;
+              border: 1px solid #a31f34;
+              font-family: sans-serif;
+              font-size: 15px;
+              line-height: 15px;
+              text-decoration: none;
+              text-align: center;
+              padding: 13px 17px;
+              color: #fff;
+              display: block;
+              border-radius: 4px;
+            "
+            >Find your first course today &rarr;</a
+          >
+        </td>
+      </tr>
+    </table>
+    <div style="clear: both; height: 16px"></div>
+    <p style="margin: 0">
+      The MIT Learn Team<br />
+      <em>Massachusetts Institute of Technology</em>
+    </p>
+  </td>
+</tr>
+{% endblock %}
+
+{% block footer %}{% endblock %}

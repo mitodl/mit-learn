@@ -85,6 +85,51 @@ def test_get_request_no_posthog_key(mocker, mock_login, settings):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_get_request_queues_welcome_email_for_new_sso_user(mocker, mock_login):
+    """New APISIX users should queue welcome email once."""
+    close_old_connections()
+    mock_delay = mocker.patch("profiles.plugins.send_welcome_email.delay")
+    mock_request = mocker.Mock(
+        META={
+            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
+        },
+        user=AnonymousUser(),
+    )
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(mock_request)
+
+    user = User.objects.get(email=apisix_user_info["email"])
+    mock_login.assert_called_once()
+    mock_delay.assert_called_once_with(user.id)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_request_does_not_queue_welcome_email_for_existing_sso_user(
+    mocker, mock_login
+):
+    """Existing APISIX users should not queue welcome email again."""
+    close_old_connections()
+    existing_user = UserFactory.create(
+        email=apisix_user_info["email"],
+        username=apisix_user_info["preferred_username"],
+        global_id=apisix_user_info["sub"],
+    )
+    mock_delay = mocker.patch("profiles.plugins.send_welcome_email.delay")
+    mock_request = mocker.Mock(
+        META={
+            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
+        },
+        user=AnonymousUser(),
+    )
+    apisix_middleware = ApisixUserMiddleware(mocker.Mock())
+    apisix_middleware.process_request(mock_request)
+
+    existing_user.refresh_from_db()
+    mock_login.assert_called_once()
+    mock_delay.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
 def test_get_request_existing_user_no_globalid(mocker, mock_login):
     """Test that a valid request updates existing user with same email, no global_id."""
     close_old_connections()
