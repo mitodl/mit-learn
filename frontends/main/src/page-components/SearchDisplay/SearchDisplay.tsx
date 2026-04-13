@@ -585,9 +585,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
-  const fetchStartRef = useRef<number | null>(
-    typeof performance !== "undefined" ? performance.now() : null,
-  )
 
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions)
@@ -634,18 +631,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
-    select: (
-      data:
+    select: (timedData: {
+      result:
         | LearningResourcesSearchResponse
-        | LearningResourcesVectorSearchResponse,
-    ) => {
+        | LearningResourcesVectorSearchResponse
+      time: number
+    }) => {
+      const { result: data, time } = timedData
+
       // Handle missing data gracefully
       if (
         !data?.metadata?.aggregations?.offered_by ||
         !data?.results ||
         data.results.length === 0
       ) {
-        return data
+        return { ...data, time }
       }
 
       // only show offerors with display_facet set
@@ -655,6 +655,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
       return {
         ...data,
+        time,
         metadata: {
           ...data.metadata,
           aggregations: {
@@ -668,21 +669,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     },
   })
 
-  const prevParamsRef = useRef(allParams)
-
   useEffect(() => {
-    if (allParams !== prevParamsRef.current) {
-      fetchStartRef.current = performance.now()
-      if (onFetchTimeChange) onFetchTimeChange(null)
-      prevParamsRef.current = allParams
+    if (onFetchTimeChange) {
+      onFetchTimeChange(data?.time ?? null)
     }
-
-    if (!isFetching && fetchStartRef.current !== null) {
-      const time = performance.now() - fetchStartRef.current
-      if (onFetchTimeChange) onFetchTimeChange(time)
-      fetchStartRef.current = null
-    }
-  }, [allParams, isFetching, onFetchTimeChange])
+  }, [data?.time, onFetchTimeChange])
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
