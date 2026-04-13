@@ -67,7 +67,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      currentBreadcrumbLabel="Learning Path"
+      currentBreadcrumbLabel="Course"
       title={page.title}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
