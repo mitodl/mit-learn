@@ -95,7 +95,7 @@ const StayUpdatedDialogInner: React.FC = () => {
             recaptchaSiteKey={recaptchaSiteKey}
             isLoading={isLoading}
             isSubmitting={hubspotFormSubmit.isPending}
-            submitLabel="Notify Me"
+            submitLabel="Stay Updated"
             errorText={submissionError}
             actions={
               <Button variant="secondary" type="button" onClick={closeDialog}>
