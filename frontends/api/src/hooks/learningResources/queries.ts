@@ -6,6 +6,7 @@ import {
   platformsApi,
   schoolsApi,
   featuredApi,
+  videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
 } from "../../clients"
 
@@ -18,6 +19,7 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
+  VideoPlaylistResource,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { queryOptions } from "@tanstack/react-query"
@@ -223,6 +225,23 @@ const offerorQueries = {
     }),
 }
 
+const videoPlaylistKeys = {
+  root: ["video_playlists"],
+  detailRoot: () => [...videoPlaylistKeys.root, "detail"],
+  detail: (id: number) => [...videoPlaylistKeys.detailRoot(), id],
+}
+
+const videoPlaylistQueries = {
+  detail: (id: number) =>
+    queryOptions<VideoPlaylistResource>({
+      queryKey: videoPlaylistKeys.detail(id),
+      queryFn: () =>
+        videoPlaylistsApi
+          .videoPlaylistsRetrieve({ id })
+          .then((res) => res.data as VideoPlaylistResource),
+    }),
+}
+
 export {
   learningResourceKeys,
   learningResourceQueries,
@@ -230,4 +249,5 @@ export {
   platformsQueries,
   schoolQueries,
   offerorQueries,
+  videoPlaylistQueries,
 }
