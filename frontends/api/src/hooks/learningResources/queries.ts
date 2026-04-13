@@ -187,6 +187,7 @@ const learningResourceQueries = {
             .learningResourcesSearchRetrieve(params)
             .then((res) => res.data),
         ),
+      select: (data) => data.result,
     }),
   vectorSearch: (params: VectorLearningResourcesSearchRetrieveRequest) =>
     queryOptions({
@@ -197,6 +198,7 @@ const learningResourceQueries = {
             .vectorLearningResourcesSearchRetrieve(params)
             .then((res) => res.data),
         ),
+      select: (data) => data.result,
     }),
 }
 
