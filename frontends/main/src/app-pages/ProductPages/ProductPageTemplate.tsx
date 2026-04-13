@@ -319,6 +319,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       <EnrollButton>{enrollmentAction}</EnrollButton>
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
+                          size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
                           onClick={() => NiceModal.show(StayUpdatedModal)}
