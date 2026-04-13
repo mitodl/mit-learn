@@ -169,6 +169,8 @@ class SearchIndexPlugin:
         Args:
             run(LearningResourceRun): The Learning Resource run that was removed
         """
+        if run.learning_resource.test_mode:
+            return
         if not run.content_files.exists():
             return
         deindex_tasks = [
@@ -184,7 +186,8 @@ class SearchIndexPlugin:
         Remove a learning resource run's content files from the search index
         and then delete the object
         """
-        self.resource_run_unpublished(run)
+        if not run.learning_resource.test_mode:
+            self.resource_run_unpublished(run)
         run.delete()
 
     @hookimpl
@@ -206,6 +209,10 @@ class SearchIndexPlugin:
             index_tasks.append(
                 tasks.index_run_content_files.si(run.id),
             )
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                index_tasks.append(
+                    vector_tasks.remove_unpublished_run_content_files.si(run.id),
+                )
             try_with_retry_as_task(chain(*index_tasks))
         else:
             deindex_tasks = [

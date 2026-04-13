@@ -32,11 +32,23 @@ def mock_search_index_helpers(mocker):
     mock_upsert_contentfiles = mocker.patch(
         "learning_resources_search.plugins.tasks.index_run_content_files"
     )
+    mock_upsert_contentfiles_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.tasks.index_run_content_files.si"
+    )
     mock_remove_contentfiles = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files"
     )
     mock_remove_contentfiles_immutable_signature = mocker.patch(
         "learning_resources_search.plugins.tasks.deindex_run_content_files.si"
+    )
+    mock_embed_run_contentfiles_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.embed_run_content_files.si"
+    )
+    mock_remove_unpublished_run_contentfiles_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.remove_unpublished_run_content_files.si"
+    )
+    mock_remove_run_contentfiles_immutable_signature = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.remove_run_content_files.si"
     )
     mock_generate_embeddings_immutable_signature = mocker.patch(
         "learning_resources_search.plugins.vector_tasks.generate_embeddings.si"
@@ -48,8 +60,12 @@ def mock_search_index_helpers(mocker):
         mock_remove_learning_resource=mock_remove_learning_resource,
         mock_remove_learning_resource_immutable_signature=mock_remove_learning_resource_immutable_signature,
         mock_upsert_contentfiles=mock_upsert_contentfiles,
+        mock_upsert_contentfiles_immutable_signature=mock_upsert_contentfiles_immutable_signature,
         mock_remove_contentfiles=mock_remove_contentfiles,
         mock_remove_contentfiles_immutable_signature=mock_remove_contentfiles_immutable_signature,
+        mock_embed_run_contentfiles_immutable_signature=mock_embed_run_contentfiles_immutable_signature,
+        mock_remove_unpublished_run_contentfiles_immutable_signature=mock_remove_unpublished_run_contentfiles_immutable_signature,
+        mock_remove_run_contentfiles_immutable_signature=mock_remove_run_contentfiles_immutable_signature,
         mock_generate_embeddings_immutable_signature=mock_generate_embeddings_immutable_signature,
     )
 
@@ -113,15 +129,16 @@ def test_search_index_plugin_resource_before_delete(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("has_content_files", [True, False])
+@pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_run_unpublished(
-    mock_search_index_helpers, has_content_files
+    mock_search_index_helpers, has_content_files, test_mode
 ):
     """The plugin function should remove a run's contenfiles from the search index"""
-    run = LearningResourceRunFactory.create()
+    run = LearningResourceRunFactory.create(learning_resource__test_mode=test_mode)
     if has_content_files:
         ContentFileFactory.create(run=run)
     SearchIndexPlugin().resource_run_unpublished(run)
-    if has_content_files:
+    if has_content_files and not test_mode:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
             run.id,
             unpublished_only=False,
@@ -132,16 +149,17 @@ def test_search_index_plugin_resource_run_unpublished(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("has_content_files", [True, False])
+@pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_run_delete(
-    mock_search_index_helpers, has_content_files
+    mock_search_index_helpers, has_content_files, test_mode
 ):
     """The plugin function should remove contenfiles from the index and delete the run"""
-    run = LearningResourceRunFactory.create()
+    run = LearningResourceRunFactory.create(learning_resource__test_mode=test_mode)
     if has_content_files:
         ContentFileFactory.create(run=run)
     run_id = run.id
     SearchIndexPlugin().resource_run_delete(run)
-    if has_content_files:
+    if has_content_files and not test_mode:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
             run_id,
             unpublished_only=False,
@@ -149,6 +167,63 @@ def test_search_index_plugin_resource_run_delete(
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
     assert LearningResourceRun.objects.filter(id=run_id).exists() is False
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_content_files_loaded_published_run(
+    mock_search_index_helpers,
+):
+    """Published run should index content files and remove unpublished ones."""
+    run = LearningResourceRunFactory.create(published=True)
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_content_files_loaded_published_run_with_qdrant(
+    mock_search_index_helpers, settings
+):
+    """Published run should schedule Qdrant embed and unpublished cleanup."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(published=True)
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_content_files_loaded_unpublished_run_with_qdrant(
+    mock_search_index_helpers, settings
+):
+    """Unpublished run should deindex and remove all run content files."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(published=False)
+    ContentFileFactory.create(run=run)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
+        run.id,
+        unpublished_only=False,
+    )
+    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
 
 
 @pytest.mark.django_db
