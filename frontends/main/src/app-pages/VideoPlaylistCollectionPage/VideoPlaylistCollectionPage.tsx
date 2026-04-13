@@ -10,7 +10,7 @@ import {
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
-import { VideoResourceResourceTypeEnum } from "api/v1"
+import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
 import VideoPageHeader from "./VideoPageHeader"
 import FeaturedVideo from "./FeaturedVideo"
 import VideoCollection from "./VideoCollection"
@@ -38,9 +38,11 @@ const VideoPlaylistCollectionPage: React.FC<
   )
   const flagsLoaded = useFeatureFlagsLoaded()
 
-  const { data: playlist, isLoading: playlistLoading } = useQuery(
-    videoPlaylistQueries.detail(playlistId),
-  )
+  const {
+    data: playlist,
+    isLoading: playlistLoading,
+    isError,
+  } = useQuery(videoPlaylistQueries.detail(playlistId))
 
   const { data: items, isLoading: itemsLoading } = useQuery(
     learningResourceQueries.items(playlistId, {
@@ -48,12 +50,20 @@ const VideoPlaylistCollectionPage: React.FC<
     }),
   )
 
-  const { data: similarData, isLoading: similarLoading } = useQuery(
-    learningResourceQueries.vectorSimilar(playlistId),
-  )
+  const { data: similarData, isLoading: similarLoading } = useQuery({
+    ...learningResourceQueries.vectorSimilar(playlistId),
+    select: (data) =>
+      data.filter(
+        (resource) => resource.resource_type === ResourceTypeEnum.VideoPlaylist,
+      ),
+  })
 
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
+  }
+
+  if (isError) {
+    return notFound()
   }
   const isLoading = playlistLoading || itemsLoading
   const videos = (items ?? []).filter(

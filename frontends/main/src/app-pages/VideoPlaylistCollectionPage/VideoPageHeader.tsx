@@ -84,10 +84,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
         <VideoContainer>
           <StyledBreadcrumbs
             variant="light"
-            ancestors={[
-              { href: "/", label: "Home" },
-              { href: "/videos", label: "Videos" },
-            ]}
+            ancestors={[{ href: "/", label: "Home" }]}
             current={playlist?.title}
           />
         </VideoContainer>

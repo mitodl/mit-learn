@@ -112,12 +112,12 @@ const collectionTypeLabel = (playlist: VideoPlaylistResource): string => {
     : "Collection"
 }
 
-type OtherCollectionsProps = {
+type RelatedCollectionsProps = {
   collections: VideoPlaylistResource[]
   isLoading: boolean
 }
 
-const RelatedPlaylist: React.FC<OtherCollectionsProps> = ({
+const RelatedPlaylist: React.FC<RelatedCollectionsProps> = ({
   collections,
   isLoading,
 }) => {
@@ -140,7 +140,7 @@ const RelatedPlaylist: React.FC<OtherCollectionsProps> = ({
               ))
             : collections.map((collection) => (
                 <CollectionLink
-                  href={`/playlist/${collection.id}`}
+                  href={`/video-collection/${collection.id}`}
                   key={collection.id}
                 >
                   <CollectionType>

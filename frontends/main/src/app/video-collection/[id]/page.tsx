@@ -15,7 +15,9 @@ export const metadata: Metadata = standardizeMetadata({
   robots: "noindex, nofollow",
 })
 
-const Page: React.FC<PageProps<"/playlist/[id]">> = async ({ params }) => {
+const Page: React.FC<PageProps<"/video-collection/[id]">> = async ({
+  params,
+}) => {
   const { id } = await params
   const playlistId = Number(id)
   if (Number.isNaN(playlistId)) {
