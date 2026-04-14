@@ -141,18 +141,6 @@ class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(resource_type_group_choices)}"
         ),
     )
-    url__isnull = serializers.BooleanField(
-        required=False,
-        default=None,
-        allow_null=True,
-        help_text="Filter to learning resources where url is null/not null",
-    )
-    title__isnull = serializers.BooleanField(
-        required=False,
-        default=None,
-        allow_null=True,
-        help_text="Filter to learning resources where title is null/not null",
-    )
 
 
 class LearningResourcesVectorSearchRequestSerializer(
@@ -165,6 +153,18 @@ class LearningResourcesVectorSearchRequestSerializer(
 
     readable_id = serializers.CharField(
         required=False, help_text="The readable id of the resource"
+    )
+    url__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to learning resources where url is null/not null",
+    )
+    title__isnull = serializers.BooleanField(
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Filter to learning resources where title is null/not null",
     )
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(

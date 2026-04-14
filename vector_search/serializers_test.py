@@ -29,6 +29,10 @@ def test_filter_serializer_has_no_search_fields():
     assert "limit" not in fields
     assert "hybrid_search" not in fields
     assert "readable_id" not in fields
+    # isnull filters are Qdrant-only and must not be in the shared base,
+    # since generate_filter_clauses (OpenSearch) doesn't support them
+    assert "url__isnull" not in fields
+    assert "title__isnull" not in fields
 
 
 def test_vector_search_request_serializer_inherits_filter_fields():

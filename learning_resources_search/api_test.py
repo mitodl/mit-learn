@@ -4524,3 +4524,42 @@ def test_get_similar_resources_opensearch_passes_filter_params(mocker):
         }
         for f in filters
     )
+
+
+@pytest.mark.parametrize("free_value", [True, False])
+def test_get_similar_resources_opensearch_boolean_filter(mocker, free_value):
+    """Scalar boolean filter_params are normalized to lists before generate_filter_clauses"""
+    from learning_resources_search.api import get_similar_resources_opensearch
+
+    mock_search = mocker.MagicMock()
+    mock_search.extra.return_value = mock_search
+    mock_search.query.return_value = mock_search
+    mock_search.execute.return_value = mocker.MagicMock(hits=[])
+    mocker.patch("learning_resources_search.api.Search", return_value=mock_search)
+    mocker.patch(
+        "learning_resources_search.api.relevant_indexes", return_value=["index"]
+    )
+
+    # Should not raise TypeError from iterating a scalar bool,
+    # and False must not be skipped by the truthiness check.
+    get_similar_resources_opensearch(
+        value_doc={"id": 1, "readable_id": "abc"},
+        num_resources=5,
+        min_term_freq=2,
+        min_doc_freq=3,
+        filter_params={"free": free_value},
+    )
+
+    _, kwargs = mock_search.query.call_args
+    filters = kwargs["filter"]
+    assert any(
+        f
+        == {
+            "bool": {
+                "should": [
+                    {"term": {"free": {"value": free_value, "case_insensitive": True}}}
+                ]
+            }
+        }
+        for f in filters
+    )

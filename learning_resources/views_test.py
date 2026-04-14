@@ -1432,6 +1432,22 @@ def test_similar_rejects_invalid_resource_type(client):
     assert resp.status_code == 400
 
 
+@pytest.mark.parametrize(("free_value", "expected"), [("true", True), ("false", False)])
+@pytest.mark.skip_nplusone_check
+def test_similar_boolean_filter_forwarded(mocker, client, free_value, expected):
+    """Boolean filter params (free=true/false) are forwarded correctly to the OpenSearch path"""
+    resource = LearningResourceFactory.create()
+    mock_similar = mocker.patch(
+        "learning_resources_search.api.get_similar_resources_opensearch",
+        return_value=[],
+    )
+    client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[resource.id]),
+        {"free": free_value},
+    )
+    assert mock_similar.call_args.kwargs["filter_params"] == {"free": expected}
+
+
 @pytest.mark.skip_nplusone_check
 def test_learning_resources_display_info_list_view(mocker, client):
     """Test learning_resources_display_info_list_view returns expected results"""

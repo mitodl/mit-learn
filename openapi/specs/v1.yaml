@@ -3033,12 +3033,6 @@ paths:
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
-        name: title__isnull
-        schema:
-          type: boolean
-          nullable: true
-        description: Filter to learning resources where title is null/not null
-      - in: query
         name: topic
         schema:
           type: array
@@ -3046,12 +3040,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: url__isnull
-        schema:
-          type: boolean
-          nullable: true
-        description: Filter to learning resources where url is null/not null
       tags:
       - learning_resources
       responses:
@@ -3408,12 +3396,6 @@ paths:
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
-        name: title__isnull
-        schema:
-          type: boolean
-          nullable: true
-        description: Filter to learning resources where title is null/not null
-      - in: query
         name: topic
         schema:
           type: array
@@ -3421,12 +3403,6 @@ paths:
             type: string
             minLength: 1
         description: The topic name. To see a list of options go to api/v1/topics/
-      - in: query
-        name: url__isnull
-        schema:
-          type: boolean
-          nullable: true
-        description: Filter to learning resources where url is null/not null
       tags:
       - learning_resources
       responses:

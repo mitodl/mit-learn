@@ -16460,9 +16460,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean | null} [professional]
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -16482,9 +16480,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean | null,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesSimilarListResourceTypeGroupEnum>,
-      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
@@ -16564,16 +16560,8 @@ export const LearningResourcesApiAxiosParamCreator = function (
         localVarQueryParameter["resource_type_group"] = resource_type_group
       }
 
-      if (title__isnull !== undefined) {
-        localVarQueryParameter["title__isnull"] = title__isnull
-      }
-
       if (topic) {
         localVarQueryParameter["topic"] = topic
-      }
-
-      if (url__isnull !== undefined) {
-        localVarQueryParameter["url__isnull"] = url__isnull
       }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
@@ -16816,9 +16804,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {boolean | null} [professional]
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -16838,9 +16824,7 @@ export const LearningResourcesApiAxiosParamCreator = function (
       professional?: boolean | null,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
-      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
@@ -16921,16 +16905,8 @@ export const LearningResourcesApiAxiosParamCreator = function (
         localVarQueryParameter["resource_type_group"] = resource_type_group
       }
 
-      if (title__isnull !== undefined) {
-        localVarQueryParameter["title__isnull"] = title__isnull
-      }
-
       if (topic) {
         localVarQueryParameter["topic"] = topic
-      }
-
-      if (url__isnull !== undefined) {
-        localVarQueryParameter["url__isnull"] = url__isnull
       }
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
@@ -17304,9 +17280,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean | null} [professional]
      * @param {Array<LearningResourcesSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -17326,9 +17300,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean | null,
       resource_type?: Array<LearningResourcesSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesSimilarListResourceTypeGroupEnum>,
-      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -17353,9 +17325,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           resource_type,
           resource_type_group,
-          title__isnull,
           topic,
-          url__isnull,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -17514,9 +17484,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {boolean | null} [professional]
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
-     * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -17536,9 +17504,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       professional?: boolean | null,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
-      title__isnull?: boolean | null,
       topic?: Array<string>,
-      url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -17563,9 +17529,7 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           professional,
           resource_type,
           resource_type_group,
-          title__isnull,
           topic,
-          url__isnull,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -17778,9 +17742,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
-          requestParameters.title__isnull,
           requestParameters.topic,
-          requestParameters.url__isnull,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -17868,9 +17830,7 @@ export const LearningResourcesApiFactory = function (
           requestParameters.professional,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
-          requestParameters.title__isnull,
           requestParameters.topic,
-          requestParameters.url__isnull,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -18312,25 +18272,11 @@ export interface LearningResourcesApiLearningResourcesSimilarListRequest {
   readonly resource_type_group?: Array<LearningResourcesSimilarListResourceTypeGroupEnum>
 
   /**
-   * Filter to learning resources where title is null/not null
-   * @type {boolean}
-   * @memberof LearningResourcesApiLearningResourcesSimilarList
-   */
-  readonly title__isnull?: boolean | null
-
-  /**
    * The topic name. To see a list of options go to api/v1/topics/
    * @type {Array<string>}
    * @memberof LearningResourcesApiLearningResourcesSimilarList
    */
   readonly topic?: Array<string>
-
-  /**
-   * Filter to learning resources where url is null/not null
-   * @type {boolean}
-   * @memberof LearningResourcesApiLearningResourcesSimilarList
-   */
-  readonly url__isnull?: boolean | null
 }
 
 /**
@@ -18606,25 +18552,11 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
   readonly resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>
 
   /**
-   * Filter to learning resources where title is null/not null
-   * @type {boolean}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly title__isnull?: boolean | null
-
-  /**
    * The topic name. To see a list of options go to api/v1/topics/
    * @type {Array<string>}
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
    */
   readonly topic?: Array<string>
-
-  /**
-   * Filter to learning resources where url is null/not null
-   * @type {boolean}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly url__isnull?: boolean | null
 }
 
 /**
@@ -18832,9 +18764,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
-        requestParameters.title__isnull,
         requestParameters.topic,
-        requestParameters.url__isnull,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
@@ -18928,9 +18858,7 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.professional,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
-        requestParameters.title__isnull,
         requestParameters.topic,
-        requestParameters.url__isnull,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

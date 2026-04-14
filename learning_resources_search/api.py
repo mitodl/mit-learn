@@ -1252,7 +1252,12 @@ def get_similar_resources_opensearch(
         min_term_freq=min_term_freq,
         min_doc_freq=min_doc_freq,
     )
-    filter_clauses = generate_filter_clauses(filter_params or {})
+    # generate_filter_clauses expects list values; scalar booleans (from
+    # ArrayWrappedBoolean validated_data) must be wrapped before iterating.
+    normalized_params = {
+        k: [v] if isinstance(v, bool) else v for k, v in (filter_params or {}).items()
+    }
+    filter_clauses = generate_filter_clauses(normalized_params)
     filters = [{"exists": {"field": "resource_type"}}, *filter_clauses.values()]
     # return only learning_resources
     search = search.query("bool", must=[mlt_query], filter=filters)
