@@ -16,7 +16,7 @@ import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
-import HowYoullLearnSection, { DEFAULT_HOW_DATA, HowYoullLearnSectionWrapper } from "./HowYoullLearnSection"
+import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -65,14 +65,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
 
   const imageSrc =
     page.course_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
-  const hylCards = [
-    page.hasOwnProperty("hyl_choice_realworld_learning") && page.hyl_choice_realworld_learning ? "hyl_choice_realworld_learning" : null,
-    page.hasOwnProperty("hyl_choice_learn_by_doing") && page.hyl_choice_learn_by_doing ? "hyl_choice_learn_by_doing" : null,
-    page.hasOwnProperty("hyl_choice_learn_from_others") && page.hyl_choice_learn_from_others ? "hyl_choice_learn_from_others" : null,
-    page.hasOwnProperty("hyl_choice_learn_on_demand") && page.hyl_choice_learn_on_demand ? "hyl_choice_learn_on_demand" : null,
-    page.hasOwnProperty("hyl_choice_ai_enabled_support") && page.hyl_choice_ai_enabled_support ? "hyl_choice_ai_enabled_support" : null,
-    page.hasOwnProperty("hyl_choice_stackable_credentials") && page.hyl_choice_stackable_credentials ? "hyl_choice_stackable_credentials" : null,
-  ]
 
   return (
     <ProductPageTemplate
@@ -106,7 +98,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}
-      <HowYoullLearnSectionWrapper data={hylCards.filter(Boolean) as string[]} />
+      <HowYoullLearnSection page={page} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
           <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>

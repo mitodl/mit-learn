@@ -9,6 +9,8 @@ import IconCertificate from "@/public/images/product/icon_certificate.png"
 import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
 import IconConnectedPeople from "@/public/images/product/icon_connected_people.png"
 
+import type { CoursePageItem, ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
+
 const HowYoullLearnRoot = styled.section(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -79,30 +81,6 @@ type HowYoullLearnOption = {
   data: HowYoullLearnItemData
 }
 
-// Placeholder data — will be replaced by API-driven content.
-const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
-  {
-    icon: IconConnectedPeople,
-    title: "Real-World Learning",
-    text: "Learn from MIT faculty and experts who ground their teaching in real-world cases rather than mathematical models, making the material approachable for all.",
-  },
-  {
-    icon: IconBrains,
-    title: "Practical Application",
-    text: "Apply your new knowledge with hands-on, practical exercises drawn from healthcare, sports, finance, sustainability, and more.",
-  },
-  {
-    icon: IconComputerBulb,
-    title: "AI-Enabled Support",
-    text: "Deepen your understanding of the course material and get help on assignments from AskTIM, the AI assistant built by MIT researchers.",
-  },
-  {
-    icon: IconCertificate,
-    title: "Stackable Credentials",
-    text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
-  },
-]
-
 const HOW_YOULL_LEARN_OPTIONS: HowYoullLearnOption[] = [
   {
     name: "hyl_choice_realworld_learning",
@@ -154,24 +132,19 @@ const HOW_YOULL_LEARN_OPTIONS: HowYoullLearnOption[] = [
   },
 ]
 
-const HowYoullLearnSectionWrapper: React.FC<{
-  data: Array<string>
-}> = ({data}) => {
-  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter((option) => data.includes(option.name))
-  const items = filteredOptions.map((option) => option.data)
-  return <HowYoullLearnSection data={items} />
-}
 
 const HowYoullLearnSection: React.FC<{
-  data: HowYoullLearnItemData[]
-}> = ({ data }) => {
-  return (
+  page: CoursePageItem | ProgramPageItem
+}> = ({ page }) => {
+  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter((option) => page.hasOwnProperty(option.name) && (page as Record<string, boolean>)[option.name])
+  const items = filteredOptions.map((option) => option.data)
+  return items.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
         How you'll learn
       </Typography>
       <HowYoullLearnGrid>
-        {data.map((item, index) => (
+        {items.map((item, index) => (
           <HowYoullLearnItem key={index}>
             <HowYoullLearnHeader>
               <HowYoullLearnIcon
@@ -187,9 +160,8 @@ const HowYoullLearnSection: React.FC<{
         ))}
       </HowYoullLearnGrid>
     </HowYoullLearnRoot>
-  )
+  ) : null
 }
 
 export default HowYoullLearnSection
-export { DEFAULT_HOW_DATA, HOW_YOULL_LEARN_OPTIONS, HowYoullLearnSectionWrapper }
 export type { HowYoullLearnItemData }
