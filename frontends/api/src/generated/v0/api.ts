@@ -11532,6 +11532,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for content
      * @summary Content File Vector Search
+     * @param {Array<VectorContentFilesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;key&#x60; - Key * &#x60;course_number&#x60; - Course Number * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;file_extension&#x60; - File Extension * &#x60;content_feature_type&#x60; - Content Feature Type * &#x60;run_readable_id&#x60; - Run Readable Id * &#x60;resource_readable_id&#x60; - Resource Readable Id * &#x60;run_title&#x60; - Run Title * &#x60;edx_module_id&#x60; - Edx Module Id * &#x60;content_type&#x60; - Content Type * &#x60;description&#x60; - Description * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;file_type&#x60; - File Type * &#x60;summary&#x60; - Summary * &#x60;flashcards&#x60; - Flashcards * &#x60;checksum&#x60; - Checksum
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {string} [group_by] The attribute to group results by
@@ -11552,6 +11553,7 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @throws {RequiredError}
      */
     vectorContentFilesSearchRetrieve: async (
+      aggregations?: Array<VectorContentFilesSearchRetrieveAggregationsEnum>,
       collection_name?: string,
       file_extension?: Array<string>,
       group_by?: string,
@@ -11585,6 +11587,10 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
+
+      if (aggregations) {
+        localVarQueryParameter["aggregations"] = aggregations
+      }
 
       if (collection_name !== undefined) {
         localVarQueryParameter["collection_name"] = collection_name
@@ -11680,6 +11686,7 @@ export const VectorContentFilesSearchApiFp = function (
     /**
      * Vector Search for content
      * @summary Content File Vector Search
+     * @param {Array<VectorContentFilesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;key&#x60; - Key * &#x60;course_number&#x60; - Course Number * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;file_extension&#x60; - File Extension * &#x60;content_feature_type&#x60; - Content Feature Type * &#x60;run_readable_id&#x60; - Run Readable Id * &#x60;resource_readable_id&#x60; - Resource Readable Id * &#x60;run_title&#x60; - Run Title * &#x60;edx_module_id&#x60; - Edx Module Id * &#x60;content_type&#x60; - Content Type * &#x60;description&#x60; - Description * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;file_type&#x60; - File Type * &#x60;summary&#x60; - Summary * &#x60;flashcards&#x60; - Flashcards * &#x60;checksum&#x60; - Checksum
      * @param {string} [collection_name] Manually specify the name of the Qdrant collection to query
      * @param {Array<string>} [file_extension] The extension of the content file.
      * @param {string} [group_by] The attribute to group results by
@@ -11700,6 +11707,7 @@ export const VectorContentFilesSearchApiFp = function (
      * @throws {RequiredError}
      */
     async vectorContentFilesSearchRetrieve(
+      aggregations?: Array<VectorContentFilesSearchRetrieveAggregationsEnum>,
       collection_name?: string,
       file_extension?: Array<string>,
       group_by?: string,
@@ -11725,6 +11733,7 @@ export const VectorContentFilesSearchApiFp = function (
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.vectorContentFilesSearchRetrieve(
+          aggregations,
           collection_name,
           file_extension,
           group_by,
@@ -11783,6 +11792,7 @@ export const VectorContentFilesSearchApiFactory = function (
     ): AxiosPromise<ContentFileVectorSearchResponse> {
       return localVarFp
         .vectorContentFilesSearchRetrieve(
+          requestParameters.aggregations,
           requestParameters.collection_name,
           requestParameters.file_extension,
           requestParameters.group_by,
@@ -11812,6 +11822,13 @@ export const VectorContentFilesSearchApiFactory = function (
  * @interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest
  */
 export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequest {
+  /**
+   * aggregations for facet counts               * &#x60;key&#x60; - Key * &#x60;course_number&#x60; - Course Number * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;file_extension&#x60; - File Extension * &#x60;content_feature_type&#x60; - Content Feature Type * &#x60;run_readable_id&#x60; - Run Readable Id * &#x60;resource_readable_id&#x60; - Resource Readable Id * &#x60;run_title&#x60; - Run Title * &#x60;edx_module_id&#x60; - Edx Module Id * &#x60;content_type&#x60; - Content Type * &#x60;description&#x60; - Description * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;file_type&#x60; - File Type * &#x60;summary&#x60; - Summary * &#x60;flashcards&#x60; - Flashcards * &#x60;checksum&#x60; - Checksum
+   * @type {Array<'key' | 'course_number' | 'platform' | 'offered_by' | 'file_extension' | 'content_feature_type' | 'run_readable_id' | 'resource_readable_id' | 'run_title' | 'edx_module_id' | 'content_type' | 'description' | 'title' | 'url' | 'file_type' | 'summary' | 'flashcards' | 'checksum'>}
+   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
+   */
+  readonly aggregations?: Array<VectorContentFilesSearchRetrieveAggregationsEnum>
+
   /**
    * Manually specify the name of the Qdrant collection to query
    * @type {string}
@@ -11946,6 +11963,7 @@ export class VectorContentFilesSearchApi extends BaseAPI {
   ) {
     return VectorContentFilesSearchApiFp(this.configuration)
       .vectorContentFilesSearchRetrieve(
+        requestParameters.aggregations,
         requestParameters.collection_name,
         requestParameters.file_extension,
         requestParameters.group_by,
@@ -11968,6 +11986,31 @@ export class VectorContentFilesSearchApi extends BaseAPI {
   }
 }
 
+/**
+ * @export
+ */
+export const VectorContentFilesSearchRetrieveAggregationsEnum = {
+  Key: "key",
+  CourseNumber: "course_number",
+  Platform: "platform",
+  OfferedBy: "offered_by",
+  FileExtension: "file_extension",
+  ContentFeatureType: "content_feature_type",
+  RunReadableId: "run_readable_id",
+  ResourceReadableId: "resource_readable_id",
+  RunTitle: "run_title",
+  EdxModuleId: "edx_module_id",
+  ContentType: "content_type",
+  Description: "description",
+  Title: "title",
+  Url: "url",
+  FileType: "file_type",
+  Summary: "summary",
+  Flashcards: "flashcards",
+  Checksum: "checksum",
+} as const
+export type VectorContentFilesSearchRetrieveAggregationsEnum =
+  (typeof VectorContentFilesSearchRetrieveAggregationsEnum)[keyof typeof VectorContentFilesSearchRetrieveAggregationsEnum]
 /**
  * @export
  */
