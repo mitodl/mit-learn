@@ -17,6 +17,7 @@ import { useFormik } from "formik"
 import {
   useCreateB2bEnrollment,
   useDestroyEnrollment,
+  useDestroyProgramEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import {
@@ -318,4 +319,79 @@ const EmailSettingsDialog = NiceModal.create(EmailSettingsDialogInner)
 const UnenrollDialog = NiceModal.create(UnenrollDialogInner)
 const JustInTimeDialog = NiceModal.create(JustInTimeDialogInner)
 
-export { EmailSettingsDialog, UnenrollDialog, JustInTimeDialog }
+type UnenrollProgramDialogProps = {
+  title: string
+  programId: number
+}
+
+const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
+  title,
+  programId,
+}) => {
+  const modal = NiceModal.useModal()
+  const destroyProgramEnrollment = useDestroyProgramEnrollment()
+  const formik = useFormik({
+    enableReinitialize: true,
+    validateOnChange: false,
+    validateOnBlur: false,
+    initialValues: {},
+    onSubmit: async () => {
+      await destroyProgramEnrollment.mutateAsync(programId)
+      if (!destroyProgramEnrollment.isError) {
+        modal.hide()
+      }
+    },
+  })
+  return (
+    <FormDialog
+      title={`Unenroll from ${title}`}
+      fullWidth
+      onReset={formik.resetForm}
+      onSubmit={formik.handleSubmit}
+      {...muiDialogV5(modal)}
+      actions={
+        <DialogActions>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              modal.hide()
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={destroyProgramEnrollment.isPending}
+            endIcon={
+              destroyProgramEnrollment.isPending ? (
+                <LoadingSpinner color="inherit" loading={true} size={16} />
+              ) : undefined
+            }
+          >
+            Unenroll
+          </Button>
+        </DialogActions>
+      }
+    >
+      <Typography variant="body1">
+        Are you sure you want to unenroll from {title}?
+      </Typography>
+      {destroyProgramEnrollment.isError && (
+        <Alert severity="error">
+          There was a problem unenrolling you from this program. Please try
+          again later.
+        </Alert>
+      )}
+    </FormDialog>
+  )
+}
+
+const UnenrollProgramDialog = NiceModal.create(UnenrollProgramDialogInner)
+
+export {
+  EmailSettingsDialog,
+  UnenrollDialog,
+  UnenrollProgramDialog,
+  JustInTimeDialog,
+}

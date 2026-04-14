@@ -72,6 +72,21 @@ const useDestroyEnrollment = () => {
   })
 }
 
+const useDestroyProgramEnrollment = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (programId: number) =>
+      programEnrollmentsApi.v3ProgramEnrollmentsDestroy({
+        program_id: programId,
+      }),
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
+    },
+  })
+}
+
 const useCreateProgramEnrollment = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -110,6 +125,7 @@ export {
   useCreateEnrollment,
   useUpdateEnrollment,
   useDestroyEnrollment,
+  useDestroyProgramEnrollment,
   useCreateProgramEnrollment,
   useCreateVerifiedProgramEnrollment,
 }

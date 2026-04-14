@@ -25,6 +25,7 @@ import {
   EmailSettingsDialog,
   JustInTimeDialog,
   UnenrollDialog,
+  UnenrollProgramDialog,
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import {
@@ -47,6 +48,7 @@ import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
   CourseRunV2,
+  DisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 
@@ -194,6 +196,23 @@ const getContextMenuItems = (
         key: "view-program-details",
         label: "View Program Details",
         href: detailsUrl,
+      })
+    }
+
+    if (
+      program.display_mode !== DisplayModeEnum.Course &&
+      !isVerifiedEnrollmentMode(resource.data.enrollment_mode)
+    ) {
+      menuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "unenroll-program",
+        label: "Unenroll",
+        onClick: () => {
+          NiceModal.show(UnenrollProgramDialog, {
+            title,
+            programId: program.id,
+          })
+        },
       })
     }
   }
