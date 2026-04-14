@@ -33,13 +33,13 @@ from learning_resources_search.serializers import (
 )
 from main.utils import checksum_for_content
 from vector_search.constants import (
+    COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
-    QDRANT_TOPICS_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
@@ -1007,12 +1007,7 @@ async def async_qdrant_aggregations(
     if not aggregation_keys:
         return {}
 
-    collection_param_map = {
-        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
-        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
-        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
-    }
-    param_map = collection_param_map.get(collection_name, QDRANT_RESOURCE_PARAM_MAP)
+    param_map = COLLECTION_PARAM_MAP.get(collection_name, QDRANT_RESOURCE_PARAM_MAP)
     client = async_qdrant_client()
 
     async def _get_facet(agg_key: str):
@@ -1054,12 +1049,7 @@ def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     Return a list of Qdrant FieldCondition objects based on params
     """
 
-    collection_param_map = {
-        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
-        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
-        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
-    }
-    qdrant_param_map = collection_param_map.get(collection_name)
+    qdrant_param_map = COLLECTION_PARAM_MAP.get(collection_name)
     if not params or not qdrant_param_map:
         return None
     must = []
