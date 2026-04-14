@@ -139,9 +139,15 @@ def transform_content_files(
         if obj.key.endswith("data.json"):
             try:
                 resource_json = safe_load_json(get_s3_object_and_read(obj), obj.key)
-                transformed_resource = transform_contentfile(
-                    obj.key, resource_json, s3_resource, force_overwrite
-                )
+
+                if resource_json.get("resourcetype"):
+                    transformed_resource = transform_contentfile(
+                        obj.key, resource_json, s3_resource, force_overwrite
+                    )
+                else:
+                    transformed_resource = transform_contentfile_legacy(
+                        obj.key, resource_json, s3_resource, force_overwrite
+                    )
                 if transformed_resource:
                     yield transformed_resource
 
@@ -171,7 +177,9 @@ def transform_page(s3_key: str, page_data: dict) -> dict:
         "title": page_data.get("title"),
         "content_title": page_data.get("title"),
         "content": page_data.get("content"),
+        "content_tags": page_data.get("learning_resource_types"),
         "key": s3_path,
+        "description": page_data.get("description"),
         "published": True,
     }
 
@@ -227,6 +235,82 @@ def get_file_content(
 
 
 def transform_contentfile(
+    s3_key: str,
+    contentfile_data: dict,
+    s3_resource: boto3.resource,
+    force_overwrite: bool,  # noqa: FBT001
+) -> dict:
+    """
+    Transform the data from data.json (new format) for a content file
+
+    Args:
+        s3_key (str): S3 path for the data.json file
+        contentfile_data (dict): JSON data from data.json
+        s3_resource (boto3.resource): The S3 resource
+        force_overwrite (bool): Overwrite document text if true
+
+    Returns:
+        dict: transformed content file data
+    """
+    s3_path = s3_key.split("data.json", maxsplit=1)[0]
+    s3_path = urlparse(s3_path).path.lstrip("/")
+
+    file_type = contentfile_data.get("file_type")
+    video_files = contentfile_data.get("video_files", {})
+
+    if contentfile_data.get("resourcetype") == "Video":
+        content_type = CONTENT_TYPE_VIDEO
+        youtube_id = contentfile_data.get("video_metadata", {}).get("youtube_id")
+        if youtube_id:
+            image_src = f"https://i.ytimg.com/vi/{youtube_id}/hqdefault.jpg"
+        else:
+            image_src = None
+        file_s3_path = video_files.get("video_transcript_file")
+        file_extension = Path(
+            contentfile_data.get("file") or video_files.get("archive_url") or ""
+        ).suffix
+    else:
+        content_type = get_content_type(file_type)
+        file_s3_path = contentfile_data.get("file") or ""
+        image_src = None
+        file_extension = Path(file_s3_path).suffix
+        youtube_id = None
+
+    title = contentfile_data.get("title")
+
+    if title in ("3play caption file", "3play pdf file") or not file_s3_path:
+        return None
+
+    contentfile_data = {
+        "description": clean_data(contentfile_data.get("content")),
+        "file_type": file_type,
+        "content_type": content_type,
+        "url": urljoin(settings.OCW_BASE_URL, urlparse(s3_path).path.lstrip("/")),
+        "title": title,
+        "content_title": title,
+        "key": s3_path,
+        "content_tags": contentfile_data.get("learning_resource_types"),
+        "published": True,
+        "file_extension": file_extension,
+    }
+
+    if not file_s3_path.startswith("courses"):
+        file_s3_path = "courses" + file_s3_path.split("courses")[1]
+
+    content_json = get_file_content(s3_path, file_s3_path, s3_resource, force_overwrite)
+    if content_json:
+        contentfile_data["content"] = content_json.get("content")
+
+    if image_src:
+        contentfile_data["image_src"] = image_src
+
+    if youtube_id:
+        contentfile_data["youtube_id"] = youtube_id
+
+    return contentfile_data
+
+
+def transform_contentfile_legacy(
     s3_key: str,
     contentfile_data: dict,
     s3_resource: boto3.resource,

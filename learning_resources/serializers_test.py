@@ -613,6 +613,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
         "content_language": "en",
         "content_title": "test title",
         "edx_module_id": "edx_module_id",
+        "youtube_id": "youtube_id",
     }
     platform = PlatformType.ocw.name
     course = factories.CourseFactory.create(platform=platform)
@@ -724,6 +725,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "summary": content_file.summary,
             "flashcards": content_file.flashcards,
             "direct_learning_resource_id": direct_learning_resource.id,
+            "youtube_id": content_file.youtube_id,
         },
     )
 
