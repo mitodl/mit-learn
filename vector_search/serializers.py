@@ -20,7 +20,10 @@ from learning_resources_search.serializers import (
     SearchResponseMetadata,
     SearchResponseSerializer,
 )
-from vector_search.constants import QDRANT_RESOURCE_PARAM_MAP
+from vector_search.constants import (
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_RESOURCE_PARAM_MAP,
+)
 
 
 class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
@@ -214,6 +217,17 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     )
     limit = serializers.IntegerField(
         required=False, help_text="Number of results to return per page"
+    )
+    aggregation_choices = [
+        (key, key.replace("_", " ").title()) for key in QDRANT_CONTENT_FILE_PARAM_MAP
+    ]
+    aggregations = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=aggregation_choices),
+        help_text=(
+            f"aggregations for facet counts \
+            \n\n{build_choice_description_list(aggregation_choices)}"
+        ),
     )
     sortby = serializers.ChoiceField(
         required=False,
