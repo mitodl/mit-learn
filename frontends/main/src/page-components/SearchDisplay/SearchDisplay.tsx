@@ -516,8 +516,8 @@ const searchModeDropdownOptions = Object.entries(
 
 /**
  * Extracts only the fields supported by the vector search API from a broader
- * search params object, dropping admin-only params (e.g., aggregations,
- * content_file_score_weight) that the vector endpoint does not accept.
+ * search params object, dropping admin-only params (e.g., content_file_score_weight)
+ * that the vector endpoint does not accept.
  *
  * The `as` casts for enum arrays are safe because the v0 and v1 generated
  * clients define separate (but structurally identical) enum types for the same
