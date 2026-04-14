@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.63.1
+Version 0.63.1 (Released April 14, 2026)
 --------------
 
 - feat: add video detail page design implementation (#3195)
