@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import Image from "next/image"
@@ -101,6 +101,7 @@ const VideoTitle = styled.h1(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.black,
   margin: "0 0 24px",
+  "&:focus": { outline: "none" },
   fontSize: "44px",
   fontStyle: "normal",
   lineHeight: "120%" /* 52.8px */,
@@ -393,9 +394,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
 
-  const sources = video
-    ? resolveVideoSources(video.video?.streaming_url, video.url)
-    : []
+  const sources = useMemo(
+    () =>
+      video ? resolveVideoSources(video.video?.streaming_url, video.url) : [],
+    [video],
+  )
 
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
