@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.63.1 (Released April 14, 2026)
+--------------
+
+- feat: add video detail page design implementation (#3195)
+- Avoid inadvertent contentfile deletion (#3174)
+- Display alert after user enrolls in a course/program (#3185)
+- allow no model for gensim_encoder (#3190)
+- feat: video playlist page design implementation (#3135)
+- Switch to lightweight static embeddings model for local development (#3178)
+- clean up hardcoded labels (#3176)
+- clean youtube descriptions (#3183)
+- Add user verification step to all data mgmt commands if --delete option is specified (#3171)
+- feat: use the same language as to transcript (#3177)
+- fix(deps): update dependency django to v4.2.29 [security] (#3016)
+
 Version 0.62.4 (Released April 09, 2026)
 --------------
 
