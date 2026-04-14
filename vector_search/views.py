@@ -87,12 +87,12 @@ class QdrantView(APIView):
         self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def async_vector_search(  # noqa: PLR0913 PLR0915 PLR0912
         self,
         query_string: str,
         params: dict,
         limit: int = 10,
-        offset: int = 10,
+        offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
         *,
         hybrid_search: bool = False,
@@ -188,14 +188,29 @@ class QdrantView(APIView):
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
         else:
-            scroll_res = await client.scroll(
-                collection_name=search_collection,
-                scroll_filter=search_filter,
-                limit=limit,
-                offset=offset,
-                with_vectors=False,
-            )
-            search_result = scroll_res[0]
+            # Qdrant's scroll API uses a point-ID cursor for `offset`, not a
+            # numeric skip count. We implement integer offset by consuming
+            # scroll pages until the desired number of records are skipped.
+            remaining_to_skip = offset
+            next_page_offset = None
+            search_result = []
+            while True:
+                fetch_size = min(remaining_to_skip + limit, 1000)
+                scroll_res = await client.scroll(
+                    collection_name=search_collection,
+                    scroll_filter=search_filter,
+                    limit=fetch_size,
+                    offset=next_page_offset,
+                    with_vectors=False,
+                )
+                page_points, next_page_offset = scroll_res
+                if remaining_to_skip > 0:
+                    page_points = page_points[remaining_to_skip:]
+                    remaining_to_skip = 0
+                search_result.extend(page_points)
+                if len(search_result) >= limit or not next_page_offset:
+                    break
+            search_result = search_result[:limit]
 
         if search_collection == RESOURCES_COLLECTION_NAME:
             hits = await sync_to_async(_resource_vector_hits)(search_result)
