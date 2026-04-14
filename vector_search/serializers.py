@@ -197,7 +197,7 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
         return instance.get("hits", {})
 
     def get_count(self, instance) -> int:
-        return instance.get("total", {}).get("value")
+        return instance.get("total", {}).get("value", 0)
 
     def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
@@ -306,11 +306,11 @@ class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):
     """
 
     def get_count(self, instance) -> int:
-        return instance["total"]["value"]
+        return instance.get("total", {}).get("value", 0)
 
     @extend_schema_field(ContentFileSerializer(many=True))
     def get_results(self, instance):
-        return instance["hits"]
+        return instance.get("hits", {})
 
     def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
