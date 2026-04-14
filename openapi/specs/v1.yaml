@@ -3399,24 +3399,6 @@ paths:
           type: boolean
           nullable: true
       - in: query
-        name: readable_id
-        schema:
-          type: array
-          items:
-            type: string
-        description: A unique text identifier for the resources
-        explode: true
-        style: form
-      - in: query
-        name: resource_id
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
-      - in: query
         name: resource_type
         schema:
           type: array
@@ -3460,42 +3442,6 @@ paths:
               * `learning_material` - Learning Material
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
-      - in: query
-        name: sortby
-        schema:
-          type: string
-          enum:
-          - -id
-          - -last_modified
-          - -mitcoursenumber
-          - -readable_id
-          - -start_date
-          - -views
-          - id
-          - last_modified
-          - mitcoursenumber
-          - new
-          - readable_id
-          - start_date
-          - upcoming
-          - views
-        description: |-
-          Sort By
-
-          * `id` - Object ID ascending
-          * `-id` - Object ID descending
-          * `readable_id` - Readable ID ascending
-          * `-readable_id` - Readable ID descending
-          * `last_modified` - Last Modified Date ascending
-          * `-last_modified` - Last Modified Date descending
-          * `new` - Newest resources first
-          * `start_date` - Start Date ascending
-          * `-start_date` - Start Date descending
-          * `mitcoursenumber` - MIT course number ascending
-          * `-mitcoursenumber` - MIT course number descending
-          * `views` - Popularity ascending
-          * `-views` - Popularity descending
-          * `upcoming` - Next start date ascending
       - in: query
         name: title__isnull
         schema:

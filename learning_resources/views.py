@@ -206,6 +206,12 @@ class LearningResourceViewSet(
     resource_type_name_plural = "Learning Resources"
     serializer_class = LearningResourceSerializer
 
+    @property
+    def filter_backends(self):
+        if self.action == "vector_similar":
+            return []
+        return super().filter_backends
+
     @extend_schema(
         summary="Get similar resources",
         parameters=[

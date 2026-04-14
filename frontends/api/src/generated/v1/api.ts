@@ -16814,11 +16814,8 @@ export const LearningResourcesApiAxiosParamCreator = function (
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
-     * @param {Array<string>} [readable_id] A unique text identifier for the resources
-     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {LearningResourcesVectorSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -16839,11 +16836,8 @@ export const LearningResourcesApiAxiosParamCreator = function (
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean | null,
-      readable_id?: Array<string>,
-      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
-      sortby?: LearningResourcesVectorSimilarListSortbyEnum,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -16919,24 +16913,12 @@ export const LearningResourcesApiAxiosParamCreator = function (
         localVarQueryParameter["professional"] = professional
       }
 
-      if (readable_id) {
-        localVarQueryParameter["readable_id"] = readable_id
-      }
-
-      if (resource_id) {
-        localVarQueryParameter["resource_id"] = resource_id
-      }
-
       if (resource_type) {
         localVarQueryParameter["resource_type"] = resource_type
       }
 
       if (resource_type_group) {
         localVarQueryParameter["resource_type_group"] = resource_type_group
-      }
-
-      if (sortby !== undefined) {
-        localVarQueryParameter["sortby"] = sortby
       }
 
       if (title__isnull !== undefined) {
@@ -17530,11 +17512,8 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
      * @param {Array<LearningResourcesVectorSimilarListOfferedByEnum>} [offered_by] The organization that offers the learning resource               * &#x60;mitx&#x60; - MITx * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;climate&#x60; - MIT Climate
      * @param {Array<LearningResourcesVectorSimilarListPlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
-     * @param {Array<string>} [readable_id] A unique text identifier for the resources
-     * @param {Array<number>} [resource_id] Comma-separated list of learning resource IDs
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {LearningResourcesVectorSimilarListSortbyEnum} [sortby] Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -17555,11 +17534,8 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
       offered_by?: Array<LearningResourcesVectorSimilarListOfferedByEnum>,
       platform?: Array<LearningResourcesVectorSimilarListPlatformEnum>,
       professional?: boolean | null,
-      readable_id?: Array<string>,
-      resource_id?: Array<number>,
       resource_type?: Array<LearningResourcesVectorSimilarListResourceTypeEnum>,
       resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>,
-      sortby?: LearningResourcesVectorSimilarListSortbyEnum,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -17585,11 +17561,8 @@ export const LearningResourcesApiFp = function (configuration?: Configuration) {
           offered_by,
           platform,
           professional,
-          readable_id,
-          resource_id,
           resource_type,
           resource_type_group,
-          sortby,
           title__isnull,
           topic,
           url__isnull,
@@ -17893,11 +17866,8 @@ export const LearningResourcesApiFactory = function (
           requestParameters.offered_by,
           requestParameters.platform,
           requestParameters.professional,
-          requestParameters.readable_id,
-          requestParameters.resource_id,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
-          requestParameters.sortby,
           requestParameters.title__isnull,
           requestParameters.topic,
           requestParameters.url__isnull,
@@ -18622,20 +18592,6 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
   readonly professional?: boolean | null
 
   /**
-   * A unique text identifier for the resources
-   * @type {Array<string>}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly readable_id?: Array<string>
-
-  /**
-   * Comma-separated list of learning resource IDs
-   * @type {Array<number>}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly resource_id?: Array<number>
-
-  /**
    * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
    * @type {Array<'course' | 'program' | 'learning_path' | 'podcast' | 'podcast_episode' | 'video' | 'video_playlist' | 'document'>}
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
@@ -18648,13 +18604,6 @@ export interface LearningResourcesApiLearningResourcesVectorSimilarListRequest {
    * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
    */
   readonly resource_type_group?: Array<LearningResourcesVectorSimilarListResourceTypeGroupEnum>
-
-  /**
-   * Sort By  * &#x60;id&#x60; - Object ID ascending * &#x60;-id&#x60; - Object ID descending * &#x60;readable_id&#x60; - Readable ID ascending * &#x60;-readable_id&#x60; - Readable ID descending * &#x60;last_modified&#x60; - Last Modified Date ascending * &#x60;-last_modified&#x60; - Last Modified Date descending * &#x60;new&#x60; - Newest resources first * &#x60;start_date&#x60; - Start Date ascending * &#x60;-start_date&#x60; - Start Date descending * &#x60;mitcoursenumber&#x60; - MIT course number ascending * &#x60;-mitcoursenumber&#x60; - MIT course number descending * &#x60;views&#x60; - Popularity ascending * &#x60;-views&#x60; - Popularity descending * &#x60;upcoming&#x60; - Next start date ascending
-   * @type {'-id' | '-last_modified' | '-mitcoursenumber' | '-readable_id' | '-start_date' | '-views' | 'id' | 'last_modified' | 'mitcoursenumber' | 'new' | 'readable_id' | 'start_date' | 'upcoming' | 'views'}
-   * @memberof LearningResourcesApiLearningResourcesVectorSimilarList
-   */
-  readonly sortby?: LearningResourcesVectorSimilarListSortbyEnum
 
   /**
    * Filter to learning resources where title is null/not null
@@ -18977,11 +18926,8 @@ export class LearningResourcesApi extends BaseAPI {
         requestParameters.offered_by,
         requestParameters.platform,
         requestParameters.professional,
-        requestParameters.readable_id,
-        requestParameters.resource_id,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
-        requestParameters.sortby,
         requestParameters.title__isnull,
         requestParameters.topic,
         requestParameters.url__isnull,
@@ -19684,27 +19630,6 @@ export const LearningResourcesVectorSimilarListResourceTypeGroupEnum = {
 } as const
 export type LearningResourcesVectorSimilarListResourceTypeGroupEnum =
   (typeof LearningResourcesVectorSimilarListResourceTypeGroupEnum)[keyof typeof LearningResourcesVectorSimilarListResourceTypeGroupEnum]
-/**
- * @export
- */
-export const LearningResourcesVectorSimilarListSortbyEnum = {
-  Id: "-id",
-  LastModified: "-last_modified",
-  Mitcoursenumber: "-mitcoursenumber",
-  ReadableId: "-readable_id",
-  StartDate: "-start_date",
-  Views: "-views",
-  Id2: "id",
-  LastModified2: "last_modified",
-  Mitcoursenumber2: "mitcoursenumber",
-  New: "new",
-  ReadableId2: "readable_id",
-  StartDate2: "start_date",
-  Upcoming: "upcoming",
-  Views2: "views",
-} as const
-export type LearningResourcesVectorSimilarListSortbyEnum =
-  (typeof LearningResourcesVectorSimilarListSortbyEnum)[keyof typeof LearningResourcesVectorSimilarListSortbyEnum]
 
 /**
  * LearningResourcesSearchApi - axios parameter creator
