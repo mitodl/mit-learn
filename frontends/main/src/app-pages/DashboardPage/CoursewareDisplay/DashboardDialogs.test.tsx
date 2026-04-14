@@ -279,6 +279,57 @@ describe("UnenrollProgramDialog", () => {
       }),
     )
   })
+
+  test("Cancelling the dialog does not fire the API call", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+    await screen.findByRole("dialog", {
+      name: `Unenroll from ${programEnrollment.program.title}`,
+    })
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "DELETE" }),
+    )
+  })
+
+  test.each(["enrollment-card-desktop", "enrollment-card-mobile"] as const)(
+    "Unenroll option is accessible from the %s overflow menu",
+    async (cardTestId) => {
+      const { programEnrollment } = setupProgramCard("audit", null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = await screen.findByTestId(cardTestId)
+      await user.click(within(card).getByLabelText("More options"))
+
+      expect(
+        await screen.findByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    },
+  )
 })
 
 describe("JustInTimeDialog", () => {
