@@ -15,7 +15,7 @@ export const metadata: Metadata = standardizeMetadata({
   robots: "noindex, nofollow",
 })
 
-const Page: React.FC<PageProps<"/video-collection/[id]">> = async ({
+const Page: React.FC<PageProps<"/video-playlist/[id]">> = async ({
   params,
 }) => {
   const { id } = await params

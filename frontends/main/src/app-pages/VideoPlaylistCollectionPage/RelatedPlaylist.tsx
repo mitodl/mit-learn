@@ -140,7 +140,7 @@ const RelatedPlaylist: React.FC<RelatedCollectionsProps> = ({
               ))
             : collections.map((collection) => (
                 <CollectionLink
-                  href={`/video-collection/${collection.id}`}
+                  href={`/video-playlist/${collection.id}`}
                   key={collection.id}
                 >
                   <CollectionType>
