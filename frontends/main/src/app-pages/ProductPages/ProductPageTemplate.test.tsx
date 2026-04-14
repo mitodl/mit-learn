@@ -4,6 +4,7 @@ import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
+import { STAY_UPDATED_FORM_ID } from "./stayUpdated.test-utils"
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
@@ -26,8 +27,6 @@ const mockedUseHubspotFormDetail = jest.mocked(useHubspotFormDetail)
 const mockedNiceModalShow = NiceModal.show as jest.MockedFunction<
   typeof NiceModal.show
 >
-
-const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
 
 const renderProductPageTemplate = () => {
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })

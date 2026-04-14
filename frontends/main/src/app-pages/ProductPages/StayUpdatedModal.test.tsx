@@ -4,6 +4,7 @@ import { HubspotForm, type HubspotFormProps } from "ol-components"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen, user, act } from "@/test-utils"
 import { StayUpdatedModal } from "./StayUpdatedModal"
+import { STAY_UPDATED_FORM_ID } from "./stayUpdated.test-utils"
 
 jest.mock("ol-components", () => ({
   ...jest.requireActual("ol-components"),
@@ -11,8 +12,6 @@ jest.mock("ol-components", () => ({
 }))
 
 const mockedHubspotForm = jest.mocked(HubspotForm)
-
-const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
 const TEST_EMAIL = "user@test.edu"
 
 const setupApis = () => {

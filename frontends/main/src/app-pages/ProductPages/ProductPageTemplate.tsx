@@ -263,6 +263,7 @@ type ProductPageTemplateProps = {
   infoBox: React.ReactNode
   enrollmentAction: React.ReactNode
   children: React.ReactNode
+  showStayUpdated?: boolean
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
@@ -273,13 +274,16 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   infoBox,
   children,
   enrollmentAction,
+  showStayUpdated,
 }) => {
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
   const stayUpdatedParams = stayUpdatedFormId
     ? { form_id: stayUpdatedFormId }
     : undefined
   const formQuery = useHubspotFormDetail(stayUpdatedParams)
-  const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId)
+
+  const shouldShowStayUpdatedButton =
+    Boolean(stayUpdatedFormId) && showStayUpdated !== false
 
   return (
     <Page>

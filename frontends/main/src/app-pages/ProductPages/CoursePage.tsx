@@ -18,6 +18,7 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
@@ -75,6 +76,16 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       infoBox={<CourseInfoBox course={course} />}
       enrollmentAction={
         <StyledCourseEnrollmentButton course={course} variant="bordered" />
+      }
+      showStayUpdated={
+        course.courseruns.length > 0 &&
+        course.courseruns.every(
+          (run) =>
+            run.enrollment_modes.length > 0 &&
+            run.enrollment_modes.every((mode) =>
+              isVerifiedEnrollmentMode(mode.mode_slug),
+            ),
+        )
       }
     >
       {page.about ? (
