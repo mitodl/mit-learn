@@ -2692,7 +2692,7 @@ paths:
     get:
       operationId: learning_resources_similar_list
       description: |-
-        Fetch similar learning resources
+        Fetch similar learning resources, optionally narrowed by filters.
 
         Args:
         id (integer): The id of the learning resource
@@ -2705,76 +2705,69 @@ paths:
         name: certification
         schema:
           type: boolean
+          nullable: true
+        description: True if the learning resource offers a certificate
       - in: query
         name: certification_type
         schema:
           type: array
           items:
-            type: string
             enum:
-            - completion
             - micromasters
-            - none
             - professional
-        description: |-
-          The type of certification offered
-
-          * `micromasters` - MicroMasters Credential
-          * `professional` - Professional Certificate
-          * `completion` - Certificate of Completion
-          * `none` - No Certificate
-        explode: true
-        style: form
+            - completion
+            - none
+            type: string
+            description: |-
+              * `micromasters` - MicroMasters Credential
+              * `professional` - Professional Certificate
+              * `completion` - Certificate of Completion
+              * `none` - No Certificate
+        description: "The type of certificate             \n\n* `micromasters` - MicroMasters\
+          \ Credential\n* `professional` - Professional Certificate\n* `completion`\
+          \ - Certificate of Completion\n* `none` - No Certificate"
       - in: query
         name: course_feature
         schema:
           type: array
           items:
             type: string
-        description: Content feature for the resources. Load the 'api/v1/course_features'
-          endpoint for a list of course features
-        explode: true
-        style: form
+            minLength: 1
+        description: The course feature. Possible options are at api/v1/course_features/
       - in: query
         name: delivery
         schema:
           type: array
           items:
-            type: array
-            items:
-              enum:
-              - online
-              - hybrid
-              - in_person
-              - offline
-              type: string
-              description: |-
-                * `online` - Online
-                * `hybrid` - Hybrid
-                * `in_person` - In person
-                * `offline` - Offline
             enum:
+            - online
             - hybrid
             - in_person
             - offline
-            - online
-        description: |-
-          The delivery of course/program resources
-
-          * `online` - Online
-          * `hybrid` - Hybrid
-          * `in_person` - In person
-          * `offline` - Offline
-        explode: true
-        style: form
+            type: string
+            description: |-
+              * `online` - Online
+              * `hybrid` - Hybrid
+              * `in_person` - In person
+              * `offline` - Offline
+        description: "The delivery options in which the learning resource is offered\
+          \             \n\n* `online` - Online\n* `hybrid` - Hybrid\n* `in_person`\
+          \ - In person\n* `offline` - Offline"
       - in: query
         name: department
         schema:
           type: array
           items:
-            type: string
             enum:
             - '1'
+            - '2'
+            - '3'
+            - '4'
+            - '5'
+            - '6'
+            - '7'
+            - '8'
+            - '9'
             - '10'
             - '11'
             - '12'
@@ -2783,7 +2776,6 @@ paths:
             - '16'
             - '17'
             - '18'
-            - '2'
             - '20'
             - 21A
             - 21G
@@ -2792,13 +2784,6 @@ paths:
             - 21M
             - '22'
             - '24'
-            - '3'
-            - '4'
-            - '5'
-            - '6'
-            - '7'
-            - '8'
-            - '9'
             - CC
             - CMS-W
             - EC
@@ -2811,53 +2796,68 @@ paths:
             - SP
             - STS
             - WGS
-        description: |-
-          The department that offers learning resources
-
-          * `1` - Civil and Environmental Engineering
-          * `2` - Mechanical Engineering
-          * `3` - Materials Science and Engineering
-          * `4` - Architecture
-          * `5` - Chemistry
-          * `6` - Electrical Engineering and Computer Science
-          * `7` - Biology
-          * `8` - Physics
-          * `9` - Brain and Cognitive Sciences
-          * `10` - Chemical Engineering
-          * `11` - Urban Studies and Planning
-          * `12` - Earth, Atmospheric, and Planetary Sciences
-          * `14` - Economics
-          * `15` - Management
-          * `16` - Aeronautics and Astronautics
-          * `17` - Political Science
-          * `18` - Mathematics
-          * `20` - Biological Engineering
-          * `21A` - Anthropology
-          * `21G` - Global Languages
-          * `21H` - History
-          * `21L` - Literature
-          * `21M` - Music and Theater Arts
-          * `22` - Nuclear Science and Engineering
-          * `24` - Linguistics and Philosophy
-          * `CC` - Concourse
-          * `CMS-W` - Comparative Media Studies/Writing
-          * `EC` - Edgerton Center
-          * `ES` - Experimental Study Group
-          * `ESD` - Engineering Systems Division
-          * `HST` - Medical Engineering and Science
-          * `IDS` - Data, Systems, and Society
-          * `MAS` - Media Arts and Sciences
-          * `PE` - Athletics, Physical Education and Recreation
-          * `SP` - Special Programs
-          * `STS` - Science, Technology, and Society
-          * `WGS` - Women's and Gender Studies
-        explode: true
-        style: form
+            type: string
+            description: |-
+              * `1` - Civil and Environmental Engineering
+              * `2` - Mechanical Engineering
+              * `3` - Materials Science and Engineering
+              * `4` - Architecture
+              * `5` - Chemistry
+              * `6` - Electrical Engineering and Computer Science
+              * `7` - Biology
+              * `8` - Physics
+              * `9` - Brain and Cognitive Sciences
+              * `10` - Chemical Engineering
+              * `11` - Urban Studies and Planning
+              * `12` - Earth, Atmospheric, and Planetary Sciences
+              * `14` - Economics
+              * `15` - Management
+              * `16` - Aeronautics and Astronautics
+              * `17` - Political Science
+              * `18` - Mathematics
+              * `20` - Biological Engineering
+              * `21A` - Anthropology
+              * `21G` - Global Languages
+              * `21H` - History
+              * `21L` - Literature
+              * `21M` - Music and Theater Arts
+              * `22` - Nuclear Science and Engineering
+              * `24` - Linguistics and Philosophy
+              * `CC` - Concourse
+              * `CMS-W` - Comparative Media Studies/Writing
+              * `EC` - Edgerton Center
+              * `ES` - Experimental Study Group
+              * `ESD` - Engineering Systems Division
+              * `HST` - Medical Engineering and Science
+              * `IDS` - Data, Systems, and Society
+              * `MAS` - Media Arts and Sciences
+              * `PE` - Athletics, Physical Education and Recreation
+              * `SP` - Special Programs
+              * `STS` - Science, Technology, and Society
+              * `WGS` - Women's and Gender Studies
+        description: "The department that offers the learning resource           \
+          \  \n\n* `1` - Civil and Environmental Engineering\n* `2` - Mechanical Engineering\n\
+          * `3` - Materials Science and Engineering\n* `4` - Architecture\n* `5` -\
+          \ Chemistry\n* `6` - Electrical Engineering and Computer Science\n* `7`\
+          \ - Biology\n* `8` - Physics\n* `9` - Brain and Cognitive Sciences\n* `10`\
+          \ - Chemical Engineering\n* `11` - Urban Studies and Planning\n* `12` -\
+          \ Earth, Atmospheric, and Planetary Sciences\n* `14` - Economics\n* `15`\
+          \ - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political\
+          \ Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`\
+          \ - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`\
+          \ - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science\
+          \ and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n\
+          * `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n\
+          * `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n\
+          * `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and\
+          \ Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical\
+          \ Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,\
+          \ Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
           type: boolean
-        description: The course/program is offered for free
+          nullable: true
       - in: path
         name: id
         schema:
@@ -2868,225 +2868,190 @@ paths:
         schema:
           type: array
           items:
-            type: string
             enum:
-            - advanced
+            - undergraduate
             - graduate
             - high_school
+            - noncredit
+            - advanced
             - intermediate
             - introductory
-            - noncredit
-            - undergraduate
-        description: |-
-          The academic level of the resources
-
-          * `undergraduate` - Undergraduate
-          * `graduate` - Graduate
-          * `high_school` - High School
-          * `noncredit` - Non-Credit
-          * `advanced` - Advanced
-          * `intermediate` - Intermediate
-          * `introductory` - Introductory
-        explode: true
-        style: form
+            type: string
+            description: |-
+              * `undergraduate` - Undergraduate
+              * `graduate` - Graduate
+              * `high_school` - High School
+              * `noncredit` - Non-Credit
+              * `advanced` - Advanced
+              * `intermediate` - Intermediate
+              * `introductory` - Introductory
       - in: query
         name: limit
         schema:
           type: integer
       - in: query
-        name: offered_by
+        name: ocw_topic
         schema:
           type: array
           items:
             type: string
+            minLength: 1
+        description: The ocw topic name.
+      - in: query
+        name: offered_by
+        schema:
+          type: array
+          items:
             enum:
-            - bootcamps
-            - climate
-            - mitpe
             - mitx
             - ocw
-            - see
+            - bootcamps
             - xpro
-        description: |-
-          The organization that offers a learning resource
-
-          * `mitx` - MITx
-          * `ocw` - MIT OpenCourseWare
-          * `bootcamps` - Bootcamps
-          * `xpro` - MIT xPRO
-          * `mitpe` - MIT Professional Education
-          * `see` - MIT Sloan Executive Education
-          * `climate` - MIT Climate
-        explode: true
-        style: form
+            - mitpe
+            - see
+            - climate
+            type: string
+            description: |-
+              * `mitx` - MITx
+              * `ocw` - MIT OpenCourseWare
+              * `bootcamps` - Bootcamps
+              * `xpro` - MIT xPRO
+              * `mitpe` - MIT Professional Education
+              * `see` - MIT Sloan Executive Education
+              * `climate` - MIT Climate
+        description: "The organization that offers the learning resource         \
+          \    \n\n* `mitx` - MITx\n* `ocw` - MIT OpenCourseWare\n* `bootcamps` -\
+          \ Bootcamps\n* `xpro` - MIT xPRO\n* `mitpe` - MIT Professional Education\n\
+          * `see` - MIT Sloan Executive Education\n* `climate` - MIT Climate"
       - in: query
         name: platform
         schema:
           type: array
           items:
-            type: string
             enum:
-            - bootcamps
-            - canvas
-            - climate
-            - csail
-            - ctl
             - edx
-            - emeritus
-            - globalalumni
-            - mitpe
-            - mitxonline
             - ocw
             - oll
-            - ovs
-            - podcast
-            - scc
-            - see
-            - simplilearn
-            - susskind
-            - whu
+            - mitxonline
+            - bootcamps
             - xpro
+            - csail
+            - mitpe
+            - see
+            - scc
+            - ctl
+            - whu
+            - susskind
+            - globalalumni
+            - simplilearn
+            - emeritus
+            - podcast
             - youtube
-        description: |-
-          The platform on which learning resources are offered
-
-          * `edx` - edX
-          * `ocw` - MIT OpenCourseWare
-          * `oll` - Open Learning Library
-          * `mitxonline` - MITx Online
-          * `bootcamps` - Bootcamps
-          * `xpro` - MIT xPRO
-          * `csail` - CSAIL
-          * `mitpe` - MIT Professional Education
-          * `see` - MIT Sloan Executive Education
-          * `scc` - Schwarzman College of Computing
-          * `ctl` - Center for Transportation & Logistics
-          * `whu` - WHU
-          * `susskind` - Susskind
-          * `globalalumni` - Global Alumni
-          * `simplilearn` - Simplilearn
-          * `emeritus` - Emeritus
-          * `podcast` - Podcast
-          * `youtube` - YouTube
-          * `canvas` - Canvas
-          * `climate` - MIT Climate
-          * `ovs` - ODL Video Service
-        explode: true
-        style: form
+            - canvas
+            - climate
+            - ovs
+            type: string
+            description: |-
+              * `edx` - edX
+              * `ocw` - MIT OpenCourseWare
+              * `oll` - Open Learning Library
+              * `mitxonline` - MITx Online
+              * `bootcamps` - Bootcamps
+              * `xpro` - MIT xPRO
+              * `csail` - CSAIL
+              * `mitpe` - MIT Professional Education
+              * `see` - MIT Sloan Executive Education
+              * `scc` - Schwarzman College of Computing
+              * `ctl` - Center for Transportation & Logistics
+              * `whu` - WHU
+              * `susskind` - Susskind
+              * `globalalumni` - Global Alumni
+              * `simplilearn` - Simplilearn
+              * `emeritus` - Emeritus
+              * `podcast` - Podcast
+              * `youtube` - YouTube
+              * `canvas` - Canvas
+              * `climate` - MIT Climate
+              * `ovs` - ODL Video Service
+        description: "The platform on which the learning resource is offered     \
+          \        \n\n* `edx` - edX\n* `ocw` - MIT OpenCourseWare\n* `oll` - Open\
+          \ Learning Library\n* `mitxonline` - MITx Online\n* `bootcamps` - Bootcamps\n\
+          * `xpro` - MIT xPRO\n* `csail` - CSAIL\n* `mitpe` - MIT Professional Education\n\
+          * `see` - MIT Sloan Executive Education\n* `scc` - Schwarzman College of\
+          \ Computing\n* `ctl` - Center for Transportation & Logistics\n* `whu` -\
+          \ WHU\n* `susskind` - Susskind\n* `globalalumni` - Global Alumni\n* `simplilearn`\
+          \ - Simplilearn\n* `emeritus` - Emeritus\n* `podcast` - Podcast\n* `youtube`\
+          \ - YouTube\n* `canvas` - Canvas\n* `climate` - MIT Climate\n* `ovs` - ODL\
+          \ Video Service"
       - in: query
         name: professional
         schema:
           type: boolean
-      - in: query
-        name: readable_id
-        schema:
-          type: array
-          items:
-            type: string
-        description: A unique text identifier for the resources
-        explode: true
-        style: form
-      - in: query
-        name: resource_id
-        schema:
-          type: array
-          items:
-            type: integer
-        description: Comma-separated list of learning resource IDs
-        explode: true
-        style: form
+          nullable: true
       - in: query
         name: resource_type
         schema:
           type: array
           items:
-            type: string
             enum:
             - course
-            - document
+            - program
             - learning_path
             - podcast
             - podcast_episode
-            - program
             - video
             - video_playlist
-        description: |-
-          The type of learning resource
-
-          * `course` - Course
-          * `program` - Program
-          * `learning_path` - Learning Path
-          * `podcast` - Podcast
-          * `podcast_episode` - Podcast Episode
-          * `video` - Video
-          * `video_playlist` - Video Playlist
-          * `document` - Document
-        explode: true
-        style: form
+            - document
+            type: string
+            description: |-
+              * `course` - course
+              * `program` - program
+              * `learning_path` - learning path
+              * `podcast` - podcast
+              * `podcast_episode` - podcast episode
+              * `video` - video
+              * `video_playlist` - video playlist
+              * `document` - document
+        description: "The type of learning resource             \n\n* `course` - course\n\
+          * `program` - program\n* `learning_path` - learning path\n* `podcast` -\
+          \ podcast\n* `podcast_episode` - podcast episode\n* `video` - video\n* `video_playlist`\
+          \ - video playlist\n* `document` - document"
       - in: query
         name: resource_type_group
         schema:
           type: array
           items:
-            type: string
             enum:
             - course
-            - learning_material
             - program
-        description: |-
-          The resource type group of the learning resources
-
-          * `course` - Course
-          * `program` - Program
-          * `learning_material` - Learning Material
-        explode: true
-        style: form
+            - learning_material
+            type: string
+            description: |-
+              * `course` - Course
+              * `program` - Program
+              * `learning_material` - Learning Material
+        description: "The category of learning resource             \n\n* `course`\
+          \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
       - in: query
-        name: sortby
+        name: title__isnull
         schema:
-          type: string
-          enum:
-          - -id
-          - -last_modified
-          - -mitcoursenumber
-          - -readable_id
-          - -start_date
-          - -views
-          - id
-          - last_modified
-          - mitcoursenumber
-          - new
-          - readable_id
-          - start_date
-          - upcoming
-          - views
-        description: |-
-          Sort By
-
-          * `id` - Object ID ascending
-          * `-id` - Object ID descending
-          * `readable_id` - Readable ID ascending
-          * `-readable_id` - Readable ID descending
-          * `last_modified` - Last Modified Date ascending
-          * `-last_modified` - Last Modified Date descending
-          * `new` - Newest resources first
-          * `start_date` - Start Date ascending
-          * `-start_date` - Start Date descending
-          * `mitcoursenumber` - MIT course number ascending
-          * `-mitcoursenumber` - MIT course number descending
-          * `views` - Popularity ascending
-          * `-views` - Popularity descending
-          * `upcoming` - Next start date ascending
+          type: boolean
+          nullable: true
+        description: Filter to learning resources where title is null/not null
       - in: query
         name: topic
         schema:
           type: array
           items:
             type: string
-        description: Topics covered by the resources. Load the '/api/v1/topics' endpoint
-          for a list of topics
-        explode: true
-        style: form
+            minLength: 1
+        description: The topic name. To see a list of options go to api/v1/topics/
+      - in: query
+        name: url__isnull
+        schema:
+          type: boolean
+          nullable: true
+        description: Filter to learning resources where url is null/not null
       tags:
       - learning_resources
       responses:

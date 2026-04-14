@@ -1405,6 +1405,34 @@ def test_vector_similar_no_filter_passes_none(mocker, client):
 
 
 @pytest.mark.skip_nplusone_check
+def test_similar_passes_filter_params_to_opensearch(mocker, client):
+    """resource_type query param is forwarded as filter_params to the OpenSearch path"""
+    resource = LearningResourceFactory.create()
+    mock_similar = mocker.patch(
+        "learning_resources_search.api.get_similar_resources_opensearch",
+        return_value=[],
+    )
+    client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[resource.id]),
+        {"resource_type": "video_playlist"},
+    )
+    assert mock_similar.call_args.kwargs["filter_params"] == {
+        "resource_type": ["video_playlist"]
+    }
+
+
+@pytest.mark.skip_nplusone_check
+def test_similar_rejects_invalid_resource_type(client):
+    """Unknown resource_type value returns 400 on the OpenSearch similarity endpoint"""
+    resource = LearningResourceFactory.create()
+    resp = client.get(
+        reverse("lr:v1:learning_resources_api-similar", args=[resource.id]),
+        {"resource_type": "not_a_real_type"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.skip_nplusone_check
 def test_learning_resources_display_info_list_view(mocker, client):
     """Test learning_resources_display_info_list_view returns expected results"""
     from learning_resources.models import LearningResource

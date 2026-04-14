@@ -110,7 +110,6 @@ from main.permissions import (
 )
 from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
-from vector_search.utils import qdrant_query_conditions
 
 
 def show_content_file_content(user):
@@ -208,7 +207,7 @@ class LearningResourceViewSet(
 
     @property
     def filter_backends(self):
-        if self.action == "vector_similar":
+        if self.action in ("similar", "vector_similar"):
             return []
         return super().filter_backends
 
@@ -217,6 +216,7 @@ class LearningResourceViewSet(
         parameters=[
             OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
             OpenApiParameter(name="limit", type=int, location=OpenApiParameter.QUERY),
+            LearningResourcesSearchFiltersSerializer,
         ],
         responses=LearningResourceSerializer(many=True),
     )
@@ -233,7 +233,7 @@ class LearningResourceViewSet(
     )
     def similar(self, request, *_, **kwargs):
         """
-        Fetch similar learning resources
+        Fetch similar learning resources, optionally narrowed by filters.
 
         Args:
         id (integer): The id of the learning resource
@@ -243,13 +243,25 @@ class LearningResourceViewSet(
         """
         limit = int(request.GET.get("limit", 12))
         pk = int(kwargs.get("id"))
+        filter_serializer = LearningResourcesSearchFiltersSerializer(data=request.GET)
+        filter_serializer.is_valid(raise_exception=True)
+        filter_params = {
+            k: v
+            for k, v in filter_serializer.validated_data.items()
+            if v not in (None, [], "")
+        }
         learning_resource = get_object_or_404(LearningResource, id=pk)
         learning_resource = LearningResource.objects.for_search_serialization().get(
             id=pk
         )
         resource_data = serialize_learning_resource_for_update(learning_resource)
         similar = get_similar_resources(
-            resource_data, limit, 2, 3, use_embeddings=False
+            resource_data,
+            limit,
+            2,
+            3,
+            use_embeddings=False,
+            filter_params=filter_params,
         )
         return Response(LearningResourceSerializer(list(similar), many=True).data)
 
@@ -295,7 +307,6 @@ class LearningResourceViewSet(
             for k, v in filter_serializer.validated_data.items()
             if v not in (None, [], "")
         }
-        query_filter = qdrant_query_conditions(filter_params) if filter_params else None
 
         try:
             learning_resource = LearningResource.objects.for_search_serialization().get(
@@ -312,7 +323,7 @@ class LearningResourceViewSet(
                 2,
                 3,
                 use_embeddings=True,
-                query_filter=query_filter,
+                filter_params=filter_params,
             )
             return Response(LearningResourceSerializer(list(similar), many=True).data)
         except _InactiveRpcError as ircp:

@@ -4462,8 +4462,8 @@ def test_get_similar_topics_qdrant_uses_cached_embedding(mocker):
     assert result == ["topic1", "topic2"]
 
 
-def test_get_similar_resources_qdrant_passes_query_filter(mocker):
-    """query_filter argument is forwarded to _qdrant_similar_results"""
+def test_get_similar_resources_qdrant_passes_filter_params(mocker):
+    """filter_params are translated to a Qdrant filter and forwarded to _qdrant_similar_results"""
     from learning_resources_search.api import get_similar_resources_qdrant
 
     mock_similar = mocker.patch(
@@ -4471,9 +4471,56 @@ def test_get_similar_resources_qdrant_passes_query_filter(mocker):
         return_value=[],
     )
     sentinel_filter = object()
+    mocker.patch(
+        "vector_search.utils.qdrant_query_conditions",
+        return_value=sentinel_filter,
+    )
     get_similar_resources_qdrant(
         value_doc={"id": 1, "readable_id": "abc", "platform": {"code": "ocw"}},
         num_resources=5,
-        query_filter=sentinel_filter,
+        filter_params={"resource_type": ["video_playlist"]},
     )
     assert mock_similar.call_args.kwargs["query_filter"] is sentinel_filter
+
+
+def test_get_similar_resources_opensearch_passes_filter_params(mocker):
+    """filter_params are translated to OpenSearch clauses via generate_filter_clauses"""
+    from learning_resources_search.api import get_similar_resources_opensearch
+
+    mock_search = mocker.MagicMock()
+    mock_search.extra.return_value = mock_search
+    mock_search.query.return_value = mock_search
+    mock_search.execute.return_value = mocker.MagicMock(hits=[])
+    mocker.patch("learning_resources_search.api.Search", return_value=mock_search)
+    mocker.patch(
+        "learning_resources_search.api.relevant_indexes", return_value=["index"]
+    )
+
+    get_similar_resources_opensearch(
+        value_doc={"id": 1, "readable_id": "abc"},
+        num_resources=5,
+        min_term_freq=2,
+        min_doc_freq=3,
+        filter_params={"resource_type": ["video_playlist"]},
+    )
+
+    _, kwargs = mock_search.query.call_args
+    filters = kwargs["filter"]
+    assert any(
+        f
+        == {
+            "bool": {
+                "should": [
+                    {
+                        "term": {
+                            "resource_type": {
+                                "value": "video_playlist",
+                                "case_insensitive": True,
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        for f in filters
+    )
