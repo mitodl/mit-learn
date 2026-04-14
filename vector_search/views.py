@@ -87,7 +87,7 @@ class QdrantView(APIView):
         self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
-    async def async_vector_search(  # noqa: PLR0913 PLR0915 PLR0912
+    async def async_vector_search(  # noqa: PLR0913, PLR0915
         self,
         query_string: str,
         params: dict,
@@ -213,13 +213,15 @@ class QdrantView(APIView):
                     break
             search_result = search_result[:limit]
 
-        if search_collection == RESOURCES_COLLECTION_NAME:
-            hits = await sync_to_async(_resource_vector_hits)(search_result)
-        else:
-            hits = await sync_to_async(_content_file_vector_hits)(search_result)
+        hits_coroutine = (
+            sync_to_async(_resource_vector_hits)(search_result)
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else sync_to_async(_content_file_vector_hits)(search_result)
+        )
 
         aggregation_keys = params.get("aggregations") or []
-        count_result, aggregations = await asyncio.gather(
+        hits, count_result, aggregations = await asyncio.gather(
+            hits_coroutine,
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
