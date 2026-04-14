@@ -9,7 +9,10 @@ import IconCertificate from "@/public/images/product/icon_certificate.png"
 import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
 import IconConnectedPeople from "@/public/images/product/icon_connected_people.png"
 
-import type { CoursePageItem, ProgramPageItem } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  CoursePageItem,
+  ProgramPageItem,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 const HowYoullLearnRoot = styled.section(({ theme }) => ({
   display: "flex",
@@ -132,11 +135,14 @@ const HOW_YOULL_LEARN_OPTIONS: HowYoullLearnOption[] = [
   },
 ]
 
-
 const HowYoullLearnSection: React.FC<{
   page: CoursePageItem | ProgramPageItem
 }> = ({ page }) => {
-  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter((option) => page.hasOwnProperty(option.name) && (page as Record<string, boolean>)[option.name])
+  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter(
+    (option) =>
+      page.hasOwnProperty(option.name) &&
+      (page as unknown as Record<string, boolean>)[option.name],
+  )
   const items = filteredOptions.map((option) => option.data)
   return items.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
