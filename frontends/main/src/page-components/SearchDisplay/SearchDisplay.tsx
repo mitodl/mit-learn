@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
   Pagination,
@@ -551,6 +551,7 @@ const toVectorSearchParams = (
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
+  onFetchTimeChange?: (time: number | null) => void
   facetManifest: FacetManifest
   facetNames: UseResourceSearchParamsProps["facets"]
   constantSearchParams: Facets & BooleanFacets
@@ -580,6 +581,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
   filterHeadingEl,
+  onFetchTimeChange,
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -629,18 +631,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       : learningResourceQueries.search(allParams as LRSearchRequest)),
     enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
-    select: (
-      data:
+    select: (timedData: {
+      result:
         | LearningResourcesSearchResponse
-        | LearningResourcesVectorSearchResponse,
-    ) => {
+        | LearningResourcesVectorSearchResponse
+      time: number
+    }) => {
+      const { result: data, time } = timedData
+
       // Handle missing data gracefully
       if (
         !data?.metadata?.aggregations?.offered_by ||
         !data?.results ||
         data.results.length === 0
       ) {
-        return data
+        return { ...data, time }
       }
 
       // only show offerors with display_facet set
@@ -650,6 +655,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
       return {
         ...data,
+        time,
         metadata: {
           ...data.metadata,
           aggregations: {
@@ -662,6 +668,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
+
+  useEffect(() => {
+    if (onFetchTimeChange) {
+      onFetchTimeChange(data?.time ?? null)
+    }
+  }, [data?.time, onFetchTimeChange])
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 

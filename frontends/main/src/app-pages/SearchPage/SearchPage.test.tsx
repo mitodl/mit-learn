@@ -410,6 +410,44 @@ describe("SearchPage", () => {
       screen.getByTestId("max_incompleteness_penalty-slider")
     })
   })
+
+  test("Search time indicator is visible to admins and hidden from non-admins", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {},
+          suggestions: [],
+        },
+      },
+    })
+
+    // Authenticate as path editor (admin)
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    const {
+      view: { unmount },
+    } = renderWithProviders(<SearchPage />)
+
+    await screen.findByText(/Search took/i)
+
+    unmount()
+
+    // Authenticate as non-admin
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: false,
+      is_authenticated: true,
+    })
+
+    renderWithProviders(<SearchPage />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Search took/i)).toBeNull()
+    })
+  })
 })
 
 test("admin users can set the search mode and slop", async () => {

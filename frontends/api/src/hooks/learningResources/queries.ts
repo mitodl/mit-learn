@@ -25,6 +25,15 @@ import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetri
 import { queryOptions } from "@tanstack/react-query"
 import { hasPosition, randomizeGroups } from "./util"
 
+const timedPromise = async <T>(
+  promise: Promise<T>,
+): Promise<{ result: T; time: number }> => {
+  const start = performance.now()
+  const result = await promise
+  const end = performance.now()
+  return { result, time: end - start }
+}
+
 const learningResourceKeys = {
   root: ["learning_resources"],
   // list
@@ -175,17 +184,23 @@ const learningResourceQueries = {
     queryOptions({
       queryKey: learningResourceKeys.search(params),
       queryFn: () =>
-        learningResourcesSearchApi
-          .learningResourcesSearchRetrieve(params)
-          .then((res) => res.data),
+        timedPromise(
+          learningResourcesSearchApi
+            .learningResourcesSearchRetrieve(params)
+            .then((res) => res.data),
+        ),
+      select: (data) => data.result,
     }),
   vectorSearch: (params: VectorLearningResourcesSearchRetrieveRequest) =>
     queryOptions({
       queryKey: learningResourceKeys.vectorSearch(params),
       queryFn: () =>
-        vectorLearningResourcesSearchApi
-          .vectorLearningResourcesSearchRetrieve(params)
-          .then((res) => res.data),
+        timedPromise(
+          vectorLearningResourcesSearchApi
+            .vectorLearningResourcesSearchRetrieve(params)
+            .then((res) => res.data),
+        ),
+      select: (data) => data.result,
     }),
 }
 
