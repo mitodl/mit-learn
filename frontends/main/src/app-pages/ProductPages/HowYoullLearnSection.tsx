@@ -74,6 +74,10 @@ type HowYoullLearnItemData = {
   title: string
   text: string
 }
+type HowYoullLearnOption = {
+  name: string
+  data: HowYoullLearnItemData
+}
 
 // Placeholder data — will be replaced by API-driven content.
 const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
@@ -98,6 +102,65 @@ const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
     text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
   },
 ]
+
+const HOW_YOULL_LEARN_OPTIONS: HowYoullLearnOption[] = [
+  {
+    name: "hyl_choice_realworld_learning",
+    data: {
+      icon: IconConnectedPeople,
+      title: "Real-World Learning",
+      text: "Learn from MIT faculty and experts who ground their teaching in real-world cases rather than mathematical models, making the material approachable for all.",
+    },
+  },
+  {
+    name: "hyl_choice_learn_by_doing",
+    data: {
+      icon: IconBrains,
+      title: "Practical Application",
+      text: "Apply your new knowledge with hands-on, practical exercises drawn from healthcare, sports, finance, sustainability, and more.",
+    },
+  },
+  {
+    name: "hyl_choice_learn_from_others",
+    data: {
+      icon: IconBrains,
+      title: "Learn From Others",
+      text: "Connect with an international community of professionals working on real-world projects.",
+    },
+  },
+  {
+    name: "hyl_choice_learn_on_demand",
+    data: {
+      icon: IconBrains,
+      title: "Learn On Demand",
+      text: "Access all course content online with complete flexibility to study at your own pace.",
+    },
+  },
+  {
+    name: "hyl_choice_ai_enabled_support",
+    data: {
+      icon: IconComputerBulb,
+      title: "AI-Enabled Support",
+      text: "Deepen your understanding of the course material and get help on assignments from AskTIM, the AI assistant built by MIT researchers.",
+    },
+  },
+  {
+    name: "hyl_choice_stackable_credentials",
+    data: {
+      icon: IconCertificate,
+      title: "Stackable Credentials",
+      text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
+    },
+  },
+]
+
+const HowYoullLearnSectionWrapper: React.FC<{
+  data: Array<string>
+}> = ({data}) => {
+  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter((option) => data.includes(option.name))
+  const items = filteredOptions.map((option) => option.data)
+  return <HowYoullLearnSection data={items} />
+}
 
 const HowYoullLearnSection: React.FC<{
   data: HowYoullLearnItemData[]
@@ -128,5 +191,5 @@ const HowYoullLearnSection: React.FC<{
 }
 
 export default HowYoullLearnSection
-export { DEFAULT_HOW_DATA }
+export { DEFAULT_HOW_DATA, HOW_YOULL_LEARN_OPTIONS, HowYoullLearnSectionWrapper }
 export type { HowYoullLearnItemData }
