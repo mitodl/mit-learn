@@ -872,7 +872,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
 
 def _resource_vector_hits(search_result):
-    hits = [hit.payload["readable_id"] for hit in search_result]
+    hits = [hit.payload.get("readable_id") for hit in search_result]
     """
     Always lookup learning resources by readable_id for portability
     in case we load points from external systems
