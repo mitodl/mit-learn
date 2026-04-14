@@ -195,7 +195,7 @@ class QdrantView(APIView):
             next_page_offset = None
             search_result = []
             while True:
-                fetch_size = min(remaining_to_skip + limit, 1000)
+                fetch_size = min(max(remaining_to_skip, limit), 1000)
                 scroll_res = await client.scroll(
                     collection_name=search_collection,
                     scroll_filter=search_filter,
@@ -205,8 +205,9 @@ class QdrantView(APIView):
                 )
                 page_points, next_page_offset = scroll_res
                 if remaining_to_skip > 0:
-                    page_points = page_points[remaining_to_skip:]
-                    remaining_to_skip = 0
+                    skipped = min(remaining_to_skip, len(page_points))
+                    page_points = page_points[skipped:]
+                    remaining_to_skip -= skipped
                 search_result.extend(page_points)
                 if len(search_result) >= limit or not next_page_offset:
                     break
