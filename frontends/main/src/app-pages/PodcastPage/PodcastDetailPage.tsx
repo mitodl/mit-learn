@@ -5,6 +5,8 @@ import dynamic from "next/dynamic"
 import { Breadcrumbs, Typography, styled } from "ol-components"
 import { ButtonLink, Button } from "@mitodl/smoot-design"
 import { RiMailLine, RiPlayFill } from "@remixicon/react"
+import PodcastPlayer from "./PodcastPlayer"
+import type { PodcastTrack } from "./PodcastPlayer"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
@@ -280,20 +282,25 @@ const EpisodeMeta = styled(Typography)(({ theme }) => ({
   textAlign: "right",
 }))
 
-const PlayButton = styled.a(({ theme }) => ({
+interface PlayButtonProps {
+  $isPlaying?: boolean
+}
+
+const PlayButton = styled.a<PlayButtonProps>(({ theme, $isPlaying }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   width: "48px",
   height: "48px",
-  border: `1.5px solid ${theme.custom.colors.darkGray2}`,
+  border: `1.5px solid ${$isPlaying ? "#E63946" : theme.custom.colors.darkGray2}`,
   borderRadius: "4px",
-  color: theme.custom.colors.darkGray2,
+  color: $isPlaying ? "#E63946" : theme.custom.colors.darkGray2,
+  backgroundColor: $isPlaying ? "#FFE8EB" : "transparent",
   textDecoration: "none",
   flexShrink: 0,
   cursor: "pointer",
   "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray2,
+    backgroundColor: $isPlaying ? "#FFD4DC" : theme.custom.colors.lightGray2,
   },
 
   [theme.breakpoints.down("sm")]: {
@@ -306,9 +313,16 @@ const PlayButton = styled.a(({ theme }) => ({
 type EpisodeItemProps = {
   episode: LearningResource
   index: number
+  onPlayClick: (episode: LearningResource) => void
+  isPlaying: boolean
 }
 
-const EpisodeItem: React.FC<EpisodeItemProps> = ({ episode, index }) => {
+const EpisodeItem: React.FC<EpisodeItemProps> = ({
+  episode,
+  index,
+  onPlayClick,
+  isPlaying,
+}) => {
   const getDrawerHref = useResourceDrawerHref()
   const drawerHref = getDrawerHref(episode.id)
 
@@ -324,8 +338,6 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({ episode, index }) => {
     : null
 
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
-
-  const audioUrl = podcastEpisode?.audio_url ?? podcastEpisode?.episode_link
 
   return (
     <EpisodeRow>
@@ -357,10 +369,10 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({ episode, index }) => {
           </EpisodeMeta>
         )}
         <PlayButton
-          href={audioUrl ?? drawerHref}
-          target={audioUrl ? "_blank" : undefined}
-          rel={audioUrl ? "noopener noreferrer" : undefined}
+          as="button"
+          onClick={() => onPlayClick(episode)}
           aria-label={`Play ${episode.title}`}
+          $isPlaying={isPlaying}
         >
           <RiPlayFill size={20} />
         </PlayButton>
@@ -383,6 +395,9 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   const id = Number(podcastId)
   const [offset, setOffset] = useState(0)
   const [allEpisodes, setAllEpisodes] = useState<LearningResource[]>([])
+  const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
+    null,
+  )
 
   const { data: resource } = useLearningResourcesDetail(id)
 
@@ -441,6 +456,23 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     podcast?.apple_podcasts_url ??
     podcast?.google_podcasts_url ??
     podcast?.rss_url
+
+  const handlePlayClick = (episode: LearningResource) => {
+    setPlayingEpisode(episode)
+  }
+
+  const currentTrack: PodcastTrack | null = playingEpisode
+    ? {
+        audioUrl:
+          (playingEpisode.resource_type === "podcast_episode" &&
+            playingEpisode.podcast_episode?.audio_url) ||
+          (playingEpisode.resource_type === "podcast_episode" &&
+            playingEpisode.podcast_episode?.episode_link) ||
+          "",
+        title: playingEpisode.title || "Untitled Episode",
+        podcastName: resource?.title || "Podcast",
+      }
+    : null
 
   return (
     <>
@@ -530,6 +562,8 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     key={episode.id}
                     episode={episode}
                     index={index}
+                    onPlayClick={handlePlayClick}
+                    isPlaying={playingEpisode?.id === episode.id}
                   />
                 ))}
               </EpisodeList>
@@ -554,6 +588,12 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
           </EpisodesSection>
         </PodcastContainer>
       </PageSection>
+      {currentTrack && (
+        <PodcastPlayer
+          track={currentTrack}
+          onClose={() => setPlayingEpisode(null)}
+        />
+      )}
     </>
   )
 }
