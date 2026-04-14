@@ -167,6 +167,7 @@ class QdrantView(APIView):
                 search_params.pop("search_params", None)
                 search_params["group_by"] = params.get("group_by")
                 search_params["group_size"] = params.get("group_size", 1)
+                search_params["with_payload"] = True
                 group_result = await client.query_points_groups(**search_params)
                 search_result = []
                 for group in group_result.groups:
