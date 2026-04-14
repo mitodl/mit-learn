@@ -249,7 +249,7 @@ describe("VideoPage", () => {
       const titleEl = await screen.findByText(collection.title)
       expect(titleEl.closest("a")).toHaveAttribute(
         "href",
-        `/playlist/detail/${collection.id}?playlist=${playlist.id}`,
+        `/video-playlist/detail/${collection.id}?playlist=${playlist.id}`,
       )
     })
 
@@ -267,7 +267,7 @@ describe("VideoPage", () => {
       const titleEls = await screen.findAllByText(featured.title)
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
-        `/playlist/detail/${featured.id}?playlist=${playlist.id}`,
+        `/video-playlist/detail/${featured.id}?playlist=${playlist.id}`,
       )
     })
   })

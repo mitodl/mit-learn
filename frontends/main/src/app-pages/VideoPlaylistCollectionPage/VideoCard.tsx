@@ -17,7 +17,15 @@ const VideoCardItem = styled(Link)({
   cursor: "pointer",
   textDecoration: "none",
 
+  "&:hover .video-card-title, &:focus-visible .video-card-title": {
+    color: theme.custom.colors.red,
+  },
+
   "&:hover .play-overlay": {
+    opacity: 1,
+  },
+
+  "&:focus-visible .play-overlay": {
     opacity: 1,
   },
 
@@ -61,6 +69,18 @@ const DurationBadge = styled.span(({ theme }) => ({
   zIndex: 1,
 }))
 
+const PlayOverlay = styled.div({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#fff",
+  opacity: 0,
+  transition: "opacity 0.2s",
+  backgroundColor: "rgba(0, 0, 0, 0.18)",
+})
+
 const CardContent = styled.div({
   flex: 1,
   display: "flex",
@@ -86,6 +106,11 @@ const CardTitle = styled(Typography)(({ theme }) => ({
     marginTop: 0,
   },
 }))
+
+const PlayIcon = styled(RiPlayCircleFill)({
+  width: 48,
+  height: 48,
+})
 
 const CardMetaRow = styled.div({
   display: "flex",
@@ -135,26 +160,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
           onError={() => setImgError(true)}
         />
         {duration && <DurationBadge>{duration}</DurationBadge>}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            opacity: 0,
-            transition: "opacity 0.2s",
-          }}
-          className="play-overlay"
-        >
-          <RiPlayCircleFill style={{ width: 40, height: 40 }} />
-        </div>
+        <PlayOverlay className="play-overlay">
+          <PlayIcon />
+        </PlayOverlay>
       </ThumbnailWrapper>
 
       <CardContent>
         <CardTitleRow>
-          <CardTitle>{resource.title}</CardTitle>
+          <CardTitle className="video-card-title">{resource.title}</CardTitle>
         </CardTitleRow>
         <CardMetaRow>
           <CardMetaGroup>
