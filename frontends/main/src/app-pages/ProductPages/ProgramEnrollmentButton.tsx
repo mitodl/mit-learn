@@ -116,6 +116,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
         {enrollment ? (
           <ButtonLinkWithDisabled
             variant={variant}
+            size="large"
             href={href}
             className={className}
           >

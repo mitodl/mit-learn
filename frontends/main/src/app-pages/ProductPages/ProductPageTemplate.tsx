@@ -59,10 +59,14 @@ const EnrollButton = styled.div(({ theme }) => ({
 const StayUpdatedButton = styled(Button)(({ theme }) => ({
   color: theme.custom.colors.white,
   borderColor: theme.custom.colors.lightGray2,
+  borderWidth: "1px",
   width: "200px",
 
   "&&:hover": {
     backgroundColor: hexToRgba(theme.custom.colors.white, 0.2),
+  },
+  [theme.breakpoints.between("sm", "md")]: {
+    width: "240px",
   },
   [theme.breakpoints.down("sm")]: {
     width: "100%",
@@ -307,9 +311,8 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                     </Typography>
                     <ShortDescription>{shortDescription}</ShortDescription>
                     <Stack
-                      direction="row"
+                      direction={{ xs: "column", md: "row" }}
                       gap="24px"
-                      flexWrap="wrap"
                       sx={(theme) => ({
                         [theme.breakpoints.down("sm")]: {
                           width: "100%",
@@ -319,6 +322,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       <EnrollButton>{enrollmentAction}</EnrollButton>
                       {shouldShowStayUpdatedButton ? (
                         <StayUpdatedButton
+                          size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
                           onClick={() => NiceModal.show(StayUpdatedModal)}

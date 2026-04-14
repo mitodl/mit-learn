@@ -34,6 +34,10 @@ const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
   },
 }))
 
+const DialogMessage = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+}))
+
 const DialogSuccessCheck = styled(Image)({
   alignSelf: "center",
   marginBottom: "24px",
@@ -89,13 +93,16 @@ const StayUpdatedDialogInner: React.FC = () => {
     >
       {!hubspotFormSubmit.isSuccess && (
         <StayUpdatedDialogContainer>
+          <DialogMessage variant="body1">
+            Not ready to enroll? Learn what to expect in this offering.
+          </DialogMessage>
           <HubspotForm
             form={hubspotForm}
             recaptchaEnabled={Boolean(recaptchaSiteKey)}
             recaptchaSiteKey={recaptchaSiteKey}
             isLoading={isLoading}
             isSubmitting={hubspotFormSubmit.isPending}
-            submitLabel="Notify Me"
+            submitLabel="Stay Updated"
             errorText={submissionError}
             actions={
               <Button variant="secondary" type="button" onClick={closeDialog}>
