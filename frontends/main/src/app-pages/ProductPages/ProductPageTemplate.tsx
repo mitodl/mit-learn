@@ -255,6 +255,7 @@ const SidebarMedia: React.FC<{
 }
 
 type ProductPageTemplateProps = {
+  readableId: string
   currentBreadcrumbLabel: string
   title: string
   shortDescription: React.ReactNode
@@ -265,6 +266,7 @@ type ProductPageTemplateProps = {
   children: React.ReactNode
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
+  readableId,
   currentBreadcrumbLabel,
   title,
   shortDescription,
@@ -325,7 +327,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                          onClick={() =>
+                            NiceModal.show(StayUpdatedModal, { readableId })
+                          }
                         >
                           Stay Updated
                         </StayUpdatedButton>

@@ -266,6 +266,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
+      readableId={readableId}
       currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={

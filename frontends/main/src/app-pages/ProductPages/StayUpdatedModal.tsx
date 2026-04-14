@@ -54,7 +54,13 @@ const mapValuesToFields = (
     .map(([name, value]) => ({ name, value }))
 }
 
-const StayUpdatedDialogInner: React.FC = () => {
+type StayUpdatedDialogInnerProps = {
+  readableId: string
+}
+
+const StayUpdatedDialogInner: React.FC<StayUpdatedDialogInnerProps> = ({
+  readableId,
+}) => {
   const modalState = NiceModal.useModal()
   const modal = muiDialogV5(modalState)
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
@@ -114,6 +120,12 @@ const StayUpdatedDialogInner: React.FC = () => {
               const emailField = fields.find((field) => field.name === "email")
               if (emailField && typeof emailField.value === "string") {
                 setEmail(emailField.value)
+              }
+              const readableIdField = fields.find(
+                (field) => field.name === "readable_id",
+              )
+              if (readableIdField) {
+                readableIdField.value = readableId
               }
               hubspotFormSubmit.mutate({
                 formId: stayUpdatedFormId,
