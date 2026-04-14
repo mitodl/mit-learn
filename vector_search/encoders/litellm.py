@@ -1,10 +1,23 @@
 import logging
+from urllib.parse import urlparse
 
+import litellm
 import tiktoken
 from django.conf import settings
 from litellm import embedding
+from litellm.caching.caching import Cache
 
 from vector_search.encoders.base import BaseEncoder
+
+redis_url = urlparse(settings.CELERY_BROKER_URL)
+
+
+litellm.cache = Cache(
+    type="redis",
+    host=redis_url.hostname,
+    port=redis_url.port,
+    password=redis_url.password,
+)
 
 log = logging.getLogger()
 
@@ -31,6 +44,10 @@ class LiteLLMEncoder(BaseEncoder):
         config = {
             "model": self.model_name,
             "input": texts,
+            "caching": True,
+            "extra_body": {
+                "cache": {"ttl": 60 * 60 * 24}  # Cache response for 5 minutes
+            },
         }
         if settings.LITELLM_CUSTOM_PROVIDER:
             config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
