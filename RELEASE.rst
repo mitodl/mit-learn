@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.63.2
+--------------
+
+- Search response time indicator for admin users (#3186)
+- stay updated dialog revisions (#3194)
+
 Version 0.63.1 (Released April 14, 2026)
 --------------
 
