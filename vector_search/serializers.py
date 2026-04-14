@@ -312,8 +312,8 @@ class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):
     def get_results(self, instance):
         return instance["hits"]
 
-    def get_metadata(self, *_) -> SearchResponseMetadata:
+    def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
-            "aggregations": [],
+            "aggregations": instance.get("aggregations", {}),
             "suggest": [],
         }
