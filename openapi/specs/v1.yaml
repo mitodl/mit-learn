@@ -3401,9 +3401,12 @@ paths:
       - in: query
         name: readable_id
         schema:
-          type: string
-          minLength: 1
-        description: The readable id of the resource
+          type: array
+          items:
+            type: string
+        description: A unique text identifier for the resources
+        explode: true
+        style: form
       - in: query
         name: resource_id
         schema:

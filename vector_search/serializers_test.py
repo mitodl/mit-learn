@@ -28,6 +28,7 @@ def test_filter_serializer_has_no_search_fields():
     assert "offset" not in fields
     assert "limit" not in fields
     assert "hybrid_search" not in fields
+    assert "readable_id" not in fields
 
 
 def test_vector_search_request_serializer_inherits_filter_fields():

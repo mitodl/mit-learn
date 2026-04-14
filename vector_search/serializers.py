@@ -31,9 +31,6 @@ class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
     to a Qdrant filter by qdrant_query_conditions().
     """
 
-    readable_id = serializers.CharField(
-        required=False, help_text="The readable id of the resource"
-    )
     offered_by_choices = [(e.name.lower(), e.value) for e in OfferedBy]
     offered_by = serializers.ListField(
         required=False,
@@ -166,6 +163,9 @@ class LearningResourcesVectorSearchRequestSerializer(
     instead of id we use readable_id in case we upload qdrant snapshots
     """
 
+    readable_id = serializers.CharField(
+        required=False, help_text="The readable id of the resource"
+    )
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(
         required=False, help_text="The initial index from which to return the results"
