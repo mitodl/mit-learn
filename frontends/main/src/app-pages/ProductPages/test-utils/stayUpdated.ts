@@ -1,18 +1,27 @@
 import { factories } from "api/mitxonline-test-utils"
 import type { EnrollmentMode } from "@mitodl/mitxonline-api-axios/v2"
+import { faker } from "@faker-js/faker/locale/en"
 
-export const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
+export const STAY_UPDATED_FORM_ID = faker.string.uuid()
 
 /**
  * Sets the Stay Updated Hubspot form ID env var before each test and removes
  * it after. Call inside a describe block.
  */
 export const useStayUpdatedEnv = () => {
+  let previousFormId: string | undefined
+
   beforeEach(() => {
+    previousFormId = process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
   })
+
   afterEach(() => {
-    delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+    if (previousFormId === undefined) {
+      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+    } else {
+      process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = previousFormId
+    }
   })
 }
 

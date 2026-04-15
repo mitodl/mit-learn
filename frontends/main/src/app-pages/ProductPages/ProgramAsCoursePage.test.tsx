@@ -23,7 +23,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   useStayUpdatedEnv,
   PROGRAM_HIDE_STAY_UPDATED_CASES,
-} from "./stayUpdated.test-utils"
+} from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"

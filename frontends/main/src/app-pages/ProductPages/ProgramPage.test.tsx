@@ -23,7 +23,7 @@ import { notFound } from "next/navigation"
 import {
   useStayUpdatedEnv,
   PROGRAM_HIDE_STAY_UPDATED_CASES,
-} from "./stayUpdated.test-utils"
+} from "./test-utils/stayUpdated"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"

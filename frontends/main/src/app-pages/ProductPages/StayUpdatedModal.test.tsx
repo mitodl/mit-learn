@@ -4,7 +4,7 @@ import { HubspotForm, type HubspotFormProps } from "ol-components"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen, user, act } from "@/test-utils"
 import { StayUpdatedModal } from "./StayUpdatedModal"
-import { STAY_UPDATED_FORM_ID } from "./stayUpdated.test-utils"
+import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 
 jest.mock("ol-components", () => ({
   ...jest.requireActual("ol-components"),

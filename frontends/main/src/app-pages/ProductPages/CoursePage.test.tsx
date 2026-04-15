@@ -13,7 +13,7 @@ import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
-import { useStayUpdatedEnv } from "./stayUpdated.test-utils"
+import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"

@@ -4,7 +4,7 @@ import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
-import { STAY_UPDATED_FORM_ID } from "./stayUpdated.test-utils"
+import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
