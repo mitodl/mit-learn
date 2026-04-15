@@ -337,9 +337,7 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
     initialValues: {},
     onSubmit: async () => {
       await destroyProgramEnrollment.mutateAsync(programId)
-      if (!destroyProgramEnrollment.isError) {
-        modal.hide()
-      }
+      modal.hide()
     },
   })
   return (
