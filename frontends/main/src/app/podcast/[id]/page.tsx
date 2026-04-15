@@ -4,6 +4,7 @@ import { PodcastDetailPage } from "@/app-pages/PodcastPage/PodcastDetailPage"
 import { getQueryClient } from "@/app/getQueryClient"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
+import { notFound } from "next/navigation"
 
 export const generateMetadata = async (props: PageProps<"/podcast/[id]">) => {
   const { id } = await props.params
@@ -26,7 +27,11 @@ const Page: React.FC<PageProps<"/podcast/[id]">> = async (props) => {
   const { id } = await props.params
   const queryClient = getQueryClient()
 
-  await queryClient.prefetchQuery(learningResourceQueries.detail(Number(id)))
+  const podcastId = Number(id)
+  if (Number.isNaN(podcastId)) {
+    notFound()
+  }
+  await queryClient.fetchQueryOr404(learningResourceQueries.detail(podcastId))
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

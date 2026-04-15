@@ -260,6 +260,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [speedIndex, setSpeedIndex] = useState(1) // default 1x
+    const speedIndexRef = useRef(1)
 
     // Auto-play when a new track is loaded
     useEffect(() => {
@@ -269,6 +270,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
       const audio = audioRef.current
       if (!audio) return
       audio.load()
+      audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
       audio
         .play()
         .then(() => setIsPlaying(true))
@@ -310,6 +312,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
 
     const handleSpeedCycle = () => {
       const nextIndex = (speedIndex + 1) % SPEED_OPTIONS.length
+      speedIndexRef.current = nextIndex
       setSpeedIndex(nextIndex)
       if (audioRef.current) {
         audioRef.current.playbackRate = SPEED_OPTIONS[nextIndex]

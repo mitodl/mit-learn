@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { Breadcrumbs, Typography, styled } from "ol-components"
 import { ButtonLink, Button } from "@mitodl/smoot-design"
-import { RiMailLine, RiPlayFill } from "@remixicon/react"
+import { RiPlayFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
 import type { PodcastTrack } from "./PodcastPlayer"
 import { useQuery } from "@tanstack/react-query"
@@ -17,7 +17,6 @@ import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME } from "@/common/urls"
-import { useResourceDrawerHref } from "@/page-components/LearningResourceDrawer/useResourceDrawerHref"
 import PodcastContainer from "./PodcastContainer"
 
 const LearningResourceDrawer = dynamic(
@@ -25,12 +24,9 @@ const LearningResourceDrawer = dynamic(
     import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
 )
 
-/* ── Header ── */
-
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   marginBottom: "56px",
-  paddingTop: "64px 0",
   overflow: "hidden",
   [theme.breakpoints.down("sm")]: {
     paddingBottom: "32px",
@@ -42,6 +38,7 @@ const HeaderSection = styled.div(({ theme }) => ({
 const PodcastTitle = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   display: "inline-block",
+
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
     fontSize: "34px",
@@ -62,7 +59,10 @@ const MetaLine = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   display: "block",
   ...theme.typography.body2,
-  lineHeight: "18px",
+  lineHeight: "26px",
+  [theme.breakpoints.down("sm")]: {
+    marginBottom: "8px",
+  },
 }))
 
 const Description = styled(Typography)(({ theme }) => ({
@@ -96,6 +96,7 @@ const PodcastImage = styled.img(({ theme }) => ({
   objectFit: "cover",
   borderRadius: "8px",
   flexShrink: 0,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
     width: "calc(100% + 32px)",
     marginLeft: "-16px",
@@ -111,23 +112,33 @@ const HeaderContent = styled.div(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "12.95fr 0.6fr",
   gap: "164px",
+  "& .mobile-title": {
+    display: "none",
+  },
+  "& .desktop-title": {
+    display: "inline-block",
+  },
+
   [theme.breakpoints.down("sm")]: {
     display: "flex",
     flexDirection: "column-reverse",
     gap: "0px",
+    "& .mobile-title": {
+      display: "inline-block",
+    },
+    "& .desktop-title": {
+      display: "none",
+    },
   },
 }))
 
 const HeaderTextContent = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: "4px",
-  },
+  [theme.breakpoints.down("sm")]: {},
 }))
 
 /* ── Episodes list ── */
 
 const EpisodesSection = styled.div(({ theme }) => ({
-  paddingBottom: "80px",
   padding: "0 48px",
   [theme.breakpoints.down("sm")]: {
     padding: "0 0 48px",
@@ -136,10 +147,15 @@ const EpisodesSection = styled.div(({ theme }) => ({
 
 const EpisodesHeading = styled(Typography)(({ theme }) => ({
   textTransform: "uppercase" as const,
-  letterSpacing: "0.1em",
-  color: theme.custom.colors.silverGrayDark,
+  color: theme.custom.colors.black,
   ...theme.typography.body3,
   marginBottom: "24px",
+
+  fontSize: "12px",
+  fontStyle: "normal",
+  fontWeight: theme.typography.fontWeightBold,
+  lineHeight: "150%" /* 18px */,
+  letterSpacing: "1.92px",
 
   [theme.breakpoints.down("sm")]: {
     fontWeight: theme.typography.fontWeightBold,
@@ -163,7 +179,7 @@ const EpisodeRow = styled.li(({ theme }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "24px 16px",
+  padding: "28px 16px",
   boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
   gap: "16px",
   "&:last-child": {
@@ -173,6 +189,7 @@ const EpisodeRow = styled.li(({ theme }) => ({
     flexDirection: "column",
     alignItems: "flex-start",
     gap: "16px",
+    padding: "24px 16px",
   },
 }))
 
@@ -184,17 +201,7 @@ const EpisodeInfo = styled.div(({ theme }) => ({
   },
 }))
 
-const EpisodeLabel = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-  marginBottom: "8px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body3,
-    fontWeight: theme.typography.fontWeightMedium,
-    lineHeight: "16px",
-  },
-}))
-
-const EpisodeTitleLink = styled.a(({ theme }) => ({
+const EpisodeTitleLink = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.darkGray2,
   textDecoration: "none",
@@ -204,23 +211,6 @@ const EpisodeTitleLink = styled.a(({ theme }) => ({
   fontStyle: "normal",
   fontWeight: theme.typography.fontWeightBold,
   lineHeight: "26px",
-  "&:hover": {
-    textDecoration: "underline",
-  },
-}))
-
-const EpisodeDescription = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  ...theme.typography.body1,
-  lineHeight: "20px",
-  [theme.breakpoints.down("sm")]: {
-    whiteSpace: "normal",
-    overflow: "visible",
-    textOverflow: "unset",
-  },
 }))
 
 const StyledButton = styled(ButtonLink)(({ theme }) => ({
@@ -258,9 +248,8 @@ const EpisodeRight = styled.div(({ theme }) => ({
   gap: "28px",
   flexShrink: 0,
   [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "8px",
+    alignItems: "center",
+    justifyContent: "flex-end",
     width: "100%",
   },
 }))
@@ -304,7 +293,8 @@ const PlayButton = styled.a<PlayButtonProps>(({ theme, $isPlaying }) => ({
   },
 
   [theme.breakpoints.down("sm")]: {
-    width: "99%",
+    width: "80px",
+    height: "48px",
   },
 }))
 
@@ -319,13 +309,9 @@ type EpisodeItemProps = {
 
 const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
-  index,
   onPlayClick,
   isPlaying,
 }) => {
-  const getDrawerHref = useResourceDrawerHref()
-  const drawerHref = getDrawerHref(episode.id)
-
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
 
@@ -342,19 +328,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
   return (
     <EpisodeRow>
       <EpisodeInfo>
-        <EpisodeLabel variant="body3">
-          {episode.readable_id || `Episode ${index + 1}`}
-        </EpisodeLabel>
-        <EpisodeTitleLink href={drawerHref}>
-          Where We’ve Been and Where We’re Going
-        </EpisodeTitleLink>
-        {episode.description && (
-          <EpisodeDescription variant="body3">
-            {/* {episode.description} */}
-            The team reflects on four seasons of climate conversations and
-            what's ahead.
-          </EpisodeDescription>
-        )}
+        <EpisodeTitleLink>{episode.title}</EpisodeTitleLink>
       </EpisodeInfo>
 
       <EpisodeRight>
@@ -398,6 +372,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
+  const [shouldLoadMore, setShouldLoadMore] = useState(true)
 
   const { data: resource } = useLearningResourcesDetail(id)
 
@@ -415,12 +390,27 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   })
 
   useEffect(() => {
-    if (episodesPage) {
-      setAllEpisodes((prev) => [...prev, ...episodesPage])
+    if (!episodesPage) {
+      return
     }
-  }, [episodesPage])
+    setAllEpisodes((prev) => {
+      if (offset === 0) {
+        return episodesPage
+      }
+      const existingIds = new Set(prev.map((episode) => episode.id))
+      const nextEpisodes = episodesPage.filter(
+        (episode) => !existingIds.has(episode.id),
+      )
+      return [...prev, ...nextEpisodes]
+    })
+    // If we received fewer items than requested, we've reached the end
+    if (episodesPage.length < EPISODES_PAGE_SIZE) {
+      setShouldLoadMore(false)
+    }
+  }, [episodesPage, offset])
 
-  const hasMore = (episodesPage?.length ?? 0) === EPISODES_PAGE_SIZE
+  const hasMore =
+    shouldLoadMore && (episodesPage?.length ?? 0) === EPISODES_PAGE_SIZE
   const episodes = allEpisodes
 
   const isPodcast =
@@ -436,7 +426,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   const metaParts = [
     offeredBy,
-    episodeCount ? `MIT OpenCourseWare ·${episodeCount} episodes` : null,
+    episodeCount ? `${episodeCount} episodes` : null,
     lastModified ? `Updated ${lastModified}` : null,
   ].filter(Boolean)
 
@@ -483,34 +473,25 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
             <PodcastContainer>
               <Breadcrumbs
                 variant="light"
-                ancestors={[
-                  { href: HOME, label: "Home" },
-                  { href: "/podcasts", label: "Podcasts" },
-                ]}
+                ancestors={[{ href: HOME, label: "Home" }]}
                 current={resource?.title}
               />
             </PodcastContainer>
           </BreadcrumbBar>
           <PodcastContainer>
             <StyledHeaderSection>
-              <PodcastTitle variant="h1">
-                {/* {resource?.title ?? ""} */}
-                Chalk Radio
-              </PodcastTitle>
               <HeaderContent>
                 <HeaderTextContent>
+                  <PodcastTitle variant="h1" className="desktop-title">
+                    {resource?.title ?? ""}
+                  </PodcastTitle>
                   {metaParts.length > 0 && (
                     <MetaLine variant="body3">{metaParts.join(" · ")}</MetaLine>
                   )}
 
                   {resource?.description && (
                     <Description variant="body2">
-                      {/* {resource.description} */}
-                      An MIT OpenCourseWare podcast about inspired teaching. We
-                      take you behind the scenes of some of the most interesting
-                      courses on campus to talk with the professors who make
-                      those courses possible. Listen in on conversations about
-                      cutting-edge research and innovative pedagogy.
+                      {resource.description}
                     </Description>
                   )}
 
@@ -531,9 +512,9 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       variant="primary"
-                      startIcon={<RiMailLine />}
+                      startIcon={<RiPlayFill />}
                     >
-                      Subscribe
+                      Play Latest Episode
                     </StyledButton>
                   )}
                 </HeaderTextContent>
@@ -546,6 +527,9 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     }
                   />
                 )}
+                <PodcastTitle variant="h1" className="mobile-title">
+                  {resource?.title ?? ""}
+                </PodcastTitle>
               </HeaderContent>
             </StyledHeaderSection>
           </PodcastContainer>
