@@ -74,13 +74,24 @@ const HowYoullLearnDescription = styled.p(({ theme }) => ({
   },
 }))
 
+// These fields come from the CMS page types. Once @mitodl/mitxonline-api-axios
+// is published with these fields, this can be replaced with:
+// Extract<keyof CoursePageItem & keyof ProgramPageItem, `hyl_choice_${string}`>
+type HylChoiceKey =
+  | "hyl_choice_realworld_learning"
+  | "hyl_choice_learn_by_doing"
+  | "hyl_choice_learn_from_others"
+  | "hyl_choice_learn_on_demand"
+  | "hyl_choice_ai_enabled_support"
+  | "hyl_choice_stackable_credentials"
+
 type HowYoullLearnItemData = {
   icon: typeof IconComputerBulb
   title: string
   text: string
 }
 type HowYoullLearnOption = {
-  name: string
+  name: HylChoiceKey
   data: HowYoullLearnItemData
 }
 
@@ -139,29 +150,28 @@ const HowYoullLearnSection: React.FC<{
   page: CoursePageItem | ProgramPageItem
 }> = ({ page }) => {
   const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter(
-    (option) =>
-      page.hasOwnProperty(option.name) &&
-      (page as unknown as Record<string, boolean>)[option.name],
+    (option) => (page as Record<HylChoiceKey, boolean>)[option.name],
   )
-  const items = filteredOptions.map((option) => option.data)
-  return items.length > 0 ? (
+  return filteredOptions.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
         How you'll learn
       </Typography>
       <HowYoullLearnGrid>
-        {items.map((item, index) => (
-          <HowYoullLearnItem key={index}>
+        {filteredOptions.map((option) => (
+          <HowYoullLearnItem key={option.name}>
             <HowYoullLearnHeader>
               <HowYoullLearnIcon
-                src={item.icon}
+                src={option.data.icon}
                 width={80}
                 height={50}
                 alt=""
               />
-              <HowYoullLearnTitle>{item.title}</HowYoullLearnTitle>
+              <HowYoullLearnTitle>{option.data.title}</HowYoullLearnTitle>
             </HowYoullLearnHeader>
-            <HowYoullLearnDescription>{item.text}</HowYoullLearnDescription>
+            <HowYoullLearnDescription>
+              {option.data.text}
+            </HowYoullLearnDescription>
           </HowYoullLearnItem>
         ))}
       </HowYoullLearnGrid>
