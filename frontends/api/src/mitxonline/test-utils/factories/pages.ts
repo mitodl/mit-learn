@@ -164,6 +164,12 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     ],
     video_url: faker.internet.url(),
     what_you_learn: makeHTMLList(5),
+    hyl_choice_realworld_learning: true,
+    hyl_choice_learn_by_doing: true,
+    hyl_choice_learn_from_others: false,
+    hyl_choice_learn_on_demand: false,
+    hyl_choice_ai_enabled_support: true,
+    hyl_choice_stackable_credentials: true,
   }
   return mergeOverrides<CoursePageItem>(defaults, override)
 }
@@ -215,6 +221,12 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
     faq_url: faker.internet.url(),
     about: makeHTMLParagraph(3),
     what_you_learn: makeHTMLList(5),
+    hyl_choice_realworld_learning: true,
+    hyl_choice_learn_by_doing: true,
+    hyl_choice_learn_from_others: false,
+    hyl_choice_learn_on_demand: false,
+    hyl_choice_ai_enabled_support: true,
+    hyl_choice_stackable_credentials: true,
     feature_image: featureImage(),
     video_url: faker.datatype.boolean() ? faker.internet.url() : null,
     faculty_section_title: "Meet your instructors",
