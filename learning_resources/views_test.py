@@ -1318,7 +1318,6 @@ def test_vector_similar_resources_endpoint_only_returns_published(mocker, client
     assert len(response_ids) == 1
 
 
-@pytest.mark.skip_nplusone_check
 def test_vector_similar_passes_resource_type_filter_to_qdrant(mocker, client):
     """resource_type query param is translated to a Qdrant filter"""
     from qdrant_client import models as qdrant_models
@@ -1361,7 +1360,6 @@ def test_vector_similar_passes_resource_type_filter_to_qdrant(mocker, client):
     )
 
 
-@pytest.mark.skip_nplusone_check
 def test_vector_similar_rejects_invalid_resource_type(mocker, client):
     """Unknown resource_type value returns 400"""
     resource = LearningResourceFactory.create()
@@ -1381,7 +1379,6 @@ def test_vector_similar_rejects_invalid_resource_type(mocker, client):
     assert resp.status_code == 400
 
 
-@pytest.mark.skip_nplusone_check
 def test_vector_similar_no_filter_passes_none(mocker, client):
     """Absence of filter params yields query_filter=None"""
     resource = LearningResourceFactory.create()
@@ -1404,7 +1401,6 @@ def test_vector_similar_no_filter_passes_none(mocker, client):
     assert mock_similar.call_args.kwargs["query_filter"] is None
 
 
-@pytest.mark.skip_nplusone_check
 def test_similar_passes_filter_params_to_opensearch(mocker, client):
     """resource_type query param is forwarded as filter_params to the OpenSearch path"""
     resource = LearningResourceFactory.create()
@@ -1421,7 +1417,6 @@ def test_similar_passes_filter_params_to_opensearch(mocker, client):
     }
 
 
-@pytest.mark.skip_nplusone_check
 def test_similar_rejects_invalid_resource_type(client):
     """Unknown resource_type value returns 400 on the OpenSearch similarity endpoint"""
     resource = LearningResourceFactory.create()
@@ -1433,7 +1428,6 @@ def test_similar_rejects_invalid_resource_type(client):
 
 
 @pytest.mark.parametrize(("free_value", "expected"), [("true", True), ("false", False)])
-@pytest.mark.skip_nplusone_check
 def test_similar_boolean_filter_forwarded(mocker, client, free_value, expected):
     """Boolean filter params (free=true/false) are forwarded correctly to the OpenSearch path"""
     resource = LearningResourceFactory.create()
