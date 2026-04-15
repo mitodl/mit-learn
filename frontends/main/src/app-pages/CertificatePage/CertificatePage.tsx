@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useCallback, useState } from "react"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { Link, Typography, styled } from "ol-components"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
+import { Button } from "@mitodl/smoot-design"
 import backgroundImage from "@/public/images/backgrounds/error_page_background.svg"
 import { certificateQueries } from "api/mitxonline-hooks/certificates"
 import { useQuery } from "@tanstack/react-query"
@@ -24,6 +24,7 @@ import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 import {
   getCertificateInfo,
   getVerifiableCredentialLinkedInURL,
+  getCertificateDownloadAPIURL,
 } from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
@@ -750,12 +751,16 @@ const CertificatePage: React.FC<{
     ? certificateData?.verifiable_credential_json
     : null
 
-  // TODO: Get the variables set up based on the VC contents.
-  const linkedInAddToProfileUrl = verifiableCredential
+  // TODO: Need to generate an equivalent fallback if there's no VC available.
+  const linkedInAddToProfileUrl = certificateData?.verifiable_credential_json
     ? getVerifiableCredentialLinkedInURL(
         certificateData.verifiable_credential_json,
       )
     : null
+
+  const sharePageUrl = verifiableCredential
+    ? `https://verifierplus.org/#verify?vc=${encodeURI(getCertificateDownloadAPIURL(certificateData?.verifiable_credential_json))}`
+    : pageUrl
 
   return (
     <Page>
@@ -764,7 +769,8 @@ const CertificatePage: React.FC<{
         title={`${title} Certificate issued by MIT Open Learning`}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
-        pageUrl={pageUrl}
+        pageUrl={sharePageUrl}
+        linkedInHrefOverride={linkedInAddToProfileUrl}
       />
       {verifiableCredential ? (
         <DigitalCredentialDialog
@@ -795,17 +801,6 @@ const CertificatePage: React.FC<{
             >
               Download Digital Credential
             </Button>
-          ) : null}
-          {/*  TODO: No clue what we want this button to look like, or even if we want it right here --> */}
-          {linkedInAddToProfileUrl ? (
-            <ButtonLink
-              variant="bordered"
-              startIcon={<RiShareLine />}
-              href={linkedInAddToProfileUrl}
-              target="_blank"
-            >
-              Upload Digital Credential to LinkedIn
-            </ButtonLink>
           ) : null}
           <Button
             variant="bordered"
