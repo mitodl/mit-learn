@@ -1258,9 +1258,15 @@ def get_similar_resources_opensearch(
         k: [v] if isinstance(v, bool) else v for k, v in (filter_params or {}).items()
     }
     filter_clauses = generate_filter_clauses(normalized_params)
-    filters = [{"exists": {"field": "resource_type"}}, *filter_clauses.values()]
+    # Wrap all filters in a bool/must so opensearch-dsl serializes them as a
+    # single AND'd filter dict rather than a bare list (which it may not handle).
+    combined_filter = {
+        "bool": {
+            "must": [{"exists": {"field": "resource_type"}}, *filter_clauses.values()]
+        }
+    }
     # return only learning_resources
-    search = search.query("bool", must=[mlt_query], filter=filters)
+    search = search.query("bool", must=[mlt_query], filter=combined_filter)
     response = search.execute()
     return LearningResource.objects.for_search_serialization().filter(
         id__in=[

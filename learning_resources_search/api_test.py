@@ -4505,7 +4505,7 @@ def test_get_similar_resources_opensearch_passes_filter_params(mocker):
     )
 
     _, kwargs = mock_search.query.call_args
-    filters = kwargs["filter"]
+    must_clauses = kwargs["filter"]["bool"]["must"]
     assert any(
         f
         == {
@@ -4522,7 +4522,7 @@ def test_get_similar_resources_opensearch_passes_filter_params(mocker):
                 ]
             }
         }
-        for f in filters
+        for f in must_clauses
     )
 
 
@@ -4551,7 +4551,7 @@ def test_get_similar_resources_opensearch_boolean_filter(mocker, free_value):
     )
 
     _, kwargs = mock_search.query.call_args
-    filters = kwargs["filter"]
+    must_clauses = kwargs["filter"]["bool"]["must"]
     assert any(
         f
         == {
@@ -4561,5 +4561,5 @@ def test_get_similar_resources_opensearch_boolean_filter(mocker, free_value):
                 ]
             }
         }
-        for f in filters
+        for f in must_clauses
     )
