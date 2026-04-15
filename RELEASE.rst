@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.63.5
+--------------
+
+- Revert "Facet counts and aggregations for Vector search (#3188)" (#3208)
+- hide stay updated button on free products (#3201)
+- Deindex unpublished test_mode resources, not contentfiles (#3192)
+- feat: enable course access to staff user before the start date (#3182)
+
 Version 0.63.3 (Released April 15, 2026)
 --------------
 
