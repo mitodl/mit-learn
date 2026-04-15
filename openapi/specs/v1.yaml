@@ -6886,13 +6886,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
         required: true
       responses:
         '201':
@@ -11900,21 +11900,21 @@ components:
       - id
       - parent
       - resource
-    LearningPathRelationshipRequest:
+    LearningPathRelationshipCreateRequest:
       type: object
-      description: Specialized serializer for a LearningPath relationship
+      description: |-
+        Create serializer for nested learning path items.
+
+        The parent is derived from the nested route and must not be client-supplied.
       properties:
         position:
           type: integer
           maximum: 2147483647
           minimum: 0
-        parent:
-          type: integer
         child:
           type: integer
       required:
       - child
-      - parent
     LearningPathResource:
       type: object
       description: CRUD serializer for LearningPath resources

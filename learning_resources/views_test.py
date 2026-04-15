@@ -115,7 +115,6 @@ def test_get_course_detail_endpoint(client, url):
         )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     "url",
     [
@@ -142,7 +141,6 @@ def test_get_course_content_files_endpoint(client, url):
         assert resp.data.get("results")[idx]["id"] == content_file.id
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("reverse_url", "expected_url"),
     [
@@ -269,7 +267,6 @@ def test_no_excess_offeror_queries(client, django_assert_num_queries, offeror_co
             assert result["channel_url"] is not None
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     "user_role",
     [
@@ -317,7 +314,6 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
             assert result.get("content") is None
 
 
-@pytest.mark.skip_nplusone_check
 def test_list_content_files_list_endpoint_with_no_runs(client):
     """Test ContentFile list endpoint returns results even without associated runs"""
     course = CourseFactory.create()
@@ -337,7 +333,6 @@ def test_list_content_files_list_endpoint_with_no_runs(client):
         assert result["id"] in content_file_ids
 
 
-@pytest.mark.skip_nplusone_check
 def test_list_content_files_list_filtered(client):
     """Test ContentFile list endpoint"""
     course_1 = CourseFactory.create()
@@ -513,7 +508,6 @@ def test_get_podcast_episode_detail_endpoint(client, url):
     )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     "url", ["lr:v1:learning_resource_items_api-list", "lr:v1:podcast_items_api-list"]
 )
@@ -845,7 +839,6 @@ def test_offerors_detail_endpoint(client):
     assert resp.data == LearningResourceOfferorDetailSerializer(instance=offeror).data
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("url", "params"),
     [
@@ -889,7 +882,6 @@ def test_get_video_playlist_detail_endpoint(client, url):
     )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     "url",
     ["lr:v1:learning_resource_items_api-list", "lr:v1:video_playlist_items_api-list"],
@@ -934,7 +926,6 @@ def test_get_video_playlist_items_endpoint(client, url):
         )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("url", "params"),
     [
@@ -960,7 +951,6 @@ def test_list_video_endpoint(client, url, params):
         )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("url", "params"),
     [
@@ -1124,7 +1114,6 @@ def test_featured_view_filter(client, offeror_featured_lists, parameter):
                 assert run["resource_prices"] == []
 
 
-@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_does_not_return_self(mocker, client):
     """Test similar learning_resources endpoint does not return initial resource"""
     from learning_resources.models import LearningResource
@@ -1160,7 +1149,6 @@ def test_similar_resources_endpoint_does_not_return_self(mocker, client):
     assert similar_for not in response_ids
 
 
-@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_only_returns_published(mocker, client):
     """Test similar learning_resources endpoint only returns published items"""
     from learning_resources.models import LearningResource
@@ -1204,7 +1192,6 @@ def test_similar_resources_endpoint_only_returns_published(mocker, client):
     assert len(response_ids) == 1
 
 
-@pytest.mark.skip_nplusone_check
 def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client):
     """Test similar learning_resources ignores the published attribute from opensearch"""
     from learning_resources.models import LearningResource
@@ -1244,7 +1231,6 @@ def test_similar_resources_endpoint_ignores_opensearch_published(mocker, client)
     assert len(response_ids) == 4
 
 
-@pytest.mark.skip_nplusone_check
 def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
     """Test vector based similar resources endpoint does not return initial id"""
     from learning_resources.models import LearningResource
@@ -1278,7 +1264,6 @@ def test_vector_similar_resources_endpoint_does_not_return_self(mocker, client):
     assert similar_for not in response_ids
 
 
-@pytest.mark.skip_nplusone_check
 def test_vector_similar_resources_endpoint_only_returns_published(mocker, client):
     """Test vector based similar resources endpoint only returns published items"""
     from learning_resources.models import LearningResource
@@ -1442,7 +1427,6 @@ def test_similar_boolean_filter_forwarded(mocker, client, free_value, expected):
     assert mock_similar.call_args.kwargs["filter_params"] == {"free": expected}
 
 
-@pytest.mark.skip_nplusone_check
 def test_learning_resources_display_info_list_view(mocker, client):
     """Test learning_resources_display_info_list_view returns expected results"""
     from learning_resources.models import LearningResource

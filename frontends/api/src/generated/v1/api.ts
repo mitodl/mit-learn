@@ -3211,27 +3211,21 @@ export interface LearningPathRelationship {
   child: number
 }
 /**
- * Specialized serializer for a LearningPath relationship
+ * Create serializer for nested learning path items.  The parent is derived from the nested route and must not be client-supplied.
  * @export
- * @interface LearningPathRelationshipRequest
+ * @interface LearningPathRelationshipCreateRequest
  */
-export interface LearningPathRelationshipRequest {
+export interface LearningPathRelationshipCreateRequest {
   /**
    *
    * @type {number}
-   * @memberof LearningPathRelationshipRequest
+   * @memberof LearningPathRelationshipCreateRequest
    */
   position?: number
   /**
    *
    * @type {number}
-   * @memberof LearningPathRelationshipRequest
-   */
-  parent: number
-  /**
-   *
-   * @type {number}
-   * @memberof LearningPathRelationshipRequest
+   * @memberof LearningPathRelationshipCreateRequest
    */
   child: number
 }
@@ -23306,13 +23300,13 @@ export const LearningpathsApiAxiosParamCreator = function (
      * Viewset for LearningPath related resources
      * @summary Learning Path Resource Relationship Add
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {LearningPathRelationshipRequest} LearningPathRelationshipRequest
+     * @param {LearningPathRelationshipCreateRequest} LearningPathRelationshipCreateRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningpathsItemsCreate: async (
       learning_resource_id: number,
-      LearningPathRelationshipRequest: LearningPathRelationshipRequest,
+      LearningPathRelationshipCreateRequest: LearningPathRelationshipCreateRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'learning_resource_id' is not null or undefined
@@ -23321,11 +23315,11 @@ export const LearningpathsApiAxiosParamCreator = function (
         "learning_resource_id",
         learning_resource_id,
       )
-      // verify required parameter 'LearningPathRelationshipRequest' is not null or undefined
+      // verify required parameter 'LearningPathRelationshipCreateRequest' is not null or undefined
       assertParamExists(
         "learningpathsItemsCreate",
-        "LearningPathRelationshipRequest",
-        LearningPathRelationshipRequest,
+        "LearningPathRelationshipCreateRequest",
+        LearningPathRelationshipCreateRequest,
       )
       const localVarPath =
         `/api/v1/learningpaths/{learning_resource_id}/items/`.replace(
@@ -23358,7 +23352,7 @@ export const LearningpathsApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        LearningPathRelationshipRequest,
+        LearningPathRelationshipCreateRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -23977,13 +23971,13 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
      * Viewset for LearningPath related resources
      * @summary Learning Path Resource Relationship Add
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {LearningPathRelationshipRequest} LearningPathRelationshipRequest
+     * @param {LearningPathRelationshipCreateRequest} LearningPathRelationshipCreateRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async learningpathsItemsCreate(
       learning_resource_id: number,
-      LearningPathRelationshipRequest: LearningPathRelationshipRequest,
+      LearningPathRelationshipCreateRequest: LearningPathRelationshipCreateRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -23994,7 +23988,7 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningpathsItemsCreate(
           learning_resource_id,
-          LearningPathRelationshipRequest,
+          LearningPathRelationshipCreateRequest,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -24401,7 +24395,7 @@ export const LearningpathsApiFactory = function (
       return localVarFp
         .learningpathsItemsCreate(
           requestParameters.learning_resource_id,
-          requestParameters.LearningPathRelationshipRequest,
+          requestParameters.LearningPathRelationshipCreateRequest,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -24612,10 +24606,10 @@ export interface LearningpathsApiLearningpathsItemsCreateRequest {
 
   /**
    *
-   * @type {LearningPathRelationshipRequest}
+   * @type {LearningPathRelationshipCreateRequest}
    * @memberof LearningpathsApiLearningpathsItemsCreate
    */
-  readonly LearningPathRelationshipRequest: LearningPathRelationshipRequest
+  readonly LearningPathRelationshipCreateRequest: LearningPathRelationshipCreateRequest
 }
 
 /**
@@ -24950,7 +24944,7 @@ export class LearningpathsApi extends BaseAPI {
     return LearningpathsApiFp(this.configuration)
       .learningpathsItemsCreate(
         requestParameters.learning_resource_id,
-        requestParameters.LearningPathRelationshipRequest,
+        requestParameters.LearningPathRelationshipCreateRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

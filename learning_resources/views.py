@@ -69,6 +69,7 @@ from learning_resources.permissions import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseResourceSerializer,
+    LearningPathRelationshipCreateSerializer,
     LearningPathRelationshipSerializer,
     LearningPathResourceSerializer,
     LearningResourceContentTagSerializer,
@@ -513,6 +514,32 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             queryset = queryset.filter(published=True)
         return queryset
 
+    def create(self, request, *_args, **_kwargs):
+        """Create a learning path and serialize from a prefetched queryset instance."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        learning_path = get_object_or_404(
+            self.get_queryset(), pk=serializer.instance.pk
+        )
+        response_serializer = self.get_serializer(learning_path)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=201, headers=headers)
+
+    def update(self, request, *_args, **kwargs):
+        """Update a learning path and serialize from a prefetched queryset instance."""
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        serializer.instance = get_object_or_404(
+            self.get_queryset(), pk=serializer.instance.pk
+        )
+        return Response(serializer.data)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -570,35 +597,14 @@ class ResourceListItemsViewSet(NestedViewSetMixin, viewsets.ReadOnlyModelViewSet
     parent_lookup_kwargs = {"learning_resource_id": "parent_id"}
     permission_classes = (AnonymousAccessReadonlyPermission,)
     serializer_class = LearningResourceRelationshipSerializer
-    queryset = (
-        LearningResourceRelationship.objects.select_related("child")
-        .prefetch_related(
-            Prefetch(
-                "child__topics",
-                queryset=LearningResourceTopic.objects.for_serialization(),
+    queryset = LearningResourceRelationship.objects.prefetch_related(
+        Prefetch(
+            "child",
+            queryset=LearningResource.objects.for_serialization().filter(
+                published=True
             ),
-            Prefetch(
-                "child__offered_by",
-                queryset=LearningResourceOfferor.objects.for_serialization(),
-            ),
-            Prefetch(
-                "child__departments",
-                queryset=LearningResourceDepartment.objects.for_serialization(
-                    prefetch_school=True
-                ).select_related("school"),
-            ),
-            Prefetch(
-                "child__runs",
-                queryset=LearningResourceRun.objects.filter(published=True)
-                .order_by("start_date", "enrollment_start", "id")
-                .for_serialization(),
-            ),
-            "child__runs__instructors",
-            "child__runs__resource_prices",
-            "child__topics",
         )
-        .filter(child__published=True)
-    )
+    ).filter(child__published=True)
     filter_backends = [OrderingFilter]
     ordering = ["position", "-child__last_modified"]
 
@@ -692,8 +698,11 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     child_id=learning_resource_id,
                     position=last_index + 1,
                 )
+        updated_relationships = UserListRelationship.objects.for_serialization().filter(
+            parent__author=request.user, child_id=learning_resource_id
+        )
         SerializerClass = self.get_serializer_class()
-        serializer = SerializerClass(current_relationships, many=True)
+        serializer = SerializerClass(updated_relationships, many=True)
         return Response(serializer.data)
 
     @extend_schema(
@@ -729,7 +738,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         learning_resource_id = req_data["learning_resource_id"]
         learning_path_ids = req_data["learning_path_ids"]
         current_relationships = LearningResourceRelationship.objects.filter(
-            child_id=learning_resource_id
+            child_id=learning_resource_id,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+            parent__resource_type=LearningResourceType.learning_path.name,
         )
         # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
@@ -741,7 +752,8 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
             # re-number the positions for surviving items
             for index, relationship in enumerate(
                 LearningResourceRelationship.objects.filter(
-                    parent__id=learning_path_id
+                    parent__id=learning_path_id,
+                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                 ).order_by("position")
             ):
                 relationship.position = index
@@ -753,9 +765,22 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                 LearningResourceRelationship.objects.create(
                     parent_id=learning_path_id,
                     child_id=learning_resource_id,
-                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS,
+                    relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
+        current_relationships = LearningResourceRelationship.objects.prefetch_related(
+            Prefetch(
+                "child",
+                queryset=LearningResource.objects.for_serialization().filter(
+                    published=True
+                ),
+            )
+        ).filter(
+            child_id=learning_resource_id,
+            child__published=True,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+            parent__resource_type=LearningResourceType.learning_path.name,
+        )
         SerializerClass = self.get_serializer_class()
         serializer = SerializerClass(current_relationships, many=True)
         return Response(serializer.data)
@@ -772,7 +797,10 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
 
 
 @extend_schema_view(
-    create=extend_schema(summary="Learning Path Resource Relationship Add"),
+    create=extend_schema(
+        summary="Learning Path Resource Relationship Add",
+        responses={201: LearningPathRelationshipSerializer},
+    ),
     destroy=extend_schema(summary="Learning Path Resource Relationship Remove"),
     partial_update=extend_schema(summary="Learning Path Resource Relationship Update"),
 )
@@ -805,12 +833,27 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
-        request.data["parent"] = request.data.get("parent_id")
-        return super().create(request, *args, **kwargs)
+    def get_serializer_class(self):
+        if self.action == "create":
+            return LearningPathRelationshipCreateSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):  # noqa: ARG002
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(parent_id=self.kwargs.get("learning_resource_id"))
+
+        relationship = LearningResourceRelationship.objects.prefetch_related(
+            Prefetch("child", queryset=LearningResource.objects.for_serialization())
+        ).get(pk=serializer.instance.pk)
+
+        response_serializer = LearningPathRelationshipSerializer(
+            relationship, context=self.get_serializer_context()
+        )
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=201, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        request.data["parent"] = request.data.get("parent_id")
         return super().update(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
@@ -935,10 +978,8 @@ class UserListViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return a queryset for this user"""
-        return (
-            UserList.objects.all()
-            .prefetch_related("author", "topics")
-            .annotate(item_count=Count("children"))
+        return UserList.objects.for_serialization().annotate(
+            item_count=Count("children")
         )
 
     def list(self, request, **kwargs):  # noqa: ARG002
@@ -959,6 +1000,26 @@ class UserListViewSet(viewsets.ModelViewSet):
         userlist = get_object_or_404(queryset, pk=id)
         serializer = self.get_serializer(userlist)
         return Response(serializer.data)
+
+    def create(self, request, *_args, **_kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        userlist = self.get_queryset().get(pk=serializer.instance.pk)
+        response_serializer = self.get_serializer(userlist)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=201, headers=headers)
+
+    def update(self, request, *_args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        userlist = self.get_queryset().get(pk=instance.pk)
+        return Response(self.get_serializer(userlist).data)
 
     def perform_destroy(self, instance):
         instance.delete()
@@ -986,24 +1047,37 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     Viewset for UserListRelationships
     """
 
-    queryset = UserListRelationship.objects.prefetch_related("child").order_by(
-        "position"
-    )
+    queryset = UserListRelationship.objects.for_serialization().order_by("position")
     serializer_class = UserListRelationshipSerializer
     permission_classes = (HasUserListItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
 
-    def create(self, request, *args, **kwargs):
-        user_list_id = kwargs.get("userlist_id")
-        request.data["parent"] = user_list_id
+    def create(self, request, *args, **kwargs):  # noqa: ARG002
+        data = request.data.copy()
+        data["parent"] = kwargs.get("userlist_id")
 
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
 
-    def update(self, request, *args, **kwargs):
-        user_list_id = kwargs.get("userlist_id")
-        request.data["parent"] = user_list_id
-        return super().update(request, *args, **kwargs)
+        relationship = self.get_queryset().get(pk=serializer.instance.pk)
+        response_serializer = self.get_serializer(relationship)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=201, headers=headers)
+
+    def update(self, request, *args, **kwargs):  # noqa: ARG002
+        data = request.data.copy()
+        data["parent"] = kwargs.get("userlist_id")
+
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        relationship = self.get_queryset().get(pk=instance.pk)
+        return Response(self.get_serializer(relationship).data)
 
     def perform_destroy(self, instance):
         instance.delete()

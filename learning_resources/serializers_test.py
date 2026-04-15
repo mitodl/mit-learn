@@ -493,6 +493,114 @@ def test_learningpathitem_serializer_validation(child_exists):
 
 
 @pytest.mark.parametrize(
+    ("existing_relationships", "expected_position"),
+    [
+        (
+            [
+                {
+                    "relation_type": (
+                        LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
+                    ),
+                    "position": 0,
+                }
+            ],
+            1,
+        ),
+        (
+            [
+                {
+                    "relation_type": (
+                        LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value
+                    ),
+                    "position": 2,
+                },
+                {
+                    "relation_type": (
+                        LearningResourceRelationTypes.PROGRAM_COURSES.value
+                    ),
+                    "position": 99,
+                },
+            ],
+            3,
+        ),
+    ],
+    ids=["zero_max_position", "scopes_by_relation_type"],
+)
+def test_learning_resource_relationship_serializer_create_position(
+    existing_relationships, expected_position
+):
+    """Create should append using relation-type scoped sibling positions."""
+    parent = LearningResourceFactory.create()
+    new_child = LearningResourceFactory.create()
+
+    for relationship_data in existing_relationships:
+        LearningResourceRelationship.objects.create(
+            parent=parent,
+            child=LearningResourceFactory.create(),
+            relation_type=relationship_data["relation_type"],
+            position=relationship_data["position"],
+        )
+
+    serializer = serializers.LearningResourceRelationshipSerializer(
+        data={
+            "parent": parent.id,
+            "child": new_child.id,
+            "relation_type": LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        }
+    )
+
+    assert serializer.is_valid(raise_exception=True)
+    relationship = serializer.save()
+
+    assert relationship.position == expected_position
+
+
+@pytest.fixture(name="topic_owner")
+def fixture_topic_owner(request):
+    """Build an object exposing topics_for_serialization()."""
+    if request.param == "learning_resource":
+        return factories.CourseFactory.create().learning_resource
+    if request.param == "user_list":
+        return factories.UserListFactory.create()
+
+    msg = f"Unknown topic owner: {request.param}"
+    raise ValueError(msg)
+
+
+@pytest.mark.parametrize(
+    "topic_owner", ["learning_resource", "user_list"], indirect=True
+)
+def test_topics_for_serialization_fallback_annotates_channel_url(topic_owner):
+    """Fallback topic loading should include channel_url annotation."""
+    topic = factories.LearningResourceTopicFactory.create()
+    topic_owner.topics.set([topic])
+    channel_topic_detail = ChannelTopicDetailFactory.create(topic=topic)
+
+    topics = topic_owner.topics_for_serialization()
+
+    assert len(topics) == 1
+    assert "channel_url" in topics[0].__dict__
+    assert topics[0].channel_url == channel_topic_detail.channel.channel_url
+
+
+def test_direct_content_files_for_serialization_fallback_selects_related_resource():
+    """Fallback content file loading should use the serialization queryset."""
+    learning_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    content_file = ContentFile.objects.create(
+        direct_learning_resource=learning_resource,
+        title="Direct file",
+    )
+
+    content_files = learning_resource.direct_content_files_for_serialization()
+
+    assert len(content_files) == 1
+    assert content_files[0].id == content_file.id
+    assert "direct_learning_resource" in content_files[0]._state.fields_cache  # noqa: SLF001
+
+
+@pytest.mark.parametrize(
     "expected_types", [["Assignments", "Tools"], ["Lecture Audio"], [], None]
 )
 @pytest.mark.parametrize("has_channels", [True, False])
@@ -618,6 +726,25 @@ def test_content_file_serializer(settings, expected_types, has_channels):
             "direct_learning_resource_id": direct_learning_resource.id,
         },
     )
+
+
+def test_content_file_serializer_direct_learning_resource_only():
+    """Serializer should use direct_learning_resource when run/resource are empty."""
+    direct_learning_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    content_file = ContentFile.objects.create(
+        direct_learning_resource=direct_learning_resource,
+        title="Direct file",
+    )
+
+    content_file = ContentFile.objects.for_serialization().get(pk=content_file.pk)
+    serialized = serializers.ContentFileSerializer(content_file).data
+
+    assert serialized["resource_id"] == str(direct_learning_resource.id)
+    assert serialized["resource_readable_id"] == direct_learning_resource.readable_id
+    assert serialized["direct_learning_resource_id"] == direct_learning_resource.id
+    assert serialized["platform"]["code"] == direct_learning_resource.platform.code
 
 
 def test_set_learning_path_request_serializer():

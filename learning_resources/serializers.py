@@ -37,6 +37,36 @@ from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodFie
 log = logging.getLogger(__name__)
 
 
+def _get_program_child_resource_map(
+    missing_ids: list[int],
+    *,
+    include_test_mode_children: bool,
+    program_relation_types: list[str],
+) -> dict[int, models.LearningResource]:
+    """Load child resources used for program course summaries."""
+    visibility_q = Q(published=True)
+    if include_test_mode_children:
+        visibility_q |= Q(test_mode=True)
+
+    child_resources = (
+        models.LearningResource.objects.filter(
+            id__in=missing_ids,
+        )
+        .filter(visibility_q)
+        .prefetch_related(
+            "topics",
+            Prefetch(
+                "children",
+                queryset=models.LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types
+                ),
+                to_attr="program_children",
+            ),
+        )
+    )
+    return {resource.id: resource for resource in child_resources}
+
+
 class LearningResourceInstructorSerializer(serializers.ModelSerializer):
     """
     Serializer for LearningResourceInstructor model
@@ -101,7 +131,7 @@ class WriteableTopicsMixin(serializers.Serializer):
         """Return the list of topics"""
         return [
             LearningResourceTopicSerializer(topic).data
-            for topic in instance.topics.all()
+            for topic in instance.topics_for_serialization()
         ]
 
 
@@ -778,27 +808,13 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         missing_ids = [cid for cid in child_ids if cid not in resource_cache]
 
         if missing_ids:
-            visibility_q = Q(published=True)
-            if include_test_mode_children:
-                visibility_q |= Q(test_mode=True)
-
-            child_resources = (
-                models.LearningResource.objects.filter(
-                    id__in=missing_ids,
-                )
-                .filter(visibility_q)
-                .prefetch_related(
-                    "topics",
-                    Prefetch(
-                        "children",
-                        queryset=models.LearningResourceRelationship.objects.filter(
-                            relation_type__in=program_relation_types
-                        ),
-                        to_attr="program_children",
-                    ),
+            resource_cache.update(
+                _get_program_child_resource_map(
+                    missing_ids,
+                    include_test_mode_children=include_test_mode_children,
+                    program_relation_types=program_relation_types,
                 )
             )
-            resource_cache.update({r.id: r for r in child_resources})
 
         child_map = {
             cid: resource_cache[cid] for cid in child_ids if cid in resource_cache
@@ -1162,7 +1178,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             LearningResourceType.course.name,
             LearningResourceType.program.name,
         ]:
-            prices = [price.amount for price in instance.resource_prices.all()]
+            prices = instance.resource_price_amounts_for_serialization()
             return not instance.professional and (
                 Decimal("0.00") in prices or not prices or prices == []
             )
@@ -1180,7 +1196,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         elif (
             instance.resource_type == constants.LearningResourceType.learning_path.value
         ):
-            list_item = instance.children.order_by("position").first()
+            list_item = instance.first_child_relationship_for_serialization()
             if list_item and list_item.child.image:
                 return LearningResourceImageSerializer(
                     instance=list_item.child.image
@@ -1340,67 +1356,12 @@ class ContentFileSerializer(serializers.ModelSerializer):
         source="direct_learning_resource.id", required=False, allow_null=True
     )
 
-    def to_representation(self, instance):
-        if not self.context.get("skip_content_file_refetch", False):
-            # prefetch related run and learning resource
-            queryset = models.ContentFile.objects.prefetch_related(
-                "learning_resource__course",
-                "learning_resource__platform",
-                "run__learning_resource__course",
-                "run__learning_resource__platform",
-                "content_tags",
-                Prefetch(
-                    "learning_resource__topics",
-                    queryset=models.LearningResourceTopic.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "learning_resource__offered_by",
-                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "learning_resource__departments",
-                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                        "school"
-                    ),
-                ),
-                Prefetch(
-                    "run__learning_resource__topics",
-                    queryset=models.LearningResourceTopic.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "run__learning_resource__offered_by",
-                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "run__learning_resource__departments",
-                    queryset=models.LearningResourceDepartment.objects.for_serialization().select_related(
-                        "school"
-                    ),
-                ),
-                "direct_learning_resource__course",
-                "direct_learning_resource__platform",
-                Prefetch(
-                    "direct_learning_resource__topics",
-                    queryset=models.LearningResourceTopic.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "direct_learning_resource__offered_by",
-                    queryset=models.LearningResourceOfferor.objects.for_serialization(),
-                ),
-                Prefetch(
-                    "direct_learning_resource__departments",
-                    queryset=models.LearningResourceDepartment.objects.for_serialization(
-                        prefetch_school=True
-                    ).select_related("school"),
-                ),
-            )
-            instance = queryset.get(pk=instance.pk)
-        return super().to_representation(instance)
-
     def get_learning_resource(self, instance):
         if instance.run:
             return instance.run.learning_resource
-        return instance.learning_resource
+        if instance.learning_resource:
+            return instance.learning_resource
+        return instance.direct_learning_resource
 
     @extend_schema_field({"type": "boolean"})
     def get_require_summaries(self, instance):
@@ -1503,22 +1464,19 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
     @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
-        content_files = instance.direct_content_files.all()
+        content_files = instance.direct_content_files_for_serialization()
         return ContentFileSerializer(
             content_files,
             many=True,
             read_only=True,
-            context={**self.context, "skip_content_file_refetch": True},
         ).data
 
     @extend_schema_field({"type": "string", "nullable": True})
     def get_description(self, instance):
         if instance.description:
             return instance.description
-        elif instance.direct_content_files.exists():
-            return instance.direct_content_files.first().description
-        else:
-            return None
+        content_files = instance.direct_content_files_for_serialization()
+        return content_files[0].description if content_files else None
 
     def get_playlists(self, instance) -> list[str]:
         """Get the playlist id(s) the video belongs to"""
@@ -1538,22 +1496,19 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
     @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
-        content_files = instance.direct_content_files.all()
+        content_files = instance.direct_content_files_for_serialization()
         return ContentFileSerializer(
             content_files,
             many=True,
             read_only=True,
-            context={**self.context, "skip_content_file_refetch": True},
         ).data
 
     @extend_schema_field({"type": "string", "nullable": True})
     def get_description(self, instance):
         if instance.description:
             return instance.description
-        elif instance.direct_content_files.exists():
-            return instance.direct_content_files.first().description
-        else:
-            return None
+        content_files = instance.direct_content_files_for_serialization()
+        return content_files[0].description if content_files else None
 
 
 class LearningResourceSerializer(serializers.Serializer):
@@ -1586,13 +1541,23 @@ class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
     resource = LearningResourceSerializer(read_only=True, source="child")
 
     def create(self, validated_data):
-        resource = validated_data["parent"]
-        items = models.LearningResourceRelationship.objects.filter(parent=resource)
-        position = (
-            items.aggregate(Max("position"))["position__max"] or items.count()
-        ) + 1
+        parent = validated_data.get("parent")
+        parent_id = validated_data.get("parent_id")
+        parent_filter = (
+            {"parent": parent} if parent is not None else {"parent_id": parent_id}
+        )
+        create_kwargs = (
+            {"parent": parent} if parent is not None else {"parent_id": parent_id}
+        )
+
+        items = models.LearningResourceRelationship.objects.filter(
+            **parent_filter,
+            relation_type=validated_data["relation_type"],
+        )
+        max_position = items.aggregate(Max("position"))["position__max"]
+        position = (items.count() if max_position is None else max_position) + 1
         item, _ = models.LearningResourceRelationship.objects.get_or_create(
-            parent=validated_data["parent"],
+            **create_kwargs,
             child=validated_data["child"],
             relation_type=validated_data["relation_type"],
             defaults={"position": position},
@@ -1640,6 +1605,16 @@ class LearningPathRelationshipSerializer(LearningResourceRelationshipSerializer)
     )
 
 
+class LearningPathRelationshipCreateSerializer(LearningPathRelationshipSerializer):
+    """Create serializer for nested learning path items.
+
+    The parent is derived from the nested route and must not be client-supplied.
+    """
+
+    class Meta(LearningResourceRelationshipSerializer.Meta):
+        read_only_fields = ("parent",)
+
+
 class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
     """
     Simplified serializer for UserList model.
@@ -1650,7 +1625,7 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
 
     def get_image(self, instance) -> dict:
         """Return the image of the first item"""
-        list_item = instance.children.order_by("position").first()
+        list_item = instance.first_child_relationship_for_serialization()
         if list_item and list_item.child.image:
             return LearningResourceImageSerializer(instance=list_item.child.image).data
         return None
@@ -1669,9 +1644,7 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
             topics_data = validated_data.pop("topics", [])
             with transaction.atomic():
                 userlist = super().create(validated_data)
-                userlist.topics.set(
-                    models.LearningResourceTopic.objects.filter(id__in=topics_data)
-                )
+                userlist.topics.set(topics_data)
             return userlist
         return None
 
@@ -1683,9 +1656,7 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
         with transaction.atomic():
             userlist = super().update(instance, validated_data)
             if topics_data is not None:
-                userlist.topics.set(
-                    models.LearningResourceTopic.objects.filter(id__in=topics_data)
-                )
+                userlist.topics.set(topics_data)
             return userlist
 
     class Meta:
