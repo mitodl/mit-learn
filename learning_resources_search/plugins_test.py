@@ -117,17 +117,39 @@ def test_search_index_plugin_resource_unpublished(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
+@pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_before_delete(
-    mock_search_index_helpers, resource_type
+    mock_search_index_helpers, resource_type, test_mode
 ):
     """The plugin function should remove a resource from the search index then delete the resource"""
-    resource = LearningResourceFactory.create(resource_type=resource_type)
+    resource = LearningResourceFactory.create(
+        resource_type=resource_type,
+        test_mode=test_mode,
+    )
+    if resource_type == COURSE_TYPE:
+        for run in resource.runs.all():
+            ContentFileFactory.create(run=run)
+
     resource_id = resource.id
     SearchIndexPlugin().resource_before_delete(resource)
 
     mock_search_index_helpers.mock_remove_learning_resource_immutable_signature.assert_called_once_with(
         resource_id, resource.resource_type
     )
+    assert resource.test_mode is False
+
+    if resource_type == COURSE_TYPE:
+        assert (
+            mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.call_count
+            == resource.runs.count()
+        )
+        for run in resource.runs.all():
+            mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_any_call(
+                run.id,
+                unpublished_only=False,
+            )
+    else:
+        mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db

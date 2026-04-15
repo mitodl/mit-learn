@@ -159,6 +159,8 @@ class SearchIndexPlugin:
         """
         Remove a resource from the search index and then delete the object
         """
+        # Ensure test mode is false so the resource is removed from the search index
+        resource.test_mode = False
         self.resource_unpublished(resource)
 
     @hookimpl
