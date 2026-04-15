@@ -65,7 +65,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(
       screen.queryByRole("button", { name: "Stay Updated" }),
     ).not.toBeInTheDocument()
-    expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined)
+    expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined, {
+      enabled: false,
+    })
   })
 
   it("opens the modal when form id is configured even if the form is not yet fetched", () => {

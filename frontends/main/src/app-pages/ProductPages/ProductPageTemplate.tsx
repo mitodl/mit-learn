@@ -277,13 +277,14 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   showStayUpdated,
 }) => {
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
+  const shouldShowStayUpdatedButton =
+    Boolean(stayUpdatedFormId) && showStayUpdated !== false
   const stayUpdatedParams = stayUpdatedFormId
     ? { form_id: stayUpdatedFormId }
     : undefined
-  const formQuery = useHubspotFormDetail(stayUpdatedParams)
-
-  const shouldShowStayUpdatedButton =
-    Boolean(stayUpdatedFormId) && showStayUpdated !== false
+  const formQuery = useHubspotFormDetail(stayUpdatedParams, {
+    enabled: shouldShowStayUpdatedButton,
+  })
 
   return (
     <Page>
