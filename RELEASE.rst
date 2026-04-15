@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.63.3
+Version 0.63.3 (Released April 15, 2026)
 --------------
 
 - Facet counts and aggregations for Vector search (#3188)
