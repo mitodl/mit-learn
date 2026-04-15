@@ -28,7 +28,11 @@ const mockedNiceModalShow = NiceModal.show as jest.MockedFunction<
   typeof NiceModal.show
 >
 
-const renderProductPageTemplate = () => {
+const renderProductPageTemplate = ({
+  showStayUpdated,
+}: {
+  showStayUpdated?: boolean
+} = {}) => {
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   renderWithProviders(
     <ProductPageTemplate
@@ -38,6 +42,7 @@ const renderProductPageTemplate = () => {
       imageSrc="/test-image.jpg"
       infoBox={<div>Info box</div>}
       enrollmentAction={<button type="button">Enroll</button>}
+      showStayUpdated={showStayUpdated}
     >
       <div>Page content</div>
     </ProductPageTemplate>,
@@ -77,7 +82,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: false,
     } as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
@@ -94,7 +99,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: true,
     } as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
@@ -111,7 +116,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: false,
     } as unknown as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
