@@ -131,6 +131,10 @@ def show_content_file_content(user):
 log = logging.getLogger(__name__)
 
 
+def _clean_filter_params(params: dict) -> dict:
+    return {k: v for k, v in params.items() if v not in (None, [], "")}
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List",
@@ -245,11 +249,7 @@ class LearningResourceViewSet(
         pk = int(kwargs.get("id"))
         filter_serializer = LearningResourcesSearchFiltersSerializer(data=request.GET)
         filter_serializer.is_valid(raise_exception=True)
-        filter_params = {
-            k: v
-            for k, v in filter_serializer.validated_data.items()
-            if v not in (None, [], "")
-        }
+        filter_params = _clean_filter_params(filter_serializer.validated_data)
         learning_resource = get_object_or_404(LearningResource, id=pk)
         learning_resource = LearningResource.objects.for_search_serialization().get(
             id=pk
@@ -302,11 +302,7 @@ class LearningResourceViewSet(
 
         filter_serializer = LearningResourcesSearchFiltersSerializer(data=request.GET)
         filter_serializer.is_valid(raise_exception=True)
-        filter_params = {
-            k: v
-            for k, v in filter_serializer.validated_data.items()
-            if v not in (None, [], "")
-        }
+        filter_params = _clean_filter_params(filter_serializer.validated_data)
 
         try:
             learning_resource = LearningResource.objects.for_search_serialization().get(
