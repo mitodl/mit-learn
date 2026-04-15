@@ -1,6 +1,8 @@
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  V2ProgramDetail,
+  V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "@/common/mitxonline"
@@ -110,3 +112,100 @@ export {
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
 }
+
+type CourseRequirementItem = {
+  resourceType: "course"
+  course: CourseWithCourseRunsSerializerV2
+}
+
+type ProgramAsCourseRequirementItem = {
+  resourceType: "program-as-course"
+  courseProgramId: number
+  courseProgram: V2ProgramDetail
+  courseProgramEnrollment: V3UserProgramEnrollment | undefined
+}
+
+type ProgramEnrollmentRequirementItem = {
+  resourceType: "program-enrollment"
+  enrollment: V3UserProgramEnrollment
+}
+
+type RequirementSectionItem =
+  | CourseRequirementItem
+  | ProgramAsCourseRequirementItem
+  | ProgramEnrollmentRequirementItem
+
+type RequirementSection = {
+  key: string | number | null | undefined
+  title: string
+  items: RequirementSectionItem[]
+  node: V2ProgramRequirement
+}
+
+const isRequirementSectionItemCompleted = (
+  item: RequirementSectionItem,
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
+): boolean => {
+  if (item.resourceType === "course") {
+    const bestEnrollment = selectBestEnrollment(
+      item.course,
+      enrollmentsByCourseId[item.course.id] || [],
+    )
+    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+  }
+  if (item.resourceType === "program-as-course") {
+    return (
+      getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
+      EnrollmentStatus.Completed
+    )
+  }
+  return false
+}
+
+/**
+ * Computes the overall completed and total course counts for a program,
+ * given its requirement sections and a map of enrollments by course ID.
+ *
+ * For `min_number_of` sections (electives), completions are capped at
+ * the section's `operator_value` so that completing extra electives does
+ * not inflate the required-course completion count shown in the header.
+ */
+const getProgramCounts = (
+  sections: RequirementSection[],
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
+): { completed: number; total: number } => {
+  return sections.reduce(
+    (acc, section) => {
+      const countableItems = section.items.filter(
+        (item) =>
+          item.resourceType === "course" ||
+          item.resourceType === "program-as-course",
+      )
+      const sectionCompleted = countableItems.filter((item) =>
+        isRequirementSectionItemCompleted(item, enrollmentsByCourseId),
+      ).length
+
+      if (
+        section.node.data.operator === "min_number_of" &&
+        section.node.data.operator_value
+      ) {
+        const minRequired = parseInt(section.node.data.operator_value, 10)
+        if (!isNaN(minRequired)) {
+          return {
+            completed: acc.completed + Math.min(sectionCompleted, minRequired),
+            total: acc.total + minRequired,
+          }
+        }
+      }
+
+      return {
+        completed: acc.completed + sectionCompleted,
+        total: acc.total + countableItems.length,
+      }
+    },
+    { completed: 0, total: 0 },
+  )
+}
+
+export type { RequirementSectionItem, RequirementSection }
+export { isRequirementSectionItemCompleted, getProgramCounts }

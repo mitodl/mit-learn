@@ -18,8 +18,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
   getEnrollmentStatus,
-  getProgramEnrollmentStatus,
+  getProgramCounts,
   getKey,
+  isRequirementSectionItemCompleted,
+  RequirementSection,
   ResourceType,
   selectBestEnrollment,
 } from "./helpers"
@@ -436,7 +438,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     {} as Record<number, CourseRunEnrollmentV3[]>,
   )
 
-  const requirementSections =
+  const requirementSections: RequirementSection[] =
     program?.req_tree
       .filter((node) => node.data.node_type === "operator")
       .map((node) => {
@@ -513,44 +515,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     )
   }, [requiredProgramList, requiredProgramCourses?.results])
 
-  const completedCount = requirementSections
-    .flatMap((section) => section.items)
-    .filter((item) => {
-      if (item.resourceType === "course") {
-        const bestEnrollment = selectBestEnrollment(
-          item.course,
-          enrollmentsByCourseId[item.course.id] || [],
-        )
-        return (
-          getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-        )
-      }
-      if (item.resourceType === "program-as-course") {
-        return (
-          getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
-          EnrollmentStatus.Completed
-        )
-      }
-      return false
-    }).length
-
-  const totalCount = requirementSections.reduce((sum, section) => {
-    if (
-      section.node.data.operator === "min_number_of" &&
-      section.node.data.operator_value
-    ) {
-      return sum + parseInt(section.node.data.operator_value, 10)
-    }
-    return (
-      sum +
-      section.items.filter((item) => {
-        return (
-          item.resourceType === "course" ||
-          item.resourceType === "program-as-course"
-        )
-      }).length
-    )
-  }, 0)
+  const { completed: completedCount, total: totalCount } = getProgramCounts(
+    requirementSections,
+    enrollmentsByCourseId,
+  )
 
   if (isLoading) {
     return (
@@ -590,24 +558,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         </Typography>
       </Stack>
       {requirementSections.map((section, index) => {
-        const sectionCompletedCount = section.items.filter((item) => {
-          if (item.resourceType === "course") {
-            const bestEnrollment = selectBestEnrollment(
-              item.course,
-              enrollmentsByCourseId[item.course.id] || [],
-            )
-            return (
-              getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-            )
-          }
-          if (item.resourceType === "program-as-course") {
-            return (
-              getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
-              EnrollmentStatus.Completed
-            )
-          }
-          return false
-        }).length
+        const sectionCompletedCount = section.items.filter((item) =>
+          isRequirementSectionItemCompleted(item, enrollmentsByCourseId),
+        ).length
 
         const sectionRequiredCount =
           section.node.data.operator === "min_number_of" &&
@@ -641,7 +594,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
-                  Completed {sectionCompletedCount} of {sectionRequiredCount}
+                  Completed{" "}
+                  {Math.min(sectionCompletedCount, sectionRequiredCount)} of{" "}
+                  {sectionRequiredCount}
                 </Typography>
               ) : null}
             </Stack>

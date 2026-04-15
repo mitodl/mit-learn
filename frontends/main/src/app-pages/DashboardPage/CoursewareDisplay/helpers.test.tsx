@@ -1,12 +1,19 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
+  CourseRunEnrollmentV3,
+  V2ProgramRequirement,
+} from "@mitodl/mitxonline-api-axios/v2"
+import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
   getBestRun,
-  selectBestEnrollment,
-  getEnrollmentStatus,
+  getProgramCounts,
   getProgramEnrollmentStatus,
   getKey,
+  isRequirementSectionItemCompleted,
+  RequirementSection,
+  selectBestEnrollment,
+  getEnrollmentStatus,
   ResourceType,
 } from "./helpers"
 
@@ -448,6 +455,353 @@ describe("helpers", () => {
       expect(getProgramEnrollmentStatus(programEnrollment, 0, 2)).toBe(
         EnrollmentStatus.Enrolled,
       )
+    })
+  })
+
+  describe("getProgramCounts", () => {
+    const makeNode = (
+      operator: string,
+      operatorValue: string | null = null,
+    ): V2ProgramRequirement => ({
+      data: {
+        node_type: "operator",
+        operator,
+        operator_value: operatorValue, // eslint-disable-line camelcase
+      },
+    })
+
+    const passedGrade = factories.enrollment.grade({ passed: true })
+    const failedGrade = factories.enrollment.grade({ passed: false })
+
+    test("all_of section: counts all completed and total items", () => {
+      const run1 = factories.courses.courseRun({ id: 1 })
+      const run2 = factories.courses.courseRun({ id: 2 })
+      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
+      const course2 = factories.courses.course({ id: 2, courseruns: [run2] })
+
+      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
+        1: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run1, course: course1 },
+            grades: [passedGrade],
+          }),
+        ],
+        2: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run2, course: course2 },
+            grades: [failedGrade],
+          }),
+        ],
+      }
+
+      const sections: RequirementSection[] = [
+        {
+          key: "s1",
+          title: "Required",
+          node: makeNode("all_of"),
+          items: [
+            { resourceType: "course", course: course1 },
+            { resourceType: "course", course: course2 },
+          ],
+        },
+      ]
+
+      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+        completed: 1,
+        total: 2,
+      })
+    })
+
+    test("min_number_of section: caps completions at operator_value", () => {
+      const run3 = factories.courses.courseRun({ id: 3 })
+      const run4 = factories.courses.courseRun({ id: 4 })
+      const run5 = factories.courses.courseRun({ id: 5 })
+      const course3 = factories.courses.course({ id: 3, courseruns: [run3] })
+      const course4 = factories.courses.course({ id: 4, courseruns: [run4] })
+      const course5 = factories.courses.course({ id: 5, courseruns: [run5] })
+
+      // All 3 electives completed, but only 1 is required
+      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
+        3: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run3, course: course3 },
+            grades: [passedGrade],
+          }),
+        ],
+        4: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run4, course: course4 },
+            grades: [passedGrade],
+          }),
+        ],
+        5: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run5, course: course5 },
+            grades: [passedGrade],
+          }),
+        ],
+      }
+
+      const sections: RequirementSection[] = [
+        {
+          key: "s1",
+          title: "Electives",
+          node: makeNode("min_number_of", "1"),
+          items: [
+            { resourceType: "course", course: course3 },
+            { resourceType: "course", course: course4 },
+            { resourceType: "course", course: course5 },
+          ],
+        },
+      ]
+
+      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+        completed: 1, // capped at operator_value=1, not 3
+        total: 1,
+      })
+    })
+
+    test("mixed sections: required all_of + optional min_number_of", () => {
+      const run1 = factories.courses.courseRun({ id: 1 })
+      const run2 = factories.courses.courseRun({ id: 2 })
+      const run3 = factories.courses.courseRun({ id: 3 })
+      const run4 = factories.courses.courseRun({ id: 4 })
+      const run5 = factories.courses.courseRun({ id: 5 })
+      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
+      const course2 = factories.courses.course({ id: 2, courseruns: [run2] })
+      const course3 = factories.courses.course({ id: 3, courseruns: [run3] })
+      const course4 = factories.courses.course({ id: 4, courseruns: [run4] })
+      const course5 = factories.courses.course({ id: 5, courseruns: [run5] })
+
+      // Course 1 (required) completed + courses 3, 4 (electives) completed
+      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
+        1: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run1, course: course1 },
+            grades: [passedGrade],
+          }),
+        ],
+        3: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run3, course: course3 },
+            grades: [passedGrade],
+          }),
+        ],
+        4: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run4, course: course4 },
+            grades: [passedGrade],
+          }),
+        ],
+      }
+
+      const sections: RequirementSection[] = [
+        {
+          key: "required",
+          title: "Required Courses",
+          node: makeNode("all_of"),
+          items: [
+            { resourceType: "course", course: course1 },
+            { resourceType: "course", course: course2 },
+          ],
+        },
+        {
+          key: "electives",
+          title: "Electives",
+          node: makeNode("min_number_of", "1"),
+          items: [
+            { resourceType: "course", course: course3 },
+            { resourceType: "course", course: course4 },
+            { resourceType: "course", course: course5 },
+          ],
+        },
+      ]
+
+      // completed: 1 required + min(2 electives, 1 required) = 2
+      // total: 2 required + 1 elective min = 3
+      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+        completed: 2,
+        total: 3,
+      })
+    })
+
+    test("min_number_of with operator_value=0 contributes nothing to total or completed", () => {
+      const run1 = factories.courses.courseRun({ id: 1 })
+      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
+
+      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
+        1: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run1, course: course1 },
+            grades: [passedGrade],
+          }),
+        ],
+      }
+
+      const sections: RequirementSection[] = [
+        {
+          key: "s1",
+          title: "Bonus",
+          node: makeNode("min_number_of", "0"),
+          items: [{ resourceType: "course", course: course1 }],
+        },
+      ]
+
+      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+        completed: 0,
+        total: 0,
+      })
+    })
+
+    test("program-enrollment items are excluded from both counts", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      const sections: RequirementSection[] = [
+        {
+          key: "s1",
+          title: "Sub-programs",
+          node: makeNode("all_of"),
+          items: [
+            {
+              resourceType: "program-enrollment",
+              enrollment: programEnrollment,
+            },
+          ],
+        },
+      ]
+
+      expect(getProgramCounts(sections, {})).toEqual({
+        completed: 0,
+        total: 0,
+      })
+    })
+
+    test("empty sections returns zeroes", () => {
+      expect(getProgramCounts([], {})).toEqual({ completed: 0, total: 0 })
+    })
+
+    test("malformed operator_value falls back to counting all items", () => {
+      const run1 = factories.courses.courseRun({ id: 1 })
+      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
+      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
+        1: [
+          factories.enrollment.courseEnrollment({
+            run: { ...run1, course: course1 },
+            grades: [factories.enrollment.grade({ passed: true })],
+          }),
+        ],
+      }
+
+      const sections: RequirementSection[] = [
+        {
+          key: "s1",
+          title: "Electives",
+          node: makeNode("min_number_of", "not-a-number"),
+          items: [{ resourceType: "course", course: course1 }],
+        },
+      ]
+
+      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+        completed: 1,
+        total: 1,
+      })
+    })
+  })
+
+  describe("isRequirementSectionItemCompleted", () => {
+    test("course item is completed when best enrollment has passing grade", () => {
+      const run = factories.courses.courseRun({ id: 1 })
+      const course = factories.courses.course({ id: 1, courseruns: [run] })
+      const enrollment = factories.enrollment.courseEnrollment({
+        run: { ...run, course },
+        grades: [factories.enrollment.grade({ passed: true })],
+      })
+
+      const result = isRequirementSectionItemCompleted(
+        { resourceType: "course", course },
+        { 1: [enrollment] },
+      )
+      expect(result).toBe(true)
+    })
+
+    test("course item is not completed when no passing grade", () => {
+      const run = factories.courses.courseRun({ id: 1 })
+      const course = factories.courses.course({ id: 1, courseruns: [run] })
+      const enrollment = factories.enrollment.courseEnrollment({
+        run: { ...run, course },
+        grades: [factories.enrollment.grade({ passed: false })],
+      })
+
+      const result = isRequirementSectionItemCompleted(
+        { resourceType: "course", course },
+        { 1: [enrollment] },
+      )
+      expect(result).toBe(false)
+    })
+
+    test("program-as-course item is completed when it has a certificate", () => {
+      const program = factories.programs.program()
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: { uuid: "cert-uuid" },
+      })
+
+      const result = isRequirementSectionItemCompleted(
+        {
+          resourceType: "program-as-course",
+          courseProgramId: program.id,
+          courseProgram: program,
+          courseProgramEnrollment: programEnrollment,
+        },
+        {},
+      )
+      expect(result).toBe(true)
+    })
+
+    test("program-as-course item is not completed when enrollment has no certificate", () => {
+      const program = factories.programs.program()
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      const result = isRequirementSectionItemCompleted(
+        {
+          resourceType: "program-as-course",
+          courseProgramId: program.id,
+          courseProgram: program,
+          courseProgramEnrollment: programEnrollment,
+        },
+        {},
+      )
+      expect(result).toBe(false)
+    })
+
+    test("program-as-course item is not completed when enrollment is undefined", () => {
+      const program = factories.programs.program()
+
+      const result = isRequirementSectionItemCompleted(
+        {
+          resourceType: "program-as-course",
+          courseProgramId: program.id,
+          courseProgram: program,
+          courseProgramEnrollment: undefined,
+        },
+        {},
+      )
+      expect(result).toBe(false)
+    })
+
+    test("program-enrollment item is never completed", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: { uuid: "cert-uuid" },
+      })
+
+      const result = isRequirementSectionItemCompleted(
+        { resourceType: "program-enrollment", enrollment: programEnrollment },
+        {},
+      )
+      expect(result).toBe(false)
     })
   })
 })

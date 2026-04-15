@@ -1739,6 +1739,241 @@ describe("EnrollmentDisplay", () => {
       },
     )
 
+    test("Overall completion count caps elective completions at min_number_of value", async () => {
+      /**
+       * Program has 2 required courses (all_of) and 3 electives (min_number_of=1).
+       * User completes 1 required course + 2 electives.
+       * Bug: counts all 3 completions → "3 of 3 courses" (wrong).
+       * Fix: caps elective contribution at 1 → "2 of 3 courses" (correct).
+       */
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const required = reqTree.addOperator({
+        operator: "all_of",
+        title: "Required Courses",
+      })
+      required.addCourse({ course: 1 })
+      required.addCourse({ course: 2 })
+
+      const electives = reqTree.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+      })
+      electives.addCourse({ course: 3 })
+      electives.addCourse({ course: 4 })
+      electives.addCourse({ course: 5 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 5555,
+        courses: [1, 2, 3, 4, 5],
+        req_tree: reqTree.serialize(),
+      })
+
+      const run1 = mitxonline.factories.courses.courseRun({ id: 101 })
+      const run3 = mitxonline.factories.courses.courseRun({ id: 103 })
+      const run4 = mitxonline.factories.courses.courseRun({ id: 104 })
+
+      const courses = {
+        count: 5,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Required 1",
+            courseruns: [run1],
+          }),
+          mitxonline.factories.courses.course({
+            id: 2,
+            title: "Required 2",
+            courseruns: [mitxonline.factories.courses.courseRun({ id: 102 })],
+          }),
+          mitxonline.factories.courses.course({
+            id: 3,
+            title: "Elective 1",
+            courseruns: [run3],
+          }),
+          mitxonline.factories.courses.course({
+            id: 4,
+            title: "Elective 2",
+            courseruns: [run4],
+          }),
+          mitxonline.factories.courses.course({
+            id: 5,
+            title: "Elective 3",
+            courseruns: [mitxonline.factories.courses.courseRun({ id: 105 })],
+          }),
+        ],
+      }
+
+      // Course 1 (required) completed, courses 3 and 4 (electives) completed
+      const completedGrade = mitxonline.factories.enrollment.grade({
+        passed: true,
+      })
+      const enrollments = [
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run1, course: courses.results[0] },
+          grades: [completedGrade],
+        }),
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run3, course: courses.results[2] },
+          grades: [completedGrade],
+        }),
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run4, course: courses.results[3] },
+          grades: [completedGrade],
+        }),
+      ]
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(
+        mitxonline.urls.enrollment.enrollmentsListV3(),
+        enrollments,
+      )
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(5555), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={5555} />)
+
+      // 1 required completed + min(2 electives completed, 1 required) = 2 total completed
+      // total = 2 required + 1 elective min = 3
+      await screen.findByText(/2 of 3 courses/)
+    })
+
+    test("Section header caps displayed count at operator_value for min_number_of sections", async () => {
+      /**
+       * Electives section with min_number_of=1 and 3 completed courses.
+       * The section header should show "Completed 1 of 1", not "Completed 3 of 1".
+       */
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const electives = reqTree.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+      })
+      electives.addCourse({ course: 1 })
+      electives.addCourse({ course: 2 })
+      electives.addCourse({ course: 3 })
+
+      const program = mitxonline.factories.programs.program({
+        id: 6666,
+        courses: [1, 2, 3],
+        req_tree: reqTree.serialize(),
+      })
+
+      const run1 = mitxonline.factories.courses.courseRun({ id: 201 })
+      const run2 = mitxonline.factories.courses.courseRun({ id: 202 })
+      const run3 = mitxonline.factories.courses.courseRun({ id: 203 })
+
+      const courses = {
+        count: 3,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            title: "Elective A",
+            courseruns: [run1],
+          }),
+          mitxonline.factories.courses.course({
+            id: 2,
+            title: "Elective B",
+            courseruns: [run2],
+          }),
+          mitxonline.factories.courses.course({
+            id: 3,
+            title: "Elective C",
+            courseruns: [run3],
+          }),
+        ],
+      }
+
+      // All 3 electives completed
+      const completedGrade = mitxonline.factories.enrollment.grade({
+        passed: true,
+      })
+      const enrollments = [
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run1, course: courses.results[0] },
+          grades: [completedGrade],
+        }),
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run2, course: courses.results[1] },
+          grades: [completedGrade],
+        }),
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...run3, course: courses.results[2] },
+          grades: [completedGrade],
+        }),
+      ]
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(
+        mitxonline.urls.enrollment.enrollmentsListV3(),
+        enrollments,
+      )
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            program: {
+              id: program.id,
+              title: program.title,
+              live: program.live,
+              program_type: program.program_type,
+              readable_id: program.readable_id,
+            },
+          }),
+        ],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(6666), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={6666} />)
+
+      await screen.findByText("Electives")
+
+      // Section header should show "Completed 1 of 1", capped at operator_value
+      const sectionCount = screen.getByTestId("section-completion-count")
+      expect(sectionCount).toHaveTextContent("Completed 1 of 1")
+      // Overall header should also show 1 of 1 (only electives section)
+      expect(screen.getByText(/1 of 1 courses/)).toBeInTheDocument()
+    })
+
     test("Returns 404 page when user is not enrolled in the program", async () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
