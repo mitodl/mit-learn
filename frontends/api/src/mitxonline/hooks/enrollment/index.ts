@@ -79,6 +79,12 @@ const useDestroyProgramEnrollment = () => {
       programEnrollmentsApi.v3ProgramEnrollmentsDestroy({
         program_id: programId,
       }),
+    onSuccess: (_data, vars) => {
+      queryClient.setQueryData(
+        enrollmentQueries.programEnrollmentsList().queryKey,
+        (data) => data?.filter((enrollment) => enrollment.program.id !== vars),
+      )
+    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.programEnrollmentsList(),
