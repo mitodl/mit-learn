@@ -74,9 +74,13 @@ const futureDashboardCourse: typeof mitxOnlineCourse = (...overrides) => {
 
 const mitxUser = mitxonline.factories.user.user
 
-const setupUserApis = () => {
-  const mitxUser = mitxonline.factories.user.user()
-  setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
+const setupUserApis = (overrides?: Parameters<typeof mitxUser>[0]) => {
+  const userData = mitxonline.factories.user.user({
+    is_staff: false,
+    ...overrides,
+  })
+  setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+  return userData
 }
 
 describe.each([
@@ -245,6 +249,36 @@ describe.each([
       }
     },
   )
+
+  test("Courseware CTA is a navigable link for staff even when course has not started", async () => {
+    setupUserApis({ is_staff: true })
+    const coursewareUrl = faker.internet.url()
+    const course = futureDashboardCourse()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      grades: [],
+      certificate: null,
+      run: {
+        ...course.courseruns[0],
+        course: course,
+        courseware_url: coursewareUrl,
+      },
+    })
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.CourseRunEnrollment,
+          data: enrollment,
+        }}
+      />,
+    )
+    const card = getCard()
+    const coursewareCTA = await within(card).findByRole("link", {
+      name: "Continue",
+    })
+    expect(coursewareCTA).toBeEnabled()
+    expect(coursewareCTA).toHaveAttribute("href", coursewareUrl)
+  })
 
   test("Courseware CTA is disabled when no enrollable runs exist", () => {
     setupUserApis()
