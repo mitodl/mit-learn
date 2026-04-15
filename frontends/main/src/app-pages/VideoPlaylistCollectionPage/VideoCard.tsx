@@ -22,11 +22,11 @@ const VideoCardItem = styled(Link)({
   },
 
   "&:hover .play-overlay": {
-    opacity: 1,
+    opacity: 0.5,
   },
 
   "&:focus-visible .play-overlay": {
-    opacity: 1,
+    opacity: 0.5,
   },
 
   [theme.breakpoints.down("sm")]: {
@@ -108,8 +108,8 @@ const CardTitle = styled(Typography)(({ theme }) => ({
 }))
 
 const PlayIcon = styled(RiPlayCircleFill)({
-  width: 48,
-  height: 48,
+  width: 36,
+  height: 36,
 })
 
 const CardMetaRow = styled.div({
