@@ -150,7 +150,8 @@ const HowYoullLearnSection: React.FC<{
   page: CoursePageItem | ProgramPageItem
 }> = ({ page }) => {
   const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter(
-    (option) => (page as Record<HylChoiceKey, boolean>)[option.name],
+    (option) =>
+      (page as Record<HylChoiceKey, boolean | undefined>)[option.name] === true,
   )
   return filteredOptions.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
