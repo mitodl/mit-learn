@@ -516,8 +516,8 @@ const searchModeDropdownOptions = Object.entries(
 
 /**
  * Extracts only the fields supported by the vector search API from a broader
- * search params object, dropping admin-only params (e.g., content_file_score_weight)
- * that the vector endpoint does not accept.
+ * search params object, dropping admin-only params (e.g., aggregations,
+ * content_file_score_weight) that the vector endpoint does not accept.
  *
  * The `as` casts for enum arrays are safe because the v0 and v1 generated
  * clients define separate (but structurally identical) enum types for the same
@@ -526,7 +526,6 @@ const searchModeDropdownOptions = Object.entries(
 const toVectorSearchParams = (
   params: ReturnType<typeof getSearchParams>,
 ): VectorSearchRequest => ({
-  aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
   certification_type:
     params.certification_type as VectorSearchRequest["certification_type"],
@@ -626,13 +625,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const wantsVectorSearch = searchParams.get("vector_search") === "true"
   const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
 
-  const queryOptions = isVectorSearch
-    ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
-    : learningResourceQueries.search(allParams as LRSearchRequest)
-
-  // @ts-expect-error Typescript has trouble unifying the different query key types
   const { data, isLoading, isFetching } = useQuery({
-    ...queryOptions,
+    ...(isVectorSearch
+      ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
+      : learningResourceQueries.search(allParams as LRSearchRequest)),
     enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
     select: (timedData: {
@@ -989,7 +985,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading ? "" : `${data?.count} results`}
+              {isFetching || isLoading || isVectorSearch
+                ? ""
+                : `${data?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">

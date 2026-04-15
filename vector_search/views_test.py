@@ -14,7 +14,7 @@ def test_vector_search_filters(mocker, client):
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
@@ -63,7 +63,7 @@ def test_vector_search_filters_empty_query(mocker, client):
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
@@ -124,7 +124,7 @@ def test_content_file_vector_search_filters(
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
@@ -201,7 +201,7 @@ def test_content_file_vector_search_filters_empty_query(
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
@@ -255,7 +255,7 @@ def test_content_file_vector_search_filters_custom_collection(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     custom_collection_name = "foo_bar_collection"
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
@@ -300,7 +300,7 @@ def test_content_file_vector_search_group_parameters(mocker, client, django_user
     )()
     custom_collection_name = "foo_bar_collection"
 
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=[[]])
     mock_qdrant.query_points = mocker.AsyncMock()
     mock_qdrant.query_points_groups = mocker.AsyncMock()
     mocker.patch(
