@@ -3213,6 +3213,43 @@ export interface LearningPathRelationship {
 /**
  * Create serializer for nested learning path items.  The parent is derived from the nested route and must not be client-supplied.
  * @export
+ * @interface LearningPathRelationshipCreate
+ */
+export interface LearningPathRelationshipCreate {
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathRelationshipCreate
+   */
+  id: number
+  /**
+   *
+   * @type {LearningResource}
+   * @memberof LearningPathRelationshipCreate
+   */
+  resource: LearningResource
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathRelationshipCreate
+   */
+  position?: number
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathRelationshipCreate
+   */
+  parent: number
+  /**
+   *
+   * @type {number}
+   * @memberof LearningPathRelationshipCreate
+   */
+  child: number
+}
+/**
+ * Create serializer for nested learning path items.  The parent is derived from the nested route and must not be client-supplied.
+ * @export
  * @interface LearningPathRelationshipCreateRequest
  */
 export interface LearningPathRelationshipCreateRequest {
@@ -5852,27 +5889,21 @@ export interface PaginatedVideoResourceList {
   results: Array<VideoResource>
 }
 /**
- * Specialized serializer for a LearningPath relationship
+ * Create serializer for nested learning path items.  The parent is derived from the nested route and must not be client-supplied.
  * @export
- * @interface PatchedLearningPathRelationshipRequest
+ * @interface PatchedLearningPathRelationshipCreateRequest
  */
-export interface PatchedLearningPathRelationshipRequest {
+export interface PatchedLearningPathRelationshipCreateRequest {
   /**
    *
    * @type {number}
-   * @memberof PatchedLearningPathRelationshipRequest
+   * @memberof PatchedLearningPathRelationshipCreateRequest
    */
   position?: number
   /**
    *
    * @type {number}
-   * @memberof PatchedLearningPathRelationshipRequest
-   */
-  parent?: number
-  /**
-   *
-   * @type {number}
-   * @memberof PatchedLearningPathRelationshipRequest
+   * @memberof PatchedLearningPathRelationshipCreateRequest
    */
   child?: number
 }
@@ -23492,14 +23523,14 @@ export const LearningpathsApiAxiosParamCreator = function (
      * @summary Learning Path Resource Relationship Update
      * @param {number} id A unique integer value identifying this learning resource relationship.
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {PatchedLearningPathRelationshipRequest} [PatchedLearningPathRelationshipRequest]
+     * @param {PatchedLearningPathRelationshipCreateRequest} [PatchedLearningPathRelationshipCreateRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     learningpathsItemsPartialUpdate: async (
       id: number,
       learning_resource_id: number,
-      PatchedLearningPathRelationshipRequest?: PatchedLearningPathRelationshipRequest,
+      PatchedLearningPathRelationshipCreateRequest?: PatchedLearningPathRelationshipCreateRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
       // verify required parameter 'id' is not null or undefined
@@ -23543,7 +23574,7 @@ export const LearningpathsApiAxiosParamCreator = function (
         ...options.headers,
       }
       localVarRequestOptions.data = serializeDataIfNeeded(
-        PatchedLearningPathRelationshipRequest,
+        PatchedLearningPathRelationshipCreateRequest,
         localVarRequestOptions,
         configuration,
       )
@@ -24083,26 +24114,26 @@ export const LearningpathsApiFp = function (configuration?: Configuration) {
      * @summary Learning Path Resource Relationship Update
      * @param {number} id A unique integer value identifying this learning resource relationship.
      * @param {number} learning_resource_id The learning resource id of the learning path
-     * @param {PatchedLearningPathRelationshipRequest} [PatchedLearningPathRelationshipRequest]
+     * @param {PatchedLearningPathRelationshipCreateRequest} [PatchedLearningPathRelationshipCreateRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async learningpathsItemsPartialUpdate(
       id: number,
       learning_resource_id: number,
-      PatchedLearningPathRelationshipRequest?: PatchedLearningPathRelationshipRequest,
+      PatchedLearningPathRelationshipCreateRequest?: PatchedLearningPathRelationshipCreateRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<LearningPathRelationship>
+      ) => AxiosPromise<LearningPathRelationshipCreate>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.learningpathsItemsPartialUpdate(
           id,
           learning_resource_id,
-          PatchedLearningPathRelationshipRequest,
+          PatchedLearningPathRelationshipCreateRequest,
           options,
         )
       const index = configuration?.serverIndex ?? 0
@@ -24449,12 +24480,12 @@ export const LearningpathsApiFactory = function (
     learningpathsItemsPartialUpdate(
       requestParameters: LearningpathsApiLearningpathsItemsPartialUpdateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<LearningPathRelationship> {
+    ): AxiosPromise<LearningPathRelationshipCreate> {
       return localVarFp
         .learningpathsItemsPartialUpdate(
           requestParameters.id,
           requestParameters.learning_resource_id,
-          requestParameters.PatchedLearningPathRelationshipRequest,
+          requestParameters.PatchedLearningPathRelationshipCreateRequest,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -24690,10 +24721,10 @@ export interface LearningpathsApiLearningpathsItemsPartialUpdateRequest {
 
   /**
    *
-   * @type {PatchedLearningPathRelationshipRequest}
+   * @type {PatchedLearningPathRelationshipCreateRequest}
    * @memberof LearningpathsApiLearningpathsItemsPartialUpdate
    */
-  readonly PatchedLearningPathRelationshipRequest?: PatchedLearningPathRelationshipRequest
+  readonly PatchedLearningPathRelationshipCreateRequest?: PatchedLearningPathRelationshipCreateRequest
 }
 
 /**
@@ -25009,7 +25040,7 @@ export class LearningpathsApi extends BaseAPI {
       .learningpathsItemsPartialUpdate(
         requestParameters.id,
         requestParameters.learning_resource_id,
-        requestParameters.PatchedLearningPathRelationshipRequest,
+        requestParameters.PatchedLearningPathRelationshipCreateRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))
