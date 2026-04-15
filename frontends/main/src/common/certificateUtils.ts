@@ -7,10 +7,22 @@ export const getCertificateInfo = (): { displayType: string } => {
   }
 }
 
-export const getVerifiableCredentialLinkedInURL = (
-  verifiableCredentialJson: object,
+// TODO: I strongly suspect that this is not the right way to generate this.
+// Should I be doing something with the API client to derive the url? Need to talk to someone who knows more about Learn frontend arch.
+export const getCertificateDownloadAPIURL = (
+  verifiableCredentialJson: VerifiableCredential,
 ): string => {
-  // TODO: Need to decide if we want to use this as the cert ID.
+  const type =
+    verifiableCredentialJson["credentialSubject"]["achievement"][
+      "achievementType"
+    ].toLowerCase()
+  const certId = verifiableCredentialJson["id"].substring(9)
+  return `https://mitxonline.mit.edu/api/v2/verifiable_${type}_credential/${certId}/download`
+}
+
+export const getVerifiableCredentialLinkedInURL = (
+  verifiableCredentialJson: VerifiableCredential,
+): string => {
   const certId = verifiableCredentialJson["id"].substring(9)
   const credentialName =
     verifiableCredentialJson["credentialSubject"]["achievement"]["name"]
@@ -20,9 +32,8 @@ export const getVerifiableCredentialLinkedInURL = (
   ).getFullYear()
   const issueMonth =
     new Date(verifiableCredentialJson["validFrom"]).getMonth() + 1
-  // TODO: Need to figure out which URL we want to link.
-  // Also need to parameterize on whether or not its a course or a program cert if we go w/ the VC download API
-  const certUrl = `https://mitxonline.mit.edu/api/v2/verifiable_course_credential/${certId}/download`
+
+  const certUrl = getCertificateDownloadAPIURL(verifiableCredentialJson)
   return encodeURI(
     `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationName=${orgName}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
   )
