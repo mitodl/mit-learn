@@ -54,7 +54,10 @@ def _get_program_child_resource_map(
         )
         .filter(visibility_q)
         .prefetch_related(
-            "topics",
+            Prefetch(
+                "topics",
+                queryset=models.LearningResourceTopic.objects.for_serialization(),
+            ),
             Prefetch(
                 "children",
                 queryset=models.LearningResourceRelationship.objects.filter(
