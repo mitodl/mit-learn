@@ -4,6 +4,7 @@ import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
+import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
@@ -27,9 +28,11 @@ const mockedNiceModalShow = NiceModal.show as jest.MockedFunction<
   typeof NiceModal.show
 >
 
-const STAY_UPDATED_FORM_ID = "4f423dc7-5b08-430b-a9fb-920b7f9597ed"
-
-const renderProductPageTemplate = () => {
+const renderProductPageTemplate = ({
+  showStayUpdated,
+}: {
+  showStayUpdated?: boolean
+} = {}) => {
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   renderWithProviders(
     <ProductPageTemplate
@@ -39,6 +42,7 @@ const renderProductPageTemplate = () => {
       imageSrc="/test-image.jpg"
       infoBox={<div>Info box</div>}
       enrollmentAction={<button type="button">Enroll</button>}
+      showStayUpdated={showStayUpdated}
     >
       <div>Page content</div>
     </ProductPageTemplate>,
@@ -66,7 +70,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(
       screen.queryByRole("button", { name: "Stay Updated" }),
     ).not.toBeInTheDocument()
-    expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined)
+    expect(mockedUseHubspotFormDetail).toHaveBeenCalledWith(undefined, {
+      enabled: false,
+    })
   })
 
   it("opens the modal when form id is configured even if the form is not yet fetched", () => {
@@ -76,7 +82,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: false,
     } as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
@@ -93,7 +99,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: true,
     } as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
@@ -110,7 +116,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       isError: false,
     } as unknown as ReturnType<typeof useHubspotFormDetail>)
 
-    renderProductPageTemplate()
+    renderProductPageTemplate({ showStayUpdated: true })
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
     expect(button).toBeInTheDocument()
