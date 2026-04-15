@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
 import { DigitalCredentialsFAQLink } from "@/common/constants"
+import { getCertificateDownloadAPIURL } from "@/common/certificateUtils"
 
 const Content = styled.div({})
 
@@ -134,6 +135,8 @@ export const DigitalCredentialDialog = ({
   const { issuer, validFrom, validUntil, credentialSubject } =
     verifiableCredential
   const { identifier, achievement } = credentialSubject
+  const certificateDownloadURL =
+    getCertificateDownloadAPIURL(verifiableCredential)
   return (
     <Dialog
       open={open}
@@ -207,7 +210,7 @@ export const DigitalCredentialDialog = ({
             <StyledButtonLink
               variant="secondary"
               size="large"
-              href="https://verifierplus.org/"
+              href={`https://verifierplus.org/#verify?vc=${encodeURI(certificateDownloadURL)}`}
               target="_blank"
               endIcon={<Image src={VerifyIcon} alt="" aria-hidden />}
             >
