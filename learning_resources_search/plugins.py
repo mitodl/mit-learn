@@ -104,7 +104,7 @@ class SearchIndexPlugin:
             )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
-        if resource.resource_type == COURSE_TYPE:
+        if resource.resource_type == COURSE_TYPE and not resource.test_mode:
             for run in resource.runs.all():
                 self.resource_run_unpublished(run)
 
@@ -159,6 +159,8 @@ class SearchIndexPlugin:
         """
         Remove a resource from the search index and then delete the object
         """
+        # Ensure test mode is false so the resource is removed from the search index
+        resource.test_mode = False
         self.resource_unpublished(resource)
 
     @hookimpl
