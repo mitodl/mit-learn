@@ -1,11 +1,7 @@
-import pytest
-
 from vector_search.serializers import (
     LearningResourcesSearchFiltersSerializer,
     LearningResourcesVectorSearchRequestSerializer,
 )
-
-pytestmark = pytest.mark.django_db
 
 
 def test_filter_serializer_accepts_resource_type():

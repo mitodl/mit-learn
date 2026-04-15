@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from django.conf import settings
+from django.db.models import QuerySet
 from opensearch_dsl import Search
 from opensearch_dsl.query import MoreLikeThis, Percolate
 from opensearchpy.exceptions import NotFoundError
@@ -1086,7 +1087,7 @@ def get_similar_resources(  # noqa: PLR0913
     min_doc_freq: int,
     use_embeddings,
     filter_params=None,
-) -> list[str]:
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources based on another resource
 
@@ -1106,8 +1107,8 @@ def get_similar_resources(  # noqa: PLR0913
             backend translates these to its own filter format
 
     Returns:
-        list of str:
-            list of learning resources
+        QuerySet[LearningResource]:
+            queryset of learning resources
     """
     if use_embeddings:
         return get_similar_resources_qdrant(
@@ -1134,7 +1135,8 @@ def _qdrant_similar_results(
 
     Args:
         input_query:
-            point id to query with
+            query input for Qdrant similarity search; may be either a point id
+            or a raw embedding vector, depending on the caller
         num_resources (int):
             number of resources to return
         collection_name (str):
@@ -1169,7 +1171,7 @@ def _qdrant_similar_results(
 
 def get_similar_resources_qdrant(
     value_doc: dict, num_resources: int, filter_params=None
-):
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources from qdrant
 
@@ -1214,7 +1216,7 @@ def get_similar_resources_opensearch(
     min_term_freq: int,
     min_doc_freq: int,
     filter_params=None,
-) -> list[str]:
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources from opensearch
 

@@ -250,9 +250,9 @@ class LearningResourceViewSet(
         filter_serializer = LearningResourcesSearchFiltersSerializer(data=request.GET)
         filter_serializer.is_valid(raise_exception=True)
         filter_params = _clean_filter_params(filter_serializer.validated_data)
-        learning_resource = get_object_or_404(LearningResource, id=pk)
-        learning_resource = LearningResource.objects.for_search_serialization().get(
-            id=pk
+        learning_resource = get_object_or_404(
+            LearningResource.objects.for_search_serialization(),
+            id=pk,
         )
         resource_data = serialize_learning_resource_for_update(learning_resource)
         similar = get_similar_resources(
