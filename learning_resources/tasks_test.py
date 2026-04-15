@@ -18,9 +18,11 @@ from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources.tasks import (
+    cleanup_deleted_content_files,
     get_ocw_data,
     get_youtube_data,
     get_youtube_transcripts,
@@ -946,3 +948,122 @@ def test_update_ocw_learning_material_resources(
         with pytest.raises(RuntimeError, match="CREATE_OCW_LEARNING_MATERIALS"):
             update_ocw_learning_material_resources()
         mock_load_learning_materials.assert_not_called()
+
+
+def test_cleanup_deleted_content_files_respects_retention_window(settings):
+    """
+    cleanup_deleted_content_files should only delete soft-deleted files past
+    the retention window, only for sources in RESOURCE_FILE_ETL_SOURCES, and
+    should chunk its deletes.
+    """
+    settings.CONTENT_FILE_RETENTION_DAYS = 14
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
+
+    eligible_run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
+    )
+    ineligible_run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.youtube.value
+    )
+
+    old_cutoff = now_in_utc() - timedelta(days=15)
+    recent_cutoff = now_in_utc() - timedelta(days=1)
+
+    old_unpublished = ContentFileFactory.create_batch(
+        3, run=eligible_run, published=False
+    )
+    recent_unpublished = ContentFileFactory.create_batch(
+        1, run=eligible_run, published=False
+    )
+    still_published = ContentFileFactory.create_batch(
+        1, run=eligible_run, published=True
+    )
+    ineligible_old_unpublished = ContentFileFactory.create_batch(
+        2, run=ineligible_run, published=False
+    )
+
+    # Force updated_on values so this test is deterministic around the threshold.
+    ContentFile.objects.filter(
+        id__in=[f.id for f in old_unpublished + ineligible_old_unpublished]
+    ).update(updated_on=old_cutoff)
+    ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
+        updated_on=recent_cutoff
+    )
+
+    result = cleanup_deleted_content_files()
+    assert result == 3
+
+    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
+    for file in old_unpublished:
+        assert file.id not in remaining_ids
+    for file in recent_unpublished + still_published + ineligible_old_unpublished:
+        assert file.id in remaining_ids
+
+
+def test_cleanup_deleted_content_files_skips_republished_rows(mocker, settings):
+    """
+    If a content file picked up in the eligible id list gets republished
+    before the chunked delete runs, it should be skipped instead of
+    hard-deleted (the delete re-applies the eligibility filter).
+    """
+    settings.CONTENT_FILE_RETENTION_DAYS = 14
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 10
+
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
+    )
+    old_cutoff = now_in_utc() - timedelta(days=15)
+    doomed = ContentFileFactory.create_batch(2, run=run, published=False)
+    survivor = ContentFileFactory.create(run=run, published=False)
+    ContentFile.objects.filter(id__in=[f.id for f in [*doomed, survivor]]).update(
+        updated_on=old_cutoff
+    )
+
+    # Wrap `list` inside the tasks module so that immediately after the
+    # eligible-id list is materialized, we flip `survivor` to published=True
+    # -- simulating a race between selection and the chunked delete. The
+    # delete's re-applied eligibility filter should still spare it.
+    real_list = list
+
+    def racy_list(iterable):
+        result = real_list(iterable)
+        ContentFile.objects.filter(id=survivor.id).update(published=True)
+        return result
+
+    mocker.patch("learning_resources.tasks.list", side_effect=racy_list, create=True)
+
+    deleted_count = cleanup_deleted_content_files()
+
+    assert deleted_count == 2
+    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
+    assert survivor.id in remaining_ids
+    for file in doomed:
+        assert file.id not in remaining_ids
+
+
+def test_cleanup_deleted_content_files_no_eligible_returns_zero(mocker, settings):
+    """cleanup_deleted_content_files should no-op and return 0 when nothing is eligible."""
+    settings.CONTENT_FILE_RETENTION_DAYS = 14
+    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 2
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
+    )
+    ContentFileFactory.create_batch(2, run=run, published=True)
+
+    mocker.patch("learning_resources.tasks.log.info")
+
+    deleted_count = cleanup_deleted_content_files()
+
+    assert deleted_count == 0
+
+
+def test_cleanup_deleted_content_files_returns_error_on_unexpected_exception(mocker):
+    """cleanup_deleted_content_files should return an error string for non-retry exceptions."""
+    mocker.patch(
+        "learning_resources.tasks.ContentFile.objects.filter",
+        side_effect=RuntimeError("boom"),
+    )
+
+    result = cleanup_deleted_content_files()
+
+    assert result == "cleanup_deleted_content_files threw an error"

@@ -79,6 +79,7 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
 def update_featured_rank():
+    """Update featured ranks for resources in the search index."""
     featured_view_set = FeaturedViewSet()
     featured_resources = featured_view_set.get_queryset()
     for position, resources_with_position in groupby(
@@ -707,6 +708,7 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def finish_update_index(results):  # noqa: ARG001
+    """Clear cached views after update index tasks complete."""
     clear_views_cache()
 
 
@@ -996,6 +998,7 @@ def _generate_subscription_digest_subject(
     rate_limit=settings.NOTIFICATION_ATTEMPT_RATE_LIMIT,
 )
 def attempt_send_digest_email_batch(user_template_items):
+    """Send a batch of digest emails for grouped per-user template payloads."""
     for user_id, template_data in user_template_items:
         log.info("Sending email to user %s", user_id)
         if not user_id:

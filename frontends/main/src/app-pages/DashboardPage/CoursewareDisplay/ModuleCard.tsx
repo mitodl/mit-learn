@@ -366,6 +366,7 @@ const useEnrollmentHandler = () => {
       createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
+    mitxOnlineUser: mitxOnlineUser.data,
   }
 }
 
@@ -376,6 +377,7 @@ type CoursewareButtonProps = {
   href?: string | null
   disabled?: boolean
   className?: string
+  isStaff?: boolean
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
 }
@@ -413,6 +415,7 @@ const CoursewareButton = styled(
     disabled,
     className,
     onClick,
+    isStaff,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareButtonStyle({
@@ -422,7 +425,8 @@ const CoursewareButton = styled(
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled = enrollmentStatus !== EnrollmentStatus.NotEnrolled
 
-    if (hasEnrolled && (hasStarted || !startDate) && href) {
+    // Staff can access courseware even before the course has started
+    if (hasEnrolled && (hasStarted || !startDate || isStaff) && href) {
       return (
         <StyledCoursewareButtonLink
           size="small"
@@ -437,10 +441,12 @@ const CoursewareButton = styled(
     }
 
     // Determine if button should be disabled
+    // Staff can access courseware even before the course has started
     const isDisabled = Boolean(
       disabled ||
         (!hasEnrolled && !onClick) || // Not enrolled and no click handler
-        (hasEnrolled && !!startDate && !hasStarted), // Enrolled but course hasn't started yet
+        (hasEnrolled && !href && !onClick) || // Enrolled but no action available
+        (hasEnrolled && !!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
     )
 
     return (
@@ -699,6 +705,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   onUpgradeError,
 }) => {
   const enrollment = useEnrollmentHandler()
+  const mitxOnlineUser = enrollment.mitxOnlineUser
 
   const title = getTitle(resource)
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
@@ -838,6 +845,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
             href={buttonHref ?? coursewareUrl}
             endDate={courseRun?.end_date ?? enrollmentRun?.end_date}
             disabled={disableEnrollment}
+            isStaff={mitxOnlineUser?.is_staff}
             onClick={coursewareButtonClick}
           />
         </CoursewareActionColumn>

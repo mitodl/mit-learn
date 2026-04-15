@@ -424,6 +424,24 @@ def remove_run_content_files(run_id):
 
 
 @app.task
+def remove_unpublished_run_content_files(run_id):
+    """
+    Remove unpublished content files associated with a run from Qdrant
+    """
+    content_file_ids = list(
+        ContentFile.objects.filter(run__id=run_id, published=False).values_list(
+            "id", flat=True
+        )
+    )
+    return celery.group(
+        [
+            remove_embeddings.si(ids, CONTENT_FILE_TYPE)
+            for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        ]
+    )
+
+
+@app.task
 def embeddings_healthcheck():
     """
     Check for missing embeddings and summaries in Qdrant and log warnings to Sentry

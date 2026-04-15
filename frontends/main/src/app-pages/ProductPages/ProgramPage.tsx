@@ -11,7 +11,10 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree, RequirementData } from "./util"
-import { getIdsFromReqTree } from "@/common/mitxonline"
+import {
+  getIdsFromReqTree,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -266,7 +269,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   return (
     <ProductPageTemplate
-      currentBreadcrumbLabel="Learning Path"
+      currentBreadcrumbLabel="Program"
       title={page.title}
       shortDescription={
         <DescriptionHTML
@@ -278,6 +281,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       videoUrl={page.video_url}
       enrollmentAction={
         <StyledProgramEnrollmentButton program={program} variant="bordered" />
+      }
+      showStayUpdated={
+        program.enrollment_modes.length > 0 &&
+        program.enrollment_modes.every((mode) =>
+          isVerifiedEnrollmentMode(mode.mode_slug),
+        )
       }
       infoBox={
         <ProgramInfoBox program={program} courses={courses.data?.results} />

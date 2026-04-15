@@ -383,6 +383,37 @@ def test_generate_summary_flashcards_exception(
             )
 
 
+def test_generate_flashcards_uses_transcript_language_instruction(mocker, settings):
+    """Flashcard prompt should explicitly instruct same-language output."""
+    settings.OPENAI_API_KEY = "test"
+    summarizer = ContentSummarizer()
+
+    mock_chat_llm = mocker.patch(
+        "learning_resources.content_summarizer.ChatLiteLLM", autospec=True
+    )
+    mocker.patch(
+        "learning_resources.content_summarizer.get_max_tokens", return_value=10000
+    )
+    mocker.patch(
+        "learning_resources.content_summarizer.truncate_to_tokens",
+        side_effect=lambda text, *_args, **_kwargs: text,
+    )
+
+    structured_invoke = mock_chat_llm.return_value.with_structured_output.return_value
+    structured_invoke.invoke.return_value = {
+        "flashcards": [{"question": "Q", "answer": "A"}]
+    }
+
+    non_english_content = "Hola mundo. Este video explica energia y trabajo."
+    summarizer._generate_flashcards(  # noqa: SLF001
+        content=non_english_content, llm_model="test-model"
+    )
+
+    prompt_sent = structured_invoke.invoke.call_args.args[0]
+    assert "Use the same language as the transcript" in prompt_sent
+    assert non_english_content in prompt_sent
+
+
 def test_summarize_single_content_file_with_exception(
     mocker, processable_content_files, settings
 ):

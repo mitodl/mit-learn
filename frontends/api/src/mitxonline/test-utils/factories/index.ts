@@ -7,6 +7,7 @@ import * as organizations from "./organization"
 import * as user from "./user"
 import * as requirements from "./requirements"
 import * as contracts from "./contracts"
+import * as orders from "./orders"
 
 export {
   mitx as enrollment,
@@ -18,4 +19,5 @@ export {
   pages,
   requirements,
   contracts,
+  orders,
 }

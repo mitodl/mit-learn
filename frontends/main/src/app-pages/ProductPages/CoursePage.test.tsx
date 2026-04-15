@@ -13,6 +13,7 @@ import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
+import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -52,6 +53,18 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+
+  const stayUpdatedFormId =
+    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  if (stayUpdatedFormId) {
+    setMockResponse.get(
+      learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
+      learnFactories.hubspot.form({
+        id: stayUpdatedFormId,
+        name: "Stay Updated",
+      }),
+    )
+  }
 }
 
 describe("CoursePage", () => {
@@ -253,6 +266,98 @@ describe("CoursePage", () => {
     renderWithProviders(<CoursePage readableId="readable_id" />)
     await waitFor(() => {
       expect(notFound).toHaveBeenCalled()
+    })
+  })
+
+  describe("Stay Updated button", () => {
+    useStayUpdatedEnv()
+
+    test("Shows button when all course runs have only the verified enrollment mode", async () => {
+      const verifiedMode = factories.courses.enrollmentMode({
+        mode_slug: "verified",
+      })
+      const course = makeCourse({
+        courseruns: [
+          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+        ],
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      expect(
+        await screen.findByRole("button", { name: "Stay Updated" }),
+      ).toBeInTheDocument()
+    })
+
+    test.each([
+      {
+        label: "one run has a non-verified mode",
+        buildRuns: () => [
+          factories.courses.courseRun({
+            enrollment_modes: [
+              factories.courses.enrollmentMode({ mode_slug: "verified" }),
+            ],
+          }),
+          factories.courses.courseRun({
+            enrollment_modes: [
+              factories.courses.enrollmentMode({ mode_slug: "audit" }),
+            ],
+          }),
+        ],
+      },
+      {
+        label: "a run has mixed verified and non-verified modes",
+        buildRuns: () => [
+          factories.courses.courseRun({
+            enrollment_modes: [
+              factories.courses.enrollmentMode({ mode_slug: "verified" }),
+              factories.courses.enrollmentMode({ mode_slug: "audit" }),
+            ],
+          }),
+        ],
+      },
+      {
+        label: "a run has no enrollment modes",
+        buildRuns: () => [
+          factories.courses.courseRun({ enrollment_modes: [] }),
+        ],
+      },
+      {
+        label: "the course has no runs",
+        buildRuns: () => [],
+      },
+    ])("Hides button when $label", async ({ buildRuns }) => {
+      const course = makeCourse({ courseruns: buildRuns() })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(
+        screen.queryByRole("button", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Hides button when Stay Updated form ID is not configured", async () => {
+      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+      const verifiedMode = factories.courses.enrollmentMode({
+        mode_slug: "verified",
+      })
+      const course = makeCourse({
+        courseruns: [
+          factories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
+        ],
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(
+        screen.queryByRole("button", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
     })
   })
 })

@@ -292,6 +292,7 @@ def test_start_recreate_index(mocker, mocked_celery, user, indexes):  # noqa: C9
 def test_start_recreate_index_existing_reindexing_index(
     mocker, mocked_celery, user, remove_existing_reindexing_tags
 ):
+    """start_recreate_index should stop when reindexing indexes already exist."""
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
     indexes = ["program"]

@@ -20,6 +20,10 @@ import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import {
+  useStayUpdatedEnv,
+  PROGRAM_HIDE_STAY_UPDATED_CASES,
+} from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -89,6 +93,17 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+  const stayUpdatedFormId =
+    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  if (stayUpdatedFormId) {
+    setMockResponse.get(
+      learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
+      learnFactories.hubspot.form({
+        id: stayUpdatedFormId,
+        name: "Stay Updated",
+      }),
+    )
+  }
   setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
 
   return { courses, childPrograms }
@@ -282,5 +297,64 @@ describe("ProgramAsCoursePage", () => {
     expect(listItems[0]).toHaveTextContent(courses[0].title)
     expect(listItems[1]).toHaveTextContent(childPrograms[0].title)
     expect(listItems[2]).toHaveTextContent(courses[1].title)
+  })
+
+  describe("Stay Updated button", () => {
+    useStayUpdatedEnv()
+
+    test("Shows button when program has only the verified enrollment mode", async () => {
+      const program = makeProgramAsCourse({
+        enrollment_modes: [
+          factories.courses.enrollmentMode({ mode_slug: "verified" }),
+        ],
+      })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(
+        <ProgramAsCoursePage readableId={program.readable_id} />,
+      )
+
+      expect(
+        await screen.findByRole("button", { name: "Stay Updated" }),
+      ).toBeInTheDocument()
+    })
+
+    test.each(PROGRAM_HIDE_STAY_UPDATED_CASES)(
+      "Hides button when $label",
+      async ({ enrollment_modes: enrollmentModes }) => {
+        const program = makeProgramAsCourse({
+          enrollment_modes: enrollmentModes,
+        })
+        const page = makePage({ program_details: program })
+        setupApis({ program, page })
+        renderWithProviders(
+          <ProgramAsCoursePage readableId={program.readable_id} />,
+        )
+
+        await screen.findByRole("heading", { name: page.title })
+        expect(
+          screen.queryByRole("button", { name: "Stay Updated" }),
+        ).not.toBeInTheDocument()
+      },
+    )
+
+    test("Hides button when Stay Updated form ID is not configured", async () => {
+      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+      const program = makeProgramAsCourse({
+        enrollment_modes: [
+          factories.courses.enrollmentMode({ mode_slug: "verified" }),
+        ],
+      })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(
+        <ProgramAsCoursePage readableId={program.readable_id} />,
+      )
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(
+        screen.queryByRole("button", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
+    })
   })
 })

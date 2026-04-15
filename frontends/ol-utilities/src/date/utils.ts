@@ -52,6 +52,31 @@ const formatDurationClockTime = (value: string | moment.Duration) => {
   return values.join(":")
 }
 
+/**
+ * Format an ISO-8601 duration string in a compact human-readable form.
+ * Suitable for displaying total collection/playlist durations.
+ * Seconds are omitted; only the two largest non-zero units are shown.
+ *
+ * Examples:
+ *  PT8H24M  → "8h 24m"
+ *  PT1H     → "1h"
+ *  PT45M    → "45m"
+ *  PT0S     → ""
+ */
+const formatDurationHuman = (value: string | moment.Duration): string => {
+  const duration = moment.duration(value)
+  const totalSeconds = duration.asSeconds()
+  if (!totalSeconds) return ""
+
+  const hours = Math.floor(duration.asHours())
+  const minutes = duration.minutes()
+
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (minutes > 0) parts.push(`${minutes}m`)
+  return parts.join(" ")
+}
+
 const calendarDaysUntil = (date: string): number | null => {
   const x = moment(date)
   if (!x.isValid()) return null
@@ -65,4 +90,10 @@ const isInPast = (date: string): null | boolean => {
   return x.isBefore(moment())
 }
 
-export { formatDate, formatDurationClockTime, isInPast, calendarDaysUntil }
+export {
+  formatDate,
+  formatDurationClockTime,
+  formatDurationHuman,
+  isInPast,
+  calendarDaysUntil,
+}

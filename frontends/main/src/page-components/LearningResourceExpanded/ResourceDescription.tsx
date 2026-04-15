@@ -16,6 +16,7 @@ const Description = styled.p({
   color: theme.custom.colors.black,
   margin: 0,
   wordBreak: "break-word",
+  whiteSpace: "pre-line",
   "> *": {
     ":first-child": {
       marginTop: 0,

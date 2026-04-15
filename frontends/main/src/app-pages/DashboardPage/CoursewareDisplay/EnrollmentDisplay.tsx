@@ -1,4 +1,5 @@
 import React from "react"
+import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
   Collapse,
@@ -574,7 +575,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
         <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-          MITx | {program?.program_type}
+          Program{program?.program_type ? `: ${program?.program_type}` : ""}
         </Typography>
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {program?.title}
@@ -888,7 +889,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
   const totalCards = normallyShown.length + maybeShown.length
 
   return totalCards > 0 ? (
-    <Wrapper>
+    <Wrapper id={DASHBOARD_MY_LEARNING_ID}>
       <Title variant="h5" component="h2">
         My Learning
       </Title>

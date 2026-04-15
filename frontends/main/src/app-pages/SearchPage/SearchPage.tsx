@@ -1,18 +1,19 @@
 "use client"
-
 import { keyBy } from "lodash"
-import React, { useCallback, useMemo, useEffect } from "react"
+
+import React, { useCallback, useMemo, useEffect, useState } from "react"
 import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
-import { styled, Container, theme } from "ol-components"
+import { styled, Container, theme, Typography } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { facetNames } from "./searchRequests"
 import getFacetManifest from "@/page-components/SearchDisplay/getFacetManifest"
 import dynamic from "next/dynamic"
+import { useUserMe } from "api/hooks/user"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -53,7 +54,8 @@ const SearchFieldContainer = styled(Container)({
   justifyContent: "center",
 })
 
-const StyledSearchField = styled(SearchField)(({ theme }) => ({
+const SearchFieldWrapper = styled.div(({ theme }) => ({
+  position: "relative",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -61,6 +63,10 @@ const StyledSearchField = styled(SearchField)(({ theme }) => ({
     width: "570px",
   },
 }))
+
+const StyledSearchField = styled(SearchField)({
+  width: "100%",
+})
 
 const constantSearchParams = {}
 
@@ -81,6 +87,15 @@ const SearchPage: React.FC = () => {
   const facetManifest = useFacetManifest(
     searchParams.get("resource_type_group"),
   )
+  const [fetchTime, setFetchTime] = useState<number | null>(null)
+  const { data: user } = useUserMe()
+
+  const formatFetchTime = (ms: number) => {
+    if (ms > 1000) {
+      return `${(ms / 1000).toFixed(2)}s`
+    }
+    return `${Math.round(ms)}ms`
+  }
 
   const setPage = useCallback(
     (newPage: number) => {
@@ -131,21 +146,40 @@ const SearchPage: React.FC = () => {
       </VisuallyHidden>
       <Header>
         <SearchFieldContainer>
-          <StyledSearchField
-            value={currentText}
-            size="large"
-            onChange={(e) => setCurrentText(e.target.value)}
-            onSubmit={(e) => {
-              setCurrentTextAndQuery(e.target.value)
-            }}
-            onClear={() => {
-              setCurrentTextAndQuery("")
-            }}
-            setPage={setPage}
-          />
+          <SearchFieldWrapper>
+            <StyledSearchField
+              value={currentText}
+              size="large"
+              onChange={(e) => setCurrentText(e.target.value)}
+              onSubmit={(e) => {
+                setCurrentTextAndQuery(e.target.value)
+              }}
+              onClear={() => {
+                setCurrentTextAndQuery("")
+              }}
+              setPage={setPage}
+            />
+            {user?.is_learning_path_editor && fetchTime !== null && (
+              <Typography
+                variant="body3"
+                color="text.secondary"
+                sx={{
+                  position: "absolute",
+                  left: "100%",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  paddingLeft: "16px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Search took {formatFetchTime(fetchTime)}
+              </Typography>
+            )}
+          </SearchFieldWrapper>
         </SearchFieldContainer>
       </Header>
       <SearchDisplay
+        onFetchTimeChange={setFetchTime}
         filterHeadingEl="h2"
         resultsHeadingEl="h2"
         page={page}

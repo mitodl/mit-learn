@@ -138,12 +138,13 @@ def process_course_archive(
             log.info("Checksums match for %s, skipping load", key)
             return False
         try:
-            load_content_files(
+            content_files_ids = load_content_files(
                 run,
                 transform_content_files(course_tarpath, run, overwrite=overwrite),
             )
-            run.checksum = checksum
-            run.save()
+            if content_files_ids:
+                run.checksum = checksum
+                run.save(update_fields=["checksum"])
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
 
