@@ -205,7 +205,7 @@ class Command(BaseCommand):
 
         values_qs = queryset.values_list(value_field, flat=True)
         if options.get("resource_distinct"):
-            values_qs = values_qs.distinct()
+            values_qs = values_qs.order_by().distinct()
 
         return [str(value) for value in values_qs if value is not None]
 
@@ -215,8 +215,7 @@ class Command(BaseCommand):
 
         values = [value.strip() for value in resource_values if value and value.strip()]
 
-        # Keep first occurrence order while de-duplicating.
-        return list(dict.fromkeys(values))
+        return sorted(dict.fromkeys(values))
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Create or update one HubSpot contact property."""
