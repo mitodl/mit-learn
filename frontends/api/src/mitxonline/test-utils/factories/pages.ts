@@ -164,12 +164,32 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     ],
     video_url: faker.internet.url(),
     what_you_learn: makeHTMLList(5),
-    hyl_choice_realworld_learning: true,
-    hyl_choice_learn_by_doing: true,
-    hyl_choice_learn_from_others: false,
-    hyl_choice_learn_on_demand: false,
-    hyl_choice_ai_enabled_support: true,
-    hyl_choice_stackable_credentials: true,
+    how_youll_learn: [
+      {
+        key: "learn_by_doing",
+        icon: "IconComputerBulb",
+        title: "Learn by doing",
+        text: "Apply what you learn with interactive exercises, projects, and real-world case studies.",
+      },
+      {
+        key: "realworld_learning",
+        icon: "IconConnectedPeople",
+        title: "Real-world learning",
+        text: "Engage with real-world scenarios and examples to understand how concepts apply in practice.",
+      },
+      {
+        key: "learn_from_others",
+        icon: "IconConnectedPeople",
+        title: "Learn from others",
+        text: "Collaborate with peers and learn from their perspectives through group projects and discussions.",
+      },
+      {
+        key: "learn_on_demand",
+        icon: "IconComputerBulb",
+        title: "Learn on demand",
+        text: "Access course materials anytime, anywhere, and learn at your own pace.",
+      },
+    ],
   }
   return mergeOverrides<CoursePageItem>(defaults, override)
 }
@@ -221,12 +241,32 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
     faq_url: faker.internet.url(),
     about: makeHTMLParagraph(3),
     what_you_learn: makeHTMLList(5),
-    hyl_choice_realworld_learning: true,
-    hyl_choice_learn_by_doing: true,
-    hyl_choice_learn_from_others: false,
-    hyl_choice_learn_on_demand: false,
-    hyl_choice_ai_enabled_support: true,
-    hyl_choice_stackable_credentials: true,
+    how_youll_learn: [
+      {
+        key: "learn_by_doing",
+        icon: "IconComputerBulb",
+        title: "Learn by doing",
+        text: "Apply what you learn with interactive exercises, projects, and real-world case studies.",
+      },
+      {
+        key: "realworld_learning",
+        icon: "IconConnectedPeople",
+        title: "Real-world learning",
+        text: "Engage with real-world scenarios and examples to understand how concepts apply in practice.",
+      },
+      {
+        key: "learn_from_others",
+        icon: "IconConnectedPeople",
+        title: "Learn from others",
+        text: "Collaborate with peers and learn from their perspectives through group projects and discussions.",
+      },
+      {
+        key: "learn_on_demand",
+        icon: "IconComputerBulb",
+        title: "Learn on demand",
+        text: "Access course materials anytime, anywhere, and learn at your own pace.",
+      },
+    ],
     feature_image: featureImage(),
     video_url: faker.datatype.boolean() ? faker.internet.url() : null,
     faculty_section_title: "Meet your instructors",

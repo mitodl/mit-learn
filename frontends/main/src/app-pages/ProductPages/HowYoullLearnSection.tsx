@@ -54,7 +54,7 @@ const HowYoullLearnHeader = styled.div({
   alignItems: "center",
 })
 
-const HowYoullLearnIcon = styled(Image)({
+const HowYoullLearnIconImage = styled(Image)({
   width: "80px",
   height: "50px",
   flexShrink: 0,
@@ -74,85 +74,47 @@ const HowYoullLearnDescription = styled.p(({ theme }) => ({
   },
 }))
 
-// These fields come from the CMS page types. Once @mitodl/mitxonline-api-axios
-// is published with these fields, this can be replaced with:
-// Extract<keyof CoursePageItem & keyof ProgramPageItem, `hyl_choice_${string}`>
-type HylChoiceKey =
-  | "hyl_choice_realworld_learning"
-  | "hyl_choice_learn_by_doing"
-  | "hyl_choice_learn_from_others"
-  | "hyl_choice_learn_on_demand"
-  | "hyl_choice_ai_enabled_support"
-  | "hyl_choice_stackable_credentials"
+const HowYoullLearnIcon: React.FC<{
+  src: string
+  width: number
+  height: number
+  alt: string
+}> = ({ src, width, height, alt }) => {
+  let iconSrc: typeof IconBrains | null = null
+  switch (src) {
+    case "IconBrains":
+      iconSrc = IconBrains
+      break
+    case "IconCertificate":
+      iconSrc = IconCertificate
+      break
+    case "IconComputerBulb":
+      iconSrc = IconComputerBulb
+      break
+    case "IconConnectedPeople":
+      iconSrc = IconConnectedPeople
+      break
+    default:
+      console.warn(`Unknown how_youll_learn icon: ${src}`)
+  }
 
-type HowYoullLearnItemData = {
-  icon: typeof IconComputerBulb
-  title: string
-  text: string
+  return (
+    iconSrc && (
+      <HowYoullLearnIconImage
+        src={iconSrc}
+        width={width}
+        height={height}
+        alt={alt}
+      />
+    )
+  )
 }
-type HowYoullLearnOption = {
-  name: HylChoiceKey
-  data: HowYoullLearnItemData
-}
-
-const HOW_YOULL_LEARN_OPTIONS: HowYoullLearnOption[] = [
-  {
-    name: "hyl_choice_realworld_learning",
-    data: {
-      icon: IconConnectedPeople,
-      title: "Real-World Learning",
-      text: "Learn from MIT faculty and experts who ground their teaching in real-world cases rather than mathematical models, making the material approachable for all.",
-    },
-  },
-  {
-    name: "hyl_choice_learn_by_doing",
-    data: {
-      icon: IconBrains,
-      title: "Practical Application",
-      text: "Apply your new knowledge with hands-on, practical exercises drawn from healthcare, sports, finance, sustainability, and more.",
-    },
-  },
-  {
-    name: "hyl_choice_learn_from_others",
-    data: {
-      icon: IconBrains,
-      title: "Learn From Others",
-      text: "Connect with an international community of professionals working on real-world projects.",
-    },
-  },
-  {
-    name: "hyl_choice_learn_on_demand",
-    data: {
-      icon: IconBrains,
-      title: "Learn On Demand",
-      text: "Access all course content online with complete flexibility to study at your own pace.",
-    },
-  },
-  {
-    name: "hyl_choice_ai_enabled_support",
-    data: {
-      icon: IconComputerBulb,
-      title: "AI-Enabled Support",
-      text: "Deepen your understanding of the course material and get help on assignments from AskTIM, the AI assistant built by MIT researchers.",
-    },
-  },
-  {
-    name: "hyl_choice_stackable_credentials",
-    data: {
-      icon: IconCertificate,
-      title: "Stackable Credentials",
-      text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
-    },
-  },
-]
 
 const HowYoullLearnSection: React.FC<{
   page: CoursePageItem | ProgramPageItem
 }> = ({ page }) => {
-  const filteredOptions = HOW_YOULL_LEARN_OPTIONS.filter(
-    (option) =>
-      (page as Record<HylChoiceKey, boolean | undefined>)[option.name] === true,
-  )
+  const filteredOptions = page.how_youll_learn ? page.how_youll_learn : []
+
   return filteredOptions.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
@@ -160,19 +122,17 @@ const HowYoullLearnSection: React.FC<{
       </Typography>
       <HowYoullLearnGrid>
         {filteredOptions.map((option) => (
-          <HowYoullLearnItem key={option.name}>
+          <HowYoullLearnItem key={option.key}>
             <HowYoullLearnHeader>
               <HowYoullLearnIcon
-                src={option.data.icon}
+                src={option.icon}
                 width={80}
                 height={50}
                 alt=""
               />
-              <HowYoullLearnTitle>{option.data.title}</HowYoullLearnTitle>
+              <HowYoullLearnTitle>{option.title}</HowYoullLearnTitle>
             </HowYoullLearnHeader>
-            <HowYoullLearnDescription>
-              {option.data.text}
-            </HowYoullLearnDescription>
+            <HowYoullLearnDescription>{option.text}</HowYoullLearnDescription>
           </HowYoullLearnItem>
         ))}
       </HowYoullLearnGrid>
@@ -181,4 +141,3 @@ const HowYoullLearnSection: React.FC<{
 }
 
 export default HowYoullLearnSection
-export type { HowYoullLearnItemData }
