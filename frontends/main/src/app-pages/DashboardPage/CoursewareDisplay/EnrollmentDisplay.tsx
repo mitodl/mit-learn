@@ -14,7 +14,7 @@ import {
   theme,
 } from "ol-components"
 import { Alert } from "@mitodl/smoot-design"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
   getEnrollmentStatus,
@@ -790,6 +790,9 @@ const AllEnrollmentsDisplay: React.FC = () => {
         page_size: enrolledProgramIds.length,
       }),
       enabled: enrolledProgramIds.length > 0,
+      // If the query key changes, show the old data while loading
+      // example: Deleting a program enrollment
+      placeholderData: keepPreviousData,
     })
 
   const filteredProgramEnrollments = enrolledPrograms
@@ -820,6 +823,7 @@ const AllEnrollmentsDisplay: React.FC = () => {
       page_size: homeCourseProgramModuleIds.length || undefined,
     }),
     enabled: homeCourseProgramModuleIds.length > 0,
+    placeholderData: keepPreviousData,
   })
 
   const homeCourseProgramsById = new Map(
