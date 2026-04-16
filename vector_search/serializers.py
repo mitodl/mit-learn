@@ -35,11 +35,6 @@ class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
     to a Qdrant filter by qdrant_query_conditions().
     """
 
-    published = serializers.BooleanField(
-        required=False,
-        default=True,
-        help_text="If the resource is published. We default to True unless passed in",
-    )
     offered_by_choices = [(e.name.lower(), e.value) for e in OfferedBy]
     offered_by = serializers.ListField(
         required=False,
@@ -160,6 +155,11 @@ class LearningResourcesVectorSearchRequestSerializer(
     instead of id we use readable_id in case we upload qdrant snapshots
     """
 
+    published = serializers.BooleanField(
+        required=False,
+        default=True,
+        help_text="If the resource is published. We default to True unless passed in",
+    )
     aggregation_choices = [
         (key, key.replace("_", " ").title()) for key in QDRANT_RESOURCE_PARAM_MAP
     ]
