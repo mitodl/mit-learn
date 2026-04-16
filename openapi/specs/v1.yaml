@@ -2989,13 +2989,6 @@ paths:
           type: boolean
           nullable: true
       - in: query
-        name: published
-        schema:
-          type: boolean
-          default: true
-        description: If the resource is published. We default to True unless passed
-          in
-      - in: query
         name: resource_type
         schema:
           type: array
@@ -3358,13 +3351,6 @@ paths:
         schema:
           type: boolean
           nullable: true
-      - in: query
-        name: published
-        schema:
-          type: boolean
-          default: true
-        description: If the resource is published. We default to True unless passed
-          in
       - in: query
         name: resource_type
         schema:
