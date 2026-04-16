@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.63.5
+Version 0.63.5 (Released April 16, 2026)
 --------------
 
 - Revert "Facet counts and aggregations for Vector search (#3188)" (#3208)
