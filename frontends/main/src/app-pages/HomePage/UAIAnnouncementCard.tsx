@@ -257,7 +257,6 @@ const UAIAnnouncementCard: React.FC = () => {
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Learn about Universal AI",
         readableId: UAI_PROGRAM_READABLE_ID,
-        resourceType: "program",
       })
     }
   }
