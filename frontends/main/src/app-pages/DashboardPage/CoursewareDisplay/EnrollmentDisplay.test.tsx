@@ -1784,27 +1784,22 @@ describe("EnrollmentDisplay", () => {
         results: [
           mitxonline.factories.courses.course({
             id: 1,
-            title: "Required 1",
             courseruns: [run1],
           }),
           mitxonline.factories.courses.course({
             id: 2,
-            title: "Required 2",
             courseruns: [mitxonline.factories.courses.courseRun({ id: 102 })],
           }),
           mitxonline.factories.courses.course({
             id: 3,
-            title: "Elective 1",
             courseruns: [run3],
           }),
           mitxonline.factories.courses.course({
             id: 4,
-            title: "Elective 2",
             courseruns: [run4],
           }),
           mitxonline.factories.courses.course({
             id: 5,
-            title: "Elective 3",
             courseruns: [mitxonline.factories.courses.courseRun({ id: 105 })],
           }),
         ],
@@ -1900,17 +1895,14 @@ describe("EnrollmentDisplay", () => {
         results: [
           mitxonline.factories.courses.course({
             id: 1,
-            title: "Elective A",
             courseruns: [run1],
           }),
           mitxonline.factories.courses.course({
             id: 2,
-            title: "Elective B",
             courseruns: [run2],
           }),
           mitxonline.factories.courses.course({
             id: 3,
-            title: "Elective C",
             courseruns: [run3],
           }),
         ],
