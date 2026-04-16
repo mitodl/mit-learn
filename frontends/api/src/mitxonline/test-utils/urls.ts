@@ -27,6 +27,8 @@ const enrollment = {
 
 const programEnrollments = {
   enrollmentsListV3: () => `${API_BASE_URL}/api/v3/program_enrollments/`,
+  programEnrollment: (programId: number) =>
+    `${API_BASE_URL}/api/v3/program_enrollments/${programId}/`,
 }
 
 const b2b = {

@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "Django==4.2.29",
+    "Django==4.2.30",
     "attrs>=25.0.0,<26",
     "base36>=0.1.1,<0.2",
     "beautifulsoup4>=4.8.2,<5",
@@ -57,7 +57,7 @@ dependencies = [
     "langchain>=0.3.11,<0.4",
     "langchain-experimental>=0.3.4,<0.4",
     "langchain-openai>=0.3.2,<0.4",
-    "litellm==1.81.13",
+    "litellm==1.83.0",
     "llama-index>=0.14.0,<0.15",
     "llama-index-llms-openai>=0.6.0,<0.7",
     "lxml>=6.0.0,<7",
