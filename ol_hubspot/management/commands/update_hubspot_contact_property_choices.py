@@ -35,6 +35,7 @@ def _parse_lookup_expression(expression: str) -> tuple[str, object]:
 
     lookup, raw_value = expression.split("=", 1)
     lookup = lookup.strip()
+    raw_value = raw_value.strip()
     if not lookup:
         msg = f"Invalid lookup expression '{expression}'. Empty lookup."
         raise CommandError(msg)
