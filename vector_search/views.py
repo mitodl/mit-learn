@@ -99,6 +99,7 @@ class QdrantView(APIView):
     ):
         client = async_qdrant_client()
         encoder_dense = dense_encoder()
+        encoder_dense.cache = True
         encoder_sparse = sparse_encoder()
 
         search_filter = qdrant_query_conditions(

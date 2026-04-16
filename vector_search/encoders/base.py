@@ -10,6 +10,7 @@ class BaseEncoder(Embeddings, ABC):
     """
 
     requires_cloud_inferencing = False
+    cache = False
 
     def model_short_name(self):
         """
