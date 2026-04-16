@@ -7,7 +7,7 @@ import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Typography, styled, theme, Skeleton, Breadcrumbs } from "ol-components"
 import VideoContainer from "./VideoContainer"
-import { RiShareForwardFill } from "@remixicon/react"
+import { RiShareForwardFill, RiPlayCircleFill } from "@remixicon/react"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
@@ -75,6 +75,11 @@ const BreadcrumbBar = styled.div(({ theme }) => ({
 const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
   "& > span > span": { paddingBottom: 0, paddingLeft: "4px" },
 }))
+
+const PlayIcon = styled(RiPlayCircleFill)({
+  width: 36,
+  height: 36,
+})
 
 const ContentArea = styled.div(({ theme }) => ({
   padding: "56px 0 80px",
@@ -237,6 +242,18 @@ const MoreFromItem = styled(Link)({
   textDecoration: "none",
   "&:hover .mf-title": { color: theme.custom.colors.red },
 
+  "&:hover .video-card-title, &:focus-visible .video-card-title": {
+    color: theme.custom.colors.red,
+  },
+
+  "&:hover .play-overlay": {
+    opacity: 0.5,
+  },
+
+  "&:focus-visible .play-overlay": {
+    opacity: 0.5,
+  },
+
   "&:first-child": {
     padding: "0 0 24px 0",
   },
@@ -345,6 +362,18 @@ const DurationText = styled.span(({ theme }) => ({
   lineHeight: "22px",
   fontWeight: theme.typography.fontWeightBold,
 }))
+
+const PlayOverlay = styled.div({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#fff",
+  opacity: 0,
+  transition: "opacity 0.2s",
+  backgroundColor: "rgba(0, 0, 0, 0.18)",
+})
 
 const ScreenReaderOnly = styled.span({
   position: "absolute",
@@ -660,6 +689,9 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                               {itemDuration && (
                                 <DurationBadge>{itemDuration}</DurationBadge>
                               )}
+                              <PlayOverlay className="play-overlay">
+                                <PlayIcon />
+                              </PlayOverlay>
                             </MoreFromThumbnailWrapper>
                             <MoreFromTextSide>
                               <MoreFromItemTitle className="mf-title">
