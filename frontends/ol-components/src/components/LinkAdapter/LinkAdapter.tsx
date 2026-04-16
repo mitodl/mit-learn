@@ -36,11 +36,10 @@ const LinkAdapter = ({ shallow, href = "", ...props }: LinkAdapterProps) => {
       href={href}
       {...props}
       onClick={(e) => {
+        props.onClick?.(e)
         if (shallow) {
           e.preventDefault()
           window.history.pushState({}, "", href)
-        } else {
-          props.onClick?.(e)
         }
       }}
     />

@@ -1,5 +1,6 @@
 import React from "react"
 import AiChatSyllabusSlideDown, {
+  AiChatSyllabusOpener,
   ChatTransitionState,
   STARTERS,
 } from "./AiChatSyllabusSlideDown"
@@ -7,6 +8,18 @@ import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
 import invariant from "tiny-invariant"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  usePostHog: jest.fn(),
+}))
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const mockAiChat = jest.fn<React.JSX.Element, [Record<string, unknown>]>(() => (
   <div data-testid="mock-ai-chat" />
@@ -113,5 +126,32 @@ describe("AiChatSyllabus", () => {
     expect((requestOpts.fetchOpts as Record<string, unknown>).credentials).toBe(
       "include",
     )
+  })
+
+  test("clicking Ask TIM opener fires asktim_clicked with syllabus payload", async () => {
+    const resource = factories.learningResources.course()
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+
+    renderWithProviders(
+      <AiChatSyllabusOpener
+        open={false}
+        resource={resource}
+        onToggleOpen={jest.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /ask tim/i }))
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.AskTimClicked,
+      expect.objectContaining({
+        type: "syllabus_bot",
+        resourceId: resource.id,
+        readableId: resource.readable_id,
+        resourceType: resource.resource_type,
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })

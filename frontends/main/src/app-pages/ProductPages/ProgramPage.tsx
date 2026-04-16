@@ -179,6 +179,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                           }
                           size="small"
                           isLoading={isLoading}
+                          label={req.title}
                           list
                         />
                       </li>
@@ -201,6 +202,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                         }
                         size="small"
                         isLoading={isLoading}
+                        label={req.title}
                         list
                       />
                     </li>

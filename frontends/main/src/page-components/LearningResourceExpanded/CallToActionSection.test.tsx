@@ -349,6 +349,7 @@ describe("CallToActionSection", () => {
 
       expect(mockCapture).toHaveBeenCalledWith("cta_clicked", {
         resource,
+        label: "Learn More",
       })
 
       // Restore original value

@@ -5,6 +5,8 @@ import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { LearningResource, ResourceTypeGroupEnum } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 export enum ChatTransitionState {
   Closed = "Closed",
@@ -140,6 +142,8 @@ export const AiChatSyllabusOpener = ({
   onToggleOpen: (open: boolean) => void
   resource: LearningResource
 }) => {
+  const posthog = usePostHog()
+
   return (
     <Opener className={className}>
       <StyledButton
@@ -147,7 +151,18 @@ export const AiChatSyllabusOpener = ({
         edge="rounded"
         aria-pressed={open}
         open={open}
-        onClick={() => onToggleOpen(!open)}
+        onClick={() => {
+          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            posthog.capture(PostHogEvents.AskTimClicked, {
+              type: "syllabus_bot",
+              resourceId: resource.id,
+              readableId: resource.readable_id,
+              resourceType: resource.resource_type,
+              platformCode: resource.platform?.code,
+            })
+          }
+          onToggleOpen(!open)
+        }}
       >
         <RiSparkling2Line />
         <Typography variant="body1">

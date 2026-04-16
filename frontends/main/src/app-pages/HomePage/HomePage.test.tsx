@@ -17,8 +17,9 @@ import {
 import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
-import { assertHeadings } from "ol-test-utilities"
+import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -127,6 +128,28 @@ describe("UAI Announcement Card", () => {
       name: "Learn about Universal AI",
     })
     assertLinksTo(cta, { pathname: "/programs/program-v1:UAI+B2C" })
+  })
+
+  test("CTA click fires cta_clicked with label and readableId", async () => {
+    allowConsoleErrors()
+    setupAPIs()
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.UniversalAI,
+    )
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    renderWithProviders(<HomePage heroImageIndex={1} />)
+    const cta = await screen.findByRole("link", {
+      name: "Learn about Universal AI",
+    })
+    await user.click(cta)
+    expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      PostHogEvents.CallToActionClicked,
+      expect.objectContaining({
+        label: "Learn about Universal AI",
+        readableId: "program-v1:UAI+B2C",
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })
 

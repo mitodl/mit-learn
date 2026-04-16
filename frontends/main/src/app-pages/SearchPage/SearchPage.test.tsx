@@ -14,17 +14,27 @@ import type {
 } from "api"
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
-import { assertHeadings, ControlledPromise } from "ol-test-utilities"
+import {
+  assertHeadings,
+  ControlledPromise,
+  allowConsoleErrors,
+} from "ol-test-utilities"
 import { act } from "@testing-library/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(() => ({ capture: jest.fn() })),
+  usePostHog: jest.fn(),
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
@@ -1072,5 +1082,26 @@ describe("UniversalAIBanner", () => {
         "LearningMaterials(0)",
       ])
     })
+  })
+
+  test("clicking Learn More fires cta_clicked with label and readableId", async () => {
+    allowConsoleErrors()
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockCapture.mockClear()
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />)
+    const link = await screen.findByRole("link", {
+      name: "Learn more about Universal AI",
+    })
+    await user.click(link)
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.CallToActionClicked,
+      expect.objectContaining({
+        label: "Learn more about Universal AI",
+        readableId: "program-v1:UAI+B2C",
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })
