@@ -99,7 +99,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
           resourceId: course.id,
           readableId: course.readable_id,
           resourceType: "course",
-          label: getButtonText(nextRun, price?.displayPrice),
+          label: getButtonText(nextRun, price?.finalPrice),
         })
       }
       if (enrollmentDecision.type === "dialog") {
