@@ -32,11 +32,13 @@ const AskTIMButton = () => {
       <StyledButton
         shallow
         href={`?${RECOMMENDER_QUERY_PARAM}`}
-        onClick={() =>
-          posthog.capture(PostHogEvents.AskTimClicked, {
-            type: "recommendation_bot",
-          })
-        }
+        onClick={() => {
+          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            posthog.capture(PostHogEvents.AskTimClicked, {
+              type: "recommendation_bot",
+            })
+          }
+        }}
       >
         <RiSparkling2Line />
         <Typography variant="body1">

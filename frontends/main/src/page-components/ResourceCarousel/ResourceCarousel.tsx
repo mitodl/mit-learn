@@ -320,26 +320,24 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                   : resources
                       .filter((resource) => resource.id !== excludeResourceId)
                       .map((resource, index) => (
-                        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-                        <div
+                        <ResourceCard
                           key={resource.id}
-                          onClick={() =>
-                            posthog.capture(PostHogEvents.CourseCardClicked, {
-                              label: title,
-                              resourceId: resource.id,
-                              readableId: resource.readable_id,
-                              resourceType: resource.resource_type,
-                              platformCode: resource.platform?.code,
-                              position: index,
-                            })
-                          }
-                        >
-                          <ResourceCard
-                            resource={resource}
-                            parentHeadingEl={titleComponent}
-                            {...tabConfig.cardProps}
-                          />
-                        </div>
+                          resource={resource}
+                          parentHeadingEl={titleComponent}
+                          {...tabConfig.cardProps}
+                          onCardClick={() => {
+                            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                              posthog.capture(PostHogEvents.CourseCardClicked, {
+                                label: title,
+                                resourceId: resource.id,
+                                readableId: resource.readable_id,
+                                resourceType: resource.resource_type,
+                                platformCode: resource.platform?.code,
+                                position: index,
+                              })
+                            }
+                          }}
+                        />
                       ))}
               </StyledCarouselV2>
             )

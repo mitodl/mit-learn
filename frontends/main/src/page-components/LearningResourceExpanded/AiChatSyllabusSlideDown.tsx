@@ -152,13 +152,15 @@ export const AiChatSyllabusOpener = ({
         aria-pressed={open}
         open={open}
         onClick={() => {
-          posthog.capture(PostHogEvents.AskTimClicked, {
-            type: "syllabus_bot",
-            resourceId: resource.id,
-            readableId: resource.readable_id,
-            resourceType: resource.resource_type,
-            platformCode: resource.platform?.code,
-          })
+          if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+            posthog.capture(PostHogEvents.AskTimClicked, {
+              type: "syllabus_bot",
+              resourceId: resource.id,
+              readableId: resource.readable_id,
+              resourceType: resource.resource_type,
+              platformCode: resource.platform?.code,
+            })
+          }
           onToggleOpen(!open)
         }}
       >

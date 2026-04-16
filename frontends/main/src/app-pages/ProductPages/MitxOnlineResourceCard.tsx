@@ -203,14 +203,16 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       startDate={data.startDate}
       ariaLabel={`${data.displayType}: ${data.title}`}
       list={list}
-      onClick={() =>
-        posthog.capture(PostHogEvents.CourseCardClicked, {
-          label,
-          resourceId: props.resource?.id,
-          readableId: props.resource?.readable_id,
-          resourceType: props.resourceType,
-        })
-      }
+      onClick={() => {
+        if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+          posthog.capture(PostHogEvents.CourseCardClicked, {
+            label,
+            resourceId: props.resource?.id,
+            readableId: props.resource?.readable_id,
+            resourceType: props.resourceType,
+          })
+        }
+      }}
     />
   )
 }
