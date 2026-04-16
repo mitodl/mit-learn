@@ -424,6 +424,11 @@ describe("ProgramEnrollmentButton", () => {
         urls.userMe.get(),
         makeUser({ is_authenticated: true }),
       )
+      setMockResponse.post(
+        mitxUrls.programEnrollments.enrollmentsListV3(),
+        null,
+        { code: 201 },
+      )
 
       renderWithProviders(
         <ProgramEnrollmentButton program={program} variant="primary" />,

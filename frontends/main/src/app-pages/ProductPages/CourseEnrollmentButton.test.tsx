@@ -538,6 +538,8 @@ describe("CourseEnrollmentButton", () => {
         urls.userMe.get(),
         makeUser({ is_authenticated: true }),
       )
+      // Clicking enroll triggers the enrollment API call; mock it to avoid failing on console.error.
+      setMockResponse.post(mitxUrls.enrollment.enrollmentsListV1(), {})
 
       renderWithProviders(<CourseEnrollmentButton course={course} />)
       await user.click(
