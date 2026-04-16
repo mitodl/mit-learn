@@ -15,7 +15,7 @@
     "@floating-ui/react": "^0.27.16",
     "@mitodl/course-search-utils": "^3.5.2",
     "@mitodl/mitxonline-api-axios": "^2026.3.26",
-    "@mitodl/smoot-design": "^6.24.0",
+    "@mitodl/smoot-design": "mitodl/smoot-design#mb/ai_error_message",
     "@mui/material": "^6.4.5",
     "@mui/material-nextjs": "^6.4.3",
     "@opentelemetry/api": "^1.9.1",

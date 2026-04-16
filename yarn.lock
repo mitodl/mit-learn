@@ -3531,9 +3531,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:^6.24.0":
-  version: 6.24.0
-  resolution: "@mitodl/smoot-design@npm:6.24.0"
+"@mitodl/smoot-design@mitodl/smoot-design#mb/ai_error_message":
+  version: 0.0.0
+  resolution: "@mitodl/smoot-design@https://github.com/mitodl/smoot-design.git#commit=c3be153f0c933c7b3944498018f02c3b82e9de88"
   dependencies:
     "@ai-sdk/react": "npm:1.2.12"
     "@emotion/cache": "npm:^11.14.0"
@@ -3558,7 +3558,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/ca8c5a25939e80f70d65a2a44056a2a1ecd778f298ac0153fa8e2b1861950280e17f8c33d4acfdc28967e29481ac112eecf7a80389431a47faa0f52c54ae1c11
+  checksum: 10/f39e0fec59ee9cb466745a9e2a2af6bb26f71f4212990434afbaaa4d4c6fe8a2b10257d2aa6100f9875e6726702f123374dc8abccce2f2631c3455d86c440be3
   languageName: node
   linkType: hard
 
@@ -16381,7 +16381,7 @@ __metadata:
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/mitxonline-api-axios": "npm:^2026.3.26"
-    "@mitodl/smoot-design": "npm:^6.24.0"
+    "@mitodl/smoot-design": "mitodl/smoot-design#mb/ai_error_message"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
     "@opentelemetry/api": "npm:^1.9.1"
