@@ -117,13 +117,10 @@ class Command(BaseCommand):
             dest="resource_types",
             action="append",
             choices=LearningResourceType.names(),
-            default=[
-                LearningResourceType.course.name,
-                LearningResourceType.program.name,
-            ],
+            default=None,
             help=(
                 "LearningResource resource_type to include. "
-                "Defaults to course and program."
+                "Defaults to course and program when not specified."
             ),
         )
         parser.add_argument(
@@ -187,7 +184,10 @@ class Command(BaseCommand):
         if not options["include_unpublished"]:
             queryset = queryset.filter(published=True)
 
-        resource_types = options.get("resource_types", [])
+        resource_types = options.get("resource_types") or [
+            LearningResourceType.course.name,
+            LearningResourceType.program.name,
+        ]
         if resource_types:
             queryset = queryset.filter(resource_type__in=resource_types)
 
