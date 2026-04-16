@@ -11,7 +11,7 @@ import {
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
 import { LearningResourceCard } from "ol-components"
-import { ControlledPromise } from "ol-test-utilities"
+import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
@@ -342,6 +342,7 @@ describe("ResourceCarousel", () => {
   )
 
   test("clicking a card fires course_card_clicked with key payload fields", async () => {
+    allowConsoleErrors()
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Test Carousel",

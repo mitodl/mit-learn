@@ -4,6 +4,7 @@ import AskTIMButton from "./AskTimDrawerButton"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { allowConsoleErrors } from "ol-test-utilities"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -53,6 +54,7 @@ describe("AskTIMButton", () => {
   })
 
   test("clicking Ask TIM fires asktim_clicked with type recommendation_bot", async () => {
+    allowConsoleErrors()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     mockCapture.mockClear()
     renderWithProviders(<AskTIMButton />)

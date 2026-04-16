@@ -24,7 +24,7 @@ import {
   user,
 } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
-import { assertHeadings } from "ol-test-utilities"
+import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { notFound } from "next/navigation"
 import {
   useStayUpdatedEnv,
@@ -653,6 +653,7 @@ describe("ProgramPage", () => {
   })
 
   test("clicking a requirement card fires course_card_clicked", async () => {
+    allowConsoleErrors()
     const program = makeProgram({
       ...makeReqs({ required: { count: 1, title: "Required" } }),
     })

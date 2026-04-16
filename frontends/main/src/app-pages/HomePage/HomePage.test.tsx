@@ -17,7 +17,7 @@ import {
 import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
-import { assertHeadings } from "ol-test-utilities"
+import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 
@@ -131,6 +131,7 @@ describe("UAI Announcement Card", () => {
   })
 
   test("CTA click fires cta_clicked with label and readableId", async () => {
+    allowConsoleErrors()
     setupAPIs()
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.UniversalAI,
