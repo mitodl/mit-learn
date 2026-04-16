@@ -21,6 +21,8 @@ import { productQueries } from "api/mitxonline-hooks/products"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useRouter } from "next-nprogress-bar"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const DiscountedPriceContent = styled.span({
   display: "inline-flex",
@@ -60,6 +62,7 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const replaceBasketItem = useReplaceBasketItem()
   const createEnrollment = useCreateEnrollment()
   const router = useRouter()
+  const posthog = usePostHog()
   const nextRunId = course.next_run_id
   const nextRun = course.courseruns.find((run) => run.id === nextRunId)
   const enrollmentDecision = getCourseEnrollmentAction(course)
@@ -91,6 +94,12 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     if (me.isLoading) {
       return
     } else if (me.data?.is_authenticated) {
+      if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+        posthog.capture(PostHogEvents.CallToActionClicked, {
+            course,
+            label: course.title,
+          })
+      }
       if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
       } else if (enrollmentDecision.type === "checkout") {

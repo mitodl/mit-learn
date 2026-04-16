@@ -1,7 +1,9 @@
 "use client"
 
 import React from "react"
+import { usePostHog } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
+import { PostHogEvents } from "@/common/constants"
 import type {
   CourseWithCourseRunsSerializerV2,
   V2ProgramDetail,
@@ -17,6 +19,7 @@ type CommonCardProps = {
   headingLevel?: number
   className?: string
   list?: boolean
+  label?: string
 }
 
 type MitxOnlineCourseCardProps = CommonCardProps & {
@@ -156,6 +159,7 @@ const extractCardData = (
 const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   props,
 ) => {
+  const posthog = usePostHog()
   const {
     href,
     size = "small",
@@ -163,6 +167,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
     headingLevel = 6,
     className,
     list,
+    label,
   } = props
 
   if (isLoading) {
@@ -198,6 +203,14 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       startDate={data.startDate}
       ariaLabel={`${data.displayType}: ${data.title}`}
       list={list}
+      onClick={() =>
+        posthog.capture(PostHogEvents.CourseCardClicked, {
+          label,
+          resourceId: props.resource?.id,
+          readableId: props.resource?.readable_id,
+          resourceType: props.resourceType,
+        })
+      }
     />
   )
 }
