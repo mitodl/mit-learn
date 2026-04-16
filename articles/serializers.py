@@ -20,6 +20,8 @@ class SanitizedHtmlField(serializers.Field):
 
 
 class UserSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
+    """Serializer for article author user fields."""
+
     class Meta:
         model = User
         fields = ["first_name", "last_name"]

@@ -8848,7 +8848,7 @@ export type SourceTypeEnum =
   (typeof SourceTypeEnum)[keyof typeof SourceTypeEnum]
 
 /**
- *
+ * Serializer for article author user fields.
  * @export
  * @interface User
  */
@@ -9017,7 +9017,7 @@ export interface UserListRequest {
 }
 
 /**
- *
+ * Serializer for article author user fields.
  * @export
  * @interface UserRequest
  */

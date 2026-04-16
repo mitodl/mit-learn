@@ -12,7 +12,7 @@ class DepartmentRenameChannelUrlToUrl(Transform):
     """v2 renames channel_url to url on LearningResourceBaseDepartmentSerializer."""
 
     version = "v2"
-    description = "Rename channel_url to url on Department"
+    description = "Rename channel_url to url on base Department"
     serializer = (
         "learning_resources.serializers.LearningResourceBaseDepartmentSerializer"
     )
@@ -30,16 +30,39 @@ class DepartmentRenameChannelUrlToUrl(Transform):
         return data
 
     def transform_schema(self, schema, direction):
-        """Swap url/channel_url in schema."""
+        """Swap url/channel_url in schema and keep old ordering for v1."""
         if direction == "backwards":
             props = schema.get("properties", {})
             if "url" in props:
                 props["channel_url"] = props.pop("url")
+
+            # Keep full Department property order stable in v0/v1 specs.
+            if "channel_url" in props and "school" in props:
+                ordered_keys = ["department_id", "name", "channel_url", "school"]
+                new_props = {k: props[k] for k in ordered_keys if k in props}
+                for key, value in props.items():
+                    if key not in new_props:
+                        new_props[key] = value
+                schema["properties"] = new_props
+
             required = schema.get("required", [])
             if "url" in required:
-                idx = required.index("url")
-                required[idx] = "channel_url"
+                required[required.index("url")] = "channel_url"
+            required.sort()
         return schema
+
+
+class FullDepartmentRenameChannelUrlToUrl(DepartmentRenameChannelUrlToUrl):
+    """v2 renames channel_url to url on LearningResourceDepartmentSerializer.
+
+    Needed because drf-spectacular emits a separate schema component for the
+    full Department serializer even though the field is inherited, and the
+    runtime transform lookup uses exact serializer-class matching.
+    """
+
+    version = "v2"
+    description = "Rename channel_url to url on full Department"
+    serializer = "learning_resources.serializers.LearningResourceDepartmentSerializer"
 
 
 class RunAddEnrollmentUrl(Transform):
@@ -90,28 +113,67 @@ class VideoRemoveCoverImageUrl(Transform):
     """v2 removes cover_image_url from VideoSerializer."""
 
     version = "v2"
-    description = "Remove cover_image_url field from Video"
+    description = "Restore v1 cover_image_url property ordering on Video"
     serializer = "learning_resources.serializers.VideoSerializer"
 
     def to_representation(self, data, request, instance):  # noqa: ARG002
         """Restore cover_image_url for v1 clients."""
         if "cover_image_url" not in data:
-            if instance is not None:
+            if "thumbnail_url" in data:
+                data["cover_image_url"] = data["thumbnail_url"]
+            elif instance is not None:
                 data["cover_image_url"] = getattr(instance, "cover_image_url", "")
             else:
                 data["cover_image_url"] = ""
         return data
 
     def transform_schema(self, schema, direction):
-        """Add cover_image_url back to schema for older versions."""
-        if direction == "backwards":
-            props = schema.get("properties", {})
-            props["cover_image_url"] = {
-                "type": "string",
-                "format": "uri",
-                "nullable": True,
-                "readOnly": True,
-            }
+        """Restore cover_image_url shape/order for older Video schemas."""
+        if direction != "backwards":
+            return schema
+
+        props = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        is_video_response = any(
+            key in props for key in ("id", "caption_urls", "streaming_url")
+        )
+        if not is_video_response:
+            # v1 request schemas did not include cover_image_url.
+            props.pop("cover_image_url", None)
+            if "cover_image_url" in required:
+                required.remove("cover_image_url")
+            return schema
+
+        cover = {
+            "type": "string",
+            "format": "uri",
+            "readOnly": True,
+            "nullable": True,
+        }
+
+        # Force the legacy response shape for cover_image_url.
+        props["cover_image_url"] = cover
+
+        # Keep legacy property order: ... streaming_url, cover_image_url, duration.
+        new_props = {}
+        inserted = False
+        for key, value in props.items():
+            if key == "cover_image_url":
+                continue
+            if key == "duration" and not inserted:
+                new_props["cover_image_url"] = cover
+                inserted = True
+            new_props[key] = value
+        if not inserted:
+            new_props["cover_image_url"] = cover
+        schema["properties"] = new_props
+
+        if "cover_image_url" not in required:
+            if "duration" in required:
+                required.insert(required.index("duration"), "cover_image_url")
+            else:
+                required.append("cover_image_url")
         return schema
 
 
@@ -121,6 +183,7 @@ class CaptionUrlAddWordCount(Transform):
     version = "v2"
     description = "Add word_count to caption URL entries"
     serializer = "learning_resources.serializers.VideoSerializer"
+    component_name = "CaptionUrl"
 
     def to_representation(self, data, request, instance):  # noqa: ARG002
         """Strip word_count from each caption entry for v1 clients."""
@@ -131,14 +194,10 @@ class CaptionUrlAddWordCount(Transform):
         return data
 
     def transform_schema(self, schema, direction):
-        """Remove word_count from CaptionUrl items schema for older versions."""
+        """Remove word_count from the CaptionUrl component for older versions."""
         if direction == "backwards":
-            caption_schema = (
-                schema.get("properties", {}).get("caption_urls", {}).get("items", {})
-            )
-            if caption_schema:
-                caption_schema.get("properties", {}).pop("word_count", None)
-                required = caption_schema.get("required", [])
-                if "word_count" in required:
-                    required.remove("word_count")
+            schema.get("properties", {}).pop("word_count", None)
+            required = schema.get("required", [])
+            if "word_count" in required:
+                required.remove("word_count")
         return schema
