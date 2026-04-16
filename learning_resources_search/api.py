@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from django.conf import settings
+from django.db.models import QuerySet
 from opensearch_dsl import Search
 from opensearch_dsl.query import MoreLikeThis, Percolate
 from opensearchpy.exceptions import NotFoundError
@@ -1079,20 +1080,21 @@ def get_similar_topics(
     return list(dict(counter.most_common(num_topics)).keys())
 
 
-def get_similar_resources(
+def get_similar_resources(  # noqa: PLR0913
     value_doc: dict,
     num_resources: int,
     min_term_freq: int,
     min_doc_freq: int,
     use_embeddings,
-) -> list[str]:
+    filter_params=None,
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources based on another resource
 
     Args:
         value_doc (dict):
             a document representing the data fields we want to search with
-        num_topics (int):
+        num_resources (int):
             number of resources to return
         min_term_freq (int):
             minimum times a term needs to show up in input
@@ -1100,15 +1102,24 @@ def get_similar_resources(
             minimum times a term needs to show up in docs
         use_embeddings (bool):
             use vector embeddings to retrieve results
+        filter_params (dict):
+            optional filter parameters (validated serializer data); each
+            backend translates these to its own filter format
 
     Returns:
-        list of str:
-            list of topic values
+        QuerySet[LearningResource]:
+            queryset of learning resources
     """
     if use_embeddings:
-        return get_similar_resources_qdrant(value_doc, num_resources)
+        return get_similar_resources_qdrant(
+            value_doc, num_resources, filter_params=filter_params
+        )
     return get_similar_resources_opensearch(
-        value_doc, num_resources, min_term_freq, min_doc_freq
+        value_doc,
+        num_resources,
+        min_term_freq,
+        min_doc_freq,
+        filter_params=filter_params,
     )
 
 
@@ -1117,15 +1128,23 @@ def _qdrant_similar_results(
     num_resources=6,
     collection_name=RESOURCES_COLLECTION_NAME,
     score_threshold=0,
+    query_filter=None,
 ):
     """
     Get similar resources from qdrant
 
     Args:
-        doc (dict):
-            a document representing the data fields we want to search with
+        input_query:
+            query input for Qdrant similarity search; may be either a point id
+            or a raw embedding vector, depending on the caller
         num_resources (int):
             number of resources to return
+        collection_name (str):
+            qdrant collection name
+        score_threshold (float):
+            minimum similarity score
+        query_filter:
+            optional Qdrant filter to apply alongside the similarity search
 
     Returns:
         list of dict:
@@ -1145,11 +1164,14 @@ def _qdrant_similar_results(
             limit=num_resources,
             using=encoder.model_short_name(),
             score_threshold=score_threshold,
+            query_filter=query_filter,
         ).points
     ]
 
 
-def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
+def get_similar_resources_qdrant(
+    value_doc: dict, num_resources: int, filter_params=None
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources from qdrant
 
@@ -1158,16 +1180,24 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
             a document representing the data fields we want to search with
         num_resources (int):
             number of resources to return
+        filter_params (dict):
+            optional filter parameters (validated serializer data) to narrow
+            the similarity search
 
     Returns:
-        list of str:
-            list of learning resources
+        list of learning resources
     """
-    from vector_search.utils import vector_point_id, vector_point_key
+    from vector_search.utils import (
+        qdrant_query_conditions,
+        vector_point_id,
+        vector_point_key,
+    )
 
+    query_filter = qdrant_query_conditions(filter_params) if filter_params else None
     hits = _qdrant_similar_results(
         input_query=vector_point_id(vector_point_key(value_doc)),
         num_resources=num_resources,
+        query_filter=query_filter,
     )
     return (
         LearningResource.objects.for_search_serialization()
@@ -1181,24 +1211,30 @@ def get_similar_resources_qdrant(value_doc: dict, num_resources: int):
 
 
 def get_similar_resources_opensearch(
-    value_doc: dict, num_resources: int, min_term_freq: int, min_doc_freq: int
-) -> list[str]:
+    value_doc: dict,
+    num_resources: int,
+    min_term_freq: int,
+    min_doc_freq: int,
+    filter_params=None,
+) -> QuerySet[LearningResource]:
     """
     Get a list of similar resources from opensearch
 
     Args:
         value_doc (dict):
             a document representing the data fields we want to search with
-        num_topics (int):
+        num_resources (int):
             number of resources to return
         min_term_freq (int):
             minimum times a term needs to show up in input
         min_doc_freq (int):
             minimum times a term needs to show up in docs
+        filter_params (dict):
+            optional filter parameters (validated serializer data) to narrow
+            the similarity search
 
     Returns:
-        list of str:
-            list of learning resources
+        list of learning resources
     """
     indexes = relevant_indexes(
         LEARNING_RESOURCE_TYPES, [], endpoint=LEARNING_RESOURCE, use_hybrid_search=False
@@ -1218,10 +1254,21 @@ def get_similar_resources_opensearch(
         min_term_freq=min_term_freq,
         min_doc_freq=min_doc_freq,
     )
+    # generate_filter_clauses expects list values; scalar booleans (from
+    # ArrayWrappedBoolean validated_data) must be wrapped before iterating.
+    normalized_params = {
+        k: [v] if isinstance(v, bool) else v for k, v in (filter_params or {}).items()
+    }
+    filter_clauses = generate_filter_clauses(normalized_params)
+    # Wrap all filters in a bool/must so opensearch-dsl serializes them as a
+    # single AND'd filter dict rather than a bare list (which it may not handle).
+    combined_filter = {
+        "bool": {
+            "must": [{"exists": {"field": "resource_type"}}, *filter_clauses.values()]
+        }
+    }
     # return only learning_resources
-    search = search.query(
-        "bool", must=[mlt_query], filter={"exists": {"field": "resource_type"}}
-    )
+    search = search.query("bool", must=[mlt_query], filter=combined_filter)
     response = search.execute()
     return LearningResource.objects.for_search_serialization().filter(
         id__in=[
