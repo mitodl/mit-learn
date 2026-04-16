@@ -96,9 +96,9 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
-            course,
-            label: course.title,
-          })
+          course,
+          label: course.title,
+        })
       }
       if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })

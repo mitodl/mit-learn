@@ -90,9 +90,9 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
-            program,
-            label: program.title,
-          })
+          program,
+          label: program.title,
+        })
       }
       if (enrollmentType === "paid" && program.products[0]) {
         replaceBasketItem.mutate(program.products[0].id)
