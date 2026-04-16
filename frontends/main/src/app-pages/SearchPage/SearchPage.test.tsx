@@ -1016,4 +1016,61 @@ describe("UniversalAIBanner", () => {
     expect(screen.queryByText("Universal AI")).not.toBeInTheDocument()
     expect(screen.queryByText("New on MIT Learn")).not.toBeInTheDocument()
   })
+
+  test("Vector Hybrid Search passes correct params and renders expected count/facets", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+        results: factories.learningResources.resources({ count: 5 }).results,
+      },
+    })
+
+    // Authenticate as path editor (admin)
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    renderWithProviders(<SearchPage />, { url: "?vector_search=true&q=test" })
+
+    await waitFor(() => {
+      const call = makeRequest.mock.calls.find(([_method, url]) => {
+        return url.includes(urls.search.vectorResources())
+      })
+      expect(call).toBeDefined()
+    })
+
+    const call = makeRequest.mock.calls.find(([_method, url]) =>
+      url.includes(urls.search.vectorResources()),
+    )
+    invariant(call)
+    const fullUrl = new URL(call[1], "http://mit.edu")
+    const apiSearchParams = fullUrl.searchParams
+
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
+    expect(apiSearchParams.get("q")).toBe("test")
+
+    // Ensure count is visible
+    const countText = await screen.findByText("700 results")
+    expect(countText).toBeVisible()
+
+    // Ensure facets are visible
+    await waitFor(() => {
+      const tabs = screen.getAllByRole("tab")
+      expect(
+        tabs.map((tab) => (tab.textContent || "").replace(/\s/g, "")),
+      ).toEqual([
+        "All(100)",
+        "Courses(100)",
+        "Programs(0)",
+        "LearningMaterials(0)",
+      ])
+    })
+  })
 })
