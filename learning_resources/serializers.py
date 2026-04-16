@@ -1145,7 +1145,9 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
         child=serializers.DecimalField(max_digits=12, decimal_places=2),
         read_only=True,
     )
-    resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
+    resource_prices = LearningResourcePriceSerializer(
+        source="resource_prices_for_serialization", read_only=True, many=True
+    )
     runs = LearningResourceRunSerializer(
         source="published_runs", read_only=True, many=True, allow_null=True
     )
@@ -1165,7 +1167,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
         return LearningResourceRelationshipChildField(
-            instance.children, many=True, read_only=True
+            instance.children_for_serialization(), many=True, read_only=True
         ).data
 
     def get_best_run_id(self, instance) -> int | None:

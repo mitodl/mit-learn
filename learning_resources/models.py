@@ -349,8 +349,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "topics",
                 queryset=LearningResourceTopic.objects.for_serialization(),
+                to_attr="_topics",
             ),
-            Prefetch("resource_prices"),
+            Prefetch("resource_prices", to_attr="_resource_prices"),
             Prefetch(
                 "offered_by",
                 queryset=LearningResourceOfferor.objects.for_serialization(),
@@ -386,6 +387,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "children",
                 queryset=LearningResourceRelationship.objects.for_serialization(),
+                to_attr="_children",
             ),
             Prefetch(
                 "direct_content_files",
@@ -440,6 +442,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                         ).select_related("school"),
                     ),
                 ),
+                to_attr="_direct_content_files",
             ),
             *LearningResourceDetailModel.get_subclass_prefetches(),
         ).select_related("image", "platform")
@@ -642,39 +645,37 @@ class LearningResource(TimestampedModel):
 
     def topics_for_serialization(self):
         """Return topics using the prefetch cache when available."""
-        prefetched_topics = getattr(self, "_prefetched_objects_cache", {}).get("topics")
-        if prefetched_topics is not None:
-            return list(prefetched_topics)
+        if hasattr(self, "_topics"):
+            return self._topics
         return list(self.topics.for_serialization())
+
+    def resource_prices_for_serialization(self):
+        """Return resource prices using the prefetch cache when available."""
+        if hasattr(self, "_resource_prices"):
+            return self._resource_prices
+        return list(self.resource_prices.all())
 
     def resource_price_amounts_for_serialization(self):
         """Return resource price amounts using the prefetch cache when available."""
-        prefetched_prices = getattr(self, "_prefetched_objects_cache", {}).get(
-            "resource_prices"
+        return [price.amount for price in self.resource_prices_for_serialization()]
+
+    def children_for_serialization(self):
+        """Return children using the prefetch cache when available."""
+        if hasattr(self, "_children"):
+            return self._children
+        return list(
+            self.children.order_by("position").select_related("child", "child__image")
         )
-        prices = (
-            prefetched_prices
-            if prefetched_prices is not None
-            else self.resource_prices.all()
-        )
-        return [price.amount for price in prices]
 
     def first_child_relationship_for_serialization(self):
         """Return the first child relationship ordered by position."""
-        prefetched_children = getattr(self, "_prefetched_objects_cache", {}).get(
-            "children"
-        )
-        if prefetched_children is not None:
-            return prefetched_children[0] if prefetched_children else None
-        return self.children.order_by("position").first()
+        children = self.children_for_serialization()
+        return children[0] if children else None
 
     def direct_content_files_for_serialization(self):
         """Return direct content files using the prefetch cache when available."""
-        prefetched_content_files = getattr(self, "_prefetched_objects_cache", {}).get(
-            "direct_content_files"
-        )
-        if prefetched_content_files is not None:
-            return list(prefetched_content_files)
+        if hasattr(self, "_direct_content_files"):
+            return self._direct_content_files
         return list(self.direct_content_files.for_serialization())
 
     @cached_property
@@ -1257,19 +1258,16 @@ class UserList(TimestampedModel):
 
     def topics_for_serialization(self):
         """Return topics using the prefetch cache when available."""
-        prefetched_topics = getattr(self, "_prefetched_objects_cache", {}).get("topics")
-        if prefetched_topics is not None:
-            return list(prefetched_topics)
+        if hasattr(self, "_topics"):
+            return self._topics
         return list(self.topics.for_serialization())
 
     def first_child_relationship_for_serialization(self):
         """Return the first child relationship ordered by position."""
-        prefetched_children = getattr(self, "_prefetched_objects_cache", {}).get(
-            "children"
-        )
-        if prefetched_children is not None:
-            return prefetched_children[0] if prefetched_children else None
-        return self.children.order_by("position").first()
+        children = getattr(self, "_children", None)
+        if children is None:
+            return self.children.order_by("position").first()
+        return children[0] if children else None
 
 
 class UserListQuerySet(TimestampedModelQuerySet):
@@ -1281,12 +1279,14 @@ class UserListQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "topics",
                 queryset=LearningResourceTopic.objects.for_serialization(),
+                to_attr="_topics",
             ),
             Prefetch(
                 "children",
                 queryset=UserListRelationship.objects.select_related(
                     "child", "child__image"
                 ).order_by("position"),
+                to_attr="_children",
             ),
         )
 
