@@ -87,15 +87,16 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (enrollments.isLoading || me.isLoading) {
       return
-    } else if (me.data?.is_authenticated) {
-      if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-        posthog.capture(PostHogEvents.CallToActionClicked, {
-          resourceId: program.id,
-          readableId: program.readable_id,
-          resourceType: "program",
-          label: getEnrollButtonText(),
-        })
-      }
+    }
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        resourceId: program.id,
+        readableId: program.readable_id,
+        resourceType: "program",
+        label: getEnrollButtonText(),
+      })
+    }
+    if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && program.products[0]) {
         replaceBasketItem.mutate(program.products[0].id)
       } else if (enrollmentType === "free") {

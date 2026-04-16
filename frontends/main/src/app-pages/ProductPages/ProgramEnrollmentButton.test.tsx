@@ -13,15 +13,21 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { programView } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const makeProgram = mitxFactories.programs.program
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
@@ -398,5 +404,71 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     screen.getByTestId("signup-popover")
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockClear()
+    })
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
+
+    test("fires cta_clicked when authenticated user clicks enroll", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+
+      renderWithProviders(
+        <ProgramEnrollmentButton program={program} variant="primary" />,
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: program.id,
+          readableId: program.readable_id,
+          resourceType: "program",
+        }),
+      )
+    })
+
+    test("fires cta_clicked when unauthenticated user clicks enroll", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [], {
+        code: 403,
+      })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
+
+      renderWithProviders(
+        <ProgramEnrollmentButton program={program} variant="primary" />,
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: program.id,
+          readableId: program.readable_id,
+          resourceType: "program",
+        }),
+      )
+    })
   })
 })

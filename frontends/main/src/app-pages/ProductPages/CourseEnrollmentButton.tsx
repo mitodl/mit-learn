@@ -93,15 +93,16 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (me.isLoading) {
       return
-    } else if (me.data?.is_authenticated) {
-      if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-        posthog.capture(PostHogEvents.CallToActionClicked, {
-          resourceId: course.id,
-          readableId: course.readable_id,
-          resourceType: "course",
-          label: getButtonText(nextRun, price?.finalPrice),
-        })
-      }
+    }
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        resourceId: course.id,
+        readableId: course.readable_id,
+        resourceType: "course",
+        label: getButtonText(nextRun, price?.finalPrice),
+      })
+    }
+    if (me.data?.is_authenticated) {
       if (enrollmentDecision.type === "dialog") {
         NiceModal.show(CourseEnrollmentDialog, { course })
       } else if (enrollmentDecision.type === "checkout") {

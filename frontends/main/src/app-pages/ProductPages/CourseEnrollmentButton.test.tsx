@@ -15,6 +15,18 @@ import {
 } from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  usePostHog: jest.fn(),
+}))
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
@@ -504,5 +516,69 @@ describe("CourseEnrollmentButton", () => {
     })
     expect(button).toBeInTheDocument()
     expect(button).toBeDisabled()
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockClear()
+    })
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
+
+    test("fires cta_clicked when authenticated user clicks enroll", async () => {
+      const run = makeRun({
+        is_archived: false,
+        is_enrollable: true,
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+
+      renderWithProviders(<CourseEnrollmentButton course={course} />)
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: course.id,
+          readableId: course.readable_id,
+          resourceType: "course",
+        }),
+      )
+    })
+
+    test("fires cta_clicked when unauthenticated user clicks enroll", async () => {
+      const run = makeRun({
+        is_archived: false,
+        is_enrollable: true,
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
+
+      renderWithProviders(<CourseEnrollmentButton course={course} />)
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: course.id,
+          readableId: course.readable_id,
+          resourceType: "course",
+        }),
+      )
+    })
   })
 })
