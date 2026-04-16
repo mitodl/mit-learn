@@ -902,15 +902,15 @@ wheels = [
 
 [[package]]
 name = "django-redis"
-version = "5.4.0"
+version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "redis" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/9d/2272742fdd9d0a9f0b28cd995b0539430c9467a2192e4de2cea9ea6ad38c/django-redis-5.4.0.tar.gz", hash = "sha256:6a02abaa34b0fea8bf9b707d2c363ab6adc7409950b2db93602e6cb292818c42", size = 52567, upload-time = "2023-10-01T20:22:01.221Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/53/dbcfa1e528e0d6c39947092625b2c89274b5d88f14d357cee53c4d6dbbd4/django_redis-6.0.0.tar.gz", hash = "sha256:2d9cb12a20424a4c4dde082c6122f486628bae2d9c2bee4c0126a4de7fda00dd", size = 56904, upload-time = "2025-06-17T18:15:46.376Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/f1/63caad7c9222c26a62082f4f777de26389233b7574629996098bf6d25a4d/django_redis-5.4.0-py3-none-any.whl", hash = "sha256:ebc88df7da810732e2af9987f7f426c96204bf89319df4c6da6ca9a2942edd5b", size = 31119, upload-time = "2023-10-01T20:21:33.009Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/79/055dfcc508cfe9f439d9f453741188d633efa9eab90fc78a67b0ab50b137/django_redis-6.0.0-py3-none-any.whl", hash = "sha256:20bf0063a8abee567eb5f77f375143c32810c8700c0674ced34737f8de4e36c0", size = 33687, upload-time = "2025-06-17T18:15:34.165Z" },
 ]
 
 [[package]]
@@ -2567,6 +2567,7 @@ dependencies = [
     { name = "lxml" },
     { name = "markdown" },
     { name = "markdown2" },
+    { name = "mitol-django-common" },
     { name = "mitol-django-observability" },
     { name = "mitol-django-scim" },
     { name = "named-enum" },
@@ -2675,7 +2676,7 @@ requires-dist = [
     { name = "django-ipware", specifier = ">=7.0.0,<8" },
     { name = "django-json-widget", specifier = ">=2.0.0,<3" },
     { name = "django-oauth-toolkit", specifier = ">=3.0.0,<4" },
-    { name = "django-redis", specifier = ">=5.2.0,<6" },
+    { name = "django-redis", specifier = ">=5.2.0,<7" },
     { name = "django-removals", specifier = ">=1.1.6,<2" },
     { name = "django-scim2", specifier = ">=0.19.1,<0.20" },
     { name = "django-server-status", specifier = ">=0.7.0,<0.8" },
@@ -2705,8 +2706,9 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.0.0,<7" },
     { name = "markdown", specifier = ">=3.7,<4" },
     { name = "markdown2", specifier = ">=2.4.8,<3" },
+    { name = "mitol-django-common", specifier = ">=2026.4.2,<2027" },
     { name = "mitol-django-observability", specifier = ">=2026.1.0,<2027" },
-    { name = "mitol-django-scim", specifier = ">=2025.3.31,<2026" },
+    { name = "mitol-django-scim", specifier = ">=2026.4.2,<2027" },
     { name = "named-enum", specifier = ">=1.4.0,<2" },
     { name = "nested-lookup", specifier = ">=0.2.25,<0.3" },
     { name = "nh3", specifier = ">=0.3.0,<0.4" },
@@ -2771,7 +2773,7 @@ dev = [
     { name = "moto", specifier = ">=5.0.0,<6" },
     { name = "nplusone", specifier = ">=1.0.0,<2" },
     { name = "pdbpp", specifier = ">=0.11.6,<0.12" },
-    { name = "pytest", specifier = ">=8.0.0,<9" },
+    { name = "pytest", specifier = ">=9.0.3,<10" },
     { name = "pytest-cov", specifier = ">=7.0.0,<8" },
     { name = "pytest-django", specifier = ">=4.5.2,<5" },
     { name = "pytest-env", specifier = ">=1.0.0,<2" },
@@ -2787,7 +2789,7 @@ dev = [
 
 [[package]]
 name = "mitol-django-common"
-version = "2025.6.20"
+version = "2026.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -2800,9 +2802,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/0e/b4dda829f5119338da3f8c7bd63a2350131bd4f84bd2f0e373c34921f520/mitol_django_common-2025.6.20.tar.gz", hash = "sha256:5060a99537a571ec8e5b94a3972161a318ae60dc7df4154ebcc8cb5f29cfbdbb", size = 21695, upload-time = "2025-06-20T08:08:05.727Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/47/1b9be48b8f5fc3cd3a9889853c78f8d8919ad0b22f1c6f4f4b92706ae45b/mitol_django_common-2026.4.2.tar.gz", hash = "sha256:609ad60133cac9d18cd5d2d4bcbc7048508b137b57c4990439de9c5016e758dd", size = 22447, upload-time = "2026-04-02T15:46:55.658Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/c2/d562e5e8721a1e4319f0ca78c7dc2fbe2fe796a58fda9aae44b4462a7a14/mitol_django_common-2025.6.20-py3-none-any.whl", hash = "sha256:a3a1d2ed1570cf905132651ab1338cf30924904c6f4d98af62e80cf9a25d4f54", size = 31511, upload-time = "2025-06-20T08:08:04.965Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/f5/f781062585655f35300d73317aa46cfdf9ab8f17f2142e7463e8a0722325/mitol_django_common-2026.4.2-py3-none-any.whl", hash = "sha256:4569bb3118047d2f79658fb71686584d140eaca9152b5f46ca52930fa0cddc8d", size = 32382, upload-time = "2026-04-02T15:46:54.84Z" },
 ]
 
 [[package]]
@@ -2826,7 +2828,7 @@ wheels = [
 
 [[package]]
 name = "mitol-django-scim"
-version = "2025.7.29"
+version = "2026.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -2837,9 +2839,9 @@ dependencies = [
     { name = "requests" },
     { name = "strenum" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/d0/a0b7b3790a34cf7efd49c7490d7d5c056b5840f986113e0343cab0e63e5f/mitol_django_scim-2025.7.29.tar.gz", hash = "sha256:d9470c0b6293f3030229a2e495b249cad5b96f1cdc4b932a8dc67f9c433bd739", size = 15087, upload-time = "2025-07-29T16:01:42.316Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/fe/22069364ce5dbb6214e08d617a27a2e6ccc638b0405e30738f2a33978bcc/mitol_django_scim-2026.4.2.tar.gz", hash = "sha256:d5ee3bc2c0a54f5e60abcefe22d927da177f57da8b62e176d19d311b906ed86a", size = 14999, upload-time = "2026-04-02T15:43:29.164Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/5e/1889d00cf93919d6b34f4638b35a930942cfa95b64c3d005d22a3ea0dd5a/mitol_django_scim-2025.7.29-py3-none-any.whl", hash = "sha256:aa10c93756d15a2fd8e8f747095e53d0c9aa7510d6fad8ce559db5ad67acfb87", size = 21390, upload-time = "2025-07-29T16:01:41.267Z" },
+    { url = "https://files.pythonhosted.org/packages/db/c9/f1eaf2645e853ca4987d89ab37fadc704002b06b6f2b0c7e4b91538b0ee4/mitol_django_scim-2026.4.2-py3-none-any.whl", hash = "sha256:0d95077ec46782955d5090a28c60e0f69b275514ab777ccd8e80c04f9f82e81d", size = 21152, upload-time = "2026-04-02T15:43:28.309Z" },
 ]
 
 [[package]]
@@ -4003,7 +4005,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "8.4.2"
+version = "9.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -4012,9 +4014,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
 ]
 
 [[package]]
