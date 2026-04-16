@@ -96,8 +96,10 @@ const CourseEnrollmentButton: React.FC<CourseEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
-          course,
-          label: course.title,
+          resourceId: course.id,
+          readableId: course.readable_id,
+          resourceType: "course",
+          label: getButtonText(nextRun, price?.displayPrice),
         })
       }
       if (enrollmentDecision.type === "dialog") {

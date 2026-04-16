@@ -90,8 +90,10 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     } else if (me.data?.is_authenticated) {
       if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
         posthog.capture(PostHogEvents.CallToActionClicked, {
-          program,
-          label: program.title,
+          resourceId: program.id,
+          readableId: program.readable_id,
+          resourceType: "program",
+          label: getEnrollButtonText(),
         })
       }
       if (enrollmentType === "paid" && program.products[0]) {
