@@ -314,9 +314,11 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
 
 const getResourceUrl = (
   resource: LearningResource,
-  { mitxonlineProductPages }: { mitxonlineProductPages?: boolean },
+  {
+    mitxonlineProductPages,
+    showVideoPlaylistPage,
+  }: { mitxonlineProductPages?: boolean; showVideoPlaylistPage?: boolean },
 ) => {
-  console.log({ resource })
   if (
     mitxonlineProductPages &&
     resource.platform?.code === PlatformEnum.Mitxonline
@@ -340,15 +342,16 @@ const getResourceUrl = (
       })
     }
   }
-  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString())
-  }
-
-  if (
-    resource.resource_type === ResourceTypeEnum.Video &&
-    resource?.playlists.length > 0
-  ) {
-    return videoDetailPageView(resource.id, resource?.playlists[0])
+  if (showVideoPlaylistPage) {
+    if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+      return videoPlaylistPageView(resource.id.toString())
+    }
+    if (
+      resource.resource_type === ResourceTypeEnum.Video &&
+      resource?.playlists?.length > 0
+    ) {
+      return videoDetailPageView(resource.id, Number(resource.playlists[0]))
+    }
   }
   return resource.url
 }
@@ -380,6 +383,9 @@ const CallToActionSection = ({
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
+  const showVideoPlaylistPage = useFeatureFlagEnabled(
+    FeatureFlags.VideoPlaylistPage,
+  )
 
   if (hide) {
     return null
@@ -406,7 +412,7 @@ const CallToActionSection = ({
   const shareLabel = "Share"
   const socialIconSize = 18
   const url = appendUtmParams(
-    getResourceUrl(resource, { mitxonlineProductPages }),
+    getResourceUrl(resource, { mitxonlineProductPages, showVideoPlaylistPage }),
     resource.title,
   )
 
