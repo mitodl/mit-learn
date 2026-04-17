@@ -39,6 +39,8 @@ import {
   LINKEDIN_SHARE_BASE_URL,
   coursePageView,
   programPageView,
+  videoDetailPageView,
+  videoPlaylistPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -259,7 +261,6 @@ const CallToActionButton: React.FC<ButtonProps & { selected?: boolean }> = (
 const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
   const accessLearningMaterial = "Access Learning Material"
-  const watchOnYouTube = "Watch on YouTube"
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
@@ -272,11 +273,6 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
-  }
-
-  if (resource?.platform?.code === PlatformEnum.Youtube) {
-    // YouTube resources should always show "Watch on YouTube" as the CTA
-    return watchOnYouTube
   }
 
   if (resource?.resource_category === "Article") {
@@ -320,6 +316,7 @@ const getResourceUrl = (
   resource: LearningResource,
   { mitxonlineProductPages }: { mitxonlineProductPages?: boolean },
 ) => {
+  console.log({ resource })
   if (
     mitxonlineProductPages &&
     resource.platform?.code === PlatformEnum.Mitxonline
@@ -342,6 +339,16 @@ const getResourceUrl = (
             : undefined,
       })
     }
+  }
+  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+    return videoPlaylistPageView(resource.id.toString())
+  }
+
+  if (
+    resource.resource_type === ResourceTypeEnum.Video &&
+    resource?.playlists.length > 0
+  ) {
+    return videoDetailPageView(resource.id, resource?.playlists[0])
   }
   return resource.url
 }

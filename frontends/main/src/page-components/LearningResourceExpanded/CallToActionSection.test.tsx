@@ -54,7 +54,7 @@ describe("CallToActionSection", () => {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Youtube,
         resourceCategory: "Lecture Video",
-        expectedText: "Watch on YouTube",
+        expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Video,
@@ -66,7 +66,7 @@ describe("CallToActionSection", () => {
         resourceType: ResourceTypeEnum.VideoPlaylist,
         platform: PlatformEnum.Youtube,
         resourceCategory: "Video Playlist",
-        expectedText: "Watch on YouTube",
+        expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Podcast,
@@ -105,6 +105,7 @@ describe("CallToActionSection", () => {
           resource_type: resourceType,
           resource_category: resourceCategory,
           platform: { code: platform },
+          playlists: [],
           url: "https://example.com/resource",
         })
 
