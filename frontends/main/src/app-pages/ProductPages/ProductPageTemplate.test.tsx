@@ -5,6 +5,18 @@ import ProductPageTemplate from "./ProductPageTemplate"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  usePostHog: jest.fn(),
+}))
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
@@ -24,14 +36,14 @@ jest.mock("@ebay/nice-modal-react", () => {
 })
 
 const mockedUseHubspotFormDetail = jest.mocked(useHubspotFormDetail)
-const mockedNiceModalShow = NiceModal.show as jest.MockedFunction<
-  typeof NiceModal.show
->
+const mockedNiceModalShow = jest.mocked(NiceModal.show)
 
 const renderProductPageTemplate = ({
   showStayUpdated,
+  resource,
 }: {
   showStayUpdated?: boolean
+  resource?: React.ComponentProps<typeof ProductPageTemplate>["resource"]
 } = {}) => {
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   renderWithProviders(
@@ -43,6 +55,7 @@ const renderProductPageTemplate = ({
       infoBox={<div>Info box</div>}
       enrollmentAction={<button type="button">Enroll</button>}
       showStayUpdated={showStayUpdated}
+      resource={resource}
     >
       <div>Page content</div>
     </ProductPageTemplate>,
@@ -124,5 +137,53 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     button.click()
     expect(mockedNiceModalShow).toHaveBeenCalled()
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
+      mockedUseHubspotFormDetail.mockReturnValue({
+        data: undefined,
+        isError: false,
+      } as ReturnType<typeof useHubspotFormDetail>)
+    })
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+      mockCapture.mockReset()
+    })
+
+    it("fires cta_clicked with resource properties when Stay Updated is clicked", () => {
+      const resource = { id: 42, readable_id: "program-v1:test+101", resource_type: "program" as const }
+      renderProductPageTemplate({ showStayUpdated: true, resource })
+
+      screen.getByRole("button", { name: "Stay Updated" }).click()
+
+      expect(mockCapture).toHaveBeenCalledWith(PostHogEvents.CallToActionClicked, {
+        label: "Stay Updated",
+        resourceId: resource.id,
+        readableId: resource.readable_id,
+        resourceType: resource.resource_type,
+      })
+    })
+
+    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", () => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+      const resource = { id: 42, readable_id: "program-v1:test+101", resource_type: "program" as const }
+      renderProductPageTemplate({ showStayUpdated: true, resource })
+
+      screen.getByRole("button", { name: "Stay Updated" }).click()
+
+      expect(mockCapture).not.toHaveBeenCalled()
+    })
+
+    it("does not fire cta_clicked when resource prop is not provided", () => {
+      renderProductPageTemplate({ showStayUpdated: true })
+
+      screen.getByRole("button", { name: "Stay Updated" }).click()
+
+      expect(mockCapture).not.toHaveBeenCalled()
+    })
   })
 })
