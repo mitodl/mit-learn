@@ -101,7 +101,7 @@ const TermsPage: React.FC = () => {
             <Link href={urls.HONOR_CODE} color="red" size="large">
               Honor Code
             </Link>{" "}
-            prior to registering for a {SITE_NAME} account or using any portion
+            prior to registering for an {SITE_NAME} account or using any portion
             of the {SITE_NAME} website ("Site"), including accessing any
             Offering, course material, discussion boards, or educational tools.
             Please be advised that certain Offerings may have other terms
@@ -223,9 +223,10 @@ const TermsPage: React.FC = () => {
             Please be advised that because of U.S. Office of Foreign Assets
             Control (OFAC) restrictions and other U.S. federal regulations,
             learners residing in one or more of the following countries or
-            regions will not be able to register for this program: Iran, Cuba,
-            North Korea and the Crimea, Donetsk People's Republic and Luhansk
-            People's Republic regions of Ukraine.
+            regions will not be able to create (register) an account on the Site
+            or enroll in any Offerings: Iran, Cuba, North Korea and the Crimea,
+            Donetsk People's Republic and Luhansk People's Republic regions of
+            Ukraine.
           </BodyText>
           <BodyText variant="body1">
             We care about the confidentiality and security of your personal
@@ -369,7 +370,7 @@ const TermsPage: React.FC = () => {
             an acceptable form of photo ID (described below). Although these
             items are collected by {SITE_NAME} in accordance with these TOS and
             the Privacy Policy, you should be aware that the actual
-            authentication of your identity is performed by a {SITE_NAME}
+            authentication of your identity is performed by an {SITE_NAME}{" "}
             third-party service provider and this information will be used only
             for the purpose of verifying your identity. Acceptable forms of
             photo ID's are:
@@ -427,9 +428,6 @@ const TermsPage: React.FC = () => {
           <BodyText variant="body1">
             We may request you to provide some personal information via a short
             voluntary module entrance survey.
-          </BodyText>
-          <BodyText variant="body1" style={{ textDecorationLine: "underline" }}>
-            REGISTRATION:
           </BodyText>
           <BodyText variant="body1" style={{ textDecorationLine: "underline" }}>
             REGISTRATION, ENROLLMENT, PAYMENT, AND REFUNDS:
@@ -608,17 +606,17 @@ const TermsPage: React.FC = () => {
             APPLICABLE LAW.
           </BodyText>
           <BodyText variant="body1">
-            {SITE_NAME} AND COLLABORATORS (AS HEREINAFTER DEFINED) DO NOT
-            WARRANT THAT THE SITE WILL OPERATE IN AN UNINTERRUPTED OR ERROR-FREE
-            MANNER, THAT THE SITE IS FREE OF VIRUSES OR OTHER HARMFUL
-            COMPONENTS, OR THAT THE MODULES OR CONTENT PROVIDED WILL MEET YOUR
-            NEEDS OR EXPECTATIONS.
+            {SITE_NAME?.toUpperCase()} AND COLLABORATORS (AS HEREINAFTER
+            DEFINED) DO NOT WARRANT THAT THE SITE WILL OPERATE IN AN
+            UNINTERRUPTED OR ERROR-FREE MANNER, THAT THE SITE IS FREE OF VIRUSES
+            OR OTHER HARMFUL COMPONENTS, OR THAT THE MODULES OR CONTENT PROVIDED
+            WILL MEET YOUR NEEDS OR EXPECTATIONS.
           </BodyText>
           <BodyText variant="body1">
-            {SITE_NAME} AND COLLABORATORS ALSO MAKE NO WARRANTY ABOUT THE
-            ACCURACY, COMPLETENESS, TIMELINESS, OR QUALITY OF THE SITE OR ANY
-            MODULES OR CONTENT, OR THAT ANY PARTICULAR MODULES OR CONTENT WILL
-            CONTINUE TO BE MADE AVAILABLE. "COLLABORATORS" MEANS MIT, THE
+            {SITE_NAME?.toUpperCase()} AND COLLABORATORS ALSO MAKE NO WARRANTY
+            ABOUT THE ACCURACY, COMPLETENESS, TIMELINESS, OR QUALITY OF THE SITE
+            OR ANY MODULES OR CONTENT, OR THAT ANY PARTICULAR MODULES OR CONTENT
+            WILL CONTINUE TO BE MADE AVAILABLE. "COLLABORATORS" MEANS MIT, THE
             ENTITIES PROVIDING INFORMATION, CONTENT, OR SERVICES FOR THE SITE,
             THE MODULE INSTRUCTORS AND THEIR STAFFS.
           </BodyText>
@@ -790,7 +788,7 @@ const TermsPage: React.FC = () => {
             inconvenience of forum).
           </BodyText>
           <BodyText variant="body1">
-            These terms of service were last updated on March 26, 2026.
+            These terms of service were last updated on April 14, 2026.
           </BodyText>
         </BodyContainer>
       </PageContainer>
