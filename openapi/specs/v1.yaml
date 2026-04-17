@@ -6886,13 +6886,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LearningPathRelationshipRequest'
+              $ref: '#/components/schemas/LearningPathRelationshipCreateRequest'
         required: true
       responses:
         '201':
@@ -6951,19 +6951,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedLearningPathRelationshipRequest'
+              $ref: '#/components/schemas/PatchedLearningPathRelationshipCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedLearningPathRelationshipRequest'
+              $ref: '#/components/schemas/PatchedLearningPathRelationshipCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedLearningPathRelationshipRequest'
+              $ref: '#/components/schemas/PatchedLearningPathRelationshipCreateRequest'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LearningPathRelationship'
+                $ref: '#/components/schemas/LearningPathRelationshipCreate'
           description: ''
     delete:
       operationId: learningpaths_items_destroy
@@ -11900,21 +11900,49 @@ components:
       - id
       - parent
       - resource
-    LearningPathRelationshipRequest:
+    LearningPathRelationshipCreate:
       type: object
-      description: Specialized serializer for a LearningPath relationship
+      description: |-
+        Create serializer for nested learning path items.
+
+        The parent is derived from the nested route and must not be client-supplied.
       properties:
+        id:
+          type: integer
+          readOnly: true
+        resource:
+          allOf:
+          - $ref: '#/components/schemas/LearningResource'
+          readOnly: true
         position:
           type: integer
           maximum: 2147483647
           minimum: 0
         parent:
           type: integer
+          readOnly: true
         child:
           type: integer
       required:
       - child
+      - id
       - parent
+      - resource
+    LearningPathRelationshipCreateRequest:
+      type: object
+      description: |-
+        Create serializer for nested learning path items.
+
+        The parent is derived from the nested route and must not be client-supplied.
+      properties:
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        child:
+          type: integer
+      required:
+      - child
     LearningPathResource:
       type: object
       description: CRUD serializer for LearningPath resources
@@ -13985,16 +14013,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VideoResource'
-    PatchedLearningPathRelationshipRequest:
+    PatchedLearningPathRelationshipCreateRequest:
       type: object
-      description: Specialized serializer for a LearningPath relationship
+      description: |-
+        Create serializer for nested learning path items.
+
+        The parent is derived from the nested route and must not be client-supplied.
       properties:
         position:
           type: integer
           maximum: 2147483647
           minimum: 0
-        parent:
-          type: integer
         child:
           type: integer
     PatchedLearningPathResourceRequest:

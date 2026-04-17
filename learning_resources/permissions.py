@@ -2,6 +2,7 @@
 learning_resources permissions
 """
 
+from django.contrib.auth.models import Group
 from django.http import HttpRequest
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -27,8 +28,10 @@ def is_learning_path_editor(request: HttpRequest) -> bool:
     """
     return (
         request.user is not None
-        and request.user.groups.filter(name=GROUP_STAFF_LISTS_EDITORS).first()
-        is not None
+        and not request.user.is_anonymous
+        and Group.objects.filter(
+            user=request.user, name=GROUP_STAFF_LISTS_EDITORS
+        ).exists()
     )
 
 

@@ -102,7 +102,7 @@ const useLearningPathListItemMove = () => {
       await learningPathsApi.learningpathsItemsPartialUpdate({
         learning_resource_id: parent,
         id,
-        PatchedLearningPathRelationshipRequest: { position },
+        PatchedLearningPathRelationshipCreateRequest: { position },
       })
     },
     onSettled: (_data, _err, vars) => {
