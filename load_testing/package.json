@@ -1,0 +1,12 @@
+{
+  "name": "mit-learn-load-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "learn.js",
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@grafana/openapi-to-k6": "^0.4.1",
+    "@types/k6": "^1.7.0"
+  }
+}
