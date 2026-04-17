@@ -101,7 +101,7 @@ const TermsPage: React.FC = () => {
             <Link href={urls.HONOR_CODE} color="red" size="large">
               Honor Code
             </Link>{" "}
-            prior to registering for an {SITE_NAME} account or using any portion
+            prior to registering for an MIT Learn account or using any portion
             of the {SITE_NAME} website ("Site"), including accessing any
             Offering, course material, discussion boards, or educational tools.
             Please be advised that certain Offerings may have other terms
@@ -370,7 +370,7 @@ const TermsPage: React.FC = () => {
             an acceptable form of photo ID (described below). Although these
             items are collected by {SITE_NAME} in accordance with these TOS and
             the Privacy Policy, you should be aware that the actual
-            authentication of your identity is performed by an {SITE_NAME}{" "}
+            authentication of your identity is performed by an MIT Learn
             third-party service provider and this information will be used only
             for the purpose of verifying your identity. Acceptable forms of
             photo ID's are:
@@ -606,17 +606,17 @@ const TermsPage: React.FC = () => {
             APPLICABLE LAW.
           </BodyText>
           <BodyText variant="body1">
-            {SITE_NAME?.toUpperCase()} AND COLLABORATORS (AS HEREINAFTER
-            DEFINED) DO NOT WARRANT THAT THE SITE WILL OPERATE IN AN
-            UNINTERRUPTED OR ERROR-FREE MANNER, THAT THE SITE IS FREE OF VIRUSES
-            OR OTHER HARMFUL COMPONENTS, OR THAT THE MODULES OR CONTENT PROVIDED
-            WILL MEET YOUR NEEDS OR EXPECTATIONS.
+            MIT LEARN AND COLLABORATORS (AS HEREINAFTER DEFINED) DO NOT WARRANT
+            THAT THE SITE WILL OPERATE IN AN UNINTERRUPTED OR ERROR-FREE MANNER,
+            THAT THE SITE IS FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS, OR
+            THAT THE MODULES OR CONTENT PROVIDED WILL MEET YOUR NEEDS OR
+            EXPECTATIONS.
           </BodyText>
           <BodyText variant="body1">
-            {SITE_NAME?.toUpperCase()} AND COLLABORATORS ALSO MAKE NO WARRANTY
-            ABOUT THE ACCURACY, COMPLETENESS, TIMELINESS, OR QUALITY OF THE SITE
-            OR ANY MODULES OR CONTENT, OR THAT ANY PARTICULAR MODULES OR CONTENT
-            WILL CONTINUE TO BE MADE AVAILABLE. "COLLABORATORS" MEANS MIT, THE
+            MIT LEARN AND COLLABORATORS ALSO MAKE NO WARRANTY ABOUT THE
+            ACCURACY, COMPLETENESS, TIMELINESS, OR QUALITY OF THE SITE OR ANY
+            MODULES OR CONTENT, OR THAT ANY PARTICULAR MODULES OR CONTENT WILL
+            CONTINUE TO BE MADE AVAILABLE. "COLLABORATORS" MEANS MIT, THE
             ENTITIES PROVIDING INFORMATION, CONTENT, OR SERVICES FOR THE SITE,
             THE MODULE INSTRUCTORS AND THEIR STAFFS.
           </BodyText>
@@ -628,7 +628,7 @@ const TermsPage: React.FC = () => {
             RESPONSIBLE FOR ANY DAMAGE TO YOUR PROPERTY (INCLUDING YOUR COMPUTER
             SYSTEM) OR LOSS OF DATA THAT RESULTS FROM THE DOWNLOAD OR USE OF
             SUCH MATERIAL OR DATA, UNLESS OTHERWISE EXPRESSLY PROVIDED FOR IN
-            THE {SITE_NAME?.toUpperCase()} PRIVACY POLICY.
+            THE MIT LEARN PRIVACY POLICY.
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             User Postings Disclaimer.
