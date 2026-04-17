@@ -1449,6 +1449,7 @@ class ContentFileSerializer(serializers.ModelSerializer):
             "edx_module_id",
             "summary",
             "flashcards",
+            "youtube_id",
         ]
 
 

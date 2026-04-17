@@ -450,6 +450,12 @@ export interface ContentFile {
    * @memberof ContentFile
    */
   flashcards?: any
+  /**
+   *
+   * @type {string}
+   * @memberof ContentFile
+   */
+  youtube_id?: string | null
 }
 
 /**

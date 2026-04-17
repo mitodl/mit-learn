@@ -1199,6 +1199,7 @@ class ContentFile(TimestampedModel):
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
     duration = models.CharField(max_length=11, null=True, blank=True)  # noqa: DJ001
+    youtube_id = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
 
     def save(self, **kwargs):
         self.checksum = checksum_for_content(self.content)
