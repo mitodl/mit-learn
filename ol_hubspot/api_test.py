@@ -4,9 +4,18 @@ from uuid import uuid4
 
 import pytest
 import requests
+from hubspot.crm.properties.exceptions import ApiException as CrmPropertiesApiException
 from hubspot.marketing.forms.exceptions import ApiException
 
-from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
+from ol_hubspot.api import (
+    create_contact_property,
+    get_contact_property,
+    get_form,
+    list_forms,
+    submit_form,
+    update_contact_property_choices,
+    verify_recaptcha,
+)
 
 
 def test_get_form(mocker, settings):
@@ -77,6 +86,91 @@ def test_list_forms(mocker, settings):
         archived=False,
         form_types=["hubspot"],
     )
+
+
+def test_get_contact_property(mocker, settings, faker):
+    """Test fetching a contact property via CRM properties core API."""
+    property_name = faker.slug().replace("-", "_")
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+    expected = mocker.Mock()
+    client.crm.properties.core_api.get_by_name.return_value = expected
+
+    result = get_contact_property(property_name=property_name)
+
+    hubspot_class.assert_called_once_with(
+        access_token=settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN
+    )
+    client.crm.properties.core_api.get_by_name.assert_called_once_with(
+        "contacts", property_name
+    )
+    assert result is expected
+
+
+def test_create_contact_property(mocker, settings, faker):
+    """Test creating a contact property with enumeration options."""
+    property_name = faker.slug().replace("-", "_")
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+
+    create_contact_property(
+        property_name=property_name,
+        label=faker.sentence(nb_words=3),
+        option_values=["Course A", "Program B"],
+        group_name="contactinformation",
+        field_type="checkbox",
+        description="Products a learner is interested in.",
+        form_field=True,
+    )
+
+    client.crm.properties.core_api.create.assert_called_once()
+    args = client.crm.properties.core_api.create.call_args.args
+    assert args[0] == "contacts"
+    payload = args[1]
+    assert payload.name == property_name
+    assert payload.group_name == "contactinformation"
+    assert payload.type == "enumeration"
+    assert payload.field_type == "checkbox"
+    assert payload.form_field is True
+    assert [option.value for option in payload.options] == ["Course A", "Program B"]
+
+
+def test_update_contact_property_choices(mocker, settings, faker):
+    """Test updating options for an existing contact property."""
+    property_name = faker.slug().replace("-", "_")
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+
+    update_contact_property_choices(
+        property_name=property_name,
+        option_values=["Course A", "Program B"],
+    )
+
+    client.crm.properties.core_api.update.assert_called_once()
+    args = client.crm.properties.core_api.update.call_args.args
+    assert args[0] == "contacts"
+    assert args[1] == property_name
+    payload = args[2]
+    assert [option.value for option in payload.options] == ["Course A", "Program B"]
+
+
+def test_get_contact_property_propagates_sdk_error(mocker, settings, faker):
+    """Test CRM properties errors propagate from the SDK helper."""
+    property_name = faker.slug().replace("-", "_")
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+    client.crm.properties.core_api.get_by_name.side_effect = CrmPropertiesApiException(
+        status=404, reason="Not Found"
+    )
+
+    with pytest.raises(CrmPropertiesApiException) as exc_info:
+        get_contact_property(property_name=property_name)
+
+    assert exc_info.value.status == 404
 
 
 def test_submit_form(mocker, settings):
