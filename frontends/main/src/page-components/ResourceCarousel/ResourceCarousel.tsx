@@ -19,6 +19,8 @@ import {
   UseQueryResult,
   UseQueryOptions,
 } from "@tanstack/react-query"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const StyledCarouselV2 = styled(CarouselV2)({
   margin: "24px 0",
@@ -224,6 +226,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   titleVariant = "h4",
   excludeResourceId,
 }) => {
+  const posthog = usePostHog()
   const [tab, setTab] = React.useState("0")
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
   const queries = useQueries({
@@ -316,12 +319,24 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                     ))
                   : resources
                       .filter((resource) => resource.id !== excludeResourceId)
-                      .map((resource) => (
+                      .map((resource, index) => (
                         <ResourceCard
                           key={resource.id}
                           resource={resource}
                           parentHeadingEl={titleComponent}
                           {...tabConfig.cardProps}
+                          onCardClick={() => {
+                            if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+                              posthog.capture(PostHogEvents.CourseCardClicked, {
+                                label: title,
+                                resourceId: resource.id,
+                                readableId: resource.readable_id,
+                                resourceType: resource.resource_type,
+                                platformCode: resource.platform?.code,
+                                position: index,
+                              })
+                            }
+                          }}
                         />
                       ))}
               </StyledCarouselV2>

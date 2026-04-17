@@ -17,6 +17,12 @@ from rest_framework.views import APIView
 from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
+from vector_search.constants import (
+    CONTENT_FILES_COLLECTION_NAME,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
+    RESOURCES_COLLECTION_NAME,
+    RESOURCES_RETRIEVE_PAYLOAD,
+)
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     ContentFileVectorSearchResponseSerializer,
@@ -24,11 +30,10 @@ from vector_search.serializers import (
     LearningResourcesVectorSearchResponseSerializer,
 )
 from vector_search.utils import (
-    CONTENT_FILES_COLLECTION_NAME,
-    RESOURCES_COLLECTION_NAME,
     _content_file_vector_hits,
     _merge_dicts,
     _resource_vector_hits,
+    async_qdrant_aggregations,
     async_qdrant_client,
     dense_encoder,
     qdrant_query_conditions,
@@ -82,12 +87,12 @@ class QdrantView(APIView):
         self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def async_vector_search(  # noqa: PLR0913, PLR0915
         self,
         query_string: str,
         params: dict,
         limit: int = 10,
-        offset: int = 10,
+        offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
         *,
         hybrid_search: bool = False,
@@ -113,8 +118,19 @@ class QdrantView(APIView):
                 "collection_name": search_collection,
                 "query_filter": search_filter,
                 "with_vectors": False,
-                "with_payload": True,
-                "search_params": models.SearchParams(indexed_only=True, exact=False),
+                "with_payload": RESOURCES_RETRIEVE_PAYLOAD
+                if search_collection == RESOURCES_COLLECTION_NAME
+                else CONTENT_FILES_RETRIEVE_PAYLOAD,
+                "search_params": models.SearchParams(
+                    quantization=models.QuantizationSearchParams(
+                        ignore=False,
+                        rescore=True,
+                        oversampling=1,
+                    ),
+                    hnsw_ef=64,
+                    indexed_only=True,
+                    exact=False,
+                ),
                 "limit": limit,
             }
 
@@ -151,6 +167,7 @@ class QdrantView(APIView):
                 search_params.pop("search_params", None)
                 search_params["group_by"] = params.get("group_by")
                 search_params["group_size"] = params.get("group_size", 1)
+                search_params["with_payload"] = True
                 group_result = await client.query_points_groups(**search_params)
                 search_result = []
                 for group in group_result.groups:
@@ -171,29 +188,56 @@ class QdrantView(APIView):
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
         else:
-            scroll_res = await client.scroll(
+            # Qdrant's scroll API uses a point-ID cursor for `offset`, not a
+            # numeric skip count. We implement integer offset by consuming
+            # scroll pages until the desired number of records are skipped.
+            remaining_to_skip = offset
+            next_page_offset = None
+            search_result = []
+            while True:
+                fetch_size = min(max(remaining_to_skip, limit), 1000)
+                scroll_res = await client.scroll(
+                    collection_name=search_collection,
+                    scroll_filter=search_filter,
+                    limit=fetch_size,
+                    offset=next_page_offset,
+                    with_vectors=False,
+                )
+                page_points, next_page_offset = scroll_res
+                if remaining_to_skip > 0:
+                    skipped = min(remaining_to_skip, len(page_points))
+                    page_points = page_points[skipped:]
+                    remaining_to_skip -= skipped
+                search_result.extend(page_points)
+                if len(search_result) >= limit or not next_page_offset:
+                    break
+            search_result = search_result[:limit]
+
+        hits_coroutine = (
+            sync_to_async(_resource_vector_hits)(search_result)
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else sync_to_async(_content_file_vector_hits)(search_result)
+        )
+
+        aggregation_keys = params.get("aggregations") or []
+        hits, count_result, aggregations = await asyncio.gather(
+            hits_coroutine,
+            client.count(
                 collection_name=search_collection,
-                scroll_filter=search_filter,
-                limit=limit,
-                offset=offset,
-                with_vectors=False,
-            )
-            search_result = scroll_res[0]
-
-        if search_collection == RESOURCES_COLLECTION_NAME:
-            hits = await sync_to_async(_resource_vector_hits)(search_result)
-        else:
-            hits = await sync_to_async(_content_file_vector_hits)(search_result)
-
-        count_result = await client.count(
-            collection_name=search_collection,
-            count_filter=search_filter,
-            exact=False,
+                count_filter=search_filter,
+                exact=False,
+            ),
+            async_qdrant_aggregations(
+                aggregation_keys,
+                params,
+                collection_name=search_collection,
+            ),
         )
 
         return {
             "hits": hits,
             "total": {"value": count_result.count},
+            "aggregations": aggregations or {},
         }
 
     def handle_exception(self, exc):

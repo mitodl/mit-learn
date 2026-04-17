@@ -15,8 +15,8 @@ import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import NiceModal from "@ebay/nice-modal-react"
 import ProgramEnrollmentDialog from "./ProgramEnrollmentDialog"
 import invariant from "tiny-invariant"
-import { DASHBOARD_HOME } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
 
 describe("ProgramEnrollmentDialog", () => {
   setupLocationMock()
@@ -41,12 +41,11 @@ describe("ProgramEnrollmentDialog", () => {
 
   test("Dialog opens with program title", async () => {
     const program = makeProgram({
-      title: "Test Program Title",
       enrollment_modes: bothEnrollmentModes(),
     })
     renderWithProviders(null)
     await openDialog(program)
-    expect(screen.getByText("Test Program Title")).toBeInTheDocument()
+    expect(screen.getByText(program.title)).toBeInTheDocument()
   })
 
   test("Shows certificate upsell with price when product is available", async () => {
@@ -134,7 +133,7 @@ describe("ProgramEnrollmentDialog", () => {
     )
   })
 
-  test("'Enroll for Free' button enrolls in program and redirects to dashboard", async () => {
+  test("'Enroll for Free' button redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({ enrollment_modes: bothEnrollmentModes() })
     const { location } = renderWithProviders(null)
     await openDialog(program)
@@ -152,8 +151,14 @@ describe("ProgramEnrollmentDialog", () => {
     await user.click(enrollButton)
 
     await waitFor(() => {
-      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
+    expect(location.current.searchParams.get("enrollment_status")).toBe(
+      "success",
+    )
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      program.title,
+    )
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
@@ -166,6 +171,7 @@ describe("ProgramEnrollmentDialog", () => {
       NiceModal.show(ProgramEnrollmentDialog, { program, onProgramEnroll })
     })
     await screen.findByRole("dialog")
+    const initialLocation = `${location.current.pathname}${location.current.search}`
 
     setMockResponse.post(
       mitxUrls.programEnrollments.enrollmentsListV3(),
@@ -181,7 +187,9 @@ describe("ProgramEnrollmentDialog", () => {
     await waitFor(() => {
       expect(onProgramEnroll).toHaveBeenCalled()
     })
-    expect(location.current.pathname).not.toBe(DASHBOARD_HOME)
+    expect(`${location.current.pathname}${location.current.search}`).toBe(
+      initialLocation,
+    )
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 

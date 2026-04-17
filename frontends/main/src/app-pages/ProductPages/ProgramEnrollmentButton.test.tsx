@@ -13,14 +13,21 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { programView, DASHBOARD_HOME } from "@/common/urls"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { programView } from "@/common/urls"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import * as routes from "@/common/urls"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const makeProgram = mitxFactories.programs.program
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
@@ -122,7 +129,7 @@ describe("ProgramEnrollmentButton", () => {
     expect(enrolledLink).toHaveAttribute("href", programView(program.id))
   })
 
-  test("Free-only: clicking 'Enroll for Free' enrolls immediately (no dialog)", async () => {
+  test("Free-only: clicking 'Enroll for Free' enrolls and redirects to the dashboard success URL with title in params", async () => {
     const program = makeProgram({
       enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
     })
@@ -150,10 +157,16 @@ describe("ProgramEnrollmentButton", () => {
         { program_id: program.id },
       )
     })
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     await waitFor(() => {
-      expect(location.current.pathname).toBe(DASHBOARD_HOME)
+      expect(location.current.pathname).toBe(routes.DASHBOARD_HOME)
     })
+    expect(location.current.searchParams.get("enrollment_status")).toBe(
+      "success",
+    )
+    expect(location.current.searchParams.get("enrollment_title")).toBe(
+      program.title,
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   test("Both: clicking 'Enroll for Free' opens enrollment dialog", async () => {
@@ -391,5 +404,76 @@ describe("ProgramEnrollmentButton", () => {
     await user.click(enrollButton)
 
     screen.getByTestId("signup-popover")
+  })
+
+  describe("PostHog tracking", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockClear()
+    })
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    })
+
+    test("fires cta_clicked when authenticated user clicks enroll", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [])
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      setMockResponse.post(
+        mitxUrls.programEnrollments.enrollmentsListV3(),
+        null,
+        { code: 201 },
+      )
+
+      renderWithProviders(
+        <ProgramEnrollmentButton program={program} variant="primary" />,
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: program.id,
+          readableId: program.readable_id,
+          resourceType: "program",
+        }),
+      )
+    })
+
+    test("fires cta_clicked when unauthenticated user clicks enroll", async () => {
+      const program = makeProgram({
+        enrollment_modes: [makeEnrollmentMode({ requires_payment: false })],
+      })
+      setMockResponse.get(mitxUrls.programEnrollments.enrollmentsListV3(), [], {
+        code: 403,
+      })
+      setMockResponse.get(
+        urls.userMe.get(),
+        makeUser({ is_authenticated: false }),
+      )
+
+      renderWithProviders(
+        <ProgramEnrollmentButton program={program} variant="primary" />,
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "Enroll for Free" }),
+      )
+
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        expect.objectContaining({
+          resourceId: program.id,
+          readableId: program.readable_id,
+          resourceType: "program",
+        }),
+      )
+    })
   })
 })

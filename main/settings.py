@@ -34,7 +34,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.62.4"
+VERSION = "0.63.5"
 
 log = logging.getLogger()
 
@@ -587,6 +587,8 @@ OPENSEARCH_SHARD_COUNT = get_int("OPENSEARCH_SHARD_COUNT", 2)
 OPENSEARCH_REPLICA_COUNT = get_int("OPENSEARCH_REPLICA_COUNT", 2)
 OPENSEARCH_MAX_REQUEST_SIZE = get_int("OPENSEARCH_MAX_REQUEST_SIZE", 10485760)
 INDEXING_ERROR_RETRIES = get_int("INDEXING_ERROR_RETRIES", 1)
+CONTENT_FILE_RETENTION_DAYS = get_int("CONTENT_FILE_RETENTION_DAYS", 14)
+CONTENT_FILE_CLEANUP_CHUNK_SIZE = get_int("CONTENT_FILE_CLEANUP_CHUNK_SIZE", 1000)
 
 # JWT authentication settings
 MITOL_JWT_SECRET = get_string(
@@ -806,7 +808,7 @@ QDRANT_CHUNK_SIZE = get_int(
 )
 
 QDRANT_ENCODER = get_string(
-    name="QDRANT_ENCODER", default="vector_search.encoders.fastembed.FastEmbedEncoder"
+    name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
 
 QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
@@ -820,10 +822,10 @@ QDRANT_BATCH_SIZE_BYTES = get_int(
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 
 VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
-    name="VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", default=20
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", default=5
 )
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
-    name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=10000
+    name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
@@ -892,6 +894,7 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
         """
         Rules:
+        - Use the same language as the transcript for both questions and answers.
         - Focus ONLY on core concepts, methods, definitions,
           reasoning, and cause-effect relationships.
         - Questions must test understanding or application,

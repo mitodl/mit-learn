@@ -11,6 +11,24 @@ describe("formatDurationClockTime", () => {
   })
 })
 
+describe("formatDurationHuman", () => {
+  it("formats hours and minutes", () => {
+    expect(u.formatDurationHuman("PT8H24M")).toBe("8h 24m")
+  })
+
+  it("formats hours only when no minutes", () => {
+    expect(u.formatDurationHuman("PT1H")).toBe("1h")
+  })
+
+  it("formats minutes only when less than an hour", () => {
+    expect(u.formatDurationHuman("PT45M")).toBe("45m")
+  })
+
+  it("returns empty string for zero duration", () => {
+    expect(u.formatDurationHuman("PT0S")).toBe("")
+  })
+})
+
 describe("calendarDaysUntil", () => {
   test("Gets calendar days until date, respecting timezone", () => {
     //         UTC                       EST

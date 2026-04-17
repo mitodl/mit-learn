@@ -12,6 +12,7 @@ import {
   SchoolsApi,
   FeaturedApi,
   MediaApi,
+  VideoPlaylistsApi,
   HubspotApi,
 } from "./generated/v1/api"
 
@@ -101,6 +102,11 @@ const testimonialsApi = new TestimonialsApi(undefined, BASE_PATH, axiosInstance)
 
 const videoShortsApi = new VideoShortsApi(undefined, BASE_PATH, axiosInstance)
 
+const videoPlaylistsApi = new VideoPlaylistsApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   undefined,
   BASE_PATH,
@@ -130,6 +136,7 @@ export {
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
   videoShortsApi,
+  videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
   BASE_PATH,
 }

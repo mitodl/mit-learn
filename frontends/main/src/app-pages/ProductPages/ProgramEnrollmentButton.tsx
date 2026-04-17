@@ -18,12 +18,17 @@ import ProgramEnrollmentDialog from "@/page-components/EnrollmentDialogs/Program
 import NiceModal from "@ebay/nice-modal-react"
 import { userQueries } from "api/hooks/user"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
-import { programView, DASHBOARD_HOME } from "@/common/urls"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { programView } from "@/common/urls"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { getEnrollmentType, formatPrice } from "@/common/mitxonline"
+import {
+  enrollmentAlertSuccessUrl,
+  formatPrice,
+  getEnrollmentType,
+} from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
+import { PostHogEvents } from "@/common/constants"
 
 const ButtonLinkWithDisabled = styled(ButtonLink)(({ href }) => [
   !href && {
@@ -77,17 +82,35 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
   const isPending =
     replaceBasketItem.isPending || createProgramEnrollment.isPending
   const isError = replaceBasketItem.isError || createProgramEnrollment.isError
+  const posthog = usePostHog()
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (enrollments.isLoading || me.isLoading) {
       return
-    } else if (me.data?.is_authenticated) {
+    }
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        resourceId: program.id,
+        readableId: program.readable_id,
+        resourceType: "program",
+        label: getEnrollButtonText(),
+      })
+    }
+    if (me.data?.is_authenticated) {
       if (enrollmentType === "paid" && program.products[0]) {
         replaceBasketItem.mutate(program.products[0].id)
       } else if (enrollmentType === "free") {
         createProgramEnrollment.mutate(
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
-          { onSuccess: () => router.push(DASHBOARD_HOME) },
+          {
+            onSuccess: () => {
+              router.push(
+                enrollmentAlertSuccessUrl({
+                  title: program.title ?? "your enrollment",
+                }),
+              )
+            },
+          },
         )
       } else {
         NiceModal.show(ProgramEnrollmentDialog, { program, displayAsCourse })
@@ -104,6 +127,7 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
         {enrollment ? (
           <ButtonLinkWithDisabled
             variant={variant}
+            size="large"
             href={href}
             className={className}
           >

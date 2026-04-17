@@ -3,14 +3,17 @@
 from django.core.management import BaseCommand
 
 from learning_resources.etl.constants import ETLSource
-from learning_resources.management.commands.mixins import TestResourceConfigurationMixin
+from learning_resources.management.commands.mixins import (
+    ConfirmDeleteMixin,
+    TestResourceConfigurationMixin,
+)
 from learning_resources.models import LearningResource
 from learning_resources.tasks import get_sloan_data
 from learning_resources.utils import resource_delete_actions
 from main.utils import now_in_utc
 
 
-class Command(TestResourceConfigurationMixin, BaseCommand):
+class Command(ConfirmDeleteMixin, TestResourceConfigurationMixin, BaseCommand):
     """Populate professional education  courses"""
 
     help = "Populate Sloan Executive Education courses"

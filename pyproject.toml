@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "Django==4.2.29",
+    "Django==4.2.30",
     "attrs>=25.0.0,<26",
     "base36>=0.1.1,<0.2",
     "beautifulsoup4>=4.8.2,<5",
@@ -37,7 +37,7 @@ dependencies = [
     "django-ipware>=7.0.0,<8",
     "django-json-widget>=2.0.0,<3",
     "django-oauth-toolkit>=3.0.0,<4",
-    "django-redis>=5.2.0,<6",
+    "django-redis>=5.2.0,<7",
     "django-scim2>=0.19.1,<0.20",
     "django-server-status>=0.7.0,<0.8",
     "django-storages>=1.13.2,<2",
@@ -57,13 +57,14 @@ dependencies = [
     "langchain>=0.3.11,<0.4",
     "langchain-experimental>=0.3.4,<0.4",
     "langchain-openai>=0.3.2,<0.4",
-    "litellm==1.81.13",
+    "litellm==1.83.0",
     "llama-index>=0.14.0,<0.15",
     "llama-index-llms-openai>=0.6.0,<0.7",
     "lxml>=6.0.0,<7",
     "markdown>=3.7,<4",
     "markdown2>=2.4.8,<3",
-    "mitol-django-scim>=2025.3.31,<2026",
+    "mitol-django-common>=2026.4.2,<2027",
+    "mitol-django-scim>=2026.4.2,<2027",
     "mitol-django-observability>=2026.1.0,<2027",
     "named-enum>=1.4.0,<2",
     "nested-lookup>=0.2.25,<0.3",
@@ -116,6 +117,7 @@ dependencies = [
     "django-removals>=1.1.6,<2",
     "langchain-litellm>=0.5.1",
     "scikit-learn>=1.8.0",
+    "gensim>=4.4.0",
 ]
 
 [dependency-groups]
@@ -128,7 +130,7 @@ dev = [
     "moto>=5.0.0,<6",
     "nplusone>=1.0.0,<2",
     "pdbpp>=0.11.6,<0.12",
-    "pytest>=8.0.0,<9",
+    "pytest>=9.0.3,<10",
     "pytest-cov>=7.0.0,<8",
     "pytest-django>=4.5.2,<5",
     "pytest-env>=1.0.0,<2",

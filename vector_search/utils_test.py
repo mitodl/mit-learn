@@ -1,3 +1,4 @@
+import asyncio
 import random
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -44,6 +45,7 @@ from vector_search.utils import (
     _get_text_splitter,
     _is_markdown_content,
     _resource_vector_hits,
+    async_qdrant_aggregations,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -1519,3 +1521,247 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
     expected_readable_ids = [r.readable_id for r in shuffled]
     actual_readable_ids = [r["readable_id"] for r in result]
     assert actual_readable_ids == expected_readable_ids
+
+
+def _make_facet_hit(count=0, value="test"):
+    """Build a minimal mock that looks like a Qdrant FacetHit."""
+    hit = MagicMock()
+    hit.value = value
+    hit.count = count
+    return hit
+
+
+def _make_facet_response(hits):
+    """Build a minimal mock that looks like a Qdrant FacetResponse."""
+    resp = MagicMock()
+    resp.hits = hits
+    return resp
+
+
+def test_async_qdrant_aggregations_empty_keys(mocker):
+    """Should return {} immediately without calling Qdrant when aggregation_keys is empty."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+    result = asyncio.run(async_qdrant_aggregations([], {}))
+    assert result == {}
+    mock_client.facet.assert_not_called()
+
+
+def test_async_qdrant_aggregations_unknown_key(mocker):
+    """An aggregation key not present in the param map should return an empty list."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["nonexistent_field"],
+            {},
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+    assert result == {"nonexistent_field": []}
+    mock_client.facet.assert_not_called()
+
+
+def test_async_qdrant_aggregations_single_key(mocker):
+    """A valid single aggregation key should query Qdrant and return correctly shaped data."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+
+    mock_client.facet.return_value = _make_facet_response(
+        [
+            _make_facet_hit(42, value="course"),
+            _make_facet_hit(7, value="podcast"),
+        ]
+    )
+
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["resource_type"],
+            {},
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+
+    assert "resource_type" in result
+    hits = result["resource_type"]
+    # Should be sorted descending by doc_count
+    assert hits[0] == {"key": "course", "doc_count": 42}
+    assert hits[1] == {"key": "podcast", "doc_count": 7}
+
+    mock_client.facet.assert_awaited_once()
+    call_kwargs = mock_client.facet.call_args.kwargs
+    assert call_kwargs["collection_name"] == RESOURCES_COLLECTION_NAME
+    assert call_kwargs["key"] == QDRANT_RESOURCE_PARAM_MAP["resource_type"]
+    assert call_kwargs["limit"] == 100
+
+
+def test_async_qdrant_aggregations_multiple_keys(mocker):
+    """Multiple valid keys should each issue a concurrent Qdrant facet call."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+
+    # Return different data depending on the 'key' kwarg
+    def _facet_side_effect(**kwargs):
+        if kwargs["key"] == QDRANT_RESOURCE_PARAM_MAP["resource_type"]:
+            return _make_facet_response([_make_facet_hit(10, value="course")])
+        if kwargs["key"] == QDRANT_RESOURCE_PARAM_MAP["platform"]:
+            return _make_facet_response(
+                [_make_facet_hit(30, value="ocw"), _make_facet_hit(20, value="edx")]
+            )
+        return _make_facet_response([])
+
+    mock_client.facet.side_effect = _facet_side_effect
+
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["resource_type", "platform"],
+            {},
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+
+    assert set(result.keys()) == {"resource_type", "platform"}
+    assert result["resource_type"] == [{"key": "course", "doc_count": 10}]
+    # Descending sort
+    assert result["platform"][0] == {"key": "ocw", "doc_count": 30}
+    assert result["platform"][1] == {"key": "edx", "doc_count": 20}
+    assert mock_client.facet.await_count == 2
+
+
+def test_async_qdrant_aggregations_excludes_own_param_from_filter(mocker):
+    """
+    When building the per-facet filter, the aggregation key's own param
+    must be excluded so that all values for that facet are counted.
+    """
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+    mock_client.facet.return_value = _make_facet_response([])
+
+    params = {
+        "resource_type": ["course"],
+        "platform": ["ocw"],
+    }
+
+    asyncio.run(
+        async_qdrant_aggregations(
+            ["resource_type"],
+            params,
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+
+    mock_client.facet.assert_awaited_once()
+    call_kwargs = mock_client.facet.call_args.kwargs
+
+    # The facet_filter should NOT contain a condition for resource_type
+    # (it was stripped out so we get all resource_type facet values),
+    # but it SHOULD still filter by platform.
+    facet_filter = call_kwargs.get("facet_filter")
+    # facet_filter is a qdrant models.Filter with must conditions
+    assert facet_filter is not None
+    condition_keys = [c.key for c in facet_filter.must if hasattr(c, "key")]
+    assert QDRANT_RESOURCE_PARAM_MAP["platform"] in condition_keys
+    assert QDRANT_RESOURCE_PARAM_MAP["resource_type"] not in condition_keys
+
+
+def test_async_qdrant_aggregations_bool_values_lowercased(mocker):
+    """Boolean hit values must be returned as lowercase strings ('true'/'false')."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+
+    mock_client.facet.return_value = _make_facet_response(
+        [
+            _make_facet_hit(5, value=True),
+            _make_facet_hit(3, value=False),
+        ]
+    )
+
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["free"],
+            {},
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+
+    keys = {hit["key"] for hit in result["free"]}
+    assert "true" in keys
+    assert "false" in keys
+    # Verify no raw booleans slipped through
+    assert True not in keys
+    assert False not in keys
+
+
+def test_async_qdrant_aggregations_sorted_by_doc_count_desc(mocker):
+    """Results must be sorted by doc_count in descending order."""
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+
+    mock_client.facet.return_value = _make_facet_response(
+        [
+            _make_facet_hit(5, value="edx"),
+            _make_facet_hit(100, value="ocw"),
+            _make_facet_hit(20, value="xpro"),
+        ]
+    )
+
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["platform"],
+            {},
+            collection_name=RESOURCES_COLLECTION_NAME,
+        )
+    )
+
+    counts = [hit["doc_count"] for hit in result["platform"]]
+    assert counts == sorted(counts, reverse=True)
+
+
+def test_async_qdrant_aggregations_uses_content_file_param_map(mocker):
+    """
+    When collection_name is CONTENT_FILES_COLLECTION_NAME the function must
+    use QDRANT_CONTENT_FILE_PARAM_MAP to resolve the Qdrant field name.
+    """
+    mock_client = mocker.AsyncMock()
+    mocker.patch(
+        "vector_search.utils.async_qdrant_client",
+        return_value=mock_client,
+    )
+    mock_client.facet.return_value = _make_facet_response(
+        [_make_facet_hit(8, value=".pdf")]
+    )
+
+    result = asyncio.run(
+        async_qdrant_aggregations(
+            ["file_extension"],
+            {},
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+        )
+    )
+
+    assert "file_extension" in result
+    call_kwargs = mock_client.facet.call_args.kwargs
+    assert call_kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+    # The Qdrant field for 'file_extension' should come from the content-file map
+    assert call_kwargs["key"] == QDRANT_CONTENT_FILE_PARAM_MAP["file_extension"]

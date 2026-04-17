@@ -6,6 +6,7 @@ import {
   platformsApi,
   schoolsApi,
   featuredApi,
+  videoPlaylistsApi,
   vectorLearningResourcesSearchApi,
   BASE_PATH,
 } from "../../clients"
@@ -20,11 +21,21 @@ import type {
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
   PaginatedLearningResourceRelationshipList,
+  VideoPlaylistResource,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
 import axiosInstance from "../../axios"
 import { hasPosition, randomizeGroups } from "./util"
+
+const timedPromise = async <T>(
+  promise: Promise<T>,
+): Promise<{ result: T; time: number }> => {
+  const start = performance.now()
+  const result = await promise
+  const end = performance.now()
+  return { result, time: end - start }
+}
 
 const learningResourceKeys = {
   root: ["learning_resources"],
@@ -206,17 +217,23 @@ const learningResourceQueries = {
     queryOptions({
       queryKey: learningResourceKeys.search(params),
       queryFn: () =>
-        learningResourcesSearchApi
-          .learningResourcesSearchRetrieve(params)
-          .then((res) => res.data),
+        timedPromise(
+          learningResourcesSearchApi
+            .learningResourcesSearchRetrieve(params)
+            .then((res) => res.data),
+        ),
+      select: (data) => data.result,
     }),
   vectorSearch: (params: VectorLearningResourcesSearchRetrieveRequest) =>
     queryOptions({
       queryKey: learningResourceKeys.vectorSearch(params),
       queryFn: () =>
-        vectorLearningResourcesSearchApi
-          .vectorLearningResourcesSearchRetrieve(params)
-          .then((res) => res.data),
+        timedPromise(
+          vectorLearningResourcesSearchApi
+            .vectorLearningResourcesSearchRetrieve(params)
+            .then((res) => res.data),
+        ),
+      select: (data) => data.result,
     }),
 }
 
@@ -256,6 +273,23 @@ const offerorQueries = {
     }),
 }
 
+const videoPlaylistKeys = {
+  root: ["video_playlists"],
+  detailRoot: () => [...videoPlaylistKeys.root, "detail"],
+  detail: (id: number) => [...videoPlaylistKeys.detailRoot(), id],
+}
+
+const videoPlaylistQueries = {
+  detail: (id: number) =>
+    queryOptions<VideoPlaylistResource>({
+      queryKey: videoPlaylistKeys.detail(id),
+      queryFn: () =>
+        videoPlaylistsApi
+          .videoPlaylistsRetrieve({ id })
+          .then((res) => res.data as VideoPlaylistResource),
+    }),
+}
+
 export {
   learningResourceKeys,
   learningResourceQueries,
@@ -263,4 +297,5 @@ export {
   platformsQueries,
   schoolQueries,
   offerorQueries,
+  videoPlaylistQueries,
 }

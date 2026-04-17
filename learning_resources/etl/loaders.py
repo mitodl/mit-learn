@@ -80,11 +80,7 @@ def update_index(learning_resource, newly_created):
         learning resource (LearningResource): a learning resource
         newly_created (bool): whether the learning resource has just been created
     """
-    if (
-        not newly_created
-        and not learning_resource.published
-        and not learning_resource.test_mode
-    ):
+    if not newly_created and not learning_resource.published:
         resource_unpublished_actions(learning_resource)
     elif learning_resource.published:
         resource_upserted_actions(
@@ -590,6 +586,7 @@ def load_course(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
+                run.checksum = None
                 run.save()
                 resource_run_unpublished_actions(run)
 
@@ -723,6 +720,7 @@ def load_program(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
+                run.checksum = None
                 run.save()
 
         load_run_dependent_values(learning_resource)
@@ -984,19 +982,34 @@ def load_content_files(
         content_tags = []
         for content_file in content_files_data:
             content_tags.append(content_file.get("content_tags") or [])
-            content_files_ids.append(load_content_file(course_run, content_file))
-        for file in (
-            ContentFile.objects.filter(run=course_run)
-            .exclude(id__in=content_files_ids)
-            .all()
-        ):
-            file.published = False
-            file.save()
+            file_id = load_content_file(course_run, content_file)
+            if file_id is not None:
+                content_files_ids.append(file_id)
 
-            if file.direct_learning_resource:
-                resource = file.direct_learning_resource
-                resource.published = False
-                resource.save()
+        if not content_files_ids:
+            log.error(
+                "No content files were ingested for run %s from archive payload; "
+                "preserving existing content files",
+                course_run.run_id,
+            )
+            return content_files_ids
+
+        stale_published_files = ContentFile.objects.filter(
+            run=course_run, published=True
+        ).exclude(id__in=content_files_ids)
+        stale_direct_resource_ids = list(
+            stale_published_files.filter(direct_learning_resource__isnull=False)
+            .values_list("direct_learning_resource_id", flat=True)
+            .distinct()
+        )
+        stale_published_files.update(published=False)
+        if stale_direct_resource_ids:
+            LearningResource.objects.filter(
+                id__in=stale_direct_resource_ids, published=True
+            ).update(published=False)
+            for resource in LearningResource.objects.filter(
+                id__in=stale_direct_resource_ids
+            ):
                 update_index(resource, newly_created=False)
 
         if calc_completeness:

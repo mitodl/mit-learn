@@ -147,6 +147,191 @@ describe("DashboardDialogs", () => {
   })
 })
 
+describe("UnenrollProgramDialog", () => {
+  const setupProgramCard = (
+    enrollmentMode: string | null = "audit",
+    displayMode: string | null = null,
+  ) => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: enrollmentMode,
+        program: { display_mode: displayMode } as never,
+      })
+
+    return { programEnrollment }
+  }
+
+  test("Shows unenroll option for free (audit) program enrollments", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Unenroll" }),
+    ).toBeInTheDocument()
+  })
+
+  test("Does not show unenroll option for paid (verified) program enrollments", async () => {
+    const { programEnrollment } = setupProgramCard("verified", null)
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Unenroll" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Does not show unenroll option for program-as-course display_mode programs", async () => {
+    const { programEnrollment } = setupProgramCard("audit", "course")
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Unenroll" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Confirming unenroll from a program fires the proper API call", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    setMockResponse.delete(
+      mitxonline.urls.programEnrollments.programEnrollment(
+        programEnrollment.program.id,
+      ),
+      null,
+    )
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    const unenrollMenuItem = await screen.findByRole("menuitem", {
+      name: "Unenroll",
+    })
+    await user.click(unenrollMenuItem)
+
+    const dialog = await screen.findByRole("dialog", {
+      name: `Unenroll from ${programEnrollment.program.title}`,
+    })
+    expect(dialog).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(
+        `Are you sure you want to unenroll from ${programEnrollment.program.title}?`,
+      ),
+    ).toBeInTheDocument()
+
+    const confirmButton = within(dialog).getByRole("button", {
+      name: "Unenroll",
+    })
+    await user.click(confirmButton)
+
+    expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "DELETE",
+        url: mitxonline.urls.programEnrollments.programEnrollment(
+          programEnrollment.program.id,
+        ),
+      }),
+    )
+  })
+
+  test("Cancelling the dialog does not fire the API call", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{
+          type: DashboardType.ProgramEnrollment,
+          data: programEnrollment,
+        }}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    const contextMenuButton = within(desktopCard).getByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+    await screen.findByRole("dialog", {
+      name: `Unenroll from ${programEnrollment.program.title}`,
+    })
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(mockAxiosInstance.request).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "DELETE" }),
+    )
+  })
+
+  test.each(["enrollment-card-desktop", "enrollment-card-mobile"] as const)(
+    "Unenroll option is accessible from the %s overflow menu",
+    async (cardTestId) => {
+      const { programEnrollment } = setupProgramCard("audit", null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = await screen.findByTestId(cardTestId)
+      await user.click(within(card).getByLabelText("More options"))
+
+      expect(
+        await screen.findByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    },
+  )
+})
+
 describe("JustInTimeDialog", () => {
   const getFields = (root: HTMLElement) => {
     return {

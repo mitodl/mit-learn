@@ -5,8 +5,11 @@ import { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { useCreateProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { useRouter } from "next-nprogress-bar"
-import { DASHBOARD_HOME } from "@/common/urls"
-import { formatPrice, getEnrollmentType } from "@/common/mitxonline"
+import {
+  enrollmentAlertSuccessUrl,
+  formatPrice,
+  getEnrollmentType,
+} from "@/common/mitxonline"
 import {
   BigButton,
   CertificateBox,
@@ -109,7 +112,11 @@ const ProgramEnrollmentDialogInner: React.FC<ProgramEnrollmentDialogProps> = ({
           if (onProgramEnroll) {
             onProgramEnroll()
           } else {
-            router.push(DASHBOARD_HOME)
+            router.push(
+              enrollmentAlertSuccessUrl({
+                title: program.title ?? "your enrollment",
+              }),
+            )
           }
           modal.hide()
         },

@@ -82,6 +82,7 @@ type ResourceCardProps = Omit<
 > & {
   headingLevel?: number
   parentHeadingEl?: HeadingElement
+  onCardClick?: () => void
 }
 
 /**
@@ -94,6 +95,7 @@ type ResourceCardProps = Omit<
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
   parentHeadingEl,
+  onCardClick,
   ...others
 }) => {
   const {
@@ -107,11 +109,18 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     onClick,
   } = useResourceCard(resource)
 
+  const composedOnClick = onCardClick
+    ? () => {
+        onClick?.()
+        onCardClick()
+      }
+    : onClick
+
   const headingLevel = parentHeadingEl ? subheadingMap[parentHeadingEl] : 6
   return (
     <>
       <LearningResourceCard
-        onClick={onClick}
+        onClick={composedOnClick}
         resource={resource}
         href={resource ? getDrawerHref(resource.id) : undefined}
         onAddToLearningPathClick={handleAddToLearningPathClick}

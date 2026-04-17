@@ -11,7 +11,10 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
 import type { RequirementItem } from "./util"
-import { getIdsFromReqTree } from "@/common/mitxonline"
+import {
+  getIdsFromReqTree,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
@@ -279,6 +282,12 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
           variant="bordered"
           displayAsCourse
         />
+      }
+      showStayUpdated={
+        program.enrollment_modes.length > 0 &&
+        program.enrollment_modes.every((mode) =>
+          isVerifiedEnrollmentMode(mode.mode_slug),
+        )
       }
       infoBox={
         <ProgramAsCourseInfoBox

@@ -414,7 +414,10 @@ const CallToActionSection = ({
           href={url}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-              posthog.capture(PostHogEvents.CallToActionClicked, { resource })
+              posthog.capture(PostHogEvents.CallToActionClicked, {
+                resource,
+                label: cta,
+              })
             }
           }}
           data-ph-action="click-cta"

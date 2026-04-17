@@ -20,24 +20,21 @@ from learning_resources_search.serializers import (
     SearchResponseMetadata,
     SearchResponseSerializer,
 )
+from vector_search.constants import (
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_RESOURCE_PARAM_MAP,
+)
 
 
-class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
+class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
     """
-    Request serializer for vector based search
-    instead of id we use readable_id in case we upload qdrant snapshots
+    Shared filter fields for Qdrant-backed learning resource queries.
+
+    Every field here must have a corresponding entry in
+    vector_search.constants.QDRANT_RESOURCE_PARAM_MAP so it can be translated
+    to a Qdrant filter by qdrant_query_conditions().
     """
 
-    q = serializers.CharField(required=False, help_text="The search text")
-    offset = serializers.IntegerField(
-        required=False, help_text="The initial index from which to return the results"
-    )
-    limit = serializers.IntegerField(
-        required=False, help_text="Number of results to return per page"
-    )
-    readable_id = serializers.CharField(
-        required=False, help_text="The readable id of the resource"
-    )
     offered_by_choices = [(e.name.lower(), e.value) for e in OfferedBy]
     offered_by = serializers.ListField(
         required=False,
@@ -148,6 +145,36 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(resource_type_group_choices)}"
         ),
     )
+
+
+class LearningResourcesVectorSearchRequestSerializer(
+    LearningResourcesSearchFiltersSerializer
+):
+    """
+    Request serializer for vector based search
+    instead of id we use readable_id in case we upload qdrant snapshots
+    """
+
+    published = serializers.BooleanField(
+        required=False,
+        default=True,
+        help_text="If the resource is published. We default to True unless passed in",
+    )
+    aggregation_choices = [
+        (key, key.replace("_", " ").title()) for key in QDRANT_RESOURCE_PARAM_MAP
+    ]
+    aggregations = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=aggregation_choices),
+        help_text=(
+            f"aggregations for facet counts \
+            \n\n{build_choice_description_list(aggregation_choices)}"
+        ),
+    )
+
+    readable_id = serializers.CharField(
+        required=False, help_text="The readable id of the resource"
+    )
     url__isnull = serializers.BooleanField(
         required=False,
         default=None,
@@ -159,6 +186,13 @@ class LearningResourcesVectorSearchRequestSerializer(serializers.Serializer):
         default=None,
         allow_null=True,
         help_text="Filter to learning resources where title is null/not null",
+    )
+    q = serializers.CharField(required=False, help_text="The search text")
+    offset = serializers.IntegerField(
+        required=False, help_text="The initial index from which to return the results"
+    )
+    limit = serializers.IntegerField(
+        required=False, help_text="Number of results to return per page"
     )
     hybrid_search = serializers.BooleanField(
         required=False,
@@ -174,14 +208,14 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
 
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
-        return instance.get("hits", {})
+        return instance.get("hits", [])
 
     def get_count(self, instance) -> int:
-        return instance.get("total", {}).get("value")
+        return instance.get("total", {}).get("value", 0)
 
-    def get_metadata(self, _) -> SearchResponseMetadata:
+    def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
-            "aggregations": [],
+            "aggregations": instance.get("aggregations", {}),
             "suggest": [],
         }
 
@@ -197,6 +231,17 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     )
     limit = serializers.IntegerField(
         required=False, help_text="Number of results to return per page"
+    )
+    aggregation_choices = [
+        (key, key.replace("_", " ").title()) for key in QDRANT_CONTENT_FILE_PARAM_MAP
+    ]
+    aggregations = serializers.ListField(
+        required=False,
+        child=serializers.ChoiceField(choices=aggregation_choices),
+        help_text=(
+            f"aggregations for facet counts \
+            \n\n{build_choice_description_list(aggregation_choices)}"
+        ),
     )
     sortby = serializers.ChoiceField(
         required=False,
@@ -275,14 +320,14 @@ class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):
     """
 
     def get_count(self, instance) -> int:
-        return instance["total"]["value"]
+        return instance.get("total", {}).get("value", 0)
 
     @extend_schema_field(ContentFileSerializer(many=True))
     def get_results(self, instance):
-        return instance["hits"]
+        return instance.get("hits", [])
 
-    def get_metadata(self, *_) -> SearchResponseMetadata:
+    def get_metadata(self, instance) -> SearchResponseMetadata:
         return {
-            "aggregations": [],
+            "aggregations": instance.get("aggregations", {}),
             "suggest": [],
         }

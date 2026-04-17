@@ -11,8 +11,20 @@ import {
 } from "@/test-utils"
 import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
 import { LearningResourceCard } from "ol-components"
-import { ControlledPromise } from "ol-test-utilities"
+import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
 import invariant from "tiny-invariant"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  usePostHog: jest.fn(),
+}))
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -328,4 +340,44 @@ describe("ResourceCarousel", () => {
       )
     },
   )
+
+  test("clicking a card fires course_card_clicked with key payload fields", async () => {
+    allowConsoleErrors()
+    const config: ResourceCarouselProps["config"] = [
+      {
+        label: "Test Carousel",
+        data: {
+          type: "resources",
+          params: { resource_type: ["course"] },
+        },
+      },
+    ]
+    const { resources } = setupApis({ count: 2 })
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+
+    renderWithProviders(
+      <ResourceCarousel
+        titleComponent="h2"
+        title="Test Carousel"
+        config={config}
+      />,
+    )
+
+    const firstResource = resources.list.results[0]
+    const card = await screen.findByRole("heading", {
+      name: firstResource.title,
+    })
+    await user.click(card)
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.CourseCardClicked,
+      expect.objectContaining({
+        label: "Test Carousel",
+        resourceId: firstResource.id,
+        readableId: firstResource.readable_id,
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
 })

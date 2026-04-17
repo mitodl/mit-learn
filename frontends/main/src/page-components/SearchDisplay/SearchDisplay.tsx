@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
   Pagination,
@@ -516,8 +516,8 @@ const searchModeDropdownOptions = Object.entries(
 
 /**
  * Extracts only the fields supported by the vector search API from a broader
- * search params object, dropping admin-only params (e.g., aggregations,
- * content_file_score_weight) that the vector endpoint does not accept.
+ * search params object, dropping admin-only params (e.g., content_file_score_weight)
+ * that the vector endpoint does not accept.
  *
  * The `as` casts for enum arrays are safe because the v0 and v1 generated
  * clients define separate (but structurally identical) enum types for the same
@@ -526,6 +526,7 @@ const searchModeDropdownOptions = Object.entries(
 const toVectorSearchParams = (
   params: ReturnType<typeof getSearchParams>,
 ): VectorSearchRequest => ({
+  aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
   certification_type:
     params.certification_type as VectorSearchRequest["certification_type"],
@@ -551,6 +552,7 @@ const toVectorSearchParams = (
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
+  onFetchTimeChange?: (time: number | null) => void
   facetManifest: FacetManifest
   facetNames: UseResourceSearchParamsProps["facets"]
   constantSearchParams: Facets & BooleanFacets
@@ -580,6 +582,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
   filterHeadingEl,
+  onFetchTimeChange,
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -623,24 +626,30 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const wantsVectorSearch = searchParams.get("vector_search") === "true"
   const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
 
+  const queryOptions = isVectorSearch
+    ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
+    : learningResourceQueries.search(allParams as LRSearchRequest)
+
+  // @ts-expect-error Typescript has trouble unifying the different query key types
   const { data, isLoading, isFetching } = useQuery({
-    ...(isVectorSearch
-      ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
-      : learningResourceQueries.search(allParams as LRSearchRequest)),
+    ...queryOptions,
     enabled: !wantsVectorSearch || !isUserLoading,
     placeholderData: keepPreviousData,
-    select: (
-      data:
+    select: (timedData: {
+      result:
         | LearningResourcesSearchResponse
-        | LearningResourcesVectorSearchResponse,
-    ) => {
+        | LearningResourcesVectorSearchResponse
+      time: number
+    }) => {
+      const { result: data, time } = timedData
+
       // Handle missing data gracefully
       if (
         !data?.metadata?.aggregations?.offered_by ||
         !data?.results ||
         data.results.length === 0
       ) {
-        return data
+        return { ...data, time }
       }
 
       // only show offerors with display_facet set
@@ -650,6 +659,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
       return {
         ...data,
+        time,
         metadata: {
           ...data.metadata,
           aggregations: {
@@ -662,6 +672,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
+
+  useEffect(() => {
+    if (onFetchTimeChange) {
+      onFetchTimeChange(data?.time ?? null)
+    }
+  }, [data?.time, onFetchTimeChange])
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
@@ -973,9 +989,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading || isVectorSearch
-                ? ""
-                : `${data?.count} results`}
+              {isFetching || isLoading ? "" : `${data?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">

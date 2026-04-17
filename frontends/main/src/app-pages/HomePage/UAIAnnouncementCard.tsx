@@ -1,10 +1,12 @@
+"use client"
 import React from "react"
 import { Typography, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiArrowRightLine } from "@remixicon/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
+import { PostHogEvents } from "@/common/constants"
 
 const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
 
@@ -243,14 +245,25 @@ const CTAButton = styled(ButtonLink)(({ theme }) => ({
 
 const UAIAnnouncementCard: React.FC = () => {
   const showUAICard = useFeatureFlagEnabled(FeatureFlags.UniversalAI)
-  if (!showUAICard) {
-    return null
-  }
+  const posthog = usePostHog()
 
   const ctaHref = programPageView({
     readable_id: UAI_PROGRAM_READABLE_ID,
     display_mode: null,
   })
+
+  const handleCTAClick = () => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        label: "Learn about Universal AI",
+        readableId: UAI_PROGRAM_READABLE_ID,
+      })
+    }
+  }
+
+  if (!showUAICard) {
+    return null
+  }
 
   return (
     <Card>
@@ -275,6 +288,7 @@ const UAIAnnouncementCard: React.FC = () => {
               variant="primary"
               href={ctaHref}
               endIcon={<RiArrowRightLine />}
+              onClick={handleCTAClick}
             >
               Learn about Universal AI
             </CTAButton>
@@ -294,6 +308,7 @@ const UAIAnnouncementCard: React.FC = () => {
           variant="primary"
           href={ctaHref}
           endIcon={<RiArrowRightLine />}
+          onClick={handleCTAClick}
         >
           Learn about Universal AI
         </CTAButton>

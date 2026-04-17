@@ -22,6 +22,7 @@ from learning_resources.constants import (
 from learning_resources.etl import youtube
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.youtube import clean_youtube_description
 from learning_resources.factories import VideoFactory
 from main.utils import clean_data
 
@@ -218,7 +219,9 @@ def extracted_and_transformed_values(youtube_api_responses):
                             "resource_type": LearningResourceType.video.name,
                             "platform": PlatformType.youtube.name,
                             "etl_source": ETLSource.youtube.name,
-                            "description": clean_data(video["snippet"]["description"]),
+                            "description": clean_youtube_description(
+                                clean_data(video["snippet"]["description"])
+                            ),
                             "image": {
                                 "url": video["snippet"]["thumbnails"]["high"]["url"],
                             },
@@ -596,3 +599,25 @@ def test_get_youtube_videos_for_transcripts_job(
             assert list(result.order_by("video__id")) == [video2]
         else:
             assert list(result.order_by("video__id")) == [video2, video4, video6]
+
+
+def test_clean_youtube_description():
+    """Test that clean_youtube_description removes boilerplate and unwanted lines"""
+
+    original_description1 = "Nancy L. Rose and Janis Melvold share how two different approaches—Plickers and workshops—engage students in conversation and challenge them to deepen their knowledge. \n\nNancy L. Rose is Charles P. Kindleberger Professor of Applied Economics and MacVicar Faculty Fellow at MIT, and a Visiting Scholar at Harvard Kennedy School.\n\nJanis Melvold is a linguist and Lecturer II in Comparative Media Studies/Writing at MIT. \n\nChapters:\n0:00 INTRODUCTION\n\n1:29 NANCY L. ROSE &amp; USE OF PLICKERS\n2:02 Deciding to use Plickers\n2:36 About 14.20/14.200 Industrial Organization\n3:52 Plickers for participation and in-class feedback\n4:11 What is a Plicker?\n6:27 Generating discussion\n8:19 Lowering the barrier to participation\n9:40 Assessing translational skills\n12:00 Real-time feedback on lectures\n13:47 Checking student understanding of lecture\n15:43 Illustrating progress in learning\n\n17:48 JANIS MELVOLD &amp; WRITING WORKSHOPS\n18:17 About writing workshops\n18:37 MIT's communication requirement\n20:29 Intended outcomes of CI-H subjects\n21:12 Toolkit for embedded writing instruction\n23:04 About 24.900 Intro to Linguistics\n26:08 Overview of 24.900 writing workshops\n26:54 Instruction &amp; active engagement\n27:35 Leveraging sample writing from past students\n28:24 Example of workshop exercise: Critical summary\n30:41 Example of workshop exercise: Research findings\n34:32 Advantages &amp; limitations of writing workshops\n36:37 Considerations for the future\n\n38:32 DISCUSSION &amp; Q/A\n39:39 Student feedback\n43:12 Course iteration\n47:40 Plickers &amp; student explanations\n49:10 Optional attendance: Writing workshops\n\nMIT Open Learning:\nhttps://openlearning.mit.edu/residential-education\nhttps://openlearning.mit.edu/events/uncovering-student-perspectives-course-concepts-tips-economist-and-linguist"
+    clean_description1 = "Nancy L. Rose and Janis Melvold share how two different approaches—Plickers and workshops—engage students in conversation and challenge them to deepen their knowledge. \n\nNancy L. Rose is Charles P. Kindleberger Professor of Applied Economics and MacVicar Faculty Fellow at MIT, and a Visiting Scholar at Harvard Kennedy School.\n\nJanis Melvold is a linguist and Lecturer II in Comparative Media Studies/Writing at MIT."
+
+    original_description2 = "MIT 9.35, Spring 2024\nInstructor: Josh McDermott\nView the complete course: https://ocw.mit.edu/courses/9-35-perception-spring-2024\nYouTube Playlist: https://www.youtube.com/playlist?list=PLUl4u3cNGP62-9RweyYBIpkqfo5dfcuS8\n\nThis lecture discusses the senses of smell and taste, with emphasis on the working of the sense receptors in the nose and tongue.\n\nLicense: Creative Commons BY-NC-SA\nMore information at https://ocw.mit.edu/terms\nMore courses at https://ocw.mit.edu\nSupport OCW at http://ow.ly/a1If50zVRl\n\nWe encourage constructive comments and discussion on OCW's YouTube and other social media channels. Personal attacks, hate speech, trolling, and inappropriate comments are not allowed and may be removed. More details at https://ocw.mit.edu/comments."
+    clean_description2 = "This lecture discusses the senses of smell and taste, with emphasis on the working of the sense receptors in the nose and tongue."
+
+    original_description3 = "MIT 21H.151 Dynastic China, Fall 2024 \nInstructor: Tristan G. Brown \nView the complete course: https://ocw.mit.edu/courses/21h-151-dynastic-china-fall-2024\nYouTube Playlist: https://www.youtube.com/playlist?list=PLUl4u3cNGP60g8vnEsLGuA4Kt-d5vNqy9\n\nProf. Brown discusses the emergence of Taiwan during the Qing Dynasty.\n\nLicense: Creative Commons BY-NC-SA\nMore information at https://ocw.mit.edu/terms\nMore courses at https://ocw.mit.edu\nSupport OCW at http://ow.ly/a1If50zVRlQ\n\nWe encourage constructive comments and discussion on OCW's YouTube and other social media channels. Personal attacks, hate speech, trolling, and inappropriate comments are not allowed and may be removed. More details at https://ocw.mit.edu/comments."
+    clean_description3 = (
+        "Prof. Brown discusses the emergence of Taiwan during the Qing Dynasty."
+    )
+
+    original_description4 = "What can we do at MIT to prepare our students to solve the challenges of their time? Every learner at MIT can impact the future of humankind and the planet—calling on us to embrace new approaches to an MIT education. In this video, panelists share their perspectives on deeply engaging students and the future of teaching and learning at MIT. \n\nSpeakers:\nOpening Remarks by Daniel E. Hastings, Interim Vice Chancellor, and the Cecil and Ida Green Education Professor of Aeronautics and Astronautics\nChris Capozzola, Elting E. Morison Professor of History &amp; Senior Associate Dean for Open Learning\nAdam Martin, Professor of Biology &amp; Co-Chair of the Task Force on the Undergraduate Academic Program\nAmitava 'Babi' Mitra, Founding Executive Director, New Engineering Education Transformation (NEET), School of Engineering\nSusan Silbey, Leon and Anne Goldberg Professor of Humanities, Sociology and Anthropology; &amp; Professor of Behavioral and Policy Sciences at Sloan School of Management\nModerator: Janet Rankin, Director of MIT Teaching + Learning Lab\n\nChapters:\n0:00 Opening remarks\n6:11 Panelist introductions\n8:35 Mens et manus (mind and hand): Strengths &amp; challenges\n16:25 Important changes or improvements to MIT education\n26:06 Examples of deeply engaging students\n39:45 Transforming mens et manus for the future\n47:53 Technology, society, and culture\n48:23 Helping students grasp the purpose and relevance of courses\n53:00 Expanding the idea of campus\n56:10 Supporting students with different goals\n1:00:57 Scaling the MIT experience for the world\n1:04:09 Envisioning a campus that values communities\n\nFestival: https://openlearning.mit.edu/mit-faculty/festival-learning \nMIT Residential Education: https://openlearning.mit.edu/residential-education"
+    clean_description4 = "What can we do at MIT to prepare our students to solve the challenges of their time? Every learner at MIT can impact the future of humankind and the planet—calling on us to embrace new approaches to an MIT education. In this video, panelists share their perspectives on deeply engaging students and the future of teaching and learning at MIT. \n\nOpening Remarks by Daniel E. Hastings, Interim Vice Chancellor, and the Cecil and Ida Green Education Professor of Aeronautics and Astronautics\nChris Capozzola, Elting E. Morison Professor of History &amp; Senior Associate Dean for Open Learning\nAdam Martin, Professor of Biology &amp; Co-Chair of the Task Force on the Undergraduate Academic Program\nAmitava 'Babi' Mitra, Founding Executive Director, New Engineering Education Transformation (NEET), School of Engineering\nSusan Silbey, Leon and Anne Goldberg Professor of Humanities, Sociology and Anthropology; &amp; Professor of Behavioral and Policy Sciences at Sloan School of Management\nModerator: Janet Rankin, Director of MIT Teaching + Learning Lab"
+    assert clean_youtube_description(original_description1) == clean_description1
+    assert clean_youtube_description(original_description2) == clean_description2
+    assert clean_youtube_description(original_description3) == clean_description3
+    assert clean_youtube_description(original_description4) == clean_description4

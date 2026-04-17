@@ -16,19 +16,35 @@ import type {
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
+import {
+  renderWithProviders,
+  waitFor,
+  screen,
+  within,
+  user,
+} from "@/test-utils"
 import ProgramPage from "./ProgramPage"
-import { assertHeadings } from "ol-test-utilities"
+import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { notFound } from "next/navigation"
+import {
+  useStayUpdatedEnv,
+  PROGRAM_HIDE_STAY_UPDATED_CASES,
+} from "./test-utils/stayUpdated"
 
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 
@@ -633,6 +649,88 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId="readable_id" />)
     await waitFor(() => {
       expect(notFound).toHaveBeenCalled()
+    })
+  })
+
+  test("clicking a requirement card fires course_card_clicked", async () => {
+    allowConsoleErrors()
+    const program = makeProgram({
+      ...makeReqs({ required: { count: 1, title: "Required" } }),
+    })
+    const page = makePage({ program_details: program })
+    const { courses } = setupApis({ program, page })
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const course = courses[0]
+    const card = await screen.findByRole("heading", { name: course.title })
+    await user.click(card)
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.CourseCardClicked,
+      expect.objectContaining({
+        resourceId: course.id,
+        readableId: course.readable_id,
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  describe("Stay Updated button", () => {
+    useStayUpdatedEnv()
+
+    test("Shows button when program has only the verified enrollment mode", async () => {
+      const program = makeProgram({
+        ...makeReqs(),
+        enrollment_modes: [
+          factories.courses.enrollmentMode({ mode_slug: "verified" }),
+        ],
+      })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      expect(
+        await screen.findByRole("button", { name: "Stay Updated" }),
+      ).toBeInTheDocument()
+    })
+
+    test.each(PROGRAM_HIDE_STAY_UPDATED_CASES)(
+      "Hides button when $label",
+      async ({ enrollment_modes: enrollmentModes }) => {
+        const program = makeProgram({
+          ...makeReqs(),
+          enrollment_modes: enrollmentModes,
+        })
+        const page = makePage({ program_details: program })
+        setupApis({ program, page })
+        renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+        await screen.findByRole("heading", { name: page.title })
+        expect(
+          screen.queryByRole("button", { name: "Stay Updated" }),
+        ).not.toBeInTheDocument()
+      },
+    )
+
+    test("Hides button when Stay Updated form ID is not configured", async () => {
+      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
+      const program = makeProgram({
+        ...makeReqs(),
+        enrollment_modes: [
+          factories.courses.enrollmentMode({ mode_slug: "verified" }),
+        ],
+      })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      await screen.findByRole("heading", { name: page.title })
+      expect(
+        screen.queryByRole("button", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
     })
   })
 })

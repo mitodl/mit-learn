@@ -14,17 +14,27 @@ import type {
 } from "api"
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
-import { assertHeadings, ControlledPromise } from "ol-test-utilities"
+import {
+  assertHeadings,
+  ControlledPromise,
+  allowConsoleErrors,
+} from "ol-test-utilities"
 import { act } from "@testing-library/react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(() => ({ capture: jest.fn() })),
+  usePostHog: jest.fn(),
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
@@ -151,50 +161,6 @@ describe("SearchPage", () => {
       )
     },
   )
-
-  test("Vector Hybrid Search passes correct params and hides count", async () => {
-    setMockApiResponses({
-      search: {
-        count: 700,
-        metadata: {
-          aggregations: {
-            resource_type_group: [{ key: "course", doc_count: 100 }],
-          },
-          suggestions: [],
-        },
-        results: factories.learningResources.resources({ count: 5 }).results,
-      },
-    })
-
-    // Authenticate as path editor (admin)
-    setMockResponse.get(urls.userMe.get(), {
-      is_learning_path_editor: true,
-      is_authenticated: true,
-    })
-
-    renderWithProviders(<SearchPage />, { url: "?vector_search=true&q=test" })
-
-    await waitFor(() => {
-      const call = makeRequest.mock.calls.find(([_method, url]) => {
-        return url.includes(urls.search.vectorResources())
-      })
-      expect(call).toBeDefined()
-    })
-
-    const call = makeRequest.mock.calls.find(([_method, url]) =>
-      url.includes(urls.search.vectorResources()),
-    )
-    invariant(call)
-    const fullUrl = new URL(call[1], "http://mit.edu")
-    const apiSearchParams = fullUrl.searchParams
-
-    expect(apiSearchParams.get("hybrid_search")).toBe("true")
-    expect(apiSearchParams.get("q")).toBe("test")
-
-    // Ensure count is hidden
-    const hideCountText = screen.queryByText("700 results")
-    expect(hideCountText).toBeNull()
-  })
 
   test("Toggling facets", async () => {
     setMockApiResponses({
@@ -408,6 +374,44 @@ describe("SearchPage", () => {
       screen.getByTestId("yearly_decay_percent-slider")
       screen.getByTestId("min_score-slider")
       screen.getByTestId("max_incompleteness_penalty-slider")
+    })
+  })
+
+  test("Search time indicator is visible to admins and hidden from non-admins", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {},
+          suggestions: [],
+        },
+      },
+    })
+
+    // Authenticate as path editor (admin)
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    const {
+      view: { unmount },
+    } = renderWithProviders(<SearchPage />)
+
+    await screen.findByText(/Search took/i)
+
+    unmount()
+
+    // Authenticate as non-admin
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: false,
+      is_authenticated: true,
+    })
+
+    renderWithProviders(<SearchPage />)
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Search took/i)).toBeNull()
     })
   })
 })
@@ -1021,5 +1025,83 @@ describe("UniversalAIBanner", () => {
 
     expect(screen.queryByText("Universal AI")).not.toBeInTheDocument()
     expect(screen.queryByText("New on MIT Learn")).not.toBeInTheDocument()
+  })
+
+  test("Vector Hybrid Search passes correct params and renders expected count/facets", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+        results: factories.learningResources.resources({ count: 5 }).results,
+      },
+    })
+
+    // Authenticate as path editor (admin)
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    renderWithProviders(<SearchPage />, { url: "?vector_search=true&q=test" })
+
+    await waitFor(() => {
+      const call = makeRequest.mock.calls.find(([_method, url]) => {
+        return url.includes(urls.search.vectorResources())
+      })
+      expect(call).toBeDefined()
+    })
+
+    const call = makeRequest.mock.calls.find(([_method, url]) =>
+      url.includes(urls.search.vectorResources()),
+    )
+    invariant(call)
+    const fullUrl = new URL(call[1], "http://mit.edu")
+    const apiSearchParams = fullUrl.searchParams
+
+    expect(apiSearchParams.get("hybrid_search")).toBe("true")
+    expect(apiSearchParams.get("q")).toBe("test")
+
+    // Ensure count is visible
+    const countText = await screen.findByText("700 results")
+    expect(countText).toBeVisible()
+
+    // Ensure facets are visible
+    await waitFor(() => {
+      const tabs = screen.getAllByRole("tab")
+      expect(
+        tabs.map((tab) => (tab.textContent || "").replace(/\s/g, "")),
+      ).toEqual([
+        "All(100)",
+        "Courses(100)",
+        "Programs(0)",
+        "LearningMaterials(0)",
+      ])
+    })
+  })
+
+  test("clicking Learn More fires cta_clicked with label and readableId", async () => {
+    allowConsoleErrors()
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockCapture.mockClear()
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />)
+    const link = await screen.findByRole("link", {
+      name: "Learn more about Universal AI",
+    })
+    await user.click(link)
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.CallToActionClicked,
+      expect.objectContaining({
+        label: "Learn more about Universal AI",
+        readableId: "program-v1:UAI+B2C",
+      }),
+    )
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })

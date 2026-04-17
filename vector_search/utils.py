@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import logging
 import uuid
@@ -32,13 +33,13 @@ from learning_resources_search.serializers import (
 )
 from main.utils import checksum_for_content
 from vector_search.constants import (
+    COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
-    QDRANT_TOPICS_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
 )
@@ -871,7 +872,11 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
 
 def _resource_vector_hits(search_result):
-    hits = [hit.payload["readable_id"] for hit in search_result]
+    hits = [
+        readable_id
+        for readable_id in (hit.payload.get("readable_id") for hit in search_result)
+        if readable_id
+    ]
     """
     Always lookup learning resources by readable_id for portability
     in case we load points from external systems
@@ -981,17 +986,74 @@ def document_exists(document, collection_name=RESOURCES_COLLECTION_NAME):
     return count_result.count > 0
 
 
+async def async_qdrant_aggregations(
+    aggregation_keys: list,
+    params: dict,
+    collection_name: str = RESOURCES_COLLECTION_NAME,
+) -> dict:
+    """
+    Compute facet aggregations from Qdrant for each requested field.
+    Issues one concurrent facet query per aggregation key and returns results
+    in the same shape used by the OpenSearch aggregation API:
+    ``{"delivery": [{"key": "online", "doc_count": 24}, ...], ...}``
+    Args:
+        aggregation_keys: list of aggregation parameter names.
+            Must be valid keys in the collection's param map
+            (e.g. ``QDRANT_RESOURCE_PARAM_MAP``).
+        params: dict of all search parameters, which are used to construct
+            a Qdrant ``models.Filter`` for each facet query.
+        collection_name: name of the Qdrant collection to query.
+    Returns:
+        dict mapping each requested aggregation name to a list of
+        ``{"key": str, "doc_count": int}`` dicts sorted by
+        ``doc_count`` descending.
+    """
+    if not aggregation_keys:
+        return {}
+
+    param_map = COLLECTION_PARAM_MAP.get(collection_name, QDRANT_RESOURCE_PARAM_MAP)
+    client = async_qdrant_client()
+
+    async def _get_facet(agg_key: str):
+        qdrant_field = param_map.get(agg_key)
+        if not qdrant_field:
+            return agg_key, []
+
+        filtered_params = {
+            k: v for k, v in params.items() if k.partition("__")[0] != agg_key
+        }
+        facet_filter = qdrant_query_conditions(
+            filtered_params, collection_name=collection_name
+        )
+
+        result = await client.facet(
+            collection_name=collection_name,
+            key=qdrant_field,
+            facet_filter=facet_filter,
+            limit=100,
+        )
+        hits = [
+            {
+                "key": str(hit.value).lower()
+                if isinstance(hit.value, bool)
+                else str(hit.value),
+                "doc_count": hit.count,
+            }
+            for hit in result.hits
+        ]
+        hits.sort(key=lambda x: x["doc_count"], reverse=True)
+        return agg_key, hits
+
+    results = await asyncio.gather(*[_get_facet(key) for key in aggregation_keys])
+    return dict(results)
+
+
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params
     """
 
-    collection_param_map = {
-        RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
-        TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
-        CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
-    }
-    qdrant_param_map = collection_param_map.get(collection_name)
+    qdrant_param_map = COLLECTION_PARAM_MAP.get(collection_name)
     if not params or not qdrant_param_map:
         return None
     must = []
