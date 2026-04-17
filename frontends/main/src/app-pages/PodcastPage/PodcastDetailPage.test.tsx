@@ -2,7 +2,7 @@ import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import { PodcastDetailPage } from "./PodcastDetailPage"
 
 jest.mock(
@@ -29,14 +29,11 @@ const EPISODES_PAGE_SIZE = 5
 
 const makeItemsResponse = (
   episodes: LearningResource[],
-  {
-    next = null,
-    previous = null,
-  }: { next?: string | null; previous?: string | null } = {},
+  opts: { next?: string | null } = {},
 ) => ({
   count: episodes.length,
-  next,
-  previous,
+  next: opts.next ?? null,
+  previous: null,
   results: episodes.map((resource, i) => ({
     id: i + 1,
     child: resource.id,
@@ -45,6 +42,13 @@ const makeItemsResponse = (
     resource,
   })),
 })
+
+const makePodcastEpisodes = (count: number): PodcastEpisodeResource[] =>
+  Array.from({ length: count }, () =>
+    factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.PodcastEpisode,
+    }),
+  ) as PodcastEpisodeResource[]
 
 const setupApis = ({
   episodesPage1,
@@ -62,27 +66,23 @@ const setupApis = ({
     podcast,
   )
 
+  // The code normalises the next URL to BASE_PATH + path, where BASE_PATH is ""
+  // in tests, so both the next value and the page-2 mock use the plain path.
+  const page2Path = episodesPage2
+    ? `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}&offset=${EPISODES_PAGE_SIZE}`
+    : null
+
   setMockResponse.get(
-    `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}&offset=0`,
-    makeItemsResponse(episodesPage1),
+    `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
+    makeItemsResponse(episodesPage1, { next: page2Path }),
   )
 
-  if (episodesPage2) {
-    setMockResponse.get(
-      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}&offset=${EPISODES_PAGE_SIZE}`,
-      makeItemsResponse(episodesPage2),
-    )
+  if (episodesPage2 && page2Path) {
+    setMockResponse.get(page2Path, makeItemsResponse(episodesPage2))
   }
 
   return { podcast }
 }
-
-const makePodcastEpisodes = (count: number): PodcastEpisodeResource[] =>
-  Array.from({ length: count }, () =>
-    factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.PodcastEpisode,
-    }),
-  ) as PodcastEpisodeResource[]
 
 describe("PodcastDetailPage", () => {
   test("renders initial episode list", async () => {
@@ -91,28 +91,25 @@ describe("PodcastDetailPage", () => {
 
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
-    // Wait for the first episode to appear, then assert all are rendered
     await screen.findByText(episodes[0].title!)
-
     for (const episode of episodes) {
       expect(screen.getByText(episode.title!)).toBeInTheDocument()
     }
   })
 
-  test("does not show 'Load more' when fewer than page size episodes are returned", async () => {
+  test("does not show 'Load more' when there is no next page", async () => {
     const episodes = makePodcastEpisodes(3)
     const { podcast } = setupApis({ episodesPage1: episodes })
 
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     await screen.findByText(episodes[0].title!)
-
     expect(
       screen.queryByRole("button", { name: /load more episodes/i }),
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Load more' button when a full page is returned", async () => {
+  test("shows 'Load more' when API returns a next page URL", async () => {
     const episodes = makePodcastEpisodes(EPISODES_PAGE_SIZE)
     const { podcast } = setupApis({
       episodesPage1: episodes,
@@ -122,7 +119,6 @@ describe("PodcastDetailPage", () => {
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     await screen.findByText(episodes[0].title!)
-
     expect(
       screen.getByRole("button", { name: /load more episodes/i }),
     ).toBeInTheDocument()
@@ -139,39 +135,32 @@ describe("PodcastDetailPage", () => {
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     await screen.findByText(page1[0].title!)
+    await user.click(
+      screen.getByRole("button", { name: /load more episodes/i }),
+    )
 
-    const loadMoreButton = screen.getByRole("button", {
-      name: /load more episodes/i,
-    })
-    await user.click(loadMoreButton)
-
-    // Both pages' episodes should now be visible
-    for (const episode of [...page1, ...page2]) {
+    for (const episode of page2) {
       await screen.findByText(episode.title!)
     }
 
-    // "Load more" hidden after receiving a partial page
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("button", { name: /load more episodes/i }),
-      ).not.toBeInTheDocument()
-    })
+    // No more pages — button should disappear
+    expect(
+      screen.queryByRole("button", { name: /load more episodes/i }),
+    ).not.toBeInTheDocument()
   })
 
-  test("clicking play renders the player with correct track title and podcast name", async () => {
+  test("clicking play renders the player with correct track and podcast name", async () => {
     const episodes = makePodcastEpisodes(2)
     const { podcast } = setupApis({ episodesPage1: episodes })
 
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     await screen.findByText(episodes[0].title!)
-
     expect(screen.queryByTestId("podcast-player")).not.toBeInTheDocument()
 
-    const playButton = screen.getByRole("button", {
-      name: `Play ${episodes[0].title}`,
-    })
-    await user.click(playButton)
+    await user.click(
+      screen.getByRole("button", { name: `Play ${episodes[0].title}` }),
+    )
 
     expect(screen.getByTestId("podcast-player")).toBeInTheDocument()
     expect(screen.getByTestId("player-track-title")).toHaveTextContent(

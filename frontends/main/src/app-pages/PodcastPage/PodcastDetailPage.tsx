@@ -1,16 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import dynamic from "next/dynamic"
+import React, { useState, useMemo } from "react"
 import { Breadcrumbs, Typography, styled } from "ol-components"
-import { ButtonLink, Button } from "@mitodl/smoot-design"
+import { ButtonLink, Button, ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill } from "@remixicon/react"
 import PodcastPlayer from "./PodcastPlayer"
 import type { PodcastTrack } from "./PodcastPlayer"
-import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
-  learningResourceQueries,
+  useInfiniteLearningResourceItems,
 } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
@@ -18,11 +16,6 @@ import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
-
-const LearningResourceDrawer = dynamic(
-  () =>
-    import("@/page-components/LearningResourceDrawer/LearningResourceDrawer"),
-)
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -40,10 +33,7 @@ const PodcastTitle = styled(Typography)(({ theme }) => ({
   display: "inline-block",
 
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h3,
-    fontSize: "34px",
-    fontStyle: "normal",
-    lineHeight: "40px",
+    ...theme.typography.h2,
   },
 }))
 
@@ -271,38 +261,27 @@ const EpisodeMeta = styled(Typography)(({ theme }) => ({
   textAlign: "right",
 }))
 
-interface PlayButtonProps {
-  $isPlaying?: boolean
-}
-
-const PlayButton = styled.a<PlayButtonProps>(({ theme, $isPlaying }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "48px",
-  height: "48px",
-  border: `1.5px solid ${$isPlaying ? "#E63946" : theme.custom.colors.darkGray2}`,
-  borderRadius: "4px",
-  color: $isPlaying ? "#E63946" : theme.custom.colors.darkGray2,
-  backgroundColor: $isPlaying ? "#FFE8EB" : "transparent",
-  textDecoration: "none",
-  flexShrink: 0,
-  cursor: "pointer",
-  "&:hover": {
-    backgroundColor: $isPlaying ? "#FFD4DC" : theme.custom.colors.lightGray2,
+const PlayButton = styled(ActionButton, {
+  shouldForwardProp: (prop) => prop !== "isPlaying",
+})<{
+  isPlaying: boolean
+}>(({ theme, isPlaying }) => [
+  {
+    color: theme.custom.colors.darkGray2,
+    borderColor: "currentColor",
+    "&:hover:not(:disabled)": {
+      color: theme.custom.colors.red,
+    },
   },
-
-  [theme.breakpoints.down("sm")]: {
-    width: "80px",
-    height: "48px",
+  isPlaying && {
+    color: theme.custom.colors.red,
   },
-}))
+])
 
 /* ── Episode row component ── */
 
 type EpisodeItemProps = {
   episode: LearningResource
-  index: number
   onPlayClick: (episode: LearningResource) => void
   isPlaying: boolean
 }
@@ -343,10 +322,10 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
           </EpisodeMeta>
         )}
         <PlayButton
-          as="button"
           onClick={() => onPlayClick(episode)}
           aria-label={`Play ${episode.title}`}
-          $isPlaying={isPlaying}
+          isPlaying={isPlaying}
+          variant="secondary"
         >
           <RiPlayFill size={20} />
         </PlayButton>
@@ -367,51 +346,31 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
 }) => {
   const id = Number(podcastId)
-  const [offset, setOffset] = useState(0)
-  const [allEpisodes, setAllEpisodes] = useState<LearningResource[]>([])
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
-  const [shouldLoadMore, setShouldLoadMore] = useState(true)
 
   const { data: resource } = useLearningResourcesDetail(id)
 
   const {
-    data: episodesPage,
+    data: episodesData,
     isLoading: episodesLoading,
-    isFetching: episodesFetching,
-  } = useQuery({
-    ...learningResourceQueries.items(id, {
-      learning_resource_id: id,
-      limit: EPISODES_PAGE_SIZE,
-      offset,
-    }),
-    enabled: !!resource,
-  })
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteLearningResourceItems(
+    id,
+    { learning_resource_id: id, limit: EPISODES_PAGE_SIZE },
+    { enabled: !!resource },
+  )
 
-  useEffect(() => {
-    if (!episodesPage) {
-      return
-    }
-    setAllEpisodes((prev) => {
-      if (offset === 0) {
-        return episodesPage
-      }
-      const existingIds = new Set(prev.map((episode) => episode.id))
-      const nextEpisodes = episodesPage.filter(
-        (episode) => !existingIds.has(episode.id),
-      )
-      return [...prev, ...nextEpisodes]
-    })
-    // If we received fewer items than requested, we've reached the end
-    if (episodesPage.length < EPISODES_PAGE_SIZE) {
-      setShouldLoadMore(false)
-    }
-  }, [episodesPage, offset])
-
-  const hasMore =
-    shouldLoadMore && (episodesPage?.length ?? 0) === EPISODES_PAGE_SIZE
-  const episodes = allEpisodes
+  const episodes = useMemo(
+    () =>
+      episodesData?.pages.flatMap((page) =>
+        page.results.map((rel) => rel.resource),
+      ) ?? [],
+    [episodesData],
+  )
 
   const isPodcast =
     resource?.resource_type === ResourceTypeEnum.Podcast &&
@@ -466,7 +425,6 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   return (
     <>
-      <LearningResourceDrawer />
       <PageSection>
         <HeaderSection>
           <BreadcrumbBar>
@@ -541,25 +499,24 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
             {episodes && episodes.length > 0 && (
               <EpisodeList>
-                {episodes.map((episode, index) => (
+                {episodes.map((episode) => (
                   <EpisodeItem
                     key={episode.id}
                     episode={episode}
-                    index={index}
                     onPlayClick={handlePlayClick}
                     isPlaying={playingEpisode?.id === episode.id}
                   />
                 ))}
               </EpisodeList>
             )}
-            {(hasMore || episodesLoading) && (
+            {(hasNextPage || episodesLoading) && (
               <StyledShowMoreContainer>
                 <StyledShowMore
                   variant="secondary"
-                  onClick={() => setOffset((o) => o + EPISODES_PAGE_SIZE)}
-                  disabled={episodesFetching}
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
                 >
-                  {episodesFetching ? "Loading..." : "Load more episodes"}
+                  {isFetchingNextPage ? "Loading..." : "Load more episodes"}
                 </StyledShowMore>
               </StyledShowMoreContainer>
             )}

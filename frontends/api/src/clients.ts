@@ -131,4 +131,5 @@ export {
   learningResourcesSearchAdminParamsApi,
   videoShortsApi,
   vectorLearningResourcesSearchApi,
+  BASE_PATH,
 }

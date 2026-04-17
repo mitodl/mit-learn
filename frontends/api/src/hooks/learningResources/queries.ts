@@ -7,6 +7,7 @@ import {
   schoolsApi,
   featuredApi,
   vectorLearningResourcesSearchApi,
+  BASE_PATH,
 } from "../../clients"
 
 import type {
@@ -18,9 +19,11 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResourcesApiLearningResourcesSummaryListRequest as LearningResourcesSummaryListRequest,
+  PaginatedLearningResourceRelationshipList,
 } from "../../generated/v1"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorLearningResourcesSearchRetrieveRequest } from "../../generated/v0"
-import { queryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query"
+import axiosInstance from "../../axios"
 import { hasPosition, randomizeGroups } from "./util"
 
 const learningResourceKeys = {
@@ -47,6 +50,14 @@ const learningResourceKeys = {
   itemsRoot: (id: number) => [...learningResourceKeys.detail(id), "items"],
   items: (id: number, params: ItemsListRequest) => [
     ...learningResourceKeys.itemsRoot(id),
+    params,
+  ],
+  infiniteItemsRoot: (id: number) => [
+    ...learningResourceKeys.detail(id),
+    "infiniteItems",
+  ],
+  infiniteItems: (id: number, params: ItemsListRequest) => [
+    ...learningResourceKeys.infiniteItemsRoot(id),
     params,
   ],
   // featured
@@ -117,6 +128,28 @@ const learningResourceQueries = {
           .learningResourcesItemsList(params)
           .then((res) => res.data.results.map((rel) => rel.resource))
       },
+    }),
+  infiniteItems: (id: number, params: Omit<ItemsListRequest, "offset">) =>
+    infiniteQueryOptions({
+      queryKey: learningResourceKeys.infiniteItems(
+        id,
+        params as ItemsListRequest,
+      ),
+      queryFn: async ({ pageParam }) => {
+        const request = pageParam
+          ? axiosInstance.request<PaginatedLearningResourceRelationshipList>({
+              method: "get",
+              url:
+                BASE_PATH +
+                new URL(pageParam, "https://x").pathname +
+                new URL(pageParam, "https://x").search,
+            })
+          : learningResourcesApi.learningResourcesItemsList(params)
+        const { data } = await request
+        return data
+      },
+      initialPageParam: null as string | null,
+      getNextPageParam: (lastPage) => lastPage.next ?? undefined,
     }),
   similar: (id: number) =>
     queryOptions({

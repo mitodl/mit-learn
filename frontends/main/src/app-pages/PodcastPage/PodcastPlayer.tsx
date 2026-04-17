@@ -414,6 +414,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
               aria-valuemin={0}
               aria-valuemax={duration}
               aria-valuenow={currentTime}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
               tabIndex={0}
               onKeyDown={(event) => {
                 if (event.key === "ArrowLeft") {
@@ -515,6 +516,7 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
               aria-valuemin={0}
               aria-valuemax={duration}
               aria-valuenow={currentTime}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
               tabIndex={0}
               onKeyDown={(event) => {
                 if (event.key === "ArrowLeft") {
