@@ -87,6 +87,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
             ),
         )
       }
+      resource={{
+        id: course.id,
+        readable_id: course.readable_id,
+        resource_type: "course",
+      }}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />

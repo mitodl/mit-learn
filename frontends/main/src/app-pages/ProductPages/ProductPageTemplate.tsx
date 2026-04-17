@@ -19,6 +19,8 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { getStayUpdatedHubspotFormId } from "@/common/config"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -264,6 +266,7 @@ type ProductPageTemplateProps = {
   enrollmentAction: React.ReactNode
   children: React.ReactNode
   showStayUpdated?: boolean
+  resource?: { id: number; readable_id: string; resource_type: string }
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
@@ -275,7 +278,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollmentAction,
   showStayUpdated,
+  resource,
 }) => {
+  const posthog = usePostHog()
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
   const shouldShowStayUpdatedButton = Boolean(
     stayUpdatedFormId && showStayUpdated,
@@ -286,6 +291,18 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   const formQuery = useHubspotFormDetail(stayUpdatedParams, {
     enabled: shouldShowStayUpdatedButton,
   })
+
+  const handleStayUpdatedClick = () => {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY && resource) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        label: "Stay Updated",
+        resourceId: resource.id,
+        readableId: resource.readable_id,
+        resourceType: resource.resource_type,
+      })
+    }
+    NiceModal.show(StayUpdatedModal)
+  }
 
   return (
     <Page>
@@ -331,7 +348,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                          onClick={handleStayUpdatedClick}
                         >
                           Stay Updated
                         </StayUpdatedButton>
