@@ -142,7 +142,8 @@ describe("ProductPageTemplate stay-updated trigger", () => {
   describe("PostHog tracking", () => {
     beforeEach(() => {
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-      process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
+      process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID =
+        STAY_UPDATED_FORM_ID
       mockedUseHubspotFormDetail.mockReturnValue({
         data: undefined,
         isError: false,
@@ -155,22 +156,33 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     })
 
     it("fires cta_clicked with resource properties when Stay Updated is clicked", () => {
-      const resource = { id: 42, readable_id: "program-v1:test+101", resource_type: "program" as const }
+      const resource = {
+        id: 42,
+        readable_id: "program-v1:test+101",
+        resource_type: "program" as const,
+      }
       renderProductPageTemplate({ showStayUpdated: true, resource })
 
       screen.getByRole("button", { name: "Stay Updated" }).click()
 
-      expect(mockCapture).toHaveBeenCalledWith(PostHogEvents.CallToActionClicked, {
-        label: "Stay Updated",
-        resourceId: resource.id,
-        readableId: resource.readable_id,
-        resourceType: resource.resource_type,
-      })
+      expect(mockCapture).toHaveBeenCalledWith(
+        PostHogEvents.CallToActionClicked,
+        {
+          label: "Stay Updated",
+          resourceId: resource.id,
+          readableId: resource.readable_id,
+          resourceType: resource.resource_type,
+        },
+      )
     })
 
     it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", () => {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-      const resource = { id: 42, readable_id: "program-v1:test+101", resource_type: "program" as const }
+      const resource = {
+        id: 42,
+        readable_id: "program-v1:test+101",
+        resource_type: "program" as const,
+      }
       renderProductPageTemplate({ showStayUpdated: true, resource })
 
       screen.getByRole("button", { name: "Stay Updated" }).click()

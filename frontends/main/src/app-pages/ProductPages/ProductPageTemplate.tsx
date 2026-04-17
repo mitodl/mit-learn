@@ -266,7 +266,11 @@ type ProductPageTemplateProps = {
   enrollmentAction: React.ReactNode
   children: React.ReactNode
   showStayUpdated?: boolean
-  resource?: { id: number; readable_id: string; resource_type: "course" | "program" }
+  resource?: {
+    id: number
+    readable_id: string
+    resource_type: "course" | "program"
+  }
 }
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
