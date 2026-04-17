@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.63.7
+--------------
+
+- feat: implement PostHog event tracking for user interactions (#3218)
+- Update dependency pytest to v9 [SECURITY] (#3215)
+- Facet counts and aggregations for Vector search (#3210)
+- Program Unenrollment (#3203)
+- Update dependency Django to v4.2.30 [SECURITY] (#3212)
+- Update dependency cryptography to v46.0.7 [SECURITY] (#3211)
+- Update dependency requests to v2.33.0 [SECURITY] (#3214)
+- Filtering for similarity endpoints (#3204)
+- fix: minor improvements on video collection pages (#3205)
+- Update dependency litellm to v1.83.0 [SECURITY] (#3213)
+
 Version 0.63.5 (Released April 16, 2026)
 --------------
 
