@@ -76,7 +76,7 @@ services:
     ports:
       - "8089:8089"
     volumes:
-      - ./load_testing:/mnt/locust
+      - ./load_testing_locust:/mnt/locust
     command: -f /mnt/locust/locustfile.py --master -H http://nginx:8063 --class-picker
     links:
       - nginx
@@ -86,7 +86,7 @@ services:
   locust-worker:
     image: locustio/locust
     volumes:
-      - ./load_testing:/mnt/locust
+      - ./load_testing_locust:/mnt/locust
     command: -f /mnt/locust/locustfile.py --worker --master-host locust
     links:
       - nginx
