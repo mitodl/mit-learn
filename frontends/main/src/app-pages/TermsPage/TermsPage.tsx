@@ -139,7 +139,7 @@ const TermsPage: React.FC = () => {
             United States export control laws.
           </BodyText>
           <BodyText variant="body1">
-            As a condition of your use of the MIT Learn, you will not use the
+            As a condition of your use of the MIT Learn site, you will not use the
             Site or any Offering in any manner intended to damage, disable,
             overburden, or impair any MIT Learn server(s) or the network(s)
             connected to any MIT Learn server, or to interfere with any other
