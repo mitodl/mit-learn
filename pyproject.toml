@@ -73,7 +73,7 @@ dependencies = [
     "onnxruntime==1.22.1",
     "openai>=2.0.0,<3",
     "opensearch-dsl>=2.0.0,<3",
-    "opensearch-py>=2.0.0,<3",
+    "opensearch-py>=3.1,<4",
     "opentelemetry-instrumentation-celery>=0.52b0",
     "opentelemetry-instrumentation-django>=0.52b0",
     "opentelemetry-instrumentation-psycopg>=0.52b0",
