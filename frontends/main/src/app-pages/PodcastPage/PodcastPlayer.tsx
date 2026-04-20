@@ -1,12 +1,6 @@
 "use client"
 
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useState,
-  useEffect,
-} from "react"
+import React, { useRef, useState, useEffect } from "react"
 import { styled, Typography, LoadingSpinner } from "ol-components"
 import {
   RiPlayCircleFill,
@@ -24,10 +18,6 @@ export type PodcastTrack = {
   audioUrl: string
   title: string
   podcastName: string
-}
-
-export type PodcastPlayerHandle = {
-  togglePlayPause: () => Promise<void>
 }
 
 type PodcastPlayerProps = {
@@ -193,23 +183,36 @@ const ProgressWrapper = styled.div({
   minWidth: 0,
 })
 
-const ProgressTrack = styled.div(({ theme }) => ({
-  flex: 1,
-  height: "6px",
-  borderRadius: "3px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  position: "relative",
-  cursor: "pointer",
-  "&:hover .thumb": { opacity: 1 },
-}))
-
-const ProgressFill = styled.div<{ percent: number }>(({ theme, percent }) => ({
-  height: "100%",
-  borderRadius: "3px",
-  width: `${percent}%`,
-  backgroundColor: theme.custom.colors.mitRed,
-  position: "relative",
-}))
+const ProgressRange = styled.input<{ percent: number }>(
+  ({ theme, percent }) => ({
+    appearance: "none",
+    WebkitAppearance: "none",
+    flex: 1,
+    height: "6px",
+    borderRadius: "3px",
+    cursor: "pointer",
+    outline: "none",
+    border: "none",
+    padding: 0,
+    background: `linear-gradient(to right, ${theme.custom.colors.mitRed} ${percent}%, ${theme.custom.colors.lightGray2} ${percent}%)`,
+    "&::-webkit-slider-thumb": {
+      WebkitAppearance: "none",
+      width: "14px",
+      height: "14px",
+      borderRadius: "50%",
+      background: theme.custom.colors.mitRed,
+      cursor: "pointer",
+    },
+    "&::-moz-range-thumb": {
+      width: "14px",
+      height: "14px",
+      borderRadius: "50%",
+      background: theme.custom.colors.mitRed,
+      border: "none",
+      cursor: "pointer",
+    },
+  }),
+)
 
 const SpeedButton = styled.button(({ theme }) => ({
   background: "white",
@@ -252,106 +255,181 @@ const formatTime = (seconds: number): string => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
-  ({ track, onClose, onPlayStateChange }, ref) => {
-    const audioRef = useRef<HTMLAudioElement>(null)
-    const [isPlaying, setIsPlaying] = useState(false)
-    const [isBuffering, setIsBuffering] = useState(true)
-    const [currentTime, setCurrentTime] = useState(0)
-    const [duration, setDuration] = useState(0)
-    const [speedIndex, setSpeedIndex] = useState(1) // default 1x
-    const speedIndexRef = useRef(1)
+const PodcastPlayer = ({
+  track,
+  onClose,
+  onPlayStateChange,
+}: PodcastPlayerProps) => {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(true)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [speedIndex, setSpeedIndex] = useState(1) // default 1x
+  const speedIndexRef = useRef(1)
 
-    // Auto-play when a new track is loaded
-    useEffect(() => {
-      setCurrentTime(0)
+  // Auto-play when a new track is loaded
+  useEffect(() => {
+    setCurrentTime(0)
+    setIsPlaying(false)
+    setIsBuffering(true)
+    const audio = audioRef.current
+    if (!audio) return
+    audio.load()
+    audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
+    audio
+      .play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {})
+  }, [track.audioUrl])
+
+  const handlePlayPause = async () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (isPlaying) {
+      audio.pause()
       setIsPlaying(false)
-      setIsBuffering(true)
-      const audio = audioRef.current
-      if (!audio) return
-      audio.load()
-      audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
-      audio
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {})
-    }, [track.audioUrl])
-
-    const handlePlayPause = async () => {
-      const audio = audioRef.current
-      if (!audio) return
-      if (isPlaying) {
-        audio.pause()
+    } else {
+      try {
+        await audio.play()
+        setIsPlaying(true)
+      } catch {
         setIsPlaying(false)
-      } else {
-        try {
-          await audio.play()
-          setIsPlaying(true)
-        } catch {
+      }
+    }
+  }
+
+  useEffect(() => {
+    onPlayStateChange?.(isPlaying)
+  }, [isPlaying, onPlayStateChange])
+
+  const handleSkip = (seconds: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.max(
+      0,
+      Math.min(audio.currentTime + seconds, duration),
+    )
+  }
+
+  const handleSpeedCycle = () => {
+    const nextIndex = (speedIndex + 1) % SPEED_OPTIONS.length
+    speedIndexRef.current = nextIndex
+    setSpeedIndex(nextIndex)
+    if (audioRef.current) {
+      audioRef.current.playbackRate = SPEED_OPTIONS[nextIndex]
+    }
+  }
+
+  const percent = duration ? (currentTime / duration) * 100 : 0
+  return (
+    <>
+      {/* Shared audio element */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio
+        ref={audioRef}
+        src={track.audioUrl}
+        onWaiting={() => setIsBuffering(true)}
+        onCanPlay={() => setIsBuffering(false)}
+        onError={() => {
+          setIsBuffering(false)
           setIsPlaying(false)
-        }
-      }
-    }
+        }}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onEnded={() => setIsPlaying(false)}
+      />
 
-    useImperativeHandle(ref, () => ({
-      togglePlayPause: handlePlayPause,
-    }))
+      {/* ── Desktop player bar (hidden on mobile) ── */}
+      <PlayerBar>
+        {/* Track info */}
+        <TrackInfo>
+          <Typography variant="body3" sx={{ color: "text.secondary" }}>
+            {track.podcastName}
+          </Typography>
+          <TrackTitle
+            variant="subtitle2"
+            sx={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {track.title}
+          </TrackTitle>
+        </TrackInfo>
 
-    useEffect(() => {
-      onPlayStateChange?.(isPlaying)
-    }, [isPlaying, onPlayStateChange])
+        <Divider />
 
-    const handleSkip = (seconds: number) => {
-      const audio = audioRef.current
-      if (!audio) return
-      audio.currentTime = Math.max(
-        0,
-        Math.min(audio.currentTime + seconds, duration),
-      )
-    }
+        {/* Controls */}
+        <Controls>
+          <IconButton
+            onClick={() => handleSkip(-10)}
+            aria-label="Rewind 10 seconds"
+            title="Rewind 10s"
+          >
+            <RiReplay10Line size={24} />
+          </IconButton>
 
-    const handleSpeedCycle = () => {
-      const nextIndex = (speedIndex + 1) % SPEED_OPTIONS.length
-      speedIndexRef.current = nextIndex
-      setSpeedIndex(nextIndex)
-      if (audioRef.current) {
-        audioRef.current.playbackRate = SPEED_OPTIONS[nextIndex]
-      }
-    }
+          <PlayPauseButton
+            onClick={handlePlayPause}
+            aria-label={isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"}
+            disabled={isBuffering}
+          >
+            {isBuffering ? (
+              <LoadingSpinner loading size={40} color="inherit" />
+            ) : isPlaying ? (
+              <RiPauseCircleLine size={40} />
+            ) : (
+              <RiPlayCircleLine size={40} />
+            )}
+          </PlayPauseButton>
 
-    const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      const audio = audioRef.current
-      if (!audio || !duration) return
-      const rect = e.currentTarget.getBoundingClientRect()
-      const ratio = (e.clientX - rect.left) / rect.width
-      audio.currentTime = ratio * duration
-    }
+          <IconButton
+            onClick={() => handleSkip(30)}
+            aria-label="Forward 30 seconds"
+            title="Forward 30s"
+          >
+            <RiForward30Line size={24} />
+          </IconButton>
+        </Controls>
 
-    const percent = duration ? (currentTime / duration) * 100 : 0
-    return (
-      <>
-        {/* Shared audio element */}
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <audio
-          ref={audioRef}
-          src={track.audioUrl}
-          onWaiting={() => setIsBuffering(true)}
-          onCanPlay={() => setIsBuffering(false)}
-          onError={() => {
-            setIsBuffering(false)
-            setIsPlaying(false)
-          }}
-          onTimeUpdate={() =>
-            setCurrentTime(audioRef.current?.currentTime ?? 0)
-          }
-          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-          onEnded={() => setIsPlaying(false)}
-        />
+        {/* Progress */}
+        <ProgressWrapper>
+          <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
+          <ProgressRange
+            type="range"
+            min={0}
+            max={duration || 1}
+            value={currentTime}
+            step={1}
+            percent={percent}
+            aria-label="Seek"
+            onChange={(e) => {
+              const audio = audioRef.current
+              if (!audio) return
+              audio.currentTime = Number(e.target.value)
+            }}
+          />
+          <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
+        </ProgressWrapper>
 
-        {/* ── Desktop player bar (hidden on mobile) ── */}
-        <PlayerBar>
-          {/* Track info */}
-          <TrackInfo>
+        {/* Speed */}
+        <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
+          {SPEED_OPTIONS[speedIndex]}x
+        </SpeedButton>
+
+        {/* Close */}
+        <CloseButton onClick={onClose} aria-label="Close player">
+          <RiCloseLine size={24} />
+        </CloseButton>
+      </PlayerBar>
+
+      {/* ── Mobile bottom-sheet card (hidden on desktop) ── */}
+      <MobileCard>
+        {/* Top row: title info + close */}
+        <MobileTopRow>
+          <MobileTitleArea>
             <Typography variant="body3" sx={{ color: "text.secondary" }}>
               {track.podcastName}
             </Typography>
@@ -360,191 +438,75 @@ const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
               sx={{
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
               }}
             >
               {track.title}
             </TrackTitle>
-          </TrackInfo>
-
-          <Divider />
-
-          {/* Controls */}
-          <Controls>
-            <IconButton
-              onClick={() => handleSkip(-10)}
-              aria-label="Rewind 10 seconds"
-              title="Rewind 10s"
-            >
-              <RiReplay10Line size={24} />
-            </IconButton>
-
-            <PlayPauseButton
-              onClick={handlePlayPause}
-              aria-label={
-                isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"
-              }
-              disabled={isBuffering}
-            >
-              {isBuffering ? (
-                <LoadingSpinner loading size={40} color="inherit" />
-              ) : isPlaying ? (
-                <RiPauseCircleLine size={40} />
-              ) : (
-                <RiPlayCircleLine size={40} />
-              )}
-            </PlayPauseButton>
-
-            <IconButton
-              onClick={() => handleSkip(30)}
-              aria-label="Forward 30 seconds"
-              title="Forward 30s"
-            >
-              <RiForward30Line size={24} />
-            </IconButton>
-          </Controls>
-
-          {/* Progress */}
-          <ProgressWrapper>
-            <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
-            <ProgressTrack
-              onClick={handleProgressClick}
-              role="slider"
-              aria-label="Seek"
-              aria-valuemin={0}
-              aria-valuemax={duration}
-              aria-valuenow={currentTime}
-              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowLeft") {
-                  event.preventDefault()
-                  handleSkip(-5)
-                } else if (event.key === "ArrowRight") {
-                  event.preventDefault()
-                  handleSkip(5)
-                } else if (
-                  event.key === "ArrowUp" ||
-                  event.key === "ArrowDown"
-                ) {
-                  event.preventDefault()
-                }
-              }}
-            >
-              <ProgressFill percent={percent} />
-            </ProgressTrack>
-            <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
-          </ProgressWrapper>
-
-          {/* Speed */}
-          <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
-            {SPEED_OPTIONS[speedIndex]}x
-          </SpeedButton>
-
-          {/* Close */}
+          </MobileTitleArea>
           <CloseButton onClick={onClose} aria-label="Close player">
             <RiCloseLine size={24} />
           </CloseButton>
-        </PlayerBar>
+        </MobileTopRow>
 
-        {/* ── Mobile bottom-sheet card (hidden on desktop) ── */}
-        <MobileCard>
-          {/* Top row: title info + close */}
-          <MobileTopRow>
-            <MobileTitleArea>
-              <Typography variant="body3" sx={{ color: "text.secondary" }}>
-                {track.podcastName}
-              </Typography>
-              <TrackTitle
-                variant="subtitle2"
-                sx={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                }}
-              >
-                {track.title}
-              </TrackTitle>
-            </MobileTitleArea>
-            <CloseButton onClick={onClose} aria-label="Close player">
-              <RiCloseLine size={24} />
-            </CloseButton>
-          </MobileTopRow>
+        {/* Controls: skip back | play/pause | skip forward */}
+        <MobileControls>
+          <MobileSkipButton
+            onClick={() => handleSkip(-10)}
+            aria-label="Rewind 10 seconds"
+          >
+            <RiReplay10Line size={32} />
+          </MobileSkipButton>
 
-          {/* Controls: skip back | play/pause | skip forward */}
-          <MobileControls>
-            <MobileSkipButton
-              onClick={() => handleSkip(-10)}
-              aria-label="Rewind 10 seconds"
-            >
-              <RiReplay10Line size={32} />
-            </MobileSkipButton>
+          <MobilePlayPauseButton
+            onClick={handlePlayPause}
+            aria-label={isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"}
+            disabled={isBuffering}
+          >
+            {isBuffering ? (
+              <LoadingSpinner loading size={56} color="inherit" />
+            ) : isPlaying ? (
+              <RiPauseCircleFill size={56} />
+            ) : (
+              <RiPlayCircleFill size={56} />
+            )}
+          </MobilePlayPauseButton>
 
-            <MobilePlayPauseButton
-              onClick={handlePlayPause}
-              aria-label={
-                isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"
-              }
-              disabled={isBuffering}
-            >
-              {isBuffering ? (
-                <LoadingSpinner loading size={56} color="inherit" />
-              ) : isPlaying ? (
-                <RiPauseCircleFill size={56} />
-              ) : (
-                <RiPlayCircleFill size={56} />
-              )}
-            </MobilePlayPauseButton>
+          <MobileSkipButton
+            onClick={() => handleSkip(30)}
+            aria-label="Forward 30 seconds"
+          >
+            <RiForward30Line size={32} />
+          </MobileSkipButton>
+        </MobileControls>
 
-            <MobileSkipButton
-              onClick={() => handleSkip(30)}
-              aria-label="Forward 30 seconds"
-            >
-              <RiForward30Line size={32} />
-            </MobileSkipButton>
-          </MobileControls>
-
-          {/* Progress row: time | track | time | speed */}
-          <MobileProgressRow>
-            <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
-            <ProgressTrack
-              onClick={handleProgressClick}
-              role="slider"
-              aria-label="Seek"
-              aria-valuemin={0}
-              aria-valuemax={duration}
-              aria-valuenow={currentTime}
-              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowLeft") {
-                  event.preventDefault()
-                  handleSkip(-5)
-                } else if (event.key === "ArrowRight") {
-                  event.preventDefault()
-                  handleSkip(5)
-                } else if (
-                  event.key === "ArrowUp" ||
-                  event.key === "ArrowDown"
-                ) {
-                  event.preventDefault()
-                }
-              }}
-              style={{ flex: 1 }}
-            >
-              <ProgressFill percent={percent} />
-            </ProgressTrack>
-            <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
-            <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
-              {SPEED_OPTIONS[speedIndex]}x
-            </SpeedButton>
-          </MobileProgressRow>
-        </MobileCard>
-      </>
-    )
-  },
-)
+        {/* Progress row: time | track | time | speed */}
+        <MobileProgressRow>
+          <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
+          <ProgressRange
+            type="range"
+            min={0}
+            max={duration || 1}
+            value={currentTime}
+            step={1}
+            percent={percent}
+            aria-label="Seek"
+            onChange={(e) => {
+              const audio = audioRef.current
+              if (!audio) return
+              audio.currentTime = Number(e.target.value)
+            }}
+          />
+          <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
+          <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
+            {SPEED_OPTIONS[speedIndex]}x
+          </SpeedButton>
+        </MobileProgressRow>
+      </MobileCard>
+    </>
+  )
+}
 
 export default PodcastPlayer

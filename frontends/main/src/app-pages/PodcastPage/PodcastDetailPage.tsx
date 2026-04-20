@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState } from "react"
 import { Breadcrumbs, Typography, styled } from "ol-components"
 import { ButtonLink, Button, ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill } from "@remixicon/react"
@@ -16,6 +16,10 @@ import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME } from "@/common/urls"
 import PodcastContainer from "./PodcastContainer"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { notFound } from "next/navigation"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -29,8 +33,8 @@ const HeaderSection = styled.div(({ theme }) => ({
 }))
 
 const PodcastTitle = styled(Typography)(({ theme }) => ({
-  marginBottom: "16px",
-  display: "inline-block",
+  marginBottom: "24px",
+  gridArea: "title",
 
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h2,
@@ -81,6 +85,7 @@ const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
 }))
 
 const PodcastImage = styled.img(({ theme }) => ({
+  gridArea: "image",
   width: "280px",
   height: "280px",
   objectFit: "cover",
@@ -88,43 +93,30 @@ const PodcastImage = styled.img(({ theme }) => ({
   flexShrink: 0,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   [theme.breakpoints.down("sm")]: {
-    width: "calc(100% + 32px)",
-    marginLeft: "-16px",
-    marginRight: "-16px",
+    width: "100%",
     height: "auto",
     aspectRatio: "1 / 1",
     borderRadius: "0px",
-    marginBottom: "-10px",
+    marginBottom: "16px",
   },
 }))
 
 const HeaderContent = styled.div(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "12.95fr 0.6fr",
-  gap: "164px",
-  "& .mobile-title": {
-    display: "none",
-  },
-  "& .desktop-title": {
-    display: "inline-block",
-  },
+  gridTemplateColumns: "1fr 280px",
+  gridTemplateAreas: '"title image" "text image"',
+  columnGap: "164px",
 
   [theme.breakpoints.down("sm")]: {
-    display: "flex",
-    flexDirection: "column-reverse",
-    gap: "0px",
-    "& .mobile-title": {
-      display: "inline-block",
-    },
-    "& .desktop-title": {
-      display: "none",
-    },
+    gridTemplateColumns: "1fr",
+    gridTemplateAreas: '"title" "image" "text"',
+    columnGap: "0",
   },
 }))
 
-const HeaderTextContent = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {},
-}))
+const HeaderTextContent = styled.div({
+  gridArea: "text",
+})
 
 /* ── Episodes list ── */
 
@@ -175,6 +167,16 @@ const EpisodeRow = styled.li(({ theme }) => ({
   "&:last-child": {
     boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
   },
+  "&:hover": {
+    backgroundColor: theme.custom.colors.lightGray1,
+    cursor: "pointer",
+  },
+  "&:hover .episode-title, &:focus-visible .episode-title": {
+    color: theme.custom.colors.red,
+  },
+  "&:hover .play-button, &:focus-visible .play-button": {
+    color: theme.custom.colors.red,
+  },
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -204,7 +206,6 @@ const EpisodeTitleLink = styled.span(({ theme }) => ({
 }))
 
 const StyledButton = styled(ButtonLink)(({ theme }) => ({
-  minWidth: "140px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -252,7 +253,7 @@ const StyledDot = styled.span(({ theme }) => ({
 }))
 
 const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
+  backgroundColor: theme.custom.colors.lightGray1,
 }))
 
 const EpisodeMeta = styled(Typography)(({ theme }) => ({
@@ -271,6 +272,11 @@ const PlayButton = styled(ActionButton, {
     borderColor: "currentColor",
     "&:hover:not(:disabled)": {
       color: theme.custom.colors.red,
+    },
+    [theme.breakpoints.down("sm")]: {
+      width: "80px",
+      height: "48px",
+      backgroundColor: theme.custom.colors.white,
     },
   },
   isPlaying && {
@@ -307,7 +313,9 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
   return (
     <EpisodeRow>
       <EpisodeInfo>
-        <EpisodeTitleLink>{episode.title}</EpisodeTitleLink>
+        <EpisodeTitleLink className="episode-title">
+          {episode.title}
+        </EpisodeTitleLink>
       </EpisodeInfo>
 
       <EpisodeRight>
@@ -326,6 +334,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
           aria-label={`Play ${episode.title}`}
           isPlaying={isPlaying}
           variant="secondary"
+          className="play-button"
         >
           <RiPlayFill size={20} />
         </PlayButton>
@@ -345,6 +354,10 @@ const EPISODES_PAGE_SIZE = 5
 export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
 }) => {
+  const showPodcastDetailPage = useFeatureFlagEnabled(
+    FeatureFlags.PodcastDetailPage,
+  )
+  const flagsLoaded = useFeatureFlagsLoaded()
   const id = Number(podcastId)
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
@@ -364,17 +377,14 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     { enabled: !!resource },
   )
 
-  const episodes = useMemo(
-    () =>
-      episodesData?.pages.flatMap((page) =>
-        page.results.map((rel) => rel.resource),
-      ) ?? [],
-    [episodesData],
-  )
+  const episodes =
+    episodesData?.pages.flatMap((page) =>
+      page.results
+        .map((rel) => rel.resource)
+        .filter((r) => r.resource_type === ResourceTypeEnum.PodcastEpisode),
+    ) ?? []
 
-  const isPodcast =
-    resource?.resource_type === ResourceTypeEnum.Podcast &&
-    resource.resource_type === "podcast"
+  const isPodcast = resource?.resource_type === ResourceTypeEnum.Podcast
   const podcast = isPodcast ? resource.podcast : null
 
   const offeredBy = resource?.offered_by?.name
@@ -410,6 +420,9 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     setPlayingEpisode(episode)
   }
 
+  if (showPodcastDetailPage) {
+    return flagsLoaded ? notFound() : null
+  }
   const currentTrack: PodcastTrack | null = playingEpisode
     ? {
         audioUrl:
@@ -439,17 +452,33 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
           <PodcastContainer>
             <StyledHeaderSection>
               <HeaderContent>
+                <PodcastTitle variant="h1">
+                  {/* {resource?.title ?? ""} */}
+                  Chalk Radio
+                </PodcastTitle>
+
+                {resource?.image?.url && (
+                  <PodcastImage
+                    src={resource.image.url}
+                    alt={
+                      resource.image.alt ?? resource.title ?? "Podcast cover"
+                    }
+                  />
+                )}
+
                 <HeaderTextContent>
-                  <PodcastTitle variant="h1" className="desktop-title">
-                    {resource?.title ?? ""}
-                  </PodcastTitle>
                   {metaParts.length > 0 && (
                     <MetaLine variant="body3">{metaParts.join(" · ")}</MetaLine>
                   )}
 
                   {resource?.description && (
                     <Description variant="body2">
-                      {resource.description}
+                      {/* {resource.description} */}
+                      An MIT OpenCourseWare podcast about inspired teaching. We
+                      take you behind the scenes of some of the most interesting
+                      courses on campus to talk with the professors who make
+                      those courses possible. Listen in on conversations about
+                      cutting-edge research and innovative pedagogy.
                     </Description>
                   )}
 
@@ -476,18 +505,6 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     </StyledButton>
                   )}
                 </HeaderTextContent>
-
-                {resource?.image?.url && (
-                  <PodcastImage
-                    src={resource.image.url}
-                    alt={
-                      resource.image.alt ?? resource.title ?? "Podcast cover"
-                    }
-                  />
-                )}
-                <PodcastTitle variant="h1" className="mobile-title">
-                  {resource?.title ?? ""}
-                </PodcastTitle>
               </HeaderContent>
             </StyledHeaderSection>
           </PodcastContainer>
