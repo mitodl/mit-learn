@@ -465,7 +465,7 @@ def embeddings_healthcheck():
         resource_point_ids[point_id] = {"resource_id": lr.readable_id, "id": lr.id}
         content_file_point_ids = {}
         if run:
-            for cf in run.content_files.filter(published=True):
+            for cf in run.content_files.for_serialization().filter(published=True):
                 if cf and cf.content:
                     serialized_cf = ContentFileSerializer(cf).data
                     point_id = vector_point_id(

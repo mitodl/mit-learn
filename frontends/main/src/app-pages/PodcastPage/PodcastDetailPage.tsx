@@ -290,12 +290,14 @@ type EpisodeItemProps = {
   episode: LearningResource
   onPlayClick: (episode: LearningResource) => void
   isPlaying: boolean
+  isPlayable: boolean
 }
 
 const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
   onPlayClick,
   isPlaying,
+  isPlayable,
 }) => {
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
@@ -333,6 +335,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
           onClick={() => onPlayClick(episode)}
           aria-label={`Play ${episode.title}`}
           isPlaying={isPlaying}
+          disabled={!isPlayable}
           variant="secondary"
           className="play-button"
         >
@@ -416,7 +419,18 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     podcast?.google_podcasts_url ??
     podcast?.rss_url
 
+  const getEpisodeAudioUrl = (episode: LearningResource): string | null => {
+    if (episode.resource_type !== "podcast_episode") return null
+
+    const candidateUrl =
+      episode.podcast_episode?.audio_url ??
+      episode.podcast_episode?.episode_link
+
+    return candidateUrl?.trim() ? candidateUrl : null
+  }
+
   const handlePlayClick = (episode: LearningResource) => {
+    if (!getEpisodeAudioUrl(episode)) return
     setPlayingEpisode(episode)
   }
 
@@ -424,16 +438,16 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     return flagsLoaded ? notFound() : null
   }
   const currentTrack: PodcastTrack | null = playingEpisode
-    ? {
-        audioUrl:
-          (playingEpisode.resource_type === "podcast_episode" &&
-            playingEpisode.podcast_episode?.audio_url) ||
-          (playingEpisode.resource_type === "podcast_episode" &&
-            playingEpisode.podcast_episode?.episode_link) ||
-          "",
-        title: playingEpisode.title || "Untitled Episode",
-        podcastName: resource?.title || "Podcast",
-      }
+    ? (() => {
+        const audioUrl = getEpisodeAudioUrl(playingEpisode)
+        if (!audioUrl) return null
+
+        return {
+          audioUrl,
+          title: playingEpisode.title || "Untitled Episode",
+          podcastName: resource?.title || "Podcast",
+        }
+      })()
     : null
 
   return (
@@ -516,6 +530,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     episode={episode}
                     onPlayClick={handlePlayClick}
                     isPlaying={playingEpisode?.id === episode.id}
+                    isPlayable={Boolean(getEpisodeAudioUrl(episode))}
                   />
                 ))}
               </EpisodeList>

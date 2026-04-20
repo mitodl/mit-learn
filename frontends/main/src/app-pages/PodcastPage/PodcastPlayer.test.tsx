@@ -32,17 +32,21 @@ const makeTrack = (overrides: Partial<PodcastTrack> = {}): PodcastTrack => ({
 const renderPlayer = async (
   track: PodcastTrack = makeTrack(),
   props: Partial<React.ComponentProps<typeof PodcastPlayer>> = {},
+  options: { waitForAutoPlay?: boolean } = {},
 ) => {
+  const { waitForAutoPlay = true } = options
   const onClose = props.onClose ?? jest.fn()
   const view = render(
     <ThemeProvider>
       <PodcastPlayer track={track} onClose={onClose} {...props} />
     </ThemeProvider>,
   )
-  // Wait until the auto-play play().then(setIsPlaying) microtask has resolved
-  await waitFor(() =>
-    expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
-  )
+  if (waitForAutoPlay) {
+    // Wait until the auto-play play().then(setIsPlaying) microtask has resolved
+    await waitFor(() =>
+      expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+    )
+  }
   const audio = document.querySelector("audio") as HTMLAudioElement
   // Simulate the audio becoming ready to play
   const simulateCanPlay = () => fireEvent.canPlay(audio)
@@ -280,5 +284,55 @@ describe("PodcastPlayer", () => {
     const pauseBtn = screen.getByRole("button", { name: /^pause$/i })
     fireEvent.click(pauseBtn)
     expect(onPlayStateChange).toHaveBeenCalledWith(false)
+  })
+
+  test("does not show loading spinner for tracks without an audio source", async () => {
+    await renderPlayer(
+      makeTrack({ audioUrl: "" }),
+      {},
+      { waitForAutoPlay: false },
+    )
+
+    expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: /^loading$/i }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole("button", { name: /play unavailable/i }),
+    ).toBeDisabled()
+  })
+
+  test("prevents duplicate play calls during rapid clicks while play is pending", async () => {
+    const { simulateCanPlay } = await renderPlayer()
+    await simulateCanPlay()
+
+    fireEvent.click(screen.getByRole("button", { name: /^pause$/i }))
+
+    jest.clearAllMocks()
+
+    let resolvePlay: (() => void) | undefined
+    const pendingPlay = new Promise<void>((resolve) => {
+      resolvePlay = resolve
+    })
+
+    ;(window.HTMLMediaElement.prototype.play as jest.Mock).mockImplementation(
+      () => pendingPlay,
+    )
+
+    const playButton = screen.getByRole("button", { name: /^play$/i })
+    fireEvent.click(playButton)
+    fireEvent.click(playButton)
+
+    expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole("button", { name: /^loading$/i })).toBeDisabled()
+
+    resolvePlay?.()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /^pause$/i }),
+      ).toBeInTheDocument()
+    })
   })
 })

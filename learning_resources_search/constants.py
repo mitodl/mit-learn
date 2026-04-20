@@ -403,6 +403,7 @@ CONTENT_FILE_MAP = {
             "name": {"type": "keyword"},
         },
     },
+    "youtube_id": {"type": "keyword"},
 }
 
 

@@ -195,4 +195,23 @@ describe("PodcastDetailPage", () => {
 
     await screen.findByText(/no episodes found/i)
   })
+
+  test("disables play button for episodes without audio source", async () => {
+    const [episodeWithoutAudio] = makePodcastEpisodes(1)
+    if (episodeWithoutAudio.podcast_episode) {
+      episodeWithoutAudio.podcast_episode.audio_url = ""
+      episodeWithoutAudio.podcast_episode.episode_link = ""
+    }
+
+    const { podcast } = setupApis({ episodesPage1: [episodeWithoutAudio] })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    const playButton = await screen.findByRole("button", {
+      name: `Play ${episodeWithoutAudio.title}`,
+    })
+
+    expect(playButton).toBeDisabled()
+    expect(screen.queryByTestId("podcast-player")).not.toBeInTheDocument()
+  })
 })

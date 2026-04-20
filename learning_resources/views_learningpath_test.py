@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.db.models import Max
 from django.urls import reverse
 
 from learning_resources import factories, models
@@ -32,7 +33,6 @@ def mock_opensearch(mocker):
     )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_public", [True, False])
 @pytest.mark.parametrize("is_editor", [True, False])
 @pytest.mark.parametrize("has_image", [True, False])
@@ -136,7 +136,6 @@ def test_learning_path_endpoint_create(  # pylint: disable=too-many-arguments  #
         assert resp.data.get("description") == resp.data.get("description")
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_public", [True, False])
 @pytest.mark.parametrize("is_editor", [True, False])
 @pytest.mark.parametrize("update_topics", [True, False])
@@ -177,14 +176,22 @@ def test_learning_path_endpoint_patch(client, update_topics, is_public, is_edito
         )
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_items_endpoint_create_item(client, user, is_editor):
     """Test lr_learningpathitems_api endpoint for creating a LearningPath item"""
     learning_path = factories.LearningPathFactory.create()
     course = factories.CourseFactory.create()
 
-    initial_count = learning_path.learning_resource.children.count()
+    existing_items = models.LearningResourceRelationship.objects.filter(
+        parent=learning_path.learning_resource,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+    max_position = existing_items.aggregate(max_position=Max("position"))[
+        "max_position"
+    ]
+    expected_position = (
+        existing_items.count() if max_position is None else max_position
+    ) + 1
 
     update_editor_group(user, is_editor)
     client.force_login(user)
@@ -202,7 +209,7 @@ def test_learning_path_items_endpoint_create_item(client, user, is_editor):
     assert resp.status_code == (201 if is_editor else 403)
     if resp.status_code == 201:
         assert resp.json().get("child") == course.learning_resource.id
-        assert resp.json().get("position") == initial_count + 1
+        assert resp.json().get("position") == expected_position
 
         item = models.LearningResourceRelationship.objects.get(id=resp.json().get("id"))
         assert (
@@ -211,7 +218,6 @@ def test_learning_path_items_endpoint_create_item(client, user, is_editor):
         )
 
 
-@pytest.mark.skip_nplusone_check
 def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     """Test lr_learningpathitems_api endpoint for creating a LearningPath item w/bad data"""
     learning_path = factories.LearningPathFactory.create()
@@ -236,7 +242,6 @@ def test_learning_path_items_endpoint_create_item_bad_data(client, user):
     }
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("is_editor", "position"),
     [[True, 0], [True, 2], [False, 1]],  # noqa: PT007
@@ -340,7 +345,6 @@ def test_learning_path_items_endpoint_delete_items(client, user, is_editor, num_
         assert item.position == (old_position - 1 if is_editor else old_position)
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_editor", [True, False])
 def test_learning_path_endpoint_delete(client, user, is_editor):
     """Test learningpath endpoint for deleting a LearningPath"""
@@ -389,7 +393,6 @@ def test_learning_path_endpoint_membership_get(client, user, is_editor):
         assert resp.status_code == 403
 
 
-@pytest.mark.skip_nplusone_check
 def test_set_learning_path_relationships(client, staff_user):
     """Test the learning_paths endpoint for setting multiple userlist relationships"""
     course = factories.CourseFactory.create()
@@ -416,7 +419,72 @@ def test_set_learning_path_relationships(client, staff_user):
     ).exists()
 
 
-@pytest.mark.skip_nplusone_check
+def test_set_learning_path_relationships_omits_unpublished_child_in_response(
+    client, staff_user
+):
+    """PATCH response should not serialize unpublished child resources."""
+    course = factories.CourseFactory.create(is_unpublished=True)
+    learning_path = factories.LearningPathFactory.create(author=staff_user)
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+    resp = client.patch(f"{url}?learning_path_id={learning_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+    assert models.LearningResourceRelationship.objects.filter(
+        parent_id=learning_path.learning_resource.id,
+        child_id=course.learning_resource.id,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    ).exists()
+    assert resp.json() == []
+
+
+def test_set_learning_path_relationships_scopes_to_learning_path_items(
+    client, staff_user
+):
+    """Bulk set should only affect learning-path memberships."""
+    course = factories.CourseFactory.create()
+    existing_learning_path = factories.LearningPathFactory.create(author=staff_user)
+    new_learning_path = factories.LearningPathFactory.create(author=staff_user)
+    program = factories.ProgramFactory.create()
+
+    factories.LearningPathRelationshipFactory.create(
+        parent=existing_learning_path.learning_resource,
+        child=course.learning_resource,
+    )
+    models.LearningResourceRelationship.objects.create(
+        parent=program.learning_resource,
+        child=course.learning_resource,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+    )
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+    resp = client.patch(
+        f"{url}?learning_path_id={new_learning_path.learning_resource.id}"
+    )
+
+    assert resp.status_code == 200
+    assert course.learning_resource.parents.filter(
+        parent__id=new_learning_path.learning_resource.id,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    ).exists()
+    assert not course.learning_resource.parents.filter(
+        parent__id=existing_learning_path.learning_resource.id,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    ).exists()
+    assert course.learning_resource.parents.filter(
+        parent__id=program.learning_resource.id,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+    ).exists()
+
+
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),

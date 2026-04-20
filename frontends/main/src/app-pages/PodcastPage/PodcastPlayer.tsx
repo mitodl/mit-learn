@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState, useEffect } from "react"
+import React, { useRef, useState, useEffect, useCallback } from "react"
 import { styled, Typography, LoadingSpinner } from "ol-components"
 import {
   RiPlayCircleLine,
@@ -241,42 +241,79 @@ const PodcastPlayer = ({
   onClose,
   onPlayStateChange,
 }: PodcastPlayerProps) => {
+  const hasAudioSource = Boolean(track.audioUrl.trim())
   const audioRef = useRef<HTMLAudioElement>(null)
+  const isPlayPendingRef = useRef(false)
+  const playAttemptIdRef = useRef(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isBuffering, setIsBuffering] = useState(true)
+  const [isPlayPending, setIsPlayPending] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [speedIndex, setSpeedIndex] = useState(1) // default 1x
   const speedIndexRef = useRef(1)
 
+  const startPlayback = useCallback(async () => {
+    if (!hasAudioSource || isPlayPendingRef.current) return
+
+    const audio = audioRef.current
+    if (!audio) return
+
+    const attemptId = ++playAttemptIdRef.current
+    isPlayPendingRef.current = true
+    setIsPlayPending(true)
+
+    try {
+      await audio.play()
+      if (playAttemptIdRef.current === attemptId) {
+        setIsPlaying(true)
+      }
+    } catch {
+      if (playAttemptIdRef.current === attemptId) {
+        setIsPlaying(false)
+      }
+    } finally {
+      if (playAttemptIdRef.current === attemptId) {
+        isPlayPendingRef.current = false
+        setIsPlayPending(false)
+      }
+    }
+  }, [hasAudioSource])
+
   // Auto-play when a new track is loaded
   useEffect(() => {
+    // Invalidate any in-flight play attempt from a previous track.
+    playAttemptIdRef.current += 1
+    isPlayPendingRef.current = false
+    setIsPlayPending(false)
+
     setCurrentTime(0)
+    setDuration(0)
     setIsPlaying(false)
-    setIsBuffering(true)
+    setIsBuffering(hasAudioSource)
+
+    if (!hasAudioSource) {
+      return
+    }
+
     const audio = audioRef.current
     if (!audio) return
     audio.load()
     audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
-    audio
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => {})
-  }, [track.audioUrl])
+    void startPlayback()
+  }, [track.audioUrl, hasAudioSource, startPlayback])
 
   const handlePlayPause = async () => {
+    if (!hasAudioSource) return
+
     const audio = audioRef.current
     if (!audio) return
+
     if (isPlaying) {
       audio.pause()
       setIsPlaying(false)
     } else {
-      try {
-        await audio.play()
-        setIsPlaying(true)
-      } catch {
-        setIsPlaying(false)
-      }
+      void startPlayback()
     }
   }
 
@@ -316,7 +353,7 @@ const PodcastPlayer = ({
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
         ref={audioRef}
-        src={track.audioUrl}
+        src={hasAudioSource ? track.audioUrl : undefined}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
         onError={() => {
@@ -349,10 +386,18 @@ const PodcastPlayer = ({
 
           <PlayPauseButton
             onClick={handlePlayPause}
-            aria-label={isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"}
-            disabled={isBuffering}
+            aria-label={
+              !hasAudioSource
+                ? "Play unavailable"
+                : isBuffering || isPlayPending
+                  ? "Loading"
+                  : isPlaying
+                    ? "Pause"
+                    : "Play"
+            }
+            disabled={isBuffering || isPlayPending || !hasAudioSource}
           >
-            {isBuffering ? (
+            {isBuffering || isPlayPending ? (
               <LoadingSpinner loading size={40} color="inherit" />
             ) : isPlaying ? (
               <RiPauseCircleLine />
