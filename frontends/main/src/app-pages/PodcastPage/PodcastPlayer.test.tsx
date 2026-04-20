@@ -61,9 +61,8 @@ describe("PodcastPlayer", () => {
     await renderPlayer(
       makeTrack({ title: "My Episode", podcastName: "My Podcast" }),
     )
-    // Both desktop and mobile render the same text so we use getAllBy
-    expect(screen.getAllByText("My Episode").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("My Podcast").length).toBeGreaterThan(0)
+    expect(screen.getByText("My Episode")).toBeInTheDocument()
+    expect(screen.getByText("My Podcast")).toBeInTheDocument()
   })
 
   test("renders the audio element with the correct src", async () => {
@@ -85,24 +84,13 @@ describe("PodcastPlayer", () => {
     await waitFor(() =>
       expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
     )
-    // isPlaying=true after auto-play resolves, but isBuffering is still true,
-    // so both buttons should show "Pause" (the buffering label is "Loading")
-    // The buttons are disabled while buffering regardless of isPlaying.
-    const allButtons = screen.getAllByRole("button")
-    const playPauseButtons = allButtons.filter(
-      (b) => b.getAttribute("aria-label") === "Loading",
-    )
-    expect(playPauseButtons.length).toBeGreaterThan(0)
-    playPauseButtons.forEach((btn) => expect(btn).toBeDisabled())
+    expect(screen.getByRole("button", { name: /^loading$/i })).toBeDisabled()
   })
 
   test("enables play/pause button after canplay fires", async () => {
     const { simulateCanPlay } = await renderPlayer()
     await simulateCanPlay()
-    // isPlaying=true from auto-play, so after canPlay we expect Pause buttons
-    const pauseButtons = screen.getAllByRole("button", { name: /^pause$/i })
-    expect(pauseButtons.length).toBeGreaterThan(0)
-    pauseButtons.forEach((btn) => expect(btn).not.toBeDisabled())
+    expect(screen.getByRole("button", { name: /^pause$/i })).not.toBeDisabled()
   })
 
   test("plays automatically on mount", async () => {
@@ -113,21 +101,19 @@ describe("PodcastPlayer", () => {
   test("clicking Pause calls audio.pause() and shows Play", async () => {
     const { simulateCanPlay } = await renderPlayer()
     await simulateCanPlay()
-    const [pauseBtn] = screen.getAllByRole("button", { name: /^pause$/i })
+    const pauseBtn = screen.getByRole("button", { name: /^pause$/i })
     fireEvent.click(pauseBtn)
     expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled()
-    expect(
-      screen.getAllByRole("button", { name: /^play$/i }).length,
-    ).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: /^play$/i })).toBeInTheDocument()
   })
 
   test("clicking Play again calls audio.play()", async () => {
     const { simulateCanPlay } = await renderPlayer()
     await simulateCanPlay()
-    const [pauseBtn] = screen.getAllByRole("button", { name: /^pause$/i })
+    const pauseBtn = screen.getByRole("button", { name: /^pause$/i })
     fireEvent.click(pauseBtn)
     jest.clearAllMocks()
-    const [playBtn] = screen.getAllByRole("button", { name: /^play$/i })
+    const playBtn = screen.getByRole("button", { name: /^play$/i })
     fireEvent.click(playBtn)
     await waitFor(() =>
       expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled(),
@@ -136,7 +122,7 @@ describe("PodcastPlayer", () => {
 
   test("calls onClose when close button is clicked", async () => {
     const { onClose } = await renderPlayer()
-    fireEvent.click(screen.getAllByRole("button", { name: /close player/i })[0])
+    fireEvent.click(screen.getByRole("button", { name: /close player/i }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -144,29 +130,23 @@ describe("PodcastPlayer", () => {
     await renderPlayer()
     // Initial speed label is 1x (index 1 of [0.75, 1, 1.25, 1.5, 2])
     expect(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
+      screen.getByRole("button", { name: /playback speed/i }),
     ).toHaveTextContent("1x")
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /playback speed/i }))
     expect(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
+      screen.getByRole("button", { name: /playback speed/i }),
     ).toHaveTextContent("1.25x")
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /playback speed/i }))
     expect(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
+      screen.getByRole("button", { name: /playback speed/i }),
     ).toHaveTextContent("1.5x")
   })
 
   test("cycling speed applies playbackRate to audio element", async () => {
     const { audio } = await renderPlayer()
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /playback speed/i }))
     expect(audio.playbackRate).toBe(1.25)
   })
 
@@ -174,12 +154,8 @@ describe("PodcastPlayer", () => {
     const { rerender, audio } = await renderPlayer()
 
     // Cycle to 1.5x
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
-    ) // 1.25x
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /playback speed/i })[0],
-    ) // 1.5x
+    fireEvent.click(screen.getByRole("button", { name: /playback speed/i })) // 1.25x
+    fireEvent.click(screen.getByRole("button", { name: /playback speed/i })) // 1.5x
 
     jest.clearAllMocks()
 
@@ -205,9 +181,7 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /rewind 10 seconds/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /rewind 10 seconds/i }))
     expect(audio.currentTime).toBe(50)
   })
 
@@ -221,9 +195,7 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /forward 30 seconds/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /forward 30 seconds/i }))
     expect(audio.currentTime).toBe(90)
   })
 
@@ -237,9 +209,7 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /rewind 10 seconds/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /rewind 10 seconds/i }))
     expect(audio.currentTime).toBe(0)
   })
 
@@ -253,9 +223,7 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /forward 30 seconds/i })[0],
-    )
+    fireEvent.click(screen.getByRole("button", { name: /forward 30 seconds/i }))
     expect(audio.currentTime).toBe(120)
   })
 
@@ -269,8 +237,8 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    const sliders = screen.getAllByRole("slider", { name: /seek/i })
-    fireEvent.keyDown(sliders[0], { key: "ArrowRight" })
+    const slider = screen.getByRole("slider", { name: /seek/i })
+    fireEvent.keyDown(slider, { key: "ArrowRight" })
     expect(audio.currentTime).toBe(45)
   })
 
@@ -284,8 +252,8 @@ describe("PodcastPlayer", () => {
       configurable: true,
       writable: true,
     })
-    const sliders = screen.getAllByRole("slider", { name: /seek/i })
-    fireEvent.keyDown(sliders[0], { key: "ArrowLeft" })
+    const slider = screen.getByRole("slider", { name: /seek/i })
+    fireEvent.keyDown(slider, { key: "ArrowLeft" })
     expect(audio.currentTime).toBe(35)
   })
 
@@ -309,7 +277,7 @@ describe("PodcastPlayer", () => {
       onPlayStateChange,
     })
     await simulateCanPlay()
-    const [pauseBtn] = screen.getAllByRole("button", { name: /^pause$/i })
+    const pauseBtn = screen.getByRole("button", { name: /^pause$/i })
     fireEvent.click(pauseBtn)
     expect(onPlayStateChange).toHaveBeenCalledWith(false)
   })

@@ -420,7 +420,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     setPlayingEpisode(episode)
   }
 
-  if (showPodcastDetailPage) {
+  if (!showPodcastDetailPage) {
     return flagsLoaded ? notFound() : null
   }
   const currentTrack: PodcastTrack | null = playingEpisode
@@ -453,8 +453,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
             <StyledHeaderSection>
               <HeaderContent>
                 <PodcastTitle variant="h1">
-                  {/* {resource?.title ?? ""} */}
-                  Chalk Radio
+                  {resource?.title ?? ""}
                 </PodcastTitle>
 
                 {resource?.image?.url && (
@@ -473,12 +472,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
                   {resource?.description && (
                     <Description variant="body2">
-                      {/* {resource.description} */}
-                      An MIT OpenCourseWare podcast about inspired teaching. We
-                      take you behind the scenes of some of the most interesting
-                      courses on campus to talk with the professors who make
-                      those courses possible. Listen in on conversations about
-                      cutting-edge research and innovative pedagogy.
+                      {resource.description}
                     </Description>
                   )}
 

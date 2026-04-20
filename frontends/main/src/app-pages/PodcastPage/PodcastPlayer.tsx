@@ -3,8 +3,6 @@
 import React, { useRef, useState, useEffect } from "react"
 import { styled, Typography, LoadingSpinner } from "ol-components"
 import {
-  RiPlayCircleFill,
-  RiPauseCircleFill,
   RiPlayCircleLine,
   RiPauseCircleLine,
   RiReplay10Line,
@@ -28,13 +26,15 @@ type PodcastPlayerProps = {
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
-const PlayerBar = styled.div(({ theme }) => ({
+const PlayerShell = styled.div(({ theme }) => ({
   position: "fixed",
   bottom: 0,
   left: 0,
   right: 0,
   zIndex: theme.zIndex.appBar + 10,
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "220px 1px auto minmax(0, 1fr) auto auto",
+  gridTemplateAreas: '"track divider controls progress speed close"',
   alignItems: "center",
   gap: "24px",
   padding: "16px 32px",
@@ -42,104 +42,46 @@ const PlayerBar = styled.div(({ theme }) => ({
   borderTop: `2px solid ${theme.custom.colors.mitRed}`,
   boxShadow: "0 -4px 16px rgba(0,0,0,0.12)",
   [theme.breakpoints.down("sm")]: {
-    display: "none",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    gridTemplateAreas:
+      '"track close" "controls controls" "progress progress" "speed speed"',
+    gap: "16px",
+    padding: "24px",
+    borderRadius: "12px 12px 0 0",
+    boxShadow: "0 -4px 24px rgba(0,0,0,0.15)",
   },
 }))
-
-// ─── Mobile card styles ───────────────────────────────────────────────────────
-
-const MobileCard = styled.div(({ theme }) => ({
-  position: "fixed",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  zIndex: theme.zIndex.appBar + 10,
-  display: "none",
-  flexDirection: "column",
-  gap: "16px",
-  padding: "24px",
-  background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
-  borderTop: `2px solid ${theme.custom.colors.mitRed}`,
-  borderRadius: "12px 12px 0 0",
-  boxShadow: "0 -4px 24px rgba(0,0,0,0.15)",
-  [theme.breakpoints.down("sm")]: {
-    display: "flex",
-  },
-}))
-
-const MobileTopRow = styled.div({
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: "12px",
-})
-
-const MobileTitleArea = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  gap: "2px",
-  flex: 1,
-  minWidth: 0,
-})
-
-const MobileControls = styled.div({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "32px",
-})
-
-const MobileSkipButton = styled.button(({ theme }) => ({
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "8px",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "2px",
-  color: theme.custom.colors.silverGray,
-  "&:hover": { color: theme.custom.colors.mitRed },
-}))
-
-const MobilePlayPauseButton = styled.button(({ theme }) => ({
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: 0,
-  display: "flex",
-  alignItems: "center",
-  color: theme.custom.colors.mitRed,
-  "&:hover": { opacity: 0.8 },
-}))
-
-const MobileProgressRow = styled.div({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-})
 
 const TrackInfo = styled.div({
+  gridArea: "track",
   display: "flex",
   flexDirection: "column",
+  gap: "2px",
   minWidth: 0,
-  width: 220,
-  flexShrink: 0,
 })
 
 const Divider = styled.div(({ theme }) => ({
+  gridArea: "divider",
   width: "1px",
   height: "40px",
   backgroundColor: theme.custom.colors.lightGray2,
   flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
 }))
 
-const Controls = styled.div({
+const Controls = styled.div(({ theme }) => ({
+  gridArea: "controls",
   display: "flex",
   alignItems: "center",
   gap: "12px",
   flexShrink: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    justifyContent: "center",
+    gap: "32px",
+  },
+}))
 
 const IconButton = styled.button(({ theme }) => ({
   background: "none",
@@ -150,9 +92,21 @@ const IconButton = styled.button(({ theme }) => ({
   alignItems: "center",
   color: theme.custom.colors.silverGray,
   "&:hover": { color: theme.custom.colors.mitRed },
+  "& svg": {
+    width: "24px",
+    height: "24px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    padding: "8px",
+    "& svg": {
+      width: "32px",
+      height: "32px",
+    },
+  },
 }))
 
 const PlayPauseButton = styled.button(({ theme }) => ({
+  gridArea: "play",
   background: "none",
   border: "none",
   cursor: "pointer",
@@ -161,6 +115,16 @@ const PlayPauseButton = styled.button(({ theme }) => ({
   alignItems: "center",
   color: theme.custom.colors.mitRed,
   "&:hover": { opacity: 0.8 },
+  "& svg": {
+    width: "40px",
+    height: "40px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    "& svg": {
+      width: "56px",
+      height: "56px",
+    },
+  },
 }))
 
 const TimeLabel = styled(Typography)(({ theme }) => ({
@@ -172,16 +136,28 @@ const TimeLabel = styled(Typography)(({ theme }) => ({
 }))
 
 const TrackTitle = styled(Typography)(({ theme }) => ({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
   color: theme.custom.colors.black,
+  [theme.breakpoints.down("sm")]: {
+    display: "-webkit-box",
+    whiteSpace: "normal",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+  },
 }))
 
-const ProgressWrapper = styled.div({
-  flex: 1,
+const ProgressWrapper = styled.div(({ theme }) => ({
+  gridArea: "progress",
   display: "flex",
   alignItems: "center",
   gap: "12px",
   minWidth: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "8px",
+  },
+}))
 
 const ProgressRange = styled.input<{ percent: number }>(
   ({ theme, percent }) => ({
@@ -215,6 +191,7 @@ const ProgressRange = styled.input<{ percent: number }>(
 )
 
 const SpeedButton = styled.button(({ theme }) => ({
+  gridArea: "speed",
   background: "white",
   border: `1px solid ${theme.custom.colors.silverGrayLight}`,
   backgroundColor: theme.custom.colors.lightGray1,
@@ -228,9 +205,13 @@ const SpeedButton = styled.button(({ theme }) => ({
     borderColor: theme.custom.colors.mitRed,
     color: theme.custom.colors.mitRed,
   },
+  [theme.breakpoints.down("sm")]: {
+    justifySelf: "end",
+  },
 }))
 
 const CloseButton = styled.button(({ theme }) => ({
+  gridArea: "close",
   background: "none",
   border: "none",
   cursor: "pointer",
@@ -238,9 +219,9 @@ const CloseButton = styled.button(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   color: theme.custom.colors.darkGray2,
-  marginLeft: "auto",
   flexShrink: 0,
   "&:hover": { color: theme.custom.colors.mitRed },
+  justifySelf: "end",
 }))
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -321,6 +302,13 @@ const PodcastPlayer = ({
     }
   }
 
+  const handleSeekKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+
+    event.preventDefault()
+    handleSkip(event.key === "ArrowRight" ? 5 : -5)
+  }
+
   const percent = duration ? (currentTime / duration) * 100 : 0
   return (
     <>
@@ -340,35 +328,23 @@ const PodcastPlayer = ({
         onEnded={() => setIsPlaying(false)}
       />
 
-      {/* ── Desktop player bar (hidden on mobile) ── */}
-      <PlayerBar>
-        {/* Track info */}
+      <PlayerShell>
         <TrackInfo>
           <Typography variant="body3" sx={{ color: "text.secondary" }}>
             {track.podcastName}
           </Typography>
-          <TrackTitle
-            variant="subtitle2"
-            sx={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {track.title}
-          </TrackTitle>
+          <TrackTitle variant="subtitle2">{track.title}</TrackTitle>
         </TrackInfo>
 
         <Divider />
 
-        {/* Controls */}
         <Controls>
           <IconButton
             onClick={() => handleSkip(-10)}
             aria-label="Rewind 10 seconds"
             title="Rewind 10s"
           >
-            <RiReplay10Line size={24} />
+            <RiReplay10Line />
           </IconButton>
 
           <PlayPauseButton
@@ -379,9 +355,9 @@ const PodcastPlayer = ({
             {isBuffering ? (
               <LoadingSpinner loading size={40} color="inherit" />
             ) : isPlaying ? (
-              <RiPauseCircleLine size={40} />
+              <RiPauseCircleLine />
             ) : (
-              <RiPlayCircleLine size={40} />
+              <RiPlayCircleLine />
             )}
           </PlayPauseButton>
 
@@ -390,11 +366,10 @@ const PodcastPlayer = ({
             aria-label="Forward 30 seconds"
             title="Forward 30s"
           >
-            <RiForward30Line size={24} />
+            <RiForward30Line />
           </IconButton>
         </Controls>
 
-        {/* Progress */}
         <ProgressWrapper>
           <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
           <ProgressRange
@@ -410,101 +385,20 @@ const PodcastPlayer = ({
               if (!audio) return
               audio.currentTime = Number(e.target.value)
             }}
+            onKeyDown={handleSeekKeyDown}
           />
           <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
-        </ProgressWrapper>
 
-        {/* Speed */}
-        <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
-          {SPEED_OPTIONS[speedIndex]}x
-        </SpeedButton>
+          <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
+            {SPEED_OPTIONS[speedIndex]}x
+          </SpeedButton>
+        </ProgressWrapper>
 
         {/* Close */}
         <CloseButton onClick={onClose} aria-label="Close player">
           <RiCloseLine size={24} />
         </CloseButton>
-      </PlayerBar>
-
-      {/* ── Mobile bottom-sheet card (hidden on desktop) ── */}
-      <MobileCard>
-        {/* Top row: title info + close */}
-        <MobileTopRow>
-          <MobileTitleArea>
-            <Typography variant="body3" sx={{ color: "text.secondary" }}>
-              {track.podcastName}
-            </Typography>
-            <TrackTitle
-              variant="subtitle2"
-              sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-              }}
-            >
-              {track.title}
-            </TrackTitle>
-          </MobileTitleArea>
-          <CloseButton onClick={onClose} aria-label="Close player">
-            <RiCloseLine size={24} />
-          </CloseButton>
-        </MobileTopRow>
-
-        {/* Controls: skip back | play/pause | skip forward */}
-        <MobileControls>
-          <MobileSkipButton
-            onClick={() => handleSkip(-10)}
-            aria-label="Rewind 10 seconds"
-          >
-            <RiReplay10Line size={32} />
-          </MobileSkipButton>
-
-          <MobilePlayPauseButton
-            onClick={handlePlayPause}
-            aria-label={isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"}
-            disabled={isBuffering}
-          >
-            {isBuffering ? (
-              <LoadingSpinner loading size={56} color="inherit" />
-            ) : isPlaying ? (
-              <RiPauseCircleFill size={56} />
-            ) : (
-              <RiPlayCircleFill size={56} />
-            )}
-          </MobilePlayPauseButton>
-
-          <MobileSkipButton
-            onClick={() => handleSkip(30)}
-            aria-label="Forward 30 seconds"
-          >
-            <RiForward30Line size={32} />
-          </MobileSkipButton>
-        </MobileControls>
-
-        {/* Progress row: time | track | time | speed */}
-        <MobileProgressRow>
-          <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
-          <ProgressRange
-            type="range"
-            min={0}
-            max={duration || 1}
-            value={currentTime}
-            step={1}
-            percent={percent}
-            aria-label="Seek"
-            onChange={(e) => {
-              const audio = audioRef.current
-              if (!audio) return
-              audio.currentTime = Number(e.target.value)
-            }}
-          />
-          <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
-          <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
-            {SPEED_OPTIONS[speedIndex]}x
-          </SpeedButton>
-        </MobileProgressRow>
-      </MobileCard>
+      </PlayerShell>
     </>
   )
 }
