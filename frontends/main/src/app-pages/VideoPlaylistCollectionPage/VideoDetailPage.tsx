@@ -435,8 +435,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const topics = video?.topics ?? []
 
-  const playlistLabel =
-    playlist?.resource_category?.trim() || playlist?.title || "Video Collection"
+  const playlistLabel = playlist?.title || "Video Collection"
 
   const otherVideos = (playlistItems ?? [])
     .filter(
