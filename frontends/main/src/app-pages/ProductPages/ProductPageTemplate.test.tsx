@@ -7,6 +7,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import type { ResourceInfo } from "./ProductPageTemplate"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -38,28 +39,46 @@ jest.mock("@ebay/nice-modal-react", () => {
 const mockedUseHubspotFormDetail = jest.mocked(useHubspotFormDetail)
 const mockedNiceModalShow = jest.mocked(NiceModal.show)
 
-const renderProductPageTemplate = ({
-  showStayUpdated,
-  resource,
-}: {
-  showStayUpdated?: boolean
-  resource?: React.ComponentProps<typeof ProductPageTemplate>["resource"]
-} = {}) => {
+const DEFAULT_RESOURCE: ResourceInfo = {
+  id: 1,
+  readable_id: "program-v1:default+test",
+  resource_type: "program",
+}
+
+const renderProductPageTemplate = (
+  args: { showStayUpdated?: true; resource?: ResourceInfo } = {},
+) => {
+  const { showStayUpdated, resource = DEFAULT_RESOURCE } = args
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
-  renderWithProviders(
-    <ProductPageTemplate
-      currentBreadcrumbLabel="Programs"
-      title="Sample Program"
-      shortDescription={"Program description"}
-      imageSrc="/test-image.jpg"
-      infoBox={<div>Info box</div>}
-      enrollmentAction={<button type="button">Enroll</button>}
-      showStayUpdated={showStayUpdated}
-      resource={resource}
-    >
-      <div>Page content</div>
-    </ProductPageTemplate>,
-  )
+  if (showStayUpdated) {
+    renderWithProviders(
+      <ProductPageTemplate
+        currentBreadcrumbLabel="Programs"
+        title="Sample Program"
+        shortDescription={"Program description"}
+        imageSrc="/test-image.jpg"
+        infoBox={<div>Info box</div>}
+        enrollmentAction={<button type="button">Enroll</button>}
+        showStayUpdated={true}
+        resource={resource}
+      >
+        <div>Page content</div>
+      </ProductPageTemplate>,
+    )
+  } else {
+    renderWithProviders(
+      <ProductPageTemplate
+        currentBreadcrumbLabel="Programs"
+        title="Sample Program"
+        shortDescription={"Program description"}
+        imageSrc="/test-image.jpg"
+        infoBox={<div>Info box</div>}
+        enrollmentAction={<button type="button">Enroll</button>}
+      >
+        <div>Page content</div>
+      </ProductPageTemplate>,
+    )
+  }
 }
 
 describe("ProductPageTemplate stay-updated trigger", () => {
@@ -184,14 +203,6 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         resource_type: "program" as const,
       }
       renderProductPageTemplate({ showStayUpdated: true, resource })
-
-      screen.getByRole("button", { name: "Stay Updated" }).click()
-
-      expect(mockCapture).not.toHaveBeenCalled()
-    })
-
-    it("does not fire cta_clicked when resource prop is not provided", () => {
-      renderProductPageTemplate({ showStayUpdated: true })
 
       screen.getByRole("button", { name: "Stay Updated" }).click()
 

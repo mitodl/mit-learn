@@ -256,6 +256,12 @@ const SidebarMedia: React.FC<{
   )
 }
 
+export type ResourceInfo = {
+  id: number
+  readable_id: string
+  resource_type: "course" | "program"
+}
+
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
   title: string
@@ -265,13 +271,10 @@ type ProductPageTemplateProps = {
   infoBox: React.ReactNode
   enrollmentAction: React.ReactNode
   children: React.ReactNode
-  showStayUpdated?: boolean
-  resource?: {
-    id: number
-    readable_id: string
-    resource_type: "course" | "program"
-  }
-}
+} & (
+  | { showStayUpdated: boolean; resource: ResourceInfo }
+  | { showStayUpdated?: false; resource?: never }
+)
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
   title,
@@ -297,12 +300,14 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   })
 
   const handleStayUpdatedClick = () => {
-    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY && resource) {
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      // resource is always defined when showStayUpdated=true (enforced by
+      // the discriminated union at call sites)
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Stay Updated",
-        resourceId: resource.id,
-        readableId: resource.readable_id,
-        resourceType: resource.resource_type,
+        resourceId: resource!.id,
+        readableId: resource!.readable_id,
+        resourceType: resource!.resource_type,
       })
     }
     NiceModal.show(StayUpdatedModal)
