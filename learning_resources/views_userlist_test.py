@@ -3,6 +3,7 @@
 import pytest
 from django.urls import reverse
 
+from channels.factories import ChannelTopicDetailFactory
 from learning_resources import factories
 from learning_resources.constants import PrivacyLevel
 from learning_resources.models import UserList, UserListRelationship
@@ -63,6 +64,39 @@ def test_user_list_endpoint_get(client, user, is_author, has_image, is_unlisted)
         reverse("lr:v1:userlists_api-detail", args=[another_user_list.id])
     )
     assert resp.status_code == 404 if not is_unlisted else 200
+
+
+def test_user_list_endpoint_list_query_count_constant(
+    client, django_assert_max_num_queries
+):
+    """User list list queries should not grow with list count."""
+    user = UserFactory.create()
+    client.force_login(user)
+
+    def _create_list_with_item():
+        user_list = factories.UserListFactory.create(author=user)
+        course = factories.CourseFactory.create()
+        UserListRelationship.objects.create(
+            parent=user_list,
+            child=course.learning_resource,
+            position=0,
+        )
+
+    _create_list_with_item()
+
+    # Cap well below what an N+1 on topics/children/image would produce
+    # for the expanded case (5 lists with related data).
+    query_budget = 20
+    with django_assert_max_num_queries(query_budget):
+        baseline_resp = client.get(reverse("lr:v1:userlists_api-list"))
+    assert baseline_resp.status_code == 200
+
+    for _ in range(4):
+        _create_list_with_item()
+
+    with django_assert_max_num_queries(query_budget):
+        expanded_resp = client.get(reverse("lr:v1:userlists_api-list"))
+    assert expanded_resp.status_code == 200
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])
@@ -136,7 +170,6 @@ def test_user_list_endpoint_membership_get(client, user, is_authenticated):
         assert resp.status_code == 403
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_author", [True, False])
 def test_user_list_items_endpoint_create_item(client, user, is_author):
     """Test userlistitems endpoint for creating a UserListItem"""
@@ -156,6 +189,35 @@ def test_user_list_items_endpoint_create_item(client, user, is_author):
     assert resp.status_code == (201 if is_author else 403)
     if resp.status_code == 201:
         assert resp.json().get("child") == course.learning_resource.id
+
+
+def test_user_list_items_endpoint_create_item_prefetches_topic_channels(client, user):
+    """User list item create should serialize resource topics without N+1 queries"""
+    author = UserFactory.create()
+    topics = factories.LearningResourceTopicFactory.create_batch(3)
+    expected_channel_urls = {}
+    for topic in topics:
+        channel_topic_detail = ChannelTopicDetailFactory.create(topic=topic)
+        expected_channel_urls[topic.id] = channel_topic_detail.channel.channel_url
+    course = factories.CourseFactory.create()
+    course.learning_resource.topics.set(topics)
+    userlist = factories.UserListFactory.create(author=author)
+
+    client.force_login(author)
+
+    resp = client.post(
+        reverse("lr:v1:userlistitems_api-list", args=[userlist.id]),
+        data={"child": course.learning_resource.id},
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    serialized_topics = sorted(
+        resp.json()["resource"]["topics"], key=lambda topic: topic["id"]
+    )
+    assert [
+        (topic["id"], topic["channel_url"]) for topic in serialized_topics
+    ] == sorted(expected_channel_urls.items())
 
 
 def test_user_list_items_endpoint_create_item_bad_data(client, user):
@@ -178,7 +240,6 @@ def test_user_list_items_endpoint_create_item_bad_data(client, user):
     }
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize(
     ("is_author", "position"),
     [[True, 0], [True, 2], [False, 1]],  # noqa: PT007
@@ -280,7 +341,6 @@ def test_user_list_endpoint_delete(client, user, is_author):
     assert UserList.objects.filter(id=userlist.id).exists() is not is_author
 
 
-@pytest.mark.skip_nplusone_check
 def test_set_userlist_relationships(client, user):
     """Test the userlists endpoint for setting multiple userlist relationships"""
     course = factories.CourseFactory.create()
@@ -301,6 +361,37 @@ def test_set_userlist_relationships(client, user):
     for userlist in userlists:
         assert userlist.resources.filter(id=course.learning_resource.id).exists()
     assert not previous_list.resources.filter(id=course.learning_resource.id).exists()
+
+
+def test_set_userlist_relationships_prefetches_topic_channels(client, user):
+    """Bulk user list updates should serialize resource topics without N+1 queries"""
+    topics = factories.LearningResourceTopicFactory.create_batch(3)
+    expected_channel_urls = {}
+    for topic in topics:
+        channel_topic_detail = ChannelTopicDetailFactory.create(topic=topic)
+        expected_channel_urls[topic.id] = channel_topic_detail.channel.channel_url
+    course = factories.CourseFactory.create()
+    course.learning_resource.topics.set(topics)
+    userlists = factories.UserListFactory.create_batch(2, author=user)
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-userlists",
+        args=[course.learning_resource.id],
+    )
+
+    client.force_login(user)
+    resp = client.patch(
+        f"{url}?{''.join([f'userlist_id={userlist.id}&' for userlist in userlists])}"
+    )
+
+    assert resp.status_code == 200
+    assert len(resp.json()) == len(userlists)
+    for relationship in resp.json():
+        serialized_topics = sorted(
+            relationship["resource"]["topics"], key=lambda topic: topic["id"]
+        )
+        assert [
+            (topic["id"], topic["channel_url"]) for topic in serialized_topics
+        ] == sorted(expected_channel_urls.items())
 
 
 def test_set_userlist_relationships_unauthorized(client, user):
@@ -348,7 +439,6 @@ def test_set_userlist_relationships_empty_list(client, user):
     )
 
 
-@pytest.mark.skip_nplusone_check
 def test_adding_to_userlist_not_effect_existing_membership(client, user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),

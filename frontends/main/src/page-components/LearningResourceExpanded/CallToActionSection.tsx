@@ -212,13 +212,20 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
-  if (
-    resource?.resource_type === "video" &&
-    resource?.url &&
-    resource?.platform?.code === PlatformEnum.Youtube
-  ) {
+  const youtubeId =
+    resource?.resource_type === "video"
+      ? resource.content_files?.[0]?.youtube_id
+      : null
+  const youtubeUrl = youtubeId
+    ? `https://www.youtube.com/watch?v=${youtubeId}`
+    : resource?.resource_type === "video" &&
+        resource?.platform?.code === PlatformEnum.Youtube
+      ? resource.url
+      : null
+
+  if (resource && youtubeUrl) {
     return (
-      <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
+      <VideoFrame src={youtubeUrl} title={resource.title} aspect={aspect} />
     )
   } else if (resource) {
     const imageUrl =
