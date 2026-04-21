@@ -24,7 +24,9 @@ import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
 import {
   getCertificateInfo,
   getVerifiableCredentialLinkedInURL,
+  getCertificateLinkedInUrl,
   getCertificateDownloadAPIURL,
+  CertificateType,
 } from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
@@ -640,11 +642,6 @@ const ProgramCertificate = ({
   )
 }
 
-export enum CertificateType {
-  Course = "course",
-  Program = "program",
-}
-
 const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
@@ -752,11 +749,12 @@ const CertificatePage: React.FC<{
     : null
 
   // TODO: Need to generate an equivalent fallback if there's no VC available.
+  // Probably only have stuff in https://rc.mitxonline.mit.edu/api/schema/swagger-ui/#/program_certificates/program_certificates_retrieve to work with
   const linkedInAddToProfileUrl = certificateData?.verifiable_credential_json
     ? getVerifiableCredentialLinkedInURL(
         certificateData.verifiable_credential_json,
       )
-    : null
+    : getCertificateLinkedInUrl(certificateType, certificateData, pageUrl)
 
   const sharePageUrl = verifiableCredential
     ? `https://verifierplus.org/#verify?vc=${encodeURI(getCertificateDownloadAPIURL(certificateData?.verifiable_credential_json))}`

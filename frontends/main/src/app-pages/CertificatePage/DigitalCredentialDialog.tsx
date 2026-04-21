@@ -5,7 +5,10 @@ import ReactMarkdown from "react-markdown"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
 import { DigitalCredentialsFAQLink } from "@/common/constants"
-import { getCertificateDownloadAPIURL } from "@/common/certificateUtils"
+import {
+  getCertificateDownloadAPIURL,
+  VerifiableCredential,
+} from "@/common/certificateUtils"
 
 const Content = styled.div({})
 
@@ -57,71 +60,6 @@ const Verify = styled.div(({ theme }) => ({
 const StyledButtonLink = styled(ButtonLink)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
-
-/*
- * This interface defines the structure of a VerifiableCredential (Open Badges v3.0).
- * While this type is not explicitly defined / unknown in our API, we can rely on its stability
- * because the structure and fields are mandated by the Open Badges v3.0 specification.
- *
- * References:
- * - https://www.imsglobal.org/spec/ob/v3p0#verifiablecredential
- * - https://www.imsglobal.org/spec/ob/v3p0#complete-openbadgecredential
- * - https://github.com/digitalcredentials/mit-learn-obv3-template/tree/main?tab=readme-ov-file#recommended-properties-for-obv3
- *
- * We may type it on the API in a later revision.
- */
-export interface VerifiableCredential {
-  id: string
-  type: string[]
-  proof?: {
-    type: string
-    created: string
-    proofValue: string
-    cryptosuite: string
-    proofPurpose: string
-    verificationMethod: string
-  }
-  issuer: {
-    id: string
-    name: string
-    type: string[]
-    image?: {
-      id: string
-      type: string
-      caption?: string
-    }
-  }
-  "@context": string[]
-  validFrom: string
-  validUntil: string
-  credentialSubject: {
-    type: string[]
-    identifier: Array<{
-      salt: string
-      type: string
-      hashed: boolean
-      identityHash: string
-      identityType: string
-    }>
-    achievement: {
-      id: string
-      name: string
-      type: string[]
-      image?: {
-        id: string
-        type: string
-        caption?: string
-      }
-      criteria?: {
-        narrative: string
-      }
-      description: string
-      achievementType: string
-    }
-    activityEndDate?: string
-    activityStartDate?: string
-  }
-}
 
 export const DigitalCredentialDialog = ({
   verifiableCredential,
