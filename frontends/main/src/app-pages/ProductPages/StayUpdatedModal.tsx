@@ -7,6 +7,7 @@ import {
   HubspotForm,
   Dialog,
   DialogActions,
+  type HubspotFormInput,
   type HubspotFormValue,
 } from "ol-components"
 import { Button, styled } from "@mitodl/smoot-design"
@@ -43,6 +44,12 @@ const DialogSuccessCheck = styled(Image)({
   marginBottom: "24px",
 })
 
+const PRODUCT_OF_INTEREST_FIELD_NAME = "product_of_interest"
+
+type StayUpdatedDialogProps = {
+  productTitle?: string
+}
+
 const mapValuesToFields = (
   values: Record<string, HubspotFormValue>,
 ): HubspotSubmitField[] => {
@@ -54,7 +61,29 @@ const mapValuesToFields = (
     .map(([name, value]) => ({ name, value }))
 }
 
-const StayUpdatedDialogInner: React.FC = () => {
+const findProductOfInterestValue = (
+  hubspotForm: HubspotFormInput | undefined,
+  productTitle: string | undefined,
+): string | undefined => {
+  const normalizedProductTitle = productTitle?.trim().toLowerCase()
+  if (!normalizedProductTitle) {
+    return undefined
+  }
+
+  const productOfInterestField = hubspotForm?.fieldGroups
+    ?.flatMap((fieldGroup) => fieldGroup.fields ?? [])
+    .find((field) => field.name === PRODUCT_OF_INTEREST_FIELD_NAME)
+
+  const matchingOption = productOfInterestField?.options?.find(
+    (option) => option.label?.trim().toLowerCase() === normalizedProductTitle,
+  )
+
+  return matchingOption?.value?.trim() || undefined
+}
+
+const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
+  productTitle,
+}) => {
   const modalState = NiceModal.useModal()
   const modal = muiDialogV5(modalState)
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
@@ -110,11 +139,25 @@ const StayUpdatedDialogInner: React.FC = () => {
               </Button>
             }
             onSubmit={(values, _event, recaptchaToken) => {
-              const fields = mapValuesToFields(values)
+              const fields = mapValuesToFields(values).filter(
+                (field) => field.name !== PRODUCT_OF_INTEREST_FIELD_NAME,
+              )
               const emailField = fields.find((field) => field.name === "email")
               if (emailField && typeof emailField.value === "string") {
                 setEmail(emailField.value)
               }
+
+              const productOfInterestValue = findProductOfInterestValue(
+                hubspotForm,
+                productTitle,
+              )
+              if (productOfInterestValue) {
+                fields.push({
+                  name: PRODUCT_OF_INTEREST_FIELD_NAME,
+                  value: [productOfInterestValue],
+                })
+              }
+
               hubspotFormSubmit.mutate({
                 formId: stayUpdatedFormId,
                 fields,

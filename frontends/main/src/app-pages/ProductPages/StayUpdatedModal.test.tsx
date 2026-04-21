@@ -1,7 +1,11 @@
 import React from "react"
 import * as NiceModal from "@ebay/nice-modal-react"
-import { HubspotForm, type HubspotFormProps } from "ol-components"
-import { setMockResponse, urls, factories } from "api/test-utils"
+import {
+  HubspotForm,
+  HubspotFormInput,
+  type HubspotFormProps,
+} from "ol-components"
+import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
 import { renderWithProviders, screen, user, act, waitFor } from "@/test-utils"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
@@ -13,15 +17,23 @@ jest.mock("ol-components", () => ({
 
 const mockedHubspotForm = jest.mocked(HubspotForm)
 const TEST_EMAIL = "user@test.edu"
+const TEST_PRODUCT_TITLE = "Sample Program"
+const TEST_PRODUCT_VALUE = "sample_program"
 
-const setupApis = () => {
-  setMockResponse.get(
-    urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
-    factories.hubspot.form({
-      id: STAY_UPDATED_FORM_ID,
-      name: "Stay Updated",
-    }),
-  )
+type HubspotFormOverride =
+  | Parameters<typeof factories.hubspot.form>[0]
+  | HubspotFormInput
+
+const setupApis = (formOverrides: HubspotFormOverride = {}) => {
+  const form = factories.hubspot.form({
+    id: STAY_UPDATED_FORM_ID,
+    name: "Stay Updated",
+  })
+
+  setMockResponse.get(urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }), {
+    ...form,
+    ...formOverrides,
+  })
   setMockResponse.post(urls.hubspot.submit(STAY_UPDATED_FORM_ID), {})
 }
 
@@ -29,6 +41,7 @@ describe("StayUpdatedModal", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID = STAY_UPDATED_FORM_ID
     process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = "test-site-key"
+    makeRequest.mockClear()
 
     mockedHubspotForm.mockImplementation((props: HubspotFormProps) => (
       <div>
@@ -155,6 +168,96 @@ describe("StayUpdatedModal", () => {
         screen.queryByRole("dialog", { name: "Stay Updated" }),
       ).not.toBeInTheDocument()
     })
+  })
+
+  it("submits product_of_interest when the product title matches a field option", async () => {
+    setupApis({
+      fieldGroups: [
+        {
+          fields: [
+            {
+              name: "product_of_interest",
+              label: "Product of Interest",
+              field_type: "multiple_checkboxes",
+              options: [
+                {
+                  label: TEST_PRODUCT_TITLE,
+                  value: TEST_PRODUCT_VALUE,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal, { productTitle: TEST_PRODUCT_TITLE })
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      "post",
+      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      expect.objectContaining({
+        fields: expect.arrayContaining([
+          { name: "email", value: TEST_EMAIL },
+          {
+            name: "product_of_interest",
+            value: [TEST_PRODUCT_VALUE],
+          },
+        ]),
+      }),
+    )
+  })
+
+  it("omits product_of_interest when the product title has no matching option", async () => {
+    setupApis({
+      fieldGroups: [
+        {
+          fields: [
+            {
+              name: "product_of_interest",
+              label: "Product of Interest",
+              field_type: "multiple_checkboxes",
+              options: [
+                {
+                  label: "Different Product",
+                  value: "different_product",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal, { productTitle: TEST_PRODUCT_TITLE })
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    const postCall = makeRequest.mock.calls.find(
+      ([method, url]) =>
+        method === "post" && url === urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+    )
+    expect(postCall).toBeDefined()
+
+    const requestBody = postCall?.[2] as {
+      fields?: Array<{ name: string; value: unknown }>
+    }
+    expect(requestBody.fields).toEqual(
+      expect.arrayContaining([{ name: "email", value: TEST_EMAIL }]),
+    )
+    expect(requestBody.fields).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "product_of_interest" }),
+      ]),
+    )
   })
 
   it("shows error message when form submission fails", async () => {
