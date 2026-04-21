@@ -64,6 +64,7 @@ interface FormDialogProps {
   className?: string
   maxWidth?: DialogProps["maxWidth"]
   disabled?: boolean
+  TransitionProps?: DialogProps["TransitionProps"]
 }
 
 /**
@@ -91,6 +92,7 @@ const FormDialog: React.FC<FormDialogProps> = ({
   className,
   maxWidth,
   disabled = false,
+  TransitionProps,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = useCallback(
@@ -137,6 +139,7 @@ const FormDialog: React.FC<FormDialogProps> = ({
       actions={actions}
       maxWidth={maxWidth}
       disabled={isSubmitting || disabled}
+      TransitionProps={TransitionProps}
     >
       <FormContent>{children}</FormContent>
     </Dialog>

@@ -106,14 +106,16 @@ describe("manageListDialogs.upsertLearningPath", () => {
     setup({
       resource: factories.learningResources.learningPath(),
     })
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     await user.click(inputs.cancel())
     expect(makeRequest).not.toHaveBeenCalledWith(
       "patch",
       expect.anything(),
       expect.anything(),
     )
-    expect(dialog).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Validates required fields", async () => {
@@ -258,14 +260,16 @@ describe("manageListDialogs.upsertUserList", () => {
     setup({
       userList: factories.userLists.userList(),
     })
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     await user.click(inputs.cancel())
     expect(makeRequest).not.toHaveBeenCalledWith(
       "patch",
       expect.anything(),
       expect.anything(),
     )
-    expect(dialog).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Validates required fields", async () => {
@@ -401,12 +405,13 @@ describe("manageListDialogs.destroyLearningPath", () => {
   test("Clicking cancel does not delete list", async () => {
     setup()
 
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     await user.click(inputs.cancel())
 
     expect(makeRequest).not.toHaveBeenCalled()
-
-    expect(dialog).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 })
 
@@ -443,10 +448,12 @@ describe("manageListDialogs.destroyUserList", () => {
   test("Clicking cancel does not delete list", async () => {
     setup()
 
-    const dialog = screen.getByRole("dialog")
+    screen.getByRole("dialog")
     await user.click(inputs.cancel())
 
     expect(makeRequest).not.toHaveBeenCalled()
-    expect(dialog).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 })
