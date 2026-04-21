@@ -6,6 +6,7 @@ from qdrant_client.http.models.models import CountResult
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from vector_search.views import QdrantView
 
 
 def test_vector_search_filters(mocker, client):
@@ -366,3 +367,19 @@ def test_content_file_vector_search_group_parameters(mocker, client, django_user
         .kwargs["collection_name"]
         .endswith(custom_collection_name)
     )
+
+
+def test_qdrant_view_format_order_by():
+    view = QdrantView()
+
+    order_by = view._format_order_by("views")  # noqa: SLF001
+    assert order_by.key == "views"
+    assert order_by.direction == models.Direction.ASC
+
+    order_by = view._format_order_by("-views")  # noqa: SLF001
+    assert order_by.key == "views"
+    assert order_by.direction == models.Direction.DESC
+
+    order_by = view._format_order_by("-")  # noqa: SLF001
+    assert order_by.key == "-"
+    assert order_by.direction == models.Direction.ASC
