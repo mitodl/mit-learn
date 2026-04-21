@@ -2,7 +2,7 @@ import React from "react"
 import * as NiceModal from "@ebay/nice-modal-react"
 import { HubspotForm, type HubspotFormProps } from "ol-components"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { renderWithProviders, screen, user, act } from "@/test-utils"
+import { renderWithProviders, screen, user, act, waitFor } from "@/test-utils"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 
@@ -133,9 +133,11 @@ describe("StayUpdatedModal", () => {
     const doneButton = await screen.findByRole("button", { name: "Done" })
     await user.click(doneButton)
 
-    expect(
-      screen.queryByRole("dialog", { name: "Stay Updated" }),
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("closes the dialog when 'Cancel' is clicked in the form view", async () => {
@@ -148,9 +150,11 @@ describe("StayUpdatedModal", () => {
     await screen.findByRole("dialog", { name: "Stay Updated" })
     await user.click(screen.getByRole("button", { name: "Cancel" }))
 
-    expect(
-      screen.queryByRole("dialog", { name: "Stay Updated" }),
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Stay Updated" }),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("shows error message when form submission fails", async () => {

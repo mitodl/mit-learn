@@ -159,7 +159,9 @@ describe("ProgramEnrollmentDialog", () => {
     expect(location.current.searchParams.get("enrollment_title")).toBe(
       program.title,
     )
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Custom onProgramEnroll: calls callback instead of redirecting", async () => {
@@ -190,7 +192,9 @@ describe("ProgramEnrollmentDialog", () => {
     expect(`${location.current.pathname}${location.current.search}`).toBe(
       initialLocation,
     )
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
   })
 
   test("Shows error message when enrollment fails", async () => {

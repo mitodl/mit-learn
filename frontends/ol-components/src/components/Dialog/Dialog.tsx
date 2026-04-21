@@ -8,8 +8,6 @@ import { Button, ActionButton } from "@mitodl/smoot-design"
 import MuiDialogActions from "@mui/material/DialogActions"
 import { RiCloseLine } from "@remixicon/react"
 import Typography from "@mui/material/Typography"
-import Slide from "@mui/material/Slide"
-import { TransitionProps } from "@mui/material/transitions"
 
 const Close = styled.div`
   position: absolute;
@@ -39,24 +37,6 @@ const DialogActions = styled(MuiDialogActions)`
     margin-left: 0;
   }
 `
-
-const Transition = React.forwardRef(
-  (
-    props: TransitionProps & {
-      children: React.ReactElement
-    },
-    ref: React.Ref<unknown>,
-  ) => {
-    return (
-      <Slide
-        direction="down"
-        ref={ref}
-        {...props}
-        timeout={process.env.NODE_ENV === "test" ? 0 : 400}
-      />
-    )
-  },
-)
 
 type DialogProps = {
   className?: string
@@ -145,9 +125,6 @@ const Dialog: React.FC<DialogProps> = ({
       slotProps={{
         paper: PaperProps,
         transition: TransitionProps,
-      }}
-      slots={{
-        transition: Transition,
       }}
       aria-labelledby={titleId}
       maxWidth={maxWidth}

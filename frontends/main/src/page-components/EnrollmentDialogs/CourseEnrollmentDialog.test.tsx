@@ -425,7 +425,9 @@ describe("CourseEnrollmentDialog", () => {
       )
 
       // Verify dialog has closed
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      })
     })
 
     test("Custom onCourseEnroll: calls callback instead of redirecting", async () => {
@@ -456,7 +458,9 @@ describe("CourseEnrollmentDialog", () => {
       )
 
       // Verify dialog has closed
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      })
     })
 
     test("Shows error message when enrollment fails", async () => {
