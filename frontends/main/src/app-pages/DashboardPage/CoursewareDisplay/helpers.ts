@@ -1,7 +1,6 @@
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
-  V2ProgramDetail,
   V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -113,99 +112,71 @@ export {
   getProgramEnrollmentStatus,
 }
 
-type CourseRequirementItem = {
-  resourceType: "course"
-  course: CourseWithCourseRunsSerializerV2
-}
-
-type ProgramAsCourseRequirementItem = {
-  resourceType: "program-as-course"
-  courseProgramId: number
-  courseProgram: V2ProgramDetail
-  courseProgramEnrollment: V3UserProgramEnrollment | undefined
-}
-
-type ProgramEnrollmentRequirementItem = {
-  resourceType: "program-enrollment"
-  enrollment: V3UserProgramEnrollment
-}
-
-type RequirementSectionItem =
-  | CourseRequirementItem
-  | ProgramAsCourseRequirementItem
-  | ProgramEnrollmentRequirementItem
-
-type RequirementSection = {
-  key: string | number | null | undefined
-  title: string
-  items: RequirementSectionItem[]
-  node: V2ProgramRequirement
-}
-
-const isRequirementSectionItemCompleted = (
-  item: RequirementSectionItem,
-  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
+const isLeafRequirementNodeCompleted = (
+  node: V2ProgramRequirement,
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
 ): boolean => {
-  if (item.resourceType === "course") {
-    const bestEnrollment = selectBestEnrollment(
-      item.course,
-      enrollmentsByCourseId[item.course.id] || [],
-    )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
+  if (
+    node.data.node_type === "course" &&
+    typeof node.data.course === "number"
+  ) {
+    const enrollments = courseEnrollments[node.data.course] ?? []
+    return enrollments.some((e) => e.grades.some((g) => g.passed))
   }
-  if (item.resourceType === "program-as-course") {
-    return (
-      getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
-      EnrollmentStatus.Completed
-    )
+  if (node.data.node_type === "program" && node.data.required_program) {
+    return !!programEnrollments[node.data.required_program]?.certificate
   }
   return false
 }
 
 /**
- * Computes the overall completed and total course counts for a program,
- * given its requirement sections and a map of enrollments by course ID.
+ * Computes `{ completed, total }` across the given operator nodes. Each
+ * operator node's direct children are counted as its requirements — nested
+ * operators are ignored (e.g., a sub-program's internal courses don't count).
+ * For `min_number_of` operators, `completed` is capped at `operator_value`
+ * so extra electives don't inflate the overall total.
  *
- * For `min_number_of` sections (electives), completions are capped at
- * the section's `operator_value` so that completing extra electives does
- * not inflate the required-course completion count shown in the header.
+ * Pass all top-level operators for overall program progress, or a single
+ * operator node for per-section progress.
  */
-const getProgramCounts = (
-  sections: RequirementSection[],
-  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
+const getRequirementsProgress = (
+  nodes: V2ProgramRequirement[],
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
 ): { completed: number; total: number } => {
-  return sections.reduce(
-    (acc, section) => {
-      const countableItems = section.items.filter(
-        (item) =>
-          item.resourceType === "course" ||
-          item.resourceType === "program-as-course",
+  return nodes.reduce(
+    (acc, node) => {
+      if (node.data.node_type !== "operator") return acc
+
+      const leaves = (node.children ?? []).filter(
+        (c) => c.data.node_type === "course" || c.data.node_type === "program",
       )
-      const sectionCompleted = countableItems.filter((item) =>
-        isRequirementSectionItemCompleted(item, enrollmentsByCourseId),
+      const completed = leaves.filter((leaf) =>
+        isLeafRequirementNodeCompleted(
+          leaf,
+          courseEnrollments,
+          programEnrollments,
+        ),
       ).length
 
-      if (
-        section.node.data.operator === "min_number_of" &&
-        section.node.data.operator_value
-      ) {
-        const minRequired = parseInt(section.node.data.operator_value, 10)
+      if (node.data.operator === "min_number_of" && node.data.operator_value) {
+        const minRequired = parseInt(node.data.operator_value, 10)
         if (!isNaN(minRequired)) {
           return {
-            completed: acc.completed + Math.min(sectionCompleted, minRequired),
+            completed: acc.completed + Math.min(completed, minRequired),
             total: acc.total + minRequired,
           }
         }
       }
 
       return {
-        completed: acc.completed + sectionCompleted,
-        total: acc.total + countableItems.length,
+        completed: acc.completed + completed,
+        total: acc.total + leaves.length,
       }
     },
     { completed: 0, total: 0 },
   )
 }
 
-export type { RequirementSectionItem, RequirementSection }
-export { isRequirementSectionItemCompleted, getProgramCounts }
+export { getRequirementsProgress }

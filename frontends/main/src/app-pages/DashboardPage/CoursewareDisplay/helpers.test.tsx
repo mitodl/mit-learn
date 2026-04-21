@@ -2,16 +2,15 @@ import { factories } from "api/mitxonline-test-utils"
 import {
   CourseRunEnrollmentV3,
   V2ProgramRequirement,
+  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
   getBestRun,
-  getProgramCounts,
+  getRequirementsProgress,
   getProgramEnrollmentStatus,
   getKey,
-  isRequirementSectionItemCompleted,
-  RequirementSection,
   selectBestEnrollment,
   getEnrollmentStatus,
   ResourceType,
@@ -458,350 +457,142 @@ describe("helpers", () => {
     })
   })
 
-  describe("getProgramCounts", () => {
-    const makeNode = (
-      operator: string,
+  describe("getRequirementsProgress", () => {
+    const courseLeaf = (id: number): V2ProgramRequirement => ({
+      data: { node_type: "course", course: id }, // eslint-disable-line camelcase
+    })
+
+    const programLeaf = (id: number): V2ProgramRequirement => ({
+      data: { node_type: "program", required_program: id }, // eslint-disable-line camelcase
+    })
+
+    const operator = (
+      op: string,
+      children: V2ProgramRequirement[],
       operatorValue: string | null = null,
     ): V2ProgramRequirement => ({
       data: {
         node_type: "operator",
-        operator,
+        operator: op,
         operator_value: operatorValue, // eslint-disable-line camelcase
       },
+      children,
     })
 
-    const passedGrade = factories.enrollment.grade({ passed: true })
-    const failedGrade = factories.enrollment.grade({ passed: false })
+    const courseEnrollment = (
+      courseId: number,
+      passed: boolean,
+    ): CourseRunEnrollmentV3 => {
+      const run = factories.courses.courseRun({ id: courseId })
+      const course = factories.courses.course({
+        id: courseId,
+        courseruns: [run],
+      })
+      return factories.enrollment.courseEnrollment({
+        run: { ...run, course },
+        grades: [factories.enrollment.grade({ passed })],
+      })
+    }
 
-    test("all_of section: counts all completed and total items", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const run2 = factories.courses.courseRun({ id: 2 })
-      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
-      const course2 = factories.courses.course({ id: 2, courseruns: [run2] })
-
-      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
-        1: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run1, course: course1 },
-            grades: [passedGrade],
-          }),
-        ],
-        2: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run2, course: course2 },
-            grades: [failedGrade],
-          }),
-        ],
+    test("all_of counts completed courses against total children", () => {
+      const nodes = [operator("all_of", [courseLeaf(1), courseLeaf(2)])]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        2: [courseEnrollment(2, false)],
       }
 
-      const sections: RequirementSection[] = [
-        {
-          key: "s1",
-          title: "Required",
-          node: makeNode("all_of"),
-          items: [
-            { resourceType: "course", course: course1 },
-            { resourceType: "course", course: course2 },
-          ],
-        },
-      ]
-
-      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
         completed: 1,
         total: 2,
       })
     })
 
-    test("min_number_of section: caps completions at operator_value", () => {
-      const run3 = factories.courses.courseRun({ id: 3 })
-      const run4 = factories.courses.courseRun({ id: 4 })
-      const run5 = factories.courses.courseRun({ id: 5 })
-      const course3 = factories.courses.course({ id: 3, courseruns: [run3] })
-      const course4 = factories.courses.course({ id: 4, courseruns: [run4] })
-      const course5 = factories.courses.course({ id: 5, courseruns: [run5] })
-
-      // All 3 electives completed, but only 1 is required
-      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
-        3: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run3, course: course3 },
-            grades: [passedGrade],
-          }),
-        ],
-        4: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run4, course: course4 },
-            grades: [passedGrade],
-          }),
-        ],
-        5: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run5, course: course5 },
-            grades: [passedGrade],
-          }),
-        ],
+    test("min_number_of caps completed and total at operator_value", () => {
+      const nodes = [
+        operator(
+          "min_number_of",
+          [courseLeaf(1), courseLeaf(2), courseLeaf(3)],
+          "1",
+        ),
+      ]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        2: [courseEnrollment(2, true)],
+        3: [courseEnrollment(3, true)],
       }
 
-      const sections: RequirementSection[] = [
-        {
-          key: "s1",
-          title: "Electives",
-          node: makeNode("min_number_of", "1"),
-          items: [
-            { resourceType: "course", course: course3 },
-            { resourceType: "course", course: course4 },
-            { resourceType: "course", course: course5 },
-          ],
-        },
-      ]
-
-      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
-        completed: 1, // capped at operator_value=1, not 3
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
+        completed: 1,
         total: 1,
       })
     })
 
-    test("mixed sections: required all_of + optional min_number_of", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const run2 = factories.courses.courseRun({ id: 2 })
-      const run3 = factories.courses.courseRun({ id: 3 })
-      const run4 = factories.courses.courseRun({ id: 4 })
-      const run5 = factories.courses.courseRun({ id: 5 })
-      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
-      const course2 = factories.courses.course({ id: 2, courseruns: [run2] })
-      const course3 = factories.courses.course({ id: 3, courseruns: [run3] })
-      const course4 = factories.courses.course({ id: 4, courseruns: [run4] })
-      const course5 = factories.courses.course({ id: 5, courseruns: [run5] })
-
-      // Course 1 (required) completed + courses 3, 4 (electives) completed
-      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
-        1: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run1, course: course1 },
-            grades: [passedGrade],
-          }),
-        ],
-        3: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run3, course: course3 },
-            grades: [passedGrade],
-          }),
-        ],
-        4: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run4, course: course4 },
-            grades: [passedGrade],
-          }),
-        ],
+    test("sums progress across multiple top-level operators", () => {
+      const nodes = [
+        operator("all_of", [courseLeaf(1), courseLeaf(2)]),
+        operator(
+          "min_number_of",
+          [courseLeaf(3), courseLeaf(4), courseLeaf(5)],
+          "1",
+        ),
+      ]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        3: [courseEnrollment(3, true)],
+        4: [courseEnrollment(4, true)],
       }
 
-      const sections: RequirementSection[] = [
-        {
-          key: "required",
-          title: "Required Courses",
-          node: makeNode("all_of"),
-          items: [
-            { resourceType: "course", course: course1 },
-            { resourceType: "course", course: course2 },
-          ],
-        },
-        {
-          key: "electives",
-          title: "Electives",
-          node: makeNode("min_number_of", "1"),
-          items: [
-            { resourceType: "course", course: course3 },
-            { resourceType: "course", course: course4 },
-            { resourceType: "course", course: course5 },
-          ],
-        },
-      ]
-
-      // completed: 1 required + min(2 electives, 1 required) = 2
-      // total: 2 required + 1 elective min = 3
-      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
         completed: 2,
         total: 3,
       })
     })
 
-    test("min_number_of with operator_value=0 contributes nothing to total or completed", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
-
-      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
-        1: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run1, course: course1 },
-            grades: [passedGrade],
-          }),
-        ],
+    test("program leaf is completed when enrollment has certificate", () => {
+      const enrollments: Record<number, V3UserProgramEnrollment> = {
+        10: factories.enrollment.programEnrollmentV3({
+          certificate: { uuid: "cert-uuid" },
+        }),
       }
+      const nodes = [operator("all_of", [programLeaf(10), programLeaf(11)])]
 
-      const sections: RequirementSection[] = [
-        {
-          key: "s1",
-          title: "Bonus",
-          node: makeNode("min_number_of", "0"),
-          items: [{ resourceType: "course", course: course1 }],
-        },
-      ]
-
-      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
-        completed: 0,
-        total: 0,
-      })
-    })
-
-    test("program-enrollment items are excluded from both counts", () => {
-      const programEnrollment = factories.enrollment.programEnrollmentV3({
-        certificate: null,
-      })
-
-      const sections: RequirementSection[] = [
-        {
-          key: "s1",
-          title: "Sub-programs",
-          node: makeNode("all_of"),
-          items: [
-            {
-              resourceType: "program-enrollment",
-              enrollment: programEnrollment,
-            },
-          ],
-        },
-      ]
-
-      expect(getProgramCounts(sections, {})).toEqual({
-        completed: 0,
-        total: 0,
-      })
-    })
-
-    test("empty sections returns zeroes", () => {
-      expect(getProgramCounts([], {})).toEqual({ completed: 0, total: 0 })
-    })
-
-    test("malformed operator_value falls back to counting all items", () => {
-      const run1 = factories.courses.courseRun({ id: 1 })
-      const course1 = factories.courses.course({ id: 1, courseruns: [run1] })
-      const enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> = {
-        1: [
-          factories.enrollment.courseEnrollment({
-            run: { ...run1, course: course1 },
-            grades: [factories.enrollment.grade({ passed: true })],
-          }),
-        ],
-      }
-
-      const sections: RequirementSection[] = [
-        {
-          key: "s1",
-          title: "Electives",
-          node: makeNode("min_number_of", "not-a-number"),
-          items: [{ resourceType: "course", course: course1 }],
-        },
-      ]
-
-      expect(getProgramCounts(sections, enrollmentsByCourseId)).toEqual({
+      expect(getRequirementsProgress(nodes, {}, enrollments)).toEqual({
         completed: 1,
-        total: 1,
+        total: 2,
       })
     })
-  })
 
-  describe("isRequirementSectionItemCompleted", () => {
-    test("course item is completed when best enrollment has passing grade", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ id: 1, courseruns: [run] })
-      const enrollment = factories.enrollment.courseEnrollment({
-        run: { ...run, course },
-        grades: [factories.enrollment.grade({ passed: true })],
-      })
+    test("ignores non-operator and non-leaf children (nested operators)", () => {
+      // Nested operators are not counted — only direct course/program children
+      const nested = operator("all_of", [courseLeaf(99)])
+      const nodes = [operator("all_of", [courseLeaf(1), nested])]
 
-      const result = isRequirementSectionItemCompleted(
-        { resourceType: "course", course },
-        { 1: [enrollment] },
-      )
-      expect(result).toBe(true)
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 1, total: 1 })
     })
 
-    test("course item is not completed when no passing grade", () => {
-      const run = factories.courses.courseRun({ id: 1 })
-      const course = factories.courses.course({ id: 1, courseruns: [run] })
-      const enrollment = factories.enrollment.courseEnrollment({
-        run: { ...run, course },
-        grades: [factories.enrollment.grade({ passed: false })],
-      })
+    test("min_number_of with operator_value=0 contributes nothing", () => {
+      const nodes = [operator("min_number_of", [courseLeaf(1)], "0")]
 
-      const result = isRequirementSectionItemCompleted(
-        { resourceType: "course", course },
-        { 1: [enrollment] },
-      )
-      expect(result).toBe(false)
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 0, total: 0 })
     })
 
-    test("program-as-course item is completed when it has a certificate", () => {
-      const program = factories.programs.program()
-      const programEnrollment = factories.enrollment.programEnrollmentV3({
-        certificate: { uuid: "cert-uuid" },
-      })
+    test("malformed operator_value falls back to full count", () => {
+      const nodes = [operator("min_number_of", [courseLeaf(1)], "not-a-number")]
 
-      const result = isRequirementSectionItemCompleted(
-        {
-          resourceType: "program-as-course",
-          courseProgramId: program.id,
-          courseProgram: program,
-          courseProgramEnrollment: programEnrollment,
-        },
-        {},
-      )
-      expect(result).toBe(true)
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 1, total: 1 })
     })
 
-    test("program-as-course item is not completed when enrollment has no certificate", () => {
-      const program = factories.programs.program()
-      const programEnrollment = factories.enrollment.programEnrollmentV3({
-        certificate: null,
+    test("empty nodes returns zeroes", () => {
+      expect(getRequirementsProgress([], {}, {})).toEqual({
+        completed: 0,
+        total: 0,
       })
-
-      const result = isRequirementSectionItemCompleted(
-        {
-          resourceType: "program-as-course",
-          courseProgramId: program.id,
-          courseProgram: program,
-          courseProgramEnrollment: programEnrollment,
-        },
-        {},
-      )
-      expect(result).toBe(false)
-    })
-
-    test("program-as-course item is not completed when enrollment is undefined", () => {
-      const program = factories.programs.program()
-
-      const result = isRequirementSectionItemCompleted(
-        {
-          resourceType: "program-as-course",
-          courseProgramId: program.id,
-          courseProgram: program,
-          courseProgramEnrollment: undefined,
-        },
-        {},
-      )
-      expect(result).toBe(false)
-    })
-
-    test("program-enrollment item is never completed", () => {
-      const programEnrollment = factories.enrollment.programEnrollmentV3({
-        certificate: { uuid: "cert-uuid" },
-      })
-
-      const result = isRequirementSectionItemCompleted(
-        { resourceType: "program-enrollment", enrollment: programEnrollment },
-        {},
-      )
-      expect(result).toBe(false)
     })
   })
 })
