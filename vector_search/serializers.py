@@ -21,7 +21,6 @@ from learning_resources_search.serializers import (
 )
 from vector_search.constants import (
     QDRANT_CONTENT_FILE_PARAM_MAP,
-    QDRANT_CONTENT_FILES_SORTBY_FIELDS,
     QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS,
     QDRANT_RESOURCE_PARAM_MAP,
 )
@@ -250,11 +249,7 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
             \n\n{build_choice_description_list(aggregation_choices)}"
         ),
     )
-    sortby = serializers.ChoiceField(
-        required=False,
-        choices=QDRANT_CONTENT_FILES_SORTBY_FIELDS,
-        help_text="if the parameter starts with '-' the sort is in descending order",
-    )
+
     key = serializers.ListField(
         required=False,
         child=serializers.CharField(),

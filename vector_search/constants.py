@@ -49,6 +49,7 @@ QDRANT_RESOURCE_PARAM_MAP = {
     "published": "published",
     "next_start_date": "next_start_date",
     "views": "views",
+    "created_on": "created_on",
 }
 
 
@@ -77,6 +78,7 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "resource_type_group": models.PayloadSchemaType.KEYWORD,
     "resource_category": models.PayloadSchemaType.KEYWORD,
     "next_start_date": models.PayloadSchemaType.DATETIME,
+    "created_on": models.PayloadSchemaType.DATETIME,
     "views": models.PayloadSchemaType.INTEGER,
 }
 

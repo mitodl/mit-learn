@@ -11546,7 +11546,6 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
      * @param {string} [q] The search text
      * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
      * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
      * @param {boolean | null} [title__isnull] Filter to content files where title is null/not null
      * @param {boolean | null} [url__isnull] Filter to content files where url is null/not null
      * @param {*} [options] Override http request option.
@@ -11567,7 +11566,6 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
       q?: string,
       resource_readable_id?: Array<string>,
       run_readable_id?: Array<string>,
-      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
       title__isnull?: boolean | null,
       url__isnull?: boolean | null,
       options: RawAxiosRequestConfig = {},
@@ -11644,10 +11642,6 @@ export const VectorContentFilesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["run_readable_id"] = run_readable_id
       }
 
-      if (sortby !== undefined) {
-        localVarQueryParameter["sortby"] = sortby
-      }
-
       if (title__isnull !== undefined) {
         localVarQueryParameter["title__isnull"] = title__isnull
       }
@@ -11700,7 +11694,6 @@ export const VectorContentFilesSearchApiFp = function (
      * @param {string} [q] The search text
      * @param {Array<string>} [resource_readable_id] The readable_id value of the parent learning resource for the content file
      * @param {Array<string>} [run_readable_id] The readable_id value of the run that the content file belongs to
-     * @param {VectorContentFilesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
      * @param {boolean | null} [title__isnull] Filter to content files where title is null/not null
      * @param {boolean | null} [url__isnull] Filter to content files where url is null/not null
      * @param {*} [options] Override http request option.
@@ -11721,7 +11714,6 @@ export const VectorContentFilesSearchApiFp = function (
       q?: string,
       resource_readable_id?: Array<string>,
       run_readable_id?: Array<string>,
-      sortby?: VectorContentFilesSearchRetrieveSortbyEnum,
       title__isnull?: boolean | null,
       url__isnull?: boolean | null,
       options?: RawAxiosRequestConfig,
@@ -11747,7 +11739,6 @@ export const VectorContentFilesSearchApiFp = function (
           q,
           resource_readable_id,
           run_readable_id,
-          sortby,
           title__isnull,
           url__isnull,
           options,
@@ -11806,7 +11797,6 @@ export const VectorContentFilesSearchApiFactory = function (
           requestParameters.q,
           requestParameters.resource_readable_id,
           requestParameters.run_readable_id,
-          requestParameters.sortby,
           requestParameters.title__isnull,
           requestParameters.url__isnull,
           options,
@@ -11921,13 +11911,6 @@ export interface VectorContentFilesSearchApiVectorContentFilesSearchRetrieveRequ
   readonly run_readable_id?: Array<string>
 
   /**
-   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;id&#x60; - id * &#x60;-id&#x60; - -id * &#x60;resource_readable_id&#x60; - resource_readable_id * &#x60;-resource_readable_id&#x60; - -resource_readable_id
-   * @type {'id' | '-id' | 'resource_readable_id' | '-resource_readable_id'}
-   * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
-   */
-  readonly sortby?: VectorContentFilesSearchRetrieveSortbyEnum
-
-  /**
    * Filter to content files where title is null/not null
    * @type {boolean}
    * @memberof VectorContentFilesSearchApiVectorContentFilesSearchRetrieve
@@ -11977,7 +11960,6 @@ export class VectorContentFilesSearchApi extends BaseAPI {
         requestParameters.q,
         requestParameters.resource_readable_id,
         requestParameters.run_readable_id,
-        requestParameters.sortby,
         requestParameters.title__isnull,
         requestParameters.url__isnull,
         options,
@@ -12011,17 +11993,6 @@ export const VectorContentFilesSearchRetrieveAggregationsEnum = {
 } as const
 export type VectorContentFilesSearchRetrieveAggregationsEnum =
   (typeof VectorContentFilesSearchRetrieveAggregationsEnum)[keyof typeof VectorContentFilesSearchRetrieveAggregationsEnum]
-/**
- * @export
- */
-export const VectorContentFilesSearchRetrieveSortbyEnum = {
-  Id: "id",
-  Id2: "-id",
-  ResourceReadableId: "resource_readable_id",
-  ResourceReadableId2: "-resource_readable_id",
-} as const
-export type VectorContentFilesSearchRetrieveSortbyEnum =
-  (typeof VectorContentFilesSearchRetrieveSortbyEnum)[keyof typeof VectorContentFilesSearchRetrieveSortbyEnum]
 
 /**
  * VectorLearningResourcesSearchApi - axios parameter creator
@@ -12034,7 +12005,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12054,6 +12025,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -12081,6 +12053,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       readable_id?: string,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
+      sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -12182,6 +12155,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["resource_type_group"] = resource_type_group
       }
 
+      if (sortby !== undefined) {
+        localVarQueryParameter["sortby"] = sortby
+      }
+
       if (title__isnull !== undefined) {
         localVarQueryParameter["title__isnull"] = title__isnull
       }
@@ -12224,7 +12201,7 @@ export const VectorLearningResourcesSearchApiFp = function (
     /**
      * Vector Search for learning resources
      * @summary Vector Search
-     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
+     * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
@@ -12244,6 +12221,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -12271,6 +12249,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       readable_id?: string,
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
+      sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -12303,6 +12282,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           readable_id,
           resource_type,
           resource_type_group,
+          sortby,
           title__isnull,
           topic,
           url__isnull,
@@ -12368,6 +12348,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.readable_id,
           requestParameters.resource_type,
           requestParameters.resource_type_group,
+          requestParameters.sortby,
           requestParameters.title__isnull,
           requestParameters.topic,
           requestParameters.url__isnull,
@@ -12385,8 +12366,8 @@ export const VectorLearningResourcesSearchApiFactory = function (
  */
 export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest {
   /**
-   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published
-   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category' | 'published'>}
+   * aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
+   * @type {Array<'readable_id' | 'resource_type' | 'certification' | 'certification_type' | 'professional' | 'free' | 'course_feature' | 'topic' | 'ocw_topic' | 'level' | 'department' | 'platform' | 'offered_by' | 'delivery' | 'title' | 'url' | 'resource_type_group' | 'resource_category' | 'published' | 'next_start_date' | 'views' | 'created_on'>}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
    */
   readonly aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>
@@ -12525,6 +12506,13 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>
 
   /**
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+   * @type {'next_start_date' | 'views' | 'created_on' | '-next_start_date' | '-views' | '-created_on'}
+   * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
+   */
+  readonly sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum
+
+  /**
    * Filter to learning resources where title is null/not null
    * @type {boolean}
    * @memberof VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieve
@@ -12587,6 +12575,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.readable_id,
         requestParameters.resource_type,
         requestParameters.resource_type_group,
+        requestParameters.sortby,
         requestParameters.title__isnull,
         requestParameters.topic,
         requestParameters.url__isnull,
@@ -12619,6 +12608,9 @@ export const VectorLearningResourcesSearchRetrieveAggregationsEnum = {
   ResourceTypeGroup: "resource_type_group",
   ResourceCategory: "resource_category",
   Published: "published",
+  NextStartDate: "next_start_date",
+  Views: "views",
+  CreatedOn: "created_on",
 } as const
 export type VectorLearningResourcesSearchRetrieveAggregationsEnum =
   (typeof VectorLearningResourcesSearchRetrieveAggregationsEnum)[keyof typeof VectorLearningResourcesSearchRetrieveAggregationsEnum]
@@ -12769,6 +12761,19 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum = {
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum]
+/**
+ * @export
+ */
+export const VectorLearningResourcesSearchRetrieveSortbyEnum = {
+  NextStartDate: "next_start_date",
+  Views: "views",
+  CreatedOn: "created_on",
+  NextStartDate2: "-next_start_date",
+  Views2: "-views",
+  CreatedOn2: "-created_on",
+} as const
+export type VectorLearningResourcesSearchRetrieveSortbyEnum =
+  (typeof VectorLearningResourcesSearchRetrieveSortbyEnum)[keyof typeof VectorLearningResourcesSearchRetrieveSortbyEnum]
 
 /**
  * VideoShortsApi - axios parameter creator

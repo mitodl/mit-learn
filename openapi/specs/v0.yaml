@@ -970,23 +970,6 @@ paths:
         description: The readable_id value of the run that the content file belongs
           to
       - in: query
-        name: sortby
-        schema:
-          enum:
-          - id
-          - -id
-          - resource_readable_id
-          - -resource_readable_id
-          type: string
-          minLength: 1
-        description: |-
-          if the parameter starts with '-' the sort is in descending order
-
-          * `id` - id
-          * `-id` - -id
-          * `resource_readable_id` - resource_readable_id
-          * `-resource_readable_id` - -resource_readable_id
-      - in: query
         name: title__isnull
         schema:
           type: boolean
@@ -1038,6 +1021,9 @@ paths:
             - resource_type_group
             - resource_category
             - published
+            - next_start_date
+            - views
+            - created_on
             type: string
             description: |-
               * `readable_id` - Readable Id
@@ -1059,6 +1045,9 @@ paths:
               * `resource_type_group` - Resource Type Group
               * `resource_category` - Resource Category
               * `published` - Published
+              * `next_start_date` - Next Start Date
+              * `views` - Views
+              * `created_on` - Created On
         description: "aggregations for facet counts             \n\n* `readable_id`\
           \ - Readable Id\n* `resource_type` - Resource Type\n* `certification` -\
           \ Certification\n* `certification_type` - Certification Type\n* `professional`\
@@ -1067,7 +1056,8 @@ paths:
           \ - Department\n* `platform` - Platform\n* `offered_by` - Offered By\n*\
           \ `delivery` - Delivery\n* `title` - Title\n* `url` - Url\n* `resource_type_group`\
           \ - Resource Type Group\n* `resource_category` - Resource Category\n* `published`\
-          \ - Published"
+          \ - Published\n* `next_start_date` - Next Start Date\n* `views` - Views\n\
+          * `created_on` - Created On"
       - in: query
         name: certification
         schema:
@@ -1425,6 +1415,27 @@ paths:
               * `learning_material` - Learning Material
         description: "The category of learning resource             \n\n* `course`\
           \ - Course\n* `program` - Program\n* `learning_material` - Learning Material"
+      - in: query
+        name: sortby
+        schema:
+          enum:
+          - next_start_date
+          - views
+          - created_on
+          - -next_start_date
+          - -views
+          - -created_on
+          type: string
+          minLength: 1
+        description: |-
+          if the parameter starts with '-' the sort is in descending order
+
+          * `next_start_date` - next_start_date
+          * `views` - views
+          * `created_on` - created_on
+          * `-next_start_date` - -next_start_date
+          * `-views` - -views
+          * `-created_on` - -created_on
       - in: query
         name: title__isnull
         schema:
