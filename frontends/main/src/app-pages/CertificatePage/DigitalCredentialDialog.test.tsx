@@ -4,10 +4,8 @@
 import React from "react"
 import { screen, renderWithProviders, user } from "@/test-utils"
 import { factories } from "api/test-utils"
-import {
-  DigitalCredentialDialog,
-  VerifiableCredential,
-} from "./DigitalCredentialDialog"
+import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
+import { VerifiableCredential } from "@/common/certificateUtils"
 
 const createMockVerifiableCredential = (
   overrides?: Partial<VerifiableCredential>,
