@@ -131,9 +131,18 @@ const isLeafRequirementNodeCompleted = (
 }
 
 /**
- * Computes `{ completed, total }` across the given operator nodes. Each
- * operator node's direct children are counted as its requirements — nested
- * operators are ignored (e.g., a sub-program's internal courses don't count).
+ * Computes `{ completed, total }` across the given operator nodes.
+ *
+ * Assumes a flat req_tree: each operator's direct children are leaves
+ * (`node_type: "course"` or `"program"`). Nesting operators inside
+ * operators is not supported — there is no single well-defined reduction
+ * for nested progress (e.g., with `min_number_of=1` parent over two
+ * `min_number_of=4` children, "max child progress" and "sum of all work"
+ * give different answers, and picking one is a product question).
+ *
+ * Only `all_of` and `min_number_of` are handled explicitly; any other
+ * operator is treated like `all_of` (total = leaf count).
+ *
  * For `min_number_of` operators, `completed` is capped at `operator_value`
  * so extra electives don't inflate the overall total.
  *
