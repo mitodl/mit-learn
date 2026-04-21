@@ -383,3 +383,41 @@ def test_qdrant_view_format_order_by():
     order_by = view._format_order_by("-")  # noqa: SLF001
     assert order_by.key == "-"
     assert order_by.direction == models.Direction.ASC
+
+
+@pytest.mark.parametrize("query_string", ["", "test"])
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_search):
+    """Test vector search properly passes sortby parameter to qdrant client"""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": query_string,
+        "sortby": "-views",
+        "hybrid_search": hybrid_search,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    if query_string:
+        call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+        assert isinstance(call_kwargs["query"], models.OrderByQuery)
+        assert call_kwargs["query"].order_by.key == "views"
+        assert call_kwargs["query"].order_by.direction == models.Direction.DESC
+    else:
+        call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
+        assert "order_by" in call_kwargs
+        assert call_kwargs["order_by"].key == "views"
+        assert call_kwargs["order_by"].direction == models.Direction.DESC
