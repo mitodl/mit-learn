@@ -115,15 +115,14 @@ export const getVerifiableCredentialLinkedInURL = (
 }
 
 export const getCertificateLinkedInUrl = (
+  certificateType: CertificateType,
   certificateData: V2ProgramCertificate | V2CourseRunCertificate,
   pageUrl: string,
 ): string => {
-  let credentialName: string
-  if (certificateData instanceof V2CourseRunCertificate) {
-    credentialName = certificateData.course_run.course.title
-  } else {
-    credentialName = certificateData.program.title
-  }
+  const credentialName =
+    certificateType === CertificateType.Course
+      ? (certificateData as V2CourseRunCertificate).course_run.course.title
+      : (certificateData as V2ProgramCertificate).program.title
   const certId = certificateData.uuid
   return `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}`
 }
