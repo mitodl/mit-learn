@@ -2508,7 +2508,7 @@ wheels = [
 
 [[package]]
 name = "mit-learn"
-version = "0.71.0"
+version = "2026.04.16.1"
 source = { virtual = "." }
 dependencies = [
     { name = "attrs" },

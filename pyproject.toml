@@ -262,13 +262,35 @@ inline-quotes = "double"
 "test_*.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "**/migrations/**" = ["ARG001"]
 
-[tool.bumpver]
-current_version = "2026.04.16.1"
-version_pattern = "YYYY.0M.0D.INC1"
+[tool.bumpversion]
 commit = false
 tag = false
-push = false
+parse = "(?P<release>(?:[1-9][0-9]{3})\\.(?:1[0-2]|0[1-9])\\.(?:3[0-1]|[1-2][0-9]|0[1-9]))\\.(?P<build>\\d+)"
+serialize = ["{release}.{build}"]
 
-[tool.bumpver.file_patterns]
-"main/settings.py" = ['VERSION = "{version}"']
-"pyproject.toml" = ['version = "{version}"']
+[tool.bumpversion.parts.release]
+calver_format = "{YYYY}.{0M}.{0D}"
+
+[tool.bumpversion.parts.build]
+first_value = "1"
+
+[[tool.bumpversion.files]]
+filename = "main/settings.py"
+search = 'VERSION = "{current_version}"'
+replace = 'VERSION = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+name = "mit-learn"
+version = "{current_version}"
+source = {{ virtual = "." }}"""
+replace = """
+name = "mit-learn"
+version = "{new_version}"
+source = {{ virtual = "." }}"""
