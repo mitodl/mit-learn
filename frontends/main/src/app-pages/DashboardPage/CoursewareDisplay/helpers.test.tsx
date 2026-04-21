@@ -580,12 +580,28 @@ describe("helpers", () => {
       ).toEqual({ completed: 0, total: 0 })
     })
 
-    test("malformed operator_value falls back to full count", () => {
+    test("min_number_of with malformed operator_value contributes nothing and warns", () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => {})
       const nodes = [operator("min_number_of", [courseLeaf(1)], "not-a-number")]
 
       expect(
         getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
-      ).toEqual({ completed: 1, total: 1 })
+      ).toEqual({ completed: 0, total: 0 })
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    test("unknown operator contributes nothing and warns", () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => {})
+      const nodes = [
+        operator("at_least_one_of", [courseLeaf(1), courseLeaf(2)]),
+      ]
+
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 0, total: 0 })
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
     })
 
     test("empty nodes returns zeroes", () => {

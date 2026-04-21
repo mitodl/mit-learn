@@ -140,8 +140,9 @@ const isLeafRequirementNodeCompleted = (
  * `min_number_of=4` children, "max child progress" and "sum of all work"
  * give different answers, and picking one is a product question).
  *
- * Only `all_of` and `min_number_of` are handled explicitly; any other
- * operator is treated like `all_of` (total = leaf count).
+ * Only `all_of` and `min_number_of` (with a valid integer `operator_value`)
+ * are counted. Unknown or malformed operators contribute nothing and log
+ * a warning — we'd rather under-report than guess.
  *
  * For `min_number_of` operators, `completed` is capped at `operator_value`
  * so extra electives don't inflate the overall total.
@@ -169,8 +170,15 @@ const getRequirementsProgress = (
         ),
       ).length
 
-      if (node.data.operator === "min_number_of" && node.data.operator_value) {
-        const minRequired = parseInt(node.data.operator_value, 10)
+      if (node.data.operator === "all_of") {
+        return {
+          completed: acc.completed + completed,
+          total: acc.total + leaves.length,
+        }
+      }
+
+      if (node.data.operator === "min_number_of") {
+        const minRequired = parseInt(node.data.operator_value ?? "", 10)
         if (!isNaN(minRequired)) {
           return {
             completed: acc.completed + Math.min(completed, minRequired),
@@ -179,10 +187,10 @@ const getRequirementsProgress = (
         }
       }
 
-      return {
-        completed: acc.completed + completed,
-        total: acc.total + leaves.length,
-      }
+      console.warn(
+        `getRequirementsProgress: unsupported operator "${node.data.operator}" (operator_value=${JSON.stringify(node.data.operator_value)}); skipping.`,
+      )
+      return acc
     },
     { completed: 0, total: 0 },
   )
