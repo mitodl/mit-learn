@@ -103,7 +103,7 @@ const SharePopover = ({
   anchorEl: HTMLDivElement | null
   onClose: () => void
   pageUrl: string
-  linkedInHrefOverride: string | null
+  linkedInHrefOverride?: string | null
 }) => {
   const [copyText, setCopyText] = useState("Copy Link")
   const linkedInHref = linkedInHrefOverride
