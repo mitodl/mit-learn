@@ -87,62 +87,76 @@ class QdrantView(APIView):
         self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
-    async def async_vector_search(  # noqa: PLR0913, PLR0915
+    def _format_order_by(self, order_by_parameter):
+        sort = models.Direction.ASC
+        if order_by_parameter.startswith("-") and len(order_by_parameter) > 1:
+            order_by_parameter = order_by_parameter.split("-")[1]
+            sort = models.Direction.DESC
+        return models.OrderBy(key=order_by_parameter, direction=sort)
+
+    async def _build_search_params(  # noqa: PLR0913
         self,
         query_string: str,
-        params: dict,
-        limit: int = 10,
-        offset: int = 0,
-        search_collection=RESOURCES_COLLECTION_NAME,
-        *,
-        hybrid_search: bool = False,
+        search_collection: str,
+        search_filter,
+        limit: int,
+        prefetch_limit: int,
+        order_by: str,
+        encoder_dense,
+        encoder_sparse,
+        hybrid_search,
     ):
-        client = async_qdrant_client()
-        encoder_dense = dense_encoder()
-        encoder_sparse = sparse_encoder()
-
-        search_filter = qdrant_query_conditions(
-            params, collection_name=search_collection
-        )
-        prefetch_multiplier = getattr(
-            settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", 20
-        )
-        prefetch_limit = (offset + limit) * prefetch_multiplier
-        prefetch_max_limit = getattr(
-            settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", None
-        )
-        if prefetch_max_limit is not None:
-            prefetch_limit = min(prefetch_limit, prefetch_max_limit)
-        if query_string:
-            search_params = {
-                "collection_name": search_collection,
-                "query_filter": search_filter,
-                "with_vectors": False,
-                "with_payload": RESOURCES_RETRIEVE_PAYLOAD
-                if search_collection == RESOURCES_COLLECTION_NAME
-                else CONTENT_FILES_RETRIEVE_PAYLOAD,
-                "search_params": models.SearchParams(
-                    quantization=models.QuantizationSearchParams(
-                        ignore=False,
-                        rescore=True,
-                        oversampling=1,
-                    ),
-                    hnsw_ef=64,
-                    indexed_only=True,
-                    exact=False,
+        search_params = {
+            "collection_name": search_collection,
+            "query_filter": search_filter,
+            "with_vectors": False,
+            "with_payload": RESOURCES_RETRIEVE_PAYLOAD
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else CONTENT_FILES_RETRIEVE_PAYLOAD,
+            "search_params": models.SearchParams(
+                quantization=models.QuantizationSearchParams(
+                    ignore=False,
+                    rescore=True,
+                    oversampling=1,
                 ),
-                "limit": limit,
-            }
+                hnsw_ef=64,
+                indexed_only=True,
+                exact=False,
+            ),
+            "limit": limit,
+        }
 
-            if hybrid_search:
-                sparse_query, dense_query = await asyncio.gather(
-                    sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
-                        query_string
-                    ),
-                    sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
-                        query_string
-                    ),
+        if hybrid_search:
+            sparse_query, dense_query = await asyncio.gather(
+                sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
+                    query_string
+                ),
+                sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
+                    query_string
+                ),
+            )
+            if order_by:
+                # Nest: vector prefetches → fusion prefetch → order_by query
+                search_params["prefetch"] = models.Prefetch(
+                    prefetch=[
+                        models.Prefetch(
+                            query=sparse_query,
+                            using=encoder_sparse.model_short_name(),
+                            limit=prefetch_limit,
+                        ),
+                        models.Prefetch(
+                            query=dense_query,
+                            using=encoder_dense.model_short_name(),
+                            limit=prefetch_limit,
+                        ),
+                    ],
+                    query=models.FusionQuery(fusion=models.Fusion.RRF),
+                    limit=prefetch_limit,
                 )
+                search_params["query"] = models.OrderByQuery(
+                    order_by=self._format_order_by(order_by)
+                )
+            else:
                 search_params["prefetch"] = [
                     models.Prefetch(
                         query=sparse_query,
@@ -156,62 +170,133 @@ class QdrantView(APIView):
                     ),
                 ]
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
-            else:
-                dense_query = await sync_to_async(encoder_dense.embed_query)(
-                    query_string
+        else:
+            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
+            if order_by:
+                # Nest: dense vector prefetch → order_by query
+                search_params["prefetch"] = models.Prefetch(
+                    query=dense_query,
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
                 )
+                search_params["query"] = models.OrderByQuery(
+                    order_by=self._format_order_by(order_by)
+                )
+            else:
                 search_params["using"] = encoder_dense.model_short_name()
                 search_params["query"] = dense_query
 
-            if "group_by" in params:
-                search_params.pop("search_params", None)
-                search_params["group_by"] = params.get("group_by")
-                search_params["group_size"] = params.get("group_size", 1)
-                search_params["with_payload"] = True
-                group_result = await client.query_points_groups(**search_params)
-                search_result = []
-                for group in group_result.groups:
-                    payloads = [hit.payload for hit in group.hits]
-                    response_hit = _merge_dicts(payloads)
-                    chunks = [payload.get("chunk_content") for payload in payloads]
-                    response_hit["chunk_content"] = None
-                    response_hit["chunks"] = chunks
-                    response_row = {
-                        "id": response_hit[search_params["group_by"]],
-                        "payload": response_hit,
-                        "vector": [],
-                    }
-                    search_result.append(models.PointStruct(**response_row))
+        return search_params
 
+    async def _execute_group_search(self, client, search_params, params):
+        search_params.pop("search_params", None)
+        search_params["group_by"] = params.get("group_by")
+        search_params["group_size"] = params.get("group_size", 1)
+        search_params["with_payload"] = True
+        group_result = await client.query_points_groups(**search_params)
+        search_result = []
+        for group in group_result.groups:
+            payloads = [hit.payload for hit in group.hits]
+            response_hit = _merge_dicts(payloads)
+            chunks = [payload.get("chunk_content") for payload in payloads]
+            response_hit["chunk_content"] = None
+            response_hit["chunks"] = chunks
+            response_row = {
+                "id": response_hit[search_params["group_by"]],
+                "payload": response_hit,
+                "vector": [],
+            }
+            search_result.append(models.PointStruct(**response_row))
+        return search_result
+
+    async def _execute_scroll_search(  # noqa: PLR0913
+        self, client, search_collection, search_filter, limit, offset, order_by
+    ):
+        remaining_to_skip = offset
+        next_page_offset = None
+        search_result = []
+
+        # Build common scroll kwargs
+        scroll_kwargs = {
+            "collection_name": search_collection,
+            "scroll_filter": search_filter,
+            "with_vectors": False,
+        }
+        if order_by:
+            scroll_kwargs["order_by"] = self._format_order_by(order_by)
+
+        while True:
+            fetch_size = min(max(remaining_to_skip, limit), 1000)
+            scroll_res = await client.scroll(
+                **scroll_kwargs,
+                limit=fetch_size,
+                offset=next_page_offset,
+            )
+            page_points, next_page_offset = scroll_res
+            if remaining_to_skip > 0:
+                skipped = min(remaining_to_skip, len(page_points))
+                page_points = page_points[skipped:]
+                remaining_to_skip -= skipped
+            search_result.extend(page_points)
+            if len(search_result) >= limit or not next_page_offset:
+                break
+        return search_result[:limit]
+
+    async def async_vector_search(  # noqa: PLR0913
+        self,
+        query_string: str,
+        params: dict,
+        order_by: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+        search_collection=RESOURCES_COLLECTION_NAME,
+        *,
+        hybrid_search: bool = False,
+    ):
+        client = async_qdrant_client()
+        encoder_dense = dense_encoder()
+        encoder_sparse = sparse_encoder()
+
+        search_filter = qdrant_query_conditions(
+            params, collection_name=search_collection
+        )
+
+        if query_string:
+            prefetch_multiplier = getattr(
+                settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER", 20
+            )
+            prefetch_limit = (offset + limit) * prefetch_multiplier
+            prefetch_max_limit = getattr(
+                settings, "VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", None
+            )
+            if prefetch_max_limit is not None:
+                prefetch_limit = min(prefetch_limit, prefetch_max_limit)
+
+            search_params = await self._build_search_params(
+                query_string,
+                search_collection,
+                search_filter,
+                limit,
+                prefetch_limit,
+                order_by,
+                encoder_dense,
+                encoder_sparse,
+                hybrid_search,
+            )
+
+            if "group_by" in params:
+                search_result = await self._execute_group_search(
+                    client, search_params, params
+                )
             else:
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
         else:
-            # Qdrant's scroll API uses a point-ID cursor for `offset`, not a
-            # numeric skip count. We implement integer offset by consuming
-            # scroll pages until the desired number of records are skipped.
-            remaining_to_skip = offset
-            next_page_offset = None
-            search_result = []
-            while True:
-                fetch_size = min(max(remaining_to_skip, limit), 1000)
-                scroll_res = await client.scroll(
-                    collection_name=search_collection,
-                    scroll_filter=search_filter,
-                    limit=fetch_size,
-                    offset=next_page_offset,
-                    with_vectors=False,
-                )
-                page_points, next_page_offset = scroll_res
-                if remaining_to_skip > 0:
-                    skipped = min(remaining_to_skip, len(page_points))
-                    page_points = page_points[skipped:]
-                    remaining_to_skip -= skipped
-                search_result.extend(page_points)
-                if len(search_result) >= limit or not next_page_offset:
-                    break
-            search_result = search_result[:limit]
+            # No query string — use scroll API
+            search_result = await self._execute_scroll_search(
+                client, search_collection, search_filter, limit, offset, order_by
+            )
 
         hits_coroutine = (
             sync_to_async(_resource_vector_hits)(search_result)
@@ -280,8 +365,10 @@ class LearningResourcesVectorSearchView(QdrantView):
             hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
+            order_by = request_data.data.get("sortby")
             response = await self.async_vector_search(
                 query_text,
+                order_by=order_by,
                 limit=limit,
                 offset=offset,
                 params=request_data.data,
