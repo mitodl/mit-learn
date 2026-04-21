@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.64.0
+Version 0.64.0 (Released April 21, 2026)
 --------------
 
 - fix: change links of video and playlist on search page (#3223)
