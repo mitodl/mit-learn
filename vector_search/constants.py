@@ -80,6 +80,19 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "views": models.PayloadSchemaType.INTEGER,
 }
 
+
+QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS = [
+    param
+    for param in QDRANT_RESOURCE_PARAM_MAP
+    if QDRANT_RESOURCE_PARAM_MAP[param] in QDRANT_LEARNING_RESOURCE_INDEXES
+    and QDRANT_LEARNING_RESOURCE_INDEXES[QDRANT_RESOURCE_PARAM_MAP[param]]
+    in [
+        models.PayloadSchemaType.DATETIME,
+        models.PayloadSchemaType.INTEGER,
+        models.PayloadSchemaType.FLOAT,
+        models.PayloadSchemaType.UUID,
+    ]
+]
 """
 Note: Be intentional about which fields we add as indexes.
 Only add fields that we expect to filter or facet on frequently.
@@ -95,6 +108,20 @@ QDRANT_CONTENT_FILE_INDEXES = {
     "edx_module_id": models.PayloadSchemaType.KEYWORD,
     "url": models.PayloadSchemaType.KEYWORD,
 }
+
+
+QDRANT_CONTENT_FILES_SORTBY_FIELDS = [
+    param
+    for param in QDRANT_CONTENT_FILE_PARAM_MAP
+    if QDRANT_CONTENT_FILE_PARAM_MAP[param] in QDRANT_CONTENT_FILE_INDEXES
+    and QDRANT_CONTENT_FILE_INDEXES[QDRANT_CONTENT_FILE_PARAM_MAP[param]]
+    in [
+        models.PayloadSchemaType.DATETIME,
+        models.PayloadSchemaType.INTEGER,
+        models.PayloadSchemaType.FLOAT,
+        models.PayloadSchemaType.UUID,
+    ]
+]
 
 QDRANT_TOPIC_INDEXES = {
     "name": models.PayloadSchemaType.KEYWORD,

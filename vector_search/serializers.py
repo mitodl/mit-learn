@@ -14,7 +14,6 @@ from learning_resources.constants import (
 )
 from learning_resources.serializers import LearningResourceSerializer
 from learning_resources_search.serializers import (
-    CONTENT_FILE_SORTBY_OPTIONS,
     ArrayWrappedBoolean,
     ContentFileSerializer,
     SearchResponseMetadata,
@@ -22,6 +21,8 @@ from learning_resources_search.serializers import (
 )
 from vector_search.constants import (
     QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_CONTENT_FILES_SORTBY_FIELDS,
+    QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS,
     QDRANT_RESOURCE_PARAM_MAP,
 )
 
@@ -162,8 +163,8 @@ class LearningResourcesVectorSearchRequestSerializer(
     )
     sortby = serializers.ChoiceField(
         required=False,
-        choices=list(QDRANT_RESOURCE_PARAM_MAP.keys())
-        + [f"-{param}" for param in QDRANT_RESOURCE_PARAM_MAP],
+        choices=QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS
+        + [f"-{param}" for param in QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS],
         help_text="if the parameter starts with '-' the sort is in descending order",
     )
     aggregation_choices = [
@@ -251,7 +252,7 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
     )
     sortby = serializers.ChoiceField(
         required=False,
-        choices=CONTENT_FILE_SORTBY_OPTIONS,
+        choices=QDRANT_CONTENT_FILES_SORTBY_FIELDS,
         help_text="if the parameter starts with '-' the sort is in descending order",
     )
     key = serializers.ListField(
