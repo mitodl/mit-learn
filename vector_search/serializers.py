@@ -160,6 +160,12 @@ class LearningResourcesVectorSearchRequestSerializer(
         default=True,
         help_text="If the resource is published. We default to True unless passed in",
     )
+    sortby = serializers.ChoiceField(
+        required=False,
+        choices=list(QDRANT_RESOURCE_PARAM_MAP.keys())
+        + [f"-{param}" for param in QDRANT_RESOURCE_PARAM_MAP],
+        help_text="if the parameter starts with '-' the sort is in descending order",
+    )
     aggregation_choices = [
         (key, key.replace("_", " ").title()) for key in QDRANT_RESOURCE_PARAM_MAP
     ]
