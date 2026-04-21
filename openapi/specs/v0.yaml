@@ -2083,6 +2083,10 @@ components:
         summary:
           type: string
         flashcards: {}
+        youtube_id:
+          type: string
+          nullable: true
+          maxLength: 32
       required:
       - content_feature_type
       - course_number

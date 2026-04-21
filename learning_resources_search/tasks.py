@@ -104,7 +104,7 @@ def update_featured_rank():
 def upsert_content_file(file_id):
     """Upsert content file based on stored database information"""
 
-    content_file_obj = ContentFile.objects.get(id=file_id)
+    content_file_obj = ContentFile.objects.for_serialization().get(id=file_id)
     content_file_data = serialize_content_file_for_update(content_file_obj)
     api.upsert_document(
         gen_content_file_id(content_file_obj.id),

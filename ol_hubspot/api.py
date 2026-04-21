@@ -5,6 +5,9 @@ from http import HTTPStatus
 import requests
 from django.conf import settings
 from hubspot import HubSpot
+from hubspot.crm.properties.models.option_input import OptionInput
+from hubspot.crm.properties.models.property_create import PropertyCreate
+from hubspot.crm.properties.models.property_update import PropertyUpdate
 from hubspot.marketing.forms.exceptions import ApiException
 
 HSFORMS_API_BASE_URL = "https://api.hsforms.com"
@@ -49,6 +52,57 @@ def list_forms(
         archived=archived,
         form_types=form_types,
     )
+
+
+def _build_contact_property_options(option_values: list[str]) -> list[OptionInput]:
+    """Convert simple strings to HubSpot contact property option models."""
+    return [
+        OptionInput(
+            hidden=False,
+            display_order=index,
+            label=value,
+            value=value,
+        )
+        for index, value in enumerate(option_values)
+    ]
+
+
+def get_contact_property(*, property_name: str):
+    """Fetch a HubSpot contact property by internal name."""
+    client = get_hubspot_client()
+    return client.crm.properties.core_api.get_by_name("contacts", property_name)
+
+
+def create_contact_property(  # noqa: PLR0913
+    *,
+    property_name: str,
+    label: str,
+    option_values: list[str],
+    group_name: str,
+    field_type: str,
+    description: str = "",
+    form_field: bool = True,
+):
+    """Create a HubSpot contact enumeration property with options."""
+    client = get_hubspot_client()
+    payload = PropertyCreate(
+        name=property_name,
+        label=label,
+        description=description,
+        group_name=group_name,
+        type="enumeration",
+        field_type=field_type,
+        form_field=form_field,
+        options=_build_contact_property_options(option_values),
+    )
+    return client.crm.properties.core_api.create("contacts", payload)
+
+
+def update_contact_property_choices(*, property_name: str, option_values: list[str]):
+    """Update options on an existing HubSpot contact property."""
+    client = get_hubspot_client()
+    payload = PropertyUpdate(options=_build_contact_property_options(option_values))
+    return client.crm.properties.core_api.update("contacts", property_name, payload)
 
 
 def verify_recaptcha(response_token: str, remote_ip: str | None = None) -> bool:

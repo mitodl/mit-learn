@@ -39,6 +39,8 @@ import {
   LINKEDIN_SHARE_BASE_URL,
   coursePageView,
   programPageView,
+  videoDetailPageView,
+  videoPlaylistPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -210,13 +212,20 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
-  if (
-    resource?.resource_type === "video" &&
-    resource?.url &&
-    resource?.platform?.code === PlatformEnum.Youtube
-  ) {
+  const youtubeId =
+    resource?.resource_type === "video"
+      ? resource.content_files?.[0]?.youtube_id
+      : null
+  const youtubeUrl = youtubeId
+    ? `https://www.youtube.com/watch?v=${youtubeId}`
+    : resource?.resource_type === "video" &&
+        resource?.platform?.code === PlatformEnum.Youtube
+      ? resource.url
+      : null
+
+  if (resource && youtubeUrl) {
     return (
-      <VideoFrame src={resource.url} title={resource.title} aspect={aspect} />
+      <VideoFrame src={youtubeUrl} title={resource.title} aspect={aspect} />
     )
   } else if (resource) {
     const imageUrl =
@@ -259,7 +268,6 @@ const CallToActionButton: React.FC<ButtonProps & { selected?: boolean }> = (
 const getCallToActionText = (resource: LearningResource): string => {
   const accessCourseMaterials = "Access Course Materials"
   const accessLearningMaterial = "Access Learning Material"
-  const watchOnYouTube = "Watch on YouTube"
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
@@ -272,11 +280,6 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
-  }
-
-  if (resource?.platform?.code === PlatformEnum.Youtube) {
-    // YouTube resources should always show "Watch on YouTube" as the CTA
-    return watchOnYouTube
   }
 
   if (resource?.resource_category === "Article") {
@@ -318,7 +321,10 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
 
 const getResourceUrl = (
   resource: LearningResource,
-  { mitxonlineProductPages }: { mitxonlineProductPages?: boolean },
+  {
+    mitxonlineProductPages,
+    showVideoPlaylistPage,
+  }: { mitxonlineProductPages?: boolean; showVideoPlaylistPage?: boolean },
 ) => {
   if (
     mitxonlineProductPages &&
@@ -341,6 +347,17 @@ const getResourceUrl = (
             ? DisplayModeEnum.Course
             : undefined,
       })
+    }
+  }
+  if (showVideoPlaylistPage) {
+    if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+      return videoPlaylistPageView(resource.id.toString())
+    }
+    if (
+      resource.resource_type === ResourceTypeEnum.Video &&
+      resource?.playlists?.length > 0
+    ) {
+      return videoDetailPageView(resource.id, Number(resource.playlists[0]))
     }
   }
   return resource.url
@@ -373,6 +390,9 @@ const CallToActionSection = ({
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
+  const showVideoPlaylistPage = useFeatureFlagEnabled(
+    FeatureFlags.VideoPlaylistPage,
+  )
 
   if (hide) {
     return null
@@ -399,7 +419,7 @@ const CallToActionSection = ({
   const shareLabel = "Share"
   const socialIconSize = 18
   const url = appendUtmParams(
-    getResourceUrl(resource, { mitxonlineProductPages }),
+    getResourceUrl(resource, { mitxonlineProductPages, showVideoPlaylistPage }),
     resource.title,
   )
 

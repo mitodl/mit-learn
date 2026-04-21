@@ -349,8 +349,9 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             Prefetch(
                 "topics",
                 queryset=LearningResourceTopic.objects.for_serialization(),
+                to_attr="_topics",
             ),
-            Prefetch("resource_prices"),
+            Prefetch("resource_prices", to_attr="_resource_prices"),
             Prefetch(
                 "offered_by",
                 queryset=LearningResourceOfferor.objects.for_serialization(),
@@ -385,9 +386,8 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             ),
             Prefetch(
                 "children",
-                queryset=LearningResourceRelationship.objects.select_related(
-                    "child"
-                ).order_by("position"),
+                queryset=LearningResourceRelationship.objects.for_serialization(),
+                to_attr="_children",
             ),
             Prefetch(
                 "direct_content_files",
@@ -425,7 +425,24 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                             "school"
                         ),
                     ),
+                    "direct_learning_resource__course",
+                    "direct_learning_resource__platform",
+                    Prefetch(
+                        "direct_learning_resource__topics",
+                        queryset=LearningResourceTopic.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "direct_learning_resource__offered_by",
+                        queryset=LearningResourceOfferor.objects.for_serialization(),
+                    ),
+                    Prefetch(
+                        "direct_learning_resource__departments",
+                        queryset=LearningResourceDepartment.objects.for_serialization(
+                            prefetch_school=True
+                        ).select_related("school"),
+                    ),
                 ),
+                to_attr="_direct_content_files",
             ),
             *LearningResourceDetailModel.get_subclass_prefetches(),
         ).select_related("image", "platform")
@@ -625,6 +642,41 @@ class LearningResource(TimestampedModel):
             .order_by("start_date", "enrollment_start", "id")
             .for_serialization()
         )
+
+    def topics_for_serialization(self):
+        """Return topics using the prefetch cache when available."""
+        if hasattr(self, "_topics"):
+            return self._topics
+        return list(self.topics.for_serialization())
+
+    def resource_prices_for_serialization(self):
+        """Return resource prices using the prefetch cache when available."""
+        if hasattr(self, "_resource_prices"):
+            return self._resource_prices
+        return list(self.resource_prices.all())
+
+    def resource_price_amounts_for_serialization(self):
+        """Return resource price amounts using the prefetch cache when available."""
+        return [price.amount for price in self.resource_prices_for_serialization()]
+
+    def children_for_serialization(self):
+        """Return children using the prefetch cache when available."""
+        if hasattr(self, "_children"):
+            return self._children
+        return list(
+            self.children.order_by("position").select_related("child", "child__image")
+        )
+
+    def first_child_relationship_for_serialization(self):
+        """Return the first child relationship ordered by position."""
+        children = self.children_for_serialization()
+        return children[0] if children else None
+
+    def direct_content_files_for_serialization(self):
+        """Return direct content files using the prefetch cache when available."""
+        if hasattr(self, "_direct_content_files"):
+            return self._direct_content_files
+        return list(self.direct_content_files.for_serialization())
 
     @cached_property
     def views_count(self) -> int:
@@ -955,6 +1007,14 @@ class LearningPath(LearningResourceDetailModel):
         return f"Learning Path: {self.learning_resource.title}"
 
 
+class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
+    """QuerySet for LearningResourceRelationship"""
+
+    def for_serialization(self):
+        """Prefetch related objects used by API serializers"""
+        return self.select_related("child", "child__image").order_by("position")
+
+
 class LearningResourceRelationship(TimestampedModel):
     """
     LearningResourceRelationship model tracks the relationships between learning resources,
@@ -975,6 +1035,8 @@ class LearningResourceRelationship(TimestampedModel):
         default=None,
     )
 
+    objects = LearningResourceRelationshipQuerySet.as_manager()
+
     class Meta:
         ordering = ["position"]
 
@@ -984,7 +1046,11 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Return a queryset ready for serialization"""
-        return self.select_related("run").prefetch_related(
+        return self.select_related(
+            "run",
+            "learning_resource",
+            "direct_learning_resource",
+        ).prefetch_related(
             "content_tags",
             "run__learning_resource",
             "run__learning_resource__course",
@@ -999,6 +1065,38 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
             ),
             Prefetch(
                 "run__learning_resource__departments",
+                queryset=LearningResourceDepartment.objects.for_serialization(
+                    prefetch_school=True
+                ).select_related("school"),
+            ),
+            "learning_resource__course",
+            "learning_resource__platform",
+            Prefetch(
+                "learning_resource__topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "learning_resource__departments",
+                queryset=LearningResourceDepartment.objects.for_serialization(
+                    prefetch_school=True
+                ).select_related("school"),
+            ),
+            "direct_learning_resource__course",
+            "direct_learning_resource__platform",
+            Prefetch(
+                "direct_learning_resource__topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+            ),
+            Prefetch(
+                "direct_learning_resource__offered_by",
+                queryset=LearningResourceOfferor.objects.for_serialization(),
+            ),
+            Prefetch(
+                "direct_learning_resource__departments",
                 queryset=LearningResourceDepartment.objects.for_serialization(
                     prefetch_school=True
                 ).select_related("school"),
@@ -1101,6 +1199,7 @@ class ContentFile(TimestampedModel):
     summary = models.TextField(blank=True, default="")
     flashcards = models.JSONField(blank=True, default=list)
     duration = models.CharField(max_length=11, null=True, blank=True)  # noqa: DJ001
+    youtube_id = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
 
     def save(self, **kwargs):
         self.checksum = checksum_for_content(self.content)
@@ -1158,6 +1257,53 @@ class UserList(TimestampedModel):
         choices=tuple((level.value, level.value) for level in PrivacyLevel),
     )
 
+    def topics_for_serialization(self):
+        """Return topics using the prefetch cache when available."""
+        if hasattr(self, "_topics"):
+            return self._topics
+        return list(self.topics.for_serialization())
+
+    def first_child_relationship_for_serialization(self):
+        """Return the first child relationship ordered by position."""
+        children = getattr(self, "_children", None)
+        if children is None:
+            return self.children.order_by("position").first()
+        return children[0] if children else None
+
+
+class UserListQuerySet(TimestampedModelQuerySet):
+    """QuerySet for UserList"""
+
+    def for_serialization(self):
+        """Prefetch related objects used by API serializers"""
+        return self.select_related("author").prefetch_related(
+            Prefetch(
+                "topics",
+                queryset=LearningResourceTopic.objects.for_serialization(),
+                to_attr="_topics",
+            ),
+            Prefetch(
+                "children",
+                queryset=UserListRelationship.objects.select_related(
+                    "child", "child__image"
+                ).order_by("position"),
+                to_attr="_children",
+            ),
+        )
+
+
+UserList.add_to_class("objects", UserListQuerySet.as_manager())
+
+
+class UserListRelationshipQuerySet(TimestampedModelQuerySet):
+    """QuerySet for UserListRelationship"""
+
+    def for_serialization(self):
+        """Prefetch related objects used by API serializers"""
+        return self.select_related("parent", "parent__author").prefetch_related(
+            Prefetch("child", queryset=LearningResource.objects.for_serialization())
+        )
+
 
 class UserListRelationship(TimestampedModel):
     """
@@ -1172,6 +1318,8 @@ class UserListRelationship(TimestampedModel):
         LearningResource, related_name="user_lists", on_delete=models.deletion.CASCADE
     )
     position = models.PositiveIntegerField(default=0)
+
+    objects = UserListRelationshipQuerySet.as_manager()
 
     class Meta:
         ordering = ["position"]
