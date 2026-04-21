@@ -514,6 +514,22 @@ const searchModeDropdownOptions = Object.entries(
   SearchModeEnumDescriptions,
 ).map(([label, value]) => ({ label, value }))
 
+const mapVectorSortby = (
+  sortby?: string,
+): VectorSearchRequest["sortby"] | undefined => {
+  switch (sortby) {
+    case "-views":
+    case "popular":
+      return "-views" as VectorSearchRequest["sortby"]
+    case "upcoming":
+      return "next_start_date" as VectorSearchRequest["sortby"]
+    case "new":
+      return "-created_on" as VectorSearchRequest["sortby"]
+    default:
+      return undefined
+  }
+}
+
 /**
  * Extracts only the fields supported by the vector search API from a broader
  * search params object, dropping admin-only params (e.g., content_file_score_weight)
@@ -524,7 +540,7 @@ const searchModeDropdownOptions = Object.entries(
  * string-literal values (e.g., delivery: 'online' | 'hybrid' | ...).
  */
 const toVectorSearchParams = (
-  params: ReturnType<typeof getSearchParams>,
+  params: ReturnType<typeof getSearchParams> & { sortby?: string },
 ): VectorSearchRequest => ({
   aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
@@ -545,6 +561,7 @@ const toVectorSearchParams = (
   resource_type: params.resource_type as VectorSearchRequest["resource_type"],
   resource_type_group:
     params.resource_type_group as VectorSearchRequest["resource_type_group"],
+  sortby: mapVectorSortby(params.sortby),
   topic: params.topic,
   hybrid_search: true,
 })
