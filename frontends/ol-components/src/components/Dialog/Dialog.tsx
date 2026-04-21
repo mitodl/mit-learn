@@ -127,6 +127,7 @@ const Dialog: React.FC<DialogProps> = ({
         transition: TransitionProps,
       }}
       aria-labelledby={titleId}
+      transitionDuration={process.env.NODE_ENV === "test" ? 0 : undefined}
       maxWidth={maxWidth}
       scroll={scroll}
     >
