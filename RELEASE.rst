@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.64.1
+Version 0.64.1 (Released April 22, 2026)
 --------------
 
 - feat: track Stay Updated button click with PostHog cta_clicked event (#3225)
