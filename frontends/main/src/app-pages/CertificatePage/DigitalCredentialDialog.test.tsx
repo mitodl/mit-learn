@@ -257,7 +257,11 @@ describe("DigitalCredentialDialog", () => {
       const verifyLink = screen.getByRole("link", {
         name: /Verify Credential/i,
       })
-      expect(verifyLink).toHaveAttribute("href", "https://verifierplus.org/")
+      /* TODO: This may need to change to account for different hosts */
+      expect(verifyLink).toHaveAttribute(
+        "href",
+        `https://verifierplus.org/#verify?vc=https://mitxonline.mit.edu/api/v2/verifiable_certificate_credential/xample.com/credentials/${credential.uuid}/download`,
+      )
       expect(verifyLink).toHaveAttribute("target", "_blank")
     })
   })
