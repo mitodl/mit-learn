@@ -9,7 +9,6 @@ services:
     env_file: env/codespaces.env
     depends_on:
       - opensearch-node-mitopen-1
-
   watch:
     extends:
       file: docker-compose.apps.yml
@@ -20,4 +19,9 @@ services:
     extends:
       file: docker-compose.apps.yml
       service: celery
+    env_file: env/codespaces.env
+  keycloak:
+    extends:
+      file: docker-compose.services.yml
+      service: keycloak
     env_file: env/codespaces.env
