@@ -1,5 +1,6 @@
 include:
   - docker-compose.services.yml
+  - docker-compose.apps.yml
 
 services:
   web:
@@ -25,3 +26,5 @@ services:
       file: docker-compose.services.yml
       service: keycloak
     env_file: env/codespaces.env
+    environment:
+      - ${KEYCLOAK_PORT:-8086}:${KEYCLOAK_PORT:-8086}
