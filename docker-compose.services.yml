@@ -1,154 +1,79 @@
-include:
-  - docker-compose.opensearch.${OPENSEARCH_CLUSTER_TYPE:-single-node}.yml
-
-# Define the extra_hosts as a reusable anchor
-x-extra-hosts: &default-extra-hosts
-  extra_hosts:
-    - "mitxonline.odl.local:host-gateway"
+version: "3.9"
 
 services:
-  db:
-    profiles:
-      - backend
-    image: postgres:16
-    healthcheck:
-      test: ["CMD", "pg_isready"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-    ports:
-      - 5432:5432
-    environment:
-      - PGUSER=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - pgdata:/var/lib/postgresql
-      - ./config/postgres:/docker-entrypoint-initdb.d
-      - ./backups:/mnt/backups
-
-  redis:
-    profiles:
-      - backend
-    image: redis:8.2.2
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-    ports:
-      - "6379"
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant-data:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "cat", ".qdrant-initialized"]
-      interval: 1s
-      timeout: 3s
-      retries: 10
-  nginx:
-    profiles:
-      - backend
-    build:
-      context: ./nginx
-    ports:
-      - "8063:8063"
-    links:
-      - web
-    environment:
-      PORT: 8063
-      NGINX_BACKEND: "web:8061"
-    volumes:
-      - ./config:/etc/nginx/templates
-
-  tika:
-    profiles:
-      - backend
-    image: apache/tika:2.5.0
-    ports:
-      - "9998:9998"
-
-  locust:
-    image: locustio/locust
-    ports:
-      - "8089:8089"
-    volumes:
-      - ./load_testing_locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --master -H http://nginx:8063 --class-picker
-    links:
-      - nginx
-    profiles:
-      - load-testing
-
-  locust-worker:
-    image: locustio/locust
-    volumes:
-      - ./load_testing_locust:/mnt/locust
-    command: -f /mnt/locust/locustfile.py --worker --master-host locust
-    links:
-      - nginx
-    profiles:
-      - load-testing
-
   keycloak:
-    profiles:
-      - keycloak
-    image: quay.io/keycloak/keycloak:26.4
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - ${KEYCLOAK_PORT}:${KEYCLOAK_PORT}
-      - ${KEYCLOAK_SSL_PORT}:${KEYCLOAK_SSL_PORT}
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    restart: unless-stopped
+
     environment:
-      - KEYCLOAK_ADMIN=${KEYCLOAK_SVC_ADMIN:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_SVC_ADMIN_PASSWORD:-admin}
-      - "_JAVA_OPTIONS=${JAVA_OPTIONS:-}" # Load _JAVA_OPTIONS from env, fallback to empty string
-    networks:
-      default:
-        aliases:
-          - ${KEYCLOAK_SVC_HOSTNAME:-kc.ol.local}
-    command: start --verbose --features scripts --import-realm --hostname=${KEYCLOAK_SVC_HOSTNAME:-kc.ol.local} --hostname-strict=false --hostname-debug=true --https-port=${KEYCLOAK_SSL_PORT} --https-certificate-file=/etc/x509/https/tls.crt --https-certificate-key-file=/etc/x509/https/tls.key --http-enabled=true --http-port=${KEYCLOAK_PORT} --config-keystore=/etc/keycloak-store --config-keystore-password=${KEYCLOAK_SVC_KEYSTORE_PASSWORD} --db=postgres --db-url-database=keycloak --db-url-host=db --db-schema=public --db-password=${POSTGRES_PASSWORD:-postgres} --db-username=postgres --db-url-port=${PGPORT:-5432}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
+    command: >
+      start --verbose --features scripts --import-realm
+      --hostname=${KEYCLOAK_BASE_URL:-kc.ol.local}
+      --hostname-strict=false
+      --hostname-debug=true
+      --https-port=${KEYCLOAK_SSL_PORT:-8067}
+      --https-certificate-file=/etc/x509/https/tls.crt
+      --https-certificate-key-file=/etc/x509/https/tls.key
+      --http-enabled=true
+      --http-port=${KEYCLOAK_PORT:-8066}
+      --config-keystore=/etc/keycloak-store
+      --config-keystore-password=${KEYCLOAK_SVC_KEYSTORE_PASSWORD:-changeit}
+
+    ports:
+      - "${KEYCLOAK_PORT:-8066}:${KEYCLOAK_PORT:-8066}"
+      - "${KEYCLOAK_SSL_PORT:-8067}:${KEYCLOAK_SSL_PORT:-8067}"
+
     volumes:
-      - keycloak-store:/etc/keycloak-store
-      - ./config/keycloak/tls:/etc/x509/https
-      - ./config/keycloak/realms:/opt/keycloak/data/import
-      - ./config/keycloak/providers:/opt/keycloak/providers
-      - ./config/keycloak/themes:/opt/jboss/keycloak/themes
+      - keycloak_data:/opt/keycloak/data
+      - ./certs:/etc/x509/https:ro
+
+    networks:
+      - ol-network
 
   apigateway:
-    profiles:
-      - apisix
-    image: apache/apisix:3.13.0-debian # versions above this drop the local port on redirects
-    <<: *default-extra-hosts
+    image: apache/apisix:latest
+    container_name: apigateway
+    restart: unless-stopped
+
     environment:
-      - CSRF_COOKIE_DOMAIN=${CSRF_COOKIE_DOMAIN:-.odl.local}
-      - KEYCLOAK_REALM_NAME=${KEYCLOAK_REALM_NAME:-ol-local}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-apisix}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - KEYCLOAK_DISCOVERY_URL=${KEYCLOAK_DISCOVERY_URL:-https://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration}
-      - KEYCLOAK_SCOPES=${KEYCLOAK_SCOPES:-openid,profile,ol-profile}
-      - APISIX_PORT=${APISIX_PORT:-8065}
-      - APISIX_SESSION_SECRET_KEY=${APISIX_SESSION_SECRET_KEY:-something_at_least_16_characters}
-      - APISIX_LOGOUT_URL=${APISIX_LOGOUT_URL:-http://open.odl.local:8065/}
-      - MITOL_API_DOMAIN=${MITOL_API_DOMAIN:-api.open.odl.local}
-      - MITX_ONLINE_UPSTREAM=${MITX_ONLINE_UPSTREAM:-mitxonline.odl.local:8013}
-      - MITX_ONLINE_DOMAIN=${MITX_ONLINE_DOMAIN:-mitxonline.odl.local}
-      - NGINX_PORT=${NGINX_PORT:-8062}
+      APISIX_PORT: ${APISIX_PORT:-8065}
+      KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL:-http://kc.ol.local:8066}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-apisix}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-HckCZXToXfaetbBx0Fo3xbjnC468oMi4}
+      KEYCLOAK_REALM_NAME: ${KEYCLOAK_REALM_NAME:-ol-local}
+      KEYCLOAK_DISCOVERY_URL: ${KEYCLOAK_DISCOVERY_URL:-http://kc.ol.local:8066/realms/ol-local/.well-known/openid-configuration}
+
     ports:
-      - ${APISIX_PORT}:${APISIX_PORT}
+      - "${APISIX_PORT:-8065}:${APISIX_PORT:-8065}"
+
+    depends_on:
+      - keycloak
+
+    networks:
+      - ol-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
     volumes:
-      - ./config/apisix/config.yaml:/usr/local/apisix/conf/config.yaml
-      - ./config/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml
-      - ./config/apisix/debug.yaml:/usr/local/apisix/conf/debug.yaml
+      - redis_data:/data
+
+    networks:
+      - ol-network
+
+networks:
+  ol-network:
+    driver: bridge
 
 volumes:
-  pgdata:
-  # note: these are here instead of docker-compose.apps.yml because `extends` doesn't pull them in
-  django_media:
-  yarn-cache:
-  qdrant-data:
-  keycloak-store:
+  keycloak_data:
+  redis_data:
