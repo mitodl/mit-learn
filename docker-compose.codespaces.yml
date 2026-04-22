@@ -1,6 +1,7 @@
 include:
   - docker-compose.services.yml
   - docker-compose.apps.yml
+  - docker-compose.opensearch.single-node.yml
 
 services:
   web:
