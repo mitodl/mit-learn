@@ -3,6 +3,8 @@ import type {
   V2CourseRunCertificate,
 } from "@mitodl/mitxonline-api-axios/v2"
 
+import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
+
 /**
  * Returns common display info for a certificate.
  */
@@ -118,7 +120,7 @@ export const getVerifiableCredentialLinkedInURL = (
   )
   /* TODO: Should I link to the certificate page instead of the download URL? */
   return encodeURI(
-    `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationId=${ORG_ID}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
+    `${LINKEDIN_ADD_TO_PROFILE_BASE_URL}?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationId=${ORG_ID}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
   )
 }
 
@@ -132,5 +134,5 @@ export const getCertificateLinkedInUrl = (
       ? (certificateData as V2CourseRunCertificate).course_run.course.title
       : (certificateData as V2ProgramCertificate).program.title
   const certId = certificateData.uuid
-  return `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}&organizationId=${ORG_ID}`
+  return `${LINKEDIN_ADD_TO_PROFILE_BASE_URL}?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}&organizationId=${ORG_ID}`
 }

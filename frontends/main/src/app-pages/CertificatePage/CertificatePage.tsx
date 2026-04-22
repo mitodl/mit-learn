@@ -748,8 +748,6 @@ const CertificatePage: React.FC<{
     ? certificateData?.verifiable_credential_json
     : null
 
-  // TODO: Need to generate an equivalent fallback if there's no VC available.
-  // Probably only have stuff in https://rc.mitxonline.mit.edu/api/schema/swagger-ui/#/program_certificates/program_certificates_retrieve to work with
   const linkedInAddToProfileUrl = certificateData?.verifiable_credential_json
     ? getVerifiableCredentialLinkedInURL(
         certificateData.verifiable_credential_json,
