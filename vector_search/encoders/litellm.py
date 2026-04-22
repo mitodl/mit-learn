@@ -42,7 +42,7 @@ class LiteLLMEncoder(BaseEncoder):
                 port=redis_url.port,
                 password=redis_url.password,
                 supported_call_types=["embedding", "aembedding"],
-                ttl=60 * 60 * 24,
+                ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
             )
         else:
             litellm.disable_cache()
