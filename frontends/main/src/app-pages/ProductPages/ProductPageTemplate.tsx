@@ -301,7 +301,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
     enabled: shouldShowStayUpdatedButton,
   })
 
-  const handleStayUpdatedClick = () => {
+  const handleStayUpdatedClick = (readableId: string) => {
     if (!showStayUpdated || !resource) return
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
@@ -311,7 +311,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         platform: PlatformEnum.Mitxonline,
       })
     }
-    NiceModal.show(StayUpdatedModal)
+    NiceModal.show(StayUpdatedModal, {
+      productReadableId: readableId,
+    })
   }
 
   return (
@@ -358,11 +360,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={() =>
-                            NiceModal.show(StayUpdatedModal, {
-                              productReadableId: readableId,
-                            })
-                          }
+                          onClick={() => handleStayUpdatedClick(readableId)}
                         >
                           Stay Updated
                         </StayUpdatedButton>
