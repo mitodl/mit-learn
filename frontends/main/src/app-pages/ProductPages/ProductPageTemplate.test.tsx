@@ -41,7 +41,6 @@ const mockedUseHubspotFormDetail = jest.mocked(useHubspotFormDetail)
 const mockedNiceModalShow = jest.mocked(NiceModal.show)
 
 const DEFAULT_RESOURCE: ResourceInfo = {
-  id: 1,
   readable_id: "program-v1:default+test",
   resource_type: "program",
 }

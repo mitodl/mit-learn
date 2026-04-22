@@ -291,7 +291,6 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         )
       }
       resource={{
-        id: program.id,
         readable_id: program.readable_id,
         resource_type: "program",
       }}

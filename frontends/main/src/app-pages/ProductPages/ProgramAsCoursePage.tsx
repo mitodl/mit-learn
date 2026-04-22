@@ -290,7 +290,6 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
         )
       }
       resource={{
-        id: program.id,
         readable_id: program.readable_id,
         resource_type: "program",
       }}

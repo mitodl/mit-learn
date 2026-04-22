@@ -258,7 +258,6 @@ const SidebarMedia: React.FC<{
 }
 
 export type ResourceInfo = {
-  id: number
   readable_id: string
   resource_type: "course" | "program"
 }
