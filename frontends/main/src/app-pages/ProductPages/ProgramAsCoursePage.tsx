@@ -289,6 +289,10 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
           isVerifiedEnrollmentMode(mode.mode_slug),
         )
       }
+      resource={{
+        readable_id: program.readable_id,
+        resource_type: "program",
+      }}
       infoBox={
         <ProgramAsCourseInfoBox
           program={program}

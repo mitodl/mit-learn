@@ -19,6 +19,9 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { getStayUpdatedHubspotFormId } from "@/common/config"
+import { usePostHog } from "posthog-js/react"
+import { PostHogEvents } from "@/common/constants"
+import { PlatformEnum } from "api"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -254,6 +257,11 @@ const SidebarMedia: React.FC<{
   )
 }
 
+export type ResourceInfo = {
+  readable_id: string
+  resource_type: "course" | "program"
+}
+
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
   title: string
@@ -263,8 +271,10 @@ type ProductPageTemplateProps = {
   infoBox: React.ReactNode
   enrollmentAction: React.ReactNode
   children: React.ReactNode
-  showStayUpdated?: boolean
-}
+} & (
+  | { showStayUpdated: boolean; resource: ResourceInfo }
+  | { showStayUpdated?: false; resource?: never }
+)
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
   title,
@@ -275,7 +285,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   children,
   enrollmentAction,
   showStayUpdated,
+  resource,
 }) => {
+  const posthog = usePostHog()
   const stayUpdatedFormId = getStayUpdatedHubspotFormId()
   const shouldShowStayUpdatedButton = Boolean(
     stayUpdatedFormId && showStayUpdated,
@@ -286,6 +298,19 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   const formQuery = useHubspotFormDetail(stayUpdatedParams, {
     enabled: shouldShowStayUpdatedButton,
   })
+
+  const handleStayUpdatedClick = () => {
+    if (!showStayUpdated || !resource) return
+    if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
+      posthog.capture(PostHogEvents.CallToActionClicked, {
+        label: "Stay Updated",
+        readableId: resource.readable_id,
+        resourceType: resource.resource_type,
+        platform: PlatformEnum.Mitxonline,
+      })
+    }
+    NiceModal.show(StayUpdatedModal)
+  }
 
   return (
     <Page>
@@ -331,7 +356,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={() => NiceModal.show(StayUpdatedModal)}
+                          onClick={handleStayUpdatedClick}
                         >
                           Stay Updated
                         </StayUpdatedButton>
