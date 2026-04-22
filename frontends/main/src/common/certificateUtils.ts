@@ -17,6 +17,11 @@ export enum CertificateType {
   Program = "program",
 }
 
+/* Unsure if I should use NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL or NEXT_PUBLIC_MITX_ONLINE_BASE_URL
+ * The below matches my naive expectations but we need to confirm that since we need unauthenticated access
+ */
+const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
+
 /*
  * This interface defines the structure of a VerifiableCredential (Open Badges v3.0).
  * While this type is not explicitly defined / unknown in our API, we can rely on its stability
@@ -92,7 +97,7 @@ export const getCertificateDownloadAPIURL = (
       "achievementType"
     ].toLowerCase()
   const certId = verifiableCredentialJson["id"].substring(9)
-  return `https://mitxonline.mit.edu/api/v2/verifiable_${type}_credential/${certId}/download`
+  return `${API_BASE_URL}/api/v2/verifiable_${type}_credential/${certId}/download`
 }
 
 export const getVerifiableCredentialLinkedInURL = (
