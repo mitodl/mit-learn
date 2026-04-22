@@ -257,7 +257,7 @@ describe("DigitalCredentialDialog", () => {
       const verifyLink = screen.getByRole("link", {
         name: /Verify Credential/i,
       })
-      /* TODO: This may need to change to account for different hosts */
+
       expect(verifyLink).toHaveAttribute(
         "href",
         `https://verifierplus.org/#verify?vc=${process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL}/api/v2/verifiable_${credential["credentialSubject"]["achievement"]["achievementType"].toLowerCase()}_credential/${credential["id"].substring(9)}/download`,
