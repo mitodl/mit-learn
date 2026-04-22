@@ -147,6 +147,10 @@ const learningResourceQueries = {
         params as ItemsListRequest,
       ),
       queryFn: async ({ pageParam }) => {
+        // We need to investigate why pageParam is always null and that make
+        // infinite query not working properly also the api call has port
+        // being add into the url for RC and PROD.
+        // https://github.com/mitodl/hq/issues/10999
         const request = pageParam
           ? axiosInstance.request<PaginatedLearningResourceRelationshipList>({
               method: "get",
