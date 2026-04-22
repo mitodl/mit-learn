@@ -38,7 +38,7 @@ const ImageWrapper = styled(Link)<{ $isSeries?: boolean }>(
     display: "block",
     textDecoration: "none",
     "& .play-overlay": {
-      opacity: 0.5,
+      opacity: 1,
       transform: "scale(1)",
       transition: "opacity 0.3s ease, transform 0.3s ease",
     },
@@ -71,11 +71,10 @@ const PlayCircle = styled.div({
   width: "92px",
   height: "92px",
   borderRadius: "50%",
-  backgroundColor: "rgba(255, 255, 255, 0.90)",
+  backgroundColor: "rgba(255, 255, 255, 0.50)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  boxShadow: "0 4px 16px rgba(0,0,0,0.32)",
 })
 
 const DurationBadge = styled.span(({ theme }) => ({
@@ -97,7 +96,7 @@ const TextSide = styled.div(({ theme }) => ({
   },
 }))
 
-const Buttonide = styled.div(({ theme }) => ({
+const Buttonide = styled.div(({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -210,7 +209,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
             />
             <PlayOverlay className="play-overlay">
               <PlayCircle>
-                <RiPlayFill size={28} color="#111" />
+                <RiPlayFill size={44} color="#fff" />
               </PlayCircle>
             </PlayOverlay>
             {!isSeries && duration && <DurationBadge>{duration}</DurationBadge>}

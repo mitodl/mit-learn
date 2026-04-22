@@ -19,11 +19,11 @@ const EpisodeNumber = styled.span<{ $isFirst?: boolean }>(
       : theme.typography.fontWeightRegular,
     lineHeight: "20px",
     [theme.breakpoints.down("sm")]: {
-      width: "25px",
-      height: "170px",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
+      width: "40px",
+      height: "auto",
+      textAlign: "center",
+      display: "block",
+      alignSelf: "center",
     },
   }),
 )
@@ -37,6 +37,9 @@ const EpisodeDescription = styled(Typography)(({ theme }) => ({
   WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
+  [theme.breakpoints.down("sm")]: {
+      marginTop: 0,
+    },
 }))
 
 const EpisodeRow = styled.li(({ theme }) => ({
@@ -64,7 +67,7 @@ const EpisodeRow = styled.li(({ theme }) => ({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: "8px",
-    padding: "24px 16px",
+    padding: "24px 0px",
   },
 }))
 
@@ -78,7 +81,7 @@ const ContentBlock = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     alignItems: "flex-start",
-    gap: "4px",
+    gap: "8px",
   },
 }))
 
@@ -96,6 +99,7 @@ const ChevronIcon = styled.span(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     color: theme.custom.colors.darkGray1,
+    marginTop: "-4px",
   },
 }))
 
@@ -113,7 +117,7 @@ const EpisodeTitleLink = styled.span<{ $isFirst?: boolean }>(
 
     [theme.breakpoints.down("sm")]: {
       fontSize: $isFirst ? "28px" : "20px",
-      lineHeight: "36px",
+      lineHeight: $isFirst? "36px": "26px",
     },
   }),
 )
@@ -127,9 +131,9 @@ const EpisodeRight = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     width: "100%",
-    marginTop: "4px",
+    marginTop: 0,
     gap: "0",
   },
 }))
@@ -147,6 +151,10 @@ const EpisodeMeta = styled(Typography)(({ theme }) => ({
   lineHeight: "22px",
   whiteSpace: "nowrap",
   textAlign: "left",
+   [theme.breakpoints.down("sm")]: {
+      ...theme.typography.body3,
+      lineHeight: "16px",
+    },
 }))
 
 const PlayButton = styled(ActionButton, {
@@ -209,10 +217,37 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
       )}
       <ContentBlock>
         <EpisodeInfo>
-          <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
+          {index && index === 1 && (
+            <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
             {/* {episode.title} */}
             Introduction and Overview
           </EpisodeTitleLink>
+          )}
+          {index && index === 2 && (
+            <EpisodeTitleLink className="episode-title">
+            {/* {episode.title} */}
+            Neural Networks and Backpropagation
+          </EpisodeTitleLink>
+          )}
+
+          {index && index === 3 && (
+            <EpisodeTitleLink className="episode-title">
+            {/* {episode.title} */}
+            Convolutional Neural Networks
+          </EpisodeTitleLink>
+          )}
+          {index && index === 4 && (
+            <EpisodeTitleLink className="episode-title" style={episode.description ? { marginBottom: 0 } : undefined}>
+            {/* {episode.title} */}
+            Recurrent Neural Networks and Attention
+          </EpisodeTitleLink>
+          )}
+           {index && index > 4 && (
+            <EpisodeTitleLink className="episode-title" style={episode.description ? { marginBottom: 0 } : undefined}>
+            {/* {episode.title} */}
+            Advanced Topics in Deep Learning
+          </EpisodeTitleLink>
+          )}
           {index && index < 4 && episode.description && (
             <EpisodeDescription variant="body2">
               {/* {episode.description} */}
