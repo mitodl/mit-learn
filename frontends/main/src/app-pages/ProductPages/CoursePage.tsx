@@ -70,6 +70,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     <ProductPageTemplate
       currentBreadcrumbLabel="Course"
       title={page.title}
+      readableId={course.readable_id}
       shortDescription={page.course_details.page.description}
       imageSrc={imageSrc}
       videoUrl={page.video_url}

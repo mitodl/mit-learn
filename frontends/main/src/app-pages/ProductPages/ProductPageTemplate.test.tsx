@@ -55,6 +55,7 @@ const renderProductPageTemplate = (
     <ProductPageTemplate
       currentBreadcrumbLabel="Programs"
       title="Sample Program"
+      readableId="sample-program"
       shortDescription={"Program description"}
       imageSrc="/test-image.jpg"
       infoBox={<div>Info box</div>}
@@ -108,7 +109,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     button.click()
     expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
-      productTitle: "Sample Program",
+      productReadableId: "sample-program",
     })
   })
 
@@ -144,7 +145,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     button.click()
     expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
-      productTitle: "Sample Program",
+      productReadableId: "sample-program",
     })
   })
 

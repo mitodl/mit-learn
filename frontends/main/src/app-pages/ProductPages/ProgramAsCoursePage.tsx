@@ -268,6 +268,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
     <ProductPageTemplate
       currentBreadcrumbLabel="Course"
       title={page.title}
+      readableId={program.readable_id}
       shortDescription={
         <DescriptionHTML
           Component="span"

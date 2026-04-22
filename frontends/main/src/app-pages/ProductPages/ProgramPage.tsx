@@ -273,6 +273,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
     <ProductPageTemplate
       currentBreadcrumbLabel="Program"
       title={page.title}
+      readableId={program.readable_id}
       shortDescription={
         <DescriptionHTML
           Component="span"

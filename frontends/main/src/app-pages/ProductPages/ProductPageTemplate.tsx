@@ -265,6 +265,7 @@ export type ResourceInfo = {
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
   title: string
+  readableId: string
   shortDescription: React.ReactNode
   imageSrc: string
   videoUrl?: string | null
@@ -278,6 +279,7 @@ type ProductPageTemplateProps = {
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
   title,
+  readableId,
   shortDescription,
   imageSrc,
   videoUrl,
@@ -356,7 +358,11 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={handleStayUpdatedClick}
+                          onClick={() =>
+                            NiceModal.show(StayUpdatedModal, {
+                              productReadableId: readableId,
+                            })
+                          }
                         >
                           Stay Updated
                         </StayUpdatedButton>

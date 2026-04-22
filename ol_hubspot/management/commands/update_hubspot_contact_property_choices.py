@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from argparse import BooleanOptionalAction, RawTextHelpFormatter
+from collections import Counter
 
 from django.core.management.base import BaseCommand, CommandError
 from hubspot.crm.properties.exceptions import ApiException as CrmPropertiesApiException
@@ -11,6 +12,7 @@ from hubspot.crm.properties.exceptions import ApiException as CrmPropertiesApiEx
 from learning_resources.constants import LearningResourceType
 from learning_resources.models import LearningResource
 from ol_hubspot.api import (
+    ContactPropertyOption,
     create_contact_property,
     get_contact_property,
     update_contact_property_choices,
@@ -81,8 +83,16 @@ class Command(BaseCommand):
             dest="learning_resource_field",
             required=True,
             help=(
-                "LearningResource field/annotation to use for option values. "
+                "LearningResource field/annotation to use for option labels. "
                 "Supports Django double-underscore traversal."
+            ),
+        )
+        parser.add_argument(
+            "--option-value-field",
+            dest="option_value_field",
+            help=(
+                "LearningResource field/annotation to use for option values. "
+                "Defaults to --learning-resource-field."
             ),
         )
 
@@ -177,9 +187,10 @@ class Command(BaseCommand):
 
     def _resolve_choice_values_from_learning_resources(
         self, options: dict
-    ) -> list[str]:
-        """Build option values from LearningResource records."""
-        value_field = options["learning_resource_field"]
+    ) -> list[tuple[object, object]]:
+        """Build option labels and values from LearningResource records."""
+        label_field = options["learning_resource_field"]
+        value_field = options.get("option_value_field") or label_field
         queryset = LearningResource.objects.all()
 
         if not options["include_unpublished"]:
@@ -204,35 +215,79 @@ class Command(BaseCommand):
         if order_by:
             queryset = queryset.order_by(*order_by)
 
-        values_qs = queryset.values_list(value_field, flat=True)
+        values_qs = queryset.values_list(label_field, value_field)
         if options.get("resource_distinct"):
             values_qs = values_qs.order_by().distinct()
 
-        return [str(value) for value in values_qs if value is not None]
+        return [
+            (label, value)
+            for label, value in values_qs
+            if label is not None and value is not None
+        ]
 
-    def _resolve_choice_values(self, options: dict) -> list[str]:
-        """Resolve option values from LearningResource data."""
+    def _resolve_choice_options(self, options: dict) -> list[ContactPropertyOption]:
+        """Resolve HubSpot options from LearningResource data."""
         resource_values = self._resolve_choice_values_from_learning_resources(options)
 
-        values = [value.strip() for value in resource_values if value and value.strip()]
+        deduped_options: dict[str, str] = {}
+        for raw_label, raw_value in resource_values:
+            label = str(raw_label).strip()
+            value = str(raw_value).strip()
+            if not label or not value:
+                continue
+            deduped_options.setdefault(value, label)
 
-        return sorted(dict.fromkeys(values))
+        sorted_options = [
+            {"label": label, "value": value}
+            for value, label in sorted(
+                deduped_options.items(), key=lambda item: item[1]
+            )
+        ]
+
+        return self._uniquify_option_labels(sorted_options)
+
+    def _uniquify_option_labels(
+        self, options: list[ContactPropertyOption]
+    ) -> list[ContactPropertyOption]:
+        """Ensure labels are unique for HubSpot enumeration properties."""
+        label_counts = Counter(option["label"] for option in options)
+        used_labels: set[str] = set()
+        unique_options: list[ContactPropertyOption] = []
+
+        for option in options:
+            label = option["label"]
+            if label_counts[label] == 1:
+                unique_options.append(option)
+                used_labels.add(label)
+                continue
+
+            candidate_label = f"{label} ({option['value']})"
+            suffix = 2
+            while candidate_label in used_labels:
+                candidate_label = f"{label} ({option['value']}) [{suffix}]"
+                suffix += 1
+
+            unique_options.append({**option, "label": candidate_label})
+            used_labels.add(candidate_label)
+
+        return unique_options
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Create or update one HubSpot contact property."""
         property_name = options["property_name"]
 
-        option_values = self._resolve_choice_values(options)
-        if not option_values and not options["allow_empty"]:
+        property_options = self._resolve_choice_options(options)
+        if not property_options and not options["allow_empty"]:
             msg = (
                 "No choices were resolved from LearningResource data. "
-                "Adjust --learning-resource-field and filters, or pass "
+                "Adjust --learning-resource-field, --option-value-field, and "
+                "filters, or pass "
                 "--allow-empty to intentionally clear options."
             )
             raise CommandError(msg)
 
         self.stdout.write(
-            f"Resolved {len(option_values)} choices for property '{property_name}'."
+            f"Resolved {len(property_options)} choices for property '{property_name}'."
         )
 
         if options["dry_run"]:
@@ -245,11 +300,11 @@ class Command(BaseCommand):
                     [
                         {
                             "displayOrder": index,
-                            "label": value,
-                            "value": value,
+                            "label": option["label"],
+                            "value": option["value"],
                             "hidden": False,
                         }
-                        for index, value in enumerate(option_values)
+                        for index, option in enumerate(property_options)
                     ],
                     indent=2,
                 )
@@ -264,7 +319,7 @@ class Command(BaseCommand):
             else:
                 msg = (
                     "Unable to read HubSpot contact property "
-                    f"'{property_name}': {exc.reason}"
+                    f"'{property_name}': {exc.reason} - {exc.body}"
                 )
                 raise CommandError(msg) from exc
 
@@ -286,7 +341,7 @@ class Command(BaseCommand):
                 create_contact_property(
                     property_name=property_name,
                     label=property_label,
-                    option_values=option_values,
+                    options=property_options,
                     group_name=options["property_group_name"],
                     field_type=options["property_field_type"],
                     description=options["property_description"],
@@ -294,21 +349,21 @@ class Command(BaseCommand):
                 )
                 result_message = (
                     f"Created contact property '{property_name}' with "
-                    f"{len(option_values)} choices."
+                    f"{len(property_options)} choices."
                 )
             else:
                 update_contact_property_choices(
                     property_name=property_name,
-                    option_values=option_values,
+                    options=property_options,
                 )
                 result_message = (
                     f"Updated contact property '{property_name}' with "
-                    f"{len(option_values)} choices."
+                    f"{len(property_options)} choices."
                 )
         except CrmPropertiesApiException as exc:
             msg = (
                 "Unable to sync HubSpot contact property "
-                f"'{property_name}': {exc.reason}"
+                f"'{property_name}': {exc.reason} - {exc.body}"
             )
             raise CommandError(msg) from exc
 

@@ -18,7 +18,7 @@ jest.mock("ol-components", () => ({
 const mockedHubspotForm = jest.mocked(HubspotForm)
 const TEST_EMAIL = "user@test.edu"
 const TEST_PRODUCT_TITLE = "Sample Program"
-const TEST_PRODUCT_VALUE = "sample_program"
+const TEST_PRODUCT_READABLE_ID = "sample-program"
 
 type HubspotFormOverride =
   | Parameters<typeof factories.hubspot.form>[0]
@@ -170,7 +170,7 @@ describe("StayUpdatedModal", () => {
     })
   })
 
-  it("submits product_of_interest when the product title matches a field option", async () => {
+  it("submits product_of_interest when the readable id matches a field option value", async () => {
     setupApis({
       fieldGroups: [
         {
@@ -182,7 +182,7 @@ describe("StayUpdatedModal", () => {
               options: [
                 {
                   label: TEST_PRODUCT_TITLE,
-                  value: TEST_PRODUCT_VALUE,
+                  value: TEST_PRODUCT_READABLE_ID,
                 },
               ],
             },
@@ -192,7 +192,9 @@ describe("StayUpdatedModal", () => {
     })
     renderWithProviders(null)
     act(() => {
-      NiceModal.show(StayUpdatedModal, { productTitle: TEST_PRODUCT_TITLE })
+      NiceModal.show(StayUpdatedModal, {
+        productReadableId: TEST_PRODUCT_READABLE_ID,
+      })
     })
 
     await screen.findByRole("dialog", { name: "Stay Updated" })
@@ -206,14 +208,14 @@ describe("StayUpdatedModal", () => {
           { name: "email", value: TEST_EMAIL },
           {
             name: "product_of_interest",
-            value: [TEST_PRODUCT_VALUE],
+            value: [TEST_PRODUCT_READABLE_ID],
           },
         ]),
       }),
     )
   })
 
-  it("omits product_of_interest when the product title has no matching option", async () => {
+  it("omits product_of_interest when the readable id has no matching option value", async () => {
     setupApis({
       fieldGroups: [
         {
@@ -235,7 +237,9 @@ describe("StayUpdatedModal", () => {
     })
     renderWithProviders(null)
     act(() => {
-      NiceModal.show(StayUpdatedModal, { productTitle: TEST_PRODUCT_TITLE })
+      NiceModal.show(StayUpdatedModal, {
+        productReadableId: TEST_PRODUCT_READABLE_ID,
+      })
     })
 
     await screen.findByRole("dialog", { name: "Stay Updated" })

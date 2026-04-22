@@ -47,7 +47,7 @@ const DialogSuccessCheck = styled(Image)({
 const PRODUCT_OF_INTEREST_FIELD_NAME = "product_of_interest"
 
 type StayUpdatedDialogProps = {
-  productTitle?: string
+  productReadableId?: string
 }
 
 const mapValuesToFields = (
@@ -63,10 +63,10 @@ const mapValuesToFields = (
 
 const findProductOfInterestValue = (
   hubspotForm: HubspotFormInput | undefined,
-  productTitle: string | undefined,
+  productReadableId: string | undefined,
 ): string | undefined => {
-  const normalizedProductTitle = productTitle?.trim().toLowerCase()
-  if (!normalizedProductTitle) {
+  const normalizedProductReadableId = productReadableId?.trim()
+  if (!normalizedProductReadableId) {
     return undefined
   }
 
@@ -75,14 +75,14 @@ const findProductOfInterestValue = (
     .find((field) => field.name === PRODUCT_OF_INTEREST_FIELD_NAME)
 
   const matchingOption = productOfInterestField?.options?.find(
-    (option) => option.label?.trim().toLowerCase() === normalizedProductTitle,
+    (option) => option.value?.trim() === normalizedProductReadableId,
   )
 
   return matchingOption?.value?.trim() || undefined
 }
 
 const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
-  productTitle,
+  productReadableId,
 }) => {
   const modalState = NiceModal.useModal()
   const modal = muiDialogV5(modalState)
@@ -149,7 +149,7 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
 
               const productOfInterestValue = findProductOfInterestValue(
                 hubspotForm,
-                productTitle,
+                productReadableId,
               )
               if (productOfInterestValue) {
                 fields.push({
