@@ -260,7 +260,7 @@ describe("DigitalCredentialDialog", () => {
       /* TODO: This may need to change to account for different hosts */
       expect(verifyLink).toHaveAttribute(
         "href",
-        `https://verifierplus.org/#verify?vc=https://mitxonline.mit.edu/api/v2/verifiable_${credential["credentialSubject"]["achievement"]["achievementType"].toLowerCase()}_credential/${credential["id"].substring(9)}/download`,
+        `https://verifierplus.org/#verify?vc=${process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL}/api/v2/verifiable_${credential["credentialSubject"]["achievement"]["achievementType"].toLowerCase()}_credential/${credential["id"].substring(9)}/download`,
       )
       expect(verifyLink).toHaveAttribute("target", "_blank")
     })
