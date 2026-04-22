@@ -90,7 +90,7 @@ class QdrantView(APIView):
     def _format_order_by(self, order_by_parameter):
         sort = models.Direction.ASC
         if order_by_parameter.startswith("-") and len(order_by_parameter) > 1:
-            order_by_parameter = order_by_parameter.split("-")[1]
+            order_by_parameter = order_by_parameter.lstrip("-")
             sort = models.Direction.DESC
         return models.OrderBy(key=order_by_parameter, direction=sort)
 
