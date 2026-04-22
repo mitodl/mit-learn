@@ -313,7 +313,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow>
+    <EpisodeRow onClick={() => onPlayClick(episode)}>
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
@@ -332,7 +332,6 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
           </EpisodeMeta>
         )}
         <PlayButton
-          onClick={() => onPlayClick(episode)}
           aria-label={`Play ${episode.title}`}
           isPlaying={isPlaying}
           disabled={!isPlayable}
@@ -403,21 +402,16 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   ].filter(Boolean)
 
   const latestEpisode = episodes?.[0]
-  const latestEpisodeDuration =
-    latestEpisode?.resource_type === "podcast_episode" &&
-    latestEpisode.podcast_episode?.duration
-      ? Math.round(
-          moment.duration(latestEpisode.podcast_episode.duration).asMinutes(),
-        )
-      : null
+  const latestEpisodeDuration = latestEpisode?.podcast_episode?.duration
+    ? Math.round(
+        moment.duration(latestEpisode.podcast_episode.duration).asMinutes(),
+      )
+    : null
   const latestEpisodeDate = latestEpisode?.last_modified
     ? formatDate(latestEpisode.last_modified, "MMM D")
     : null
 
-  const subscribeUrl =
-    podcast?.apple_podcasts_url ??
-    podcast?.google_podcasts_url ??
-    podcast?.rss_url
+  const subscribeUrl = podcast?.apple_podcasts_url ?? podcast?.rss_url
 
   const getEpisodeAudioUrl = (episode: LearningResource): string | null => {
     if (episode.resource_type !== "podcast_episode") return null
