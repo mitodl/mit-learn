@@ -786,10 +786,13 @@ QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
     name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
 )
 
-QDRANT_API_KEY = get_string(name="QDRANT_API_KEY_V2", default="")
-QDRANT_HOST = get_string(name="QDRANT_HOST_V2", default="http://qdrant:6333")
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 
-
+# 1 week default query cache ttl
+QDRANT_QUERY_EMBEDDING_CACHE_TTL = get_string(
+    name="QDRANT_QUERY_EMBEDDING_CACHE_TTL", default=60 * 60 * 24 * 7
+)
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )
