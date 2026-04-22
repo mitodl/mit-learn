@@ -215,6 +215,51 @@ describe("StayUpdatedModal", () => {
     )
   })
 
+  it("submits product_of_interest when the HubSpot response uses field_groups", async () => {
+    setupApis({
+      field_groups: [
+        {
+          fields: [
+            {
+              name: "product_of_interest",
+              label: "Product of Interest",
+              field_type: "multiple_checkboxes",
+              options: [
+                {
+                  label: TEST_PRODUCT_TITLE,
+                  value: TEST_PRODUCT_READABLE_ID,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    renderWithProviders(null)
+    act(() => {
+      NiceModal.show(StayUpdatedModal, {
+        productReadableId: TEST_PRODUCT_READABLE_ID,
+      })
+    })
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      "post",
+      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      expect.objectContaining({
+        fields: expect.arrayContaining([
+          { name: "email", value: TEST_EMAIL },
+          {
+            name: "product_of_interest",
+            value: [TEST_PRODUCT_READABLE_ID],
+          },
+        ]),
+      }),
+    )
+  })
+
   it("omits product_of_interest when the readable id has no matching option value", async () => {
     setupApis({
       fieldGroups: [

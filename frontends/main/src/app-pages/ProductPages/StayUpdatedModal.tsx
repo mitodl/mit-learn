@@ -70,7 +70,9 @@ const findProductOfInterestValue = (
     return undefined
   }
 
-  const productOfInterestField = hubspotForm?.fieldGroups
+  const fieldGroups = hubspotForm?.fieldGroups ?? hubspotForm?.field_groups
+
+  const productOfInterestField = fieldGroups
     ?.flatMap((fieldGroup) => fieldGroup.fields ?? [])
     .find((field) => field.name === PRODUCT_OF_INTEREST_FIELD_NAME)
 
