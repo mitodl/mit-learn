@@ -6,7 +6,19 @@
     "AI_PROXY_AUTH_TOKEN": "${localEnv:AI_PROXY_AUTH_TOKEN}",
     "POSTHOG_PROJECT_ID": "${localEnv:POSTHOG_PROJECT_ID}",
     "POSTHOG_PROJECT_API_KEY": "${localEnv:POSTHOG_PROJECT_API_KEY}",
-    "POSTHOG_PERSONAL_API_KEY": "${localEnv:POSTHOG_PERSONAL_API_KEY}"
+    "POSTHOG_PERSONAL_API_KEY": "${localEnv:POSTHOG_PERSONAL_API_KEY}",
+    "MITOL_NEW_USER_LOGIN_URL": "http://open.odl.local:8062/onboarding",
+    "MITOL_API_LOGOUT_SUFFIX": "logout",
+    "MITOL_APP_BASE_URL": "http://open.odl.local:8062",
+    "MITOL_API_BASE_URL": "http://api.open.odl.local:8065",
+    "MITOL_SUPPORT_EMAIL": "support@localhost",
+    "CSRF_COOKIE_NAME": "csrftoken-local-learn",
+    "POSTHOG_TIMEOUT_MS": "1500",
+    "NGINX_PORT": "8063",
+    "APISIX_PORT": "8065",
+    "KEYCLOAK_PORT": "8066",
+    "KEYCLOAK_SSL_PORT": "8067",
+    "REDIS_VIEW_CACHE_DURATION": "0"
   },
   "runServices": [
     "watch",
