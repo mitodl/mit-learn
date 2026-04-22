@@ -28,6 +28,7 @@ from main.envs import (
     get_list_of_str,
     get_string,
 )
+from main.middleware.cookie_tombstones import parse_cookie_tombstones
 from main.sentry import init_sentry
 from main.settings_celery import *  # noqa: F403
 from main.settings_course_etl import *  # noqa: F403
@@ -241,6 +242,9 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = get_string(
 CSRF_COOKIE_SECURE = get_bool("CSRF_COOKIE_SECURE", True)  # noqa: FBT003
 CSRF_COOKIE_DOMAIN = get_string("CSRF_COOKIE_DOMAIN", None)
 CSRF_COOKIE_NAME = get_string("CSRF_COOKIE_NAME", "csrftoken")
+CSRF_COOKIE_TOMBSTONES = parse_cookie_tombstones(
+    get_list_of_str("CSRF_COOKIE_TOMBSTONES", [])
+)
 
 CSRF_HEADER_NAME = get_string("CSRF_HEADER_NAME", "HTTP_X_CSRFTOKEN")
 
@@ -248,6 +252,9 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
+
+if CSRF_COOKIE_TOMBSTONES:
+    MIDDLEWARE += ("main.middleware.cookie_tombstones.CookieTombstoneMiddleware",)
 
 # enable the nplusone profiler only in debug mode
 if DEBUG:
