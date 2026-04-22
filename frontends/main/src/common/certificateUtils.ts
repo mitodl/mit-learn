@@ -111,7 +111,9 @@ export const getVerifiableCredentialLinkedInURL = (
   const issueMonth =
     new Date(verifiableCredentialJson["validFrom"]).getMonth() + 1
 
-  const certUrl = getCertificateDownloadAPIURL(verifiableCredentialJson)
+  const certUrl = getVerifiableCredentialDownloadAPIURL(
+    verifiableCredentialJson,
+  )
   return encodeURI(
     `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationName=${orgName}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
   )
