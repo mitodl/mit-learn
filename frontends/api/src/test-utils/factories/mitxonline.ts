@@ -174,7 +174,7 @@ export const verifiableCredential: PartialFactory<VerifiableCredential> = (
   overrides = {},
 ) => {
   const base: VerifiableCredential = {
-    id: `https://example.com/credentials/${faker.string.uuid()}`,
+    id: `urn:uuid:${faker.string.uuid()}`,
     type: ["VerifiableCredential", "OpenBadgeCredential"],
     proof: {
       type: "DataIntegrityProof",
@@ -211,7 +211,7 @@ export const verifiableCredential: PartialFactory<VerifiableCredential> = (
         name: faker.lorem.words(3),
         type: ["Achievement"],
         description: faker.lorem.sentence(),
-        achievementType: "Certificate",
+        achievementType: ["Program", "Course"][Math.floor(Math.random() * 2)],
         criteria: {
           narrative: faker.lorem.sentence(),
         },
