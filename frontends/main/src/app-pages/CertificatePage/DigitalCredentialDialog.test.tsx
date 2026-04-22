@@ -260,7 +260,7 @@ describe("DigitalCredentialDialog", () => {
       /* TODO: This may need to change to account for different hosts */
       expect(verifyLink).toHaveAttribute(
         "href",
-        `https://verifierplus.org/#verify?vc=https://mitxonline.mit.edu/api/v2/verifiable_certificate_credential/xample.com/credentials/${credential.uuid}/download`,
+        `https://verifierplus.org/#verify?vc=https://mitxonline.mit.edu/api/v2/verifiable_certificate_credential/xample.com/credentials/${credential["id"].substring(9)}/download`,
       )
       expect(verifyLink).toHaveAttribute("target", "_blank")
     })
