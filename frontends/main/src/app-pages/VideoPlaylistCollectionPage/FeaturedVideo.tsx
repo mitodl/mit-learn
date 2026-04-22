@@ -2,7 +2,9 @@ import React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { styled } from "ol-components"
+import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
+import { RiPlayFill } from "@remixicon/react"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
 
@@ -25,15 +27,55 @@ const FeaturedGrid = styled.div(({ theme }) => ({
   },
 }))
 
-const ImageWrapper = styled(Link)({
-  position: "relative",
-  width: "100%",
-  aspectRatio: "16/9",
-  backgroundColor: "#111",
-  overflow: "hidden",
-  cursor: "pointer",
-  display: "block",
-  textDecoration: "none",
+const ImageWrapper = styled(Link)<{ $isSeries?: boolean }>(
+  ({ theme, $isSeries }) => ({
+    position: "relative",
+    width: "100%",
+    aspectRatio: "16/9",
+    backgroundColor: "#111",
+    overflow: "hidden",
+    cursor: "pointer",
+    display: "block",
+    textDecoration: "none",
+    "& .play-overlay": {
+      opacity: 0.5,
+      transform: "scale(1)",
+      transition: "opacity 0.3s ease, transform 0.3s ease",
+    },
+    "&:hover .play-overlay": {
+      opacity: 0.75,
+      transform: "scale(1.12)",
+    },
+    ...($isSeries && {
+      [theme.breakpoints.down("sm")]: {
+        width: "358px",
+        height: "270px",
+        aspectRatio: "auto",
+        marginBottom: "24px",
+      },
+    }),
+  }),
+)
+
+const PlayOverlay = styled.div({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1,
+  pointerEvents: "none",
+})
+
+const PlayCircle = styled.div({
+  width: "92px",
+  height: "92px",
+  borderRadius: "50%",
+  backgroundColor: "rgba(255, 255, 255, 0.90)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 4px 16px rgba(0,0,0,0.32)",
 })
 
 const DurationBadge = styled.span(({ theme }) => ({
@@ -53,6 +95,13 @@ const TextSide = styled.div(({ theme }) => ({
     padding: "16px 0 0",
     letterSpacing: "inherit",
   },
+}))
+
+const Buttonide = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  flexDirection: "column",
 }))
 
 const FeaturedTitle = styled.h2(({ theme }) => ({
@@ -106,12 +155,37 @@ const FeaturedDescription = styled.p(({ theme }) => ({
   },
 }))
 
+const DurationText = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray1,
+  marginTop: "16px",
+}))
+
+const StyledButton = styled(ButtonLink)(({ theme }) => ({
+  width: "220px",
+  ...theme.typography.body1,
+  padding: "12px 24px 12px 16px",
+  lineHeight: "16px",
+  height: "48px",
+  boxShadow:
+    "0 2px 4px 0 rgba(37, 38, 43, 0.10), 0 3px 8px 0 rgba(37, 38, 43, 0.12)",
+}))
+
 type FeaturedVideoProps = {
   video: VideoResource
   href: string
+  isSeries?: boolean
+  totalVideos?: number
+  totalTime?: string
 }
 
-const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
+const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
+  video,
+  href,
+  isSeries = false,
+  totalVideos,
+  totalTime,
+}) => {
   const imageUrl = video.image?.url ?? null
   const duration = video.video?.duration
     ? formatDurationClockTime(video.video.duration)
@@ -122,31 +196,63 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({ video, href }) => {
     <Section>
       <VideoContainer>
         <FeaturedGrid>
-          <ImageWrapper href={href} aria-label={`Play ${video.title}`}>
+          <ImageWrapper
+            href={href}
+            aria-label={`Play ${video.title}`}
+            $isSeries={isSeries}
+          >
             <Image
               src={imageUrl ?? PLACEHOLDER_IMG}
               alt={video.title}
               fill
               sizes="(max-width: 600px) 100vw, 50vw"
-              style={{ objectFit: "cover" }}
+              style={{ objectFit: isSeries ? "none" : "cover" }}
             />
-            {duration && <DurationBadge>{duration}</DurationBadge>}
+            <PlayOverlay className="play-overlay">
+              <PlayCircle>
+                <RiPlayFill size={28} color="#111" />
+              </PlayCircle>
+            </PlayOverlay>
+            {!isSeries && duration && <DurationBadge>{duration}</DurationBadge>}
+            {isSeries && totalVideos && totalTime && (
+              <DurationBadge>
+                {totalVideos} videos • {totalTime}
+              </DurationBadge>
+            )}
           </ImageWrapper>
 
-          <TextSide>
-            <FeaturedTitle>
-              <Link
-                href={href}
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                <span className="desktop-title">{video.title}</span>
-                <span className="mobile-title">{video.title}</span>
-              </Link>
-            </FeaturedTitle>
-            {description && (
-              <FeaturedDescription>{description}</FeaturedDescription>
-            )}
-          </TextSide>
+          {!isSeries ? (
+            <TextSide>
+              <FeaturedTitle>
+                <Link
+                  href={href}
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <span className="desktop-title">{video.title}</span>
+                  <span className="mobile-title">{video.title}</span>
+                </Link>
+              </FeaturedTitle>
+              {description && (
+                <FeaturedDescription>{description}</FeaturedDescription>
+              )}
+            </TextSide>
+          ) : (
+            <>
+              <Buttonide>
+                <StyledButton
+                  href={href}
+                  rel="noopener noreferrer"
+                  variant="primary"
+                  startIcon={<RiPlayFill />}
+                >
+                  Start watching
+                </StyledButton>
+                <DurationText>
+                  {totalTime} • {totalVideos} videos
+                </DurationText>
+              </Buttonide>
+            </>
+          )}
         </FeaturedGrid>
       </VideoContainer>
     </Section>

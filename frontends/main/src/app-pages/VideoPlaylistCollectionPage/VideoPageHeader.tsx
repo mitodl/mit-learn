@@ -17,15 +17,17 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
   },
 }))
 
-const HeaderSection = styled.div(({ theme }) => ({
-  padding: "56px 0 72px",
-  [theme.breakpoints.down("md")]: {
-    padding: "32px 0 40px",
-  },
-  [theme.breakpoints.down("sm")]: {
-    padding: "32px 0 40px",
-  },
-}))
+const HeaderSection = styled.div<{ isSeries?: boolean }>(
+  ({ theme, isSeries }) => ({
+    padding: "56px 0 72px",
+    [theme.breakpoints.down("md")]: {
+      padding: "32px 0 40px",
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: isSeries ? "32px 0 16px" : "32px 0 40px",
+    },
+  }),
+)
 
 const CollectionLabel = styled.span(({ theme }) => ({
   display: "block",
@@ -38,14 +40,14 @@ const CollectionLabel = styled.span(({ theme }) => ({
   letterSpacing: "1.92px",
 }))
 
-const PageTitle = styled.h1(({ theme }) => ({
+const PageTitle = styled.h1<{ isSeries?: boolean }>(({ theme, isSeries }) => ({
   ...theme.typography.h2,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.black,
   fontSize: "44px",
   margin: "0 0 24px",
   lineHeight: "120%",
-  marginBottom: "18px",
+  marginBottom: "16px",
   letterSpacing: "-0.88px",
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h3,
@@ -53,27 +55,30 @@ const PageTitle = styled.h1(({ theme }) => ({
   },
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
-    margin: "0 0 8px",
+    margin: isSeries ? "0 0 16px" : "0 0 8px",
     letterSpacing: "inherit",
   },
 }))
 
 const PageDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray1,
-  maxWidth: "640px",
   ...theme.typography.body1,
   lineHeight: "26px",
-  overflow: "hidden",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    lineHeight: "22px",
+  },
 }))
 
 type VideoPageHeaderProps = {
   playlist?: VideoPlaylistResource
+  isSeries?: boolean
 }
 
-const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
+const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
+  playlist,
+  isSeries = false,
+}) => {
   const collectionLabel = playlist
     ? playlist.resource_category?.trim() || "Video Collection"
     : null
@@ -84,25 +89,36 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({ playlist }) => {
         <VideoContainer>
           <StyledBreadcrumbs
             variant="light"
+            separatorStyle={{ margin: "0 4px" }}
             ancestors={[{ href: "/", label: "Home" }]}
             current={playlist?.title}
           />
         </VideoContainer>
       </BreadcrumbBar>
 
-      <HeaderSection>
+      <HeaderSection isSeries={isSeries}>
         <VideoContainer>
           {collectionLabel === null ? (
             <Skeleton width={140} height={24} style={{ marginBottom: 18 }} />
           ) : (
-            <CollectionLabel>{collectionLabel}</CollectionLabel>
+            <CollectionLabel>
+              {isSeries ? "Video Series" : collectionLabel}
+            </CollectionLabel>
           )}
 
-          <PageTitle>{playlist?.title ?? <Skeleton width={380} />}</PageTitle>
+          {/* <PageTitle>{playlist?.title ?? <Skeleton width={380} />}</PageTitle> */}
+          <PageTitle isSeries={isSeries}>
+            Introduction to Deep Learning
+          </PageTitle>
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (
-            <PageDescription>{playlist.description}</PageDescription>
+            <PageDescription>
+              A lecture series covering the foundations of deep learning, from
+              neural networks to generative models. Designed for students and
+              practitioners who want to understand the mathematics and intuition
+              behind modern AI systems.
+            </PageDescription>
           )}
         </VideoContainer>
       </HeaderSection>
