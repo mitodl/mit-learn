@@ -239,6 +239,31 @@ describe("CertificatePage - SharePopover", () => {
     expect(linkedinLink).toHaveAttribute("target", "_blank")
   })
 
+  it("renders social media share links with correct URLs when given override", () => {
+    const linkedInHrefOverride = "https://example.com/linkedInHrefOverride"
+    renderWithProviders(
+      <SharePopover
+        {...mockProps}
+        linkedInHrefOverride={linkedInHrefOverride}
+      />,
+    )
+
+    const facebookHref = `${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(mockProps.pageUrl)}`
+    const twitterHref = `${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(mockProps.title)}&url=${encodeURIComponent(mockProps.pageUrl)}`
+
+    const facebookLink = screen.getByRole("link", { name: "Share on Facebook" })
+    const twitterLink = screen.getByRole("link", { name: "Share on Twitter" })
+    const linkedinLink = screen.getByRole("link", { name: "Share on LinkedIn" })
+
+    expect(facebookLink).toHaveAttribute("href", facebookHref)
+    expect(twitterLink).toHaveAttribute("href", twitterHref)
+    expect(linkedinLink).toHaveAttribute("href", linkedInHrefOverride)
+
+    expect(facebookLink).toHaveAttribute("target", "_blank")
+    expect(twitterLink).toHaveAttribute("target", "_blank")
+    expect(linkedinLink).toHaveAttribute("target", "_blank")
+  })
+
   it("copies link to clipboard when copy button is clicked", async () => {
     renderWithProviders(<SharePopover {...mockProps} />)
 
