@@ -1,5 +1,8 @@
 import logging
+import os
+from urllib.parse import urlparse
 
+import litellm
 import tiktoken
 from django.conf import settings
 from litellm import embedding
@@ -7,6 +10,10 @@ from litellm import embedding
 from vector_search.encoders.base import BaseEncoder
 
 log = logging.getLogger()
+redis_url = urlparse(settings.CELERY_BROKER_URL)
+
+# these must be set directly via environ (litellm limitation)
+os.environ["REDIS_SSL"] = str(redis_url.scheme.endswith("ss"))
 
 
 class LiteLLMEncoder(BaseEncoder):
@@ -28,6 +35,17 @@ class LiteLLMEncoder(BaseEncoder):
         return [result["embedding"] for result in self.get_embedding(documents)["data"]]
 
     def get_embedding(self, texts):
+        if self.cache:
+            litellm.enable_cache(
+                type="redis",
+                host=redis_url.hostname,
+                port=redis_url.port,
+                password=redis_url.password,
+                supported_call_types=["embedding", "aembedding"],
+                ttl=60 * 60 * 24,
+            )
+        else:
+            litellm.disable_cache()
         config = {
             "model": self.model_name,
             "input": texts,
