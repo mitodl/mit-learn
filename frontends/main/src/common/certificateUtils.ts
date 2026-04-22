@@ -22,6 +22,9 @@ export enum CertificateType {
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
 
+/* This is the Organization ID for MIT OpenLearning on LinkedIn as far as I can tell. We could parameterize this if needed */
+const ORG_ID = 74540637
+
 /*
  * This interface defines the structure of a VerifiableCredential (Open Badges v3.0).
  * While this type is not explicitly defined / unknown in our API, we can rely on its stability
@@ -104,7 +107,6 @@ export const getVerifiableCredentialLinkedInURL = (
   const certId = verifiableCredentialJson["id"].substring(9)
   const credentialName =
     verifiableCredentialJson["credentialSubject"]["achievement"]["name"]
-  const orgName = verifiableCredentialJson["issuer"]["name"]
   const issueYear = new Date(
     verifiableCredentialJson["validFrom"],
   ).getFullYear()
@@ -114,8 +116,9 @@ export const getVerifiableCredentialLinkedInURL = (
   const certUrl = getVerifiableCredentialDownloadAPIURL(
     verifiableCredentialJson,
   )
+  /* TODO: Should I link to the certificate page instead of the download URL? */
   return encodeURI(
-    `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationName=${orgName}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
+    `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationId=${ORG_ID}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
   )
 }
 
@@ -129,5 +132,5 @@ export const getCertificateLinkedInUrl = (
       ? (certificateData as V2CourseRunCertificate).course_run.course.title
       : (certificateData as V2ProgramCertificate).program.title
   const certId = certificateData.uuid
-  return `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}`
+  return `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}&organizationId=${ORG_ID}`
 }
