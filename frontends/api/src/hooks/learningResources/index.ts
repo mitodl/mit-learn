@@ -2,6 +2,7 @@ import {
   keepPreviousData,
   useMutation,
   useQuery,
+  useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query"
 import { learningResourcesApi } from "../../clients"
@@ -14,6 +15,7 @@ import type {
   FeaturedApiFeaturedListRequest as FeaturedListParams,
   LearningResourcesApiLearningResourcesUserlistsPartialUpdateRequest,
   LearningResourcesApiLearningResourcesLearningPathsPartialUpdateRequest,
+  LearningResourcesApiLearningResourcesItemsListRequest as ItemsListRequest,
   LearningResource,
 } from "../../generated/v1"
 // import learningResources from "./keyFactory"
@@ -201,6 +203,17 @@ const useVectorSimilarLearningResources = (
   })
 }
 
+const useInfiniteLearningResourceItems = (
+  id: number,
+  params: Omit<ItemsListRequest, "offset">,
+  opts?: { enabled?: boolean },
+) => {
+  return useInfiniteQuery({
+    ...learningResourceQueries.infiniteItems(id, params),
+    ...opts,
+  })
+}
+
 export {
   useLearningResourcesList,
   useFeaturedLearningResourcesList,
@@ -217,6 +230,7 @@ export {
   useSchoolsList,
   useSimilarLearningResources,
   useVectorSimilarLearningResources,
+  useInfiniteLearningResourceItems,
   learningResourceQueries,
   offerorQueries,
   schoolQueries,

@@ -13,6 +13,7 @@ export enum FeatureFlags {
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
   VideoPlaylistPage = "video-playlist-page",
+  PodcastDetailPage = "podcast-detail-page",
 }
 
 /**
