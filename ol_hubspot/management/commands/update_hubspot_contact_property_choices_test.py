@@ -178,6 +178,58 @@ def test_command_disambiguates_duplicate_labels_with_value_suffix(mocker, faker)
 
 
 @pytest.mark.django_db
+def test_command_avoids_collisions_with_existing_original_labels(mocker, faker):
+    """Disambiguated labels should not collide with any pre-existing label."""
+    property_name = faker.slug().replace("-", "_")
+    LearningResourceFactory(
+        is_course=True,
+        title="Test",
+        readable_id="a",
+        etl_source="hubspot_test",
+    )
+    LearningResourceFactory(
+        is_program=True,
+        title="Test",
+        readable_id="b",
+        etl_source="hubspot_test",
+    )
+    LearningResourceFactory(
+        is_program=True,
+        title="Test (b)",
+        readable_id="c",
+        etl_source="hubspot_test",
+    )
+
+    mocker.patch(
+        "ol_hubspot.management.commands.update_hubspot_contact_property_choices.get_contact_property",
+        side_effect=CrmPropertiesApiException(status=404, reason="Not Found"),
+    )
+    create_mock = mocker.patch(
+        "ol_hubspot.management.commands.update_hubspot_contact_property_choices.create_contact_property"
+    )
+
+    call_command(
+        "update_hubspot_contact_property_choices",
+        property_name,
+        "--learning-resource-field",
+        "title",
+        "--option-value-field",
+        "readable_id",
+        "--resource-filter",
+        "etl_source=hubspot_test",
+        "--resource-order-by",
+        "title",
+    )
+
+    create_mock.assert_called_once()
+    labels = [option["label"] for option in create_mock.call_args.kwargs["options"]]
+    assert len(labels) == len(set(labels))
+    assert "Test (a)" in labels
+    assert "Test (b)" in labels
+    assert "Test (b) [2]" in labels
+
+
+@pytest.mark.django_db
 def test_command_uses_label_field_as_value_field_by_default(mocker, faker):
     """Command preserves the current label=value behavior unless overridden."""
     property_name = faker.slug().replace("-", "_")

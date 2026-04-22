@@ -251,6 +251,7 @@ class Command(BaseCommand):
     ) -> list[ContactPropertyOption]:
         """Ensure labels are unique for HubSpot enumeration properties."""
         label_counts = Counter(option["label"] for option in options)
+        original_labels = {option["label"] for option in options}
         used_labels: set[str] = set()
         unique_options: list[ContactPropertyOption] = []
 
@@ -263,7 +264,7 @@ class Command(BaseCommand):
 
             candidate_label = f"{label} ({option['value']})"
             suffix = 2
-            while candidate_label in used_labels:
+            while candidate_label in used_labels or candidate_label in original_labels:
                 candidate_label = f"{label} ({option['value']}) [{suffix}]"
                 suffix += 1
 
