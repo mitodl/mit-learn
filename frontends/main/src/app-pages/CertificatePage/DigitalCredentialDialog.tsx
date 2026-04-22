@@ -6,7 +6,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import VerifyIcon from "@/public/images/icons/verify.svg"
 import { DigitalCredentialsFAQLink } from "@/common/constants"
 import {
-  getCertificateDownloadAPIURL,
+  getVerifiableCredentialDownloadAPIURL,
   VerifiableCredential,
 } from "@/common/certificateUtils"
 
@@ -74,7 +74,7 @@ export const DigitalCredentialDialog = ({
     verifiableCredential
   const { identifier, achievement } = credentialSubject
   const certificateDownloadURL =
-    getCertificateDownloadAPIURL(verifiableCredential)
+    getVerifiableCredentialDownloadAPIURL(verifiableCredential)
   return (
     <Dialog
       open={open}

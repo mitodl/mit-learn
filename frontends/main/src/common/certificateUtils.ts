@@ -87,9 +87,7 @@ export interface VerifiableCredential {
   }
 }
 
-// TODO: I strongly suspect that this is not the right way to generate this.
-// Should I be doing something with the API client to derive the url? Need to talk to someone who knows more about Learn frontend arch.
-export const getCertificateDownloadAPIURL = (
+export const getVerifiableCredentialDownloadAPIURL = (
   verifiableCredentialJson: VerifiableCredential,
 ): string => {
   const type =
