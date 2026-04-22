@@ -549,7 +549,6 @@ describe("CourseEnrollmentButton", () => {
       expect(mockCapture).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
         expect.objectContaining({
-          resourceId: course.id,
           readableId: course.readable_id,
           resourceType: "course",
         }),
@@ -576,7 +575,6 @@ describe("CourseEnrollmentButton", () => {
       expect(mockCapture).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
         expect.objectContaining({
-          resourceId: course.id,
           readableId: course.readable_id,
           resourceType: "course",
         }),

@@ -8,6 +8,7 @@ import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import type { ResourceInfo } from "./ProductPageTemplate"
+import { PlatformEnum } from "api"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -50,35 +51,20 @@ const renderProductPageTemplate = (
 ) => {
   const { showStayUpdated, resource = DEFAULT_RESOURCE } = args
   setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
-  if (showStayUpdated) {
-    renderWithProviders(
-      <ProductPageTemplate
-        currentBreadcrumbLabel="Programs"
-        title="Sample Program"
-        shortDescription={"Program description"}
-        imageSrc="/test-image.jpg"
-        infoBox={<div>Info box</div>}
-        enrollmentAction={<button type="button">Enroll</button>}
-        showStayUpdated={true}
-        resource={resource}
-      >
-        <div>Page content</div>
-      </ProductPageTemplate>,
-    )
-  } else {
-    renderWithProviders(
-      <ProductPageTemplate
-        currentBreadcrumbLabel="Programs"
-        title="Sample Program"
-        shortDescription={"Program description"}
-        imageSrc="/test-image.jpg"
-        infoBox={<div>Info box</div>}
-        enrollmentAction={<button type="button">Enroll</button>}
-      >
-        <div>Page content</div>
-      </ProductPageTemplate>,
-    )
-  }
+  renderWithProviders(
+    <ProductPageTemplate
+      currentBreadcrumbLabel="Programs"
+      title="Sample Program"
+      shortDescription={"Program description"}
+      imageSrc="/test-image.jpg"
+      infoBox={<div>Info box</div>}
+      enrollmentAction={<button type="button">Enroll</button>}
+      showStayUpdated={showStayUpdated ?? false}
+      resource={resource}
+    >
+      <div>Page content</div>
+    </ProductPageTemplate>,
+  )
 }
 
 describe("ProductPageTemplate stay-updated trigger", () => {
@@ -188,9 +174,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         PostHogEvents.CallToActionClicked,
         {
           label: "Stay Updated",
-          resourceId: resource.id,
           readableId: resource.readable_id,
           resourceType: resource.resource_type,
+          platform: PlatformEnum.Mitxonline,
         },
       )
     })

@@ -21,6 +21,7 @@ import { StayUpdatedModal } from "./StayUpdatedModal"
 import { getStayUpdatedHubspotFormId } from "@/common/config"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { PlatformEnum } from "api"
 
 const GradientBanner = styled(BannerBackground)(({ theme }) => ({
   background:
@@ -300,14 +301,13 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   })
 
   const handleStayUpdatedClick = () => {
+    if (!showStayUpdated || !resource) return
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
-      // resource is always defined when showStayUpdated=true (enforced by
-      // the discriminated union at call sites)
       posthog.capture(PostHogEvents.CallToActionClicked, {
         label: "Stay Updated",
-        resourceId: resource!.id,
-        readableId: resource!.readable_id,
-        resourceType: resource!.resource_type,
+        readableId: resource.readable_id,
+        resourceType: resource.resource_type,
+        platform: PlatformEnum.Mitxonline,
       })
     }
     NiceModal.show(StayUpdatedModal)
