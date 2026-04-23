@@ -49,7 +49,6 @@ const ImageWrapper = styled(Link, {
   },
   ...($isSeries && {
     [theme.breakpoints.down("sm")]: {
-      width: "358px",
       height: "270px",
       aspectRatio: "auto",
       marginBottom: "24px",
