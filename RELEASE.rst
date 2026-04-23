@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.64.1 (Released April 22, 2026)
+--------------
+
+- feat: track Stay Updated button click with PostHog cta_clicked event (#3225)
+- feat: implementing the podcast detail page (#3184)
+- remove default slide transition from dialogs (#3229)
+- Revert "Update dependency opensearch-py to v3 (#2764)" (#3230)
+- Update nginx Docker tag to v1.29.7 (#2986)
+- Update dependency onnxruntime to v1.24.4 (#2742)
+- Update dependency opensearch-py to v3 (#2764)
+
 Version 0.64.0 (Released April 21, 2026)
 --------------
 

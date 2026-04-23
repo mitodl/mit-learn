@@ -90,7 +90,6 @@ const ProgramEnrollmentButton: React.FC<ProgramEnrollmentButtonProps> = ({
     }
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
-        resourceId: program.id,
         readableId: program.readable_id,
         resourceType: "program",
         label: getEnrollButtonText(),
