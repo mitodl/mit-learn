@@ -180,7 +180,7 @@ describe("MitxOnlineResourceCard", () => {
         href: "/test",
         list: true,
       })
-      expect(container.textContent).toContain("$200.00")
+      expect(container.textContent).toContain("$200")
     })
 
     test("shows 'Free' when enrollment is free-only", () => {
@@ -214,7 +214,7 @@ describe("MitxOnlineResourceCard", () => {
         href: "/test",
         list: true,
       })
-      expect(container.textContent).toContain("$500.00")
+      expect(container.textContent).toContain("$500")
     })
 
     test("shows price range when min and max differ", () => {
@@ -231,7 +231,7 @@ describe("MitxOnlineResourceCard", () => {
         href: "/test",
         list: true,
       })
-      expect(container.textContent).toContain("$100.00 - $500.00")
+      expect(container.textContent).toContain("$100 - $500")
     })
 
     test("shows 'Free' and certificate price when both free and paid", () => {
@@ -251,7 +251,7 @@ describe("MitxOnlineResourceCard", () => {
         list: true,
       })
       expect(container.textContent).toContain("Free")
-      expect(container.textContent).toContain("$500.00")
+      expect(container.textContent).toContain("$500")
     })
 
     test("shows no price when no enrollment modes", () => {

@@ -411,7 +411,7 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
   })
   const price =
     canPurchase && product
-      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data, avoidCents: true })
       : null
 
   const upgradeDeadline = nextRun?.is_archived
@@ -502,7 +502,7 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   })
   const price =
     enrollmentType === "paid" && product
-      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data, avoidCents: true })
       : null
 
   if (enrollmentType === "none") return null
@@ -769,7 +769,7 @@ const ProgramCertificateBox: React.FC<{ program: V2ProgramDetail }> = ({
           >
             <InfoLabel>Earn a certificate</InfoLabel>
           </UnderlinedLink>
-          : {formatPrice(price)}
+          : {formatPrice(price, { avoidCents: true })}
         </span>
       </InfoRowInner>
       {program.page.financial_assistance_form_url ? (
@@ -800,7 +800,7 @@ const ProgramPriceRow: React.FC<ProgramPriceRowProps> = ({
   const paidPrice =
     enrollmentType === "paid" && program.products[0]?.price ? (
       <>
-        {formatPrice(program.products[0].price)}{" "}
+        {formatPrice(program.products[0].price, { avoidCents: true })}{" "}
         <GrayText>(includes {program.certificate_type})</GrayText>
       </>
     ) : null
