@@ -158,8 +158,14 @@ const getRequirementsProgress = (
   return nodes.reduce(
     (acc, node) => {
       if (node.data.node_type !== "operator") return acc
+      const children = node.children ?? []
+      if (children.some((c) => c.data.node_type === "operator")) {
+        console.warn(
+          "getRequirementsProgress: nested operators are not supported and will be skipped",
+        )
+      }
 
-      const leaves = (node.children ?? []).filter(
+      const leaves = children.filter(
         (c) => c.data.node_type === "course" || c.data.node_type === "program",
       )
       const completed = leaves.filter((leaf) =>

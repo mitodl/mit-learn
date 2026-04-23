@@ -15,6 +15,7 @@ import {
   getEnrollmentStatus,
   ResourceType,
 } from "./helpers"
+import { allowConsoleErrors } from "ol-test-utilities"
 
 describe("helpers", () => {
   describe("getKey", () => {
@@ -567,9 +568,11 @@ describe("helpers", () => {
       const nested = operator("all_of", [courseLeaf(99)])
       const nodes = [operator("all_of", [courseLeaf(1), nested])]
 
+      const { consoleWarn } = allowConsoleErrors()
       expect(
         getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
       ).toEqual({ completed: 1, total: 1 })
+      expect(consoleWarn).toHaveBeenCalled()
     })
 
     test("min_number_of with operator_value=0 contributes nothing", () => {
