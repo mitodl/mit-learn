@@ -520,11 +520,11 @@ const mapVectorSortby = (
   switch (sortby) {
     case "-views":
     case "popular":
-      return "-views" as VectorSearchRequest["sortby"]
+      return "-views"
     case "upcoming":
-      return "next_start_date" as VectorSearchRequest["sortby"]
+      return "next_start_date"
     case "new":
-      return "-created_on" as VectorSearchRequest["sortby"]
+      return "-created_on"
     default:
       return undefined
   }
