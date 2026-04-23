@@ -255,16 +255,7 @@ SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
 
 if CSRF_COOKIE_TOMBSTONES:
     tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
-    csrf_middleware = "django.middleware.csrf.CsrfViewMiddleware"
-    if csrf_middleware in MIDDLEWARE:
-        csrf_index = MIDDLEWARE.index(csrf_middleware)
-        MIDDLEWARE = (
-            *MIDDLEWARE[:csrf_index],
-            tombstone_middleware,
-            *MIDDLEWARE[csrf_index:],
-        )
-    else:
-        MIDDLEWARE += (tombstone_middleware,)
+    MIDDLEWARE = (tombstone_middleware, *MIDDLEWARE)
 
 # enable the nplusone profiler only in debug mode
 if DEBUG:

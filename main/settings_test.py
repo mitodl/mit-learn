@@ -229,7 +229,7 @@ class TestSettings(TestCase):
             )
 
     def test_cookie_tombstone_middleware_ordering(self):
-        """Cookie tombstone middleware should run after CSRF on response."""
+        """Cookie tombstone middleware should be first in the middleware stack."""
         with mock.patch.dict(
             "os.environ",
             {
@@ -240,11 +240,10 @@ class TestSettings(TestCase):
         ):
             settings_vars = self.reload_settings()
             middleware = settings_vars["MIDDLEWARE"]
-            tombstone_index = middleware.index(
-                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+            assert (
+                middleware[0]
+                == "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
             )
-            csrf_index = middleware.index("django.middleware.csrf.CsrfViewMiddleware")
-            assert tombstone_index < csrf_index
 
     def test_celery_beat_disabled(self):
         """Test that we can disable celery beat with an env var"""
