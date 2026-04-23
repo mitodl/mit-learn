@@ -141,6 +141,7 @@ const VideoPlaylistCollectionPage: React.FC<
                 <EpisodeItem
                   key={video.id}
                   episode={video}
+                  href={getVideoHref(video)}
                   index={i + 1}
                   onPlayClick={() => getVideoHref(video)}
                   isPlayable

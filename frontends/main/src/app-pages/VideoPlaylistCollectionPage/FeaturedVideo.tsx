@@ -95,7 +95,7 @@ const TextSide = styled.div(({ theme }) => ({
   },
 }))
 
-const Buttonide = styled.div({
+const ButtonSide = styled.div({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -236,19 +236,20 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
             </TextSide>
           ) : (
             <>
-              <Buttonide>
+              <ButtonSide>
                 <StyledButton
                   href={href}
-                  rel="noopener noreferrer"
                   variant="primary"
                   startIcon={<RiPlayFill />}
                 >
                   Start watching
                 </StyledButton>
-                <DurationText>
-                  {totalTime} • {totalVideos} videos
-                </DurationText>
-              </Buttonide>
+                {totalTime && totalVideos && (
+                  <DurationText>
+                    {totalTime} • {totalVideos} videos
+                  </DurationText>
+                )}
+              </ButtonSide>
             </>
           )}
         </FeaturedGrid>

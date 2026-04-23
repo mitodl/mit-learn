@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import Link from "next/link"
 import { Typography, styled } from "ol-components"
 import { ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill, RiArrowRightSLine } from "@remixicon/react"
@@ -42,21 +43,16 @@ const EpisodeDescription = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const EpisodeRow = styled.li(({ theme }) => ({
-  margin: 0,
+const EpisodeRowLink = styled(Link)(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
   padding: "24px 0 24px 16px",
   gap: "30px",
-  "&:last-child": {
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
-  },
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray1,
-    cursor: "pointer",
-  },
+  color: "inherit",
+  textDecoration: "none",
+  flex: 1,
   "&:hover .episode-title, &:focus-visible .episode-title": {
     color: theme.custom.colors.red,
   },
@@ -68,6 +64,18 @@ const EpisodeRow = styled.li(({ theme }) => ({
     alignItems: "flex-start",
     gap: "8px",
     padding: "24px 0px",
+  },
+}))
+
+const EpisodeRow = styled.li(({ theme }) => ({
+  margin: 0,
+  display: "flex",
+  flexDirection: "row",
+  "&:last-child": {
+    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
+  },
+  "&:has(a:hover), &:has(a:focus-visible)": {
+    backgroundColor: theme.custom.colors.lightGray1,
   },
 }))
 
@@ -184,6 +192,7 @@ const PlayButton = styled(ActionButton, {
 
 type EpisodeItemProps = {
   episode: LearningResource
+  href: string
   onPlayClick: (episode: LearningResource) => void
   isPlaying?: boolean
   isPlayable?: boolean
@@ -192,6 +201,7 @@ type EpisodeItemProps = {
 
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
+  href,
   onPlayClick,
   isPlaying,
   isPlayable,
@@ -203,55 +213,56 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
     ? formatDurationClockTime(videoResource.video.duration)
     : null
 
-  const date =
-    !videoResource && episode.last_modified
-      ? formatDate(episode.last_modified, "MMM D")
-      : null
+  const date = episode.last_modified
+    ? formatDate(episode.last_modified, "MMM D")
+    : null
 
   const metaParts = [duration, date].filter(Boolean)
 
   return (
     <EpisodeRow>
-      {index !== undefined && (
-        <EpisodeNumber $isFirst={index === 1}>{index}</EpisodeNumber>
-      )}
-      <ContentBlock>
-        <EpisodeInfo>
-          <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
-            {episode.title}
-          </EpisodeTitleLink>
+      <EpisodeRowLink href={href}>
+        {index !== undefined && (
+          <EpisodeNumber $isFirst={index === 1}>{index}</EpisodeNumber>
+        )}
+        <ContentBlock>
+          <EpisodeInfo>
+            <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
+              {episode.title}
+            </EpisodeTitleLink>
 
-          <EpisodeDescription variant="body2">
-            {episode.description}
-          </EpisodeDescription>
-        </EpisodeInfo>
+            <EpisodeDescription variant="body2">
+              {episode.description}
+            </EpisodeDescription>
+          </EpisodeInfo>
 
-        <EpisodeRight>
-          {metaParts.length > 0 && (
-            <EpisodeMeta variant="body3">
-              {metaParts.map((part, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <StyledDot>&middot;</StyledDot>}
-                  {part}
-                </React.Fragment>
-              ))}
-            </EpisodeMeta>
-          )}
-          <PlayButton
-            onClick={() => onPlayClick(episode)}
-            aria-label={`Play ${episode.title}`}
-            isPlaying={isPlaying ?? false}
-            disabled={!isPlayable}
-            variant="secondary"
-            className="play-button"
-          >
-            <RiPlayFill size={20} />
-          </PlayButton>
-          <ChevronIcon>
-            <RiArrowRightSLine size={20} />
-          </ChevronIcon>
-        </EpisodeRight>
-      </ContentBlock>
+          <EpisodeRight>
+            {metaParts.length > 0 && (
+              <EpisodeMeta variant="body3">
+                {metaParts.map((part, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <StyledDot>&middot;</StyledDot>}
+                    {part}
+                  </React.Fragment>
+                ))}
+              </EpisodeMeta>
+            )}
+            <PlayButton
+              onClick={() => onPlayClick(episode)}
+              aria-label={`Play ${episode.title}`}
+              isPlaying={isPlaying ?? false}
+              disabled={!isPlayable}
+              variant="secondary"
+              className="play-button"
+            >
+              <RiPlayFill size={20} />
+            </PlayButton>
+            <ChevronIcon>
+              <RiArrowRightSLine size={20} />
+            </ChevronIcon>
+          </EpisodeRight>
+        </ContentBlock>
+      </EpisodeRowLink>
     </EpisodeRow>
   )
 }
