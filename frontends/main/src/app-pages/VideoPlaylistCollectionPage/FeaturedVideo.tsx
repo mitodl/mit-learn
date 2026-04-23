@@ -27,35 +27,35 @@ const FeaturedGrid = styled.div(({ theme }) => ({
   },
 }))
 
-const ImageWrapper = styled(Link)<{ $isSeries?: boolean }>(
-  ({ theme, $isSeries }) => ({
-    position: "relative",
-    width: "100%",
-    aspectRatio: "16/9",
-    backgroundColor: "#111",
-    overflow: "hidden",
-    cursor: "pointer",
-    display: "block",
-    textDecoration: "none",
-    "& .play-overlay": {
-      opacity: 1,
-      transform: "scale(1)",
-      transition: "opacity 0.3s ease, transform 0.3s ease",
+const ImageWrapper = styled(Link, {
+  shouldForwardProp: (prop) => prop !== "$isSeries",
+})<{ $isSeries?: boolean }>(({ theme, $isSeries }) => ({
+  position: "relative",
+  width: "100%",
+  aspectRatio: "16/9",
+  backgroundColor: "#111",
+  overflow: "hidden",
+  cursor: "pointer",
+  display: "block",
+  textDecoration: "none",
+  "& .play-overlay": {
+    opacity: 1,
+    transform: "scale(1)",
+    transition: "opacity 0.3s ease, transform 0.3s ease",
+  },
+  "&:hover .play-overlay": {
+    opacity: 0.75,
+    transform: "scale(1.12)",
+  },
+  ...($isSeries && {
+    [theme.breakpoints.down("sm")]: {
+      width: "358px",
+      height: "270px",
+      aspectRatio: "auto",
+      marginBottom: "24px",
     },
-    "&:hover .play-overlay": {
-      opacity: 0.75,
-      transform: "scale(1.12)",
-    },
-    ...($isSeries && {
-      [theme.breakpoints.down("sm")]: {
-        width: "358px",
-        height: "270px",
-        aspectRatio: "auto",
-        marginBottom: "24px",
-      },
-    }),
   }),
-)
+}))
 
 const PlayOverlay = styled.div({
   position: "absolute",
@@ -96,12 +96,12 @@ const TextSide = styled.div(({ theme }) => ({
   },
 }))
 
-const Buttonide = styled.div(({
+const Buttonide = styled.div({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
   flexDirection: "column",
-}))
+})
 
 const FeaturedTitle = styled.h2(({ theme }) => ({
   ...theme.typography.h1,

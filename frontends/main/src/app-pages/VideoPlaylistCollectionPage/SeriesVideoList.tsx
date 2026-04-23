@@ -38,8 +38,8 @@ const EpisodeDescription = styled(Typography)(({ theme }) => ({
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
   [theme.breakpoints.down("sm")]: {
-      marginTop: 0,
-    },
+    marginTop: 0,
+  },
 }))
 
 const EpisodeRow = styled.li(({ theme }) => ({
@@ -117,7 +117,7 @@ const EpisodeTitleLink = styled.span<{ $isFirst?: boolean }>(
 
     [theme.breakpoints.down("sm")]: {
       fontSize: $isFirst ? "28px" : "20px",
-      lineHeight: $isFirst? "36px": "26px",
+      lineHeight: $isFirst ? "36px" : "26px",
     },
   }),
 )
@@ -151,10 +151,10 @@ const EpisodeMeta = styled(Typography)(({ theme }) => ({
   lineHeight: "22px",
   whiteSpace: "nowrap",
   textAlign: "left",
-   [theme.breakpoints.down("sm")]: {
-      ...theme.typography.body3,
-      lineHeight: "16px",
-    },
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+    lineHeight: "16px",
+  },
 }))
 
 const PlayButton = styled(ActionButton, {
@@ -217,44 +217,13 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
       )}
       <ContentBlock>
         <EpisodeInfo>
-          {index && index === 1 && (
-            <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
-            {/* {episode.title} */}
-            Introduction and Overview
+          <EpisodeTitleLink className="episode-title" $isFirst={index === 1}>
+            {episode.title}
           </EpisodeTitleLink>
-          )}
-          {index && index === 2 && (
-            <EpisodeTitleLink className="episode-title">
-            {/* {episode.title} */}
-            Neural Networks and Backpropagation
-          </EpisodeTitleLink>
-          )}
 
-          {index && index === 3 && (
-            <EpisodeTitleLink className="episode-title">
-            {/* {episode.title} */}
-            Convolutional Neural Networks
-          </EpisodeTitleLink>
-          )}
-          {index && index === 4 && (
-            <EpisodeTitleLink className="episode-title" style={episode.description ? { marginBottom: 0 } : undefined}>
-            {/* {episode.title} */}
-            Recurrent Neural Networks and Attention
-          </EpisodeTitleLink>
-          )}
-           {index && index > 4 && (
-            <EpisodeTitleLink className="episode-title" style={episode.description ? { marginBottom: 0 } : undefined}>
-            {/* {episode.title} */}
-            Advanced Topics in Deep Learning
-          </EpisodeTitleLink>
-          )}
-          {index && index < 4 && episode.description && (
-            <EpisodeDescription variant="body2">
-              {/* {episode.description} */}
-              Course structure, prerequisites, and the landscape of deep
-              learning in 2026
-            </EpisodeDescription>
-          )}
+          <EpisodeDescription variant="body2">
+            {episode.description}
+          </EpisodeDescription>
         </EpisodeInfo>
 
         <EpisodeRight>

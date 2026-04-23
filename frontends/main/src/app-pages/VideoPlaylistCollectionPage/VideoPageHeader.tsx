@@ -106,19 +106,13 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
             </CollectionLabel>
           )}
 
-          {/* <PageTitle>{playlist?.title ?? <Skeleton width={380} />}</PageTitle> */}
           <PageTitle isSeries={isSeries}>
-            Introduction to Deep Learning
+            {playlist?.title ?? <Skeleton width={380} />}
           </PageTitle>
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (
-            <PageDescription>
-              A lecture series covering the foundations of deep learning, from
-              neural networks to generative models. Designed for students and
-              practitioners who want to understand the mathematics and intuition
-              behind modern AI systems.
-            </PageDescription>
+            <PageDescription>{playlist.description}</PageDescription>
           )}
         </VideoContainer>
       </HeaderSection>
