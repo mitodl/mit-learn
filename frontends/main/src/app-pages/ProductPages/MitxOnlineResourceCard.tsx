@@ -58,7 +58,7 @@ const formatResourcePrice = (
 
   const single = minPrice ?? maxPrice
   if (single !== null && single !== undefined) {
-    return formatPrice(single, { avoidCents: true })  
+    return formatPrice(single, { avoidCents: true })
   }
 
   return null
