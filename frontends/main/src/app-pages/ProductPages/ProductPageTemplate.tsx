@@ -265,7 +265,6 @@ export type ResourceInfo = {
 type ProductPageTemplateProps = {
   currentBreadcrumbLabel: string
   title: string
-  readableId: string
   shortDescription: React.ReactNode
   imageSrc: string
   videoUrl?: string | null
@@ -279,7 +278,6 @@ type ProductPageTemplateProps = {
 const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   currentBreadcrumbLabel,
   title,
-  readableId,
   shortDescription,
   imageSrc,
   videoUrl,
@@ -301,7 +299,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
     enabled: shouldShowStayUpdatedButton,
   })
 
-  const handleStayUpdatedClick = (readableId: string) => {
+  const handleStayUpdatedClick = () => {
     if (!showStayUpdated || !resource) return
     if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
       posthog.capture(PostHogEvents.CallToActionClicked, {
@@ -312,7 +310,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
       })
     }
     NiceModal.show(StayUpdatedModal, {
-      productReadableId: readableId,
+      productReadableId: resource.readable_id,
     })
   }
 
@@ -360,7 +358,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                           size="large"
                           variant="secondary"
                           disabled={formQuery.isError}
-                          onClick={() => handleStayUpdatedClick(readableId)}
+                          onClick={handleStayUpdatedClick}
                         >
                           Stay Updated
                         </StayUpdatedButton>
