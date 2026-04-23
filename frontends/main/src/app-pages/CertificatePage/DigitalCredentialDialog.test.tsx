@@ -4,10 +4,8 @@
 import React from "react"
 import { screen, renderWithProviders, user } from "@/test-utils"
 import { factories } from "api/test-utils"
-import {
-  DigitalCredentialDialog,
-  VerifiableCredential,
-} from "./DigitalCredentialDialog"
+import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
+import { VerifiableCredential } from "@/common/certificateUtils"
 
 const createMockVerifiableCredential = (
   overrides?: Partial<VerifiableCredential>,
@@ -259,7 +257,11 @@ describe("DigitalCredentialDialog", () => {
       const verifyLink = screen.getByRole("link", {
         name: /Verify Credential/i,
       })
-      expect(verifyLink).toHaveAttribute("href", "https://verifierplus.org/")
+
+      expect(verifyLink).toHaveAttribute(
+        "href",
+        `https://verifierplus.org/#verify?vc=${process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL}/api/v2/verifiable_${credential["credentialSubject"]["achievement"]["achievementType"].toLowerCase()}_credential/${credential["id"].substring(9)}/download`,
+      )
       expect(verifyLink).toHaveAttribute("target", "_blank")
     })
   })

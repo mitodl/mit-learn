@@ -85,21 +85,30 @@ const CopyLinkButton = styled(Button)({
   minWidth: "104px",
 })
 
+// We use this for two pretty distinct purposes:
+// - Sharing a certificate, which can now be either a link to the current page or a verifierplus.org link if you have a verifiable certificate.
+//   - LinkedIn links are special in these cases, because rather than a straight share, we use an add to profile link that pre-populates the certificate info for the user to add to their profile
+// - Sharing an article.
+// As a result, we need to override the linkedin link generation if you're on a cert page.
 const SharePopover = ({
   open,
   title,
   anchorEl,
   onClose,
   pageUrl,
+  linkedInHrefOverride = null,
 }: {
   open: boolean
   title: string
   anchorEl: HTMLDivElement | null
   onClose: () => void
   pageUrl: string
+  linkedInHrefOverride?: string | null
 }) => {
   const [copyText, setCopyText] = useState("Copy Link")
-
+  const linkedInHref = linkedInHrefOverride
+    ? linkedInHrefOverride
+    : `${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(pageUrl)}`
   return (
     <StyledPopover open={open} onClose={onClose} anchorEl={anchorEl}>
       <Contents>
@@ -121,7 +130,7 @@ const SharePopover = ({
               <RiTwitterXLine size={18} />
             </ShareLink>
             <ShareLink
-              href={`${LINKEDIN_SHARE_BASE_URL}?url=${encodeURIComponent(pageUrl)}`}
+              href={linkedInHref}
               aria-label="Share on LinkedIn"
               target="_blank"
             >
