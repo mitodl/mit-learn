@@ -1,15 +1,14 @@
 """Middleware for deleting legacy cookies during migrations."""
 
+import json
 import re
 from dataclasses import dataclass
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-TOMBSTONE_FORMAT_PARTS = 3
-DOMAIN_PART_INDEX = 1
-PATH_PART_INDEX = 2
 VALID_COOKIE_DOMAIN_RE = re.compile(r"^\.?[A-Za-z0-9.-]+$")
+ALLOWED_TOMBSTONE_FIELDS = {"name", "domain", "path"}
 
 
 @dataclass(frozen=True)
@@ -21,20 +20,20 @@ class CookieTombstone:
     path: str = "/"
 
 
-def parse_cookie_tombstones(tombstones: list[str]) -> list[CookieTombstone]:
+def parse_cookie_tombstones(tombstones_json: str) -> list[CookieTombstone]:
     """
-    Parse tombstones from a list of pipe-delimited values.
+    Parse tombstones from a JSON array of objects.
 
-    Each item uses the positional format ``name|domain|path``. Trailing parts
-    may be omitted, so accepted forms are ``name``, ``name|domain``, and
-    ``name|domain|path``. To specify a ``path`` without a ``domain``, include
-    an empty domain placeholder: ``name||/path``.
+    Each object supports:
+    - ``name`` (required string)
+    - ``domain`` (optional string or null)
+    - ``path`` (optional string, defaults to ``/``)
 
     Examples:
         Input:
             [
-                "csrftoken|.learn.mit.edu|/",
-                "legacy_cookie",
+                {"name": "csrftoken", "domain": ".learn.mit.edu", "path": "/"},
+                {"name": "legacy_cookie"},
             ]
 
         Output:
@@ -43,46 +42,85 @@ def parse_cookie_tombstones(tombstones: list[str]) -> list[CookieTombstone]:
                 CookieTombstone(name="legacy_cookie", domain=None, path="/"),
             ]
     """
-    parsed_tombstones: list[CookieTombstone] = []
+    try:
+        tombstones = json.loads(tombstones_json)
+    except json.JSONDecodeError as ex:
+        msg = "COOKIE_TOMBSTONES must be valid JSON"
+        raise ImproperlyConfigured(msg) from ex
 
-    for tombstone in tombstones:
-        parts = [part.strip() for part in tombstone.split("|")]
-        if len(parts) > TOMBSTONE_FORMAT_PARTS:
-            msg = (
-                "CSRF_COOKIE_TOMBSTONES entries must use 'name|domain|path' format: "
-                f"{tombstone}"
-            )
-            raise ImproperlyConfigured(msg)
+    if not isinstance(tombstones, list):
+        msg = "COOKIE_TOMBSTONES must be a JSON array"
+        raise ImproperlyConfigured(msg)
 
-        name = parts[0]
-        domain = parts[DOMAIN_PART_INDEX] if len(parts) > DOMAIN_PART_INDEX else None
-        path = parts[PATH_PART_INDEX] if len(parts) > PATH_PART_INDEX else "/"
+    return [_parse_tombstone(tombstone) for tombstone in tombstones]
 
-        if not name:
-            msg = "CSRF_COOKIE_TOMBSTONES entries must include a cookie name"
-            raise ImproperlyConfigured(msg)
 
-        if domain == "":
-            domain = None
-        elif domain and not _is_valid_cookie_domain(domain):
-            msg = (
-                "CSRF_COOKIE_TOMBSTONES entries must use a valid domain when provided: "
-                f"{tombstone}"
-            )
-            raise ImproperlyConfigured(msg)
+def _parse_tombstone(tombstone: object) -> CookieTombstone:
+    """Parse a single tombstone object into a CookieTombstone."""
+    if not isinstance(tombstone, dict):
+        msg = "COOKIE_TOMBSTONES entries must be objects with name/domain/path fields"
+        raise ImproperlyConfigured(msg)
 
-        if not path:
-            path = "/"
-        elif not path.startswith("/"):
-            msg = (
-                "CSRF_COOKIE_TOMBSTONES entries must use a path starting with '/': "
-                f"{tombstone}"
-            )
-            raise ImproperlyConfigured(msg)
+    extra_fields = set(tombstone.keys()) - ALLOWED_TOMBSTONE_FIELDS
+    if extra_fields:
+        msg = (
+            "COOKIE_TOMBSTONES entries include unsupported field(s): "
+            f"{sorted(extra_fields)}"
+        )
+        raise ImproperlyConfigured(msg)
 
-        parsed_tombstones.append(CookieTombstone(name=name, domain=domain, path=path))
+    return CookieTombstone(
+        name=_parse_tombstone_name(tombstone.get("name")),
+        domain=_parse_tombstone_domain(tombstone.get("domain")),
+        path=_parse_tombstone_path(tombstone.get("path", "/")),
+    )
 
-    return parsed_tombstones
+
+def _parse_tombstone_name(name: object) -> str:
+    """Validate and normalize tombstone name."""
+    if not isinstance(name, str):
+        msg = "COOKIE_TOMBSTONES entries must include a string cookie name"
+        raise ImproperlyConfigured(msg)
+
+    name = name.strip()
+    if not name:
+        msg = "COOKIE_TOMBSTONES entries must include a cookie name"
+        raise ImproperlyConfigured(msg)
+    return name
+
+
+def _parse_tombstone_domain(domain: object) -> str | None:
+    """Validate and normalize tombstone domain."""
+    if domain is None:
+        return None
+    if not isinstance(domain, str):
+        msg = "COOKIE_TOMBSTONES entries must use a string domain when provided"
+        raise ImproperlyConfigured(msg)
+
+    domain = domain.strip()
+    if not domain:
+        return None
+    if not _is_valid_cookie_domain(domain):
+        msg = (
+            f"COOKIE_TOMBSTONES entries must use a valid domain when provided: {domain}"
+        )
+        raise ImproperlyConfigured(msg)
+    return domain
+
+
+def _parse_tombstone_path(path: object) -> str:
+    """Validate and normalize tombstone path."""
+    if path is None:
+        return "/"
+    if not isinstance(path, str):
+        msg = "COOKIE_TOMBSTONES entries must use a string path when provided"
+        raise ImproperlyConfigured(msg)
+
+    path = path.strip() or "/"
+    if not path.startswith("/"):
+        msg = f"COOKIE_TOMBSTONES entries must use a path starting with '/': {path}"
+        raise ImproperlyConfigured(msg)
+    return path
 
 
 def _host_in_domain_scope(host: str, domain: str | None) -> bool:
@@ -118,7 +156,7 @@ class CookieTombstoneMiddleware:
     """
     Delete configured legacy cookies from matching responses.
 
-    Expected pre-parsed values in ``settings.CSRF_COOKIE_TOMBSTONES``:
+    Expected pre-parsed values in ``settings.COOKIE_TOMBSTONES``:
     [
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/"),
         CookieTombstone(name="legacy_cookie", domain=None, path="/"),
@@ -149,7 +187,7 @@ class CookieTombstoneMiddleware:
         """Delete configured cookies from matching responses."""
         response = self.get_response(request)
 
-        tombstones = settings.CSRF_COOKIE_TOMBSTONES
+        tombstones = settings.COOKIE_TOMBSTONES
         if not tombstones or not request.COOKIES:
             return response
 

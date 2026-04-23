@@ -209,7 +209,9 @@ class TestSettings(TestCase):
             "os.environ",
             {
                 **REQUIRED_SETTINGS,
-                "CSRF_COOKIE_TOMBSTONES": '["csrftoken|.learn.mit.edu|/"]',
+                "COOKIE_TOMBSTONES": (
+                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
+                ),
             },
             clear=True,
         ):
@@ -234,7 +236,9 @@ class TestSettings(TestCase):
             "os.environ",
             {
                 **REQUIRED_SETTINGS,
-                "CSRF_COOKIE_TOMBSTONES": '["csrftoken|.learn.mit.edu|/"]',
+                "COOKIE_TOMBSTONES": (
+                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
+                ),
             },
             clear=True,
         ):

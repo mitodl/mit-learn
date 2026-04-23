@@ -242,9 +242,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = get_string(
 CSRF_COOKIE_SECURE = get_bool("CSRF_COOKIE_SECURE", True)  # noqa: FBT003
 CSRF_COOKIE_DOMAIN = get_string("CSRF_COOKIE_DOMAIN", None)
 CSRF_COOKIE_NAME = get_string("CSRF_COOKIE_NAME", "csrftoken")
-CSRF_COOKIE_TOMBSTONES = parse_cookie_tombstones(
-    get_list_of_str("CSRF_COOKIE_TOMBSTONES", [])
-)
+COOKIE_TOMBSTONES = parse_cookie_tombstones(get_string("COOKIE_TOMBSTONES", "[]"))
 
 CSRF_HEADER_NAME = get_string("CSRF_HEADER_NAME", "HTTP_X_CSRFTOKEN")
 
@@ -253,7 +251,7 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
 
-if CSRF_COOKIE_TOMBSTONES:
+if COOKIE_TOMBSTONES:
     tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
     MIDDLEWARE = (tombstone_middleware, *MIDDLEWARE)
 

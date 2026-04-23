@@ -18,9 +18,15 @@ def middleware(mocker):
 
 
 def test_parse_cookie_tombstones():
-    """Cookie tombstones should parse from pipe-delimited values."""
+    """Cookie tombstones should parse from JSON object values."""
     parsed = parse_cookie_tombstones(
-        ["csrftoken|.learn.mit.edu|/", "csrftoken", "sessionid||/accounts"]
+        """
+        [
+            {"name": "csrftoken", "domain": ".learn.mit.edu", "path": "/"},
+            {"name": "csrftoken"},
+            {"name": "sessionid", "path": "/accounts"}
+        ]
+        """
     )
     assert parsed == [
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/"),
@@ -32,15 +38,26 @@ def test_parse_cookie_tombstones():
 def test_parse_cookie_tombstones_invalid():
     """Invalid cookie tombstone values should raise ImproperlyConfigured."""
     with pytest.raises(ImproperlyConfigured):
-        parse_cookie_tombstones(["|.learn.mit.edu|/"])
+        parse_cookie_tombstones(
+            """
+            [{"name": "csrftoken", "domain": "/accounts"}]
+            """
+        )
 
     with pytest.raises(ImproperlyConfigured):
-        parse_cookie_tombstones(["csrftoken|/accounts"])
+        parse_cookie_tombstones(
+            """
+            [{"domain": ".learn.mit.edu"}]
+            """
+        )
+
+    with pytest.raises(ImproperlyConfigured):
+        parse_cookie_tombstones("not-json")
 
 
 def test_delete_matching_domain_cookie_and_host_only(middleware, mocker, settings):
     """Matching domain tombstones should delete both domain and host-only cookies."""
-    settings.CSRF_COOKIE_TOMBSTONES = [
+    settings.COOKIE_TOMBSTONES = [
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/")
     ]
     request = mocker.Mock()
@@ -65,7 +82,7 @@ def test_delete_matching_domain_cookie_and_host_only(middleware, mocker, setting
 
 def test_skip_when_host_not_in_cookie_domain(middleware, mocker, settings):
     """Domain tombstones should not apply outside the tombstone domain scope."""
-    settings.CSRF_COOKIE_TOMBSTONES = [
+    settings.COOKIE_TOMBSTONES = [
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/")
     ]
     request = mocker.Mock()
@@ -80,7 +97,7 @@ def test_skip_when_host_not_in_cookie_domain(middleware, mocker, settings):
 
 def test_skip_when_cookie_not_present(middleware, mocker, settings):
     """No deletion should occur when the cookie name is not present in request cookies."""
-    settings.CSRF_COOKIE_TOMBSTONES = [
+    settings.COOKIE_TOMBSTONES = [
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/")
     ]
     request = mocker.Mock()
@@ -96,7 +113,7 @@ def test_skip_when_cookie_not_present(middleware, mocker, settings):
 
 def test_skip_host_lookup_for_host_only_tombstones(middleware, mocker, settings):
     """Host lookups should be skipped when only host-only tombstones apply."""
-    settings.CSRF_COOKIE_TOMBSTONES = [
+    settings.COOKIE_TOMBSTONES = [
         CookieTombstone(name="csrftoken", domain=None, path="/")
     ]
     request = mocker.Mock()
@@ -115,7 +132,7 @@ def test_skip_host_lookup_for_host_only_tombstones(middleware, mocker, settings)
 
 def test_domain_host_lookup_is_lazy_and_single_call(middleware, mocker, settings):
     """Host should be fetched lazily and at most once for domain tombstones."""
-    settings.CSRF_COOKIE_TOMBSTONES = [
+    settings.COOKIE_TOMBSTONES = [
         CookieTombstone(name="other_cookie", domain=".learn.mit.edu", path="/"),
         CookieTombstone(name="csrftoken", domain=".learn.mit.edu", path="/"),
         CookieTombstone(name="csrftoken", domain=".open.edx.org", path="/"),
