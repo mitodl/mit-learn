@@ -113,7 +113,7 @@ const HowYoullLearnIcon: React.FC<{
 const HowYoullLearnSection: React.FC<{
   page: CoursePageItem | ProgramPageItem
 }> = ({ page }) => {
-  const filteredOptions = page.how_youll_learn ? page.how_youll_learn : []
+  const filteredOptions = page.how_youll_learn ?? []
 
   return filteredOptions.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
