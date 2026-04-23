@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.64.2
+--------------
+
+- Add configurable cookie tombstone middleware (#3234)
+
 Version 0.64.1 (Released April 22, 2026)
 --------------
 
