@@ -11,6 +11,9 @@ pytestmark = pytest.mark.django_db
 @patch("vector_search.encoders.litellm.litellm")
 @patch("vector_search.encoders.litellm.embedding")
 def test_litellm_encoder_cache_enabled(mock_embedding, mock_litellm):
+    """
+    Test that cache is enabled when cache is True on the encoder
+    """
     mock_embedding.return_value.to_dict.return_value = {
         "data": [{"embedding": [0.1, 0.2]}]
     }
@@ -32,6 +35,9 @@ def test_litellm_encoder_cache_enabled(mock_embedding, mock_litellm):
 @patch("vector_search.encoders.litellm.litellm")
 @patch("vector_search.encoders.litellm.embedding")
 def test_litellm_encoder_cache_disabled(mock_embedding, mock_litellm):
+    """
+    Test that cache is disabled when cache is False on the encoder
+    """
     mock_embedding.return_value.to_dict.return_value = {
         "data": [{"embedding": [0.1, 0.2]}]
     }
