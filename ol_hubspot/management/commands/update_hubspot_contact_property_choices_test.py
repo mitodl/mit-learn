@@ -17,13 +17,13 @@ def test_command_creates_contact_property_when_missing(mocker, faker):
         is_course=True,
         title="Algorithms",
         readable_id="algorithms",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
     LearningResourceFactory(
         is_program=True,
         title="Data Science Program",
         readable_id="data-science-program",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
 
     mocker.patch(
@@ -45,8 +45,8 @@ def test_command_creates_contact_property_when_missing(mocker, faker):
         "title",
         "--option-value-field",
         "readable_id",
-        "--resource-filter",
-        "etl_source=hubspot_test",
+        "--etl-source",
+        "mitxonline",
         "--resource-order-by",
         "title",
         stdout=stdout,
@@ -71,13 +71,13 @@ def test_command_updates_existing_contact_property(mocker, faker):
         is_course=True,
         title="AI Foundations",
         readable_id="ai-foundations",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
     LearningResourceFactory(
         is_program=True,
         title="AI Program",
         readable_id="ai-program",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
 
     existing_property = mocker.Mock()
@@ -100,10 +100,10 @@ def test_command_updates_existing_contact_property(mocker, faker):
         "title",
         "--option-value-field",
         "readable_id",
+        "--etl-source",
+        "mitxonline",
         "--resource-filter",
         "title__icontains=AI",
-        "--resource-filter",
-        "etl_source=hubspot_test",
         "--resource-order-by",
         "title",
         "--resource-distinct",
@@ -127,13 +127,13 @@ def test_command_disambiguates_duplicate_labels_with_value_suffix(mocker, faker)
         is_course=True,
         title="Generative AI Playbook",
         readable_id="gai-playbook-a",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
     LearningResourceFactory(
         is_program=True,
         title="Generative AI Playbook",
         readable_id="gai-playbook-b",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
 
     mocker.patch(
@@ -151,8 +151,8 @@ def test_command_disambiguates_duplicate_labels_with_value_suffix(mocker, faker)
         "title",
         "--option-value-field",
         "readable_id",
-        "--resource-filter",
-        "etl_source=hubspot_test",
+        "--etl-source",
+        "mitxonline",
         "--resource-order-by",
         "title",
     )
@@ -185,19 +185,19 @@ def test_command_avoids_collisions_with_existing_original_labels(mocker, faker):
         is_course=True,
         title="Test",
         readable_id="a",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
     LearningResourceFactory(
         is_program=True,
         title="Test",
         readable_id="b",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
     LearningResourceFactory(
         is_program=True,
         title="Test (b)",
         readable_id="c",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
 
     mocker.patch(
@@ -215,8 +215,8 @@ def test_command_avoids_collisions_with_existing_original_labels(mocker, faker):
         "title",
         "--option-value-field",
         "readable_id",
-        "--resource-filter",
-        "etl_source=hubspot_test",
+        "--etl-source",
+        "mitxonline",
         "--resource-order-by",
         "title",
     )
@@ -236,7 +236,7 @@ def test_command_uses_label_field_as_value_field_by_default(mocker, faker):
     LearningResourceFactory(
         is_course=True,
         title="Algorithms",
-        etl_source="hubspot_test",
+        etl_source="mitxonline",
     )
 
     mocker.patch(
@@ -252,8 +252,8 @@ def test_command_uses_label_field_as_value_field_by_default(mocker, faker):
         property_name,
         "--option-label-field",
         "title",
-        "--resource-filter",
-        "etl_source=hubspot_test",
+        "--etl-source",
+        "mitxonline",
     )
 
     create_mock.assert_called_once_with(
@@ -271,7 +271,7 @@ def test_command_uses_label_field_as_value_field_by_default(mocker, faker):
 def test_command_rejects_non_enumeration_existing_property(mocker, faker):
     """Command errors if an existing property is not an enumeration."""
     property_name = faker.slug().replace("-", "_")
-    LearningResourceFactory(is_course=True, title="Algorithms")
+    LearningResourceFactory(is_course=True, title="Algorithms", etl_source="mitxonline")
 
     existing_property = mocker.Mock()
     existing_property.type = "string"
@@ -286,6 +286,8 @@ def test_command_rejects_non_enumeration_existing_property(mocker, faker):
             property_name,
             "--option-label-field",
             "title",
+            "--etl-source",
+            "mitxonline",
         )
 
     assert "unsupported type" in str(exc_info.value)
@@ -295,9 +297,7 @@ def test_command_rejects_non_enumeration_existing_property(mocker, faker):
 def test_command_dry_run_skips_hubspot_lookup(mocker, faker):
     """Dry-run should not read HubSpot, even if lookup would fail."""
     property_name = faker.slug().replace("-", "_")
-    LearningResourceFactory(
-        is_course=True, title="Algorithms", etl_source="hubspot_test"
-    )
+    LearningResourceFactory(is_course=True, title="Algorithms", etl_source="mitxonline")
 
     get_property_mock = mocker.patch(
         "ol_hubspot.management.commands.update_hubspot_contact_property_choices.get_contact_property",
@@ -317,8 +317,8 @@ def test_command_dry_run_skips_hubspot_lookup(mocker, faker):
         property_name,
         "--option-label-field",
         "title",
-        "--resource-filter",
-        "etl_source=hubspot_test",
+        "--etl-source",
+        "mitxonline",
         "--dry-run",
     )
 

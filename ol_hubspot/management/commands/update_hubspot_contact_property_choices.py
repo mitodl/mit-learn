@@ -10,6 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 from hubspot.crm.properties.exceptions import ApiException as CrmPropertiesApiException
 
 from learning_resources.constants import LearningResourceType
+from learning_resources.etl.constants import ETLSource
 from learning_resources.models import LearningResource
 from ol_hubspot.api import (
     ContactPropertyOption,
@@ -58,11 +59,13 @@ class Command(BaseCommand):
             "  python manage.py update_hubspot_contact_property_choices "
             "learner_interest_choices \\\n"
             "    --option-label-field title \\\n"
+            "    --etl-source mitxonline \\\n"
             "    --resource-order-by title \\\n"
             "    --property-field-type checkbox\n\n"
             "  python manage.py update_hubspot_contact_property_choices "
             "learner_interest_choices \\\n"
             "    --option-label-field offered_by__name \\\n"
+            "    --etl-source xpro --etl-source mitxonline \\\n"
             "    --resource-filter professional=true \\\n"
             "    --resource-type course --resource-type program \\\n"
             "    --resource-distinct\n\n"
@@ -93,6 +96,19 @@ class Command(BaseCommand):
             help=(
                 "LearningResource field/annotation to use for option values. "
                 "Defaults to --option-label-field."
+            ),
+        )
+
+        parser.add_argument(
+            "--etl-source",
+            dest="etl_sources",
+            action="append",
+            required=True,
+            choices=ETLSource.names(),
+            metavar="ETL_SOURCE",
+            help=(
+                "ETL source to include (required; repeat for multiple). "
+                f"Choices: {', '.join(ETLSource.names())}"
             ),
         )
 
@@ -196,6 +212,8 @@ class Command(BaseCommand):
         if not options["include_unpublished"]:
             queryset = queryset.filter(published=True)
 
+        queryset = queryset.filter(etl_source__in=options["etl_sources"])
+
         resource_types = options.get("resource_types") or [
             LearningResourceType.course.name,
             LearningResourceType.program.name,
@@ -281,7 +299,7 @@ class Command(BaseCommand):
         if not property_options and not options["allow_empty"]:
             msg = (
                 "No choices were resolved from LearningResource data. "
-                "Adjust --option-label-field, --option-value-field, and "
+                "Adjust --option-label-field, --option-value-field, --etl-source, and "
                 "filters, or pass "
                 "--allow-empty to intentionally clear options."
             )
