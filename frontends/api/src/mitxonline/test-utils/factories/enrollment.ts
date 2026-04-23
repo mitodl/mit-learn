@@ -88,7 +88,11 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
           link: `/certificate/program/${faker.string.uuid()}/`,
         }
       : null,
-    enrollment_mode: faker.helpers.arrayElement(["audit", "verified", undefined]),
+    enrollment_mode: faker.helpers.arrayElement([
+      "audit",
+      "verified",
+      undefined,
+    ]),
     program: program,
   }
   return mergeOverrides<V3UserProgramEnrollment>(defaults, overrides)
