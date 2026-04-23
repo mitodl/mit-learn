@@ -411,7 +411,11 @@ const CourseCertificateBox: React.FC<CourseInfoRowProps> = ({
   })
   const price =
     canPurchase && product
-      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data, avoidCents: true })
+      ? priceWithDiscount({
+          product,
+          flexiblePrice: userFlexiblePrice.data,
+          avoidCents: true,
+        })
       : null
 
   const upgradeDeadline = nextRun?.is_archived
@@ -502,7 +506,11 @@ const CoursePriceRow: React.FC<CourseInfoRowProps> = ({
   })
   const price =
     enrollmentType === "paid" && product
-      ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data, avoidCents: true })
+      ? priceWithDiscount({
+          product,
+          flexiblePrice: userFlexiblePrice.data,
+          avoidCents: true,
+        })
       : null
 
   if (enrollmentType === "none") return null
