@@ -64,7 +64,13 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const sources = useMemo(
     () =>
-      video ? resolveVideoSources(video.video?.streaming_url, video.url) : [],
+      video
+        ? resolveVideoSources(
+            video.video?.streaming_url,
+            video.url,
+            video.content_files?.[0]?.youtube_id,
+          )
+        : [],
     [video],
   )
 
@@ -274,9 +280,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
           {/* Description */}
           {!isLoading && video?.description && (
-            <Styled.DescriptionText id="video-description">
-              {video.description}
-            </Styled.DescriptionText>
+            <Styled.DescriptionText
+              id="video-description"
+              dangerouslySetInnerHTML={{ __html: video.description }}
+            />
           )}
 
           {!isLoading && !video?.description && (

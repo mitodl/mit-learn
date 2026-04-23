@@ -227,9 +227,12 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
               {episode.title}
             </EpisodeTitleLink>
 
-            <EpisodeDescription variant="body2">
-              {episode.description}
-            </EpisodeDescription>
+            <EpisodeDescription
+              variant="body2"
+              dangerouslySetInnerHTML={{
+                __html: episode.description ?? "",
+              }}
+            />
           </EpisodeInfo>
 
           <EpisodeRight>

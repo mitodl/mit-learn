@@ -402,10 +402,14 @@ def update_ocw_learning_material_resources(self):  # noqa: ARG001
     ocw courses or content files
     """
 
-    if not settings.CREATE_OCW_LEARNING_MATERIALS:
+    if (
+        not settings.CREATE_OCW_LEARNING_MATERIALS
+        and not settings.SHOW_OCW_LECTURE_VIDEOS
+    ):
         message = (
-            "CREATE_OCW_LEARNING_MATERIALS flag is set to False."
-            " update_ocw_learning_material_resources cannont run"
+            "update_ocw_learning_material_resources cannot run because "
+            "CREATE_OCW_LEARNING_MATERIALS and SHOW_OCW_LECTURE_VIDEOS "
+            "flags are set to False."
         )
         raise RuntimeError(message)
 

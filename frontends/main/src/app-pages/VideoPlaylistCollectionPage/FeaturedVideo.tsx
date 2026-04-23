@@ -184,7 +184,9 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
   totalVideos,
   totalTime,
 }) => {
-  const imageUrl = video.image?.url ?? null
+  const imageUrl =
+    video.image?.url ?? video.content_files?.[0]?.image_src ?? null
+
   const duration = video.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
@@ -231,7 +233,9 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
                 </Link>
               </FeaturedTitle>
               {description && (
-                <FeaturedDescription>{description}</FeaturedDescription>
+                <FeaturedDescription
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
               )}
             </TextSide>
           ) : (
