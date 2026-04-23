@@ -41,7 +41,7 @@ def test_command_creates_contact_property_when_missing(mocker, faker):
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--option-value-field",
         "readable_id",
@@ -96,7 +96,7 @@ def test_command_updates_existing_contact_property(mocker, faker):
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--option-value-field",
         "readable_id",
@@ -147,7 +147,7 @@ def test_command_disambiguates_duplicate_labels_with_value_suffix(mocker, faker)
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--option-value-field",
         "readable_id",
@@ -211,7 +211,7 @@ def test_command_avoids_collisions_with_existing_original_labels(mocker, faker):
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--option-value-field",
         "readable_id",
@@ -250,7 +250,7 @@ def test_command_uses_label_field_as_value_field_by_default(mocker, faker):
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--resource-filter",
         "etl_source=hubspot_test",
@@ -284,7 +284,7 @@ def test_command_rejects_non_enumeration_existing_property(mocker, faker):
         call_command(
             "update_hubspot_contact_property_choices",
             property_name,
-            "--learning-resource-field",
+            "--option-label-field",
             "title",
         )
 
@@ -315,7 +315,7 @@ def test_command_dry_run_skips_hubspot_lookup(mocker, faker):
     call_command(
         "update_hubspot_contact_property_choices",
         property_name,
-        "--learning-resource-field",
+        "--option-label-field",
         "title",
         "--resource-filter",
         "etl_source=hubspot_test",

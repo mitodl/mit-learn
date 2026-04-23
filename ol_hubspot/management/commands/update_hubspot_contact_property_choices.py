@@ -57,12 +57,12 @@ class Command(BaseCommand):
             "Examples:\n"
             "  python manage.py update_hubspot_contact_property_choices "
             "learner_interest_choices \\\n"
-            "    --learning-resource-field title \\\n"
+            "    --option-label-field title \\\n"
             "    --resource-order-by title \\\n"
             "    --property-field-type checkbox\n\n"
             "  python manage.py update_hubspot_contact_property_choices "
             "learner_interest_choices \\\n"
-            "    --learning-resource-field offered_by__name \\\n"
+            "    --option-label-field offered_by__name \\\n"
             "    --resource-filter professional=true \\\n"
             "    --resource-type course --resource-type program \\\n"
             "    --resource-distinct\n\n"
@@ -79,8 +79,8 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--learning-resource-field",
-            dest="learning_resource_field",
+            "--option-label-field",
+            dest="option_label_field",
             required=True,
             help=(
                 "LearningResource field/annotation to use for option labels. "
@@ -92,7 +92,7 @@ class Command(BaseCommand):
             dest="option_value_field",
             help=(
                 "LearningResource field/annotation to use for option values. "
-                "Defaults to --learning-resource-field."
+                "Defaults to --option-label-field."
             ),
         )
 
@@ -189,7 +189,7 @@ class Command(BaseCommand):
         self, options: dict
     ) -> list[tuple[object, object]]:
         """Build option labels and values from LearningResource records."""
-        label_field = options["learning_resource_field"]
+        label_field = options["option_label_field"]
         value_field = options.get("option_value_field") or label_field
         queryset = LearningResource.objects.all()
 
@@ -281,7 +281,7 @@ class Command(BaseCommand):
         if not property_options and not options["allow_empty"]:
             msg = (
                 "No choices were resolved from LearningResource data. "
-                "Adjust --learning-resource-field, --option-value-field, and "
+                "Adjust --option-label-field, --option-value-field, and "
                 "filters, or pass "
                 "--allow-empty to intentionally clear options."
             )
