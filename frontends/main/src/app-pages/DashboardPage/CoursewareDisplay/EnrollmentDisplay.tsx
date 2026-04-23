@@ -18,7 +18,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
   getEnrollmentStatus,
-  getProgramEnrollmentStatus,
+  getRequirementsProgress,
   getKey,
   ResourceType,
   selectBestEnrollment,
@@ -308,6 +308,35 @@ interface ResourceItem {
   type: "course" | "program"
 }
 
+type CourseRequirementItem = {
+  resourceType: "course"
+  course: CourseWithCourseRunsSerializerV2
+}
+
+type ProgramAsCourseRequirementItem = {
+  resourceType: "program-as-course"
+  courseProgramId: number
+  courseProgram: V2ProgramDetail
+  courseProgramEnrollment: V3UserProgramEnrollment | undefined
+}
+
+type ProgramEnrollmentRequirementItem = {
+  resourceType: "program-enrollment"
+  enrollment: V3UserProgramEnrollment
+}
+
+type RequirementSectionItem =
+  | CourseRequirementItem
+  | ProgramAsCourseRequirementItem
+  | ProgramEnrollmentRequirementItem
+
+type RequirementSection = {
+  key: string | number | null | undefined
+  title: string
+  items: RequirementSectionItem[]
+  node: V2ProgramRequirement
+}
+
 const extractResourcesFromNode = (
   node: V2ProgramRequirement,
 ): ResourceItem[] => {
@@ -436,7 +465,15 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     {} as Record<number, CourseRunEnrollmentV3[]>,
   )
 
-  const requirementSections =
+  const programEnrollmentsById = (programEnrollments ?? []).reduce(
+    (acc, enrollment) => {
+      acc[enrollment.program.id] = enrollment
+      return acc
+    },
+    {} as Record<number, V3UserProgramEnrollment>,
+  )
+
+  const requirementSections: RequirementSection[] =
     program?.req_tree
       .filter((node) => node.data.node_type === "operator")
       .map((node) => {
@@ -444,12 +481,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           (programCourses?.results ?? []).map((c) => [c.id, c]),
         )
         const programsById = new Map(requiredProgramList.map((p) => [p.id, p]))
-        const programEnrollmentsById = new Map(
-          (programEnrollments ?? []).map((enrollment) => [
-            enrollment.program.id,
-            enrollment,
-          ]),
-        )
 
         const sectionItems = extractResourcesFromNode(node)
           .map((resource) => {
@@ -473,13 +504,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 resourceType: "program-as-course" as const,
                 courseProgramId: requiredProgram.id,
                 courseProgram: requiredProgram,
-                courseProgramEnrollment: programEnrollmentsById.get(
-                  requiredProgram.id,
-                ),
+                courseProgramEnrollment:
+                  programEnrollmentsById[requiredProgram.id],
               }
             }
 
-            const enrollment = programEnrollmentsById.get(requiredProgram.id)
+            const enrollment = programEnrollmentsById[requiredProgram.id]
             if (!enrollment) return null
 
             return {
@@ -513,44 +543,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     )
   }, [requiredProgramList, requiredProgramCourses?.results])
 
-  const completedCount = requirementSections
-    .flatMap((section) => section.items)
-    .filter((item) => {
-      if (item.resourceType === "course") {
-        const bestEnrollment = selectBestEnrollment(
-          item.course,
-          enrollmentsByCourseId[item.course.id] || [],
-        )
-        return (
-          getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-        )
-      }
-      if (item.resourceType === "program-as-course") {
-        return (
-          getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
-          EnrollmentStatus.Completed
-        )
-      }
-      return false
-    }).length
-
-  const totalCount = requirementSections.reduce((sum, section) => {
-    if (
-      section.node.data.operator === "min_number_of" &&
-      section.node.data.operator_value
-    ) {
-      return sum + parseInt(section.node.data.operator_value, 10)
-    }
-    return (
-      sum +
-      section.items.filter((item) => {
-        return (
-          item.resourceType === "course" ||
-          item.resourceType === "program-as-course"
-        )
-      }).length
+  const { completed: completedCount, total: totalCount } =
+    getRequirementsProgress(
+      requirementSections.map((s) => s.node),
+      enrollmentsByCourseId,
+      programEnrollmentsById,
     )
-  }, 0)
 
   if (isLoading) {
     return (
@@ -590,35 +588,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         </Typography>
       </Stack>
       {requirementSections.map((section, index) => {
-        const sectionCompletedCount = section.items.filter((item) => {
-          if (item.resourceType === "course") {
-            const bestEnrollment = selectBestEnrollment(
-              item.course,
-              enrollmentsByCourseId[item.course.id] || [],
-            )
-            return (
-              getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-            )
-          }
-          if (item.resourceType === "program-as-course") {
-            return (
-              getProgramEnrollmentStatus(item.courseProgramEnrollment, 0, 0) ===
-              EnrollmentStatus.Completed
-            )
-          }
-          return false
-        }).length
-
-        const sectionRequiredCount =
-          section.node.data.operator === "min_number_of" &&
-          section.node.data.operator_value
-            ? parseInt(section.node.data.operator_value, 10)
-            : section.items.filter((item) => {
-                return (
-                  item.resourceType === "course" ||
-                  item.resourceType === "program-as-course"
-                )
-              }).length
+        const { completed: sectionCompleted, total: sectionTotal } =
+          getRequirementsProgress(
+            [section.node],
+            enrollmentsByCourseId,
+            programEnrollmentsById,
+          )
 
         return (
           <React.Fragment key={section.key}>
@@ -635,13 +610,13 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               >
                 {section.title}
               </Typography>
-              {sectionRequiredCount > 0 ? (
+              {sectionTotal > 0 ? (
                 <Typography
                   data-testid="section-completion-count"
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
-                  Completed {sectionCompletedCount} of {sectionRequiredCount}
+                  Completed {sectionCompleted} of {sectionTotal}
                 </Typography>
               ) : null}
             </Stack>
