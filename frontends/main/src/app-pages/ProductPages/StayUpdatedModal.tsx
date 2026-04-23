@@ -80,7 +80,7 @@ const findProductOfInterestValue = (
     (option) => option.value?.trim() === normalizedProductReadableId,
   )
 
-  return matchingOption?.value?.trim() || undefined
+  return matchingOption?.value?.trim()
 }
 
 const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
