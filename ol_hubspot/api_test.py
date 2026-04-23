@@ -118,7 +118,10 @@ def test_create_contact_property(mocker, settings, faker):
     create_contact_property(
         property_name=property_name,
         label=faker.sentence(nb_words=3),
-        option_values=["Course A", "Program B"],
+        options=[
+            {"label": "Course A", "value": "course-a"},
+            {"label": "Program B", "value": "program-b"},
+        ],
         group_name="contactinformation",
         field_type="checkbox",
         description="Products a learner is interested in.",
@@ -134,7 +137,8 @@ def test_create_contact_property(mocker, settings, faker):
     assert payload.type == "enumeration"
     assert payload.field_type == "checkbox"
     assert payload.form_field is True
-    assert [option.value for option in payload.options] == ["Course A", "Program B"]
+    assert [option.label for option in payload.options] == ["Course A", "Program B"]
+    assert [option.value for option in payload.options] == ["course-a", "program-b"]
 
 
 def test_update_contact_property_choices(mocker, settings, faker):
@@ -146,7 +150,10 @@ def test_update_contact_property_choices(mocker, settings, faker):
 
     update_contact_property_choices(
         property_name=property_name,
-        option_values=["Course A", "Program B"],
+        options=[
+            {"label": "Course A", "value": "course-a"},
+            {"label": "Program B", "value": "program-b"},
+        ],
     )
 
     client.crm.properties.core_api.update.assert_called_once()
@@ -154,7 +161,8 @@ def test_update_contact_property_choices(mocker, settings, faker):
     assert args[0] == "contacts"
     assert args[1] == property_name
     payload = args[2]
-    assert [option.value for option in payload.options] == ["Course A", "Program B"]
+    assert [option.label for option in payload.options] == ["Course A", "Program B"]
+    assert [option.value for option in payload.options] == ["course-a", "program-b"]
 
 
 def test_get_contact_property_propagates_sdk_error(mocker, settings, faker):
