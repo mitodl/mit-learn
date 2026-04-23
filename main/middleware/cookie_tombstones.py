@@ -1,5 +1,6 @@
 """Middleware for deleting legacy cookies during migrations."""
 
+import re
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 TOMBSTONE_FORMAT_PARTS = 3
 DOMAIN_PART_INDEX = 1
 PATH_PART_INDEX = 2
+VALID_COOKIE_DOMAIN_RE = re.compile(r"^\.?[A-Za-z0-9.-]+$")
 
 
 @dataclass(frozen=True)
@@ -23,8 +25,10 @@ def parse_cookie_tombstones(tombstones: list[str]) -> list[CookieTombstone]:
     """
     Parse tombstones from a list of pipe-delimited values.
 
-    Each item has shape: ``name|domain|path``, where ``domain`` and ``path``
-    are optional.
+    Each item uses the positional format ``name|domain|path``. Trailing parts
+    may be omitted, so accepted forms are ``name``, ``name|domain``, and
+    ``name|domain|path``. To specify a ``path`` without a ``domain``, include
+    an empty domain placeholder: ``name||/path``.
 
     Examples:
         Input:
@@ -60,7 +64,7 @@ def parse_cookie_tombstones(tombstones: list[str]) -> list[CookieTombstone]:
 
         if domain == "":
             domain = None
-        elif domain and not domain.lstrip("."):
+        elif domain and not _is_valid_cookie_domain(domain):
             msg = (
                 "CSRF_COOKIE_TOMBSTONES entries must use a valid domain when provided: "
                 f"{tombstone}"
@@ -90,6 +94,23 @@ def _host_in_domain_scope(host: str, domain: str | None) -> bool:
     normalized_host = host.split(":", 1)[0].lower()
     return normalized_host == normalized_domain or normalized_host.endswith(
         f".{normalized_domain}"
+    )
+
+
+def _is_valid_cookie_domain(domain: str) -> bool:
+    """Validate cookie domain format."""
+    normalized_domain = domain.lstrip(".")
+    if not normalized_domain:
+        return False
+    if not VALID_COOKIE_DOMAIN_RE.fullmatch(domain):
+        return False
+    if ".." in normalized_domain:
+        return False
+
+    labels = normalized_domain.split(".")
+    return all(
+        label and not label.startswith("-") and not label.endswith("-")
+        for label in labels
     )
 
 
@@ -132,13 +153,16 @@ class CookieTombstoneMiddleware:
         if not tombstones or not request.COOKIES:
             return response
 
-        request_host = request.get_host()
+        request_host: str | None = None
         deleted_signatures: set[tuple[str, str, str | None]] = set()
         for tombstone in tombstones:
             if tombstone.name not in request.COOKIES:
                 continue
-            if not _host_in_domain_scope(request_host, tombstone.domain):
-                continue
+            if tombstone.domain is not None:
+                if request_host is None:
+                    request_host = request.get_host()
+                if not _host_in_domain_scope(request_host, tombstone.domain):
+                    continue
 
             self._delete_cookie_once(
                 response,
