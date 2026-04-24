@@ -85,7 +85,7 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <html lang="en">
       <head>
         {gtmHeadScript ? (
-          <Script id="google-tag-manager" strategy="beforeInteractive">
+          <Script id="google-tag-manager" strategy="afterInteractive">
             {gtmHeadScript}
           </Script>
         ) : null}
