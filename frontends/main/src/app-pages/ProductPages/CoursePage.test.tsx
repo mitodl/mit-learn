@@ -9,6 +9,7 @@ import {
   urls as learnUrls,
   factories as learnFactories,
 } from "api/test-utils"
+import userEvent from "@testing-library/user-event"
 import { renderWithProviders, waitFor, screen, within } from "@/test-utils"
 import CoursePage from "./CoursePage"
 import { assertHeadings } from "ol-test-utilities"
@@ -18,6 +19,7 @@ import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
+import { getOutlineCoursewareId } from "./util"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -48,6 +50,26 @@ const setupApis = ({
   setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
+  const outlineCoursewareId = getOutlineCoursewareId(course)
+  if (outlineCoursewareId) {
+    setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
+      course_id: course.readable_id,
+      generated_at: new Date().toISOString(),
+      modules: [
+        {
+          id: "m1",
+          display_name: "Introduction",
+          effort_time: 540,
+          counts: {
+            videos: 30,
+            readings: 2,
+            assignments: 1,
+          },
+        },
+        { id: "m2", display_name: "Core concepts", effort_time: 60 },
+      ],
+    })
+  }
 
   setMockResponse.get(
     learnUrls.userMe.get(),
@@ -112,6 +134,7 @@ describe("CoursePage", () => {
         { level: 2, name: "Course Information" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
+        { level: 2, name: "Modules" },
         { level: 2, name: "How you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
@@ -173,6 +196,65 @@ describe("CoursePage", () => {
 
     const section = await screen.findByRole("region", { name: "Prerequisites" })
     expectRawContent(section, page.prerequisites)
+  })
+
+  test("Modules section renders module titles and summary", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Modules" })
+    expect(
+      within(section).getByText("There are 2 modules in this course"),
+    ).toBeInTheDocument()
+    expect(within(section).getByText("Introduction")).toBeInTheDocument()
+    expect(within(section).getByText("Core concepts")).toBeInTheDocument()
+  })
+
+  test("Modules section expands to show What's included counts", async () => {
+    const user = userEvent.setup()
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Modules" })
+    await user.click(
+      within(section).getByRole("button", { name: /Introduction/i }),
+    )
+    expect(
+      await within(section).findByRole("heading", { name: "What's included" }),
+    ).toBeInTheDocument()
+    expect(within(section).getByText("30 videos")).toBeInTheDocument()
+    expect(within(section).getByText("2 readings")).toBeInTheDocument()
+    expect(within(section).getByText("1 assignment")).toBeInTheDocument()
+  })
+
+  test("Modules section allows multiple panels expanded at once", async () => {
+    const user = userEvent.setup()
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Modules" })
+    const introButton = within(section).getByRole("button", {
+      name: /Introduction/i,
+    })
+    const coreButton = within(section).getByRole("button", {
+      name: /Core concepts/i,
+    })
+
+    await user.click(introButton)
+    await user.click(coreButton)
+
+    expect(
+      within(section).getByRole("button", { name: /Introduction/i }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(
+      within(section).getByRole("button", { name: /Core concepts/i }),
+    ).toHaveAttribute("aria-expanded", "true")
   })
 
   test("Renders program bundle upsell when course belongs to a program (content tested in ProgramBundleUpsell.test)", async () => {
@@ -259,6 +341,16 @@ describe("CoursePage", () => {
       urls.courses.coursesList({ readable_id: "readable_id" }),
       { results: courses },
     )
+    if (courses.length > 0) {
+      const outlineCoursewareId = getOutlineCoursewareId(courses[0])
+      if (outlineCoursewareId) {
+        setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
+          course_id: courses[0].readable_id,
+          generated_at: new Date().toISOString(),
+          modules: [],
+        })
+      }
+    }
     setMockResponse.get(urls.pages.coursePages("readable_id"), {
       items: pages,
     })

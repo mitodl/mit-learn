@@ -10,7 +10,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds } from "./util"
+import { getOutlineCoursewareId, HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
@@ -22,9 +22,11 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
+import CourseOutlineSection from "./CourseOutlineSection"
 
 type CoursePageProps = {
   readableId: string
+  outlineCoursewareId?: string
 }
 
 const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
@@ -39,13 +41,23 @@ const PrerequisitesSection = styled.section({
   gap: "16px",
 })
 
-const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
+const CoursePage: React.FC<CoursePageProps> = ({
+  readableId,
+  outlineCoursewareId,
+}) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
   const courses = useQuery(
     coursesQueries.coursesList({ readable_id: readableId }),
   )
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
+  const effectiveOutlineCoursewareId = course
+    ? (outlineCoursewareId ?? getOutlineCoursewareId(course))
+    : undefined
+  const outline = useQuery({
+    ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
+    enabled: Boolean(effectiveOutlineCoursewareId),
+  })
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
   const flagsLoaded = useFeatureFlagsLoaded()
 
@@ -98,6 +110,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}
+      <CourseOutlineSection modules={outline.data?.modules ?? []} />
       <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>

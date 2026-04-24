@@ -1,5 +1,8 @@
-import type { V2Program } from "@mitodl/mitxonline-api-axios/v2"
-import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  NodeTypeEnum,
+  type CourseWithCourseRunsSerializerV2,
+  type V2Program,
+} from "@mitodl/mitxonline-api-axios/v2"
 
 enum HeadingIds {
   About = "about",
@@ -70,7 +73,25 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
     })
 }
 
+const getOutlineCoursewareId = (
+  course: CourseWithCourseRunsSerializerV2,
+): string | undefined => {
+  const runs = course.courseruns ?? []
+  const nextRun = runs.find((run) => run.id === course.next_run_id)
+  if (nextRun?.courseware_id) {
+    return nextRun.courseware_id
+  }
+
+  const firstRunWithCoursewareId = runs.find((run) =>
+    Boolean(run.courseware_id),
+  )
+  if (firstRunWithCoursewareId?.courseware_id) {
+    return firstRunWithCoursewareId.courseware_id
+  }
+  return undefined
+}
+
 type ProductNoun = "Course" | "Program"
 
-export { HeadingIds, parseReqTree }
+export { HeadingIds, parseReqTree, getOutlineCoursewareId }
 export type { ProductNoun, RequirementData, RequirementItem }
