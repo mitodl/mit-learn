@@ -10,7 +10,7 @@ import {
   videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import { formatDurationHuman } from "ol-utilities"
-import { getVideoPlaylistType } from "@/common/utils"
+import { isOcwPlaylist } from "@/common/utils"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
 import { EpisodeItem } from "./SeriesVideoList"
@@ -89,7 +89,7 @@ const VideoPlaylistCollectionPage: React.FC<
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
   const collectionVideos = videos.slice(1)
-  const playlistType = getVideoPlaylistType(playlist)
+  const playlistType = isOcwPlaylist(playlist)
 
   const totalVideos = videos.length
   const totalVideoSeconds = videos.reduce((acc, video) => {
@@ -143,8 +143,6 @@ const VideoPlaylistCollectionPage: React.FC<
                   episode={video}
                   href={getVideoHref(video)}
                   index={i + 1}
-                  onPlayClick={() => getVideoHref(video)}
-                  isPlayable
                 />
               ))}
             </EpisodeListUl>

@@ -133,7 +133,7 @@ function hexToRgba(hex: string, alpha: number): string | undefined {
   return `rgba(${r}, ${g}, ${b}, ${clampedAlpha})`
 }
 
-const getVideoPlaylistType = (resource: VideoPlaylistResource | undefined) =>
+const isOcwPlaylist = (resource: VideoPlaylistResource | undefined) =>
   resource?.offered_by?.code === "ocw" ? true : false
 
 export {
@@ -143,5 +143,5 @@ export {
   linkifyText,
   convertToEmbedUrl,
   hexToRgba,
-  getVideoPlaylistType,
+  isOcwPlaylist,
 }

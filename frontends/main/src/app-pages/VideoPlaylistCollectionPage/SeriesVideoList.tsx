@@ -3,7 +3,6 @@
 import React from "react"
 import Link from "next/link"
 import { Typography, styled } from "ol-components"
-import { ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill, RiArrowRightSLine } from "@remixicon/react"
 import type { LearningResource } from "api/v1"
 import { formatDate, formatDurationClockTime } from "ol-utilities"
@@ -165,9 +164,7 @@ const EpisodeMeta = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const PlayButton = styled(ActionButton, {
-  shouldForwardProp: (prop) => prop !== "isPlaying",
-})<{
+const PlayButton = styled("div")<{
   isPlaying: boolean
 }>(({ theme, isPlaying }) => [
   {
@@ -175,16 +172,19 @@ const PlayButton = styled(ActionButton, {
     width: "48px",
     height: "48px",
     border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-    borderRadius: "inherit",
-    "&:hover:not(:disabled)": {
-      color: theme.custom.colors.red,
-    },
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    transition: "color 0.2s ease, border-color 0.2s ease",
     [theme.breakpoints.down("sm")]: {
       display: "none",
     },
   },
   isPlaying && {
     color: theme.custom.colors.red,
+    borderColor: theme.custom.colors.red,
   },
 ])
 
@@ -193,18 +193,14 @@ const PlayButton = styled(ActionButton, {
 type EpisodeItemProps = {
   episode: LearningResource
   href: string
-  onPlayClick: (episode: LearningResource) => void
   isPlaying?: boolean
-  isPlayable?: boolean
   index?: number
 }
 
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
   href,
-  onPlayClick,
   isPlaying,
-  isPlayable,
   index,
 }) => {
   const videoResource = episode.resource_type === "video" ? episode : null
@@ -247,14 +243,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
                 ))}
               </EpisodeMeta>
             )}
-            <PlayButton
-              onClick={() => onPlayClick(episode)}
-              aria-label={`Play ${episode.title}`}
-              isPlaying={isPlaying ?? false}
-              disabled={!isPlayable}
-              variant="secondary"
-              className="play-button"
-            >
+            <PlayButton isPlaying={isPlaying ?? false} className="play-button">
               <RiPlayFill size={20} />
             </PlayButton>
             <ChevronIcon>
