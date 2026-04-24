@@ -11,10 +11,10 @@ const makeFlexiblePrice = factories.products.flexiblePrice
 
 describe("formatPrice", () => {
   test.each([
-    { input: 100, expected: "$100.00" },
-    { input: "100.00", expected: "$100.00" },
-    { input: 149, expected: "$149.00" },
-    { input: "149.00", expected: "$149.00" },
+    { input: 100, expected: "$100" },
+    { input: "100.00", expected: "$100" },
+    { input: 149, expected: "$149" },
+    { input: "149.00", expected: "$149" },
     { input: 100.5, expected: "$100.50" },
     { input: "100.50", expected: "$100.50" },
     { input: 100.25, expected: "$100.25" },
@@ -24,14 +24,14 @@ describe("formatPrice", () => {
   })
 
   test.each([
-    { input: 100, expected: "$100" },
-    { input: "100.00", expected: "$100" },
+    { input: 100, expected: "$100.00" },
+    { input: "100.00", expected: "$100.00" },
     { input: 100.5, expected: "$100.50" },
     { input: "99.99", expected: "$99.99" },
   ])(
-    "formatPrice($input, { avoidCents: true }) === '$expected'",
+    "formatPrice($input, { avoidCents: false }) === '$expected'",
     ({ input, expected }) => {
-      expect(formatPrice(input, { avoidCents: true })).toBe(expected)
+      expect(formatPrice(input, { avoidCents: false })).toBe(expected)
     },
   )
 })
@@ -151,8 +151,8 @@ describe("priceWithDiscount", () => {
 
     const result = priceWithDiscount({ product })
 
-    expect(result.originalPrice).toBe("$100.00")
-    expect(result.finalPrice).toBe("$100.00")
+    expect(result.originalPrice).toBe("$100")
+    expect(result.finalPrice).toBe("$100")
     expect(result.isDiscounted).toBe(false)
     expect(result.approvedFinancialAid).toBe(false)
   })
@@ -182,8 +182,8 @@ describe("priceWithDiscount", () => {
 
     const result = priceWithDiscount({ product, flexiblePrice })
 
-    expect(result.originalPrice).toBe("$100.00")
-    expect(result.finalPrice).toBe("$70.00")
+    expect(result.originalPrice).toBe("$100")
+    expect(result.finalPrice).toBe("$70")
     expect(result.isDiscounted).toBe(true)
     expect(result.approvedFinancialAid).toBe(true)
   })
@@ -214,8 +214,8 @@ describe("priceWithDiscount", () => {
 
     const result = priceWithDiscount({ product, flexiblePrice })
 
-    expect(result.originalPrice).toBe("$100.00")
-    expect(result.finalPrice).toBe("$100.00")
+    expect(result.originalPrice).toBe("$100")
+    expect(result.finalPrice).toBe("$100")
     expect(result.isDiscounted).toBe(false)
     expect(result.approvedFinancialAid).toBe(true) // Has financial aid approval, just no discount
   })

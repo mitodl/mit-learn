@@ -68,7 +68,10 @@ const ProgramCertificateUpsell: React.FC<{
           <RiAwardFill />
           <Stack gap="4px">
             <strong>
-              Get Certificate {product ? formatPrice(product.price) : null}
+              Get Certificate{" "}
+              {product
+                ? formatPrice(product.price, { avoidCents: true })
+                : null}
             </strong>
           </Stack>
         </CertificatePriceRoot>

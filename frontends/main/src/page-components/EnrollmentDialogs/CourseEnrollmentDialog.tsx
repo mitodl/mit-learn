@@ -213,7 +213,11 @@ const CertificateUpsell: React.FC<{
     enabled: enabled && !!financialAidUrl,
   })
   const price = enabled
-    ? priceWithDiscount({ product, flexiblePrice: userFlexiblePrice.data })
+    ? priceWithDiscount({
+        product,
+        flexiblePrice: userFlexiblePrice.data,
+        avoidCents: true,
+      })
     : null
   const hasFinancialAssistance = !!financialAidUrl
   const deadlineUI = courseRun?.upgrade_deadline ? (
