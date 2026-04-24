@@ -6,6 +6,7 @@ import litellm
 import tiktoken
 from django.conf import settings
 from litellm import embedding
+from litellm.caching.caching import Cache
 
 from vector_search.encoders.base import BaseEncoder
 
@@ -14,6 +15,14 @@ redis_url = urlparse(settings.CELERY_BROKER_URL)
 
 # these must be set directly via environ (litellm limitation)
 os.environ["REDIS_SSL"] = str(redis_url.scheme.endswith("ss"))
+litellm.cache = Cache(
+    type="redis",
+    host=redis_url.hostname,
+    port=redis_url.port,
+    password=redis_url.password,
+    supported_call_types=["embedding", "aembedding"],
+    ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
+)
 
 
 class LiteLLMEncoder(BaseEncoder):
@@ -36,20 +45,17 @@ class LiteLLMEncoder(BaseEncoder):
 
     def get_embedding(self, texts):
         if self.cache:
-            litellm.enable_cache(
-                type="redis",
-                host=redis_url.hostname,
-                port=redis_url.port,
-                password=redis_url.password,
-                supported_call_types=["embedding", "aembedding"],
-                ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
-            )
+            cache_params = {
+                "caching": True,
+                "ttl": settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
+            }
+
         else:
-            litellm.disable_cache()
-        config = {
-            "model": self.model_name,
-            "input": texts,
-        }
+            cache_params = {
+                "no-cache": True,
+                "no-store": True,
+            }
+        config = {"model": self.model_name, "input": texts, "cache": cache_params}
         if settings.LITELLM_CUSTOM_PROVIDER:
             config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
         if settings.LITELLM_API_BASE:
