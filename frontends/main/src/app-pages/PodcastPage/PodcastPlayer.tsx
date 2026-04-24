@@ -154,7 +154,7 @@ const TrackTitle = styled(Typography)(({ theme }) => ({
 }))
 
 const PodcastName = styled(Typography)(({ theme }) => ({
- color: theme.custom.colors.silverGrayDark,
+  color: theme.custom.colors.silverGrayDark,
 }))
 
 const ProgressWrapper = styled.div(({ theme }) => ({

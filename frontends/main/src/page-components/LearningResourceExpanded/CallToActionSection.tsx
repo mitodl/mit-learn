@@ -21,7 +21,6 @@ import type { LearningResource } from "api"
 import {
   RiBookmarkFill,
   RiBookmarkLine,
-  RiExternalLinkLine,
   RiFacebookFill,
   RiLink,
   RiLinkedinFill,
@@ -31,7 +30,6 @@ import {
 } from "@remixicon/react"
 import type { User } from "api/hooks/user"
 import { PostHogEvents } from "@/common/constants"
-import VideoFrame from "./VideoFrame"
 import { kebabCase } from "lodash"
 import {
   FACEBOOK_SHARE_BASE_URL,
@@ -212,22 +210,7 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
-  const youtubeId =
-    resource?.resource_type === "video"
-      ? resource.content_files?.[0]?.youtube_id
-      : null
-  const youtubeUrl = youtubeId
-    ? `https://www.youtube.com/watch?v=${youtubeId}`
-    : resource?.resource_type === "video" &&
-        resource?.platform?.code === PlatformEnum.Youtube
-      ? resource.url
-      : null
-
-  if (resource && youtubeUrl) {
-    return (
-      <VideoFrame src={youtubeUrl} title={resource.title} aspect={aspect} />
-    )
-  } else if (resource) {
+  if (resource) {
     const imageUrl =
       resource.image?.url ||
       resourceContentFilesImageSrc(resource) ||
@@ -430,7 +413,6 @@ const CallToActionSection = ({
         <StyledLink
           target="_blank"
           size="medium"
-          endIcon={<RiExternalLinkLine />}
           href={url}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {
