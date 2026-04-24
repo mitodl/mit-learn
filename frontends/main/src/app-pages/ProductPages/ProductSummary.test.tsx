@@ -802,7 +802,7 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       expect(priceRow).toHaveTextContent(
-        `Earn a certificate: ${formatPrice(run.products[0].price)}`,
+        `Earn a certificate: ${formatPrice(run.products[0].price, { avoidCents: true })}`,
       )
       invariant(run.upgrade_deadline)
       expect(priceRow).toHaveTextContent(
@@ -852,7 +852,9 @@ describe("CourseSummary", () => {
       renderWithProviders(<CourseSummary course={course} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(formatPrice(product.price))
+      expect(priceRow).toHaveTextContent(
+        formatPrice(product.price, { avoidCents: true }),
+      )
       expect(priceRow).toHaveTextContent(course.certificate_type)
       expect(priceRow).not.toHaveTextContent("Free to Learn")
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
@@ -1007,7 +1009,9 @@ describe("CourseSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
 
       // Should show the regular price
-      expect(priceRow).toHaveTextContent(formatPrice(product.price))
+      expect(priceRow).toHaveTextContent(
+        formatPrice(product.price, { avoidCents: true }),
+      )
       // Should NOT show financial assistance link
       expect(
         within(priceRow).queryByRole("link", { name: /financial assistance/i }),
@@ -1285,7 +1289,9 @@ describe("ProgramSummary", () => {
       renderWithProviders(<ProgramSummary program={program} />)
 
       const priceRow = screen.getByTestId(TestIds.PriceRow)
-      expect(priceRow).toHaveTextContent(formatPrice(product.price))
+      expect(priceRow).toHaveTextContent(
+        formatPrice(product.price, { avoidCents: true }),
+      )
       expect(priceRow).toHaveTextContent(program.certificate_type)
       expect(priceRow).not.toHaveTextContent("Free to Learn")
       expect(priceRow).not.toHaveTextContent("Earn a certificate")
@@ -1301,7 +1307,9 @@ describe("ProgramSummary", () => {
       const priceRow = screen.getByTestId(TestIds.PriceRow)
       expect(priceRow).toHaveTextContent("Free to Learn")
       expect(priceRow).toHaveTextContent("Earn a certificate")
-      expect(priceRow).toHaveTextContent(formatPrice(program.products[0].price))
+      expect(priceRow).toHaveTextContent(
+        formatPrice(program.products[0].price, { avoidCents: true }),
+      )
     })
 
     test.each([

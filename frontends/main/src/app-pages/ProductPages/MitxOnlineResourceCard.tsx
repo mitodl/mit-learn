@@ -49,16 +49,19 @@ const formatResourcePrice = (
     maxPrice !== undefined &&
     minPrice !== maxPrice
   ) {
-    return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
+    const formattedMinPrice = formatPrice(minPrice, { avoidCents: true })
+    const formattedMaxPrice = formatPrice(maxPrice, { avoidCents: true })
+
+    return `${formattedMinPrice} - ${formattedMaxPrice}`
   }
 
   if (productPrice !== undefined && productPrice !== null) {
-    return formatPrice(productPrice)
+    return formatPrice(productPrice, { avoidCents: true })
   }
 
   const single = minPrice ?? maxPrice
   if (single !== null && single !== undefined) {
-    return formatPrice(single)
+    return formatPrice(single, { avoidCents: true })
   }
 
   return null

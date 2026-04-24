@@ -1,6 +1,7 @@
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  V2ProgramRequirement,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "@/common/mitxonline"
@@ -110,3 +111,95 @@ export {
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
 }
+
+const isLeafRequirementNodeCompleted = (
+  node: V2ProgramRequirement,
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
+): boolean => {
+  if (
+    node.data.node_type === "course" &&
+    typeof node.data.course === "number"
+  ) {
+    const enrollments = courseEnrollments[node.data.course] ?? []
+    return enrollments.some((e) => e.grades.some((g) => g.passed))
+  }
+  if (node.data.node_type === "program" && node.data.required_program) {
+    return !!programEnrollments[node.data.required_program]?.certificate
+  }
+  return false
+}
+
+/**
+ * Computes `{ completed, total }` across the given operator nodes.
+ *
+ * Assumes a flat req_tree: each operator's direct children are leaves
+ * (`node_type: "course"` or `"program"`). Nesting operators inside
+ * operators is not supported — there is no single well-defined reduction
+ * for nested progress (e.g., with `min_number_of=1` parent over two
+ * `min_number_of=4` children, "max child progress" and "sum of all work"
+ * give different answers, and picking one is a product question).
+ *
+ * Only `all_of` and `min_number_of` (with a valid integer `operator_value`)
+ * are counted. Unknown or malformed operators contribute nothing and log
+ * a warning — we'd rather under-report than guess.
+ *
+ * For `min_number_of` operators, `completed` is capped at `operator_value`
+ * so extra electives don't inflate the overall total.
+ *
+ * Pass all top-level operators for overall program progress, or a single
+ * operator node for per-section progress.
+ */
+const getRequirementsProgress = (
+  nodes: V2ProgramRequirement[],
+  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+  programEnrollments: Record<number, V3UserProgramEnrollment>,
+): { completed: number; total: number } => {
+  return nodes.reduce(
+    (acc, node) => {
+      if (node.data.node_type !== "operator") return acc
+      const children = node.children ?? []
+      if (children.some((c) => c.data.node_type === "operator")) {
+        console.warn(
+          "getRequirementsProgress: nested operators are not supported and will be skipped",
+        )
+      }
+
+      const leaves = children.filter(
+        (c) => c.data.node_type === "course" || c.data.node_type === "program",
+      )
+      const completed = leaves.filter((leaf) =>
+        isLeafRequirementNodeCompleted(
+          leaf,
+          courseEnrollments,
+          programEnrollments,
+        ),
+      ).length
+
+      if (node.data.operator === "all_of") {
+        return {
+          completed: acc.completed + completed,
+          total: acc.total + leaves.length,
+        }
+      }
+
+      if (node.data.operator === "min_number_of") {
+        const minRequired = parseInt(node.data.operator_value ?? "", 10)
+        if (!isNaN(minRequired)) {
+          return {
+            completed: acc.completed + Math.min(completed, minRequired),
+            total: acc.total + minRequired,
+          }
+        }
+      }
+
+      console.warn(
+        `getRequirementsProgress: unsupported operator "${node.data.operator}" (operator_value=${JSON.stringify(node.data.operator_value)}); skipping.`,
+      )
+      return acc
+    },
+    { completed: 0, total: 0 },
+  )
+}
+
+export { getRequirementsProgress }
