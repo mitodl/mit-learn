@@ -21,7 +21,7 @@ import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
-import HowYoullLearnSection, { DEFAULT_HOW_DATA } from "./HowYoullLearnSection"
+import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
@@ -312,7 +312,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
         childPrograms={childPrograms.data?.results}
         isLoading={dataLoading}
       />
-      <HowYoullLearnSection data={DEFAULT_HOW_DATA} />
+      <HowYoullLearnSection page={page} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>
           <Typography variant="h4" component="h2" id={HeadingIds.Prereqs}>

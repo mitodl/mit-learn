@@ -9,6 +9,11 @@ import IconCertificate from "@/public/images/product/icon_certificate.png"
 import IconComputerBulb from "@/public/images/product/icon_computer_lightbulb.png"
 import IconConnectedPeople from "@/public/images/product/icon_connected_people.png"
 
+import type {
+  CoursePageItem,
+  ProgramPageItem,
+} from "@mitodl/mitxonline-api-axios/v2"
+
 const HowYoullLearnRoot = styled.section(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -49,7 +54,7 @@ const HowYoullLearnHeader = styled.div({
   alignItems: "center",
 })
 
-const HowYoullLearnIcon = styled(Image)({
+const HowYoullLearnIconImage = styled(Image)({
   width: "80px",
   height: "50px",
   flexShrink: 0,
@@ -69,64 +74,70 @@ const HowYoullLearnDescription = styled.p(({ theme }) => ({
   },
 }))
 
-type HowYoullLearnItemData = {
-  icon: typeof IconComputerBulb
-  title: string
-  text: string
+const HowYoullLearnIcon: React.FC<{
+  src: string
+  width: number
+  height: number
+  alt: string
+}> = ({ src, width, height, alt }) => {
+  let iconSrc: typeof IconBrains | null = null
+  switch (src) {
+    case "IconBrains":
+      iconSrc = IconBrains
+      break
+    case "IconCertificate":
+      iconSrc = IconCertificate
+      break
+    case "IconComputerBulb":
+      iconSrc = IconComputerBulb
+      break
+    case "IconConnectedPeople":
+      iconSrc = IconConnectedPeople
+      break
+    default:
+      console.warn(`Unknown how_youll_learn icon: ${src}`)
+  }
+
+  return (
+    iconSrc && (
+      <HowYoullLearnIconImage
+        src={iconSrc}
+        width={width}
+        height={height}
+        alt={alt}
+      />
+    )
+  )
 }
 
-// Placeholder data — will be replaced by API-driven content.
-const DEFAULT_HOW_DATA: HowYoullLearnItemData[] = [
-  {
-    icon: IconConnectedPeople,
-    title: "Real-World Learning",
-    text: "Learn from MIT faculty and experts who ground their teaching in real-world cases rather than mathematical models, making the material approachable for all.",
-  },
-  {
-    icon: IconBrains,
-    title: "Practical Application",
-    text: "Apply your new knowledge with hands-on, practical exercises drawn from healthcare, sports, finance, sustainability, and more.",
-  },
-  {
-    icon: IconComputerBulb,
-    title: "AI-Enabled Support",
-    text: "Deepen your understanding of the course material and get help on assignments from AskTIM, the AI assistant built by MIT researchers.",
-  },
-  {
-    icon: IconCertificate,
-    title: "Stackable Credentials",
-    text: "Earn an MIT Open Learning certificate at each milestone—module, course, and program—demonstrating your AI expertise. Available in paid courses only.",
-  },
-]
-
 const HowYoullLearnSection: React.FC<{
-  data: HowYoullLearnItemData[]
-}> = ({ data }) => {
-  return (
+  page: CoursePageItem | ProgramPageItem
+}> = ({ page }) => {
+  const filteredOptions = page.how_youll_learn ?? []
+
+  return filteredOptions.length > 0 ? (
     <HowYoullLearnRoot aria-labelledby={HeadingIds.How}>
       <Typography variant="h4" component="h2" id={HeadingIds.How}>
         How you'll learn
       </Typography>
       <HowYoullLearnGrid>
-        {data.map((item, index) => (
-          <HowYoullLearnItem key={index}>
+        {filteredOptions.map((option) => (
+          <HowYoullLearnItem key={option.key}>
             <HowYoullLearnHeader>
               <HowYoullLearnIcon
-                src={item.icon}
+                src={option.icon}
                 width={80}
                 height={50}
                 alt=""
               />
-              <HowYoullLearnTitle>{item.title}</HowYoullLearnTitle>
+              <HowYoullLearnTitle>{option.title}</HowYoullLearnTitle>
             </HowYoullLearnHeader>
-            <HowYoullLearnDescription>{item.text}</HowYoullLearnDescription>
+            <HowYoullLearnDescription>{option.text}</HowYoullLearnDescription>
           </HowYoullLearnItem>
         ))}
       </HowYoullLearnGrid>
     </HowYoullLearnRoot>
-  )
+  ) : null
 }
 
 export default HowYoullLearnSection
-export { DEFAULT_HOW_DATA }
-export type { HowYoullLearnItemData }
