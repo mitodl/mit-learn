@@ -60,6 +60,13 @@ function buildSpanProcessors(): SpanProcessor[] {
   return processors
 }
 
+/**
+ * Ensure resource.attributes are set correctly.
+ * Sentry hard-codes some values like `service.name` and ignores
+ * OTEL_RESOURCE_ATTRIBUTES.
+ *
+ * See https://github.com/getsentry/sentry-javascript/issues/20502
+ */
 class ResourceAttributeOverrideSpanProcessor implements SpanProcessor {
   private readonly overrides: ServiceResourceOverrides
 
