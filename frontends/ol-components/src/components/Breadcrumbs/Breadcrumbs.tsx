@@ -33,6 +33,7 @@ const BreadcrumbText = styled.span({
 const Separator = styled(RiArrowRightSLine)({
   width: "16px",
   height: "16px",
+  margin: "0 4px",
 })
 
 const LightSeparator = styled(Separator)({

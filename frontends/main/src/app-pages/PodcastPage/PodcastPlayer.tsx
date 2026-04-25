@@ -12,6 +12,9 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Height of the fixed player bar. Used by the page to add compensating bottom padding. */
+export const PLAYER_HEIGHT = { desktop: 104, mobile: 220 }
+
 export type PodcastTrack = {
   audioUrl: string
   title: string
@@ -33,12 +36,12 @@ const PlayerShell = styled.div(({ theme }) => ({
   right: 0,
   zIndex: theme.zIndex.appBar + 10,
   display: "grid",
-  gridTemplateColumns: "220px 1px auto minmax(0, 1fr) auto auto",
+  gridTemplateColumns: "390px 1px auto minmax(0, 1fr) auto auto",
   gridTemplateAreas: '"track divider controls progress speed close"',
   alignItems: "center",
   gap: "24px",
-  padding: "16px 32px",
-  background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+  padding: "32px",
+  background: theme.custom.colors.white,
   borderTop: `2px solid ${theme.custom.colors.mitRed}`,
   boxShadow: "0 -4px 16px rgba(0,0,0,0.12)",
   [theme.breakpoints.down("sm")]: {
@@ -116,8 +119,8 @@ const PlayPauseButton = styled.button(({ theme }) => ({
   color: theme.custom.colors.mitRed,
   "&:hover": { opacity: 0.8 },
   "& svg": {
-    width: "40px",
-    height: "40px",
+    width: "64px",
+    height: "64px",
   },
   [theme.breakpoints.down("sm")]: {
     "& svg": {
@@ -139,6 +142,8 @@ const TrackTitle = styled(Typography)(({ theme }) => ({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  fontSize: "18px",
+  lineHeight: "26px",
   color: theme.custom.colors.black,
   [theme.breakpoints.down("sm")]: {
     display: "-webkit-box",
@@ -146,6 +151,10 @@ const TrackTitle = styled(Typography)(({ theme }) => ({
     WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
   },
+}))
+
+const PodcastName = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
 }))
 
 const ProgressWrapper = styled.div(({ theme }) => ({
@@ -164,8 +173,8 @@ const ProgressRange = styled.input<{ percent: number }>(
     appearance: "none",
     WebkitAppearance: "none",
     flex: 1,
-    height: "6px",
-    borderRadius: "3px",
+    height: "12px",
+    borderRadius: "6px",
     cursor: "pointer",
     outline: "none",
     border: "none",
@@ -196,7 +205,7 @@ const SpeedButton = styled.button(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.silverGrayLight}`,
   backgroundColor: theme.custom.colors.lightGray1,
   borderRadius: "4px",
-  padding: "2px 8px",
+  padding: "4px 12px",
   cursor: "pointer",
   ...theme.typography.body3,
   color: theme.custom.colors.darkGray2,
@@ -367,9 +376,9 @@ const PodcastPlayer = ({
 
       <PlayerShell>
         <TrackInfo>
-          <Typography variant="body3" sx={{ color: "text.secondary" }}>
+          <PodcastName variant="body1" sx={{ color: "text.secondary" }}>
             {track.podcastName}
-          </Typography>
+          </PodcastName>
           <TrackTitle variant="subtitle2">{track.title}</TrackTitle>
         </TrackInfo>
 

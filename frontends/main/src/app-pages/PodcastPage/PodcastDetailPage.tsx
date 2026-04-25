@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Breadcrumbs, Typography, styled } from "ol-components"
-import { ButtonLink, Button, ActionButton } from "@mitodl/smoot-design"
+import { Button, ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill } from "@remixicon/react"
-import PodcastPlayer from "./PodcastPlayer"
+import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
 import type { PodcastTrack } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
@@ -205,7 +205,7 @@ const EpisodeTitleLink = styled.span(({ theme }) => ({
   lineHeight: "26px",
 }))
 
-const StyledButton = styled(ButtonLink)(({ theme }) => ({
+const StyledButton = styled(Button)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -411,8 +411,6 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     ? formatDate(latestEpisode.last_modified, "MMM D")
     : null
 
-  const subscribeUrl = podcast?.apple_podcasts_url ?? podcast?.rss_url
-
   const getEpisodeAudioUrl = (episode: LearningResource): string | null => {
     if (episode.resource_type !== "podcast_episode") return null
 
@@ -428,9 +426,6 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
     setPlayingEpisode(episode)
   }
 
-  if (!showPodcastDetailPage) {
-    return flagsLoaded ? notFound() : null
-  }
   const currentTrack: PodcastTrack | null = playingEpisode
     ? (() => {
         const audioUrl = getEpisodeAudioUrl(playingEpisode)
@@ -443,6 +438,34 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
         }
       })()
     : null
+
+  // When the player is active, shrink the page layout so the footer is
+  // visible above the fixed player bar.
+  useEffect(() => {
+    const root = document.documentElement
+
+    const updatePlayerHeight = () => {
+      if (currentTrack) {
+        const isMobile = window.innerWidth < 600
+        const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
+        root.style.setProperty("--mit-player-height", `${height}px`)
+      } else {
+        root.style.removeProperty("--mit-player-height")
+      }
+    }
+
+    updatePlayerHeight()
+    window.addEventListener("resize", updatePlayerHeight)
+
+    return () => {
+      window.removeEventListener("resize", updatePlayerHeight)
+      root.style.removeProperty("--mit-player-height")
+    }
+  }, [currentTrack])
+
+  if (!showPodcastDetailPage) {
+    return flagsLoaded ? notFound() : null
+  }
 
   return (
     <>
@@ -495,13 +518,12 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     </LatestEpisodeLine>
                   )}
 
-                  {subscribeUrl && (
+                  {latestEpisode && (
                     <StyledButton
-                      href={subscribeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() => handlePlayClick(latestEpisode)}
                       variant="primary"
                       startIcon={<RiPlayFill />}
+                      disabled={!getEpisodeAudioUrl(latestEpisode)}
                     >
                       Play Latest Episode
                     </StyledButton>

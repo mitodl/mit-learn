@@ -23,6 +23,7 @@ jest.mock(
 
 jest.mock("./PodcastPlayer", () => ({
   __esModule: true,
+  PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
   default: jest.fn(
     ({ track }: { track: { title: string; podcastName: string } }) => (
       <div data-testid="podcast-player">
