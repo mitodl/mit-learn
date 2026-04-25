@@ -140,11 +140,13 @@ class QdrantView(APIView):
                 search_params["prefetch"] = models.Prefetch(
                     prefetch=[
                         models.Prefetch(
+                            filter=search_filter,
                             query=sparse_query,
                             using=encoder_sparse.model_short_name(),
                             limit=prefetch_limit,
                         ),
                         models.Prefetch(
+                            filter=search_filter,
                             query=dense_query,
                             using=encoder_dense.model_short_name(),
                             limit=prefetch_limit,
@@ -159,11 +161,13 @@ class QdrantView(APIView):
             else:
                 search_params["prefetch"] = [
                     models.Prefetch(
+                        filter=search_filter,
                         query=sparse_query,
                         using=encoder_sparse.model_short_name(),
                         limit=prefetch_limit,
                     ),
                     models.Prefetch(
+                        filter=search_filter,
                         query=dense_query,
                         using=encoder_dense.model_short_name(),
                         limit=prefetch_limit,
@@ -256,6 +260,9 @@ class QdrantView(APIView):
         client = async_qdrant_client()
         encoder_dense = dense_encoder()
         encoder_sparse = sparse_encoder()
+
+        # enable caching
+        encoder_dense.cache = True
 
         search_filter = qdrant_query_conditions(
             params, collection_name=search_collection

@@ -11,6 +11,9 @@ class BaseEncoder(Embeddings, ABC):
 
     requires_cloud_inferencing = False
 
+    # determines if the encoder should enable caching (if available)
+    cache = False
+
     def model_short_name(self):
         """
         Return the short name of the model
