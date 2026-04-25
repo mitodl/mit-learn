@@ -51,6 +51,8 @@ const programCollections = {
 const courses = {
   coursesList: (opts?: CoursesApiApiV2CoursesListRequest) =>
     `${API_BASE_URL}/api/v2/courses/${queryify(opts, { explode: false })}`,
+  courseOutline: (coursewareId: string) =>
+    `${API_BASE_URL}/api/v3/courses/${encodeURIComponent(coursewareId)}/ol_openedx_outline/`,
 }
 
 const pages = {
