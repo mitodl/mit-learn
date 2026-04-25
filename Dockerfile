@@ -1,6 +1,6 @@
 # hadolint global ignore=SC2046,DL3002,DL3008,DL3025,DL3042,DL4006
 
-FROM python:3.12-slim AS base
+FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS base
 LABEL maintainer "ODL DevOps <mitx-devops@mit.edu>"
 
 # Add package files, install updated node and pip
@@ -35,7 +35,7 @@ ENV  \
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:latest@sha256:240fb85ab0f263ef12f492d8476aa3a2e4e1e333f7d67fbdd923d00a506a516a /uv /uvx /usr/local/bin/
 
 # Install Chromium (commented out lines illustrate the syntax for getting specific chromium versions)
 RUN echo "deb http://deb.debian.org/debian/ sid main" >> /etc/apt/sources.list \
