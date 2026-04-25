@@ -22,6 +22,13 @@ const makePlaylist = () =>
     description: "Conversations with faculty on the future of technology.",
   })
 
+const makeSeriesPlaylist = () =>
+  factories.learningResources.videoPlaylist({
+    title: "MIT Faculty Interviews",
+    description: "Conversations with faculty on the future of technology.",
+    offered_by: { code: "ocw", name: "OCW", channel_url: null },
+  })
+
 const makeVideo = (overrides = {}) =>
   factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Video,
@@ -268,6 +275,86 @@ describe("VideoPage", () => {
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
         `/video-playlist/detail/${featured.id}?playlist=${playlist.id}`,
+      )
+    })
+  })
+
+  describe("series playlist", () => {
+    test("renders 'Video Series' label in the header for an OCW playlist", async () => {
+      const playlist = makeSeriesPlaylist()
+      setupApis({ playlistId: playlist.id, videos: [], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByText("Video Series")
+    })
+
+    test("renders all videos as episodes instead of the collection grid", async () => {
+      const playlist = makeSeriesPlaylist()
+      const [ep1, ep2, ep3] = [
+        makeVideo({ title: "Episode One" }),
+        makeVideo({ title: "Episode Two" }),
+        makeVideo({ title: "Episode Three" }),
+      ]
+      setupApis({ playlistId: playlist.id, videos: [ep1, ep2, ep3], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByText(ep1.title)
+      await screen.findByText(ep2.title)
+      await screen.findByText(ep3.title)
+    })
+
+    test("does not render the collection grid for a series playlist", async () => {
+      const playlist = makeSeriesPlaylist()
+      const [ep1, ep2] = [
+        makeVideo({ title: "Episode One" }),
+        makeVideo({ title: "Episode Two" }),
+      ]
+      setupApis({ playlistId: playlist.id, videos: [ep1, ep2], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      // Wait for data
+      await screen.findByText(ep1.title)
+
+      // The collection grid uses a role="list" of video cards; the episode
+      // list does not re-use that component, so "All Videos" heading should
+      // be absent
+      expect(screen.queryByText("All Videos")).not.toBeInTheDocument()
+    })
+
+    test("renders 'Start watching' button on the featured video for a series", async () => {
+      const playlist = makeSeriesPlaylist()
+      const featured = makeVideo({ title: "Series Opener" })
+      setupApis({ playlistId: playlist.id, videos: [featured], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      await screen.findByRole("link", { name: /start watching/i })
+    })
+
+    test("each episode row links to the correct video detail URL", async () => {
+      const playlist = makeSeriesPlaylist()
+      const [ep1, ep2] = [
+        makeVideo({ title: "Episode Alpha" }),
+        makeVideo({ title: "Episode Beta" }),
+      ]
+      setupApis({ playlistId: playlist.id, videos: [ep1, ep2], playlist })
+
+      renderWithProviders(<VideoPage playlistId={playlist.id} />)
+
+      // Episode titles are rendered as text inside EpisodeRowLink anchors
+      const ep1Title = await screen.findByText(ep1.title)
+      expect(ep1Title.closest("a")).toHaveAttribute(
+        "href",
+        `/video-playlist/detail/${ep1.id}?playlist=${playlist.id}`,
+      )
+
+      const ep2Title = screen.getByText(ep2.title)
+      expect(ep2Title.closest("a")).toHaveAttribute(
+        "href",
+        `/video-playlist/detail/${ep2.id}?playlist=${playlist.id}`,
       )
     })
   })
