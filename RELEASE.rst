@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.64.5
+--------------
+
+- fix: remove the breadcrum sepator style (#3249)
+- feat: implement the video series page design (#3235)
+- cache "query embeddings" via litellm (#3240)
+- bump sentry (#3243)
+
 Version 0.64.4 (Released April 27, 2026)
 --------------
 
