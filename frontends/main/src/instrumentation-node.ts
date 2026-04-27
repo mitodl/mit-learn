@@ -25,10 +25,7 @@ import { parseSampleRate } from "./sentry-utils"
 
 // Inject service.version into OTEL_RESOURCE_ATTRIBUTES so the OTEL SDK's
 // EnvDetector picks it up alongside any other attributes set via env.
-// Our deployment env is stored in a vault that can't interpolate $VERSION
-// into OTEL_RESOURCE_ATTRIBUTES, so we prepend it here at startup. Prepending
-// (rather than appending) lets an explicit OTEL_RESOURCE_ATTRIBUTES entry
-// override this default — last-key-wins per the SDK parser.
+// Simpler than interpolating OTEL_RESOURCE_ATTRIBUTES in ol-infrastructure.
 if (process.env.NEXT_PUBLIC_VERSION) {
   const prefix = `service.version=${encodeURIComponent(process.env.NEXT_PUBLIC_VERSION)}`
   const existing = process.env.OTEL_RESOURCE_ATTRIBUTES
