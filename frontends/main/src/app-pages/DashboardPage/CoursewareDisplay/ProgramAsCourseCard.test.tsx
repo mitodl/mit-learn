@@ -375,6 +375,7 @@ describe("ProgramAsCourseCard", () => {
 
   test("displays certificate button when program enrollment has a certificate", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
     const certUuid = "test-certificate-uuid-123"
     const programEnrollmentWithCert = {
       ...cardData.courseProgramEnrollment,
@@ -406,6 +407,7 @@ describe("ProgramAsCourseCard", () => {
 
   test("does not display certificate button when program enrollment has no certificate", async () => {
     const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
     const programEnrollmentNoCert = {
       ...cardData.courseProgramEnrollment,
       certificate: null,
