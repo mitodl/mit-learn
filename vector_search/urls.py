@@ -3,6 +3,7 @@ from rest_framework.routers import SimpleRouter
 
 from vector_search.views import (
     ContentFilesVectorSearchView,
+    LearningResourcesRecommendView,
     LearningResourcesVectorSearchView,
 )
 
@@ -17,6 +18,11 @@ v0_urls = [
         r"vector_content_files_search/",
         ContentFilesVectorSearchView.as_view(),
         name="vector_content_files_search",
+    ),
+    path(
+        r"recommend/",
+        LearningResourcesRecommendView.as_view(),
+        name="vector_learning_resources_recommend",
     ),
 ]
 

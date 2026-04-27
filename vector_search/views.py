@@ -26,6 +26,7 @@ from vector_search.constants import (
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     ContentFileVectorSearchResponseSerializer,
+    LearningResourcesRecommendRequestSerializer,
     LearningResourcesVectorSearchRequestSerializer,
     LearningResourcesVectorSearchResponseSerializer,
 )
@@ -393,6 +394,105 @@ class LearningResourcesVectorSearchView(QdrantView):
                 response_data = await sync_to_async(serialize)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
+        else:
+            errors = {}
+            for key, errors_obj in request_data.errors.items():
+                if isinstance(errors_obj, list):
+                    errors[key] = errors_obj
+                else:
+                    errors[key] = list(set(chain(*errors_obj.values())))
+            return Response(errors, status=400)
+
+
+@method_decorator(blocked_ip_exempt, name="dispatch")
+@extend_schema_view(
+    get=extend_schema(
+        parameters=[LearningResourcesRecommendRequestSerializer()],
+        responses=LearningResourcesVectorSearchResponseSerializer(),
+    ),
+)
+@action(methods=["GET"], detail=False, name="Recommend Learning Resources")
+class LearningResourcesRecommendView(QdrantView):
+    """
+    Recommend Learning Resources based on topics and resource_readable_ids
+    """
+
+    permission_classes = ()
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="vector_search_recommend",
+        )
+    )
+    @extend_schema(summary="Vector Search Recommendations")
+    async def get(self, request):
+        request_data = LearningResourcesRecommendRequestSerializer(data=request.GET)
+
+        if request_data.is_valid():
+            topics = request_data.data.get("topic", [])
+            resource_ids = request_data.data.get("resource_readable_id", [])
+            limit = request_data.data.get("limit", 10)
+
+            positive = []
+
+            if topics:
+                encoder = dense_encoder()
+                topics_embeddings = await sync_to_async(
+                    encoder.embed_documents, thread_sensitive=False
+                )(topics)
+                positive.extend(topics_embeddings)
+
+            if resource_ids:
+                client = async_qdrant_client()
+                search_filter = qdrant_query_conditions(
+                    {"readable_id": resource_ids},
+                    collection_name=RESOURCES_COLLECTION_NAME,
+                )
+                results = await client.scroll(
+                    collection_name=RESOURCES_COLLECTION_NAME,
+                    scroll_filter=search_filter,
+                    limit=len(resource_ids),
+                )
+                positive.extend([point.id for point in results[0]])
+
+            if not positive:
+                return Response(
+                    {"count": 0, "next": None, "previous": None, "results": []}
+                )
+
+            client = async_qdrant_client()
+            encoder = dense_encoder()
+            result_obj = await client.query_points(
+                collection_name=RESOURCES_COLLECTION_NAME,
+                using=encoder.model_short_name(),
+                query=models.RecommendQuery(
+                    recommend=models.RecommendInput(
+                        positive=positive,
+                        strategy=models.RecommendStrategy.AVERAGE_VECTOR,
+                    )
+                ),
+                with_payload=RESOURCES_RETRIEVE_PAYLOAD,
+                limit=limit,
+            )
+
+            hits = await sync_to_async(_resource_vector_hits)(result_obj.points)
+
+            response = {
+                "hits": hits,
+                "total": {"value": len(hits)},
+                "aggregations": {},
+            }
+
+            def serialize():
+                return LearningResourcesVectorSearchResponseSerializer(
+                    response, context={"request": request}
+                ).data
+
+            response_data = await sync_to_async(serialize)()
+            response_data["results"] = list(response_data["results"])
+            return Response(response_data)
         else:
             errors = {}
             for key, errors_obj in request_data.errors.items():

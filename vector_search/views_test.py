@@ -421,3 +421,60 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
         assert "order_by" in call_kwargs
         assert call_kwargs["order_by"].key == "views"
         assert call_kwargs["order_by"].direction == models.Direction.DESC
+
+
+@pytest.mark.django_db
+def test_learning_resources_recommend_view(mocker, client):
+    """Test recommend view correctly passes parameters to qdrant client"""
+    from learning_resources.factories import LearningResourceFactory
+
+    LearningResourceFactory.create(readable_id="recommended-course")
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_point = mocker.MagicMock()
+    mock_point.id = "mock-uuid"
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([mock_point], None))
+
+    mock_scored_point = mocker.MagicMock()
+    mock_scored_point.id = "recommended-uuid"
+    mock_scored_point.payload = {"readable_id": "recommended-course"}
+    mock_qdrant.recommend = mocker.AsyncMock(return_value=[mock_scored_point])
+
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    mock_encoder = mocker.patch(
+        "vector_search.views.dense_encoder", return_value=mocker.MagicMock()
+    )()
+    mock_encoder.embed_documents = mocker.MagicMock(return_value=[[0.1, 0.2]])
+    mock_encoder.model_short_name = mocker.MagicMock(return_value="test-encoder")
+
+    params = {
+        "topic": ["Science"],
+        "resource_readable_id": ["course-1"],
+        "limit": 5,
+    }
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_recommend"), data=params
+    )
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    mock_encoder.embed_documents.assert_called_once_with(["Science"])
+
+    # Check that scroll was called for resource ids
+    scroll_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
+    assert isinstance(scroll_kwargs["scroll_filter"].must[0], models.FieldCondition)
+    assert scroll_kwargs["scroll_filter"].must[0].key == "readable_id"
+    assert scroll_kwargs["scroll_filter"].must[0].match.any == ["course-1"]
+
+    # Check that recommend was called properly
+    recommend_kwargs = mock_qdrant.recommend.mock_calls[0].kwargs
+    assert "mock-uuid" in recommend_kwargs["positive"]
+    assert [0.1, 0.2] in recommend_kwargs["positive"]
+    assert recommend_kwargs["using"] == "test-encoder"
+    assert recommend_kwargs["limit"] == 5

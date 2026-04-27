@@ -207,6 +207,31 @@ class LearningResourcesVectorSearchRequestSerializer(
     )
 
 
+class LearningResourcesRecommendRequestSerializer(serializers.Serializer):
+    """
+    Request serializer for vector based recommend search
+    """
+
+    topic = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The topic names to recommend based on.",
+    )
+    resource_readable_id = serializers.ListField(
+        required=False,
+        child=serializers.CharField(),
+        help_text="The readable ids of the resources to recommend based on.",
+    )
+    offset = serializers.IntegerField(
+        required=False,
+        default=0,
+        help_text="The initial index from which to return the results",
+    )
+    limit = serializers.IntegerField(
+        required=False, default=10, help_text="Number of results to return per page"
+    )
+
+
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
     """
     Response serializer for vector based search
