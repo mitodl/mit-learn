@@ -118,6 +118,7 @@ dependencies = [
     "langchain-litellm>=0.5.1",
     "scikit-learn>=1.8.0",
     "gensim>=4.4.0",
+    "pytest-repeat>=0.9.4",
 ]
 
 [dependency-groups]
