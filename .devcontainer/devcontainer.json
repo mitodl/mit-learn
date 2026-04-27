@@ -29,7 +29,6 @@
     "celery",
     "nginx",
     "redis",
-    "litellm",
     "qdrant"
   ],
   "hostRequirements": { "cpus": 4, "memory": "8gb" },
