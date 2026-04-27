@@ -12,7 +12,6 @@ import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
   learningResourceQueries,
-  videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
@@ -390,11 +389,15 @@ const ScreenReaderOnly = styled.span({
 type VideoDetailPageProps = {
   videoId: number
   playlistId: number | null
+  playlistData?: VideoPlaylistResource
+  playlistLoading: boolean
 }
 
 const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   videoId,
   playlistId,
+  playlistData,
+  playlistLoading
 }) => {
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLButtonElement>(null)
@@ -402,11 +405,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
-
-  const { data: playlistData, isLoading: playlistLoading } = useQuery({
-    ...videoPlaylistQueries.detail(playlistId ?? 0),
-    enabled: !!playlistId,
-  })
 
   const { data: playlistItems, isLoading: itemsLoading } = useQuery({
     ...learningResourceQueries.items(playlistId ?? 0, {
