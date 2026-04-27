@@ -1,6 +1,8 @@
+import invariant from "tiny-invariant"
 import { convertToEmbedUrl, externalLinkProps } from "./utils"
 
-const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN!
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
 
 describe("externalLinkProps", () => {
   it("returns blank-target props for an external URL", () => {
