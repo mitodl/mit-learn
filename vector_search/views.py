@@ -312,7 +312,7 @@ class QdrantView(APIView):
                 # manually on the client side.
                 search_params["limit"] = offset + limit
                 result_obj = await client.query_points(**search_params)
-                search_result = result_obj.points[offset:]
+                search_result = result_obj.points[offset : offset + limit]
             else:
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)
