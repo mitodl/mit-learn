@@ -15,6 +15,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
+  hasOtlpEndpointConfig,
   parseServiceResourceOverrides,
   type ServiceResourceOverrides,
 } from "./otel-utils"
@@ -47,7 +48,7 @@ function buildSpanProcessors(): SpanProcessor[] {
     processors.push(new ResourceAttributeOverrideSpanProcessor(process.env))
   }
 
-  if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+  if (hasOtlpEndpointConfig(process.env)) {
     processors.push(new BatchSpanProcessor(new OTLPTraceExporter()))
   } else if (process.env.OTEL_TRACES_EXPORTER === "console") {
     processors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))

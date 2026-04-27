@@ -4,6 +4,7 @@ import { mergeOverrides, PartialFactory } from "ol-test-utilities"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
+  hasOtlpEndpointConfig,
   parseServiceResourceOverrides,
 } from "./otel-utils"
 
@@ -207,5 +208,16 @@ describe("parseServiceResourceOverrides", () => {
         "service.version": "1.2.3",
       },
     })
+  })
+})
+
+describe("hasOtlpEndpointConfig", () => {
+  it("returns true when only OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is set", () => {
+    expect(
+      hasOtlpEndpointConfig({
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+          "http://alloy.monitoring:4318/v1/traces",
+      }),
+    ).toBe(true)
   })
 })

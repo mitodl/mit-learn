@@ -78,6 +78,13 @@ export function parseServiceResourceOverrides(
   }
 }
 
+export function hasOtlpEndpointConfig(env: ServiceNameEnvSubset): boolean {
+  return Boolean(
+    getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_ENDPOINT) ||
+      getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
+  )
+}
+
 /**
  * Returns the first non-empty string attribute for the provided keys, in order.
  * Keys act as fallbacks to support multiple semantic conventions.
