@@ -654,6 +654,9 @@ def test_mitxonline_transform_programs(
                 "published": bool(
                     program_data.get("page", {}).get("page_url", None) is not None
                     and program_data.get("page", {}).get("live", None)
+                    and program_data.get("page", {}).get(
+                        "include_in_learn_catalog", False
+                    )
                 ),
                 "url": expected_program_url,
                 "availability": program_data["availability"],
@@ -872,6 +875,33 @@ def test_mitxonline_transform_courses_not_in_catalog(
     assert any(run["is_enrollable"] for run in course["courseruns"])
 
     result = transform_courses([course])
+    assert result[0]["published"] is bool(include_in_learn_catalog)
+
+
+@pytest.mark.parametrize("include_in_learn_catalog", [True, False, None])
+def test_mitxonline_transform_programs_not_in_catalog(
+    mock_mitxonline_programs_data,
+    mock_mitxonline_courses_data,
+    mocker,
+    include_in_learn_catalog,
+):
+    """Test that a program with include_in_learn_catalog=False/None is not published"""
+    set_up_topics(is_mitx=True)
+    mock_now = datetime(2023, 1, 1, tzinfo=UTC)
+    mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
+    mocker.patch(
+        "learning_resources.etl.mitxonline._fetch_data",
+        return_value=mock_mitxonline_courses_data["results"],
+    )
+
+    # Use only the first program and set include_in_learn_catalog to True/False/None
+    program = mock_mitxonline_programs_data["results"][0]
+    program["page"]["include_in_learn_catalog"] = include_in_learn_catalog
+    # Ensure all other publish conditions are met
+    program["page"]["page_url"] = "/programs/test-program/"
+    program["page"]["live"] = True
+
+    result = list(transform_programs([program]))
     assert result[0]["published"] is bool(include_in_learn_catalog)
 
 
