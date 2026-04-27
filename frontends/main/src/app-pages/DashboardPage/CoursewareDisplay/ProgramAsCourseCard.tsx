@@ -40,6 +40,7 @@ import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { ProgramCertificateButton } from "./EnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { programPageView } from "@/common/urls"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -283,14 +284,19 @@ const getContextMenuItems = (
   title: string,
   resource: ProgramAsCourse,
   additionalItems: SimpleMenuItem[] = [],
-  hideDetailsUrl = false,
+  useProductPages = false,
 ) => {
   const menuItems = []
-  const detailsUrl = mitxonlineLegacyUrl(`/courses/${resource.readable_id}`)
+  const detailsUrl = useProductPages
+    ? programPageView({
+        readable_id: resource.readable_id,
+        display_mode: "course",
+      })
+    : mitxonlineLegacyUrl(`/programs/${resource.readable_id}`)
 
   const courseMenuItems = []
 
-  if (!hideDetailsUrl && detailsUrl) {
+  if (detailsUrl) {
     courseMenuItems.push({
       className: "dashboard-card-menu-item",
       key: "view-course-details",
