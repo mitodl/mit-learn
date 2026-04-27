@@ -1,5 +1,13 @@
 import React from "react"
-import { Link, Popover, Stack, Typography, styled } from "ol-components"
+import {
+  Link,
+  Popover,
+  SimpleMenu,
+  SimpleMenuItem,
+  Stack,
+  Typography,
+  styled,
+} from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -23,7 +31,14 @@ import { formatDate } from "ol-utilities"
 import {
   getIdsFromReqTree,
   isVerifiedEnrollmentMode,
+  mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
+import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
+import { RiAwardFill, RiMore2Line } from "@remixicon/react"
+import NiceModal from "@ebay/nice-modal-react"
+import { UnenrollProgramDialog } from "./DashboardDialogs"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const ProgramCardRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -126,6 +141,34 @@ const ProgramCardBody = styled.div({
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
 })
+
+const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  display: "flex",
+  width: "120px",
+  height: "32px",
+  padding: "12px 12px 12px 8px",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "10px",
+}))
+
+const MenuButton = styled(ActionButton)<{
+  status: EnrollmentStatus
+}>(({ theme, status }) => [
+  {
+    marginLeft: "-8px",
+    [theme.breakpoints.down("md")]: {
+      position: "absolute",
+      top: "0",
+      right: "0",
+    },
+  },
+  status !== EnrollmentStatus.Completed &&
+    status !== EnrollmentStatus.Enrolled && {
+      visibility: "hidden",
+    },
+])
 
 const getTimezone = (dateString: string): string => {
   const tz =
@@ -246,19 +289,57 @@ const getRelativeDateContent = (
   }
 }
 
+const getContextMenuItems = (
+  title: string,
+  resource: ProgramAsCourse,
+  additionalItems: SimpleMenuItem[] = [],
+  hideDetailsUrl = false,
+) => {
+  const menuItems = []
+  const detailsUrl = mitxonlineLegacyUrl(`/courses/${resource.readable_id}`)
+
+  const courseMenuItems = []
+
+  if (!hideDetailsUrl && detailsUrl) {
+    courseMenuItems.push({
+      className: "dashboard-card-menu-item",
+      key: "view-course-details",
+      label: "View Course Details",
+      href: detailsUrl,
+    })
+  }
+
+  courseMenuItems.push({
+    className: "dashboard-card-menu-item",
+    key: "unenroll",
+    label: "Unenroll",
+    onClick: () => {
+      NiceModal.show(UnenrollProgramDialog, {
+        title,
+        enrollment: resource.readable_id,
+      })
+    },
+  })
+
+  menuItems.push(...courseMenuItems)
+  return [...menuItems, ...additionalItems]
+}
+
+interface ProgramAsCourse {
+  id: number
+  readable_id: string
+  title?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  courses?: number[]
+  req_tree?: V2ProgramRequirement[]
+}
+
 interface ProgramAsCourseCardProps {
   /**
    * The courselike program to display.
    */
-  courseProgram: {
-    id: number
-    readable_id: string
-    title?: string | null
-    start_date?: string | null
-    end_date?: string | null
-    courses?: number[]
-    req_tree?: V2ProgramRequirement[]
-  }
+  courseProgram: ProgramAsCourse
   /**
    * child courses of the program. These correspond to nodes in the req_tree.
    */
@@ -289,6 +370,7 @@ interface ProgramAsCourseCardProps {
     enrollment_mode?: string | null
   }
   Component?: React.ElementType
+  contextMenuItems?: SimpleMenuItem[]
   className?: string
 }
 
@@ -313,8 +395,12 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   courseProgramEnrollment,
   ancestorProgramEnrollment,
   Component,
+  contextMenuItems = [],
   className,
 }) => {
+  const useProductPages = useFeatureFlagEnabled(
+    FeatureFlags.MitxOnlineProductPages,
+  )
   const moduleRequirementSection = courseProgram?.req_tree?.find(
     (node) => node.data.node_type === "operator",
   )
@@ -384,6 +470,41 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     ancestorProgramEnrollment?.enrollment_mode,
   ].some(isVerifiedEnrollmentMode)
 
+  const programCertificateUrl = courseProgramEnrollment?.certificate
+    ? `/certificate/program/${courseProgramEnrollment.certificate.uuid}`
+    : null
+
+  const enrollmentStatus = getProgramEnrollmentStatus(
+    courseProgramEnrollment,
+    enrolledCount,
+    completedCount,
+  )
+
+  // Build context menu
+  const menuItems = getContextMenuItems(
+    courseProgram.title ?? "",
+    courseProgram,
+    contextMenuItems,
+    useProductPages ?? false,
+  )
+
+  const contextMenu = (
+    <SimpleMenu
+      items={menuItems}
+      trigger={
+        <MenuButton
+          size="small"
+          variant="text"
+          aria-label="More options"
+          status={enrollmentStatus}
+          hidden={menuItems.length === 0}
+        >
+          <RiMore2Line />
+        </MenuButton>
+      }
+    />
+  )
+
   return (
     <ProgramCardRoot
       as={Component}
@@ -438,6 +559,21 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           </StatusContainer>
           <Typography variant="subtitle2">{courseProgram?.title}</Typography>
         </ProgramCardHeaderInner>
+        <>
+          {programCertificateUrl && (
+            <ProgramCertificateButton
+              variant="bordered"
+              size="small"
+              startIcon={<RiAwardFill />}
+              href={programCertificateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Certificate
+            </ProgramCertificateButton>
+          )}
+          {contextMenu}
+        </>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>
         <ProgramCardSubHeaderText variant="subtitle3">
