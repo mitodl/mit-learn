@@ -474,12 +474,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     ? `/certificate/program/${courseProgramEnrollment.certificate.uuid}`
     : null
 
-  const enrollmentStatus = getProgramEnrollmentStatus(
-    courseProgramEnrollment,
-    enrolledCount,
-    completedCount,
-  )
-
   // Build context menu
   const menuItems = getContextMenuItems(
     courseProgram.title ?? "",
@@ -496,7 +490,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           size="small"
           variant="text"
           aria-label="More options"
-          status={enrollmentStatus}
+          status={programEnrollmentStatus}
           hidden={menuItems.length === 0}
         >
           <RiMore2Line />
