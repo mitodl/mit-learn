@@ -33,10 +33,11 @@ import {
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton } from "@mitodl/smoot-design"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
+import { ProgramCertificateButton } from "./EnrollmentDisplay"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
@@ -141,17 +142,6 @@ const ProgramCardBody = styled.div({
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
 })
-
-const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
-  color: theme.custom.colors.red,
-  display: "flex",
-  width: "120px",
-  height: "32px",
-  padding: "12px 12px 12px 8px",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: "10px",
-}))
 
 const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus

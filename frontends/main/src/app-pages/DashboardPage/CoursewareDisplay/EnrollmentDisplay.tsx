@@ -108,7 +108,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
+export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
   display: "flex",
   width: "120px",
