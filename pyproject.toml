@@ -118,7 +118,6 @@ dependencies = [
     "langchain-litellm>=0.5.1",
     "scikit-learn>=1.8.0",
     "gensim>=4.4.0",
-    "pytest-repeat>=0.9.4",
 ]
 
 [dependency-groups]
@@ -137,6 +136,7 @@ dev = [
     "pytest-env>=1.0.0,<2",
     "pytest-freezegun>=0.4.2,<0.5",
     "pytest-mock>=3.10.0,<4",
+    "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",
     "ruff==0.14.14",
     "safety>=3.0.0,<4",
