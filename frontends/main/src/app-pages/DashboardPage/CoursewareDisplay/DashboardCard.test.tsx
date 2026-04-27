@@ -126,7 +126,7 @@ describe.each([
     })
     expect(courseLink).toHaveAttribute("href", coursewareUrl)
     expect(
-      within(card).getByRole("heading", { name: course.title }),
+      within(card).getByRole("heading", { name: course.title, level: 3 }),
     ).toBeInTheDocument()
   })
 
@@ -152,7 +152,7 @@ describe.each([
     ).not.toBeInTheDocument()
     // Should be clickable text wrapped in a heading
     expect(
-      within(card).getByRole("heading", { name: course.title }),
+      within(card).getByRole("heading", { name: course.title, level: 3 }),
     ).toBeInTheDocument()
   })
 
@@ -182,7 +182,7 @@ describe.each([
       within(card).queryByRole("link", { name: course.title }),
     ).not.toBeInTheDocument()
     expect(
-      within(card).getByRole("heading", { name: course.title }),
+      within(card).getByRole("heading", { name: course.title, level: 3 }),
     ).toBeInTheDocument()
   })
 
