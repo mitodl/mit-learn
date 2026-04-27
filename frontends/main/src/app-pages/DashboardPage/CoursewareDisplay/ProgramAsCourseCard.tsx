@@ -436,7 +436,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               </>
             )}
           </StatusContainer>
-          <Typography variant="subtitle2">{courseProgram?.title}</Typography>
+          <Typography variant="subtitle2" component="h3">
+            {courseProgram?.title}
+          </Typography>
         </ProgramCardHeaderInner>
       </ProgramCardHeaderOuter>
       <ProgramCardSubHeader>

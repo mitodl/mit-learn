@@ -117,14 +117,18 @@ const CardRoot = styled.div<{
   },
 ])
 
-const TitleLink = styled(Link)(({ theme }) => ({
+const TitleHeading = styled.h3(({ theme }) => ({
+  margin: 0,
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleText = styled.div<{ clickable?: boolean }>(
+const TitleLink = styled(Link)()
+
+const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
+    margin: 0,
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
@@ -788,14 +792,16 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   ) : (
     <>
       {titleHref ? (
-        <TitleLink
-          size="medium"
-          color="black"
-          href={titleHref}
-          onClick={titleClick}
-        >
-          {title}
-        </TitleLink>
+        <TitleHeading>
+          <TitleLink
+            size="medium"
+            color="black"
+            href={titleHref}
+            onClick={titleClick}
+          >
+            {title}
+          </TitleLink>
+        </TitleHeading>
       ) : (
         <TitleText clickable={Boolean(titleClick)} onClick={titleClick}>
           {title}
