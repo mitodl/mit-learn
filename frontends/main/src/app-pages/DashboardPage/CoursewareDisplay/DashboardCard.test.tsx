@@ -125,7 +125,9 @@ describe.each([
       name: course.title,
     })
     expect(courseLink).toHaveAttribute("href", coursewareUrl)
-    expect(within(card).getByRole("heading", { name: course.title })).toBeInTheDocument()
+    expect(
+      within(card).getByRole("heading", { name: course.title }),
+    ).toBeInTheDocument()
   })
 
   test("It shows course title as clickable text (not link) when not enrolled (non-B2B)", async () => {
@@ -149,7 +151,9 @@ describe.each([
       within(card).queryByRole("link", { name: course.title }),
     ).not.toBeInTheDocument()
     // Should be clickable text wrapped in a heading
-    expect(within(card).getByRole("heading", { name: course.title })).toBeInTheDocument()
+    expect(
+      within(card).getByRole("heading", { name: course.title }),
+    ).toBeInTheDocument()
   })
 
   test("It shows course title as clickable text if not enrolled but has B2B contract", async () => {
@@ -177,7 +181,9 @@ describe.each([
     expect(
       within(card).queryByRole("link", { name: course.title }),
     ).not.toBeInTheDocument()
-    expect(within(card).getByRole("heading", { name: course.title })).toBeInTheDocument()
+    expect(
+      within(card).getByRole("heading", { name: course.title }),
+    ).toBeInTheDocument()
   })
 
   test("Accepts a classname", () => {
