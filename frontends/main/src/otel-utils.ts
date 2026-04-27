@@ -1,5 +1,7 @@
 import { SpanKind } from "@opentelemetry/api"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
+import { envDetector } from "@opentelemetry/resources"
+import type { DetectedResourceAttributes } from "@opentelemetry/resources"
 
 const REQUEST_METHOD_KEYS = ["http.request.method", "http.method"] as const
 const REQUEST_ROUTE_KEYS = [
@@ -24,65 +26,27 @@ export type RequestLogEntry = {
   name: string
 }
 
-type ServiceNameEnvSubset = Readonly<Record<string, string | undefined>>
-export type ServiceResourceOverrides = {
-  resourceAttributes: Record<string, string>
-  serviceName?: string
-  serviceVersion?: string
-}
+type OtelEnvSubset = Readonly<Record<string, string | undefined>>
 
 function getNonEmptyEnvValue(value: string | undefined): string | undefined {
   const trimmed = value?.trim()
   return trimmed ? trimmed : undefined
 }
 
-function getResourceOverrides(
-  env: ServiceNameEnvSubset,
-): Record<string, string> {
-  const overrides: Record<string, string> = {}
-  const attributes = getNonEmptyEnvValue(env.OTEL_RESOURCE_ATTRIBUTES)
-  if (!attributes) {
-    return overrides
-  }
-
-  for (const assignment of attributes.split(",")) {
-    const trimmedAssignment = assignment.trim()
-    if (!trimmedAssignment) {
-      continue
-    }
-    const separatorIndex = trimmedAssignment.indexOf("=")
-    if (separatorIndex <= 0) {
-      continue
-    }
-    const key = trimmedAssignment.slice(0, separatorIndex).trim()
-    const value = getNonEmptyEnvValue(
-      trimmedAssignment.slice(separatorIndex + 1),
-    )
-    if (!value) {
-      continue
-    }
-
-    overrides[key] = value
-  }
-
-  return overrides
-}
-
-export function parseServiceResourceOverrides(
-  env: ServiceNameEnvSubset,
-): ServiceResourceOverrides {
-  return {
-    resourceAttributes: getResourceOverrides(env),
-    serviceName: getNonEmptyEnvValue(env.OTEL_SERVICE_NAME),
-    serviceVersion: getNonEmptyEnvValue(env.NEXT_PUBLIC_VERSION),
-  }
-}
-
-export function hasOtlpEndpointConfig(env: ServiceNameEnvSubset): boolean {
+export function hasOtlpEndpointConfig(env: OtelEnvSubset): boolean {
   return Boolean(
     getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_ENDPOINT) ||
       getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
   )
+}
+
+/**
+ * Read OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES from process.env using
+ * the OTEL SDK's spec-compliant parser. Handles percent-decoding, length
+ * checks, and merges OTEL_SERVICE_NAME into service.name.
+ */
+export function detectResourceOverrides(): DetectedResourceAttributes {
+  return envDetector.detect().attributes ?? {}
 }
 
 /**
@@ -151,18 +115,22 @@ export function createRequestLogEntry(
   }
 }
 
+/**
+ * Copy detected resource attributes onto a span's resource. Used to work
+ * around Sentry's hardcoded service.name (and friends) — see
+ * https://github.com/getsentry/sentry-javascript/issues/20502.
+ *
+ * EnvDetector returns AttributeValue | Promise<AttributeValue> | undefined,
+ * but in practice OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES yield only
+ * strings; non-strings are skipped defensively.
+ */
 export function applyResourceOverrides(
   span: ReadableSpan,
-  overrides: ServiceResourceOverrides,
+  overrides: DetectedResourceAttributes,
 ): void {
-  for (const [key, value] of Object.entries(overrides.resourceAttributes)) {
-    span.resource.attributes[key] = value
-  }
-
-  if (overrides.serviceName) {
-    span.resource.attributes["service.name"] = overrides.serviceName
-  }
-  if (overrides.serviceVersion) {
-    span.resource.attributes["service.version"] = overrides.serviceVersion
+  for (const [key, value] of Object.entries(overrides)) {
+    if (typeof value === "string") {
+      span.resource.attributes[key] = value
+    }
   }
 }

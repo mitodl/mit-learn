@@ -11,15 +11,29 @@ import {
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base"
 import type { ReadableSpan, SpanProcessor } from "@opentelemetry/sdk-trace-base"
+import type { DetectedResourceAttributes } from "@opentelemetry/resources"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
+  detectResourceOverrides,
   hasOtlpEndpointConfig,
-  parseServiceResourceOverrides,
-  type ServiceResourceOverrides,
 } from "./otel-utils"
 import { parseSampleRate } from "./sentry-utils"
+
+// Inject service.version into OTEL_RESOURCE_ATTRIBUTES so the OTEL SDK's
+// EnvDetector picks it up alongside any other attributes set via env.
+// Our deployment env is stored in a vault that can't interpolate $VERSION
+// into OTEL_RESOURCE_ATTRIBUTES, so we prepend it here at startup. Prepending
+// (rather than appending) lets an explicit OTEL_RESOURCE_ATTRIBUTES entry
+// override this default — last-key-wins per the SDK parser.
+if (process.env.NEXT_PUBLIC_VERSION) {
+  const prefix = `service.version=${encodeURIComponent(process.env.NEXT_PUBLIC_VERSION)}`
+  const existing = process.env.OTEL_RESOURCE_ATTRIBUTES
+  process.env.OTEL_RESOURCE_ATTRIBUTES = existing
+    ? `${prefix},${existing}`
+    : prefix
+}
 
 /**
  * Build the list of extra span processors injected into Sentry's OTEL provider.
@@ -40,12 +54,9 @@ import { parseSampleRate } from "./sentry-utils"
 function buildSpanProcessors(): SpanProcessor[] {
   const processors: SpanProcessor[] = []
 
-  if (
-    process.env.OTEL_SERVICE_NAME ||
-    process.env.OTEL_RESOURCE_ATTRIBUTES ||
-    process.env.NEXT_PUBLIC_VERSION
-  ) {
-    processors.push(new ResourceAttributeOverrideSpanProcessor(process.env))
+  const overrides = detectResourceOverrides()
+  if (Object.keys(overrides).length > 0) {
+    processors.push(new ResourceAttributeOverrideSpanProcessor(overrides))
   }
 
   if (hasOtlpEndpointConfig(process.env)) {
@@ -62,17 +73,18 @@ function buildSpanProcessors(): SpanProcessor[] {
 }
 
 /**
- * Ensure resource.attributes are set correctly.
- * Sentry hard-codes some values like `service.name` and ignores
- * OTEL_RESOURCE_ATTRIBUTES.
+ * Apply resource attributes from OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES
+ * to every span at end time. Sentry hard-codes service.name to "node" and
+ * ignores OTEL_RESOURCE_ATTRIBUTES on its internal resource, so without this
+ * the spans we ship to Alloy/Tempo would be misattributed.
  *
  * See https://github.com/getsentry/sentry-javascript/issues/20502
  */
 class ResourceAttributeOverrideSpanProcessor implements SpanProcessor {
-  private readonly overrides: ServiceResourceOverrides
+  private readonly overrides: DetectedResourceAttributes
 
-  constructor(env: NodeJS.ProcessEnv) {
-    this.overrides = parseServiceResourceOverrides(env)
+  constructor(overrides: DetectedResourceAttributes) {
+    this.overrides = overrides
   }
 
   onStart(_span: Span, _parentContext: Context): void {

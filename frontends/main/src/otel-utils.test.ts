@@ -4,8 +4,8 @@ import { mergeOverrides, PartialFactory } from "ol-test-utilities"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
+  detectResourceOverrides,
   hasOtlpEndpointConfig,
-  parseServiceResourceOverrides,
 } from "./otel-utils"
 
 function makeResource(
@@ -87,7 +87,7 @@ describe("createRequestLogEntry", () => {
 })
 
 describe("applyResourceOverrides", () => {
-  it("overrides resource service.name when OTEL_SERVICE_NAME is set", () => {
+  it("copies overrides onto the span resource", () => {
     const span = makeReadableSpan({
       resource: makeResource({
         "service.name": "node",
@@ -95,119 +95,78 @@ describe("applyResourceOverrides", () => {
       }),
     })
 
-    const overrides = parseServiceResourceOverrides({
-      OTEL_SERVICE_NAME: "learn-nextjs",
+    applyResourceOverrides(span, {
+      "service.name": "learn-nextjs",
+      "deployment.environment.name": "prod",
     })
-    applyResourceOverrides(span, overrides)
 
     expect(span.resource.attributes["service.name"]).toBe("learn-nextjs")
     expect(span.resource.attributes["service.namespace"]).toBe("sentry")
-  })
-
-  it("does not change resource attributes when OTEL_SERVICE_NAME is unset", () => {
-    const span = makeReadableSpan({
-      resource: makeResource({
-        "service.name": "node",
-      }),
-    })
-
-    const overrides = parseServiceResourceOverrides({})
-    applyResourceOverrides(span, overrides)
-
-    expect(span.resource.attributes["service.name"]).toBe("node")
-  })
-
-  it("overrides service namespace and version from OTEL_RESOURCE_ATTRIBUTES", () => {
-    const span = makeReadableSpan({
-      resource: makeResource({
-        "service.name": "node",
-        "service.namespace": "sentry",
-        "service.version": "10.50.0",
-      }),
-    })
-
-    const overrides = parseServiceResourceOverrides({
-      OTEL_RESOURCE_ATTRIBUTES:
-        "service.namespace=my-namespace,service.version=2026.04.24",
-    })
-    applyResourceOverrides(span, overrides)
-
-    expect(span.resource.attributes["service.name"]).toBe("node")
-    expect(span.resource.attributes["service.namespace"]).toBe("my-namespace")
-    expect(span.resource.attributes["service.version"]).toBe("2026.04.24")
-  })
-
-  it("prefers OTEL_SERVICE_NAME over service.name in OTEL_RESOURCE_ATTRIBUTES", () => {
-    const span = makeReadableSpan({
-      resource: makeResource({
-        "service.name": "node",
-      }),
-    })
-
-    const overrides = parseServiceResourceOverrides({
-      OTEL_SERVICE_NAME: "env-service-name",
-      OTEL_RESOURCE_ATTRIBUTES:
-        "service.name=resource-attrs-name,service.namespace=my-namespace",
-    })
-    applyResourceOverrides(span, overrides)
-
-    expect(span.resource.attributes["service.name"]).toBe("env-service-name")
-    expect(span.resource.attributes["service.namespace"]).toBe("my-namespace")
-  })
-
-  it("applies arbitrary resource attributes from OTEL_RESOURCE_ATTRIBUTES", () => {
-    const span = makeReadableSpan({
-      resource: makeResource({
-        "service.name": "node",
-      }),
-    })
-
-    const overrides = parseServiceResourceOverrides({
-      OTEL_RESOURCE_ATTRIBUTES:
-        "deployment.environment.name=prod,cloud.region=us-east-1",
-    })
-    applyResourceOverrides(span, overrides)
-
     expect(span.resource.attributes["deployment.environment.name"]).toBe("prod")
-    expect(span.resource.attributes["cloud.region"]).toBe("us-east-1")
   })
 
-  it("overrides service.version from NEXT_PUBLIC_VERSION", () => {
+  it("leaves the resource unchanged when overrides is empty", () => {
     const span = makeReadableSpan({
-      resource: makeResource({
-        "service.version": "10.50.0",
-      }),
+      resource: makeResource({ "service.name": "node" }),
     })
 
-    const overrides = parseServiceResourceOverrides({
-      NEXT_PUBLIC_VERSION: "release-2026-04-24",
-      OTEL_RESOURCE_ATTRIBUTES: "service.version=resource-attrs-version",
-    })
-    applyResourceOverrides(span, overrides)
+    applyResourceOverrides(span, {})
 
-    expect(span.resource.attributes["service.version"]).toBe(
-      "release-2026-04-24",
-    )
+    expect(span.resource.attributes["service.name"]).toBe("node")
+  })
+
+  it("skips non-string values defensively", () => {
+    const span = makeReadableSpan({
+      resource: makeResource({ "service.name": "node" }),
+    })
+
+    applyResourceOverrides(span, {
+      "service.name": "learn-nextjs",
+      "broken.promise": Promise.resolve("ignored"),
+      "broken.array": ["a", "b"],
+    })
+
+    expect(span.resource.attributes["service.name"]).toBe("learn-nextjs")
+    expect(span.resource.attributes["broken.promise"]).toBeUndefined()
+    expect(span.resource.attributes["broken.array"]).toBeUndefined()
   })
 })
 
-describe("parseServiceResourceOverrides", () => {
-  it("parses OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME into one override object", () => {
-    expect(
-      parseServiceResourceOverrides({
-        OTEL_SERVICE_NAME: "app-name",
-        NEXT_PUBLIC_VERSION: "release-1.2.3",
-        OTEL_RESOURCE_ATTRIBUTES:
-          "service.namespace=learn,service.version=1.2.3",
-      }),
-    ).toEqual({
-      serviceName: "app-name",
-      serviceVersion: "release-1.2.3",
-      resourceAttributes: {
-        "service.namespace": "learn",
-        "service.version": "1.2.3",
-      },
+describe("detectResourceOverrides", () => {
+  const originalEnv = { ...process.env }
+
+  afterEach(() => {
+    process.env = { ...originalEnv }
+  })
+
+  it("parses OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES via the SDK", () => {
+    process.env.OTEL_SERVICE_NAME = "app-name"
+    process.env.OTEL_RESOURCE_ATTRIBUTES =
+      "service.namespace=learn,service.version=1.2.3"
+
+    expect(detectResourceOverrides()).toEqual({
+      "service.name": "app-name",
+      "service.namespace": "learn",
+      "service.version": "1.2.3",
     })
+  })
+
+  it("percent-decodes values per the OTEL spec", () => {
+    process.env.OTEL_RESOURCE_ATTRIBUTES =
+      "deployment.environment.name=us%2Ceast,service.version=1%3D2"
+    delete process.env.OTEL_SERVICE_NAME
+
+    expect(detectResourceOverrides()).toEqual({
+      "deployment.environment.name": "us,east",
+      "service.version": "1=2",
+    })
+  })
+
+  it("returns an empty object when no env vars are set", () => {
+    delete process.env.OTEL_SERVICE_NAME
+    delete process.env.OTEL_RESOURCE_ATTRIBUTES
+
+    expect(detectResourceOverrides()).toEqual({})
   })
 })
 
