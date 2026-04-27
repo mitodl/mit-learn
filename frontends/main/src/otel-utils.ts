@@ -24,7 +24,10 @@ export type RequestLogEntry = {
   traceId: string
   spanId: string
   name: string
+  version: string | null
 }
+
+const APP_VERSION = process.env.NEXT_PUBLIC_VERSION ?? null
 
 type OtelEnvSubset = Readonly<Record<string, string | undefined>>
 
@@ -112,6 +115,7 @@ export function createRequestLogEntry(
     traceId: context.traceId,
     spanId: context.spanId,
     name: span.name,
+    version: APP_VERSION,
   }
 }
 

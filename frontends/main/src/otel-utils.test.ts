@@ -72,6 +72,7 @@ describe("createRequestLogEntry", () => {
       traceId: "trace-id",
       spanId: "span-id",
       name: "GET /courses",
+      version: "test-version",
     })
   })
 
