@@ -98,6 +98,11 @@ class ResourceAttributeOverrideSpanProcessor implements SpanProcessor {
   }
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __NEXT_REQUEST_LOGGER_SUBSCRIBED__: boolean | undefined
+}
+
 /**
  * Subscribe to Node's built-in HTTP server diagnostics channels and emit a
  * structured JSON log line per completed request. This runs independently of
@@ -110,8 +115,15 @@ class ResourceAttributeOverrideSpanProcessor implements SpanProcessor {
  * are marked Experimental in Node 24 and 25, but are the same surface that
  * Sentry/OTEL/Datadog subscribe to internally; the API has been stable in
  * practice for years.
+ *
+ * Guarded against double-subscription via a globalThis flag — instrumentation
+ * hooks can be re-evaluated on dev reloads or worker restarts, and stacked
+ * subscriptions would duplicate every log line.
  */
 function subscribeRequestLogger(): void {
+  if (globalThis.__NEXT_REQUEST_LOGGER_SUBSCRIBED__) return
+  globalThis.__NEXT_REQUEST_LOGGER_SUBSCRIBED__ = true
+
   const startTimes = new WeakMap<IncomingMessage, bigint>()
 
   diagnosticsChannel.subscribe("http.server.request.start", (message) => {
