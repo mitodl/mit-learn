@@ -882,11 +882,13 @@ def test_mitxonline_transform_courses_not_in_catalog(
 def test_mitxonline_transform_programs_not_in_catalog(
     mock_mitxonline_programs_data,
     mock_mitxonline_courses_data,
+    settings,
     mocker,
     include_in_learn_catalog,
 ):
-    """Test that a program with include_in_learn_catalog=False/None is not published"""
+    """Program published mirrors bool(include_in_learn_catalog) when other publish conditions are met."""
     set_up_topics(is_mitx=True)
+    settings.MITX_ONLINE_COURSES_API_URL = "http://localhost/test/courses/api"
     mock_now = datetime(2023, 1, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
     mocker.patch(
