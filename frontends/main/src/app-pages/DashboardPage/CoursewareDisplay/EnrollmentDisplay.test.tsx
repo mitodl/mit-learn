@@ -2291,5 +2291,103 @@ describe("EnrollmentDisplay", () => {
       expect(cards[1]).toHaveTextContent(courseA.title)
       expect(cards[2]).toHaveTextContent(courseB.title)
     })
+
+    test("displays certificate button when program enrollment has a certificate", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const certUuid = "test-program-cert-uuid"
+      const program = mitxonline.factories.programs.program({
+        id: 456,
+        title: "Program With Certificate",
+        courses: [10, 11],
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+          certificate: {
+            uuid: certUuid,
+            link: `/certificate/program/${certUuid}/`,
+          },
+        })
+      const courses = mitxonline.factories.courses.courses({ count: 2 })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [programEnrollment],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(456), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={456} />)
+
+      await screen.findByText("Program With Certificate")
+      const certButton = screen.getByRole("link", { name: "Certificate" })
+      expect(certButton).toBeInTheDocument()
+      expect(certButton).toHaveAttribute(
+        "href",
+        `/certificate/program/${certUuid}`,
+      )
+      expect(certButton).toHaveAttribute("target", "_blank")
+      expect(certButton).toHaveAttribute("rel", "noopener noreferrer")
+    })
+
+    test("does not display certificate button when program enrollment has no certificate", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const program = mitxonline.factories.programs.program({
+        id: 457,
+        title: "Program Without Certificate",
+        courses: [12, 13],
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+          certificate: null,
+        })
+      const courses = mitxonline.factories.courses.courses({ count: 2 })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [programEnrollment],
+      )
+      setMockResponse.get(mitxonline.urls.programs.programDetail(457), program)
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        courses,
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={457} />)
+
+      await screen.findByText("Program Without Certificate")
+      const certButton = screen.queryByRole("link", { name: "Certificate" })
+      expect(certButton).not.toBeInTheDocument()
+    })
   })
 })

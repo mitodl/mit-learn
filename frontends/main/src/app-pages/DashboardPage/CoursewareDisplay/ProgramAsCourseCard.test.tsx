@@ -364,4 +364,56 @@ describe("ProgramAsCourseCard", () => {
       screen.queryByRole("dialog", { name: moduleWithRun.title }),
     ).not.toBeInTheDocument()
   })
+
+  test("displays certificate button when program enrollment has a certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    const certUuid = "test-certificate-uuid-123"
+    const programEnrollmentWithCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: {
+        uuid: certUuid,
+        link: `/certificate/program/${certUuid}/`,
+      },
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithCert}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const certButton = screen.getByRole("link", { name: "Certificate" })
+    expect(certButton).toBeInTheDocument()
+    expect(certButton).toHaveAttribute(
+      "href",
+      `/certificate/program/${certUuid}`,
+    )
+    expect(certButton).toHaveAttribute("target", "_blank")
+    expect(certButton).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  test("does not display certificate button when program enrollment has no certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    const programEnrollmentNoCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentNoCert}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const certButton = screen.queryByRole("link", { name: "Certificate" })
+    expect(certButton).not.toBeInTheDocument()
+  })
 })
