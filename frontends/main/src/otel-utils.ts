@@ -1,29 +1,17 @@
-import { SpanKind } from "@opentelemetry/api"
+import { isSpanContextValid, trace } from "@opentelemetry/api"
+import type { IncomingMessage, ServerResponse } from "node:http"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
 import { envDetector } from "@opentelemetry/resources"
 import type { DetectedResourceAttributes } from "@opentelemetry/resources"
-
-const REQUEST_METHOD_KEYS = ["http.request.method", "http.method"] as const
-const REQUEST_ROUTE_KEYS = [
-  "http.route",
-  "url.path",
-  "http.target",
-  "url.full",
-] as const
-const RESPONSE_STATUS_KEYS = [
-  "http.response.status_code",
-  "http.status_code",
-] as const
 
 export type RequestLogEntry = {
   message: "next_request"
   method: string
   route: string
-  statusCode: number | null
+  statusCode: number
   durationMs: number
-  traceId: string
-  spanId: string
-  name: string
+  traceId: string | null
+  spanId: string | null
   version: string | null
 }
 
@@ -53,68 +41,32 @@ export function detectResourceOverrides(): DetectedResourceAttributes {
 }
 
 /**
- * Returns the first non-empty string attribute for the provided keys, in order.
- * Keys act as fallbacks to support multiple semantic conventions.
+ * Build a structured log entry for a finished HTTP request. The traceId/spanId
+ * come from the active OTEL context if one is present — a null traceId in the
+ * log is itself the diagnostic signal that the request was not traced.
  */
-function getStringAttribute(
-  span: ReadableSpan,
-  keys: readonly string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = span.attributes[key]
-    if (typeof value === "string" && value.length > 0) {
-      return value
-    }
-  }
-  return undefined
-}
-
-/**
- * Returns the first finite numeric attribute for the provided keys, in order.
- * Keys act as fallbacks to support multiple semantic conventions.
- */
-function getNumberAttribute(
-  span: ReadableSpan,
-  keys: readonly string[],
-): number | undefined {
-  for (const key of keys) {
-    const value = span.attributes[key]
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value
-    }
-  }
-  return undefined
-}
-
-function getDurationMs(duration: [number, number]): number {
-  // HrTime is [seconds, nanoseconds], with nanoseconds normalized to < 1e9.
-  // Convert each component to milliseconds and add.
-  return Math.round(duration[0] * 1_000 + duration[1] / 1_000_000)
-}
-
-export function createRequestLogEntry(
-  span: ReadableSpan,
-): RequestLogEntry | null {
-  if (span.kind !== SpanKind.SERVER) {
-    return null
-  }
-
-  // Span attribute keys differ across OTEL semantic convention versions and
-  // instrumentation libraries, so we read from ordered fallback key lists.
-  const context = span.spanContext()
-  const method = getStringAttribute(span, REQUEST_METHOD_KEYS) ?? "UNKNOWN"
-  const route = getStringAttribute(span, REQUEST_ROUTE_KEYS) ?? span.name
-  const statusCode = getNumberAttribute(span, RESPONSE_STATUS_KEYS) ?? null
-
+export function createRequestLogEntry({
+  request,
+  response,
+  durationMs,
+}: {
+  request: IncomingMessage
+  response: ServerResponse
+  durationMs: number
+}): RequestLogEntry {
+  const ctx = trace.getActiveSpan()?.spanContext()
+  const hasTrace = ctx ? isSpanContextValid(ctx) : false
   return {
     message: "next_request",
-    method,
-    route,
-    statusCode,
-    durationMs: getDurationMs(span.duration),
-    traceId: context.traceId,
-    spanId: context.spanId,
-    name: span.name,
+    method: request.method ?? "UNKNOWN",
+    // Strip the query string so log routes group cleanly. We don't have access
+    // to the matched Next.js route template here (e.g. /courses/[id]); raw
+    // paths are good enough for "did every request get a trace" comparisons.
+    route: request.url?.split("?")[0] ?? "",
+    statusCode: response.statusCode,
+    durationMs,
+    traceId: hasTrace && ctx ? ctx.traceId : null,
+    spanId: hasTrace && ctx ? ctx.spanId : null,
     version: APP_VERSION,
   }
 }

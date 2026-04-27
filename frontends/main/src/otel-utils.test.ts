@@ -1,6 +1,5 @@
-import { SpanKind, SpanStatusCode, TraceFlags } from "@opentelemetry/api"
+import type { IncomingMessage, ServerResponse } from "node:http"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
-import { mergeOverrides, PartialFactory } from "ol-test-utilities"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
@@ -23,67 +22,70 @@ function makeResource(
   return resource
 }
 
-const makeReadableSpan: PartialFactory<ReadableSpan> = (overrides = {}) => {
-  const base: ReadableSpan = {
-    name: "test span",
-    kind: SpanKind.INTERNAL,
-    spanContext: () => ({
-      traceId: "trace-id",
-      spanId: "span-id",
-      traceFlags: TraceFlags.SAMPLED,
-    }),
-    startTime: [0, 0],
-    endTime: [0, 0],
-    status: { code: SpanStatusCode.UNSET },
-    attributes: {},
-    links: [],
-    events: [],
-    duration: [0, 0],
-    ended: true,
-    resource: makeResource(),
-    instrumentationScope: { name: "test-scope", version: "1.0.0" },
-    droppedAttributesCount: 0,
-    droppedEventsCount: 0,
-    droppedLinksCount: 0,
-  }
-
-  return mergeOverrides<ReadableSpan>(base, overrides)
-}
+const makeReadableSpan = (
+  overrides: Partial<ReadableSpan> = {},
+): ReadableSpan => ({
+  name: "test span",
+  kind: 0,
+  spanContext: () => ({
+    traceId: "trace-id",
+    spanId: "span-id",
+    traceFlags: 1,
+  }),
+  startTime: [0, 0],
+  endTime: [0, 0],
+  status: { code: 0 },
+  attributes: {},
+  links: [],
+  events: [],
+  duration: [0, 0],
+  ended: true,
+  resource: makeResource(),
+  instrumentationScope: { name: "test-scope", version: "1.0.0" },
+  droppedAttributesCount: 0,
+  droppedEventsCount: 0,
+  droppedLinksCount: 0,
+  ...overrides,
+})
 
 describe("createRequestLogEntry", () => {
-  it("creates a request log entry for server spans", () => {
-    const span = makeReadableSpan({
-      kind: SpanKind.SERVER,
-      name: "GET /courses",
-      attributes: {
-        "http.request.method": "GET",
-        "url.path": "/courses",
-        "http.response.status_code": 200,
-      },
-      duration: [1, 250_000_000],
-    })
+  it("builds a log entry from request and response", () => {
+    const request = { method: "GET", url: "/courses" } as IncomingMessage
+    const response = { statusCode: 200 } as ServerResponse
 
-    expect(createRequestLogEntry(span)).toEqual({
+    expect(
+      createRequestLogEntry({ request, response, durationMs: 1250 }),
+    ).toEqual({
       message: "next_request",
       method: "GET",
       route: "/courses",
       statusCode: 200,
       durationMs: 1250,
-      traceId: "trace-id",
-      spanId: "span-id",
-      name: "GET /courses",
+      traceId: null,
+      spanId: null,
       version: "test-version",
     })
   })
 
-  it("returns null for non-server spans", () => {
-    const span = makeReadableSpan({
-      kind: SpanKind.CLIENT,
-      name: "GET api",
-      duration: [0, 100_000],
-    })
+  it("strips the query string from the route", () => {
+    const request = {
+      method: "POST",
+      url: "/api/foo?bar=baz&qux=1",
+    } as IncomingMessage
+    const response = { statusCode: 201 } as ServerResponse
 
-    expect(createRequestLogEntry(span)).toBeNull()
+    expect(
+      createRequestLogEntry({ request, response, durationMs: 5 }).route,
+    ).toBe("/api/foo")
+  })
+
+  it("falls back to UNKNOWN when method is missing", () => {
+    const request = { url: "/" } as IncomingMessage
+    const response = { statusCode: 500 } as ServerResponse
+
+    expect(
+      createRequestLogEntry({ request, response, durationMs: 1 }).method,
+    ).toBe("UNKNOWN")
   })
 })
 

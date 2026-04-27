@@ -13,6 +13,8 @@ import {
 import type { ReadableSpan, SpanProcessor } from "@opentelemetry/sdk-trace-base"
 import type { DetectedResourceAttributes } from "@opentelemetry/resources"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
+import diagnosticsChannel from "node:diagnostics_channel"
+import type { IncomingMessage, ServerResponse } from "node:http"
 import {
   applyResourceOverrides,
   createRequestLogEntry,
@@ -46,10 +48,6 @@ if (process.env.NEXT_PUBLIC_VERSION) {
  * LOCAL TESTING (no Grafana Alloy required):
  * Set OTEL_TRACES_EXPORTER=console and OTEL_TRACES_SAMPLER_ARG=1.0 to print
  * completed spans as JSON to stdout. See env/frontend.env for details.
- *
- * REQUEST TIMING LOGS:
- * Set NEXT_SERVER_REQUEST_LOGGING=true to print one structured JSON log line
- * for each completed server request span (method, route, status, duration).
  */
 function buildSpanProcessors(): SpanProcessor[] {
   const processors: SpanProcessor[] = []
@@ -63,10 +61,6 @@ function buildSpanProcessors(): SpanProcessor[] {
     processors.push(new BatchSpanProcessor(new OTLPTraceExporter()))
   } else if (process.env.OTEL_TRACES_EXPORTER === "console") {
     processors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))
-  }
-
-  if (process.env.NEXT_SERVER_REQUEST_LOGGING === "true") {
-    processors.push(new RequestLogSpanProcessor())
   }
 
   return processors
@@ -104,25 +98,44 @@ class ResourceAttributeOverrideSpanProcessor implements SpanProcessor {
   }
 }
 
-class RequestLogSpanProcessor implements SpanProcessor {
-  onStart(_span: Span, _parentContext: Context): void {
-    // no-op
-  }
+/**
+ * Subscribe to Node's built-in HTTP server diagnostics channels and emit a
+ * structured JSON log line per completed request. This runs independently of
+ * the OTEL sampler — every request is logged regardless of OTEL_TRACES_SAMPLER_ARG
+ * — so the logs can be used as ground truth for verifying OTEL trace coverage.
+ *
+ * Enabled by default; set NEXT_SERVER_REQUEST_LOGGING=false to disable.
+ *
+ * The channels (`http.server.request.start`, `http.server.response.finish`)
+ * are marked Experimental in Node 24 and 25, but are the same surface that
+ * Sentry/OTEL/Datadog subscribe to internally; the API has been stable in
+ * practice for years.
+ */
+function subscribeRequestLogger(): void {
+  const startTimes = new WeakMap<IncomingMessage, bigint>()
 
-  onEnd(span: ReadableSpan): void {
-    const entry = createRequestLogEntry(span)
-    if (entry) {
-      console.info(JSON.stringify(entry))
+  diagnosticsChannel.subscribe("http.server.request.start", (message) => {
+    const { request } = message as { request: IncomingMessage }
+    startTimes.set(request, process.hrtime.bigint())
+  })
+
+  diagnosticsChannel.subscribe("http.server.response.finish", (message) => {
+    const { request, response } = message as {
+      request: IncomingMessage
+      response: ServerResponse
     }
-  }
+    const start = startTimes.get(request)
+    if (start === undefined) return
+    startTimes.delete(request)
+    const durationMs = Number((process.hrtime.bigint() - start) / 1_000_000n)
+    console.info(
+      JSON.stringify(createRequestLogEntry({ request, response, durationMs })),
+    )
+  })
+}
 
-  shutdown(): Promise<void> {
-    return Promise.resolve()
-  }
-
-  forceFlush(): Promise<void> {
-    return Promise.resolve()
-  }
+if (process.env.NEXT_SERVER_REQUEST_LOGGING !== "false") {
+  subscribeRequestLogger()
 }
 
 // OTEL_TRACES_SAMPLER_ARG controls the OTEL sampler rate — i.e. what fraction
