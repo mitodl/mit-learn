@@ -216,18 +216,29 @@ class QdrantView(APIView):
     async def _execute_scroll_search(  # noqa: PLR0913
         self, client, search_collection, search_filter, limit, offset, order_by
     ):
-        remaining_to_skip = offset
-        next_page_offset = None
-        search_result = []
-
         # Build common scroll kwargs
         scroll_kwargs = {
             "collection_name": search_collection,
             "scroll_filter": search_filter,
             "with_vectors": False,
         }
+
         if order_by:
+            # Qdrant disables pagination (next_page_offset) when order_by
+            # is used.  Fetch offset+limit results in one call and slice
+            # on the client side.
             scroll_kwargs["order_by"] = self._format_order_by(order_by)
+            scroll_res = await client.scroll(
+                **scroll_kwargs,
+                limit=offset + limit,
+            )
+            page_points, _ = scroll_res
+            return page_points[offset : offset + limit]
+
+        # Standard pagination loop for non-ordered scrolls
+        remaining_to_skip = offset
+        next_page_offset = None
+        search_result = []
 
         while True:
             fetch_size = min(max(remaining_to_skip, limit), 1000)
@@ -295,6 +306,13 @@ class QdrantView(APIView):
                 search_result = await self._execute_group_search(
                     client, search_params, params
                 )
+            elif order_by:
+                # Qdrant's query_points does not support offset with
+                # OrderByQuery.  Fetch offset+limit results and slice
+                # manually on the client side.
+                search_params["limit"] = offset + limit
+                result_obj = await client.query_points(**search_params)
+                search_result = result_obj.points[offset:]
             else:
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)

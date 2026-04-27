@@ -421,3 +421,101 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
         assert "order_by" in call_kwargs
         assert call_kwargs["order_by"].key == "views"
         assert call_kwargs["order_by"].direction == models.Direction.DESC
+
+
+def test_vector_search_sortby_pagination(mocker, client):
+    """Test that sortby with offset uses client-side slicing instead of Qdrant offset.
+
+    Qdrant's query_points does not support offset with OrderByQuery, so
+    we must fetch offset+limit results and slice on the client side.
+    """
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    # Create 80 mock points to simulate a large result set
+    mock_points = []
+    for i in range(80):
+        mock_point = mocker.MagicMock()
+        mock_point.payload = {"readable_id": f"resource-{i}"}
+        mock_points.append(mock_point)
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = mock_points
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=100))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "test",
+        "sortby": "-created_on",
+        "limit": 20,
+        "offset": 60,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+
+    # Should request offset+limit results, not just limit
+    assert call_kwargs["limit"] == 80  # 60 + 20
+
+    # Should NOT pass offset to Qdrant when using OrderByQuery
+    assert "offset" not in call_kwargs
+
+
+def test_vector_search_sortby_scroll_pagination(mocker, client):
+    """Test that sortby with offset on scroll (no query) uses client-side slicing.
+
+    Qdrant disables scroll pagination (next_page_offset) when order_by
+    is used.  We must fetch offset+limit in one call and slice.
+    """
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    # Create 80 mock points to simulate a large result set
+    mock_points = []
+    for i in range(80):
+        mock_point = mocker.MagicMock()
+        mock_point.payload = {"readable_id": f"resource-{i}"}
+        mock_points.append(mock_point)
+
+    # scroll returns (points, next_page_offset=None) when order_by is used
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=(mock_points, None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=100))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "",
+        "sortby": "-created_on",
+        "limit": 20,
+        "offset": 60,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.scroll.mock_calls[0].kwargs
+
+    # Should request offset+limit in a single call
+    assert call_kwargs["limit"] == 80  # 60 + 20
+
+    # Should NOT pass a page offset (no cursor-based pagination with order_by)
+    assert "offset" not in call_kwargs or call_kwargs.get("offset") is None
+
+    # query_points should not be called (no query string)
+    assert mock_qdrant.query_points.call_count == 0
