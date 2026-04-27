@@ -1,4 +1,5 @@
 import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { VideoPlaylistResource } from "api/v1"
 
 const isInEnum = <T extends string>(
   value: string,
@@ -132,6 +133,9 @@ function hexToRgba(hex: string, alpha: number): string | undefined {
   return `rgba(${r}, ${g}, ${b}, ${clampedAlpha})`
 }
 
+const isOcwPlaylist = (resource: VideoPlaylistResource | undefined) =>
+  resource?.offered_by?.code === "ocw" ? true : false
+
 export {
   isInEnum,
   matchOrganizationBySlug,
@@ -139,4 +143,5 @@ export {
   linkifyText,
   convertToEmbedUrl,
   hexToRgba,
+  isOcwPlaylist,
 }
