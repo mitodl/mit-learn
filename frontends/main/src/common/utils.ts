@@ -145,14 +145,14 @@ const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
  * an endIcon).
  */
 function externalLinkProps(href: string): {
-  target: "_blank"
-  rel: "noopener noreferrer"
+  target?: "_blank"
+  rel?: "noopener noreferrer"
 }
 function externalLinkProps<T extends Record<string, unknown>>(
   href: string,
   extra: T,
 ):
-  | ({ target: "_blank"; rel: "noopener noreferrer" } & T)
+  | ({ target?: "_blank"; rel?: "noopener noreferrer" } & T)
   | Record<string, never>
 function externalLinkProps(href: string, extra?: Record<string, unknown>) {
   try {
