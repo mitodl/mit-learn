@@ -13,7 +13,7 @@ import {
   styled,
   theme,
 } from "ol-components"
-import { Alert } from "@mitodl/smoot-design"
+import { Alert, ButtonLink } from "@mitodl/smoot-design"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   EnrollmentStatus,
@@ -43,6 +43,7 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { getIdsFromReqTree } from "@/common/mitxonline"
+import { RiAwardFill } from "@remixicon/react"
 
 const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
@@ -105,6 +106,17 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     marginBottom: "24px",
   },
+}))
+
+const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
+  color: theme.custom.colors.red,
+  display: "flex",
+  width: "120px",
+  height: "32px",
+  padding: "12px 12px 12px 8px",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "10px",
 }))
 
 const alphabeticalSort = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
@@ -550,6 +562,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       programEnrollmentsById,
     )
 
+  const programCertificateUrl = programEnrollment?.certificate
+    ? `/certificate/program/${programEnrollment.certificate.uuid}`
+    : null
+
   if (isLoading) {
     return (
       <Stack direction="column">
@@ -578,14 +594,28 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {program?.title}
         </Typography>
-        <Typography variant="body2">
-          You have completed
-          <Typography component="span" variant="subtitle2">
-            {" "}
-            {completedCount} of {totalCount} courses{" "}
+        <Stack direction="row" justifyContent="space-between">
+          <Typography variant="body2">
+            You have completed
+            <Typography component="span" variant="subtitle2">
+              {" "}
+              {completedCount} of {totalCount} courses{" "}
+            </Typography>
+            for this program.
           </Typography>
-          for this program.
-        </Typography>
+          {programCertificateUrl && (
+            <ProgramCertificateButton
+              variant="bordered"
+              size="small"
+              startIcon={<RiAwardFill />}
+              href={programCertificateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Certificate
+            </ProgramCertificateButton>
+          )}
+        </Stack>
       </Stack>
       {requirementSections.map((section, index) => {
         const { completed: sectionCompleted, total: sectionTotal } =
