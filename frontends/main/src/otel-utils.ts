@@ -8,6 +8,7 @@ export type RequestLogEntry = {
   message: "next_request"
   method: string
   route: string
+  query: string | null
   statusCode: number
   durationMs: number
   traceId: string | null
@@ -56,13 +57,17 @@ export function createRequestLogEntry({
 }): RequestLogEntry {
   const ctx = trace.getActiveSpan()?.spanContext()
   const hasTrace = ctx ? isSpanContextValid(ctx) : false
+  // Split the URL into path + query so the path can group cleanly while the
+  // query stays available for filtering (e.g. _rsc=... marks an RSC fetch).
+  const url = request.url ?? ""
+  const queryIdx = url.indexOf("?")
+  const route = queryIdx === -1 ? url : url.slice(0, queryIdx)
+  const query = queryIdx === -1 ? null : url.slice(queryIdx + 1)
   return {
     message: "next_request",
     method: request.method ?? "UNKNOWN",
-    // Strip the query string so log routes group cleanly. We don't have access
-    // to the matched Next.js route template here (e.g. /courses/[id]); raw
-    // paths are good enough for "did every request get a trace" comparisons.
-    route: request.url?.split("?")[0] ?? "",
+    route,
+    query,
     statusCode: response.statusCode,
     durationMs,
     traceId: hasTrace && ctx ? ctx.traceId : null,

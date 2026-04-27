@@ -100,6 +100,13 @@ declare global {
   var __NEXT_REQUEST_LOGGER_SUBSCRIBED__: boolean | undefined
 }
 
+// Skip Next-internal paths (static chunks, HMR, dev endpoints) and the
+// favicon. These never get OTEL traces (Sentry's HttpInstrumentation already
+// filters them) so they're noise for the OTEL-coverage diagnostic, and in
+// prod they mostly hit the CDN anyway. RSC fetches go to real route paths
+// (e.g. /courses?_rsc=...) and are not filtered.
+const NEXT_INTERNAL_PATH = /^\/(_next\/|__nextjs_|favicon\.ico)/
+
 /**
  * Subscribe to Node's built-in HTTP server diagnostics channels and emit a
  * structured JSON log line per completed request. This runs independently of
@@ -136,6 +143,7 @@ function subscribeRequestLogger(): void {
     const start = startTimes.get(request)
     if (start === undefined) return
     startTimes.delete(request)
+    if (request.url && NEXT_INTERNAL_PATH.test(request.url)) return
     const durationMs = Number((process.hrtime.bigint() - start) / 1_000_000n)
     console.info(
       JSON.stringify(createRequestLogEntry({ request, response, durationMs })),

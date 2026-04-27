@@ -59,6 +59,7 @@ describe("createRequestLogEntry", () => {
       message: "next_request",
       method: "GET",
       route: "/courses",
+      query: null,
       statusCode: 200,
       durationMs: 1250,
       traceId: null,
@@ -67,16 +68,16 @@ describe("createRequestLogEntry", () => {
     })
   })
 
-  it("strips the query string from the route", () => {
+  it("splits route and query when the URL has a query string", () => {
     const request = {
       method: "POST",
       url: "/api/foo?bar=baz&qux=1",
     } as IncomingMessage
     const response = { statusCode: 201 } as ServerResponse
 
-    expect(
-      createRequestLogEntry({ request, response, durationMs: 5 }).route,
-    ).toBe("/api/foo")
+    const entry = createRequestLogEntry({ request, response, durationMs: 5 })
+    expect(entry.route).toBe("/api/foo")
+    expect(entry.query).toBe("bar=baz&qux=1")
   })
 
   it("falls back to UNKNOWN when method is missing", () => {
