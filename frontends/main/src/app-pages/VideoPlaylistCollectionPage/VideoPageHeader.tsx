@@ -88,9 +88,7 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
       <BreadcrumbBar>
         <VideoContainer>
           <StyledBreadcrumbs
-            separatorStyle={{ margin: "0 4px" }}
             variant="light"
-            separatorStyle={{ margin: "0 4px" }}
             ancestors={[{ href: "/", label: "Home" }]}
             current={playlist?.title}
           />
