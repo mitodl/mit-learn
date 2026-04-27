@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.64.4
+Version 0.64.4 (Released April 27, 2026)
 --------------
 
 - fix: Hide .00 on whole-dollar MITxOnline prices (#3239)
