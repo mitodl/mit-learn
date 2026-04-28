@@ -210,7 +210,7 @@ class LearningResourcesVectorSearchRequestSerializer(
     offset = serializers.IntegerField(
         required=False,
         help_text="The initial index from which to return the results",
-        min_value=1,
+        min_value=0,
         max_value=MAX_RESULT_WINDOW,
     )
     limit = serializers.IntegerField(
