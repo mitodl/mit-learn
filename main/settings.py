@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.64.4"
+VERSION = "0.65.0"
 
 log = logging.getLogger()
 

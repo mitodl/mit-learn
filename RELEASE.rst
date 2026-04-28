@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.65.0 (Released April 28, 2026)
+--------------
+
+- Update dependency lxml to v6.1.0 [SECURITY] (#3232)
+- Update dependency litellm to v1.83.7 [SECURITY] (#3248)
+- Add externalLinkProps utility; open external CTA links in new tab only (#3254)
+- Add simple nextjs request logger plus fix OTEL resource attributes (#3247)
+
+Version 0.64.5 (Released April 28, 2026)
+--------------
+
+- fix: remove the breadcrum sepator style (#3249)
+- feat: implement the video series page design (#3235)
+- cache "query embeddings" via litellm (#3240)
+- bump sentry (#3243)
+
 Version 0.64.4 (Released April 27, 2026)
 --------------
 

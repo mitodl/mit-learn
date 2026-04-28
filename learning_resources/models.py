@@ -664,7 +664,9 @@ class LearningResource(TimestampedModel):
         if hasattr(self, "_children"):
             return self._children
         return list(
-            self.children.order_by("position").select_related("child", "child__image")
+            self.children.order_by("position", "id").select_related(
+                "child", "child__image"
+            )
         )
 
     def first_child_relationship_for_serialization(self):
@@ -1012,7 +1014,7 @@ class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Prefetch related objects used by API serializers"""
-        return self.select_related("child", "child__image").order_by("position")
+        return self.select_related("child", "child__image").order_by("position", "id")
 
 
 class LearningResourceRelationship(TimestampedModel):
@@ -1038,7 +1040,7 @@ class LearningResourceRelationship(TimestampedModel):
     objects = LearningResourceRelationshipQuerySet.as_manager()
 
     class Meta:
-        ordering = ["position"]
+        ordering = ["position", "id"]
 
 
 class ContentFileQuerySet(TimestampedModelQuerySet):

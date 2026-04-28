@@ -27,6 +27,7 @@ process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL =
   "http://mitxonline.odl.local:8065"
 process.env.NEXT_PUBLIC_ORIGIN = "http://test.learn.odl.local:8062"
 process.env.NEXT_PUBLIC_EMBEDLY_KEY = "fake-embedly-key"
+process.env.NEXT_PUBLIC_VERSION = "test-version"
 
 // Pulled from the docs - see https://jestjs.io/docs/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
 
