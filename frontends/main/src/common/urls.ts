@@ -220,6 +220,9 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
+export const OCW_COURSE_PAGE_VIEW = "/courses/o/[slug]"
+export const ocwCoursePageView = (slug: string) =>
+  generatePath(OCW_COURSE_PAGE_VIEW, { slug })
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
 export const videoPlaylistPageView = (id: string) =>
   generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })

@@ -38,6 +38,7 @@ import {
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
   coursePageView,
+  ocwCoursePageView,
   programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
@@ -312,15 +313,33 @@ const appendUtmParams = (url?: string | null, resourceTitle?: string) => {
 const getResourceUrl = (
   resource: LearningResource,
   {
+    ocwProductPages,
     mitxonlineProductPages,
     showVideoPlaylistPage,
     showPodcastPage,
   }: {
     mitxonlineProductPages?: boolean
     showVideoPlaylistPage?: boolean
-    showPodcastPage?: boolean
+    showPodcastPage?: boolean,
+    ocwProductPages?: boolean
   },
 ) => {
+  if (
+    ocwProductPages &&
+    resource.platform?.code === PlatformEnum.Ocw &&
+    resource.resource_type === ResourceTypeEnum.Course &&
+    resource.url
+  ) {
+    try {
+      const ocwPath = new URL(resource.url).pathname
+      const match = ocwPath.match(/^\/courses\/([^/]+)/)
+      if (match) {
+        return ocwCoursePageView(match[1])
+      }
+    } catch {
+      // fall through to resource.url
+    }
+  }
   if (
     mitxonlineProductPages &&
     resource.platform?.code === PlatformEnum.Mitxonline
@@ -397,6 +416,7 @@ const CallToActionSection = ({
   const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
+  const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
   const mitxonlineProductPages = useFeatureFlagEnabled(
     FeatureFlags.MitxOnlineProductPages,
   )
@@ -434,6 +454,7 @@ const CallToActionSection = ({
       mitxonlineProductPages,
       showVideoPlaylistPage,
       showPodcastPage,
+      ocwProductPages,
     }),
     resource.title,
   )

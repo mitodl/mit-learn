@@ -1,5 +1,5 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { auth, coursePageView, programPageView } from "./urls"
+import { auth, coursePageView, ocwCoursePageView, programPageView } from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 
@@ -113,3 +113,20 @@ test("programPageView falls back to /programs/ for unknown display_mode values",
     }),
   ).toBe("/programs/some-slug")
 })
+
+test.each([
+  {
+    slug: "some-plain-slug",
+    expected: "/courses/o/some-plain-slug",
+  },
+  {
+    slug: "16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006",
+    expected:
+      "/courses/o/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006",
+  },
+])(
+  "ocwCoursePageView returns /courses/o/ path for slug $slug",
+  ({ slug, expected }) => {
+    expect(ocwCoursePageView(slug)).toBe(expected)
+  },
+)
