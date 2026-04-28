@@ -2337,11 +2337,12 @@ describe("EnrollmentDisplay", () => {
 
       await screen.findByText("Program With Certificate")
       const certButton = screen.getByRole("link", { name: "Certificate" })
-      expect(certButton).toBeInTheDocument()
-      expect(certButton).toHaveAttribute(
-        "href",
-        `/certificate/program/${certUuid}`,
+      const expectedCertHref = programEnrollment.certificate?.link?.replace(
+        /\/$/,
+        "",
       )
+      expect(certButton).toBeInTheDocument()
+      expect(certButton).toHaveAttribute("href", expectedCertHref)
       expect(certButton).not.toHaveAttribute("target")
     })
 
