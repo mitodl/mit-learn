@@ -487,7 +487,7 @@ const VideoSeriesDetailPage: React.FC<VideoDetailPageProps> = ({
     : null
 
   const topics = video?.topics ?? []
-  const playlistLabel = "Introduction to Deep Learning" //playlist?.title || "Video Collection"
+  const playlistLabel = playlist?.title || "Video Collection"
 
   // Series navigation: find current video position and prev/next
   const videoItems = useMemo(
@@ -570,7 +570,6 @@ const VideoSeriesDetailPage: React.FC<VideoDetailPageProps> = ({
         <VideoContainer>
           <StyledBreadcrumbs
             variant="light"
-            separatorStyle={{ margin: "0 4px" }}
             ancestors={[
               { href: "/", label: "Home" },
               ...(playlist && playlistId
