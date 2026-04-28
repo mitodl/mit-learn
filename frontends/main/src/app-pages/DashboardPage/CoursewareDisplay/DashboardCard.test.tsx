@@ -1941,5 +1941,200 @@ describe.each([
         screen.getByRole("menuitem", { name: "Unenroll" }),
       ).toBeInTheDocument()
     })
+
+    test("Receipt menu item appears for verified course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { ...run, course },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.getByRole("menuitem", { name: "Receipt" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Receipt menu item does not appear for audit course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+        enrollment_mode: EnrollmentMode.Audit,
+        run: { ...run, course },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.queryByRole("menuitem", { name: "Receipt" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Receipt menu item links to correct MITx Online URL for verified course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = mitxonline.factories.courses.courseRun({ id: 42 })
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { ...run, course },
+      })
+
+      const windowOpenSpy = jest
+        .spyOn(window, "open")
+        .mockImplementation(() => null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const receiptItem = screen.getByRole("menuitem", { name: "Receipt" })
+      await user.click(receiptItem)
+
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/orders/receipt/by-run/42/"),
+        "_blank",
+      )
+      windowOpenSpy.mockRestore()
+    })
+
+    test("Receipt menu item appears for verified program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Verified,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.getByRole("menuitem", { name: "Receipt" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Receipt menu item does not appear for audit program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Audit,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.queryByRole("menuitem", { name: "Receipt" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Receipt menu item links to correct MITx Online URL for verified program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Verified,
+        })
+
+      const windowOpenSpy = jest
+        .spyOn(window, "open")
+        .mockImplementation(() => null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const receiptItem = screen.getByRole("menuitem", { name: "Receipt" })
+      await user.click(receiptItem)
+
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/orders/receipt/by-program/99/"),
+        "_blank",
+      )
+      windowOpenSpy.mockRestore()
+    })
   })
 })

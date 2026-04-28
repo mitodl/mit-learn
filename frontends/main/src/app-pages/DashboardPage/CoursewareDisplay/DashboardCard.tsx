@@ -215,6 +215,20 @@ const getContextMenuItems = (
         },
       })
     }
+
+    if (isVerifiedEnrollmentMode(resource.data.enrollment_mode)) {
+      menuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "receipt",
+        label: "Receipt",
+        onClick: () => {
+          window.open(
+            mitxonlineLegacyUrl(`/orders/receipt/by-program/${program.id}/`),
+            "_blank",
+          )
+        },
+      })
+    }
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
     const detailsUrl = useProductPages
@@ -253,6 +267,22 @@ const getContextMenuItems = (
         },
       },
     )
+
+    if (isVerifiedEnrollmentMode(resource.data.enrollment_mode)) {
+      courseMenuItems.push({
+        className: "dashboard-card-menu-item",
+        key: "receipt",
+        label: "Receipt",
+        onClick: () => {
+          window.open(
+            mitxonlineLegacyUrl(
+              `/orders/receipt/by-run/${resource.data.run.id}/`,
+            ),
+            "_blank",
+          )
+        },
+      })
+    }
 
     menuItems.push(...courseMenuItems)
   }
