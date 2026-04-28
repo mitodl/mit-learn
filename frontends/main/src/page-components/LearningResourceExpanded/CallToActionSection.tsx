@@ -44,6 +44,7 @@ import {
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
+import { externalLinkProps } from "@/common/utils"
 import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
@@ -428,9 +429,10 @@ const CallToActionSection = ({
       <ImageSection resource={resource} config={imgConfig} />
       <ActionsContainer>
         <StyledLink
-          target="_blank"
+          {...externalLinkProps(url, {
+            endIcon: <RiExternalLinkLine />,
+          })}
           size="medium"
-          endIcon={<RiExternalLinkLine />}
           href={url}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {

@@ -1,4 +1,41 @@
-import { convertToEmbedUrl } from "./utils"
+import invariant from "tiny-invariant"
+import { convertToEmbedUrl, externalLinkProps } from "./utils"
+
+const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+invariant(NEXT_PUBLIC_ORIGIN, "NEXT_PUBLIC_ORIGIN must be defined")
+
+describe("externalLinkProps", () => {
+  it("returns blank-target props for an external URL", () => {
+    expect(externalLinkProps("https://ocw.mit.edu/courses/123")).toEqual({
+      target: "_blank",
+      rel: "noopener noreferrer",
+    })
+  })
+
+  it("returns extra props only for external URLs", () => {
+    const extra = { endIcon: "external" }
+    expect(externalLinkProps("https://ocw.mit.edu/courses/123", extra)).toEqual(
+      {
+        target: "_blank",
+        rel: "noopener noreferrer",
+        ...extra,
+      },
+    )
+    expect(externalLinkProps("/courses/123", extra)).toEqual({})
+  })
+
+  it("returns empty object for an internal absolute URL", () => {
+    expect(externalLinkProps(`${NEXT_PUBLIC_ORIGIN}/courses/123`)).toEqual({})
+  })
+
+  it("returns empty object for a relative URL", () => {
+    expect(externalLinkProps("/courses/123")).toEqual({})
+  })
+
+  it("returns empty object for a hash-only href", () => {
+    expect(externalLinkProps("#section")).toEqual({})
+  })
+})
 
 describe("convertToEmbedUrl", () => {
   describe("invalid / unsupported input", () => {
