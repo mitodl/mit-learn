@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.65.1
+--------------
+
+- do not promote ocw page contentfiles to resources (#3261)
+- dashboard b2c series certificate display (#3256)
+- flaky test test_learning_resources_serializer (#3252)
+- [pre-commit.ci] pre-commit autoupdate (#2973)
+- Update dependency sharp to v0.34.5 (#2707)
+
 Version 0.65.0 (Released April 28, 2026)
 --------------
 
