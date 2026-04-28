@@ -311,7 +311,12 @@ const getResourceUrl = (
   {
     mitxonlineProductPages,
     showVideoPlaylistPage,
-  }: { mitxonlineProductPages?: boolean; showVideoPlaylistPage?: boolean },
+    showPodcastPage,
+  }: {
+    mitxonlineProductPages?: boolean
+    showVideoPlaylistPage?: boolean
+    showPodcastPage?: boolean
+  },
 ) => {
   if (
     mitxonlineProductPages &&
@@ -346,6 +351,9 @@ const getResourceUrl = (
     ) {
       return videoDetailPageView(resource.id, Number(resource.playlists[0]))
     }
+  }
+
+  if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
       return podcastPageView(resource.id.toString())
     }
@@ -383,6 +391,7 @@ const CallToActionSection = ({
   const showVideoPlaylistPage = useFeatureFlagEnabled(
     FeatureFlags.VideoPlaylistPage,
   )
+  const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
     return null
@@ -409,7 +418,11 @@ const CallToActionSection = ({
   const shareLabel = "Share"
   const socialIconSize = 18
   const url = appendUtmParams(
-    getResourceUrl(resource, { mitxonlineProductPages, showVideoPlaylistPage }),
+    getResourceUrl(resource, {
+      mitxonlineProductPages,
+      showVideoPlaylistPage,
+      showPodcastPage,
+    }),
     resource.title,
   )
 
