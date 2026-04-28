@@ -1,12 +1,16 @@
 import { SharedArray } from "k6/data"
 
 export type AuthCredential = {
-  username: string
+  email: string
   password: string
 }
 
 export function getAccessToken(): string | null {
   return __ENV.AUTH_ACCESS_TOKEN
+}
+
+export function hasAccessToken(): boolean {
+  return !getAccessToken()
 }
 
 function _validate_credentials(credentials) {
