@@ -1,4 +1,6 @@
+from vector_search.constants import MAX_RESULT_WINDOW
 from vector_search.serializers import (
+    ContentFileVectorSearchRequestSerializer,
     LearningResourcesSearchFiltersSerializer,
     LearningResourcesVectorSearchRequestSerializer,
 )
@@ -37,3 +39,47 @@ def test_vector_search_request_serializer_inherits_filter_fields():
     assert "platform" in fields
     assert "q" in fields
     assert "hybrid_search" in fields
+
+
+def test_vector_search_result_window_validation():
+    """Test that the result window (offset + limit) is validated."""
+    # Valid window
+    data = {"offset": 10, "limit": 10}
+    s = LearningResourcesVectorSearchRequestSerializer(data=data)
+    assert s.is_valid(), s.errors
+
+    # Invalid window: offset + limit > MAX_RESULT_WINDOW
+    data = {"offset": MAX_RESULT_WINDOW, "limit": 1}
+    s = LearningResourcesVectorSearchRequestSerializer(data=data)
+    assert not s.is_valid()
+    assert (
+        f"offset + limit must not exceed {MAX_RESULT_WINDOW}"
+        in s.errors["non_field_errors"][0]
+    )
+
+    # Boundary case: offset + limit == MAX_RESULT_WINDOW
+    data = {"offset": MAX_RESULT_WINDOW - 10, "limit": 10}
+    s = LearningResourcesVectorSearchRequestSerializer(data=data)
+    assert s.is_valid(), s.errors
+
+
+def test_content_file_vector_search_result_window_validation():
+    """Test that the result window (offset + limit) is validated for content files."""
+    # Valid window
+    data = {"offset": 10, "limit": 10}
+    s = ContentFileVectorSearchRequestSerializer(data=data)
+    assert s.is_valid(), s.errors
+
+    # Invalid window: offset + limit > MAX_RESULT_WINDOW
+    data = {"offset": MAX_RESULT_WINDOW, "limit": 1}
+    s = ContentFileVectorSearchRequestSerializer(data=data)
+    assert not s.is_valid()
+    assert (
+        f"offset + limit must not exceed {MAX_RESULT_WINDOW}"
+        in s.errors["non_field_errors"][0]
+    )
+
+    # Boundary case: offset + limit == MAX_RESULT_WINDOW
+    data = {"offset": MAX_RESULT_WINDOW - 10, "limit": 10}
+    s = ContentFileVectorSearchRequestSerializer(data=data)
+    assert s.is_valid(), s.errors
