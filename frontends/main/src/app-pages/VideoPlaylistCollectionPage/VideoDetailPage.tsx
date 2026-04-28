@@ -397,7 +397,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   videoId,
   playlistId,
   playlistData,
-  playlistLoading
+  playlistLoading,
 }) => {
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLButtonElement>(null)

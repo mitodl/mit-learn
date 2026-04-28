@@ -16,7 +16,7 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
   videoId,
   playlistId,
 }) => {
-  const { data: playlist, isLoading: playlistLoading  } = useQuery({
+  const { data: playlist, isLoading: playlistLoading } = useQuery({
     ...videoPlaylistQueries.detail(playlistId ?? 0),
     enabled: playlistId !== null,
   })
@@ -24,19 +24,24 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
   const isOcw = isOcwPlaylist(playlist)
 
   if (isOcw) {
-    return <VideoSeriesDetailPage 
-    videoId={videoId} 
-    playlistId={playlistId} 
-    playlistData={playlist} 
-    playlistLoading={playlistLoading} 
-    />
+    return (
+      <VideoSeriesDetailPage
+        videoId={videoId}
+        playlistId={playlistId}
+        playlistData={playlist}
+        playlistLoading={playlistLoading}
+      />
+    )
   }
 
-  return <VideoDetailPage 
-  videoId={videoId} 
-  playlistId={playlistId}
-   playlistData={playlist} 
-    playlistLoading={playlistLoading}  />
+  return (
+    <VideoDetailPage
+      videoId={videoId}
+      playlistId={playlistId}
+      playlistData={playlist}
+      playlistLoading={playlistLoading}
+    />
+  )
 }
 
 export default VideoDetailPageRouter

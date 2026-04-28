@@ -5,7 +5,7 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { Typography, styled, Skeleton, Breadcrumbs } from "ol-components"
+import { Typography, styled, Skeleton, Breadcrumbs, theme } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
 import { RiArrowLeftLine, RiArrowRightLine, RiPlayFill } from "@remixicon/react"
@@ -28,10 +28,10 @@ const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   { ssr: false },
 )
 
-const PageWrapper = styled.div(({ theme }) => ({
+const PageWrapper = styled.div({
   backgroundColor: theme.custom.colors.lightGray1,
   minHeight: "100vh",
-}))
+})
 
 const SkipLinksNav = styled.nav({
   position: "absolute",
@@ -62,7 +62,7 @@ const SkipLink = styled.a(({ theme }) => ({
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "20px 0 4px 0",
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
+  borderBottom: `2px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     padding: "16px 0 0 0",
   },
@@ -85,7 +85,7 @@ const SeriesNavTopRow = styled(VideoContainer)(({ theme }) => ({
   padding: "56px 0 12px !important",
   gap: "16px",
   [theme.breakpoints.down("lg")]: {
-    padding: "16px 16px 8px !important",
+    padding: "32px 16px 12px !important",
   },
 }))
 
@@ -101,8 +101,8 @@ const SeriesNavTitle = styled(Link)(({ theme }) => ({
   minWidth: 0,
   "&:hover": { color: theme.custom.colors.red },
   [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body2,
-    fontWeight: theme.typography.fontWeightBold,
+    ...theme.typography.body3,
+    fontWeight: theme.typography.fontWeightMedium,
   },
 }))
 
@@ -111,6 +111,10 @@ const VideoPositionLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   whiteSpace: "nowrap",
   flexShrink: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+    fontWeight: theme.typography.fontWeightMedium,
+  },
 }))
 
 const ProgressBarRow = styled(VideoContainer)(({ theme }) => ({
@@ -127,8 +131,9 @@ const ProgressSegment = styled.div<{ $active: boolean; $done: boolean }>(
     flex: 1,
     height: "4px",
     borderRadius: "2px",
-    backgroundColor:
-      $active || $done
+    backgroundColor: $active
+      ? theme.custom.colors.darkGray1
+      : $done
         ? theme.custom.colors.darkRed
         : theme.custom.colors.lightGray2,
   }),
@@ -141,6 +146,9 @@ const SeriesNavBottomRow = styled(VideoContainer)(({ theme }) => ({
   padding: "16px 0 16px !important",
   [theme.breakpoints.down("lg")]: {
     padding: "16px 16px 16px !important",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "16px",
   },
 }))
 
@@ -156,13 +164,17 @@ const NavLink = styled(Link)(({ theme }) => ({
   flexShrink: 1,
   "&:hover": { color: theme.custom.colors.red },
   [theme.breakpoints.down("sm")]: {
-    maxWidth: "48%",
+    maxWidth: "100%",
   },
 }))
 
-const StyledButtonLink = styled(ButtonLink)({
+const StyledButtonLink = styled(ButtonLink)(({ theme }) => ({
   marginTop: "8px",
-})
+  [theme.breakpoints.down("sm")]: {
+    marginLeft: "24px",
+    marginTop: "0",
+  },
+}))
 
 const NavLinkText = styled.span({
   overflow: "hidden",
@@ -192,6 +204,11 @@ const InstitutionLabel = styled.span(({ theme }) => ({
   textTransform: "uppercase",
   marginBottom: "16px",
   lineHeight: "26px",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body3,
+    lineHeight: "22px",
+    marginBottom: "8px",
+  },
 }))
 
 const VideoTitle = styled.h1(({ theme }) => ({
@@ -238,6 +255,13 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     fontSize: "4em !important",
     marginTop: "-1.25em !important",
     marginLeft: "-1.18em !important",
+    [theme.breakpoints.down("sm")]: {
+      width: "68px !important",
+      height: "68px !important",
+      lineHeight: "68px !important",
+      marginLeft: "-1em !important",
+      marginTop: "-.7em !important",
+    },
   },
 
   "vjs-icon-placeholder": {
@@ -278,15 +302,19 @@ const UpNextSection = styled.div(({ theme }) => ({
     flexDirection: "column",
     alignItems: "flex-start",
     gap: "12px",
+    padding: "16px 0",
   },
 }))
 
-const UpNextLeft = styled.div({
+const UpNextLeft = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
   minWidth: 0,
-})
+  [theme.breakpoints.down("sm")]: {
+    paddingLeft: "24px",
+  },
+}))
 
 const UpNextLabel = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
@@ -294,6 +322,10 @@ const UpNextLabel = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   textTransform: "uppercase",
   lineHeight: "150%",
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.body2,
+    lineHeight: "22px",
+  },
 }))
 
 const UpNextTitle = styled(Typography)(({ theme }) => ({
@@ -311,8 +343,35 @@ const MetaRow = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.darkGray1,
   marginBottom: "40px",
+  lineHeight: "1.8",
   [theme.breakpoints.down("sm")]: {
-    marginBottom: "16px",
+    marginBottom: "32px",
+  },
+}))
+
+const HideOnMobile = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const HideOnDesktop = styled.div(({ theme }) => ({
+  display: "none",
+  [theme.breakpoints.down("sm")]: {
+    display: "block",
+  },
+}))
+
+const MetaInstructorLine = styled.div(({ theme }) => ({
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.custom.colors.darkGray2,
+}))
+
+const StyledDuration = styled.div(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    marginTop: "4px",
   },
 }))
 
@@ -322,8 +381,8 @@ const DescriptionText = styled(Typography)(({ theme }) => ({
   marginBottom: "16px",
   lineHeight: "22px",
   [theme.breakpoints.down("sm")]: {
-    fontSize: "16px",
-    lineHeight: "28px",
+    ...theme.typography.body2,
+    lineHeight: "22px",
     marginBottom: "24px",
   },
 }))
@@ -514,8 +573,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             separatorStyle={{ margin: "0 4px" }}
             ancestors={[
               { href: "/", label: "Home" },
-              { href: "/search?resource_type=video", label: "Videos" },
-              { href: "/search?resource_type=video_playlist", label: "Series" },
               ...(playlist && playlistId
                 ? [
                     {
@@ -597,7 +654,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={280} height={16} style={{ marginBottom: 8 }} />
           ) : institutionLabel ? (
-            <InstitutionLabel>{institutionLabel}</InstitutionLabel>
+            // <InstitutionLabel>{institutionLabel}</InstitutionLabel>
+            <InstitutionLabel>
+              MIT Computer Science and Artificial Intelligence Laboratory
+            </InstitutionLabel>
           ) : null}
 
           {/* Video title */}
@@ -690,10 +750,27 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             </UpNextSection>
           )}
 
-          {/* Meta row: instructors · department · duration · term */}
           {!isLoading && metaParts.length > 0 && (
-            <MetaRow>{metaParts.join(" · ")}</MetaRow>
+            <HideOnMobile>
+              <MetaRow>{metaParts.join(" · ")}</MetaRow>
+            </HideOnMobile>
           )}
+          {!isLoading &&
+            (instructorNames || departmentName || duration || term) && (
+              <HideOnDesktop>
+                <MetaRow>
+                  {instructorNames && (
+                    <MetaInstructorLine>{instructorNames}</MetaInstructorLine>
+                  )}
+                  {departmentName && <div>{departmentName}</div>}
+                  {(duration || term) && (
+                    <StyledDuration>
+                      {[duration, term].filter(Boolean).join(" · ")}
+                    </StyledDuration>
+                  )}
+                </MetaRow>
+              </HideOnDesktop>
+            )}
 
           {/* Description */}
           {!isLoading && video?.description && (
