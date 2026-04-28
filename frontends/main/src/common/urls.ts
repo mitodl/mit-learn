@@ -221,6 +221,9 @@ export const coursePageView = (readableId: string) =>
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
 export const videoPlaylistPageView = (id: string) =>
   generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
+export const PODCAST_PAGE_VIEW = "/podcast/[id]"
+export const podcastPageView = (id: string) =>
+  generatePath(PODCAST_PAGE_VIEW, { id })
 export const VIDEO_DETAIL_PAGE_VIEW = "/video-playlist/detail/[videoId]"
 export const videoDetailPageView = (videoId: number, playlistId: number) => {
   const params = new URLSearchParams({ playlist: String(playlistId) })

@@ -24,6 +24,7 @@ import {
   RiFacebookFill,
   RiLink,
   RiLinkedinFill,
+  RiExternalLinkLine,
   RiMenuAddLine,
   RiShareLine,
   RiTwitterXLine,
@@ -39,6 +40,7 @@ import {
   programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
+  podcastPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -255,12 +257,13 @@ const getCallToActionText = (resource: LearningResource): string => {
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
+  const watchVideos = "Watch Video"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.LearningPath]: learnMore,
-    [ResourceTypeEnum.Video]: learnMore,
-    [ResourceTypeEnum.VideoPlaylist]: learnMore,
+    [ResourceTypeEnum.Video]: watchVideos,
+    [ResourceTypeEnum.VideoPlaylist]: watchVideos,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
@@ -342,6 +345,9 @@ const getResourceUrl = (
       resource?.playlists?.length > 0
     ) {
       return videoDetailPageView(resource.id, Number(resource.playlists[0]))
+    }
+    if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
+      return podcastPageView(resource.id.toString())
     }
   }
   return resource.url
