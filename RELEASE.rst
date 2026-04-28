@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.65.0
+Version 0.65.0 (Released April 28, 2026)
 --------------
 
 - Update dependency lxml to v6.1.0 [SECURITY] (#3232)
