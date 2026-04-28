@@ -12,6 +12,8 @@ import pytest
 from django.forms.models import model_to_dict
 
 from learning_resources.constants import (
+    CONTENT_TYPE_FILE,
+    CONTENT_TYPE_PAGE,
     CURRENCY_USD,
     Availability,
     LearningResourceDelivery,
@@ -3005,12 +3007,14 @@ def test_load_learning_materials(mocker):
     learning_material_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[relevant_content_tag],
+        content_type=CONTENT_TYPE_FILE,
     )
 
     other_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[irrelevant_content_tag],
         direct_learning_resource=no_longer_relevant_resource,
+        content_type=CONTENT_TYPE_FILE,
     )
 
     mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
@@ -3050,6 +3054,51 @@ def test_load_learning_materials(mocker):
 
     no_longer_relevant_resource.refresh_from_db()
     assert no_longer_relevant_resource.published is False
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_demotes_page_content_files(mocker):
+    """
+    Page content files should not be promoted to learning resources.
+    If a page content file was previously promoted (has direct_learning_resource),
+    load_learning_materials should unpublish that resource and clear the link.
+    """
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+    relevant_content_tag = LearningResourceContentTagFactory.create(
+        name="Programming Assignments"
+    )
+    previously_promoted_resource = LearningResourceFactory.create(published=True)
+
+    page_content_file = ContentFileFactory.create(
+        run=ocw_course.learning_resource.runs.first(),
+        content_tags=[relevant_content_tag],
+        direct_learning_resource=previously_promoted_resource,
+        content_type=CONTENT_TYPE_PAGE,
+    )
+
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(
+        course_run=ocw_course.learning_resource.runs.first(),
+        content_file_ids=[page_content_file.id],
+    )
+
+    previously_promoted_resource.refresh_from_db()
+    assert previously_promoted_resource.published is False
+
+    page_content_file.refresh_from_db()
+    assert page_content_file.direct_learning_resource is None
+
+    mock_index.assert_called_once_with(
+        previously_promoted_resource, newly_created=False
+    )
+
+    # No learning materials should be linked to the course
+    assert ocw_course.learning_resource.children.count() == 0
 
 
 @pytest.mark.django_db
