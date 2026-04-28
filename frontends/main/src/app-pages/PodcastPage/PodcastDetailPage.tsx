@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Breadcrumbs, Typography, styled } from "ol-components"
+import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
+import type { Theme } from "ol-components"
 import { Button, ActionButton } from "@mitodl/smoot-design"
 import { RiPlayFill } from "@remixicon/react"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
@@ -361,6 +362,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   )
   const flagsLoaded = useFeatureFlagsLoaded()
   const id = Number(podcastId)
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
@@ -444,24 +446,17 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   useEffect(() => {
     const root = document.documentElement
 
-    const updatePlayerHeight = () => {
-      if (currentTrack) {
-        const isMobile = window.innerWidth < 600
-        const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
-        root.style.setProperty("--mit-player-height", `${height}px`)
-      } else {
-        root.style.removeProperty("--mit-player-height")
-      }
-    }
-
-    updatePlayerHeight()
-    window.addEventListener("resize", updatePlayerHeight)
-
-    return () => {
-      window.removeEventListener("resize", updatePlayerHeight)
+    if (currentTrack) {
+      const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
+      root.style.setProperty("--mit-player-height", `${height}px`)
+    } else {
       root.style.removeProperty("--mit-player-height")
     }
-  }, [currentTrack])
+
+    return () => {
+      root.style.removeProperty("--mit-player-height")
+    }
+  }, [currentTrack, isMobile])
 
   if (!showPodcastDetailPage) {
     return flagsLoaded ? notFound() : null
