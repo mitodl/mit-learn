@@ -647,8 +647,10 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             "image": _transform_image(program),
             "availability": program.get("availability"),
             "published": bool(
-                has_product_page and parse_page_attribute(program, "live")
-            ),  # a program is only considered published if it has a page url
+                has_product_page
+                and parse_page_attribute(program, "live")
+                and parse_page_attribute(program, "include_in_learn_catalog")
+            ),
             "format": [Format.asynchronous.name],
             "pace": pace,
             "runs": [run],
