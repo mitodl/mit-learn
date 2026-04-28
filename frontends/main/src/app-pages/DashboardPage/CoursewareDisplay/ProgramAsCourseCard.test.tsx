@@ -488,6 +488,8 @@ describe("ProgramAsCourseCard", () => {
   test("clicking Unenroll menu item opens UnenrollProgramDialog with readable_id", async () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
     const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    cardData.courseProgramEnrollment.enrollment_mode = "audit"
     const modalShowSpy = jest.spyOn(NiceModal, "show")
 
     renderWithProviders(
@@ -509,5 +511,29 @@ describe("ProgramAsCourseCard", () => {
       enrollment: cardData.courseProgram.readable_id,
     })
     modalShowSpy.mockRestore()
+  })
+
+  test("does not show Unenroll option in context menu for verified enrollment", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    cardData.courseProgramEnrollment.enrollment_mode = "verified"
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Unenroll" }),
+    ).not.toBeInTheDocument()
   })
 })

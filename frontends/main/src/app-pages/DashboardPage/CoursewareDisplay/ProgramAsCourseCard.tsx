@@ -283,6 +283,7 @@ const getRelativeDateContent = (
 const getContextMenuItems = (
   title: string,
   resource: ProgramAsCourse,
+  enrollmentMode: string | null | undefined,
   additionalItems: SimpleMenuItem[] = [],
   useProductPages = false,
 ) => {
@@ -305,17 +306,19 @@ const getContextMenuItems = (
     })
   }
 
-  courseMenuItems.push({
-    className: "dashboard-card-menu-item",
-    key: "unenroll",
-    label: "Unenroll",
-    onClick: () => {
-      NiceModal.show(UnenrollProgramDialog, {
-        title,
-        enrollment: resource.readable_id,
-      })
-    },
-  })
+  if (enrollmentMode && !isVerifiedEnrollmentMode(enrollmentMode)) {
+    courseMenuItems.push({
+      className: "dashboard-card-menu-item",
+      key: "unenroll",
+      label: "Unenroll",
+      onClick: () => {
+        NiceModal.show(UnenrollProgramDialog, {
+          title,
+          enrollment: resource.readable_id,
+        })
+      },
+    })
+  }
 
   menuItems.push(...courseMenuItems)
   return [...menuItems, ...additionalItems]
@@ -473,6 +476,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const menuItems = getContextMenuItems(
     courseProgram.title ?? "",
     courseProgram,
+    courseProgramEnrollment?.enrollment_mode,
     contextMenuItems,
     useProductPages ?? false,
   )
