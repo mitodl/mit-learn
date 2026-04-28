@@ -110,13 +110,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
-  display: "flex",
   width: "120px",
-  height: "32px",
-  padding: "12px 12px 12px 8px",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: "10px",
 }))
 
 const alphabeticalSort = (a: CourseRunEnrollmentV3, b: CourseRunEnrollmentV3) =>
