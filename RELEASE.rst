@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.64.5
+Version 0.64.5 (Released April 28, 2026)
 --------------
 
 - fix: remove the breadcrum sepator style (#3249)
