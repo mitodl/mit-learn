@@ -12,6 +12,18 @@ describe("externalLinkProps", () => {
     })
   })
 
+  it("returns extra props only for external URLs", () => {
+    const extra = { endIcon: "external" }
+    expect(externalLinkProps("https://ocw.mit.edu/courses/123", extra)).toEqual(
+      {
+        target: "_blank",
+        rel: "noopener noreferrer",
+        ...extra,
+      },
+    )
+    expect(externalLinkProps("/courses/123", extra)).toEqual({})
+  })
+
   it("returns empty object for an internal absolute URL", () => {
     expect(externalLinkProps(`${NEXT_PUBLIC_ORIGIN}/courses/123`)).toEqual({})
   })
