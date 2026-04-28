@@ -562,9 +562,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       programEnrollmentsById,
     )
 
-  const programCertificateUrl = programEnrollment?.certificate
-    ? `/certificate/program/${programEnrollment.certificate.uuid}`
-    : null
+  const programCertificateUrl = programEnrollment?.certificate?.link ?? null
 
   if (isLoading) {
     return (

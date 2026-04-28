@@ -466,9 +466,8 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     ancestorProgramEnrollment?.enrollment_mode,
   ].some(isVerifiedEnrollmentMode)
 
-  const programCertificateUrl = courseProgramEnrollment?.certificate
-    ? `/certificate/program/${courseProgramEnrollment.certificate.uuid}`
-    : null
+  const programCertificateUrl =
+    courseProgramEnrollment?.certificate?.link ?? null
 
   // Build context menu
   const menuItems = getContextMenuItems(
