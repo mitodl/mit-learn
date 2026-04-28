@@ -46,7 +46,7 @@ async function login(page: Page) {
   const credential: AuthCredential = randomItem(credentials)
 
   if (!!credential) {
-    log.debug("Skipping login because no credentials provided")
+    console.debug("Skipping login because no credentials provided")
     return
   }
 
@@ -64,12 +64,16 @@ async function loginKeycloak(page: Page, credential: AuthCredential) {
   )
 
   const credentialnameInput = await page.locator("input#username")
-  await credentialnameInput.type(user.email)
+  await credentialnameInput.type(credential.email)
   await page.locator("button#kc-login").click()
 
   const passwordInput = await page.locator("input#password")
   await passwordInput.type(credential.password)
   await page.locator("button#kc-login").click()
+}
+
+async function dashboard(page: Page) {
+  await page.goto(`${FRONTEND_BASE_URL}/dashboard`)
 }
 
 export async function testFrontend() {
@@ -83,6 +87,7 @@ export async function testFrontend() {
     await departments(page)
     await units(page)
     await login(page)
+    await dashboard(page)
   } finally {
     await page.close()
   }

@@ -8,6 +8,7 @@ import {
 import { createV0Client, createV1Client } from "./client/client.ts"
 import { NewsEventsListParams } from "./client/v0/api.schemas.ts"
 import { FeaturedListParams } from "./client/v1/api.schemas.ts"
+import { hasAccessToken } from "../auth.ts"
 
 export function testBackend() {
   group("api", function () {
@@ -55,6 +56,14 @@ export function testBackend() {
             "has results": (r) => r.response.json("results").length > 0,
           })
         })
+      })
+
+      res = client.usersMeRetrieve()
+
+      check(res, {
+        "is status 200": (r) => r.response.status === 200,
+        "expected auth state": (r) =>
+          r.response.json("is_authenticated") === hasAccessToken(),
       })
 
       delete exec.vu.metrics.tags.apiVersion
