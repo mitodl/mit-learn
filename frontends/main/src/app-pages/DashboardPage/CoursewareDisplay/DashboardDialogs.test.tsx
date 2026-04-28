@@ -157,7 +157,7 @@ describe("UnenrollProgramDialog", () => {
 
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: enrollmentMode,
+        enrollment_mode: enrollmentMode ? enrollmentMode : undefined,
         program: { display_mode: displayMode } as never,
       })
 
