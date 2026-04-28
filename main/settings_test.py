@@ -203,6 +203,52 @@ class TestSettings(TestCase):
                 is False
             )
 
+    def test_cookie_tombstone_middleware_enabled(self):
+        """Cookie tombstone middleware should be enabled when tombstones are configured."""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "COOKIE_TOMBSTONES": (
+                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
+                ),
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings()
+            assert (
+                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+                in (settings_vars["MIDDLEWARE"])
+            )
+
+    def test_cookie_tombstone_middleware_disabled(self):
+        """Cookie tombstone middleware should be disabled when tombstones are unset."""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings()
+            assert (
+                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+                not in (settings_vars["MIDDLEWARE"])
+            )
+
+    def test_cookie_tombstone_middleware_ordering(self):
+        """Cookie tombstone middleware should be first in the middleware stack."""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "COOKIE_TOMBSTONES": (
+                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
+                ),
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings()
+            middleware = settings_vars["MIDDLEWARE"]
+            assert (
+                middleware[0]
+                == "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+            )
+
     def test_celery_beat_disabled(self):
         """Test that we can disable celery beat with an env var"""
         with mock.patch.dict(

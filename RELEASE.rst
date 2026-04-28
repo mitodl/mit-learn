@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.64.4 (Released April 27, 2026)
+--------------
+
+- fix: Hide .00 on whole-dollar MITxOnline prices (#3239)
+- feat: Adds Google Tag Manager (GTM) support (#3236)
+- Fix program dashboard "completed x of y" counts (#3217)
+- submit course / program as product_of_interest if the field is on the form (#3231)
+- vector learning resources sortby/sorting support (#3228)
+
+Version 0.64.2 (Released April 23, 2026)
+--------------
+
+- Add configurable cookie tombstone middleware (#3234)
+
 Version 0.64.1 (Released April 22, 2026)
 --------------
 

@@ -309,7 +309,9 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
         platform: PlatformEnum.Mitxonline,
       })
     }
-    NiceModal.show(StayUpdatedModal)
+    NiceModal.show(StayUpdatedModal, {
+      productReadableId: resource.readable_id,
+    })
   }
 
   return (

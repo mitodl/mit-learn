@@ -1,14 +1,21 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
+  CourseRunEnrollmentV3,
+  V2ProgramRequirement,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
+import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
   getBestRun,
-  selectBestEnrollment,
-  getEnrollmentStatus,
+  getRequirementsProgress,
   getProgramEnrollmentStatus,
   getKey,
+  selectBestEnrollment,
+  getEnrollmentStatus,
   ResourceType,
 } from "./helpers"
+import { allowConsoleErrors } from "ol-test-utilities"
 
 describe("helpers", () => {
   describe("getKey", () => {
@@ -448,6 +455,163 @@ describe("helpers", () => {
       expect(getProgramEnrollmentStatus(programEnrollment, 0, 2)).toBe(
         EnrollmentStatus.Enrolled,
       )
+    })
+  })
+
+  describe("getRequirementsProgress", () => {
+    const courseLeaf = (id: number): V2ProgramRequirement => ({
+      data: { node_type: "course", course: id }, // eslint-disable-line camelcase
+    })
+
+    const programLeaf = (id: number): V2ProgramRequirement => ({
+      data: { node_type: "program", required_program: id }, // eslint-disable-line camelcase
+    })
+
+    const operator = (
+      op: string,
+      children: V2ProgramRequirement[],
+      operatorValue: string | null = null,
+    ): V2ProgramRequirement => ({
+      data: {
+        node_type: "operator",
+        operator: op,
+        operator_value: operatorValue, // eslint-disable-line camelcase
+      },
+      children,
+    })
+
+    const courseEnrollment = (
+      courseId: number,
+      passed: boolean,
+    ): CourseRunEnrollmentV3 => {
+      const run = factories.courses.courseRun({ id: courseId })
+      const course = factories.courses.course({
+        id: courseId,
+        courseruns: [run],
+      })
+      return factories.enrollment.courseEnrollment({
+        run: { ...run, course },
+        grades: [factories.enrollment.grade({ passed })],
+      })
+    }
+
+    test("all_of counts completed courses against total children", () => {
+      const nodes = [operator("all_of", [courseLeaf(1), courseLeaf(2)])]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        2: [courseEnrollment(2, false)],
+      }
+
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
+        completed: 1,
+        total: 2,
+      })
+    })
+
+    test("min_number_of caps completed and total at operator_value", () => {
+      const nodes = [
+        operator(
+          "min_number_of",
+          [courseLeaf(1), courseLeaf(2), courseLeaf(3)],
+          "1",
+        ),
+      ]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        2: [courseEnrollment(2, true)],
+        3: [courseEnrollment(3, true)],
+      }
+
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
+        completed: 1,
+        total: 1,
+      })
+    })
+
+    test("sums progress across multiple top-level operators", () => {
+      const nodes = [
+        operator("all_of", [courseLeaf(1), courseLeaf(2)]),
+        operator(
+          "min_number_of",
+          [courseLeaf(3), courseLeaf(4), courseLeaf(5)],
+          "1",
+        ),
+      ]
+      const courseEnrollments = {
+        1: [courseEnrollment(1, true)],
+        3: [courseEnrollment(3, true)],
+        4: [courseEnrollment(4, true)],
+      }
+
+      expect(getRequirementsProgress(nodes, courseEnrollments, {})).toEqual({
+        completed: 2,
+        total: 3,
+      })
+    })
+
+    test("program leaf is completed when enrollment has certificate", () => {
+      const enrollments: Record<number, V3UserProgramEnrollment> = {
+        10: factories.enrollment.programEnrollmentV3({
+          certificate: { uuid: "cert-uuid" },
+        }),
+      }
+      const nodes = [operator("all_of", [programLeaf(10), programLeaf(11)])]
+
+      expect(getRequirementsProgress(nodes, {}, enrollments)).toEqual({
+        completed: 1,
+        total: 2,
+      })
+    })
+
+    test("ignores non-operator and non-leaf children (nested operators)", () => {
+      // Nested operators are not counted — only direct course/program children
+      const nested = operator("all_of", [courseLeaf(99)])
+      const nodes = [operator("all_of", [courseLeaf(1), nested])]
+
+      const { consoleWarn } = allowConsoleErrors()
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 1, total: 1 })
+      expect(consoleWarn).toHaveBeenCalled()
+    })
+
+    test("min_number_of with operator_value=0 contributes nothing", () => {
+      const nodes = [operator("min_number_of", [courseLeaf(1)], "0")]
+
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 0, total: 0 })
+    })
+
+    test("min_number_of with malformed operator_value contributes nothing and warns", () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => {})
+      const nodes = [operator("min_number_of", [courseLeaf(1)], "not-a-number")]
+
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 0, total: 0 })
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    test("unknown operator contributes nothing and warns", () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => {})
+      const nodes = [
+        operator("at_least_one_of", [courseLeaf(1), courseLeaf(2)]),
+      ]
+
+      expect(
+        getRequirementsProgress(nodes, { 1: [courseEnrollment(1, true)] }, {}),
+      ).toEqual({ completed: 0, total: 0 })
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    test("empty nodes returns zeroes", () => {
+      expect(getRequirementsProgress([], {}, {})).toEqual({
+        completed: 0,
+        total: 0,
+      })
     })
   })
 })

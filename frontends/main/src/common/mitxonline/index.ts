@@ -61,13 +61,13 @@ export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
  * ```ts
  * formatPrice(100) // "$100"
  * formatPrice(100.5) // "$100.50"
- * formatPrice(100, { avoidCents: true }) // "$100"
- * formatPrice(100.5, { avoidCents: true }) // "$100.50"
+ * formatPrice(100, { avoidCents: false }) // "$100.00"
+ * formatPrice(100.5, { avoidCents: false }) // "$100.50"
  * ```
  */
 const formatPrice = (
   amount: number | string,
-  { avoidCents = false } = {},
+  { avoidCents = true } = {},
 ): string => {
   const num = Number(amount)
   const fractionDigits = avoidCents && Number.isInteger(num) ? 0 : 2
@@ -92,7 +92,7 @@ type PriceWithDiscount = {
 const priceWithDiscount = ({
   product,
   flexiblePrice,
-  avoidCents = false,
+  avoidCents = true,
 }: {
   product: BaseProduct
   flexiblePrice?: ProductFlexiblePrice

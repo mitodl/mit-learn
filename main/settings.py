@@ -28,13 +28,14 @@ from main.envs import (
     get_list_of_str,
     get_string,
 )
+from main.middleware.cookie_tombstones import parse_cookie_tombstones
 from main.sentry import init_sentry
 from main.settings_celery import *  # noqa: F403
 from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.64.1"
+VERSION = "0.64.4"
 
 log = logging.getLogger()
 
@@ -241,6 +242,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = get_string(
 CSRF_COOKIE_SECURE = get_bool("CSRF_COOKIE_SECURE", True)  # noqa: FBT003
 CSRF_COOKIE_DOMAIN = get_string("CSRF_COOKIE_DOMAIN", None)
 CSRF_COOKIE_NAME = get_string("CSRF_COOKIE_NAME", "csrftoken")
+COOKIE_TOMBSTONES = parse_cookie_tombstones(get_string("COOKIE_TOMBSTONES", "[]"))
 
 CSRF_HEADER_NAME = get_string("CSRF_HEADER_NAME", "HTTP_X_CSRFTOKEN")
 
@@ -248,6 +250,10 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
+
+if COOKIE_TOMBSTONES:
+    tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
+    MIDDLEWARE = (tombstone_middleware, *MIDDLEWARE)
 
 # enable the nplusone profiler only in debug mode
 if DEBUG:
@@ -786,10 +792,13 @@ QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = get_bool(
     name="QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS", default=False
 )
 
-QDRANT_API_KEY = get_string(name="QDRANT_API_KEY_V2", default="")
-QDRANT_HOST = get_string(name="QDRANT_HOST_V2", default="http://qdrant:6333")
+QDRANT_API_KEY = get_string(name="QDRANT_API_KEY", default="")
+QDRANT_HOST = get_string(name="QDRANT_HOST", default="http://qdrant:6333")
 
-
+# 1 week default query cache ttl
+QDRANT_QUERY_EMBEDDING_CACHE_TTL = get_int(
+    name="QDRANT_QUERY_EMBEDDING_CACHE_TTL", default=60 * 60 * 24 * 7
+)
 QDRANT_BASE_COLLECTION_NAME = get_string(
     name="QDRANT_COLLECTION_NAME", default="resource_embeddings"
 )

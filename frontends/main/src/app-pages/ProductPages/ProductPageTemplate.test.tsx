@@ -2,6 +2,7 @@ import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
+import { StayUpdatedModal } from "./StayUpdatedModal"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
@@ -106,7 +107,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(button).toBeEnabled()
 
     button.click()
-    expect(mockedNiceModalShow).toHaveBeenCalled()
+    expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
+      productReadableId: DEFAULT_RESOURCE.readable_id,
+    })
   })
 
   it("disables the trigger button when form fetch errors", () => {
@@ -140,7 +143,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(button).toBeEnabled()
 
     button.click()
-    expect(mockedNiceModalShow).toHaveBeenCalled()
+    expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
+      productReadableId: DEFAULT_RESOURCE.readable_id,
+    })
   })
 
   describe("PostHog tracking", () => {
