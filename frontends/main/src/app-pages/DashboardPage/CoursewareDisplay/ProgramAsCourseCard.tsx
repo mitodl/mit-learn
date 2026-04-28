@@ -559,8 +559,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               size="small"
               startIcon={<RiAwardFill />}
               href={programCertificateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
             >
               Certificate
             </ProgramCertificateButton>

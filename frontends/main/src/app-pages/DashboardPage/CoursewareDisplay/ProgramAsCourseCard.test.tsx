@@ -401,8 +401,7 @@ describe("ProgramAsCourseCard", () => {
       "href",
       `/certificate/program/${certUuid}`,
     )
-    expect(certButton).toHaveAttribute("target", "_blank")
-    expect(certButton).toHaveAttribute("rel", "noopener noreferrer")
+    expect(certButton).not.toHaveAttribute("target")
   })
 
   test("does not display certificate button when program enrollment has no certificate", async () => {
