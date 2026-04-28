@@ -354,7 +354,7 @@ const getResourceUrl = (
   }
 
   if (showPodcastPage) {
-    if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
+    if (resource.resource_type === ResourceTypeEnum.Podcast) {
       return podcastPageView(resource.id.toString())
     }
   }
