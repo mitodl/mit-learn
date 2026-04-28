@@ -264,7 +264,7 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     },
   },
 
-  "vjs-icon-placeholder": {
+  ".vjs-icon-placeholder": {
     border: "none !important",
   },
 
@@ -450,7 +450,7 @@ type VideoDetailPageProps = {
   playlistLoading: boolean
 }
 
-const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
+const VideoSeriesDetailPage: React.FC<VideoDetailPageProps> = ({
   videoId,
   playlistId,
   playlistData,
@@ -622,10 +622,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 <NavArrowIcon>
                   <RiArrowLeftLine size={16} />
                 </NavArrowIcon>
-                {/* <NavLinkText>Previous: {prevVideo.title}</NavLinkText> */}
-                <NavLinkText>
-                  Previous: Neural Networks and Backpropagation
-                </NavLinkText>
+                <NavLinkText>Previous: {prevVideo.title}</NavLinkText>
               </NavLink>
             ) : (
               <span />
@@ -635,10 +632,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 href={getVideoHref(nextVideo)}
                 style={{ justifyContent: "flex-end" }}
               >
-                {/* <NavLinkText>Next: {nextVideo.title}</NavLinkText> */}
-                <NavLinkText>
-                  Next: Recurrent Neural Networks and Attention
-                </NavLinkText>
+                <NavLinkText>Next: {nextVideo.title}</NavLinkText>
                 <NavArrowIcon>
                   <RiArrowRightLine size={16} />
                 </NavArrowIcon>
@@ -654,10 +648,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={280} height={16} style={{ marginBottom: 8 }} />
           ) : institutionLabel ? (
-            // <InstitutionLabel>{institutionLabel}</InstitutionLabel>
-            <InstitutionLabel>
-              MIT Computer Science and Artificial Intelligence Laboratory
-            </InstitutionLabel>
+            <InstitutionLabel>{institutionLabel}</InstitutionLabel>
           ) : null}
 
           {/* Video title */}
@@ -670,8 +661,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             />
           ) : (
             <VideoTitle ref={titleRef} tabIndex={-1}>
-              {/* {video?.title} */}
-              Convolutional Neural Networks
+              {video?.title}
             </VideoTitle>
           )}
 
@@ -735,10 +725,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             <UpNextSection>
               <UpNextLeft>
                 <UpNextLabel>Up Next</UpNextLabel>
-                {/* <UpNextTitle>{nextVideo.title}</UpNextTitle> */}
-                <UpNextTitle>
-                  Recurrent Neural Networks and Attention
-                </UpNextTitle>
+                <UpNextTitle>{nextVideo.title}</UpNextTitle>
               </UpNextLeft>
               <StyledButtonLink
                 href={getVideoHref(nextVideo)}
@@ -775,12 +762,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {/* Description */}
           {!isLoading && video?.description && (
             <DescriptionText id="video-description">
-              {/* {video.description} */}
-              Image recognition, feature hierarchies, and the architectures that
-              transformed computer vision. This lecture covers the mathematical
-              foundations of convolution operations, pooling strategies, and how
-              deep convolutional networks learn hierarchical representations
-              from raw pixel data.
+              {video.description}
             </DescriptionText>
           )}
 
@@ -816,4 +798,4 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   )
 }
 
-export default VideoDetailPage
+export default VideoSeriesDetailPage
