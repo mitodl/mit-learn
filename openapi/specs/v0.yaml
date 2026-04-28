@@ -1292,7 +1292,7 @@ paths:
         schema:
           type: integer
           maximum: 1000
-          minimum: 1
+          minimum: 0
         description: The initial index from which to return the results
       - in: query
         name: platform
