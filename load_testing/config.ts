@@ -2,6 +2,7 @@ import { NewBrowserContextOptions } from "k6/browser"
 
 export const BACKEND_BASE_URL: string = __ENV.BACKEND_BASE_URL
 export const FRONTEND_BASE_URL: string = __ENV.FRONTEND_BASE_URL
+export const SSO_BASE_URL: string = __ENV.SSO_BASE_URL
 
 export const IGNORE_HTTPS_ERRORS: boolean =
   (__ENV.IGNORE_HTTPS_ERRORS || "false").toLowerCase() == "true"
