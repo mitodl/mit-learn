@@ -4,8 +4,13 @@ import {
   randomIntBetween,
   randomItem,
 } from "https://jslib.k6.io/k6-utils/1.2.0/index.js"
-import { BROWSER_CONTEXT_OPTIONS, FRONTEND_BASE_URL } from "../config.ts"
+import {
+  BROWSER_CONTEXT_OPTIONS,
+  FRONTEND_BASE_URL,
+  SSO_BASE_URL,
+} from "../config.ts"
 import { AuthCredential, credentials } from "../auth.ts"
+import { escapeRegex } from "../utils.ts"
 
 async function home(page: Page) {
   await page.goto(FRONTEND_BASE_URL)
@@ -47,7 +52,7 @@ async function login(page: Page) {
 
   if (!!credential) {
     console.debug("Skipping login because no credentials provided")
-    return
+    return false
   }
 
   const loginButton = page.getByTestId("login-button-desktop")
@@ -56,12 +61,16 @@ async function login(page: Page) {
   await loginKeycloak(page)
 
   await page.waitForURL(/.*\/dashboard.*/)
+
+  return true
 }
 
+const KEYCLOAK_OIDC_RE = new RegExp(
+  `${escapeRegex(SSO_BASE_URL)}\/realms\/olapps\/protocol\/openid-connect\/auth.*`,
+)
+
 async function loginKeycloak(page: Page, credential: AuthCredential) {
-  await page.waitForURL(
-    /https:\/sso(\-qa)?\.ol\.mit\.edu\/realms\/olapps\/protocol\/openid-connect\/auth.*/,
-  )
+  await page.waitForURL(KEYCLOAK_OIDC_RE)
 
   const credentialnameInput = await page.locator("input#username")
   await credentialnameInput.type(credential.email)
@@ -86,8 +95,10 @@ export async function testFrontend() {
     await topics(page)
     await departments(page)
     await units(page)
-    await login(page)
-    await dashboard(page)
+    const loggedIn = await login(page)
+    if (loggedIn) {
+      await dashboard(page)
+    }
   } finally {
     await page.close()
   }
