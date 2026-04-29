@@ -923,6 +923,8 @@ paths:
         name: limit
         schema:
           type: integer
+          maximum: 1000
+          minimum: 1
         description: Number of results to return per page
       - in: query
         name: offered_by
@@ -936,6 +938,8 @@ paths:
         name: offset
         schema:
           type: integer
+          maximum: 1000
+          minimum: 0
         description: The initial index from which to return the results
       - in: query
         name: platform
@@ -1247,6 +1251,8 @@ paths:
         name: limit
         schema:
           type: integer
+          maximum: 1000
+          minimum: 1
         description: Number of results to return per page
       - in: query
         name: ocw_topic
@@ -1286,6 +1292,8 @@ paths:
         name: offset
         schema:
           type: integer
+          maximum: 1000
+          minimum: 0
         description: The initial index from which to return the results
       - in: query
         name: platform

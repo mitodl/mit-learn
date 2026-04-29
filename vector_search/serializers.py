@@ -20,10 +20,23 @@ from learning_resources_search.serializers import (
     SearchResponseSerializer,
 )
 from vector_search.constants import (
+    MAX_RESULT_WINDOW,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS,
     QDRANT_RESOURCE_PARAM_MAP,
 )
+
+
+def _validate_result_window(attrs):
+    offset = attrs.get("offset") or 0
+    limit = attrs.get("limit") or 0
+    if offset + limit > MAX_RESULT_WINDOW:
+        msg = (
+            f"offset + limit must not exceed {MAX_RESULT_WINDOW}. "
+            "Use more specific filters to narrow results."
+        )
+        raise serializers.ValidationError(msg)
+    return attrs
 
 
 class LearningResourcesSearchFiltersSerializer(serializers.Serializer):
@@ -195,16 +208,25 @@ class LearningResourcesVectorSearchRequestSerializer(
     )
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(
-        required=False, help_text="The initial index from which to return the results"
+        required=False,
+        help_text="The initial index from which to return the results",
+        min_value=0,
+        max_value=MAX_RESULT_WINDOW,
     )
     limit = serializers.IntegerField(
-        required=False, help_text="Number of results to return per page"
+        required=False,
+        help_text="Number of results to return per page",
+        min_value=1,
+        max_value=MAX_RESULT_WINDOW,
     )
     hybrid_search = serializers.BooleanField(
         required=False,
         default=False,
         help_text="Whether to use a hybrid search",
     )
+
+    def validate(self, attrs):
+        return _validate_result_window(attrs)
 
 
 class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
@@ -233,10 +255,16 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
 
     q = serializers.CharField(required=False, help_text="The search text")
     offset = serializers.IntegerField(
-        required=False, help_text="The initial index from which to return the results"
+        required=False,
+        help_text="The initial index from which to return the results",
+        min_value=0,
+        max_value=MAX_RESULT_WINDOW,
     )
     limit = serializers.IntegerField(
-        required=False, help_text="Number of results to return per page"
+        required=False,
+        help_text="Number of results to return per page",
+        min_value=1,
+        max_value=MAX_RESULT_WINDOW,
     )
     aggregation_choices = [
         (key, key.replace("_", " ").title()) for key in QDRANT_CONTENT_FILE_PARAM_MAP
@@ -314,6 +342,9 @@ class ContentFileVectorSearchRequestSerializer(serializers.Serializer):
         default=False,
         help_text="Whether to use a hybrid search",
     )
+
+    def validate(self, attrs):
+        return _validate_result_window(attrs)
 
 
 class ContentFileVectorSearchResponseSerializer(SearchResponseSerializer):
