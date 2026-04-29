@@ -1311,6 +1311,7 @@ describe.each([
 
         const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
         setMockResponse.post(enrollmentUrl, {})
+        setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
         renderWithProviders(
           <DashboardCard
@@ -1390,6 +1391,74 @@ describe.each([
         ).not.toBeInTheDocument()
       },
     )
+
+    test("Audit enrollment uses selected language run and normalizes fallback redirect URL", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const sourceRun = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_id: "course-v1:LANGTEST+COURSE+BASE",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home",
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: false,
+          }),
+        ],
+      })
+
+      const course = mitxOnlineCourse({
+        courseruns: [sourceRun],
+        next_run_id: sourceRun.id,
+      })
+
+      const selectedLanguageRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        is_enrollable: true,
+        courseware_id: "course-v1:LANGTEST+COURSE+ALT_ES",
+        courseware_url: null,
+      })
+
+      const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+      setMockResponse.post(enrollmentUrl, {})
+      // Return no matching enrollment so redirect falls back to href normalization.
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          selectedCourseRun={selectedLanguageRun}
+          buttonHref={
+            "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home"
+          }
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "POST",
+            url: enrollmentUrl,
+            data: JSON.stringify({ run_id: selectedLanguageRun.id }),
+          }),
+        )
+      })
+
+      await waitFor(() => {
+        expect(window.location.href).toContain(
+          selectedLanguageRun.courseware_id,
+        )
+      })
+      expect(window.location.href).toContain("/learn/course/")
+      expect(window.location.href).toContain("/home")
+    })
   })
 
   describe("Verified Program Enrollment", () => {
@@ -1495,6 +1564,70 @@ describe.each([
       await screen.findByRole("dialog", { name: course.title })
     })
 
+    test("Verified enrollment normalizes redirect URL to selected language courseware_id", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const sourceRun = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_id: "course-v1:VERIFYTEST+COURSE+BASE",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+BASE/home",
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [sourceRun],
+        next_run_id: sourceRun.id,
+      })
+
+      const selectedLanguageRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        is_enrollable: true,
+        courseware_id: "course-v1:VERIFYTEST+COURSE+ALT_ES",
+      })
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "verified",
+        })
+
+      const verifiedEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(
+          selectedLanguageRun.courseware_id,
+        )
+      setMockResponse.post(verifiedEndpoint, {})
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          selectedCourseRun={selectedLanguageRun}
+          buttonHref={
+            "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+BASE/home"
+          }
+          programEnrollment={programEnrollment}
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "POST", url: verifiedEndpoint }),
+        )
+      })
+
+      await waitFor(() => {
+        expect(window.location.href).toContain(
+          selectedLanguageRun.courseware_id,
+        )
+      })
+      expect(window.location.href).toContain("/learn/course/")
+      expect(window.location.href).toContain("/home")
+    })
+
     test("Audit program enrollment bypasses dialog for free-only single-run enrollment", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
@@ -1520,6 +1653,7 @@ describe.each([
 
       const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
       setMockResponse.post(enrollmentUrl, {})
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
       renderWithProviders(
         <DashboardCard

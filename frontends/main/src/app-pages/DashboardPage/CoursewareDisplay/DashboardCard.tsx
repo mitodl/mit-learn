@@ -40,6 +40,7 @@ import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
   getCourseEnrollmentAction,
+  getEnrollmentType,
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -308,10 +309,36 @@ const useEnrollmentHandler = () => {
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
   const replaceBasketItem = useReplaceBasketItem()
 
+  const normalizeCoursewareUrl = React.useCallback(
+    (
+      url: string | undefined,
+      coursewareId: string | undefined,
+    ): string | undefined => {
+      if (!url || !coursewareId) {
+        return url
+      }
+
+      if (url.includes(coursewareId)) {
+        return url
+      }
+
+      // Canonical MITx courseware paths are `/learn/course/<courseware_id>/home`.
+      // If href is still for the source run, rewrite only the courseware_id segment.
+      const rewritten = url.replace(
+        /(\/learn\/course\/)([^/]+)(\/home\/?)/,
+        `$1${coursewareId}$3`,
+      )
+
+      return rewritten
+    },
+    [],
+  )
+
   const enroll = React.useCallback(
     ({
       course,
       readableId,
+      selectedRunId,
       href,
       isB2B,
       isVerifiedProgram,
@@ -319,6 +346,7 @@ const useEnrollmentHandler = () => {
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
+      selectedRunId?: number
       href?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
@@ -376,23 +404,101 @@ const useEnrollmentHandler = () => {
           )
           return
         }
+        const verifiedDestination = normalizeCoursewareUrl(href, readableId)
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: [programCoursewareId] },
           {
             onSuccess: () => {
-              window.location.href = href
+              window.location.href = verifiedDestination ?? href
             },
           },
         )
       } else {
-        const enrollmentAction = getCourseEnrollmentAction(course)
+        // Use the explicitly provided run_id when available (e.g., language
+        // picker selects a variant run that may not appear in course.courseruns).
+        // Fall back to searching course.courseruns by courseware_id, then to
+        // getCourseEnrollmentAction for the default run.
+        const directRequestedRun = selectedRunId
+          ? course.courseruns.find(
+              (r) => r.id === selectedRunId && r.is_enrollable,
+            )
+          : undefined
+        const isSyntheticRequestedRun =
+          !directRequestedRun && Boolean(selectedRunId && readableId)
+        const requestedRun = directRequestedRun
+          ? directRequestedRun
+          : isSyntheticRequestedRun
+            ? // Variant run not in courseruns: build a minimal run descriptor so
+              // we can still call createEnrollment with the correct id.
+              ({
+                id: selectedRunId!,
+                courseware_id: readableId!,
+              } as CourseRunV2)
+            : undefined
+        const requestedRunFromReadableId = readableId
+          ? course.courseruns.find(
+              (r) => r.courseware_id === readableId && r.is_enrollable,
+            )
+          : undefined
+
+        const enrollmentAction =
+          (requestedRun ?? requestedRunFromReadableId)
+            ? (() => {
+                const chosenRun = requestedRun ?? requestedRunFromReadableId!
+                const enrollmentType = getEnrollmentType(
+                  course.courseruns.find((r) => r.id === chosenRun.id)
+                    ?.enrollment_modes,
+                )
+                if (enrollmentType === "free") {
+                  return { type: "audit" as const, run: chosenRun }
+                }
+                if (enrollmentType === "none") {
+                  // For synthetic language-only runs we don't have enrollment_modes,
+                  // so attempt an audit enrollment by run id. For normal runs,
+                  // defer to the default action picker.
+                  return isSyntheticRequestedRun
+                    ? { type: "audit" as const, run: chosenRun }
+                    : getCourseEnrollmentAction(course)
+                }
+                if (enrollmentType === "paid") {
+                  const product = course.courseruns.find(
+                    (r) => r.id === chosenRun.id,
+                  )?.products?.[0]
+                  return product
+                    ? { type: "checkout" as const, run: chosenRun, product }
+                    : { type: "none" as const }
+                }
+                return getCourseEnrollmentAction(course)
+              })()
+            : getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
+          const enrolledCoursewareId =
+            readableId ?? enrollmentAction.run.courseware_id
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
-              onSuccess: () => {
-                const destination = enrollmentAction.run.courseware_url ?? href
+              onSuccess: async () => {
+                // Fetch fresh enrollment data to get the authoritative
+                // courseware_url from the V3 enrollment record, which is
+                // reliable for language-variant runs where the V2 run object
+                // may have a null or incorrect courseware_url.
+                if (enrolledCoursewareId) {
+                  const enrollments = await queryClient.fetchQuery(
+                    enrollmentQueries.courseRunEnrollmentsList(),
+                  )
+                  const enrolledUrl = enrollments.find(
+                    (e) => e.run.courseware_id === enrolledCoursewareId,
+                  )?.run.courseware_url
+                  if (enrolledUrl) {
+                    window.location.href = enrolledUrl
+                    return
+                  }
+                }
+                const destination =
+                  normalizeCoursewareUrl(href, enrolledCoursewareId) ??
+                  enrollmentAction.run.courseware_url ??
+                  href
                 if (destination) {
                   window.location.href = destination
                 }
@@ -419,6 +525,7 @@ const useEnrollmentHandler = () => {
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,
+      normalizeCoursewareUrl,
       replaceBasketItem,
       queryClient,
     ],
@@ -785,6 +892,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
+        selectedRunId: courseRun?.id,
         href: buttonHref ?? coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,

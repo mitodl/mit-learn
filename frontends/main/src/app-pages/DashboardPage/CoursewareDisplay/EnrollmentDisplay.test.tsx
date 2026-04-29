@@ -2389,5 +2389,117 @@ describe("EnrollmentDisplay", () => {
       const certButton = screen.queryByRole("link", { name: "Certificate" })
       expect(certButton).not.toBeInTheDocument()
     })
+
+    test("program language picker switches card title on B2C program page", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const englishRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        title: "Module in English",
+        courseware_id: "course-v1:LANG+TEST+EN",
+        courseware_url:
+          "https://courses.example.com/learn/course/course-v1:LANG+TEST+EN/home",
+        is_enrollable: true,
+      })
+      const spanishRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        title: "Modulo en Espanol",
+        courseware_id: "course-v1:LANG+TEST+ES",
+        courseware_url:
+          "https://courses.example.com/learn/course/course-v1:LANG+TEST+ES/home",
+        is_enrollable: true,
+      })
+
+      const localizedCourse = mitxonline.factories.courses.course({
+        id: 991,
+        title: "Base Course Title",
+        courseruns: [englishRun, spanishRun],
+        next_run_id: englishRun.id,
+        language_options: [
+          {
+            id: englishRun.id,
+            courseware_id: englishRun.courseware_id,
+            language: "en",
+            title: englishRun.title,
+            run_tag: englishRun.run_tag,
+          },
+          {
+            id: spanishRun.id,
+            courseware_id: spanishRun.courseware_id,
+            language: "es",
+            title: spanishRun.title,
+            run_tag: spanishRun.run_tag,
+          },
+        ],
+      })
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const core = reqTree.addOperator({
+        operator: "all_of",
+        title: "Core Courses",
+      })
+      core.addCourse({ course: localizedCourse.id })
+
+      const program = mitxonline.factories.programs.program({
+        id: 458,
+        title: "Program With Languages",
+        courses: [localizedCourse.id],
+        req_tree: reqTree.serialize(),
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+          certificate: null,
+        })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [programEnrollment],
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(program.id),
+        program,
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [localizedCourse],
+        },
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={program.id} />)
+
+      await screen.findByText("Program With Languages")
+      const languageSelect = await screen.findByRole("combobox")
+      expect(languageSelect).toHaveTextContent("English")
+
+      const card = await screen.findByTestId("enrollment-card-desktop")
+      expect(card).toHaveTextContent("Module in English")
+
+      await user.click(languageSelect)
+      await user.click(await screen.findByRole("option", { name: "Español" }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
+          "Modulo en Espanol",
+        )
+      })
+    })
   })
 })

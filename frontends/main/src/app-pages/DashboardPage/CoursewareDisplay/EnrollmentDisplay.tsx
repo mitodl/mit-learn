@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import {
@@ -6,6 +6,7 @@ import {
   Link,
   PlainList,
   PlainListProps,
+  SimpleSelect,
   Skeleton,
   Stack,
   Typography,
@@ -28,6 +29,13 @@ import {
   DashboardResource,
   DashboardType,
 } from "./DashboardCard"
+import {
+  getDistinctLanguageOptions,
+  getSelectedLanguageOption,
+  getCourseRunForSelectedLanguage,
+  getEnrollmentForSelectedLanguage,
+  getResolvedRunForSelectedLanguage,
+} from "./languageOptions"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
@@ -105,6 +113,13 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   marginTop: "24px",
   [theme.breakpoints.down("md")]: {
     marginBottom: "24px",
+  },
+}))
+
+const ProgramLanguageSelect = styled(SimpleSelect)(({ theme }) => ({
+  width: "120px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
   },
 }))
 
@@ -558,6 +573,30 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
   const programCertificateUrl = programEnrollment?.certificate?.link ?? null
 
+  const allProgramCourses = React.useMemo(
+    () => programCourses?.results ?? [],
+    [programCourses?.results],
+  )
+  const languageOptions = React.useMemo(
+    () => getDistinctLanguageOptions(allProgramCourses),
+    [allProgramCourses],
+  )
+  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
+  useEffect(() => {
+    if (languageOptions.length === 0) {
+      if (selectedLanguageKey) {
+        setSelectedLanguageKey("")
+      }
+      return
+    }
+    const hasSelectedLanguage = languageOptions.some(
+      (option) => option.value === selectedLanguageKey,
+    )
+    if (!hasSelectedLanguage) {
+      setSelectedLanguageKey(String(languageOptions[0].value))
+    }
+  }, [languageOptions, selectedLanguageKey])
+
   if (isLoading) {
     return (
       <Stack direction="column">
@@ -580,9 +619,32 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   return (
     <Stack direction="column">
       <Stack direction="column" marginBottom="24px">
-        <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-          Program{program?.program_type ? `: ${program?.program_type}` : ""}
-        </Typography>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
+            Program{program?.program_type ? `: ${program?.program_type}` : ""}
+          </Typography>
+          {languageOptions.length > 0 && (
+            <Stack direction="row" gap="8px" alignItems="center">
+              <Typography variant="body3">Learning Language:</Typography>
+              <ProgramLanguageSelect
+                size="small"
+                value={selectedLanguageKey}
+                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+                options={languageOptions}
+                renderValue={(value) => {
+                  const selected = languageOptions.find(
+                    (opt) => opt.value === value,
+                  )
+                  return String(selected?.label ?? "")
+                }}
+              />
+            </Stack>
+          )}
+        </Stack>
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {program?.title}
         </Typography>
@@ -595,16 +657,18 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             </Typography>
             for this program.
           </Typography>
-          {programCertificateUrl && (
-            <ProgramCertificateButton
-              variant="bordered"
-              size="small"
-              startIcon={<RiAwardFill />}
-              href={programCertificateUrl}
-            >
-              Certificate
-            </ProgramCertificateButton>
-          )}
+          <Stack direction="column" alignItems="flex-end" gap="8px">
+            {programCertificateUrl && (
+              <ProgramCertificateButton
+                variant="bordered"
+                size="small"
+                startIcon={<RiAwardFill />}
+                href={programCertificateUrl}
+              >
+                Certificate
+              </ProgramCertificateButton>
+            )}
+          </Stack>
         </Stack>
       </Stack>
       {requirementSections.map((section, index) => {
@@ -643,15 +707,44 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             <Stack direction="column" gap="16px">
               {section.items.map((item) => {
                 if (item.resourceType === "course") {
-                  const bestEnrollment = selectBestEnrollment(
+                  const courseEnrollments =
+                    enrollmentsByCourseId[item.course.id] || []
+                  const selectedLanguageOption = getSelectedLanguageOption(
                     item.course,
-                    enrollmentsByCourseId[item.course.id] || [],
+                    selectedLanguageKey,
+                  )
+                  const selectedRun = getCourseRunForSelectedLanguage(
+                    item.course,
+                    selectedLanguageKey,
+                  )
+                  const selectedLanguageEnrollment =
+                    getEnrollmentForSelectedLanguage(
+                      courseEnrollments,
+                      selectedLanguageOption,
+                      selectedRun,
+                    )
+                  const resolvedRun = getResolvedRunForSelectedLanguage(
+                    item.course,
+                    selectedLanguageOption,
+                    selectedRun,
+                    selectedLanguageEnrollment,
                   )
 
-                  const resource = bestEnrollment
+                  // When a language is selected, only use an enrollment that
+                  // matches that specific language run. Don't fall back to a
+                  // different-language enrollment, which would show the wrong
+                  // title/URL and a misleading "Continue" CTA.
+                  const hasLanguageSelected = Boolean(
+                    selectedLanguageKey && languageOptions.length > 0,
+                  )
+                  const effectiveEnrollment = hasLanguageSelected
+                    ? selectedLanguageEnrollment
+                    : selectBestEnrollment(item.course, courseEnrollments)
+
+                  const resource = effectiveEnrollment
                     ? {
                         type: DashboardType.CourseRunEnrollment,
-                        data: bestEnrollment,
+                        data: effectiveEnrollment,
                       }
                     : { type: DashboardType.Course, data: item.course }
 
@@ -660,11 +753,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       key={getKey({
                         resourceType: ResourceType.Course,
                         id: item.course.id,
-                        runId: bestEnrollment?.run.id,
+                        runId: effectiveEnrollment?.run.id ?? resolvedRun?.id,
                       })}
                       resource={resource}
                       programEnrollment={programEnrollment}
                       showNotComplete={false}
+                      selectedCourseRun={resolvedRun}
                     />
                   )
                 }
