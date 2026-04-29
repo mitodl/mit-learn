@@ -209,6 +209,13 @@ export const B2B_ATTACH_VIEW = "/enrollmentcode/[code]"
 export const b2bAttachView = (code: string) =>
   generatePath(B2B_ATTACH_VIEW, { code: code })
 
+export const CONTRACT_ADMIN_VIEW = "/contractadmin/[orgId]/[contractId]"
+export const contractAdminView = (orgId: number, contractId: number) =>
+  generatePath(CONTRACT_ADMIN_VIEW, {
+    orgId: String(orgId),
+    contractId: String(contractId),
+  })
+
 export const FACEBOOK_SHARE_BASE_URL =
   "https://www.facebook.com/sharer/sharer.php"
 export const TWITTER_SHARE_BASE_URL = "https://x.com/share"
