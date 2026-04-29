@@ -470,6 +470,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               useVerifiedEnrollment={useVerifiedEnrollment}
               parentProgramIds={parentProgramIds}
               variant="stacked"
+              headingLevel="h4"
             />
           )
         })}

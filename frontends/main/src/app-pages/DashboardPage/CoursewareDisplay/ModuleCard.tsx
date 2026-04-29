@@ -606,6 +606,7 @@ type DashboardCardProps = {
   useVerifiedEnrollment?: boolean
   parentProgramIds?: string[]
   onUpgradeError?: (error: string) => void
+  headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
 type DashboardCardSharedProps = Omit<DashboardCardProps, "resource">
@@ -707,6 +708,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   useVerifiedEnrollment,
   parentProgramIds,
   onUpgradeError,
+  headingLevel = "h3",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -792,7 +794,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   ) : (
     <>
       {titleHref ? (
-        <TitleHeading>
+        <TitleHeading as={headingLevel}>
           <TitleLink
             size="medium"
             color="black"
@@ -803,7 +805,11 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
           </TitleLink>
         </TitleHeading>
       ) : (
-        <TitleText clickable={Boolean(titleClick)} onClick={titleClick}>
+        <TitleText
+          as={headingLevel}
+          clickable={Boolean(titleClick)}
+          onClick={titleClick}
+        >
           {title}
         </TitleText>
       )}
