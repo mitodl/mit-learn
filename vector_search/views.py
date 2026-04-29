@@ -105,6 +105,7 @@ class QdrantView(APIView):
         encoder_dense,
         encoder_sparse,
         hybrid_search,
+        score_cutoff: float = 0.0,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -124,6 +125,7 @@ class QdrantView(APIView):
                 exact=False,
             ),
             "limit": limit,
+            "score_threshold": score_cutoff,
         }
 
         if hybrid_search:
@@ -214,7 +216,13 @@ class QdrantView(APIView):
         return search_result
 
     async def _execute_scroll_search(  # noqa: PLR0913
-        self, client, search_collection, search_filter, limit, offset, order_by
+        self,
+        client,
+        search_collection,
+        search_filter,
+        limit,
+        offset,
+        order_by,
     ):
         # Build common scroll kwargs
         scroll_kwargs = {
@@ -265,6 +273,7 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
+        score_cutoff: float = 0,
         *,
         hybrid_search: bool = False,
     ):
@@ -300,6 +309,7 @@ class QdrantView(APIView):
                 encoder_dense,
                 encoder_sparse,
                 hybrid_search,
+                score_cutoff,
             )
 
             if "group_by" in params:
@@ -320,7 +330,12 @@ class QdrantView(APIView):
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(
-                client, search_collection, search_filter, limit, offset, order_by
+                client,
+                search_collection,
+                search_filter,
+                limit,
+                offset,
+                order_by,
             )
 
         hits_coroutine = (
@@ -398,6 +413,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                 offset=offset,
                 params=request_data.data,
                 hybrid_search=hybrid_search,
+                score_cutoff=request_data.data.get("score_cutoff", 0),
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)
