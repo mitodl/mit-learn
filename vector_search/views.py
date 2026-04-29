@@ -2,6 +2,7 @@ import asyncio
 import logging
 from functools import wraps
 from itertools import chain
+from types import SimpleNamespace
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -20,6 +21,8 @@ from main.utils import cache_page_for_anonymous_users
 from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    QDRANT_CONTENT_FILE_PARAM_MAP,
+    QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
 )
@@ -106,6 +109,8 @@ class QdrantView(APIView):
         encoder_sparse,
         hybrid_search,
         score_cutoff: float = 0.0,
+        sparse_query=None,
+        dense_query=None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -129,14 +134,15 @@ class QdrantView(APIView):
         }
 
         if hybrid_search:
-            sparse_query, dense_query = await asyncio.gather(
-                sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
-                    query_string
-                ),
-                sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
-                    query_string
-                ),
-            )
+            if sparse_query is None or dense_query is None:
+                sparse_query, dense_query = await asyncio.gather(
+                    sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
+                        query_string
+                    ),
+                    sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
+                        query_string
+                    ),
+                )
             if order_by:
                 # Nest: vector prefetches → fusion prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
@@ -177,7 +183,10 @@ class QdrantView(APIView):
                 ]
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
+            if dense_query is None:
+                dense_query = await sync_to_async(encoder_dense.embed_query)(
+                    query_string
+                )
             if order_by:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
@@ -192,7 +201,7 @@ class QdrantView(APIView):
                 search_params["using"] = encoder_dense.model_short_name()
                 search_params["query"] = dense_query
 
-        return search_params
+        return search_params, sparse_query, dense_query
 
     async def _execute_group_search(self, client, search_params, params):
         search_params.pop("search_params", None)
@@ -265,6 +274,116 @@ class QdrantView(APIView):
                 break
         return search_result[:limit]
 
+    async def _counts_from_result_set(  # noqa: C901
+        self, client, search_params, aggregation_keys, search_collection
+    ):
+        """
+        Manually compute count and aggregations from a result set.
+        This is used when a score threshold is applied, as Qdrant's count and
+        facet APIs do not support filtering by score.
+        """
+        from collections import Counter
+
+        all_payloads = []
+
+        count_params = search_params.copy()
+        del count_params["limit"]
+        count_params["with_vectors"] = False
+        # Only fetch payload fields we need for aggregations to keep it fast
+        count_params["with_payload"] = [*aggregation_keys, "readable_id"]
+        # Remove offset if present in original search_params to start from beginning
+        count_params.pop("offset", None)
+
+        result = await client.query_points(**count_params)
+        all_payloads = [p.payload for p in result.points]
+
+        if not all_payloads:
+            return 0, {}
+
+        total_count = len(all_payloads)
+        aggregations = {}
+
+        def pluck(d, field):
+            parts = field.split(".")
+            current = [d]
+            for part in parts:
+                next_level = []
+                is_array = part.endswith("[]")
+                clean_part = part[:-2] if is_array else part
+                for item in current:
+                    if isinstance(item, dict) and clean_part in item:
+                        val = item[clean_part]
+                        if isinstance(val, list):
+                            next_level.extend(val)
+                        else:
+                            next_level.append(val)
+                current = next_level
+            return current
+
+        param_map = (
+            QDRANT_RESOURCE_PARAM_MAP
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else QDRANT_CONTENT_FILE_PARAM_MAP
+        )
+
+        for agg_key in aggregation_keys:
+            qdrant_field = param_map.get(agg_key)
+            if not qdrant_field:
+                continue
+
+            all_values = []
+            for payload in all_payloads:
+                all_values.extend(pluck(payload, qdrant_field))
+
+            if all_values:
+                counts = Counter(all_values)
+                aggregations[agg_key] = [
+                    {"key": str(k).lower(), "doc_count": v} for k, v in counts.items()
+                ]
+
+        return total_count, aggregations
+
+    def async_count_coroutines(  # noqa: PLR0913
+        self,
+        client,
+        search_params,
+        search_filter,
+        search_result,  # noqa: ARG002
+        search_collection,
+        aggregation_keys,
+        params,
+        query_string=None,
+    ):
+        if query_string or search_params.get("score_threshold", 0) > 0:
+            task = asyncio.create_task(
+                self._counts_from_result_set(
+                    client, search_params, aggregation_keys, search_collection
+                )
+            )
+
+            async def get_count():
+                count, _ = await task
+                return SimpleNamespace(count=count)
+
+            async def get_aggs():
+                _, aggs = await task
+                return aggs
+
+            return [get_count(), get_aggs()]
+
+        return [
+            client.count(
+                collection_name=search_collection,
+                count_filter=search_filter,
+                exact=False,
+            ),
+            async_qdrant_aggregations(
+                aggregation_keys,
+                params,
+                collection_name=search_collection,
+            ),
+        ]
+
     async def async_vector_search(  # noqa: PLR0913
         self,
         query_string: str,
@@ -283,6 +402,7 @@ class QdrantView(APIView):
 
         # enable caching
         encoder_dense.cache = True
+        search_params = {}
 
         search_filter = qdrant_query_conditions(
             params, collection_name=search_collection
@@ -299,7 +419,7 @@ class QdrantView(APIView):
             if prefetch_max_limit is not None:
                 prefetch_limit = min(prefetch_limit, prefetch_max_limit)
 
-            search_params = await self._build_search_params(
+            search_params, sparse_query, dense_query = await self._build_search_params(
                 query_string,
                 search_collection,
                 search_filter,
@@ -309,9 +429,27 @@ class QdrantView(APIView):
                 encoder_dense,
                 encoder_sparse,
                 hybrid_search,
-                score_cutoff,
+                score_cutoff=score_cutoff,
             )
 
+            # For manual counts/aggregations, use a much larger prefetch limit
+            # to ensure we don't miss results that would match after filtering.
+            # This is especially important for hybrid search fusion.
+            count_prefetch_limit = max(prefetch_limit, 5000)
+            count_search_params, _, _ = await self._build_search_params(
+                query_string,
+                search_collection,
+                search_filter,
+                limit,
+                count_prefetch_limit,
+                order_by,
+                encoder_dense,
+                encoder_sparse,
+                hybrid_search,
+                score_cutoff=score_cutoff,
+                sparse_query=sparse_query,
+                dense_query=dense_query,
+            )
             if "group_by" in params:
                 search_result = await self._execute_group_search(
                     client, search_params, params
@@ -329,6 +467,8 @@ class QdrantView(APIView):
                 search_result = result_obj.points
         else:
             # No query string — use scroll API
+            search_params = {}
+            count_search_params = {}
             search_result = await self._execute_scroll_search(
                 client,
                 search_collection,
@@ -347,15 +487,15 @@ class QdrantView(APIView):
         aggregation_keys = params.get("aggregations") or []
         hits, count_result, aggregations = await asyncio.gather(
             hits_coroutine,
-            client.count(
-                collection_name=search_collection,
-                count_filter=search_filter,
-                exact=False,
-            ),
-            async_qdrant_aggregations(
+            *self.async_count_coroutines(
+                client,
+                count_search_params,
+                search_filter,
+                search_result,
+                search_collection,
                 aggregation_keys,
                 params,
-                collection_name=search_collection,
+                query_string=query_string,
             ),
         )
 
@@ -491,6 +631,7 @@ class ContentFilesVectorSearchView(QdrantView):
                 params=request_data.data,
                 search_collection=collection_name,
                 hybrid_search=hybrid_search,
+                score_cutoff=request_data.data.get("score_cutoff", 0),
             )
             if request_data.data.get("dev_mode"):
                 return Response(response)
