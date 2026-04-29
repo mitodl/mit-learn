@@ -289,19 +289,6 @@ export const MetaRow = styled.div(({ theme }) => ({
   },
 }))
 
-export const HideOnMobile = styled.div(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    display: "none",
-  },
-}))
-
-export const HideOnDesktop = styled.div(({ theme }) => ({
-  display: "none",
-  [theme.breakpoints.down("sm")]: {
-    display: "block",
-  },
-}))
-
 export const MetaInstructorLine = styled.div(({ theme }) => ({
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,

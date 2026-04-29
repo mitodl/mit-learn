@@ -26,14 +26,14 @@ const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   { ssr: false },
 )
 
-type VideoDetailPageProps = {
+type VideoSeriesDetailPageProps = {
   videoId: number
   playlistId: number | null
   playlistData?: VideoPlaylistResource
   playlistLoading: boolean
 }
 
-const VideoSeriesDetailPage: React.FC<VideoDetailPageProps> = ({
+const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   videoId,
   playlistId,
   playlistData,

@@ -6,6 +6,7 @@ import { videoPlaylistQueries } from "api/hooks/learningResources"
 import { isOcwPlaylist } from "@/common/utils"
 import VideoDetailPage from "./VideoDetailPage"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
+import { LoadingSpinner } from "ol-components"
 
 type VideoDetailPageRouterProps = {
   videoId: number
@@ -20,6 +21,10 @@ const VideoDetailPageRouter: React.FC<VideoDetailPageRouterProps> = ({
     ...videoPlaylistQueries.detail(playlistId ?? 0),
     enabled: playlistId !== null,
   })
+
+  if (playlistId !== null && playlistLoading) {
+    return <LoadingSpinner loading={playlistLoading} />
+  }
 
   const isOcw = isOcwPlaylist(playlist)
 

@@ -1,4 +1,6 @@
 import React from "react"
+import useMediaQuery from "@mui/material/useMediaQuery"
+import { theme } from "ol-components"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 type MetaRowProps = {
@@ -16,32 +18,27 @@ const MetaRow: React.FC<MetaRowProps> = ({
   duration,
   term,
 }) => {
-  return (
-    <>
-      {metaParts.length > 0 && (
-        <Styled.HideOnMobile>
-          <Styled.MetaRow>{metaParts.join(" · ")}</Styled.MetaRow>
-        </Styled.HideOnMobile>
-      )}
-      {(instructorNames || departmentName || duration || term) && (
-        <Styled.HideOnDesktop>
-          <Styled.MetaRow>
-            {instructorNames && (
-              <Styled.MetaInstructorLine>
-                {instructorNames}
-              </Styled.MetaInstructorLine>
-            )}
-            {departmentName && <div>{departmentName}</div>}
-            {(duration || term) && (
-              <Styled.StyledDuration>
-                {[duration, term].filter(Boolean).join(" · ")}
-              </Styled.StyledDuration>
-            )}
-          </Styled.MetaRow>
-        </Styled.HideOnDesktop>
-      )}
-    </>
-  )
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
+
+  if (isMobile) {
+    if (!instructorNames && !departmentName && !duration && !term) return null
+    return (
+      <Styled.MetaRow>
+        {instructorNames && (
+          <Styled.MetaInstructorLine>{instructorNames}</Styled.MetaInstructorLine>
+        )}
+        {departmentName && <div>{departmentName}</div>}
+        {(duration || term) && (
+          <Styled.StyledDuration>
+            {[duration, term].filter(Boolean).join(" · ")}
+          </Styled.StyledDuration>
+        )}
+      </Styled.MetaRow>
+    )
+  }
+
+  if (metaParts.length === 0) return null
+  return <Styled.MetaRow>{metaParts.join(" · ")}</Styled.MetaRow>
 }
 
 export default MetaRow
