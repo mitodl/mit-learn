@@ -1,6 +1,6 @@
 [project]
 name = "mit-learn"
-version = "0.71.0"
+version = "2026.4.16.1"
 description = "Search index for use with other MIT applications."
 authors = [{ name = "MIT ODL" }]
 requires-python = ">=3.12,<3.13"
@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "Django==4.2.30",
+    "Django==4.2.29",
     "attrs>=25.0.0,<26",
     "base36>=0.1.1,<0.2",
     "beautifulsoup4>=4.8.2,<5",
@@ -37,7 +37,7 @@ dependencies = [
     "django-ipware>=7.0.0,<8",
     "django-json-widget>=2.0.0,<3",
     "django-oauth-toolkit>=3.0.0,<4",
-    "django-redis>=5.2.0,<7",
+    "django-redis>=5.2.0,<6",
     "django-scim2>=0.19.1,<0.20",
     "django-server-status>=0.7.0,<0.8",
     "django-storages>=1.13.2,<2",
@@ -57,20 +57,19 @@ dependencies = [
     "langchain>=0.3.11,<0.4",
     "langchain-experimental>=0.3.4,<0.4",
     "langchain-openai>=0.3.2,<0.4",
-    "litellm==1.83.7",
+    "litellm==1.81.13",
     "llama-index>=0.14.0,<0.15",
     "llama-index-llms-openai>=0.6.0,<0.7",
     "lxml>=6.0.0,<7",
     "markdown>=3.7,<4",
     "markdown2>=2.4.8,<3",
-    "mitol-django-common>=2026.4.2,<2027",
-    "mitol-django-scim>=2026.4.2,<2027",
+    "mitol-django-scim>=2025.3.31,<2026",
     "mitol-django-observability>=2026.1.0,<2027",
     "named-enum>=1.4.0,<2",
     "nested-lookup>=0.2.25,<0.3",
     "nh3>=0.3.0,<0.4",
     "ocw-data-parser>=0.35.1,<0.36",
-    "onnxruntime==1.24.4",
+    "onnxruntime==1.22.1",
     "openai>=2.0.0,<3",
     "opensearch-dsl>=2.0.0,<3",
     "opensearch-py>=2.0.0,<3",
@@ -130,13 +129,12 @@ dev = [
     "moto>=5.0.0,<6",
     "nplusone>=1.0.0,<2",
     "pdbpp>=0.11.6,<0.12",
-    "pytest>=9.0.3,<10",
+    "pytest>=8.0.0,<9",
     "pytest-cov>=7.0.0,<8",
     "pytest-django>=4.5.2,<5",
     "pytest-env>=1.0.0,<2",
     "pytest-freezegun>=0.4.2,<0.5",
     "pytest-mock>=3.10.0,<4",
-    "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",
     "ruff==0.14.14",
     "safety>=3.0.0,<4",
@@ -263,3 +261,36 @@ inline-quotes = "double"
 "*_test.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "test_*.py" = ["ARG001", "E501", "S101", "PLR2004"]
 "**/migrations/**" = ["ARG001"]
+
+[tool.bumpversion]
+commit = false
+tag = false
+parse = "(?P<release>(?:[1-9][0-9]{3})\\.(?:1[0-2]|[1-9])\\.(?:3[0-1]|[12][0-9]|[1-9]))\\.(?P<build>\\d+)"
+serialize = ["{release}.{build}"]
+
+[tool.bumpversion.parts.release]
+calver_format = "{YYYY}.{MM}.{DD}"
+
+[tool.bumpversion.parts.build]
+first_value = "1"
+
+[[tool.bumpversion.files]]
+filename = "main/settings.py"
+search = 'VERSION = "{current_version}"'
+replace = 'VERSION = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+name = "mit-learn"
+version = "{current_version}"
+source = {{ virtual = "." }}"""
+replace = """
+name = "mit-learn"
+version = "{new_version}"
+source = {{ virtual = "." }}"""

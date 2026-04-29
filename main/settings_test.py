@@ -3,11 +3,12 @@ Validate that our settings functions work
 """
 
 import importlib
+import re
 import sys
+import tomllib
 from unittest import mock
 
 import pytest
-import semantic_version
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
@@ -162,12 +163,14 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert settings_vars["OPENSEARCH_INDEX"] == index_name
 
-    @staticmethod
-    def test_semantic_version():
-        """
-        Verify that we have a semantic compatible version.
-        """
-        semantic_version.Version(settings.VERSION)
+    def test_bump_my_version_format(self):
+        """Verify that VERSION matches the bump-my-version calver format."""
+        with open("pyproject.toml", "rb") as f:  # noqa: PTH123
+            pyproject = tomllib.load(f)
+        version_pattern = pyproject["tool"]["bumpversion"]["parse"]
+        package_version = pyproject["project"]["version"]
+        assert package_version == settings.VERSION
+        assert re.fullmatch(version_pattern, settings.VERSION)
 
     def test_required_settings(self):
         """
@@ -201,52 +204,6 @@ class TestSettings(TestCase):
             assert (
                 settings_vars["DEFAULT_DATABASE_CONFIG"]["DISABLE_SERVER_SIDE_CURSORS"]
                 is False
-            )
-
-    def test_cookie_tombstone_middleware_enabled(self):
-        """Cookie tombstone middleware should be enabled when tombstones are configured."""
-        with mock.patch.dict(
-            "os.environ",
-            {
-                **REQUIRED_SETTINGS,
-                "COOKIE_TOMBSTONES": (
-                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
-                ),
-            },
-            clear=True,
-        ):
-            settings_vars = self.reload_settings()
-            assert (
-                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
-                in (settings_vars["MIDDLEWARE"])
-            )
-
-    def test_cookie_tombstone_middleware_disabled(self):
-        """Cookie tombstone middleware should be disabled when tombstones are unset."""
-        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
-            settings_vars = self.reload_settings()
-            assert (
-                "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
-                not in (settings_vars["MIDDLEWARE"])
-            )
-
-    def test_cookie_tombstone_middleware_ordering(self):
-        """Cookie tombstone middleware should be first in the middleware stack."""
-        with mock.patch.dict(
-            "os.environ",
-            {
-                **REQUIRED_SETTINGS,
-                "COOKIE_TOMBSTONES": (
-                    '[{"name":"csrftoken","domain":".learn.mit.edu","path":"/"}]'
-                ),
-            },
-            clear=True,
-        ):
-            settings_vars = self.reload_settings()
-            middleware = settings_vars["MIDDLEWARE"]
-            assert (
-                middleware[0]
-                == "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
             )
 
     def test_celery_beat_disabled(self):
