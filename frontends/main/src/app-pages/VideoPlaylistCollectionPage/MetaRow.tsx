@@ -1,6 +1,5 @@
 import React from "react"
-import useMediaQuery from "@mui/material/useMediaQuery"
-import { theme } from "ol-components"
+import { theme, useMediaQuery } from "ol-components"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 type MetaRowProps = {
@@ -25,7 +24,9 @@ const MetaRow: React.FC<MetaRowProps> = ({
     return (
       <Styled.MetaRow>
         {instructorNames && (
-          <Styled.MetaInstructorLine>{instructorNames}</Styled.MetaInstructorLine>
+          <Styled.MetaInstructorLine>
+            {instructorNames}
+          </Styled.MetaInstructorLine>
         )}
         {departmentName && <div>{departmentName}</div>}
         {(duration || term) && (
