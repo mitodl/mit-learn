@@ -21,17 +21,16 @@ import type { LearningResource } from "api"
 import {
   RiBookmarkFill,
   RiBookmarkLine,
-  RiExternalLinkLine,
   RiFacebookFill,
   RiLink,
   RiLinkedinFill,
+  RiExternalLinkLine,
   RiMenuAddLine,
   RiShareLine,
   RiTwitterXLine,
 } from "@remixicon/react"
 import type { User } from "api/hooks/user"
 import { PostHogEvents } from "@/common/constants"
-import VideoFrame from "./VideoFrame"
 import { kebabCase } from "lodash"
 import {
   FACEBOOK_SHARE_BASE_URL,
@@ -41,9 +40,11 @@ import {
   programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
+  podcastPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
+import { externalLinkProps } from "@/common/utils"
 import invariant from "tiny-invariant"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
@@ -212,22 +213,7 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const aspect = config.width / config.height
-  const youtubeId =
-    resource?.resource_type === "video"
-      ? resource.content_files?.[0]?.youtube_id
-      : null
-  const youtubeUrl = youtubeId
-    ? `https://www.youtube.com/watch?v=${youtubeId}`
-    : resource?.resource_type === "video" &&
-        resource?.platform?.code === PlatformEnum.Youtube
-      ? resource.url
-      : null
-
-  if (resource && youtubeUrl) {
-    return (
-      <VideoFrame src={youtubeUrl} title={resource.title} aspect={aspect} />
-    )
-  } else if (resource) {
+  if (resource) {
     const imageUrl =
       resource.image?.url ||
       resourceContentFilesImageSrc(resource) ||
@@ -271,12 +257,13 @@ const getCallToActionText = (resource: LearningResource): string => {
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
+  const watchVideos = "Watch Video"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.LearningPath]: learnMore,
-    [ResourceTypeEnum.Video]: learnMore,
-    [ResourceTypeEnum.VideoPlaylist]: learnMore,
+    [ResourceTypeEnum.Video]: watchVideos,
+    [ResourceTypeEnum.VideoPlaylist]: watchVideos,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
@@ -324,7 +311,12 @@ const getResourceUrl = (
   {
     mitxonlineProductPages,
     showVideoPlaylistPage,
-  }: { mitxonlineProductPages?: boolean; showVideoPlaylistPage?: boolean },
+    showPodcastPage,
+  }: {
+    mitxonlineProductPages?: boolean
+    showVideoPlaylistPage?: boolean
+    showPodcastPage?: boolean
+  },
 ) => {
   if (
     mitxonlineProductPages &&
@@ -360,6 +352,12 @@ const getResourceUrl = (
       return videoDetailPageView(resource.id, Number(resource.playlists[0]))
     }
   }
+
+  if (showPodcastPage) {
+    if (resource.resource_type === ResourceTypeEnum.Podcast) {
+      return podcastPageView(resource.id.toString())
+    }
+  }
   return resource.url
 }
 
@@ -393,6 +391,7 @@ const CallToActionSection = ({
   const showVideoPlaylistPage = useFeatureFlagEnabled(
     FeatureFlags.VideoPlaylistPage,
   )
+  const showPodcastPage = useFeatureFlagEnabled(FeatureFlags.PodcastDetailPage)
 
   if (hide) {
     return null
@@ -419,7 +418,11 @@ const CallToActionSection = ({
   const shareLabel = "Share"
   const socialIconSize = 18
   const url = appendUtmParams(
-    getResourceUrl(resource, { mitxonlineProductPages, showVideoPlaylistPage }),
+    getResourceUrl(resource, {
+      mitxonlineProductPages,
+      showVideoPlaylistPage,
+      showPodcastPage,
+    }),
     resource.title,
   )
 
@@ -428,9 +431,10 @@ const CallToActionSection = ({
       <ImageSection resource={resource} config={imgConfig} />
       <ActionsContainer>
         <StyledLink
-          target="_blank"
+          {...externalLinkProps(url, {
+            endIcon: <RiExternalLinkLine />,
+          })}
           size="medium"
-          endIcon={<RiExternalLinkLine />}
           href={url}
           onClick={() => {
             if (process.env.NEXT_PUBLIC_POSTHOG_API_KEY) {

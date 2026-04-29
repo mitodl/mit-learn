@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from learning_resources.constants import (
+    CONTENT_TYPE_PAGE,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     VIDEO_CONTENT_CATEGORIES,
     LearningResourceDelivery,
@@ -1034,7 +1035,7 @@ def load_learning_materials(
         learning_material_tags = set(
             content_file.content_tags.values_list("name", flat=True)
         ) & set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
-        if learning_material_tags:
+        if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)
             )

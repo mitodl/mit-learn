@@ -136,6 +136,36 @@ function hexToRgba(hex: string, alpha: number): string | undefined {
 const isOcwPlaylist = (resource: VideoPlaylistResource | undefined) =>
   resource?.offered_by?.code === "ocw" ? true : false
 
+const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
+
+/**
+ * Returns `{ target: "_blank", rel: "noopener noreferrer", ...extra }` for URLs
+ * whose origin differs from NEXT_PUBLIC_ORIGIN, or `{}` for internal / relative
+ * URLs. Pass `extra` to include additional props only for external links (e.g.,
+ * an endIcon).
+ */
+function externalLinkProps(href: string): {
+  target?: "_blank"
+  rel?: "noopener noreferrer"
+}
+function externalLinkProps<T extends Record<string, unknown>>(
+  href: string,
+  extra: T,
+):
+  | ({ target?: "_blank"; rel?: "noopener noreferrer" } & T)
+  | Record<string, never>
+function externalLinkProps(href: string, extra?: Record<string, unknown>) {
+  try {
+    const parsed = new URL(href, ORIGIN)
+    if (ORIGIN && parsed.origin === new URL(ORIGIN).origin) {
+      return {}
+    }
+  } catch {
+    return {}
+  }
+  return { target: "_blank", rel: "noopener noreferrer", ...extra }
+}
+
 export {
   isInEnum,
   matchOrganizationBySlug,
@@ -144,4 +174,5 @@ export {
   convertToEmbedUrl,
   hexToRgba,
   isOcwPlaylist,
+  externalLinkProps,
 }

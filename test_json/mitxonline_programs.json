@@ -1,5 +1,5 @@
 {
-  "count": 9,
+  "count": 2,
   "next": null,
   "previous": null,
   "results": [
@@ -83,7 +83,8 @@
         "page_url": "/programs/program-v1:MITxT+18.03x/",
         "financial_assistance_form_url": "",
         "description": "\u003Cp data-block-key=\"38wzq\"\u003EScientists and engineers understand the world through differential equations. You can too.\u003C/p\u003E",
-        "live": false,
+        "live": true,
+        "include_in_learn_catalog": true,
         "length": "14 weeks",
         "effort": "7 hrs/wk",
         "price": "$175"
@@ -97,7 +98,7 @@
           "name": "Mathematics"
         }
       ],
-      "live": false,
+      "live": true,
       "topics": [
         {
           "name": "Mathematics"
@@ -114,6 +115,123 @@
       "time_commitment": "5-7 hrs/wk",
       "min_weekly_hours": "5",
       "max_weekly_hours": "7",
+      "enrollment_modes": [
+        { "mode_slug": "verified" },
+        { "mode_slug": "audit" }
+      ]
+    },
+    {
+      "title": "8.02x Electricity and Magnetism",
+      "readable_id": "program-v1:MITxT+8.02x",
+      "id": 6,
+      "courses": [81, 82, 83],
+      "requirements": {
+        "required": [81, 82, 83],
+        "electives": []
+      },
+      "req_tree": [
+        {
+          "data": {
+            "node_type": "program_root",
+            "operator": null,
+            "operator_value": null,
+            "program": 6,
+            "course": null,
+            "title": "",
+            "elective_flag": false
+          },
+          "id": 46,
+          "children": [
+            {
+              "data": {
+                "node_type": "operator",
+                "operator": "all_of",
+                "operator_value": null,
+                "program": 6,
+                "course": null,
+                "title": "Required Courses",
+                "elective_flag": false
+              },
+              "id": 47,
+              "children": [
+                {
+                  "data": {
+                    "node_type": "course",
+                    "operator": null,
+                    "operator_value": null,
+                    "program": 6,
+                    "course": 81,
+                    "title": null,
+                    "elective_flag": false
+                  },
+                  "id": 48
+                },
+                {
+                  "data": {
+                    "node_type": "course",
+                    "operator": null,
+                    "operator_value": null,
+                    "program": 6,
+                    "course": 82,
+                    "title": null,
+                    "elective_flag": false
+                  },
+                  "id": 49
+                },
+                {
+                  "data": {
+                    "node_type": "course",
+                    "operator": null,
+                    "operator_value": null,
+                    "program": 6,
+                    "course": 83,
+                    "title": null,
+                    "elective_flag": false
+                  },
+                  "id": 50
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "page": {
+        "feature_image_src": "/static/images/mitx-labs.png",
+        "page_url": "/programs/program-v1:MITxT+8.02x/",
+        "financial_assistance_form_url": "",
+        "description": "\u003Cp data-block-key=\"2f4sq\"\u003EExplore the core ideas of electricity and magnetism through theory and practical examples.\u003C/p\u003E",
+        "live": true,
+        "include_in_learn_catalog": false,
+        "length": "10 weeks",
+        "effort": "6 hrs/wk",
+        "price": "$149"
+      },
+      "min_price": 990,
+      "max_price": 1990,
+      "program_type": "Series",
+      "certificate_type": "Certificate of Completion",
+      "departments": [
+        {
+          "name": "Physics"
+        }
+      ],
+      "live": true,
+      "topics": [
+        {
+          "name": "Physics"
+        }
+      ],
+      "availability": "dated",
+      "start_date": "2025-09-15T00:00:00Z",
+      "end_date": "2025-12-01T00:00:00Z",
+      "enrollment_start": "2025-08-01T00:00:00Z",
+      "enrollment_end": "2025-10-15T00:00:00Z",
+      "duration": "9-10 weeks",
+      "min_weeks": 9,
+      "max_weeks": 10,
+      "time_commitment": "4-6 hrs/wk",
+      "min_weekly_hours": "4",
+      "max_weekly_hours": "6",
       "enrollment_modes": [
         { "mode_slug": "verified" },
         { "mode_slug": "audit" }

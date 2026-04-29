@@ -13,6 +13,14 @@ import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
 import moment from "moment"
+import NiceModal from "@ebay/nice-modal-react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { UnenrollProgramDialog } from "./DashboardDialogs"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 describe("ProgramAsCourseCard", () => {
   setupLocationMock()
@@ -362,6 +370,170 @@ describe("ProgramAsCourseCard", () => {
     })
     expect(
       screen.queryByRole("dialog", { name: moduleWithRun.title }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("displays certificate button when program enrollment has a certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const certUuid = "test-certificate-uuid-123"
+    const programEnrollmentWithCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: {
+        uuid: certUuid,
+        link: `/certificate/program/${certUuid}/`,
+      },
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithCert}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const certButton = screen.getByRole("link", { name: "Certificate" })
+    const expectedCertHref = programEnrollmentWithCert.certificate.link.replace(
+      /\/$/,
+      "",
+    )
+    expect(certButton).toBeInTheDocument()
+    expect(certButton).toHaveAttribute("href", expectedCertHref)
+    expect(certButton).not.toHaveAttribute("target")
+  })
+
+  test("does not display certificate button when program enrollment has no certificate", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollmentNoCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentNoCert}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const certButton = screen.queryByRole("link", { name: "Certificate" })
+    expect(certButton).not.toBeInTheDocument()
+  })
+
+  test("shows legacy details link in context menu when product pages flag is disabled", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+    const detailsLink = await screen.findByRole("menuitem", {
+      name: "View Course Details",
+    })
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      expect.stringContaining(
+        `/programs/${cardData.courseProgram.readable_id}`,
+      ),
+    )
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      expect.stringContaining("ecom-service=true"),
+    )
+  })
+
+  test("shows product-page details link in context menu when product pages flag is enabled", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+    const detailsLink = await screen.findByRole("menuitem", {
+      name: "View Course Details",
+    })
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      `/courses/p/${cardData.courseProgram.readable_id}`,
+    )
+  })
+
+  test("clicking Unenroll menu item opens UnenrollProgramDialog with readable_id", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    cardData.courseProgramEnrollment.enrollment_mode = "audit"
+    const modalShowSpy = jest.spyOn(NiceModal, "show")
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+
+    expect(modalShowSpy).toHaveBeenCalledWith(UnenrollProgramDialog, {
+      title: cardData.courseProgram.title,
+      enrollment: cardData.courseProgram.readable_id,
+    })
+    modalShowSpy.mockRestore()
+  })
+
+  test("does not show Unenroll option in context menu for verified enrollment", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    cardData.courseProgramEnrollment.enrollment_mode = "verified"
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findByText(cardData.courseProgram.title)
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Unenroll" }),
     ).not.toBeInTheDocument()
   })
 })

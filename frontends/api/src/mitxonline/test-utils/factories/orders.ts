@@ -13,6 +13,7 @@ const transactionLine = (
   total_paid: faker.commerce.price({ min: 50, max: 500 }),
   discount: "0.00",
   price: faker.commerce.price({ min: 50, max: 500 }),
+  content_type: "",
   ...overrides,
 })
 

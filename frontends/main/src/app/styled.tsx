@@ -11,11 +11,12 @@ import { styled, HEADER_HEIGHT, HEADER_HEIGHT_MD } from "ol-components"
 export const PageWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+  minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
   marginTop: HEADER_HEIGHT,
+  paddingBottom: "var(--mit-player-height, 0px)",
   [theme.breakpoints.down("md")]: {
     marginTop: HEADER_HEIGHT_MD,
-    height: `calc(100vh - ${HEADER_HEIGHT_MD}px)`,
+    minHeight: `calc(100vh - ${HEADER_HEIGHT_MD}px)`,
   },
 }))
 

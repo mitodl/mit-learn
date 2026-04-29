@@ -180,6 +180,9 @@ export {
 
 export { AppRouterCacheProvider as NextJsAppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
 
+export { default as useMediaQuery } from "@mui/material/useMediaQuery"
+export type { Theme } from "@mui/material/styles"
+
 // /**
 //  * @deprecated Please use component from @mitodl/smoot-design instead
 //  */

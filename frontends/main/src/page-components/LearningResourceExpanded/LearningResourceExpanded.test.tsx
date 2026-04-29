@@ -104,21 +104,6 @@ describe("Learning Resource Expanded", () => {
     },
   )
 
-  test("Renders card and title for youtube videos", () => {
-    const resource = factories.learningResources.resource({
-      resource_type: ResourceTypeEnum.Video,
-      platform: { code: "youtube" },
-    })
-
-    setup({ resource })
-
-    const embedlyCard = screen.getByTestId("embedly-card")
-    invariant(embedlyCard)
-    expect(embedlyCard).toHaveAttribute("href", resource.url)
-
-    screen.getByText(resource.title)
-  })
-
   test("Sets lang attribute on title and description", () => {
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Course,
