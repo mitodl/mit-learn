@@ -5,14 +5,19 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { Typography, styled, theme, Skeleton, Breadcrumbs } from "ol-components"
+import { Typography, styled, theme, Skeleton } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { RiShareForwardFill, RiPlayCircleFill } from "@remixicon/react"
+import {
+  SkipLinksNav,
+  SkipLink,
+  StyledBreadcrumbs,
+  NoVideoMessage,
+} from "./shared.styled"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
   learningResourceQueries,
-  videoPlaylistQueries,
 } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
@@ -37,43 +42,12 @@ const PageWrapper = styled.div({
   minHeight: "100vh",
 })
 
-const SkipLinksNav = styled.nav({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  zIndex: 1000,
-})
-
-const SkipLink = styled.a(({ theme }) => ({
-  position: "absolute",
-  left: "-9999px",
-  top: "auto",
-  width: 1,
-  height: 1,
-  overflow: "hidden",
-  backgroundColor: theme.custom.colors.white,
-  color: theme.custom.colors.black,
-  padding: "8px 12px",
-  border: `2px solid ${theme.custom.colors.red}`,
-  textDecoration: "none",
-  "&:focus": {
-    left: "16px",
-    top: "16px",
-    width: "auto",
-    height: "auto",
-  },
-}))
-
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "32px 0 16px 0",
   borderBottom: `2px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     padding: "16px 0 0 0",
   },
-}))
-
-const StyledBreadcrumbs = styled(Breadcrumbs)(() => ({
-  "& > span > span": { paddingBottom: 0, paddingLeft: "4px" },
 }))
 
 const PlayIcon = styled(RiPlayCircleFill)({
@@ -151,16 +125,6 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     borderRadius: "50% !important",
   },
 }))
-
-const NoVideoMessage = styled.div({
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "rgba(255,255,255,0.5)",
-  fontSize: 14,
-})
 
 const DescriptionText = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
@@ -390,11 +354,15 @@ const ScreenReaderOnly = styled.span({
 type VideoDetailPageProps = {
   videoId: number
   playlistId: number | null
+  playlistData?: VideoPlaylistResource
+  playlistLoading: boolean
 }
 
 const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   videoId,
   playlistId,
+  playlistData,
+  playlistLoading,
 }) => {
   const [shareOpen, setShareOpen] = useState(false)
   const shareButtonRef = useRef<HTMLButtonElement>(null)
@@ -402,11 +370,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const { data: resource, isLoading: videoLoading } =
     useLearningResourcesDetail(videoId)
-
-  const { data: playlistData, isLoading: playlistLoading } = useQuery({
-    ...videoPlaylistQueries.detail(playlistId ?? 0),
-    enabled: !!playlistId,
-  })
 
   const { data: playlistItems, isLoading: itemsLoading } = useQuery({
     ...learningResourceQueries.items(playlistId ?? 0, {

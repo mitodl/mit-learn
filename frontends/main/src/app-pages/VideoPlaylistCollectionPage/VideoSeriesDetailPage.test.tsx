@@ -1,0 +1,542 @@
+import React from "react"
+import { setMockResponse, urls, factories } from "api/test-utils"
+import { renderWithProviders, screen } from "@/test-utils"
+import { notFound } from "next/navigation"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
+import { ResourceTypeEnum } from "api/v1"
+import type { VideoResource, VideoPlaylistResource } from "api/v1"
+
+jest.mock("posthog-js/react")
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlagsLoaded")
+const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
+
+jest.mock("next-nprogress-bar", () => ({
+  useRouter: () => ({}),
+}))
+
+// Stub VideoJsPlayer to avoid loading video.js in the test environment
+jest.mock("./VideoJsPlayer", () => ({
+  __esModule: true,
+  default: (props: { ariaLabel?: string }) => (
+    <div data-testid="video-js-player" aria-label={props.ariaLabel} />
+  ),
+}))
+
+// ── Factories ────────────────────────────────────────────────────────────────
+
+const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
+  factories.learningResources.video({
+    resource_type: ResourceTypeEnum.Video,
+    ...overrides,
+  }) as VideoResource
+
+const makePlaylist = (
+  overrides: Partial<VideoPlaylistResource> = {},
+): VideoPlaylistResource =>
+  factories.learningResources.videoPlaylist(overrides) as VideoPlaylistResource
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+
+const setupVideoApi = (video: VideoResource) => {
+  setMockResponse.get(urls.learningResources.details({ id: video.id }), video)
+}
+
+const setupItemsApi = (playlistId: number, items: VideoResource[]) => {
+  setMockResponse.get(urls.learningResources.items({ id: playlistId }), {
+    count: items.length,
+    next: null,
+    previous: null,
+    results: items.map((item, i) => ({
+      id: i + 1,
+      child: item.id,
+      parent: playlistId,
+      position: i + 1,
+      resource: item,
+    })),
+  })
+}
+
+// ── Default render helper ────────────────────────────────────────────────────
+
+type RenderOptions = {
+  video?: VideoResource
+  playlistId?: number | null
+  playlistData?: VideoPlaylistResource
+  playlistLoading?: boolean
+  playlistItems?: VideoResource[]
+}
+
+const renderPage = ({
+  video = makeVideo(),
+  playlistId = null,
+  playlistData = undefined,
+  playlistLoading = false,
+  playlistItems = [],
+}: RenderOptions = {}) => {
+  setupVideoApi(video)
+  if (playlistId) {
+    setupItemsApi(playlistId, playlistItems)
+  }
+
+  return renderWithProviders(
+    <VideoSeriesDetailPage
+      videoId={video.id}
+      playlistId={playlistId}
+      playlistData={playlistData}
+      playlistLoading={playlistLoading}
+    />,
+  )
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+describe("VideoSeriesDetailPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+  })
+
+  describe("feature-flag gating", () => {
+    test("calls notFound when VideoPlaylistPage flag is disabled and flags are loaded", () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+
+      renderPage()
+
+      expect(notFound).toHaveBeenCalled()
+    })
+
+    test("does not call notFound when the flag is enabled", () => {
+      renderPage()
+      expect(notFound).not.toHaveBeenCalled()
+    })
+
+    test("does not call notFound when the flag is undefined and flags are not yet loaded", () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+      mockedUseFeatureFlagsLoaded.mockReturnValue(false)
+
+      renderPage()
+
+      expect(notFound).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("video title and institution label", () => {
+    test("renders the video title once data is loaded", async () => {
+      const video = makeVideo({ title: "Introduction to Machine Learning" })
+      renderPage({ video })
+
+      await screen.findByRole("heading", {
+        name: "Introduction to Machine Learning",
+      })
+    })
+
+    test("renders the institution label from the video department", async () => {
+      const video = makeVideo({
+        departments: [
+          factories.learningResources.department({
+            department_id: "eecs",
+            name: "Electrical Engineering and Computer Science",
+          }),
+        ],
+      })
+      renderPage({ video })
+
+      await screen.findByText("ELECTRICAL ENGINEERING AND COMPUTER SCIENCE")
+    })
+
+    test("renders the institution label from offered_by when no department", async () => {
+      const playlist = makePlaylist({
+        offered_by: {
+          code: "ocw",
+          name: "MIT OpenCourseWare",
+          channel_url: null,
+        },
+      })
+      const video = makeVideo({ departments: [] })
+      renderPage({ video, playlistId: playlist.id, playlistData: playlist })
+
+      await screen.findByText("MIT OPENCOURSEWARE")
+    })
+  })
+
+  describe("breadcrumbs", () => {
+    test("renders a home breadcrumb link", async () => {
+      const video = makeVideo()
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      const homeLink = screen.getByRole("link", { name: "Home" })
+      expect(homeLink).toBeInTheDocument()
+    })
+
+    test("includes a playlist breadcrumb when playlistId is provided", async () => {
+      const playlist = makePlaylist({ title: "Neural Networks Series" })
+      const video = makeVideo()
+      renderPage({
+        video,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [video],
+      })
+
+      await screen.findByRole("heading", { name: video.title })
+      // Both the breadcrumb and the SeriesNavBar link point to the playlist page
+      const playlistLinks = screen.getAllByRole("link", {
+        name: "Neural Networks Series",
+      })
+      expect(playlistLinks.length).toBeGreaterThanOrEqual(1)
+      expect(playlistLinks[0]).toHaveAttribute(
+        "href",
+        `/video-playlist/${playlist.id}`,
+      )
+    })
+
+    test("does not include a playlist breadcrumb when no playlistId", async () => {
+      const playlist = makePlaylist({ title: "Neural Networks Series" })
+      const video = makeVideo()
+      renderPage({ video, playlistData: playlist, playlistId: null })
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(
+        screen.queryByRole("link", { name: "Neural Networks Series" }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("series nav bar", () => {
+    test("renders the series nav bar when playlistId is provided", async () => {
+      const playlist = makePlaylist({ title: "Intro to AI" })
+      const video = makeVideo()
+      renderPage({
+        video,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [video],
+      })
+
+      await screen.findByRole("link", { name: "Intro to AI" })
+    })
+
+    test("does not render the series nav bar when no playlistId", async () => {
+      const playlist = makePlaylist({ title: "Intro to AI" })
+      const video = makeVideo()
+      renderPage({ video, playlistData: playlist, playlistId: null })
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(
+        screen.queryByRole("link", { name: "Intro to AI" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("renders video position label when part of a playlist", async () => {
+      const playlist = makePlaylist({ title: "ML Basics" })
+      const [first, second, third] = [
+        makeVideo({ title: "Lecture 1" }),
+        makeVideo({ title: "Lecture 2" }),
+        makeVideo({ title: "Lecture 3" }),
+      ]
+      renderPage({
+        video: second,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [first, second, third],
+      })
+
+      await screen.findByText("Video 2 of 3")
+    })
+
+    test("renders a Previous link pointing to the prev video", async () => {
+      const playlist = makePlaylist()
+      const prev = makeVideo({ title: "Part 1" })
+      const current = makeVideo({ title: "Part 2" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [prev, current],
+      })
+
+      const prevLink = await screen.findByRole("link", {
+        name: /Previous: Part 1/i,
+      })
+      expect(prevLink).toHaveAttribute(
+        "href",
+        `/video-playlist/detail/${prev.id}?playlist=${playlist.id}`,
+      )
+    })
+
+    test("renders a Next link pointing to the next video", async () => {
+      const playlist = makePlaylist()
+      const current = makeVideo({ title: "Part 1" })
+      const next = makeVideo({ title: "Part 2" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [current, next],
+      })
+
+      const nextLink = await screen.findByRole("link", {
+        name: /Next: Part 2/i,
+      })
+      expect(nextLink).toHaveAttribute(
+        "href",
+        `/video-playlist/detail/${next.id}?playlist=${playlist.id}`,
+      )
+    })
+
+    test("does not render a Previous link for the first video in a playlist", async () => {
+      const playlist = makePlaylist()
+      const first = makeVideo({ title: "First Video" })
+      const second = makeVideo()
+      renderPage({
+        video: first,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [first, second],
+      })
+
+      await screen.findByText(/Video 1 of 2/)
+      expect(
+        screen.queryByRole("link", { name: /Previous/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("does not render a Next link for the last video in a playlist", async () => {
+      const playlist = makePlaylist()
+      const first = makeVideo()
+      const last = makeVideo({ title: "Last Video" })
+      renderPage({
+        video: last,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [first, last],
+      })
+
+      await screen.findByText(/Video 2 of 2/)
+      expect(
+        screen.queryByRole("link", { name: /Next/i }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("Up Next section", () => {
+    test("renders Up Next with a Continue button when there is a next video", async () => {
+      const playlist = makePlaylist()
+      const current = makeVideo({ title: "Episode 1" })
+      const next = makeVideo({ title: "Episode 2" })
+      renderPage({
+        video: current,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [current, next],
+      })
+
+      await screen.findByText("Up Next")
+      expect(screen.getByText("Episode 2")).toBeInTheDocument()
+      expect(
+        screen.getByRole("link", { name: /Continue/i }),
+      ).toBeInTheDocument()
+    })
+
+    test("does not render Up Next section when the current video is the last", async () => {
+      const playlist = makePlaylist()
+      const first = makeVideo()
+      const last = makeVideo({ title: "Final Episode" })
+      renderPage({
+        video: last,
+        playlistId: playlist.id,
+        playlistData: playlist,
+        playlistItems: [first, last],
+      })
+
+      await screen.findByRole("heading", { name: last.title })
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument()
+    })
+
+    test("does not render Up Next section when there is no playlist", async () => {
+      const video = makeVideo()
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(screen.queryByText("Up Next")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("description", () => {
+    test("renders the video description when present", async () => {
+      const video = makeVideo({
+        description: "A deep dive into transformer architecture.",
+      })
+      renderPage({ video })
+
+      await screen.findByText("A deep dive into transformer architecture.")
+    })
+
+    test("renders an accessible description placeholder when description is absent", async () => {
+      const video = makeVideo({ description: "", title: "My Video" })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: "My Video" })
+      // When description is absent the component renders a screen-reader-only
+      // element in its place so aria-describedby still resolves
+      const descEl = document.getElementById("video-description")
+      expect(descEl).toBeInTheDocument()
+      expect(descEl?.textContent).toContain("My Video")
+    })
+  })
+
+  describe("topic chips", () => {
+    test("renders topic chip links for each topic", async () => {
+      const video = makeVideo({
+        topics: [
+          { id: 1, name: "Machine Learning", parent: 10, channel_url: null },
+          { id: 2, name: "Statistics", parent: 11, channel_url: null },
+        ],
+      })
+      renderPage({ video })
+
+      const mlChip = await screen.findByRole("link", {
+        name: "Machine Learning",
+      })
+      const statsChip = screen.getByRole("link", { name: "Statistics" })
+      expect(mlChip).toHaveAttribute("href", "/search?topic=Machine%20Learning")
+      expect(statsChip).toHaveAttribute("href", "/search?topic=Statistics")
+    })
+
+    test("renders the Video Series heading when topics are present", async () => {
+      const video = makeVideo({
+        topics: [{ id: 1, name: "Robotics", parent: 5, channel_url: null }],
+      })
+      renderPage({ video })
+
+      await screen.findByText("Video Series")
+    })
+
+    test("does not render the Video Series section when there are no topics", async () => {
+      const video = makeVideo({ topics: [] })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(screen.queryByText("Video Series")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("video player", () => {
+    test("renders the video player when a streaming URL is present", async () => {
+      const video = makeVideo({
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "120",
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      await screen.findByTestId("video-js-player")
+    })
+
+    test("renders a fallback image when there is no video source but an image exists", async () => {
+      const video = makeVideo({
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: null,
+          duration: "",
+          cover_image_url: null,
+        },
+        url: null,
+        image: factories.learningResources.image({
+          url: "https://example.com/thumb.jpg",
+          alt: "thumbnail",
+          description: "",
+        }),
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      const img = await screen.findByAltText(/Video thumbnail for/)
+      expect(img).toBeInTheDocument()
+    })
+
+    test("renders 'No playable source' message when there is no source and no image", async () => {
+      const video = makeVideo({
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: null,
+          duration: "",
+          cover_image_url: null,
+        },
+        url: null,
+        image: null,
+      })
+      renderPage({ video })
+
+      // The visible NoVideoMessage div should be present
+      await screen.findByRole("alert")
+      const alert = screen.getByRole("alert")
+      expect(alert).toHaveTextContent(
+        "No playable source available for this video.",
+      )
+    })
+  })
+
+  describe("loading state", () => {
+    test("shows a loading status message while video data is loading", async () => {
+      const video = makeVideo()
+      // Mock the API but use an unresolved promise to keep the query in loading
+      setMockResponse.get(
+        urls.learningResources.details({ id: video.id }),
+        new Promise(() => {}), // never resolves → stays loading
+      )
+
+      renderWithProviders(
+        <VideoSeriesDetailPage
+          videoId={video.id}
+          playlistId={null}
+          playlistLoading={false}
+        />,
+      )
+
+      // The ScreenReaderOnly status span should show the loading message
+      const statusEl = document.querySelector(
+        "[role='status'][aria-atomic='true']",
+      )
+      expect(statusEl).toHaveTextContent("Loading video details and player")
+    })
+
+    test("shows loaded status message once data arrives", async () => {
+      const video = makeVideo()
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      const statusEl = document.querySelector(
+        "[role='status'][aria-atomic='true']",
+      )
+      expect(statusEl).toHaveTextContent("Video details loaded")
+    })
+  })
+
+  describe("skip links", () => {
+    test("renders skip-to-main-content and skip-to-player links", async () => {
+      const video = makeVideo()
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      expect(
+        screen.getByRole("link", { name: "Skip to main content" }),
+      ).toHaveAttribute("href", "#video-detail-main")
+      expect(
+        screen.getByRole("link", { name: "Skip to video player" }),
+      ).toHaveAttribute("href", "#video-player-region")
+    })
+  })
+})
