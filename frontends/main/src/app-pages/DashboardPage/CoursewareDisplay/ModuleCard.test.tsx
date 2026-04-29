@@ -62,6 +62,7 @@ describe("ModuleCard context menu receipt item", () => {
     expect(windowOpenSpy).toHaveBeenCalledWith(
       mitxonlineLegacyUrl("/orders/receipt/by-run/42/"),
       "_blank",
+      "noopener,noreferrer",
     )
     windowOpenSpy.mockRestore()
   })

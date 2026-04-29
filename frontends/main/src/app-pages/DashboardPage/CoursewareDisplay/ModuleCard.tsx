@@ -27,11 +27,11 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import {
   getCourseEnrollmentAction,
-  isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import { getReceiptMenuItem } from "./receiptMenuItem"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -227,21 +227,11 @@ const getContextMenuItems = (
       },
     )
 
-    if (isVerifiedEnrollmentMode(resource.data.enrollment_mode)) {
-      courseMenuItems.push({
-        className: "dashboard-card-menu-item",
-        key: "receipt",
-        label: "Receipt",
-        onClick: () => {
-          window.open(
-            mitxonlineLegacyUrl(
-              `/orders/receipt/by-run/${resource.data.run.id}/`,
-            ),
-            "_blank",
-          )
-        },
-      })
-    }
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-run/${resource.data.run.id}/`,
+    )
+    if (receiptMenuItem) courseMenuItems.push(receiptMenuItem)
 
     menuItems.push(...courseMenuItems)
   }

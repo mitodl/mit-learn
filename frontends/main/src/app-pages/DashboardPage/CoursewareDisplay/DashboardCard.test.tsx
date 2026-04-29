@@ -2037,6 +2037,7 @@ describe.each([
       expect(windowOpenSpy).toHaveBeenCalledWith(
         mitxonlineLegacyUrl("/orders/receipt/by-run/42/"),
         "_blank",
+        "noopener,noreferrer",
       )
       windowOpenSpy.mockRestore()
     })
@@ -2133,6 +2134,7 @@ describe.each([
       expect(windowOpenSpy).toHaveBeenCalledWith(
         mitxonlineLegacyUrl("/orders/receipt/by-program/99/"),
         "_blank",
+        "noopener,noreferrer",
       )
       windowOpenSpy.mockRestore()
     })

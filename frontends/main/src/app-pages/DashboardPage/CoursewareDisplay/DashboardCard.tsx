@@ -21,6 +21,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { getReceiptMenuItem } from "./receiptMenuItem"
 import {
   EmailSettingsDialog,
   JustInTimeDialog,
@@ -37,9 +38,9 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
-  mitxonlineLegacyUrl,
   getCourseEnrollmentAction,
   isVerifiedEnrollmentMode,
+  mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
@@ -216,19 +217,11 @@ const getContextMenuItems = (
       })
     }
 
-    if (isVerifiedEnrollmentMode(resource.data.enrollment_mode)) {
-      menuItems.push({
-        className: "dashboard-card-menu-item",
-        key: "receipt",
-        label: "Receipt",
-        onClick: () => {
-          window.open(
-            mitxonlineLegacyUrl(`/orders/receipt/by-program/${program.id}/`),
-            "_blank",
-          )
-        },
-      })
-    }
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-program/${program.id}/`,
+    )
+    if (receiptMenuItem) menuItems.push(receiptMenuItem)
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
     const detailsUrl = useProductPages
@@ -268,21 +261,11 @@ const getContextMenuItems = (
       },
     )
 
-    if (isVerifiedEnrollmentMode(resource.data.enrollment_mode)) {
-      courseMenuItems.push({
-        className: "dashboard-card-menu-item",
-        key: "receipt",
-        label: "Receipt",
-        onClick: () => {
-          window.open(
-            mitxonlineLegacyUrl(
-              `/orders/receipt/by-run/${resource.data.run.id}/`,
-            ),
-            "_blank",
-          )
-        },
-      })
-    }
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-run/${resource.data.run.id}/`,
+    )
+    if (receiptMenuItem) courseMenuItems.push(receiptMenuItem)
 
     menuItems.push(...courseMenuItems)
   }
