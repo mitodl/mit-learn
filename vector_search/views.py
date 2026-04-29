@@ -265,7 +265,7 @@ class QdrantView(APIView):
                 break
         return search_result[:limit]
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def _async_vector_hits(  # noqa: PLR0913
         self,
         query_string: str,
         params: dict,
@@ -277,6 +277,9 @@ class QdrantView(APIView):
         *,
         hybrid_search: bool = False,
     ):
+        """
+        Execute vector search and return hydrated hits
+        """
         client = async_qdrant_client()
         encoder_dense = dense_encoder()
         encoder_sparse = sparse_encoder()
@@ -338,15 +341,26 @@ class QdrantView(APIView):
                 order_by,
             )
 
-        hits_coroutine = (
-            sync_to_async(_resource_vector_hits)(search_result)
-            if search_collection == RESOURCES_COLLECTION_NAME
-            else sync_to_async(_content_file_vector_hits)(search_result)
-        )
+        if search_collection == RESOURCES_COLLECTION_NAME:
+            return await sync_to_async(_resource_vector_hits)(search_result)
+        else:
+            return await sync_to_async(_content_file_vector_hits)(search_result)
 
+    async def _async_vector_counts(
+        self,
+        params: dict,
+        search_collection=RESOURCES_COLLECTION_NAME,
+    ):
+        """
+        Compute total count and aggregations/facets
+        """
+        client = async_qdrant_client()
+        search_filter = qdrant_query_conditions(
+            params, collection_name=search_collection
+        )
         aggregation_keys = params.get("aggregations") or []
-        hits, count_result, aggregations = await asyncio.gather(
-            hits_coroutine,
+
+        count_result, aggregations = await asyncio.gather(
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
@@ -360,9 +374,42 @@ class QdrantView(APIView):
         )
 
         return {
-            "hits": hits,
             "total": {"value": count_result.count},
             "aggregations": aggregations or {},
+        }
+
+    async def async_vector_search(  # noqa: PLR0913
+        self,
+        query_string: str,
+        params: dict,
+        order_by: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+        search_collection=RESOURCES_COLLECTION_NAME,
+        score_cutoff: float = 0,
+        *,
+        hybrid_search: bool = False,
+    ):
+        hits, counts = await asyncio.gather(
+            self._async_vector_hits(
+                query_string,
+                params,
+                order_by=order_by,
+                limit=limit,
+                offset=offset,
+                search_collection=search_collection,
+                score_cutoff=score_cutoff,
+                hybrid_search=hybrid_search,
+            ),
+            self._async_vector_counts(
+                params,
+                search_collection=search_collection,
+            ),
+        )
+
+        return {
+            "hits": hits,
+            **counts,
         }
 
     def handle_exception(self, exc):
