@@ -3,11 +3,10 @@ Validate that our settings functions work
 """
 
 import importlib
-import sys
-from unittest import mock
-
 import re
+import sys
 import tomllib
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -170,7 +169,7 @@ class TestSettings(TestCase):
             pyproject = tomllib.load(f)
         version_pattern = pyproject["tool"]["bumpversion"]["parse"]
         package_version = pyproject["project"]["version"]
-        assert settings.VERSION == package_version
+        assert package_version == settings.VERSION
         assert re.fullmatch(version_pattern, settings.VERSION)
 
     def test_required_settings(self):
