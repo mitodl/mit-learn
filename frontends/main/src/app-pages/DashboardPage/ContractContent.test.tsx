@@ -1289,6 +1289,186 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Second extra content")).toBeNull()
   })
 
+  test("program language picker switches card title", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Module in English",
+      courseware_id: "cw-program-en",
+      courseware_url: "https://openedx.example.com/program-english",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Modulo en Espanol",
+      courseware_id: "cw-program-es",
+      courseware_url: "https://openedx.example.com/program-spanish",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: englishRun.id,
+          courseware_id: englishRun.courseware_id,
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: spanishRun.id,
+          courseware_id: spanishRun.courseware_id,
+          language: "es",
+          title: spanishRun.title,
+          run_tag: spanishRun.run_tag,
+        },
+      ],
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    const root = within(await screen.findByTestId("org-program-root"))
+    const languageSelect = await root.findByRole("combobox")
+    expect(languageSelect).toHaveTextContent("English")
+
+    const card = await root.findByTestId("enrollment-card-desktop")
+    expect(card).toHaveTextContent("Module in English")
+
+    await user.click(languageSelect)
+    await user.click(await screen.findByRole("option", { name: "Español" }))
+
+    await waitFor(() => {
+      expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
+        "Modulo en Espanol",
+      )
+    })
+  })
+
+  test("collection language picker switches card title", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English",
+      courseware_id: "cw-collection-en",
+      courseware_url: "https://openedx.example.com/collection-english",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection Espanol",
+      courseware_id: "cw-collection-es",
+      courseware_url: "https://openedx.example.com/collection-spanish",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: englishRun.id,
+          courseware_id: englishRun.courseware_id,
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: spanishRun.id,
+          courseware_id: spanishRun.courseware_id,
+          language: "es",
+          title: spanishRun.title,
+          run_tag: spanishRun.run_tag,
+        },
+      ],
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [localizedCourse.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [localizedCourse] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    const collectionRoot = await screen.findByTestId(
+      "org-program-collection-root",
+    )
+    const collection = within(collectionRoot)
+
+    const languageSelect = await collection.findByRole("combobox")
+    expect(languageSelect).toHaveTextContent("English")
+
+    const card = await collection.findByTestId("enrollment-card-desktop")
+    expect(card).toHaveTextContent("Collection English")
+
+    await user.click(languageSelect)
+    await user.click(await screen.findByRole("option", { name: "Español" }))
+
+    await waitFor(() => {
+      expect(
+        collection.getByTestId("enrollment-card-desktop"),
+      ).toHaveTextContent("Collection Espanol")
+    })
+  })
+
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 

@@ -29,12 +29,13 @@ import {
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import {
+  enrollmentQueries,
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
@@ -259,12 +260,15 @@ const getContextMenuItems = (
   return [...menuItems, ...additionalItems]
 }
 
-const getTitle = (resource: DashboardResource): string => {
+const getTitle = (
+  resource: DashboardResource,
+  selectedCourseRun?: CourseRunV2 | null,
+): string => {
   if (resource.type === DashboardType.Course) {
-    return resource.data.title
+    return selectedCourseRun?.title ?? resource.data.title
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run.course.title
+    return resource.data.run.title
   }
   return resource.data.program.title
 }
@@ -297,6 +301,7 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 }
 
 const useEnrollmentHandler = () => {
+  const queryClient = useQueryClient()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
@@ -320,8 +325,19 @@ const useEnrollmentHandler = () => {
       programCoursewareId?: string
     }) => {
       if (isB2B) {
-        if (!readableId || !href) {
+        if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
+            readableId,
+            href,
+          })
+          return
+        }
+        const matchedRun = (course.courseruns ?? []).find(
+          (run) => run.courseware_id === readableId,
+        )
+        const destinationUrl = href ?? matchedRun?.courseware_url
+        if (!destinationUrl) {
+          console.warn("Cannot enroll in B2B course: missing destination URL", {
             readableId,
             href,
           })
@@ -333,15 +349,21 @@ const useEnrollmentHandler = () => {
 
         if (showJustInTimeDialog) {
           NiceModal.show(JustInTimeDialog, {
-            href,
+            href: destinationUrl,
             readableId,
           })
         } else {
           createB2bEnrollment.mutate(
             { readable_id: readableId },
             {
-              onSuccess: () => {
-                window.location.href = href
+              onSuccess: async () => {
+                const enrollments = await queryClient.fetchQuery(
+                  enrollmentQueries.courseRunEnrollmentsList(),
+                )
+                const enrolledUrl = enrollments.find(
+                  (enrollment) => enrollment.run.courseware_id === readableId,
+                )?.run.courseware_url
+                window.location.href = enrolledUrl ?? destinationUrl
               },
             },
           )
@@ -398,6 +420,7 @@ const useEnrollmentHandler = () => {
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
+      queryClient,
     ],
   )
 
@@ -674,6 +697,7 @@ type DashboardCardProps = {
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
+  selectedCourseRun?: CourseRunV2 | null
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -691,6 +715,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   contractId,
   programEnrollment,
   onUpgradeError,
+  selectedCourseRun,
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -698,10 +723,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     FeatureFlags.MitxOnlineProductPages,
   )
 
-  const title = getTitle(resource)
+  const title = getTitle(resource, selectedCourseRun)
   const courseRun =
     resource.type === DashboardType.Course
-      ? getBestRun(resource.data, { enrollableOnly: true, contractId })
+      ? (selectedCourseRun ??
+        getBestRun(resource.data, { enrollableOnly: true, contractId }))
       : undefined
   const enrollmentRun =
     resource.type === DashboardType.CourseRunEnrollment
@@ -730,7 +756,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const isContractPageResource = Boolean(b2bContractId)
 
   const hasEnrollableRuns = isCourse
-    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    ? (courseRun?.is_enrollable ?? false)
     : true
 
   const disableEnrollment = isCourse && !hasEnrollableRuns

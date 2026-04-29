@@ -14,6 +14,7 @@ import {
   Link,
   PlainList,
   Skeleton,
+  SimpleSelect,
   Stack,
   styled,
   Typography,
@@ -32,11 +33,14 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
+import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import {
-  ResourceType,
-  getKey,
-  selectBestEnrollment,
-} from "./CoursewareDisplay/helpers"
+  getCourseRunForSelectedLanguage,
+  getDistinctLanguageOptions,
+  getEnrollmentForSelectedLanguage,
+  getResolvedRunForSelectedLanguage,
+  getSelectedLanguageOption,
+} from "./CoursewareDisplay/languageOptions"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const HeaderRoot = styled.div({
@@ -195,6 +199,22 @@ const ProgramCollectionsList = styled(PlainList)({
   gap: "40px",
 })
 
+const ProgramControls = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "12px",
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
+const ProgramLanguageSelect = styled(SimpleSelect)(({ theme }) => ({
+  width: "120px",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
   programCollection: V2ProgramCollection,
@@ -258,12 +278,37 @@ const OrgProgramCollectionDisplay: React.FC<{
       collection.programs.find((p) => p.id === programId)?.order ?? Infinity
     courseIdToOrder.set(firstCourseId, order)
   })
-  const rawCourses =
-    courses.data?.results.sort((a, b) => {
-      const orderA = courseIdToOrder.get(a.id) ?? Infinity
-      const orderB = courseIdToOrder.get(b.id) ?? Infinity
-      return orderA - orderB
-    }) ?? []
+  const rawCourses = React.useMemo(
+    () =>
+      courses.data?.results.sort((a, b) => {
+        const orderA = courseIdToOrder.get(a.id) ?? Infinity
+        const orderB = courseIdToOrder.get(b.id) ?? Infinity
+        return orderA - orderB
+      }) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [courses.data?.results],
+  )
+  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
+  const languageOptions = React.useMemo(
+    () => getDistinctLanguageOptions(rawCourses),
+    [rawCourses],
+  )
+
+  useEffect(() => {
+    if (languageOptions.length === 0) {
+      if (selectedLanguageKey) {
+        setSelectedLanguageKey("")
+      }
+      return
+    }
+
+    const hasSelectedLanguage = languageOptions.some(
+      (option) => option.value === selectedLanguageKey,
+    )
+    if (!hasSelectedLanguage) {
+      setSelectedLanguageKey(String(languageOptions[0].value))
+    }
+  }, [languageOptions, selectedLanguageKey])
 
   const header = (
     <ProgramHeader>
@@ -273,6 +318,22 @@ const OrgProgramCollectionDisplay: React.FC<{
         </Typography>
         <ProgramDescription html={collection.description ?? ""} />
       </ProgramHeaderText>
+      {languageOptions.length > 0 && (
+        <ProgramControls>
+          <ProgramLanguageSelect
+            size="small"
+            value={selectedLanguageKey}
+            onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+            options={languageOptions}
+            renderValue={(value) => {
+              const selected = languageOptions.find(
+                (opt) => opt.value === value,
+              )
+              return String(selected?.label ?? "")
+            }}
+          />
+        </ProgramControls>
+      )}
     </ProgramHeader>
   )
 
@@ -310,14 +371,30 @@ const OrgProgramCollectionDisplay: React.FC<{
             />
           ))}
         {rawCourses.map((course) => {
+          const selectedLanguageOption = getSelectedLanguageOption(
+            course,
+            selectedLanguageKey,
+          )
+          const selectedRun = getCourseRunForSelectedLanguage(
+            course,
+            selectedLanguageKey,
+          )
           // Filter enrollments to only those matching this contract
           const contractEnrollments =
             enrollments?.filter(
               (enrollment) => enrollment.b2b_contract_id === contract.id,
             ) ?? []
-          const bestEnrollment = selectBestEnrollment(
-            course,
+          const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
             contractEnrollments,
+            selectedLanguageOption,
+            selectedRun,
+          )
+          const resolvedRun = getResolvedRunForSelectedLanguage(
+            course,
+            selectedLanguageOption,
+            selectedRun,
+            selectedLanguageEnrollment ?? null,
+            contract.id,
           )
           return (
             <DashboardCardStyled
@@ -325,19 +402,23 @@ const OrgProgramCollectionDisplay: React.FC<{
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: course.id,
-                runId: bestEnrollment?.run.id,
+                runId: selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
               })}
               resource={
-                bestEnrollment
+                selectedLanguageEnrollment
                   ? {
                       type: DashboardType.CourseRunEnrollment,
-                      data: bestEnrollment,
+                      data: selectedLanguageEnrollment,
                     }
                   : { type: DashboardType.Course, data: course }
               }
               noun="Module"
               offerUpgrade={false}
-              buttonHref={bestEnrollment?.run.courseware_url}
+              buttonHref={
+                selectedLanguageEnrollment?.run.courseware_url ??
+                resolvedRun?.courseware_url
+              }
+              selectedCourseRun={resolvedRun}
               contractId={contract.id}
             />
           )
@@ -377,10 +458,35 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
 
-  const courses =
-    coursesQuery.data?.results.sort((a, b) => {
-      return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
-    }) ?? []
+  const courses = React.useMemo(
+    () =>
+      coursesQuery.data?.results.sort((a, b) => {
+        return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
+      }) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [coursesQuery.data?.results, program.courses],
+  )
+  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
+  const languageOptions = React.useMemo(
+    () => getDistinctLanguageOptions(courses),
+    [courses],
+  )
+
+  useEffect(() => {
+    if (languageOptions.length === 0) {
+      if (selectedLanguageKey) {
+        setSelectedLanguageKey("")
+      }
+      return
+    }
+
+    const hasSelectedLanguage = languageOptions.some(
+      (option) => option.value === selectedLanguageKey,
+    )
+    if (!hasSelectedLanguage) {
+      setSelectedLanguageKey(String(languageOptions[0].value))
+    }
+  }, [languageOptions, selectedLanguageKey])
 
   return (
     <ProgramRoot data-testid="org-program-root">
@@ -391,29 +497,65 @@ const OrgProgramDisplay: React.FC<{
           </Typography>
           <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
-        {hasValidCertificate && (
-          <ProgramCertificateButton
-            size="small"
-            variant="bordered"
-            startIcon={<RiAwardFill />}
-            href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
-          >
-            View {program.program_type} Certificate
-          </ProgramCertificateButton>
-        )}
+        <ProgramControls>
+          {languageOptions.length > 0 && (
+            <>
+              <Typography variant="body3">Learning Language:</Typography>
+              <ProgramLanguageSelect
+                size="small"
+                value={selectedLanguageKey}
+                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+                options={languageOptions}
+                renderValue={(value) => {
+                  const selected = languageOptions.find(
+                    (opt) => opt.value === value,
+                  )
+                  return String(selected?.label ?? "")
+                }}
+              />
+            </>
+          )}
+          {hasValidCertificate && (
+            <ProgramCertificateButton
+              size="small"
+              variant="bordered"
+              startIcon={<RiAwardFill />}
+              href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
+            >
+              View {program.program_type} Certificate
+            </ProgramCertificateButton>
+          )}
+        </ProgramControls>
       </ProgramHeader>
       <PlainList>
         {programLoading || coursesQuery.isLoading
           ? skeleton
           : courses.map((course) => {
+              const selectedLanguageOption = getSelectedLanguageOption(
+                course,
+                selectedLanguageKey,
+              )
+              const selectedRun = getCourseRunForSelectedLanguage(
+                course,
+                selectedLanguageKey,
+              )
               // Filter enrollments to only those matching this contract
               const contractEnrollments =
                 courseRunEnrollments?.filter(
                   (enrollment) => enrollment.b2b_contract_id === contract?.id,
                 ) ?? []
-              const bestEnrollment = selectBestEnrollment(
+              const selectedLanguageEnrollment =
+                getEnrollmentForSelectedLanguage(
+                  contractEnrollments,
+                  selectedLanguageOption,
+                  selectedRun,
+                )
+              const resolvedRun = getResolvedRunForSelectedLanguage(
                 course,
-                contractEnrollments,
+                selectedLanguageOption,
+                selectedRun,
+                selectedLanguageEnrollment ?? null,
+                contract?.id,
               )
 
               return (
@@ -422,19 +564,24 @@ const OrgProgramDisplay: React.FC<{
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: course.id,
-                    runId: bestEnrollment?.run.id,
+                    runId:
+                      selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
                   })}
                   resource={
-                    bestEnrollment
+                    selectedLanguageEnrollment
                       ? {
                           type: DashboardType.CourseRunEnrollment,
-                          data: bestEnrollment,
+                          data: selectedLanguageEnrollment,
                         }
                       : { type: DashboardType.Course, data: course }
                   }
                   noun="Module"
                   offerUpgrade={false}
-                  buttonHref={bestEnrollment?.run.courseware_url}
+                  buttonHref={
+                    selectedLanguageEnrollment?.run.courseware_url ??
+                    resolvedRun?.courseware_url
+                  }
+                  selectedCourseRun={resolvedRun}
                   contractId={contract?.id}
                 />
               )
