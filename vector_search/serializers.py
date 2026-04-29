@@ -224,6 +224,11 @@ class LearningResourcesVectorSearchRequestSerializer(
         default=False,
         help_text="Whether to use a hybrid search",
     )
+    score_cutoff = serializers.FloatField(
+        required=False,
+        default=0.1,
+        help_text="The minimum score a result must have to be returned",
+    )
 
     def validate(self, attrs):
         return _validate_result_window(attrs)
