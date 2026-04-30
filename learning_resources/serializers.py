@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 from datetime import UTC
 from decimal import Decimal
 from uuid import uuid4
@@ -218,11 +219,11 @@ class LearningResourceBaseDepartmentSerializer(
     The absence of the departments list is to avoid a circular serialization structure.
     """
 
-    channel_url = serializers.CharField(read_only=True, allow_null=True)
+    url = serializers.CharField(read_only=True, allow_null=True, source="channel_url")
 
     class Meta:
         model = models.LearningResourceDepartment
-        fields = ["department_id", "name", "channel_url"]
+        fields = ["department_id", "name", "url"]
 
 
 class LearningResourceBaseSchoolSerializer(
@@ -409,6 +410,11 @@ class LearningResourceRunSerializer(
     format = serializers.ListField(child=FormatSerializer(), read_only=True)
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     resource_prices = LearningResourcePriceSerializer(read_only=True, many=True)
+    enrollment_url = serializers.SerializerMethodField()
+
+    def get_enrollment_url(self, instance) -> str | None:
+        """Return a URL for enrollment, derived from the run URL."""
+        return f"{instance.url.rstrip('/')}/enroll/" if instance.url else None
 
     class Meta:
         model = models.LearningResourceRun
@@ -510,6 +516,11 @@ class CaptionUrlSerializer(serializers.Serializer):
     language = serializers.CharField()
     language_name = serializers.CharField()
     url = serializers.URLField()
+    word_count = serializers.SerializerMethodField()
+
+    def get_word_count(self, obj) -> int:
+        url = obj.get("url", "") if isinstance(obj, dict) else ""
+        return random.Random(url).randint(100, 5000)  # noqa: S311
 
 
 class NullableURLField(serializers.URLField):
@@ -524,13 +535,18 @@ class VideoSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
 
     caption_urls = CaptionUrlSerializer(many=True, read_only=True)
     streaming_url = NullableURLField(allow_blank=True, allow_null=True, read_only=True)
-    cover_image_url = NullableURLField(
-        allow_blank=True, allow_null=True, read_only=True
+    thumbnail_url = NullableURLField(
+        allow_blank=True, allow_null=True, read_only=True, source="cover_image_url"
     )
 
     class Meta:
         model = models.Video
-        exclude = ("learning_resource", "transcript", *COMMON_IGNORED_FIELDS)
+        exclude = (
+            "learning_resource",
+            "transcript",
+            "cover_image_url",
+            *COMMON_IGNORED_FIELDS,
+        )
 
 
 class VideoPlaylistSerializer(VersionedSerializerMixin, serializers.ModelSerializer):

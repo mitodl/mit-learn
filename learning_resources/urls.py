@@ -139,8 +139,11 @@ v0_router.register(
 
 v0_urls = v0_router.urls
 
+v2_urls = v1_urls
+
 app_name = "lr"
 urlpatterns = [
+    re_path(r"^api/v2/", include((v2_urls, "v2"))),
     re_path(r"^api/v1/", include((v1_urls, "v1"))),
     re_path(r"^api/v0/", include((v0_urls, "v0"))),
     path("podcasts/rss_feed", views.podcast_rss_feed, name="podcast-rss-feed"),

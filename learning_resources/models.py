@@ -892,6 +892,7 @@ class Course(LearningResourceDetailModel):
         primary_key=True,
     )
     course_numbers = JSONField(null=True, blank=True)
+    credits_earned = models.FloatField(null=True, blank=True)
 
     @property
     def runs(self):

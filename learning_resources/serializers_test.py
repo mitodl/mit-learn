@@ -62,7 +62,8 @@ def test_serialize_course_to_json():
         {
             "course_numbers": serializers.CourseNumberSerializer(
                 instance=course.course_numbers, many=True
-            ).data
+            ).data,
+            "credits_earned": course.credits_earned,
         },
     )
 
@@ -431,6 +432,22 @@ def test_serialize_run_related_models():
     assert len(serializer.data["instructors"]) > 0
     for attr in ("first_name", "last_name", "full_name"):
         assert attr in serializer.data["instructors"][0]
+
+
+@pytest.mark.parametrize(
+    ("run_url", "expected"),
+    [
+        ("https://example.com/course", "https://example.com/course/enroll/"),
+        ("https://example.com/course/", "https://example.com/course/enroll/"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_run_serializer_enrollment_url(run_url, expected):
+    """enrollment_url is derived from the run url with a single trailing slash."""
+    run = factories.LearningResourceRunFactory.create(url=run_url)
+    serializer = serializers.LearningResourceRunSerializer(run)
+    assert serializer.data["enrollment_url"] == expected
 
 
 @pytest.mark.parametrize(

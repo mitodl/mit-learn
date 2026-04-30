@@ -22,6 +22,8 @@ docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:
 	generate -c scripts/openapi-configs/typescript-axios-v0.yaml
 docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:${GENERATOR_VERSION} \
 	generate -c scripts/openapi-configs/typescript-axios-v1.yaml
+docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:${GENERATOR_VERSION} \
+	generate -c scripts/openapi-configs/typescript-axios-v2.yaml
 
 # We expect pre-commit to exit with a non-zero status since it is reformatting
 # the generated code.
