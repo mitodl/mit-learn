@@ -1413,8 +1413,12 @@ describe("ContractContent", () => {
     orgX.contracts = contracts
     mitxOnlineUser.b2b_organizations[0].contracts = contracts
 
+    const nonEnrollableContractRunId = 1001
+    const enrollableNonContractRunId = 1002
+    const syntheticLanguageOptionId = 1003
+
     const nonEnrollableContractRun = factories.courses.courseRun({
-      id: faker.number.int(),
+      id: nonEnrollableContractRunId,
       title: "English Contract Run",
       courseware_id: "cw-contract-en",
       courseware_url: "https://openedx.example.com/contract-english",
@@ -1422,7 +1426,7 @@ describe("ContractContent", () => {
       is_enrollable: false,
     })
     const enrollableNonContractRun = factories.courses.courseRun({
-      id: faker.number.int(),
+      id: enrollableNonContractRunId,
       title: "Fallback Enrollable Run",
       courseware_id: "cw-fallback-enrollable",
       courseware_url: "https://openedx.example.com/fallback-enrollable",
@@ -1441,7 +1445,7 @@ describe("ContractContent", () => {
           run_tag: nonEnrollableContractRun.run_tag,
         },
         {
-          id: faker.number.int(),
+          id: syntheticLanguageOptionId,
           courseware_id: "cw-contract-es-synthetic",
           language: "es",
           title: "Modulo sintetico",
