@@ -2514,9 +2514,9 @@ describe("EnrollmentDisplay", () => {
       const desktopCard = await screen.findByTestId("enrollment-card-desktop")
       await within(desktopCard).findByText("Modulo en Espanol")
 
-      expect(screen.getByText("Idioma de aprendizaje:")).toBeInTheDocument()
+      expect(screen.getByText("Learning Language:")).toBeInTheDocument()
       expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
-        "Comenzar Curso",
+        "Start Course",
       )
     })
 

@@ -986,7 +986,6 @@ describe.each([
             data: enrollment,
           },
           false, // useProductPages
-          "en", // uiLanguageCode
         ),
       ]
       const menuItems = screen.getAllByRole("menuitem")
