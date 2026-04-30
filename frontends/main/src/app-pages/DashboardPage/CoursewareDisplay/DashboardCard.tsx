@@ -390,13 +390,21 @@ const useEnrollmentHandler = () => {
             { readable_id: readableId },
             {
               onSuccess: async () => {
-                const enrollments = await queryClient.fetchQuery(
-                  enrollmentQueries.courseRunEnrollmentsList(),
-                )
-                const enrolledUrl = enrollments.find(
-                  (enrollment) => enrollment.run.courseware_id === readableId,
-                )?.run.courseware_url
-                window.location.href = enrolledUrl ?? destinationUrl
+                try {
+                  const enrollments = await queryClient.fetchQuery(
+                    enrollmentQueries.courseRunEnrollmentsList(),
+                  )
+                  const enrolledUrl = enrollments.find(
+                    (enrollment) => enrollment.run.courseware_id === readableId,
+                  )?.run.courseware_url
+                  window.location.href = enrolledUrl ?? destinationUrl
+                } catch (error) {
+                  console.warn(
+                    "Failed to fetch enrollments after B2B enrollment; falling back to destination URL",
+                    error,
+                  )
+                  window.location.href = destinationUrl
+                }
               },
             },
           )
