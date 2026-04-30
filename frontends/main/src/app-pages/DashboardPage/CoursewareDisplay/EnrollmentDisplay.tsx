@@ -657,7 +657,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             {tDashboard(uiLanguageCode, "program")}
             {program?.program_type ? `: ${program?.program_type}` : ""}
           </Typography>
-          {languageOptions.length > 0 && (
+          {languageOptions.length > 1 && (
             <ProgramLanguageSelect
               size="small"
               label={tDashboard(uiLanguageCode, "learningLanguage")}

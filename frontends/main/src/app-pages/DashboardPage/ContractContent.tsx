@@ -336,7 +336,7 @@ const OrgProgramCollectionDisplay: React.FC<{
         </Typography>
         <ProgramDescription html={collection.description ?? ""} />
       </ProgramHeaderText>
-      {languageOptions.length > 0 && (
+      {languageOptions.length > 1 && (
         <ProgramControls>
           <ProgramLanguageSelect
             size="small"
@@ -521,7 +521,7 @@ const OrgProgramDisplay: React.FC<{
           <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
         <ProgramControls>
-          {languageOptions.length > 0 && (
+          {languageOptions.length > 1 && (
             <ProgramLanguageSelect
               size="small"
               label={tDashboard(uiLanguageCode, "learningLanguage")}

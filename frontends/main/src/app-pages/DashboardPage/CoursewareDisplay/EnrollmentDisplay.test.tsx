@@ -2520,7 +2520,7 @@ describe("EnrollmentDisplay", () => {
       )
     })
 
-    test("language picker is hidden when no language options are present", async () => {
+    test("language picker is hidden when only one language option is present", async () => {
       const mitxOnlineUser = mitxonline.factories.user.user()
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -2533,7 +2533,15 @@ describe("EnrollmentDisplay", () => {
         id: 992,
         courseruns: [run],
         next_run_id: run.id,
-        language_options: [],
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            language: "en",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
       })
 
       const reqTree =

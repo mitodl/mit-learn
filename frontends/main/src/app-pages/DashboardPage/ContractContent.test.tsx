@@ -1506,7 +1506,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("language picker is hidden when no language options are present", async () => {
+  test("language picker is hidden when only one language option is present", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1518,7 +1518,15 @@ describe("ContractContent", () => {
     const course = factories.courses.course({
       courseruns: [run],
       next_run_id: run.id,
-      language_options: [],
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+        },
+      ],
     })
     const program = factories.programs.program({ courses: [course.id] })
     const contracts = createTestContracts(orgX.id, 1, [program.id])
@@ -1539,6 +1547,78 @@ describe("ContractContent", () => {
     )
 
     await screen.findByTestId("org-program-root")
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+  })
+
+  test("collection language picker is hidden when only one language option is present", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const run = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English",
+      courseware_id: "cw-collection-en-only",
+      courseware_url: "https://openedx.example.com/collection-english-only",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+        },
+      ],
+    })
+    program.courses = [course.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [course],
+      contracts,
+    )
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [course.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [course] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-collection-root")
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
