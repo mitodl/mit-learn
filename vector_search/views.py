@@ -390,6 +390,32 @@ class QdrantView(APIView):
         *,
         hybrid_search: bool = False,
     ):
+        if query_string and score_cutoff > 0:
+            counts = await self._async_vector_counts(
+                params,
+                search_collection=search_collection,
+            )
+            total_count = counts["total"]["value"]
+            if total_count == 0:
+                return {
+                    "hits": [],
+                    **counts,
+                }
+            hits = await self._async_vector_hits(
+                query_string,
+                params,
+                order_by=order_by,
+                limit=total_count,
+                offset=0,
+                search_collection=search_collection,
+                score_cutoff=score_cutoff,
+                hybrid_search=hybrid_search,
+            )
+            return {
+                "hits": hits,
+                **counts,
+            }
+
         hits, counts = await asyncio.gather(
             self._async_vector_hits(
                 query_string,

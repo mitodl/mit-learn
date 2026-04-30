@@ -471,6 +471,40 @@ def test_vector_search_sortby_pagination(mocker, client):
     assert "offset" not in call_kwargs
 
 
+def test_vector_search_with_score_cutoff_fetches_all_results(mocker, client):
+    """A query with a score cutoff should bypass request pagination."""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=42))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "test",
+        "limit": 10,
+        "offset": 20,
+        "score_cutoff": 0.5,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert call_kwargs["limit"] == 42
+    assert call_kwargs["offset"] == 0
+    assert call_kwargs["score_threshold"] == 0.5
+
+
 def test_vector_search_sortby_scroll_pagination(mocker, client):
     """Test that sortby with offset on scroll (no query) uses client-side slicing.
 
