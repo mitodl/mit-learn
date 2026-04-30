@@ -1326,7 +1326,7 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Second extra content")).toBeNull()
   })
 
-  test("program language picker switches card title", async () => {
+  test("shared contract language picker switches top-level program card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1387,6 +1387,7 @@ describe("ContractContent", () => {
     )
 
     const root = within(await screen.findByTestId("org-program-root"))
+    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
     const languageSelect = await screen.findByRole("combobox")
     expect(languageSelect).toHaveTextContent("English")
 
@@ -1403,7 +1404,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("collection language picker switches card title", async () => {
+  test("shared contract language picker switches program collection card title", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1490,6 +1491,7 @@ describe("ContractContent", () => {
     )
     const collection = within(collectionRoot)
 
+    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
     const languageSelect = await screen.findByRole("combobox")
     expect(languageSelect).toHaveTextContent("English")
 
@@ -1506,7 +1508,7 @@ describe("ContractContent", () => {
     })
   })
 
-  test("language picker is hidden when only one language option is present", async () => {
+  test("shared contract language picker is hidden when only one language option is present", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
@@ -1551,7 +1553,7 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
 
-  test("collection language picker is hidden when only one language option is present", async () => {
+  test("shared contract language picker stays hidden for single-language program collections", async () => {
     const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
     mitxOnlineUser.legal_address = { country: "US" }
     mitxOnlineUser.user_profile = { year_of_birth: 1988 }
