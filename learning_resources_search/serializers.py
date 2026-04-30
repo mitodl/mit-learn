@@ -11,6 +11,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
+from mitol.api_versioning.mixins import (
+    VersionedSerializerMixin,
+    transform_dict_backwards,
+)
 from rest_framework import serializers
 from rest_framework.utils.urls import replace_query_param
 
@@ -638,7 +642,7 @@ class SearchResponseSerializer(serializers.Serializer):
         }
 
 
-class PercolateQuerySerializer(serializers.ModelSerializer):
+class PercolateQuerySerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for PercolateQuery objects
     """
@@ -660,8 +664,17 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
 
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
+        request = self.context.get("request")
         hits = instance.get("hits", {}).get("hits", [])
-        return (hit.get("_source") for hit in hits)
+        return (
+            transform_dict_backwards(
+                hit.get("_source"),
+                LearningResourceSerializer,
+                request,
+                recursive=True,
+            )
+            for hit in hits
+        )
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):
@@ -671,8 +684,12 @@ class ContentFileSearchResponseSerializer(SearchResponseSerializer):
 
     @extend_schema_field(ContentFileSerializer(many=True))
     def get_results(self, instance):
+        request = self.context.get("request")
         hits = instance.get("hits", {}).get("hits", [])
-        return (hit.get("_source") for hit in hits)
+        return (
+            transform_dict_backwards(hit.get("_source"), ContentFileSerializer, request)
+            for hit in hits
+        )
 
 
 class PercolateQuerySubscriptionRequestSerializer(

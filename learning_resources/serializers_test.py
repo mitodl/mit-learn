@@ -167,9 +167,14 @@ def test_serialize_video_resource_playlists_to_json():
     assert serializer.data["playlists"] == [playlist.learning_resource.id]
 
 
-def test_serialize_video_resource_with_video_object():
+@pytest.mark.parametrize(
+    ("version", "image_field"),
+    [("v1", "cover_image_url"), ("v2", "thumbnail_url")],
+)
+def test_serialize_video_resource_with_video_object(rf, version, image_field):
     """
     Verify that VideoResourceSerializer correctly serializes a video with a Video object
+    for both v1 and v2 API versions.
     """
     video = factories.VideoFactory.create(
         duration="PT10M30S",
@@ -178,13 +183,17 @@ def test_serialize_video_resource_with_video_object():
     resource = LearningResource.objects.for_serialization().get(
         pk=video.learning_resource.pk
     )
-    serializer = serializers.VideoResourceSerializer(instance=resource)
+    request = rf.get("/")
+    request.version = version
+    serializer = serializers.VideoResourceSerializer(
+        instance=resource, context={"request": request}
+    )
 
     assert serializer.data["video"] == {
         "id": video.id,
         "duration": "PT10M30S",
         "caption_urls": [],
-        "cover_image_url": None,
+        image_field: None,
         "streaming_url": None,
     }
     assert serializer.data["content_files"] == []
@@ -360,7 +369,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
             {
                 "department_id": dept.department_id,
                 "name": dept.name,
-                "channel_url": frontend_absolute_url(
+                "url": frontend_absolute_url(
                     f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/",
                 ),
                 "school": {
@@ -664,7 +673,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 {
                     "name": dept.name,
                     "department_id": dept.department_id,
-                    "channel_url": frontend_absolute_url(
+                    "url": frontend_absolute_url(
                         f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/"
                     )
                     if has_channels

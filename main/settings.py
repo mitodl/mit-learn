@@ -131,6 +131,7 @@ INSTALLED_APPS = (
     "learning_resources",
     "learning_resources_search",
     "website_content.apps.WebsiteContentConfig",
+    "mitol.api_versioning.apps.ApiVersioningApp",
     "openapi",
     "oauth2_provider",
     "news_events",
@@ -677,7 +678,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
-    "ALLOWED_VERSIONS": ["v0", "v1"],
+    "ALLOWED_VERSIONS": ["v0", "v1", "v2"],
     "ORDERING_PARAM": "sortby",
 }
 
