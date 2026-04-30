@@ -34,8 +34,10 @@ import {
   getSelectedLanguageOption,
   getCourseRunForSelectedLanguage,
   getEnrollmentForSelectedLanguage,
+  getLanguageCodeFromOptionKey,
   getResolvedRunForSelectedLanguage,
 } from "./languageOptions"
+import { tDashboard } from "./dashboardI18n"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import {
@@ -378,17 +380,22 @@ const extractResourcesFromNode = (
   return resources
 }
 
-const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
+const getRequirementSectionTitle = (
+  node: V2ProgramRequirement,
+  uiLanguageCode: string,
+): string => {
   if (node.data.title) {
     return node.data.title
   }
   if (node.data.elective_flag) {
     if (node.data.operator === "min_number_of" && node.data.operator_value) {
-      return `Electives (Complete ${node.data.operator_value})`
+      return tDashboard(uiLanguageCode, "electivesComplete", {
+        count: node.data.operator_value,
+      })
     }
-    return "Elective Courses"
+    return tDashboard(uiLanguageCode, "electiveCourses")
   }
-  return "Core Courses"
+  return tDashboard(uiLanguageCode, "coreCourses")
 }
 
 interface ProgramEnrollmentDisplayProps {
@@ -438,7 +445,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
       enabled: Boolean(enrolledInProgram && requiredProgramIds.length > 0),
     })
 
-  const requiredProgramList = requiredPrograms?.results ?? []
+  const requiredProgramList = React.useMemo(
+    () => requiredPrograms?.results ?? [],
+    [requiredPrograms?.results],
+  )
 
   const programAsCourseCourseIds = React.useMemo(() => {
     const uniqueIds = new Set<number>()
@@ -494,6 +504,33 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
     {} as Record<number, V3UserProgramEnrollment>,
   )
 
+  const allProgramCourses = React.useMemo(
+    () => programCourses?.results ?? [],
+    [programCourses?.results],
+  )
+  const languageOptions = React.useMemo(
+    () => getDistinctLanguageOptions(allProgramCourses),
+    [allProgramCourses],
+  )
+  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
+  useEffect(() => {
+    if (languageOptions.length === 0) {
+      if (selectedLanguageKey) {
+        setSelectedLanguageKey("")
+      }
+      return
+    }
+    const hasSelectedLanguage = languageOptions.some(
+      (option) => option.value === selectedLanguageKey,
+    )
+    if (!hasSelectedLanguage) {
+      setSelectedLanguageKey(String(languageOptions[0].value))
+    }
+  }, [languageOptions, selectedLanguageKey])
+
+  const uiLanguageCode =
+    getLanguageCodeFromOptionKey(selectedLanguageKey) ?? "en"
+
   const requirementSections: RequirementSection[] =
     program?.req_tree
       .filter((node) => node.data.node_type === "operator")
@@ -542,7 +579,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
         return {
           key: node.id,
-          title: getRequirementSectionTitle(node),
+          title: getRequirementSectionTitle(node, uiLanguageCode),
           items: sectionItems,
           node,
         }
@@ -573,30 +610,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
 
   const programCertificateUrl = programEnrollment?.certificate?.link ?? null
 
-  const allProgramCourses = React.useMemo(
-    () => programCourses?.results ?? [],
-    [programCourses?.results],
-  )
-  const languageOptions = React.useMemo(
-    () => getDistinctLanguageOptions(allProgramCourses),
-    [allProgramCourses],
-  )
-  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
-  useEffect(() => {
-    if (languageOptions.length === 0) {
-      if (selectedLanguageKey) {
-        setSelectedLanguageKey("")
-      }
-      return
-    }
-    const hasSelectedLanguage = languageOptions.some(
-      (option) => option.value === selectedLanguageKey,
-    )
-    if (!hasSelectedLanguage) {
-      setSelectedLanguageKey(String(languageOptions[0].value))
-    }
-  }, [languageOptions, selectedLanguageKey])
-
   if (isLoading) {
     return (
       <Stack direction="column">
@@ -625,11 +638,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           alignItems="center"
         >
           <Typography variant="h5" color={theme.custom.colors.silverGrayDark}>
-            Program{program?.program_type ? `: ${program?.program_type}` : ""}
+            {tDashboard(uiLanguageCode, "program")}
+            {program?.program_type ? `: ${program?.program_type}` : ""}
           </Typography>
           {languageOptions.length > 0 && (
             <Stack direction="row" gap="8px" alignItems="center">
-              <Typography variant="body3">Learning Language:</Typography>
+              <Typography variant="body3">
+                {tDashboard(uiLanguageCode, "learningLanguage")}
+              </Typography>
               <ProgramLanguageSelect
                 size="small"
                 value={selectedLanguageKey}
@@ -650,12 +666,13 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         </Typography>
         <Stack direction="row" justifyContent="space-between">
           <Typography variant="body2">
-            You have completed
+            {tDashboard(uiLanguageCode, "youHaveCompleted")}
             <Typography component="span" variant="subtitle2">
               {" "}
-              {completedCount} of {totalCount} courses{" "}
+              {completedCount} {tDashboard(uiLanguageCode, "of")} {totalCount}{" "}
+              {tDashboard(uiLanguageCode, "courses")}{" "}
             </Typography>
-            for this program.
+            {tDashboard(uiLanguageCode, "forThisProgram")}
           </Typography>
           <Stack direction="column" alignItems="flex-end" gap="8px">
             {programCertificateUrl && (
@@ -665,7 +682,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 startIcon={<RiAwardFill />}
                 href={programCertificateUrl}
               >
-                Certificate
+                {tDashboard(uiLanguageCode, "certificate")}
               </ProgramCertificateButton>
             )}
           </Stack>
@@ -700,7 +717,8 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
-                  Completed {sectionCompleted} of {sectionTotal}
+                  {tDashboard(uiLanguageCode, "completed")} {sectionCompleted}{" "}
+                  {tDashboard(uiLanguageCode, "of")} {sectionTotal}
                 </Typography>
               ) : null}
             </Stack>
@@ -759,6 +777,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       programEnrollment={programEnrollment}
                       showNotComplete={false}
                       selectedCourseRun={resolvedRun}
+                      uiLanguageCode={uiLanguageCode}
                     />
                   )
                 }
@@ -803,6 +822,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       data: item.enrollment,
                     }}
                     showNotComplete={false}
+                    uiLanguageCode={uiLanguageCode}
                   />
                 )
               })}

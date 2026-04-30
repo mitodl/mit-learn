@@ -33,6 +33,14 @@ const getLanguageOptionKey = (option: CourseRunLanguageOption): string => {
   return languageCode ? `language:${languageCode}` : ""
 }
 
+const getLanguageCodeFromOptionKey = (optionKey: string): string | null => {
+  if (!optionKey.startsWith("language:")) {
+    return null
+  }
+  const code = optionKey.replace("language:", "").trim().toLowerCase()
+  return code || null
+}
+
 const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {
   const languageCode = getLanguageCode(option)
   if (!languageCode) {
@@ -228,6 +236,7 @@ const getResolvedRunForSelectedLanguage = (
 }
 
 export {
+  getLanguageCodeFromOptionKey,
   getLanguageOptionKey,
   getDistinctLanguageOptions,
   getSelectedLanguageOption,

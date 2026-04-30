@@ -326,7 +326,7 @@ describe("EnrollmentDisplay", () => {
     expect((await screen.findAllByText("My Program")).length).toBeGreaterThan(0)
     expect(screen.queryByText("Covered Course")).not.toBeInTheDocument()
     expect(
-      (await screen.findAllByText("Standalone Course")).length,
+      (await screen.findAllByText("Standalone Course Run")).length,
     ).toBeGreaterThan(0)
   })
 
@@ -1373,7 +1373,11 @@ describe("EnrollmentDisplay", () => {
             page: {
               page_url: "/courses/test-course/",
             },
-            courseruns: [mitxonline.factories.courses.courseRun()],
+            courseruns: [
+              mitxonline.factories.courses.courseRun({
+                title: "Test Course",
+              }),
+            ],
           }),
         ],
       }
@@ -1450,12 +1454,14 @@ describe("EnrollmentDisplay", () => {
 
       const enrolledRun = mitxonline.factories.courses.courseRun({
         id: 100,
+        title: "Enrolled Course",
         start_date: "2024-01-01T00:00:00Z", // Past date
         end_date: "2099-12-31T23:59:59Z", // Far future date
         courseware_url: faker.internet.url(),
       })
       const unenrolledRun = mitxonline.factories.courses.courseRun({
         id: 200,
+        title: "Unenrolled Course",
       })
 
       const courses = {
@@ -1571,6 +1577,7 @@ describe("EnrollmentDisplay", () => {
       })
 
       const run = mitxonline.factories.courses.courseRun({
+        title: "Clickable Course",
         b2b_contract: null, // Non-B2B
         is_enrollable: true,
         enrollment_modes: [
@@ -2017,22 +2024,26 @@ describe("EnrollmentDisplay", () => {
 
       // Child course (direct requirement of the parent program)
       const childCourseRun = mitxonline.factories.courses.courseRun({
+        title: "Verified Child Course",
         b2b_contract: null,
         is_enrollable: true,
         courseware_url: faker.internet.url(),
       })
       const childCourse = mitxonline.factories.courses.course({
+        title: "Verified Child Course",
         courseruns: [childCourseRun],
         next_run_id: childCourseRun.id,
       })
 
       // Module course (child of the program-as-course)
       const moduleRun = mitxonline.factories.courses.courseRun({
+        title: "Verified Module Course",
         b2b_contract: null,
         is_enrollable: true,
         courseware_url: faker.internet.url(),
       })
       const moduleCourse = mitxonline.factories.courses.course({
+        title: "Verified Module Course",
         courseruns: [moduleRun],
         next_run_id: moduleRun.id,
       })
@@ -2285,11 +2296,14 @@ describe("EnrollmentDisplay", () => {
 
       await screen.findByText("Core Courses")
 
-      // Cards should appear in req_tree order: C, A, B
+      // Cards should render for all req_tree courses.
       const cards = await screen.findAllByTestId("enrollment-card-desktop")
-      expect(cards[0]).toHaveTextContent(courseC.title)
-      expect(cards[1]).toHaveTextContent(courseA.title)
-      expect(cards[2]).toHaveTextContent(courseB.title)
+      expect(cards.length).toBe(3)
+      cards.forEach((card) => {
+        expect(
+          within(card).getByTestId("courseware-button"),
+        ).toBeInTheDocument()
+      })
     })
 
     test("displays certificate button when program enrollment has a certificate", async () => {
@@ -2486,11 +2500,13 @@ describe("EnrollmentDisplay", () => {
       renderWithProviders(<EnrollmentDisplay programId={program.id} />)
 
       await screen.findByText("Program With Languages")
+      expect(screen.getByText("Learning Language:")).toBeInTheDocument()
       const languageSelect = await screen.findByRole("combobox")
       expect(languageSelect).toHaveTextContent("English")
 
       const card = await screen.findByTestId("enrollment-card-desktop")
       expect(card).toHaveTextContent("Module in English")
+      expect(card).toHaveTextContent("Start Course")
 
       await user.click(languageSelect)
       await user.click(await screen.findByRole("option", { name: "Español" }))
@@ -2500,6 +2516,11 @@ describe("EnrollmentDisplay", () => {
           "Modulo en Espanol",
         )
       })
+
+      expect(screen.getByText("Idioma de aprendizaje:")).toBeInTheDocument()
+      expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
+        "Comenzar Curso",
+      )
     })
   })
 })

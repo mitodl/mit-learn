@@ -45,6 +45,7 @@ import {
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import { tDashboard } from "./dashboardI18n"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -179,6 +180,7 @@ const getContextMenuItems = (
   title: string,
   resource: DashboardResource,
   useProductPages: boolean,
+  uiLanguageCode: string,
   additionalItems: SimpleMenuItem[] = [],
   hideDetailsUrl = false,
 ) => {
@@ -196,7 +198,7 @@ const getContextMenuItems = (
       menuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-program-details",
-        label: "View Program Details",
+        label: tDashboard(uiLanguageCode, "viewProgramDetails"),
         href: detailsUrl,
       })
     }
@@ -208,7 +210,7 @@ const getContextMenuItems = (
       menuItems.push({
         className: "dashboard-card-menu-item",
         key: "unenroll-program",
-        label: "Unenroll",
+        label: tDashboard(uiLanguageCode, "unenroll"),
         onClick: () => {
           NiceModal.show(UnenrollProgramDialog, {
             title,
@@ -229,7 +231,7 @@ const getContextMenuItems = (
       courseMenuItems.push({
         className: "dashboard-card-menu-item",
         key: "view-course-details",
-        label: "View Course Details",
+        label: tDashboard(uiLanguageCode, "viewCourseDetails"),
         href: detailsUrl,
       })
     }
@@ -238,7 +240,7 @@ const getContextMenuItems = (
       {
         className: "dashboard-card-menu-item",
         key: "email-settings",
-        label: "Email Settings",
+        label: tDashboard(uiLanguageCode, "emailSettings"),
         onClick: () => {
           NiceModal.show(EmailSettingsDialog, {
             title,
@@ -249,7 +251,7 @@ const getContextMenuItems = (
       {
         className: "dashboard-card-menu-item",
         key: "unenroll",
-        label: "Unenroll",
+        label: tDashboard(uiLanguageCode, "unenroll"),
         onClick: () => {
           NiceModal.show(UnenrollDialog, { title, enrollment: resource.data })
         },
@@ -295,10 +297,13 @@ const getDashboardEnrollmentStatus = (
     : EnrollmentStatus.Enrolled
 }
 
-const getDefaultNoun = (resource: DashboardResource): string => {
+const getDefaultNoun = (
+  resource: DashboardResource,
+  uiLanguageCode: string,
+): string => {
   return resource.type === DashboardType.ProgramEnrollment
-    ? "Program"
-    : "Course"
+    ? tDashboard(uiLanguageCode, "program")
+    : tDashboard(uiLanguageCode, "course")
 }
 
 const useEnrollmentHandler = () => {
@@ -440,37 +445,46 @@ const useEnrollmentHandler = () => {
               (r) => r.courseware_id === readableId && r.is_enrollable,
             )
           : undefined
+        const enrollableRuns = (course.courseruns ?? []).filter(
+          (r) => r.is_enrollable,
+        )
 
         const enrollmentAction =
-          (requestedRun ?? requestedRunFromReadableId)
-            ? (() => {
-                const chosenRun = requestedRun ?? requestedRunFromReadableId!
-                const enrollmentType = getEnrollmentType(
-                  course.courseruns.find((r) => r.id === chosenRun.id)
-                    ?.enrollment_modes,
-                )
-                if (enrollmentType === "free") {
-                  return { type: "audit" as const, run: chosenRun }
-                }
-                if (enrollmentType === "none") {
-                  // For synthetic language-only runs we don't have enrollment_modes,
-                  // so attempt an audit enrollment by run id. For normal runs,
-                  // defer to the default action picker.
-                  return isSyntheticRequestedRun
-                    ? { type: "audit" as const, run: chosenRun }
-                    : getCourseEnrollmentAction(course)
-                }
-                if (enrollmentType === "paid") {
-                  const product = course.courseruns.find(
-                    (r) => r.id === chosenRun.id,
-                  )?.products?.[0]
-                  return product
-                    ? { type: "checkout" as const, run: chosenRun, product }
-                    : { type: "none" as const }
-                }
-                return getCourseEnrollmentAction(course)
-              })()
-            : getCourseEnrollmentAction(course)
+          // Preserve existing dashboard behavior: when a course has multiple
+          // enrollable runs, users should pick a run in the enrollment dialog.
+          // Exception: synthetic language-only runs are explicit selections
+          // derived from language options and should still allow direct action.
+          enrollableRuns.length > 1 && !isSyntheticRequestedRun
+            ? getCourseEnrollmentAction(course)
+            : (requestedRun ?? requestedRunFromReadableId)
+              ? (() => {
+                  const chosenRun = requestedRun ?? requestedRunFromReadableId!
+                  const enrollmentType = getEnrollmentType(
+                    course.courseruns.find((r) => r.id === chosenRun.id)
+                      ?.enrollment_modes,
+                  )
+                  if (enrollmentType === "free") {
+                    return { type: "audit" as const, run: chosenRun }
+                  }
+                  if (enrollmentType === "none") {
+                    // For synthetic language-only runs we don't have enrollment_modes,
+                    // so attempt an audit enrollment by run id. For normal runs,
+                    // defer to the default action picker.
+                    return isSyntheticRequestedRun
+                      ? { type: "audit" as const, run: chosenRun }
+                      : getCourseEnrollmentAction(course)
+                  }
+                  if (enrollmentType === "paid") {
+                    const product = course.courseruns.find(
+                      (r) => r.id === chosenRun.id,
+                    )?.products?.[0]
+                    return product
+                      ? { type: "checkout" as const, run: chosenRun, product }
+                      : { type: "none" as const }
+                  }
+                  return getCourseEnrollmentAction(course)
+                })()
+              : getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
           const enrolledCoursewareId =
@@ -555,6 +569,7 @@ type CoursewareButtonProps = {
   isStaff?: boolean
   "data-testid"?: string
   onClick?: React.MouseEventHandler<HTMLButtonElement>
+  uiLanguageCode: string
 }
 
 const getCoursewareTextAndIcon = ({
@@ -562,26 +577,40 @@ const getCoursewareTextAndIcon = ({
   enrollmentStatus,
   noun,
   isProgram,
+  uiLanguageCode,
 }: {
   endDate?: string | null
   enrollmentStatus: EnrollmentStatus
   noun: string
   isProgram?: boolean
+  uiLanguageCode: string
 }) => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${noun}`, endIcon: null }
+    return {
+      text: tDashboard(uiLanguageCode, "startNoun", { noun }),
+      endIcon: null,
+    }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: tDashboard(uiLanguageCode, "viewNoun", { noun }),
+      endIcon: null,
+    }
   }
   // Programs show "View Program" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: tDashboard(uiLanguageCode, "viewNoun", { noun }),
+      endIcon: null,
+    }
   }
-  return { text: "Continue", endIcon: <RiArrowRightLine /> }
+  return {
+    text: tDashboard(uiLanguageCode, "continue"),
+    endIcon: <RiArrowRightLine />,
+  }
 }
 
 const CoursewareButton = styled(
@@ -597,6 +626,7 @@ const CoursewareButton = styled(
     onClick,
     isPending,
     isStaff,
+    uiLanguageCode,
     ...others
   }: CoursewareButtonProps) => {
     const coursewareText = getCoursewareTextAndIcon({
@@ -604,6 +634,7 @@ const CoursewareButton = styled(
       noun,
       enrollmentStatus,
       isProgram,
+      uiLanguageCode,
     })
     const hasStarted = startDate && isInPast(startDate)
     const hasEnrolled = enrollmentStatus !== EnrollmentStatus.NotEnrolled
@@ -660,15 +691,15 @@ const CoursewareButton = styled(
   },
 )({ width: "124px" })
 
-const formatUpgradeTime = (daysFloat: number) => {
+const formatUpgradeTime = (daysFloat: number, uiLanguageCode: string) => {
   if (daysFloat < 0) return ""
   const days = Math.floor(daysFloat)
   if (days > 1) {
-    return `${days} days remaining`
+    return tDashboard(uiLanguageCode, "daysRemaining", { days })
   } else if (days === 1) {
-    return `${days} day remaining`
+    return tDashboard(uiLanguageCode, "dayRemaining", { days })
   }
-  return "Less than a day remaining"
+  return tDashboard(uiLanguageCode, "lessThanDayRemaining")
 }
 
 const SubtitleLinkRoot = styled.div(({ theme }) => ({
@@ -697,6 +728,7 @@ const UpgradeBanner: React.FC<
     certificateUpgradePrice?: string | null
     productId?: number | null
     onError?: (error: Error) => void
+    uiLanguageCode: string
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
@@ -704,6 +736,7 @@ const UpgradeBanner: React.FC<
   certificateUpgradePrice,
   productId,
   onError,
+  uiLanguageCode,
   ...others
 }) => {
   const replaceBasketItem = useReplaceBasketItem()
@@ -737,12 +770,14 @@ const UpgradeBanner: React.FC<
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
-        Add a certificate for {formattedPrice}
+        {tDashboard(uiLanguageCode, "addCertificateFor", {
+          price: formattedPrice,
+        })}
       </SubtitleLink>
       {calendarDays !== null && (
         <NoSSR>
           {/* This uses local time. */}
-          {formatUpgradeTime(calendarDays)}
+          {formatUpgradeTime(calendarDays, uiLanguageCode)}
         </NoSSR>
       )}
     </SubtitleLinkRoot>
@@ -762,18 +797,19 @@ const CountdownRoot = styled.div(({ theme }) => ({
 }))
 const CourseStartCountdown: React.FC<{
   startDate: string
+  uiLanguageCode: string
   className?: string
-}> = ({ startDate, className }) => {
+}> = ({ startDate, className, uiLanguageCode }) => {
   const calendarDays = calendarDaysUntil(startDate)
 
   let value
   if (calendarDays === null || calendarDays < 0) return null
   if (calendarDays === 0) {
-    value = "Starts Today"
+    value = tDashboard(uiLanguageCode, "startsToday")
   } else if (calendarDays === 1) {
-    value = "Starts Tomorrow"
+    value = tDashboard(uiLanguageCode, "startsTomorrow")
   } else {
-    value = `Starts in ${calendarDays} days`
+    value = tDashboard(uiLanguageCode, "startsInDays", { days: calendarDays })
   }
   return (
     <CountdownRoot>
@@ -805,6 +841,7 @@ type DashboardCardProps = {
   programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
   selectedCourseRun?: CourseRunV2 | null
+  uiLanguageCode?: string
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -823,6 +860,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   programEnrollment,
   onUpgradeError,
   selectedCourseRun,
+  uiLanguageCode = "en",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -842,7 +880,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       : undefined
   const enrollmentStatus = getDashboardEnrollmentStatus(resource)
   const certificateLink = getCertificateLink(resource)
-  const displayNoun = noun ?? getDefaultNoun(resource)
+  const displayNoun = noun ?? getDefaultNoun(resource, uiLanguageCode)
 
   const isCourse = resource.type === DashboardType.Course
   const isCourseRunEnrollment =
@@ -902,6 +940,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   }, [
     isCourse,
     resource,
+    courseRun?.id,
     readableId,
     coursewareUrl,
     b2bContractId,
@@ -958,7 +997,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       {certificateLink ? (
         <SubtitleLink href={certificateLink}>
           <RiAwardLine size="16px" />
-          View Certificate
+          {tDashboard(uiLanguageCode, "viewCertificate")}
         </SubtitleLink>
       ) : null}
       {isCourseRunEnrollment &&
@@ -970,6 +1009,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           certificateUpgradeDeadline={enrollmentRun?.upgrade_deadline}
           certificateUpgradePrice={enrollmentRun?.upgrade_product_price}
           productId={enrollmentRun?.upgrade_product_id}
+          uiLanguageCode={uiLanguageCode}
           onError={() => {
             onUpgradeError?.(
               "There was a problem adding the certificate to your cart.",
@@ -1000,6 +1040,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         disabled={disableEnrollment}
         isPending={enrollment.isPending}
         isStaff={mitxOnlineUser?.is_staff}
+        uiLanguageCode={uiLanguageCode}
         onClick={coursewareButtonClick}
       />
     </>
@@ -1010,6 +1051,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       isProgram={true}
       enrollmentStatus={enrollmentStatus}
       href={buttonHref ?? programView(resource.data.program.id)}
+      uiLanguageCode={uiLanguageCode}
     />
   ) : null
 
@@ -1024,6 +1066,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
           ? (courseRun?.start_date as string)
           : (enrollmentRun?.start_date as string)
       }
+      uiLanguageCode={uiLanguageCode}
     />
   ) : null
 
@@ -1032,6 +1075,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     title,
     resource,
     useProductPages ?? false,
+    uiLanguageCode,
     contextMenuItems,
     isContractPageResource,
   )

@@ -39,8 +39,10 @@ import {
   getDistinctLanguageOptions,
   getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
+  getLanguageCodeFromOptionKey,
   getSelectedLanguageOption,
 } from "./CoursewareDisplay/languageOptions"
+import { tDashboard } from "./CoursewareDisplay/dashboardI18n"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
 const HeaderRoot = styled.div({
@@ -309,6 +311,8 @@ const OrgProgramCollectionDisplay: React.FC<{
       setSelectedLanguageKey(String(languageOptions[0].value))
     }
   }, [languageOptions, selectedLanguageKey])
+  const uiLanguageCode =
+    getLanguageCodeFromOptionKey(selectedLanguageKey) ?? "en"
 
   const header = (
     <ProgramHeader>
@@ -412,7 +416,8 @@ const OrgProgramCollectionDisplay: React.FC<{
                     }
                   : { type: DashboardType.Course, data: course }
               }
-              noun="Module"
+              noun={tDashboard(uiLanguageCode, "module")}
+              uiLanguageCode={uiLanguageCode}
               offerUpgrade={false}
               buttonHref={
                 selectedLanguageEnrollment?.run.courseware_url ??
@@ -488,6 +493,9 @@ const OrgProgramDisplay: React.FC<{
     }
   }, [languageOptions, selectedLanguageKey])
 
+  const uiLanguageCode =
+    getLanguageCodeFromOptionKey(selectedLanguageKey) ?? "en"
+
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
@@ -500,7 +508,9 @@ const OrgProgramDisplay: React.FC<{
         <ProgramControls>
           {languageOptions.length > 0 && (
             <>
-              <Typography variant="body3">Learning Language:</Typography>
+              <Typography variant="body3">
+                {tDashboard(uiLanguageCode, "learningLanguage")}
+              </Typography>
               <ProgramLanguageSelect
                 size="small"
                 value={selectedLanguageKey}
@@ -522,7 +532,9 @@ const OrgProgramDisplay: React.FC<{
               startIcon={<RiAwardFill />}
               href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
             >
-              View {program.program_type} Certificate
+              {tDashboard(uiLanguageCode, "viewProgramTypeCertificate", {
+                programType: program.program_type,
+              })}
             </ProgramCertificateButton>
           )}
         </ProgramControls>
@@ -575,7 +587,8 @@ const OrgProgramDisplay: React.FC<{
                         }
                       : { type: DashboardType.Course, data: course }
                   }
-                  noun="Module"
+                  noun={tDashboard(uiLanguageCode, "module")}
+                  uiLanguageCode={uiLanguageCode}
                   offerUpgrade={false}
                   buttonHref={
                     selectedLanguageEnrollment?.run.courseware_url ??
