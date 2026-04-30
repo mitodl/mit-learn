@@ -4,6 +4,7 @@ import logging
 from collections.abc import Iterable
 from typing import NamedTuple
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
@@ -11,6 +12,7 @@ from django.db.models import Q
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
+    OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     VIDEO_CONTENT_CATEGORIES,
     LearningResourceDelivery,
@@ -1030,11 +1032,20 @@ def load_learning_materials(
     """
     material_ids = []
 
+    if settings.CREATE_OCW_LEARNING_MATERIALS:
+        promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+    elif settings.SHOW_OCW_LECTURE_VIDEOS:
+        promoted_ocw_file_types = {OCW_CONTENT_CATEGORY_LECTURE_VIDEOS}
+    else:
+        promoted_ocw_file_types = set()
+
     for content_file_id in content_file_ids:
         content_file = ContentFile.objects.get(id=content_file_id)
-        learning_material_tags = set(
-            content_file.content_tags.values_list("name", flat=True)
-        ) & set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+
+        learning_material_tags = (
+            set(content_file.content_tags.values_list("name", flat=True))
+            & promoted_ocw_file_types
+        )
         if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)
@@ -1330,6 +1341,7 @@ def load_video(video_data: dict) -> LearningResource:
     video_fields = video_data.pop("video", {})
     image_data = video_data.pop("image", None)
     video_data["resource_category"] = LearningResourceType.video.value
+    video_data.pop("youtube_id", None)
 
     with transaction.atomic():
         (
@@ -1443,7 +1455,7 @@ def load_documents(
     return document_resources
 
 
-def load_ovs_playlist(playlist_data: dict) -> LearningResource:
+def load_ovs_playlist(playlist_data: dict) -> LearningResource | None:
     """
     Load a single OVS playlist (collection) and its videos into the database.
 
@@ -1451,7 +1463,8 @@ def load_ovs_playlist(playlist_data: dict) -> LearningResource:
         playlist_data (dict): playlist data including nested videos list
 
     Returns:
-        LearningResource: the created or updated playlist resource
+        LearningResource | None: the created or updated playlist resource,
+            or None if not all videos could be matched
     """
     channel, _ = VideoChannel.objects.get_or_create(
         channel_id="ovs",
@@ -1519,7 +1532,9 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
     return playlists
 
 
-def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningResource:
+def load_playlist(
+    video_channel: VideoChannel, playlist_data: dict
+) -> LearningResource | None:
     """
     Load a video playlist into the database
 
@@ -1528,13 +1543,38 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         playlist_data (dict): the video playlist
 
     Returns:
-        LearningResource: the created or updated playlist resource
+        LearningResource | None: the created or updated playlist resource,
+            or None if create_videos is False and not all videos could be matched
     """
 
     playlist_id = playlist_data.pop("playlist_id")
     thumbnail_data = playlist_data.pop("image", None)
     videos_data = playlist_data.pop("videos", [])
     offered_bys_data = playlist_data.pop("offered_by", None)
+    create_videos = playlist_data.pop("create_videos", True)
+
+    if create_videos:
+        video_resources = load_videos(videos_data)
+    else:
+        video_resources = find_existing_videos(videos_data)
+
+        if video_resources is None:
+            log.info(
+                "Skipping playlist %s: not all videos have matching video. ",
+                playlist_id,
+            )
+
+            existing_resource = LearningResource.objects.filter(
+                readable_id=playlist_id,
+                resource_type=LearningResourceType.video_playlist.name,
+                published=True,
+            ).first()
+            if existing_resource:
+                existing_resource.published = False
+                existing_resource.save()
+                update_index(existing_resource, newly_created=False)
+            return None
+
     playlist_data["resource_category"] = LearningResourceType.video_playlist.value
     with transaction.atomic():
         if thumbnail_data:
@@ -1557,10 +1597,13 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
         )
         load_offered_by(playlist_resource, offered_bys_data)
 
-    video_resources = load_videos(videos_data)
     load_topics(playlist_resource, most_common_topics(video_resources))
+
+    # Unpublish any videos from youtube that are no longer in the playlist
+    # OCW content file videos are removed from the playlist but not unpublished
     unpublished_videos = playlist_resource.resources.filter(
         resource_type=LearningResourceType.video.name,
+        platform=PlatformType.youtube.name,
         published=True,
     ).exclude(id__in=[video.id for video in video_resources])
     unpublished_video_ids = list(unpublished_videos.values_list("id", flat=True))
@@ -1584,6 +1627,42 @@ def load_playlist(video_channel: VideoChannel, playlist_data: dict) -> LearningR
     return playlist_resource
 
 
+def find_existing_videos(videos_data: list[dict]) -> list[LearningResource] | None:
+    """
+    Find existing video resources matching the given video data.
+
+    Args:
+        videos_data (list of dict): list of video data dicts
+
+    Returns:
+        list of LearningResource | None: list of existing video resources,
+            or None if any video is not found
+    """
+    videos = []
+    for video_data in videos_data:
+        youtube_id = video_data.get("youtube_id")
+        if not youtube_id:
+            return None
+        learning_resource = (
+            ContentFile.objects.filter(
+                youtube_id=youtube_id,
+                direct_learning_resource__resource_type=LearningResourceType.video.name,
+                direct_learning_resource__published=True,
+            )
+            .select_related("direct_learning_resource")
+            .first()
+        )
+        if learning_resource:
+            videos.append(learning_resource.direct_learning_resource)
+        else:
+            log.info(
+                "No existing published video resource found for youtube_id=%s",
+                youtube_id,
+            )
+            return None
+    return videos
+
+
 def load_playlists(
     video_channel: VideoChannel, playlists_data: iter
 ) -> list[LearningResource]:
@@ -1599,7 +1678,12 @@ def load_playlists(
             the created or updated LearningResources for the playlists
     """
     playlists = [
-        load_playlist(video_channel, playlist_data) for playlist_data in playlists_data
+        playlist
+        for playlist in (
+            load_playlist(video_channel, playlist_data)
+            for playlist_data in playlists_data
+        )
+        if playlist is not None
     ]
     playlist_ids = [playlist.id for playlist in playlists]
 

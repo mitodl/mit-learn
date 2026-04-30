@@ -529,7 +529,13 @@ const INFO_ITEMS: InfoItemConfig = [
     label: "Parent Course:",
     Icon: RiBookLine,
     selector: (resource: LearningResource) => {
-      return formattedParentCourseName(resource)
+      const name = formattedParentCourseName(resource)
+      if (!name || !resource.url) return name
+      return (
+        <Link href={resource.url} color="red" size="small">
+          {name}
+        </Link>
+      )
     },
   },
   {

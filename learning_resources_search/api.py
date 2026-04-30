@@ -480,23 +480,26 @@ def generate_filter_clauses(search_params):
     if search_params.get("endpoint") == LEARNING_RESOURCE and not search_params.get(
         "show_ocw_files"
     ):
+        ocw_should = [
+            {
+                "bool": {
+                    "must_not": [
+                        {
+                            "nested": {
+                                "path": "platform",
+                                "query": {"term": {"platform.code": "ocw"}},
+                            }
+                        }
+                    ]
+                }
+            },
+            {"term": {"resource_type": "course"}},
+        ]
+        if settings.SHOW_OCW_LECTURE_VIDEOS:
+            ocw_should.append({"term": {"resource_category": "Lecture Videos"}})
         ocw_clause = {
             "bool": {
-                "should": [
-                    {
-                        "bool": {
-                            "must_not": [
-                                {
-                                    "nested": {
-                                        "path": "platform",
-                                        "query": {"term": {"platform.code": "ocw"}},
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {"term": {"resource_type": "course"}},
-                ],
+                "should": ocw_should,
                 "minimum_should_match": 1,
             }
         }

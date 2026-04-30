@@ -388,7 +388,13 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const sources = useMemo(
     () =>
-      video ? resolveVideoSources(video.video?.streaming_url, video.url) : [],
+      video
+        ? resolveVideoSources(
+            video.video?.streaming_url,
+            video.url,
+            video.content_files?.[0]?.youtube_id,
+          )
+        : [],
     [video],
   )
 
@@ -523,6 +529,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   sources[0]?.type === "video/youtube"
                     ? undefined
                     : (video?.video?.cover_image_url ??
+                      video?.content_files?.[0]?.image_src ??
                       video?.image?.url ??
                       undefined)
                 }
@@ -532,10 +539,12 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 ariaLabel={`Video: ${videoTitleLabel}`}
                 ariaDescribedBy="video-description"
               />
-            ) : video?.image?.url ? (
+            ) : video?.image?.url || video?.content_files?.[0]?.image_src ? (
               <ThumbnailWrapper>
                 <Image
-                  src={video.image.url}
+                  src={
+                    (video?.image?.url ?? video?.content_files?.[0]?.image_src)!
+                  }
                   alt={videoThumbnailAlt}
                   fill
                   sizes="100vw"
@@ -556,9 +565,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           <BorderLine />
 
           {!isLoading && video?.description && (
-            <DescriptionText id="video-description">
-              {video?.description}
-            </DescriptionText>
+            <DescriptionText
+              id="video-description"
+              dangerouslySetInnerHTML={{ __html: video.description }}
+            />
           )}
 
           {!isLoading && !video?.description && (
@@ -627,7 +637,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       const itemDuration = item.video?.duration
                         ? formatDurationClockTime(item.video.duration)
                         : null
-                      const imageUrl = item.image?.url ?? null
+                      const imageUrl =
+                        item.image?.url ??
+                        item.content_files?.[0]?.image_src ??
+                        null
                       const itemTopicNames = (item.topics ?? [])
                         .map((topic) => topic.name)
                         .filter(Boolean)
@@ -660,9 +673,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                                 {item.title}
                               </MoreFromItemTitle>
                               {item.description && (
-                                <MoreFromItemMeta>
-                                  {item.description}
-                                </MoreFromItemMeta>
+                                <MoreFromItemMeta
+                                  dangerouslySetInnerHTML={{
+                                    __html: item.description,
+                                  }}
+                                />
                               )}
                             </MoreFromTextSide>
                           </MoreFromItem>

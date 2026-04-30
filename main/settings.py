@@ -934,3 +934,13 @@ VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
 
 # Hubspot settings
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
+
+# Create all learning material resources for OCW courses
+# Learning material resources are behind show_ocw_files flag in search
+CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
+# Create just lecture video resources for OCW courses.
+# OCW lecture video resources will be displayed in search
+# regardless of show_ocw_files flag
+# If the video config is set to `create_videos`=False ocw videos will be added to
+# playlists
+SHOW_OCW_LECTURE_VIDEOS = get_bool("SHOW_OCW_LECTURE_VIDEOS", default=False)

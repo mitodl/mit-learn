@@ -160,7 +160,10 @@ def ocw_courses_etl(
                         calc_completeness=True,
                     )
 
-                    if settings.CREATE_OCW_LEARNING_MATERIALS:
+                    if (
+                        settings.CREATE_OCW_LEARNING_MATERIALS
+                        or settings.SHOW_OCW_LECTURE_VIDEOS
+                    ):
                         loaders.load_learning_materials(course_run, content_file_ids)
             else:
                 log.info("No course data found for %s", url_path)

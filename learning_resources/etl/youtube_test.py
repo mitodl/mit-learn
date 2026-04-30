@@ -176,18 +176,18 @@ def extracted_and_transformed_values(youtube_api_responses):
         (
             OfferedBy.ocw.name,
             channels_list[0]["items"][0],
-            [(playlists_list[0]["items"][0], ocw_videos)],
+            [(playlists_list[0]["items"][0], ocw_videos, True)],
         ),
         (
             OfferedBy.mitx.name,
             channels_list[0]["items"][1],
-            [(playlists_list[1]["items"][0], mitx_videos)],
+            [(playlists_list[1]["items"][0], mitx_videos, True)],
         ),
         (
             "csail",
             channels_list[0]["items"][2],
             [
-                (playlists_list[2]["items"][1], csail_videos),
+                (playlists_list[2]["items"][1], csail_videos, True),
             ],
         ),
     ]
@@ -236,11 +236,13 @@ def extracted_and_transformed_values(youtube_api_responses):
                             "video": {
                                 "duration": video["contentDetails"]["duration"],
                             },
+                            "youtube_id": video["id"],
                         }
                         for video in videos
                     ],
+                    "create_videos": create_videos,
                 }
-                for playlist, videos in playlists
+                for playlist, videos, create_videos in playlists
             ],
         }
         for offered_by, channel, playlists in extracted
@@ -263,8 +265,8 @@ def _resolve_extracted_channels(channels):
 
 def _resolve_extracted_playlist(playlist):
     """Resolve a playlist and its nested generators"""
-    playlist_data, videos = playlist
-    return (playlist_data, list(videos))
+    playlist_data, videos, create_videos = playlist
+    return (playlist_data, list(videos), create_videos)
 
 
 @pytest.fixture
@@ -423,8 +425,52 @@ def test_extract_playlists_errors(
     request = Mock(execute=Mock(side_effect=error(Mock(), b"")))
     if raised_exception:
         with pytest.raises(raised_exception) as err:
-            list(youtube._extract_playlists(mock_youtube_client, request, {}))  # noqa: SLF001
+            list(
+                youtube._extract_playlists(  # noqa: SLF001
+                    mock_youtube_client, request, {}, create_videos_channel_setting=True
+                )
+            )
         assert message in str(err)
+
+
+@pytest.mark.parametrize(
+    ("channel_create_videos", "playlist_create_videos", "expected"),
+    [
+        (True, None, True),
+        (False, None, False),
+        (True, False, False),
+        (False, True, True),
+    ],
+)
+def test_extract_playlists_create_videos(
+    mock_youtube_client,
+    channel_create_videos,
+    playlist_create_videos,
+    expected,
+):
+    """Test that create_videos is resolved from playlist config or channel setting"""
+    playlist_id = "PL_test_123"
+    playlist_data = {"id": playlist_id, "snippet": {"title": "Test"}}
+    request = Mock(execute=Mock(return_value={"items": [playlist_data]}))
+    mock_youtube_client.return_value.playlists.return_value.list_next.return_value = (
+        None
+    )
+
+    playlist_config = {"id": playlist_id}
+    if playlist_create_videos is not None:
+        playlist_config["create_videos"] = playlist_create_videos
+
+    results = list(
+        youtube._extract_playlists(  # noqa: SLF001
+            mock_youtube_client.return_value,
+            request,
+            {playlist_id: playlist_config},
+            create_videos_channel_setting=channel_create_videos,
+        )
+    )
+    assert len(results) == 1
+    _, _, create_videos = results[0]
+    assert create_videos is expected
 
 
 @pytest.mark.django_db
@@ -462,6 +508,7 @@ def test_transform_playlist(
         extracted[0][2][0][0],
         extracted[0][2][0][1],
         OfferedBy.ocw.name,
+        create_videos=True,
     )
     assert {**result, "videos": list(result["videos"])} == {
         **transformed[0]["playlists"][0],
