@@ -480,9 +480,9 @@ const OrgProgramDisplay: React.FC<{
 
   const courses = React.useMemo(
     () =>
-      coursesQuery.data?.results.sort((a, b) => {
+      [...(coursesQuery.data?.results ?? [])].sort((a, b) => {
         return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
-      }) ?? [],
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [coursesQuery.data?.results, program.courses],
   )
