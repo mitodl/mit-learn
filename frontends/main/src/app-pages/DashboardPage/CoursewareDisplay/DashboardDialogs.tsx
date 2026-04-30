@@ -233,13 +233,21 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
       await createEnrollment.mutateAsync({
         readable_id: readableId,
       })
-      const enrollments = await queryClient.fetchQuery(
-        enrollmentQueries.courseRunEnrollmentsList(),
-      )
-      const enrolledUrl = enrollments.find(
-        (enrollment) => enrollment.run.courseware_id === readableId,
-      )?.run.courseware_url
-      window.location.assign(enrolledUrl ?? href)
+      try {
+        const enrollments = await queryClient.fetchQuery(
+          enrollmentQueries.courseRunEnrollmentsList(),
+        )
+        const enrolledUrl = enrollments.find(
+          (enrollment) => enrollment.run.courseware_id === readableId,
+        )?.run.courseware_url
+        window.location.assign(enrolledUrl ?? href)
+      } catch (error) {
+        console.warn(
+          "Failed to fetch enrollments after JIT enrollment; falling back to destination URL",
+          error,
+        )
+        window.location.assign(href)
+      }
       modal.hide()
     },
   })
