@@ -498,15 +498,22 @@ const useEnrollmentHandler = () => {
                 // reliable for language-variant runs where the V2 run object
                 // may have a null or incorrect courseware_url.
                 if (enrolledCoursewareId) {
-                  const enrollments = await queryClient.fetchQuery(
-                    enrollmentQueries.courseRunEnrollmentsList(),
-                  )
-                  const enrolledUrl = enrollments.find(
-                    (e) => e.run.courseware_id === enrolledCoursewareId,
-                  )?.run.courseware_url
-                  if (enrolledUrl) {
-                    window.location.href = enrolledUrl
-                    return
+                  try {
+                    const enrollments = await queryClient.fetchQuery(
+                      enrollmentQueries.courseRunEnrollmentsList(),
+                    )
+                    const enrolledUrl = enrollments.find(
+                      (e) => e.run.courseware_id === enrolledCoursewareId,
+                    )?.run.courseware_url
+                    if (enrolledUrl) {
+                      window.location.href = enrolledUrl
+                      return
+                    }
+                  } catch (error) {
+                    console.warn(
+                      "Failed to fetch enrollments after enrollment; falling back to computed destination",
+                      error,
+                    )
                   }
                 }
                 const destination =
