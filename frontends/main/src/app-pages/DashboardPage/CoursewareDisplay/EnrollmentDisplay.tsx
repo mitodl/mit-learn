@@ -119,9 +119,25 @@ const ShowAllContainer = styled.div(({ theme }) => ({
 }))
 
 const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
-  width: "120px",
+  display: "inline-flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "8px",
+  width: "auto",
+  "> *:not(:last-child)": {
+    marginBottom: "0",
+  },
+  "> label": {
+    marginBottom: "0",
+    whiteSpace: "nowrap",
+  },
+  "> .MuiInputBase-root": {
+    width: "120px",
+  },
   [theme.breakpoints.down("sm")]: {
-    width: "100%",
+    "> .MuiInputBase-root": {
+      width: "120px",
+    },
   },
 })) as typeof SimpleSelectField
 

@@ -211,9 +211,25 @@ const ProgramControls = styled.div(({ theme }) => ({
 }))
 
 const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
-  width: "120px",
+  display: "inline-flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "8px",
+  width: "auto",
+  "> *:not(:last-child)": {
+    marginBottom: "0",
+  },
+  "> label": {
+    marginBottom: "0",
+    whiteSpace: "nowrap",
+  },
+  "> .MuiInputBase-root": {
+    width: "120px",
+  },
   [theme.breakpoints.down("sm")]: {
-    width: "100%",
+    "> .MuiInputBase-root": {
+      width: "120px",
+    },
   },
 })) as typeof SimpleSelectField
 
@@ -271,25 +287,23 @@ const OrgProgramCollectionDisplay: React.FC<{
     }),
     enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
-  // Create mapping from course ID to program order
-  const courseIdToOrder = new Map<number, number>()
-  programsWithCourses?.forEach((item) => {
-    const firstCourseId = item.program.courses[0]
-    const programId = item.programId
-    const order =
-      collection.programs.find((p) => p.id === programId)?.order ?? Infinity
-    courseIdToOrder.set(firstCourseId, order)
-  })
-  const rawCourses = React.useMemo(
-    () =>
-      courses.data?.results.sort((a, b) => {
-        const orderA = courseIdToOrder.get(a.id) ?? Infinity
-        const orderB = courseIdToOrder.get(b.id) ?? Infinity
-        return orderA - orderB
-      }) ?? [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [courses.data?.results],
-  )
+  const rawCourses = React.useMemo(() => {
+    const courseIdToOrder = new Map<number, number>()
+    programsWithCourses?.forEach((item) => {
+      const firstCourseId = item.program.courses[0]
+      const programId = item.programId
+      const order =
+        collection.programs.find((p) => p.id === programId)?.order ?? Infinity
+      courseIdToOrder.set(firstCourseId, order)
+    })
+
+    const results = courses.data?.results ?? []
+    return [...results].sort((a, b) => {
+      const orderA = courseIdToOrder.get(a.id) ?? Infinity
+      const orderB = courseIdToOrder.get(b.id) ?? Infinity
+      return orderA - orderB
+    })
+  }, [courses.data?.results, programsWithCourses, collection.programs])
   const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
   const languageOptions = React.useMemo(
     () => getDistinctLanguageOptions(rawCourses),
