@@ -1506,6 +1506,43 @@ describe("ContractContent", () => {
     })
   })
 
+  test("language picker is hidden when no language options are present", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const run = factories.courses.courseRun({
+      b2b_contract: undefined,
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [],
+    })
+    const program = factories.programs.program({ courses: [course.id] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [course],
+      contracts,
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-root")
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+  })
+
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 

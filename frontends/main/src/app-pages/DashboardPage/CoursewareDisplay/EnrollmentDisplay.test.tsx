@@ -2522,5 +2522,72 @@ describe("EnrollmentDisplay", () => {
         "Comenzar Curso",
       )
     })
+
+    test("language picker is hidden when no language options are present", async () => {
+      const mitxOnlineUser = mitxonline.factories.user.user()
+      setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+      const run = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        title: "Single Language Module",
+        is_enrollable: true,
+      })
+      const course = mitxonline.factories.courses.course({
+        id: 992,
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [],
+      })
+
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const core = reqTree.addOperator({
+        operator: "all_of",
+        title: "Core Courses",
+      })
+      core.addCourse({ course: course.id })
+
+      const program = mitxonline.factories.programs.program({
+        id: 459,
+        title: "Single Language Program",
+        courses: [course.id],
+        req_tree: reqTree.serialize(),
+      })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+          certificate: null,
+        })
+
+      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+      setMockResponse.get(
+        mitxonline.urls.programEnrollments.enrollmentsListV3(),
+        [programEnrollment],
+      )
+      setMockResponse.get(
+        mitxonline.urls.programs.programDetail(program.id),
+        program,
+      )
+      setMockResponse.get(
+        mitxonline.urls.courses.coursesList({
+          id: program.courses,
+          page_size: program.courses.length,
+        }),
+        { count: 1, next: null, previous: null, results: [course] },
+      )
+
+      renderWithProviders(<EnrollmentDisplay programId={program.id} />)
+
+      await screen.findByText("Single Language Program")
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+      expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+    })
   })
 })
