@@ -222,11 +222,13 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
     whiteSpace: "nowrap",
   },
   "> .MuiInputBase-root": {
-    width: "120px",
+    width: "fit-content",
+    maxWidth: "100%",
   },
   [theme.breakpoints.down("sm")]: {
     "> .MuiInputBase-root": {
-      width: "120px",
+      width: "fit-content",
+      maxWidth: "100%",
     },
   },
 })) as typeof SimpleSelectField
