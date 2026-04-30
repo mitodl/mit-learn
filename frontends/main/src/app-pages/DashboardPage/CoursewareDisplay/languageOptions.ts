@@ -175,11 +175,15 @@ const getEnrollmentForSelectedLanguage = (
 
 const getResolvedRunForSelectedLanguage = (
   course: CourseWithCourseRunsSerializerV2,
-  _selectedLanguageOption: CourseRunLanguageOption | null,
+  selectedLanguageOption: CourseRunLanguageOption | null,
   selectedRun: CourseRunV2 | null,
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
 ): CourseRunV2 | null => {
+  // TODO: In this function, we adapt V3 enrollment run data to a V2-shaped course run
+  // object to preserve selected language context. Once all dashboard card/run context
+  // is migrated to V3-native types, this adaptation logic can be removed and the
+  // function can simply return the selected enrollment's run directly.
   let scopedSelectedRun: CourseRunV2 | null = selectedRun
   if (
     typeof contractId === "number" &&
@@ -198,11 +202,13 @@ const getResolvedRunForSelectedLanguage = (
 
   if (selectedEnrollment) {
     if (!templateRun) {
+      // Cannot adapt enrollment.run to a CourseRunV2 shape without a scoped
+      // template run to supply required base fields.
       return null
     }
 
-    // TODO: Temporary V3 -> V2 run adapter.
-    // Remove once dashboard card/run context is migrated to V3-native types.
+    // Return the selected enrollment's run details merged onto a scoped base run
+    // so downstream CourseRunV2 consumers get the selected-language run context.
     return {
       ...templateRun,
       id: selectedEnrollment.run.id,
@@ -224,10 +230,26 @@ const getResolvedRunForSelectedLanguage = (
   }
 
   if (scopedSelectedRun) {
+    // Return the exact selected run when it already exists in this course's
+    // scoped runs and matches the optional contract constraint.
     return scopedSelectedRun
   }
 
-  return null
+  if (!selectedLanguageOption || !templateRun) {
+    // No selected language option, or no scoped template run to anchor one,
+    // so there is no safe run context to return.
+    return null
+  }
+
+  // Return a synthetic selected-language run id/title/courseware mapped onto a
+  // scoped template run so unenrolled language selection can still resolve.
+  return {
+    ...templateRun,
+    id: selectedLanguageOption.id,
+    title: selectedLanguageOption.title,
+    courseware_id: selectedLanguageOption.courseware_id,
+    run_tag: selectedLanguageOption.run_tag,
+  }
 }
 
 export {

@@ -246,7 +246,7 @@ describe("languageOptions", () => {
     expect(resolved?.enrollment_start).toBe(spanishRun.enrollment_start)
   })
 
-  test("synthetic language option without matching run resolves to null", () => {
+  test("synthetic language option resolves using contract-scoped template run", () => {
     const contractId = 77
     const nonEnrollableContractRun = factories.courses.courseRun({
       id: 1001,
@@ -295,7 +295,11 @@ describe("languageOptions", () => {
       contractId,
     )
 
-    expect(resolved).toBeNull()
+    expect(resolved?.id).toBe(1003)
+    expect(resolved?.title).toBe("Modulo sintetico")
+    expect(resolved?.courseware_id).toBe("cw-contract-es-synthetic")
+    expect(resolved?.b2b_contract).toBe(contractId)
+    expect(resolved?.is_enrollable).toBe(false)
   })
 
   test("returns null when contract-scoped template run does not exist", () => {
