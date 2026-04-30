@@ -456,6 +456,7 @@ def test_vector_search_sortby_pagination(mocker, client):
         "sortby": "-created_on",
         "limit": 20,
         "offset": 60,
+        "score_cutoff": 0,
     }
 
     client.get(
