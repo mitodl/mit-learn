@@ -134,5 +134,11 @@ export const getCertificateLinkedInUrl = (
       ? (certificateData as V2CourseRunCertificate).course_run.course.title
       : (certificateData as V2ProgramCertificate).program.title
   const certId = certificateData.uuid
-  return `${LINKEDIN_ADD_TO_PROFILE_BASE_URL}?startTask=CERTIFICATION_NAME&name=${credentialName}&certId=${certId}&certUrl=${pageUrl}&organizationId=${ORG_ID}`
+  const linkedinUrl = new URL(LINKEDIN_ADD_TO_PROFILE_BASE_URL)
+  linkedinUrl.searchParams.set("startTask", "CERTIFICATION_NAME")
+  linkedinUrl.searchParams.set("name", credentialName)
+  linkedinUrl.searchParams.set("certId", certId)
+  linkedinUrl.searchParams.set("certUrl", pageUrl)
+  linkedinUrl.searchParams.set("organizationId", ORG_ID.toString())
+  return linkedinUrl.toString()
 }

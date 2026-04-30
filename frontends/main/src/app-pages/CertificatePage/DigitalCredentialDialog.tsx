@@ -148,7 +148,7 @@ export const DigitalCredentialDialog = ({
             <StyledButtonLink
               variant="secondary"
               size="large"
-              href={`https://verifierplus.org/#verify?vc=${encodeURI(certificateDownloadURL)}`}
+              href={`https://verifierplus.org/#verify?vc=${encodeURIComponent(certificateDownloadURL)}`}
               target="_blank"
               endIcon={<Image src={VerifyIcon} alt="" aria-hidden />}
             >
