@@ -14,7 +14,7 @@ import {
   Link,
   PlainList,
   Skeleton,
-  SimpleSelect,
+  SimpleSelectField,
   Stack,
   styled,
   Typography,
@@ -210,12 +210,12 @@ const ProgramControls = styled.div(({ theme }) => ({
   },
 }))
 
-const ProgramLanguageSelect = styled(SimpleSelect)(({ theme }) => ({
+const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   width: "120px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
-}))
+})) as typeof SimpleSelectField
 
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
@@ -326,6 +326,7 @@ const OrgProgramCollectionDisplay: React.FC<{
         <ProgramControls>
           <ProgramLanguageSelect
             size="small"
+            label={tDashboard(uiLanguageCode, "learningLanguage")}
             value={selectedLanguageKey}
             onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
             options={languageOptions}
@@ -507,23 +508,19 @@ const OrgProgramDisplay: React.FC<{
         </ProgramHeaderText>
         <ProgramControls>
           {languageOptions.length > 0 && (
-            <>
-              <Typography variant="body3">
-                {tDashboard(uiLanguageCode, "learningLanguage")}
-              </Typography>
-              <ProgramLanguageSelect
-                size="small"
-                value={selectedLanguageKey}
-                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-                options={languageOptions}
-                renderValue={(value) => {
-                  const selected = languageOptions.find(
-                    (opt) => opt.value === value,
-                  )
-                  return String(selected?.label ?? "")
-                }}
-              />
-            </>
+            <ProgramLanguageSelect
+              size="small"
+              label={tDashboard(uiLanguageCode, "learningLanguage")}
+              value={selectedLanguageKey}
+              onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+              options={languageOptions}
+              renderValue={(value) => {
+                const selected = languageOptions.find(
+                  (opt) => opt.value === value,
+                )
+                return String(selected?.label ?? "")
+              }}
+            />
           )}
           {hasValidCertificate && (
             <ProgramCertificateButton

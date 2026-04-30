@@ -6,7 +6,7 @@ import {
   Link,
   PlainList,
   PlainListProps,
-  SimpleSelect,
+  SimpleSelectField,
   Skeleton,
   Stack,
   Typography,
@@ -118,12 +118,12 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   },
 }))
 
-const ProgramLanguageSelect = styled(SimpleSelect)(({ theme }) => ({
+const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   width: "120px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
-}))
+})) as typeof SimpleSelectField
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -642,23 +642,19 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
             {program?.program_type ? `: ${program?.program_type}` : ""}
           </Typography>
           {languageOptions.length > 0 && (
-            <Stack direction="row" gap="8px" alignItems="center">
-              <Typography variant="body3">
-                {tDashboard(uiLanguageCode, "learningLanguage")}
-              </Typography>
-              <ProgramLanguageSelect
-                size="small"
-                value={selectedLanguageKey}
-                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-                options={languageOptions}
-                renderValue={(value) => {
-                  const selected = languageOptions.find(
-                    (opt) => opt.value === value,
-                  )
-                  return String(selected?.label ?? "")
-                }}
-              />
-            </Stack>
+            <ProgramLanguageSelect
+              size="small"
+              label={tDashboard(uiLanguageCode, "learningLanguage")}
+              value={selectedLanguageKey}
+              onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+              options={languageOptions}
+              renderValue={(value) => {
+                const selected = languageOptions.find(
+                  (opt) => opt.value === value,
+                )
+                return String(selected?.label ?? "")
+              }}
+            />
           )}
         </Stack>
         <Typography component="h1" variant="h3" paddingBottom="32px">
