@@ -687,7 +687,12 @@ class ContentFileSearchResponseSerializer(SearchResponseSerializer):
         request = self.context.get("request")
         hits = instance.get("hits", {}).get("hits", [])
         return (
-            transform_dict_backwards(hit.get("_source"), ContentFileSerializer, request)
+            transform_dict_backwards(
+                hit.get("_source"),
+                ContentFileSerializer,
+                request,
+                recursive=True,
+            )
             for hit in hits
         )
 
