@@ -246,7 +246,7 @@ describe("languageOptions", () => {
     expect(resolved?.enrollment_start).toBe(spanishRun.enrollment_start)
   })
 
-  test("synthetic language runs inherit enrollability from an enrollable fallback run", () => {
+  test("synthetic language option without matching run resolves to null", () => {
     const contractId = 77
     const nonEnrollableContractRun = factories.courses.courseRun({
       id: 1001,
@@ -295,9 +295,42 @@ describe("languageOptions", () => {
       contractId,
     )
 
-    expect(resolved?.id).toBe(1003)
-    expect(resolved?.title).toBe("Modulo sintetico")
-    expect(resolved?.courseware_id).toBe("cw-contract-es-synthetic")
-    expect(resolved?.is_enrollable).toBe(true)
+    expect(resolved).toBeNull()
+  })
+
+  test("returns null when contract-scoped template run does not exist", () => {
+    const contractId = 88
+    const nonContractRun = factories.courses.courseRun({
+      id: 2001,
+      title: "Non-contract run",
+      courseware_id: "cw-non-contract",
+      courseware_url: "https://openedx.example.com/non-contract",
+      b2b_contract: null,
+    })
+    const course = factories.courses.course({
+      courseruns: [nonContractRun],
+      next_run_id: nonContractRun.id,
+      language_options: [
+        {
+          id: 2002,
+          courseware_id: "cw-contract-es-synthetic",
+          language: "es",
+          title: "Modulo sintetico",
+          run_tag: "spanish",
+        },
+      ],
+    })
+
+    const spanishOption = getSelectedLanguageOption(course, "language:es")
+
+    const resolved = getResolvedRunForSelectedLanguage(
+      course,
+      spanishOption,
+      null,
+      null,
+      contractId,
+    )
+
+    expect(resolved).toBeNull()
   })
 })

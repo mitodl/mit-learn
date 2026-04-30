@@ -363,41 +363,50 @@ const createTestContracts = (
 const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
   const contractIds = contracts.map((c) => c.id)
 
-  return factories.courses.courses({ count: 3 }).results.map((course) => ({
-    ...course,
-    courseruns: [
-      // First run associated with organization's contract
-      {
-        ...course.courseruns[0],
-        id: faker.number.int(),
-        b2b_contract: contractIds[0], // Associated with org contract
-        is_enrollable: true,
-        start_date: faker.date.future().toISOString(),
-        end_date: faker.date.future().toISOString(),
-        title: `${course.title} - Org Contract Run`,
-      },
-      // Second run associated with different organization's contract
-      {
-        ...course.courseruns[0],
-        id: faker.number.int(),
-        b2b_contract: faker.number.int(), // Different contract ID
-        is_enrollable: true,
-        start_date: faker.date.past().toISOString(),
-        end_date: faker.date.past().toISOString(),
-        title: `${course.title} - Other Org Run`,
-      },
-      // Third run with no contract (general enrollment)
-      {
-        ...course.courseruns[0],
-        id: faker.number.int(),
-        b2b_contract: null,
-        is_enrollable: true,
-        start_date: faker.date.future().toISOString(),
-        end_date: faker.date.future().toISOString(),
-        title: `${course.title} - General Run`,
-      },
-    ],
-  }))
+  return factories.courses.courses({ count: 3 }).results.map((course) => {
+    const contractRun = {
+      ...course.courseruns[0],
+      id: faker.number.int(),
+      b2b_contract: contractIds[0], // Associated with org contract
+      is_enrollable: true,
+      start_date: faker.date.future().toISOString(),
+      end_date: faker.date.future().toISOString(),
+      title: `${course.title} - Org Contract Run`,
+    }
+    const otherOrgRun = {
+      ...course.courseruns[0],
+      id: faker.number.int(),
+      b2b_contract: faker.number.int(), // Different contract ID
+      is_enrollable: true,
+      start_date: faker.date.past().toISOString(),
+      end_date: faker.date.past().toISOString(),
+      title: `${course.title} - Other Org Run`,
+    }
+    const generalRun = {
+      ...course.courseruns[0],
+      id: faker.number.int(),
+      b2b_contract: null,
+      is_enrollable: true,
+      start_date: faker.date.future().toISOString(),
+      end_date: faker.date.future().toISOString(),
+      title: `${course.title} - General Run`,
+    }
+
+    return {
+      ...course,
+      next_run_id: contractRun.id,
+      language_options: [
+        {
+          id: contractRun.id,
+          courseware_id: contractRun.courseware_id,
+          language: "en",
+          title: contractRun.title,
+          run_tag: contractRun.run_tag,
+        },
+      ],
+      courseruns: [contractRun, otherOrgRun, generalRun],
+    }
+  })
 }
 
 export {

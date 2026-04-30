@@ -151,13 +151,7 @@ const getCourseRunForSelectedLanguage = (
     return null
   }
 
-  return (
-    course.courseruns.find(
-      (run) =>
-        run.courseware_id === languageOption.courseware_id ||
-        run.id === languageOption.id,
-    ) ?? null
-  )
+  return course.courseruns.find((run) => run.id === languageOption.id) ?? null
 }
 
 const getEnrollmentForSelectedLanguage = (
@@ -172,7 +166,7 @@ const getEnrollmentForSelectedLanguage = (
   return (
     enrollments.find((enrollment) => {
       return (
-        enrollment.run.courseware_id === selectedLanguageOption.courseware_id ||
+        enrollment.run.id === selectedLanguageOption.id ||
         (selectedRun ? enrollment.run.id === selectedRun.id : false)
       )
     }) ?? null
@@ -181,23 +175,32 @@ const getEnrollmentForSelectedLanguage = (
 
 const getResolvedRunForSelectedLanguage = (
   course: CourseWithCourseRunsSerializerV2,
-  selectedLanguageOption: CourseRunLanguageOption | null,
+  _selectedLanguageOption: CourseRunLanguageOption | null,
   selectedRun: CourseRunV2 | null,
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
 ): CourseRunV2 | null => {
-  const templateRun =
-    selectedRun ??
-    getBestRun(course, { enrollableOnly: true, contractId }) ??
-    getBestRun(course, { enrollableOnly: true }) ??
-    getBestRun(course, { contractId }) ??
-    course.courseruns[0] ??
-    null
+  let scopedSelectedRun: CourseRunV2 | null = selectedRun
+  if (
+    typeof contractId === "number" &&
+    selectedRun?.b2b_contract !== contractId
+  ) {
+    scopedSelectedRun = null
+  }
+
+  let templateRun: CourseRunV2 | null = scopedSelectedRun
   if (!templateRun) {
-    return null
+    templateRun =
+      typeof contractId === "number"
+        ? (getBestRun(course, { contractId }) ?? null)
+        : (getBestRun(course) ?? null)
   }
 
   if (selectedEnrollment) {
+    if (!templateRun) {
+      return null
+    }
+
     // TODO: Temporary V3 -> V2 run adapter.
     // Remove once dashboard card/run context is migrated to V3-native types.
     return {
@@ -220,21 +223,11 @@ const getResolvedRunForSelectedLanguage = (
     }
   }
 
-  if (selectedRun) {
-    return selectedRun
+  if (scopedSelectedRun) {
+    return scopedSelectedRun
   }
 
-  if (!selectedLanguageOption) {
-    return null
-  }
-
-  return {
-    ...templateRun,
-    id: selectedLanguageOption.id,
-    title: selectedLanguageOption.title,
-    courseware_id: selectedLanguageOption.courseware_id,
-    run_tag: selectedLanguageOption.run_tag,
-  }
+  return null
 }
 
 export {
