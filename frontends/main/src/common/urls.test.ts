@@ -1,5 +1,10 @@
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { auth, coursePageView, ocwCoursePageView, programPageView } from "./urls"
+import {
+  auth,
+  coursePageView,
+  ocwCoursePageView,
+  programPageView,
+} from "./urls"
 
 const MITOL_API_BASE_URL = process.env.NEXT_PUBLIC_MITOL_API_BASE_URL
 

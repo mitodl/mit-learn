@@ -373,7 +373,8 @@ describe("CallToActionSection", () => {
   })
 
   describe("OCW product pages", () => {
-    const ocwSlug = "16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006"
+    const ocwSlug =
+      "16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006"
     const ocwUrl = `https://ocw.mit.edu/courses/${ocwSlug}/`
 
     const ocwResource: typeof factories.learningResources.resource = (

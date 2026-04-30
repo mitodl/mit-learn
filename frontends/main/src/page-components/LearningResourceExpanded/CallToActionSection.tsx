@@ -320,7 +320,7 @@ const getResourceUrl = (
   }: {
     mitxonlineProductPages?: boolean
     showVideoPlaylistPage?: boolean
-    showPodcastPage?: boolean,
+    showPodcastPage?: boolean
     ocwProductPages?: boolean
   },
 ) => {
