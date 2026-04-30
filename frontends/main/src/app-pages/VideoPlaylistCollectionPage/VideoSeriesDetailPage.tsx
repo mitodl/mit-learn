@@ -17,7 +17,6 @@ import { notFound } from "next/navigation"
 import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
-import MetaRow from "./MetaRow"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
@@ -50,7 +49,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-  console.log(video)
+
   const {
     prevVideo,
     nextVideo,
@@ -71,35 +70,14 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     ? formatDurationClockTime(video.video.duration)
     : null
 
-  const topics = video?.topics ?? []
   const playlistLabel = playlist?.title || "Video Collection"
-
-  // Meta: instructors, department, duration, term
-  const run = video?.runs?.[0]
-  const instructorNames =
-    run?.instructors
-      ?.map((i) => i.full_name)
-      .filter(Boolean)
-      .join(", ") ?? null
-  const departmentName = video?.departments?.[0]?.name ?? null
-  const term =
-    run?.semester && run?.year
-      ? `${run.semester} ${run.year}`
-      : run?.semester || (run?.year ? String(run.year) : null)
-  const metaParts = [instructorNames, departmentName, term].filter(
-    Boolean,
-  ) as string[]
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 
   const videoTitleLabel = video?.title?.trim() || "Untitled video"
   const durationLabel = duration || "Unknown duration"
-  const topicNamesLabel =
-    topics
-      .map((t) => t.name)
-      .filter(Boolean)
-      .join(" · ") || "No topics listed"
-  const videoThumbnailAlt = `Video thumbnail for ${videoTitleLabel}. Duration: ${durationLabel}. Topics: ${topicNamesLabel}`
+
+  const videoThumbnailAlt = `Video thumbnail for ${videoTitleLabel}. Duration: ${durationLabel}`
   const loadingStatusMessage = isLoading
     ? "Loading video details and player"
     : "Video details loaded"
@@ -246,16 +224,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             <UpNextSection nextVideo={nextVideo} getVideoHref={getVideoHref} />
           )}
 
-          {/* Meta row */}
-          {!isLoading && (
-            <MetaRow
-              metaParts={metaParts}
-              instructorNames={instructorNames}
-              departmentName={departmentName}
-              term={term}
-            />
-          )}
-
           {/* Description */}
           {!isLoading && video?.description && (
             <Styled.DescriptionText id="video-description">
@@ -265,8 +233,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
           {!isLoading && !video?.description && (
             <Styled.ScreenReaderOnly id="video-description">
-              {videoTitleLabel}. Duration: {durationLabel}. Topics:{" "}
-              {topicNamesLabel}.
+              {videoTitleLabel}. Duration: {durationLabel}.
             </Styled.ScreenReaderOnly>
           )}
         </VideoContainer>
