@@ -2511,11 +2511,8 @@ describe("EnrollmentDisplay", () => {
       await user.click(languageSelect)
       await user.click(await screen.findByRole("option", { name: "Español" }))
 
-      await waitFor(() => {
-        expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
-          "Modulo en Espanol",
-        )
-      })
+      const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+      await within(desktopCard).findByText("Modulo en Espanol")
 
       expect(screen.getByText("Idioma de aprendizaje:")).toBeInTheDocument()
       expect(screen.getByTestId("enrollment-card-desktop")).toHaveTextContent(
