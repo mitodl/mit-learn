@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.65.3
+--------------
+
+- show resource_category in channel pages (#3264)
+- use youtube etl for playlists and ocw for videos (#3257)
+- Vector search pagination fix for empty hybrid searches (#3251)
+
 Version 0.65.2 (Released April 30, 2026)
 --------------
 
