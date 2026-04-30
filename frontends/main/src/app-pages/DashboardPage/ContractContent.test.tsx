@@ -1387,7 +1387,7 @@ describe("ContractContent", () => {
     )
 
     const root = within(await screen.findByTestId("org-program-root"))
-    const languageSelect = await root.findByRole("combobox")
+    const languageSelect = await screen.findByRole("combobox")
     expect(languageSelect).toHaveTextContent("English")
 
     const card = await root.findByTestId("enrollment-card-desktop")
@@ -1490,7 +1490,7 @@ describe("ContractContent", () => {
     )
     const collection = within(collectionRoot)
 
-    const languageSelect = await collection.findByRole("combobox")
+    const languageSelect = await screen.findByRole("combobox")
     expect(languageSelect).toHaveTextContent("English")
 
     const card = await collection.findByTestId("enrollment-card-desktop")
