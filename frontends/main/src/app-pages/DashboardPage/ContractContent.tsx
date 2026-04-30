@@ -533,7 +533,7 @@ const OrgProgramDisplay: React.FC<{
               href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
             >
               {tDashboard(uiLanguageCode, "viewProgramTypeCertificate", {
-                programType: program.program_type,
+                programType: program.program_type ?? "",
               })}
             </ProgramCertificateButton>
           )}
