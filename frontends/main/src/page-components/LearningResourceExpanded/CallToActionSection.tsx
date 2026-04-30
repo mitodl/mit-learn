@@ -327,18 +327,9 @@ const getResourceUrl = (
   if (
     ocwProductPages &&
     resource.platform?.code === PlatformEnum.Ocw &&
-    resource.resource_type === ResourceTypeEnum.Course &&
     resource.url
   ) {
-    try {
-      const ocwPath = new URL(resource.url).pathname
-      const match = ocwPath.match(/^\/courses\/([^/]+)/)
-      if (match) {
-        return ocwCoursePageView(match[1])
-      }
-    } catch {
-      // fall through to resource.url
-    }
+    return resource.url.replace(/.*?\/courses\//, "/courses/o/")
   }
   if (
     mitxonlineProductPages &&
