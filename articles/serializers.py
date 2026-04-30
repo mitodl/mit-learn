@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_field
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 
 from articles import models
@@ -18,13 +19,15 @@ class SanitizedHtmlField(serializers.Field):
         return clean_html(data)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
+    """Serializer for article author user fields."""
+
     class Meta:
         model = User
         fields = ["first_name", "last_name"]
 
 
-class RichTextArticleSerializer(serializers.ModelSerializer):
+class RichTextArticleSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for LearningResourceInstructor model
     """

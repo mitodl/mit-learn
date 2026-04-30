@@ -1,11 +1,12 @@
 """Serializers for video shorts"""
 
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 
 from video_shorts.models import VideoShort
 
 
-class VideoShortSerializer(serializers.ModelSerializer):
+class VideoShortSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """ModelSerializer for VideoShort model"""
 
     class Meta:
@@ -23,7 +24,9 @@ class VideoShortSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_on", "updated_on"]
 
 
-class VideoShortWebhookSerializer(serializers.ModelSerializer):
+class VideoShortWebhookSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer to transform webhook metadata to VideoShort objects.
     """

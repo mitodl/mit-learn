@@ -66,6 +66,7 @@ dependencies = [
     "mitol-django-common>=2026.4.2,<2027",
     "mitol-django-scim>=2026.4.2,<2027",
     "mitol-django-observability>=2026.1.0,<2027",
+    "mitol-django-api-versioning>=2026.3.24,<2027",
     "named-enum>=1.4.0,<2",
     "nested-lookup>=0.2.25,<0.3",
     "nh3>=0.3.0,<0.4",
@@ -156,6 +157,7 @@ override-dependencies = ["setuptools<80"]
 
 [tool.uv.sources]
 django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" } # pragma: allowlist secret
+mitol-django-api-versioning = { git = "https://github.com/mitodl/ol-django", subdirectory = "src/api_versioning", rev = "5290e759d575ba070de4cd98331d08c58f0abb5e" } # pragma: allowlist secret
 
 [tool.uv.build-backend]
 module-root = ""

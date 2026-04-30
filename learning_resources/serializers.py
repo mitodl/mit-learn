@@ -14,6 +14,7 @@ from django.db.models import F, Max, Prefetch, Q
 from drf_spectacular.utils import extend_schema_field
 from isodate import parse_duration
 from langchain_text_splitters import RecursiveJsonSplitter
+from mitol.api_versioning.mixins import VersionedSerializerMixin
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -70,7 +71,9 @@ def _get_program_child_resource_map(
     return {resource.id: resource for resource in child_resources}
 
 
-class LearningResourceInstructorSerializer(serializers.ModelSerializer):
+class LearningResourceInstructorSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for LearningResourceInstructor model
     """
@@ -80,7 +83,9 @@ class LearningResourceInstructorSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
-class LearningResourcePriceSerializer(serializers.ModelSerializer):
+class LearningResourcePriceSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for LearningResourcePrice model
     """
@@ -90,7 +95,9 @@ class LearningResourcePriceSerializer(serializers.ModelSerializer):
         exclude = "id", *COMMON_IGNORED_FIELDS
 
 
-class LearningResourceTopicSerializer(serializers.ModelSerializer):
+class LearningResourceTopicSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for LearningResourceTopic model
     """
@@ -142,7 +149,9 @@ class LearningResourceTypeField(serializers.ReadOnlyField):
     """Field for LearningResource.resource_type"""
 
 
-class LearningResourceOfferorSerializer(serializers.ModelSerializer):
+class LearningResourceOfferorSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for LearningResourceOfferor with basic details"""
 
     channel_url = serializers.CharField(read_only=True, allow_null=True)
@@ -190,7 +199,9 @@ class LearningResourceContentTagField(serializers.Field):
         return sorted([tag.name for tag in value.all()])
 
 
-class LearningResourcePlatformSerializer(serializers.ModelSerializer):
+class LearningResourcePlatformSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for LearningResourcePlatform"""
 
     class Meta:
@@ -198,7 +209,9 @@ class LearningResourcePlatformSerializer(serializers.ModelSerializer):
         fields = ("code", "name")
 
 
-class LearningResourceBaseDepartmentSerializer(serializers.ModelSerializer):
+class LearningResourceBaseDepartmentSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for LearningResourceDepartment, minus school
 
@@ -212,7 +225,9 @@ class LearningResourceBaseDepartmentSerializer(serializers.ModelSerializer):
         fields = ["department_id", "name", "channel_url"]
 
 
-class LearningResourceBaseSchoolSerializer(serializers.ModelSerializer):
+class LearningResourceBaseSchoolSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Base serializer for LearningResourceSchool model, minus departments list
 
@@ -246,7 +261,9 @@ class LearningResourceSchoolSerializer(LearningResourceBaseSchoolSerializer):
         fields = [*LearningResourceBaseSchoolSerializer.Meta.fields, "departments"]
 
 
-class LearningResourceContentTagSerializer(serializers.ModelSerializer):
+class LearningResourceContentTagSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for LearningResourceContentTag"""
 
     class Meta:
@@ -254,7 +271,9 @@ class LearningResourceContentTagSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
-class LearningResourceImageSerializer(serializers.ModelSerializer):
+class LearningResourceImageSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for LearningResourceImage"""
 
     class Meta:
@@ -373,7 +392,9 @@ class ComputedResourceTypeGroupField(ResourceTypeGroupChoiceField):
         return LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
 
 
-class LearningResourceRunSerializer(serializers.ModelSerializer):
+class LearningResourceRunSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """Serializer for the LearningResourceRun model"""
 
     instructors = LearningResourceInstructorSerializer(
@@ -415,7 +436,7 @@ class CourseNumberSerializer(serializers.Serializer):
     listing_type = serializers.CharField()
 
 
-class ProgramSerializer(serializers.ModelSerializer):
+class ProgramSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the Program model"""
 
     course_count = serializers.IntegerField(read_only=True)
@@ -427,7 +448,7 @@ class ProgramSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class CourseSerializer(serializers.ModelSerializer):
+class CourseSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the Course model"""
 
     course_numbers = CourseNumberSerializer(many=True, allow_null=True)
@@ -437,7 +458,9 @@ class CourseSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
+class LearningPathSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer, ResourceListMixin
+):
     """Serializer for the LearningPath model"""
 
     class Meta:
@@ -445,7 +468,7 @@ class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
         exclude = ("learning_resource", "author", *COMMON_IGNORED_FIELDS)
 
 
-class PodcastEpisodeSerializer(serializers.ModelSerializer):
+class PodcastEpisodeSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for PodcastEpisode
     """
@@ -461,7 +484,7 @@ class PodcastEpisodeSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class PodcastSerializer(serializers.ModelSerializer):
+class PodcastSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for Podcasts
     """
@@ -473,7 +496,7 @@ class PodcastSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class VideoChannelSerializer(serializers.ModelSerializer):
+class VideoChannelSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the VideoChannel model"""
 
     class Meta:
@@ -496,7 +519,7 @@ class NullableURLField(serializers.URLField):
         return super().to_representation(value) if value else None
 
 
-class VideoSerializer(serializers.ModelSerializer):
+class VideoSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the Video model"""
 
     caption_urls = CaptionUrlSerializer(many=True, read_only=True)
@@ -510,7 +533,7 @@ class VideoSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", "transcript", *COMMON_IGNORED_FIELDS)
 
 
-class VideoPlaylistSerializer(serializers.ModelSerializer):
+class VideoPlaylistSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """Serializer for the VideoPlaylist model"""
 
     channel = VideoChannelSerializer(read_only=True, allow_null=True)
@@ -523,7 +546,9 @@ class VideoPlaylistSerializer(serializers.ModelSerializer):
         exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
 
 
-class MicroLearningPathRelationshipSerializer(serializers.ModelSerializer):
+class MicroLearningPathRelationshipSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer containing only parent and child ids for a learning path relationship
     """
@@ -539,7 +564,9 @@ class MicroLearningPathRelationshipSerializer(serializers.ModelSerializer):
         fields = ("id", "parent", "child")
 
 
-class MicroUserListRelationshipSerializer(serializers.ModelSerializer):
+class MicroUserListRelationshipSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer containing only parent and child ids for a user list relationship
     """
@@ -1107,7 +1134,9 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         ]
 
 
-class LearningResourceRelationshipChildField(serializers.ModelSerializer):
+class LearningResourceRelationshipChildField(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer field for the LearningResourceRelationship model that uses
     the LearningResourceSerializer to serialize the child resources
@@ -1127,7 +1156,9 @@ class LearningResourceRelationshipChildField(serializers.ModelSerializer):
         )
 
 
-class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
+class LearningResourceBaseSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer, WriteableTopicsMixin
+):
     """Serializer for LearningResource, minus program"""
 
     position = serializers.IntegerField(read_only=True, allow_null=True)
@@ -1335,7 +1366,7 @@ class VideoPlaylistResourceSerializer(LearningResourceBaseSerializer):
     video_playlist = VideoPlaylistSerializer(read_only=True)
 
 
-class ContentFileSerializer(serializers.ModelSerializer):
+class ContentFileSerializer(VersionedSerializerMixin, serializers.ModelSerializer):
     """
     Serializer class for course run ContentFiles
     """
@@ -1541,7 +1572,9 @@ class LearningResourceSerializer(serializers.Serializer):
         return serializer_cls(instance=instance, context=self.context).data
 
 
-class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
+class LearningResourceRelationshipSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """CRUD serializer for LearningResourceRelationship"""
 
     resource = LearningResourceSerializer(read_only=True, source="child")
@@ -1621,7 +1654,9 @@ class LearningPathRelationshipCreateSerializer(LearningPathRelationshipSerialize
         read_only_fields = ("parent",)
 
 
-class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
+class UserListSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer, WriteableTopicsMixin
+):
     """
     Simplified serializer for UserList model.
     """
@@ -1671,7 +1706,9 @@ class UserListSerializer(serializers.ModelSerializer, WriteableTopicsMixin):
         read_only_fields = ["author"]
 
 
-class UserListRelationshipSerializer(serializers.ModelSerializer):
+class UserListRelationshipSerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Serializer for UserListRelationship model
     """
@@ -1790,7 +1827,9 @@ class LearningResourceDisplayInfoResponseSerializer(
     id = serializers.IntegerField()
 
 
-class LearningResourceSummarySerializer(serializers.ModelSerializer):
+class LearningResourceSummarySerializer(
+    VersionedSerializerMixin, serializers.ModelSerializer
+):
     """
     Minimal serializer for LearningResource - returns only essential fields
     for sitemap generation and other use cases requiring minimal data transfer.
