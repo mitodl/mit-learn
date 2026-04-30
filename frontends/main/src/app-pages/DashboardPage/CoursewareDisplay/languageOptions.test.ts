@@ -245,4 +245,59 @@ describe("languageOptions", () => {
     expect(resolved?.courseware_url).toBe(spanishRun.courseware_url)
     expect(resolved?.enrollment_start).toBe(spanishRun.enrollment_start)
   })
+
+  test("synthetic language runs inherit enrollability from an enrollable fallback run", () => {
+    const contractId = 77
+    const nonEnrollableContractRun = factories.courses.courseRun({
+      id: 1001,
+      title: "English Contract Run",
+      courseware_id: "cw-contract-en",
+      courseware_url: "https://openedx.example.com/contract-english",
+      b2b_contract: contractId,
+      is_enrollable: false,
+    })
+    const enrollableNonContractRun = factories.courses.courseRun({
+      id: 1002,
+      title: "Fallback Enrollable Run",
+      courseware_id: "cw-fallback-enrollable",
+      courseware_url: "https://openedx.example.com/fallback-enrollable",
+      b2b_contract: null,
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [nonEnrollableContractRun, enrollableNonContractRun],
+      next_run_id: nonEnrollableContractRun.id,
+      language_options: [
+        {
+          id: nonEnrollableContractRun.id,
+          courseware_id: nonEnrollableContractRun.courseware_id,
+          language: "en",
+          title: nonEnrollableContractRun.title,
+          run_tag: nonEnrollableContractRun.run_tag,
+        },
+        {
+          id: 1003,
+          courseware_id: "cw-contract-es-synthetic",
+          language: "es",
+          title: "Modulo sintetico",
+          run_tag: "spanish",
+        },
+      ],
+    })
+
+    const spanishOption = getSelectedLanguageOption(course, "language:es")
+
+    const resolved = getResolvedRunForSelectedLanguage(
+      course,
+      spanishOption,
+      null,
+      null,
+      contractId,
+    )
+
+    expect(resolved?.id).toBe(1003)
+    expect(resolved?.title).toBe("Modulo sintetico")
+    expect(resolved?.courseware_id).toBe("cw-contract-es-synthetic")
+    expect(resolved?.is_enrollable).toBe(true)
+  })
 })

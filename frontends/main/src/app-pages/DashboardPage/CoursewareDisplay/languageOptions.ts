@@ -189,6 +189,8 @@ const getResolvedRunForSelectedLanguage = (
   const templateRun =
     selectedRun ??
     getBestRun(course, { enrollableOnly: true, contractId }) ??
+    getBestRun(course, { enrollableOnly: true }) ??
+    getBestRun(course, { contractId }) ??
     course.courseruns[0] ??
     null
   if (!templateRun) {
