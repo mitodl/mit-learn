@@ -13,7 +13,7 @@ const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
   "de-de": "Deutsch",
   el: "Ελληνικά",
   es: "Español",
-  "es-419": "Español latinoamericano",
+  "es-419": "Español (Latinoamérica)",
   fr: "Français",
   pt: "Português",
   ja: "日本語",
