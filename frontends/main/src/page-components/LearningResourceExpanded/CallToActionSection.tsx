@@ -38,7 +38,6 @@ import {
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
   coursePageView,
-  ocwCoursePageView,
   programPageView,
   videoDetailPageView,
   videoPlaylistPageView,
