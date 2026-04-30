@@ -6,7 +6,6 @@ type MetaRowProps = {
   metaParts: string[]
   instructorNames: string | null
   departmentName: string | null
-  duration: string | null
   term: string | null
 }
 
@@ -14,25 +13,18 @@ const MetaRow: React.FC<MetaRowProps> = ({
   metaParts,
   instructorNames,
   departmentName,
-  duration,
   term,
 }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   if (isMobile) {
-    if (!instructorNames && !departmentName && !duration && !term) return null
+    if (!instructorNames && !departmentName && !term) return null
     return (
       <Styled.MetaRow>
         {instructorNames && (
           <Styled.MetaInstructorLine>
             {instructorNames}
           </Styled.MetaInstructorLine>
-        )}
-        {departmentName && <div>{departmentName}</div>}
-        {(duration || term) && (
-          <Styled.StyledDuration>
-            {[duration, term].filter(Boolean).join(" · ")}
-          </Styled.StyledDuration>
         )}
       </Styled.MetaRow>
     )

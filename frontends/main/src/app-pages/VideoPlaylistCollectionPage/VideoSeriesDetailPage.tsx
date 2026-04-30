@@ -18,7 +18,6 @@ import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import MetaRow from "./MetaRow"
-import TopicChips from "./TopicChips"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
@@ -51,7 +50,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
+  console.log(video)
   const {
     prevVideo,
     nextVideo,
@@ -87,14 +86,9 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     run?.semester && run?.year
       ? `${run.semester} ${run.year}`
       : run?.semester || (run?.year ? String(run.year) : null)
-  const metaParts = [instructorNames, departmentName, duration, term].filter(
+  const metaParts = [instructorNames, departmentName, term].filter(
     Boolean,
   ) as string[]
-
-  const institutionLabel =
-    video?.departments?.[0]?.name?.toUpperCase() ??
-    playlist?.offered_by?.name?.toUpperCase() ??
-    null
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 
@@ -178,15 +172,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
       <Styled.ContentArea id="video-detail-main" tabIndex={-1}>
         <VideoContainer>
-          {/* Institution / category label */}
-          {isLoading ? (
-            <Skeleton width={280} height={16} style={{ marginBottom: 8 }} />
-          ) : institutionLabel ? (
-            <Styled.InstitutionLabel>
-              {institutionLabel}
-            </Styled.InstitutionLabel>
-          ) : null}
-
           {/* Video title */}
           {isLoading ? (
             <Skeleton
@@ -200,7 +185,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               {video?.title}
             </Styled.VideoTitle>
           )}
-
+          <Styled.StyledDuration>{duration}</Styled.StyledDuration>
           {/* Video player */}
           <Styled.PlayerWrapper
             id="video-player-region"
@@ -267,7 +252,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               metaParts={metaParts}
               instructorNames={instructorNames}
               departmentName={departmentName}
-              duration={duration}
               term={term}
             />
           )}
@@ -285,9 +269,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               {topicNamesLabel}.
             </Styled.ScreenReaderOnly>
           )}
-
-          {/* Topic chips */}
-          {!isLoading && <TopicChips topics={topics} />}
         </VideoContainer>
       </Styled.ContentArea>
     </Styled.PageWrapper>

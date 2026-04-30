@@ -165,7 +165,7 @@ export const VideoTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h2,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.black,
-  margin: "0 0 40px",
+  margin: "0 0 16px",
   "&:focus": { outline: "none" },
   fontSize: "44px",
   fontStyle: "normal",
@@ -173,7 +173,7 @@ export const VideoTitle = styled.h1(({ theme }) => ({
   letterSpacing: "-0.88px",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
-    margin: "0 0 14px",
+    margin: "0 0 8px",
     letterSpacing: "inherit",
   },
 }))
@@ -297,8 +297,9 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
+  margin: "0 0 40px",
   [theme.breakpoints.down("sm")]: {
-    marginTop: "4px",
+    margin: "0 0 16px",
   },
 }))
 
