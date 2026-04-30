@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.65.2
+Version 0.65.2 (Released April 30, 2026)
 --------------
 
 - feat: implement the video series page design (#3258)
