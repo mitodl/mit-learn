@@ -1392,7 +1392,7 @@ describe.each([
       },
     )
 
-    test("Audit enrollment uses selected language run and normalizes fallback redirect URL", async () => {
+    test("Audit enrollment redirects to selected language run courseware_url", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
 
@@ -1418,12 +1418,13 @@ describe.each([
         id: faker.number.int(),
         is_enrollable: true,
         courseware_id: "course-v1:LANGTEST+COURSE+ALT_ES",
-        courseware_url: null,
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+ALT_ES/home",
       })
 
       const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
       setMockResponse.post(enrollmentUrl, {})
-      // Return no matching enrollment so redirect falls back to href normalization.
+      // Return no matching enrollment so redirect falls back to selected run URL.
       setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
       renderWithProviders(
@@ -1452,12 +1453,8 @@ describe.each([
       })
 
       await waitFor(() => {
-        expect(window.location.href).toContain(
-          selectedLanguageRun.courseware_id,
-        )
+        expect(window.location.href).toBe(selectedLanguageRun.courseware_url)
       })
-      expect(window.location.href).toContain("/learn/course/")
-      expect(window.location.href).toContain("/home")
     })
   })
 
@@ -1564,7 +1561,7 @@ describe.each([
       await screen.findByRole("dialog", { name: course.title })
     })
 
-    test("Verified enrollment normalizes redirect URL to selected language courseware_id", async () => {
+    test("Verified enrollment redirects to selected language run courseware_url", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
 
@@ -1584,6 +1581,8 @@ describe.each([
         id: faker.number.int(),
         is_enrollable: true,
         courseware_id: "course-v1:VERIFYTEST+COURSE+ALT_ES",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+ALT_ES/home",
       })
 
       const programEnrollment =
@@ -1620,12 +1619,8 @@ describe.each([
       })
 
       await waitFor(() => {
-        expect(window.location.href).toContain(
-          selectedLanguageRun.courseware_id,
-        )
+        expect(window.location.href).toBe(selectedLanguageRun.courseware_url)
       })
-      expect(window.location.href).toContain("/learn/course/")
-      expect(window.location.href).toContain("/home")
     })
 
     test("Audit program enrollment bypasses dialog for free-only single-run enrollment", async () => {

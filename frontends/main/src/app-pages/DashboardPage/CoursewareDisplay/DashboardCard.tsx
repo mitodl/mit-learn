@@ -309,37 +309,13 @@ const useEnrollmentHandler = () => {
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
   const replaceBasketItem = useReplaceBasketItem()
 
-  const normalizeCoursewareUrl = React.useCallback(
-    (
-      url: string | undefined,
-      coursewareId: string | undefined,
-    ): string | undefined => {
-      if (!url || !coursewareId) {
-        return url
-      }
-
-      if (url.includes(coursewareId)) {
-        return url
-      }
-
-      // Canonical MITx courseware paths are `/learn/course/<courseware_id>/home`.
-      // If href is still for the source run, rewrite only the courseware_id segment.
-      const rewritten = url.replace(
-        /(\/learn\/course\/)([^/]+)(\/home\/?)/,
-        `$1${coursewareId}$3`,
-      )
-
-      return rewritten
-    },
-    [],
-  )
-
   const enroll = React.useCallback(
     ({
       course,
       readableId,
       selectedRunId,
       href,
+      selectedCoursewareUrl,
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
@@ -348,6 +324,7 @@ const useEnrollmentHandler = () => {
       readableId?: string
       selectedRunId?: number
       href?: string
+      selectedCoursewareUrl?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
@@ -412,7 +389,12 @@ const useEnrollmentHandler = () => {
           )
           return
         }
-        const verifiedDestination = normalizeCoursewareUrl(href, readableId)
+        const verifiedDestination =
+          selectedCoursewareUrl ??
+          (course.courseruns ?? []).find(
+            (run) => run.courseware_id === readableId,
+          )?.courseware_url ??
+          href
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: [programCoursewareId] },
           {
@@ -520,7 +502,7 @@ const useEnrollmentHandler = () => {
                   }
                 }
                 const destination =
-                  normalizeCoursewareUrl(href, enrolledCoursewareId) ??
+                  selectedCoursewareUrl ??
                   enrollmentAction.run.courseware_url ??
                   href
                 if (destination) {
@@ -549,7 +531,6 @@ const useEnrollmentHandler = () => {
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,
-      normalizeCoursewareUrl,
       replaceBasketItem,
       queryClient,
     ],
@@ -932,6 +913,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
         readableId: readableId,
         selectedRunId: courseRun?.id,
         href: buttonHref ?? coursewareUrl ?? undefined,
+        selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programCoursewareId: programEnrollment?.program.readable_id,
