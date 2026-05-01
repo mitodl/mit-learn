@@ -1,5 +1,5 @@
 import React from "react"
-import { screen, within } from "@testing-library/react"
+import { screen, within, fireEvent } from "@testing-library/react"
 import { LearningResourceCard } from "./LearningResourceCard"
 import type { LearningResourceCardProps } from "./LearningResourceCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
@@ -297,6 +297,62 @@ describe("Learning Resource Card", () => {
     const imageEl = getByImageSrc(view.container, expected.src)
 
     expect(imageEl).toHaveAttribute("alt", expected.alt)
+  })
+
+  test("Shows content_files image when resource.image is null for Document/Video", () => {
+    const contentFileImageSrc = "https://example.com/content-file.jpg"
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      image: null,
+      content_files: [
+        factories.learningResources.contentFile({
+          image_src: contentFileImageSrc,
+        }),
+      ],
+    })
+
+    const view = setup({ resource })
+
+    getByImageSrc(view.container, contentFileImageSrc)
+  })
+
+  test("Falls back to content_files image when image.url returns 404", () => {
+    const primaryUrl = "https://example.com/primary.jpg"
+    const contentFileImageSrc = "https://example.com/content-file.jpg"
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      image: { url: primaryUrl, alt: "primary" },
+      content_files: [
+        factories.learningResources.contentFile({
+          image_src: contentFileImageSrc,
+        }),
+      ],
+    })
+
+    const view = setup({ resource })
+    fireEvent.error(getByImageSrc(view.container, primaryUrl))
+
+    getByImageSrc(view.container, contentFileImageSrc)
+  })
+
+  test("Falls back to DEFAULT_RESOURCE_IMG when image.url and content_files image both return 404", () => {
+    const primaryUrl = "https://example.com/primary.jpg"
+    const contentFileImageSrc = "https://example.com/content-file.jpg"
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      image: { url: primaryUrl, alt: "primary" },
+      content_files: [
+        factories.learningResources.contentFile({
+          image_src: contentFileImageSrc,
+        }),
+      ],
+    })
+
+    const view = setup({ resource })
+    fireEvent.error(getByImageSrc(view.container, primaryUrl))
+    fireEvent.error(getByImageSrc(view.container, contentFileImageSrc))
+
+    getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
   })
 
   test("Resource cards have headingLevel set for screen reader navigation", async () => {

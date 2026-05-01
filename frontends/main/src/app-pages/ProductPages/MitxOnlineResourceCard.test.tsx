@@ -1,9 +1,11 @@
 import React from "react"
-import { screen } from "@testing-library/react"
+import { screen, fireEvent } from "@testing-library/react"
 import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
 import { factories } from "api/mitxonline-test-utils"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders } from "@/test-utils"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { getByImageSrc } from "ol-test-utilities"
 import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
 
 const renderCard = (props: MitxOnlineResourceCardProps) =>
@@ -158,6 +160,26 @@ describe("MitxOnlineResourceCard", () => {
         }
       },
     )
+  })
+
+  describe("image error fallback", () => {
+    test("falls back to DEFAULT_RESOURCE_IMG when course image returns 404", () => {
+      const course = factories.courses.course({
+        page: { feature_image_src: "https://example.com/course.jpg", page_url: "" },
+      })
+      const { view } = renderCard({ resource: course, resourceType: "course", href: "/test" })
+      fireEvent.error(getByImageSrc(view.container, "https://example.com/course.jpg"))
+      getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
+    })
+
+    test("falls back to DEFAULT_RESOURCE_IMG when program image returns 404", () => {
+      const program = factories.programs.program({
+        page: { feature_image_src: "https://example.com/program.jpg", page_url: "" },
+      })
+      const { view } = renderCard({ resource: program, resourceType: "program", href: "/test" })
+      fireEvent.error(getByImageSrc(view.container, "https://example.com/program.jpg"))
+      getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
+    })
   })
 
   describe("enrollment-based pricing", () => {
