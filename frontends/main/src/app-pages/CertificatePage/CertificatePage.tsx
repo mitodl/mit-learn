@@ -753,7 +753,7 @@ const CertificatePage: React.FC<{
     : getCertificateLinkedInUrl(certificateType, certificateData!, pageUrl)
 
   const sharePageUrl = verifiableCredential
-    ? `https://verifierplus.org/#verify?vc=${encodeURI(getVerifiableCredentialDownloadAPIURL(verifiableCredential))}`
+    ? `https://verifierplus.org/#verify?vc=${encodeURIComponent(getVerifiableCredentialDownloadAPIURL(verifiableCredential))}`
     : pageUrl
 
   return (
