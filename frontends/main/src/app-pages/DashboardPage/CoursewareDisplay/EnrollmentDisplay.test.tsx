@@ -2246,6 +2246,34 @@ describe("EnrollmentDisplay", () => {
       setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
       const courses = mitxonline.factories.courses.courses({ count: 3 })
+      courses.results = courses.results.map((course) => {
+        const firstRun = course.courseruns[0]
+        return {
+          ...course,
+          courseruns: firstRun
+            ? [
+                {
+                  ...firstRun,
+                  title: course.title,
+                  is_enrollable: true,
+                },
+              ]
+            : [],
+          next_run_id: firstRun?.id ?? null,
+          language_options: firstRun
+            ? [
+                {
+                  id: firstRun.id,
+                  courseware_id: firstRun.courseware_id,
+                  courseware_url: firstRun.courseware_url ?? "",
+                  language: firstRun.language ?? "en",
+                  title: course.title,
+                  run_tag: firstRun.run_tag,
+                },
+              ]
+            : [],
+        }
+      })
       const [courseA, courseB, courseC] = courses.results
 
       // Requirement tree defines courses in order: C, A, B
@@ -2438,6 +2466,7 @@ describe("EnrollmentDisplay", () => {
           {
             id: englishRun.id,
             courseware_id: englishRun.courseware_id,
+            courseware_url: englishRun.courseware_url ?? "",
             language: "en",
             title: englishRun.title,
             run_tag: englishRun.run_tag,
@@ -2445,6 +2474,7 @@ describe("EnrollmentDisplay", () => {
           {
             id: spanishRun.id,
             courseware_id: spanishRun.courseware_id,
+            courseware_url: spanishRun.courseware_url ?? "",
             language: "es",
             title: spanishRun.title,
             run_tag: spanishRun.run_tag,
@@ -2541,6 +2571,7 @@ describe("EnrollmentDisplay", () => {
           {
             id: run.id,
             courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
             language: "en",
             title: run.title,
             run_tag: run.run_tag,

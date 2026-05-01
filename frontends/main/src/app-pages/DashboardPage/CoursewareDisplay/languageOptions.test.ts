@@ -1,5 +1,6 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
+  getCourseRunForSelectedLanguage,
   getDistinctLanguageOptions,
   getEnrollmentForSelectedLanguage,
   getLanguageOptionKey,
@@ -13,6 +14,7 @@ describe("languageOptions", () => {
       getLanguageOptionKey({
         id: 1,
         courseware_id: "cw-1",
+        courseware_url: "https://example.com/cw-1",
         language: "pt_BR",
         title: "Run",
         run_tag: "R1",
@@ -25,31 +27,43 @@ describe("languageOptions", () => {
       id: 101,
       title: "English A",
       courseware_id: "cw-en-a",
+      courseware_url: "https://example.com/cw-en-a",
+      is_enrollable: true,
     })
     const spanishRunA = factories.courses.courseRun({
       id: 102,
       title: "Espanol A",
       courseware_id: "cw-es-a",
+      courseware_url: "https://example.com/cw-es-a",
+      is_enrollable: true,
     })
     const englishRunB = factories.courses.courseRun({
       id: 201,
       title: "English B",
       courseware_id: "cw-en-b",
+      courseware_url: "https://example.com/cw-en-b",
+      is_enrollable: true,
     })
     const spanishRunB = factories.courses.courseRun({
       id: 202,
       title: "Espanol B",
       courseware_id: "cw-es-b",
+      courseware_url: "https://example.com/cw-es-b",
+      is_enrollable: true,
     })
     const spanishRunC = factories.courses.courseRun({
       id: 302,
       title: "Espanol C",
       courseware_id: "cw-es-c",
+      courseware_url: "https://example.com/cw-es-c",
+      is_enrollable: true,
     })
     const englishRunC = factories.courses.courseRun({
       id: 301,
       title: "English C",
       courseware_id: "cw-en-c",
+      courseware_url: "https://example.com/cw-en-c",
+      is_enrollable: true,
     })
 
     const courseA = factories.courses.course({
@@ -59,6 +73,7 @@ describe("languageOptions", () => {
         {
           id: englishRunA.id,
           courseware_id: englishRunA.courseware_id,
+          courseware_url: englishRunA.courseware_url ?? "",
           language: "en",
           title: englishRunA.title,
           run_tag: englishRunA.run_tag,
@@ -66,6 +81,7 @@ describe("languageOptions", () => {
         {
           id: spanishRunA.id,
           courseware_id: spanishRunA.courseware_id,
+          courseware_url: spanishRunA.courseware_url ?? "",
           language: "es",
           title: spanishRunA.title,
           run_tag: spanishRunA.run_tag,
@@ -73,6 +89,7 @@ describe("languageOptions", () => {
         {
           id: 999,
           courseware_id: "cw-empty",
+          courseware_url: "https://example.com/cw-empty",
           language: "",
           title: "No Language",
           run_tag: "R0",
@@ -86,6 +103,7 @@ describe("languageOptions", () => {
         {
           id: englishRunB.id,
           courseware_id: englishRunB.courseware_id,
+          courseware_url: englishRunB.courseware_url ?? "",
           language: "en",
           title: englishRunB.title,
           run_tag: englishRunB.run_tag,
@@ -93,6 +111,7 @@ describe("languageOptions", () => {
         {
           id: spanishRunB.id,
           courseware_id: spanishRunB.courseware_id,
+          courseware_url: spanishRunB.courseware_url ?? "",
           language: "es",
           title: spanishRunB.title,
           run_tag: spanishRunB.run_tag,
@@ -106,6 +125,7 @@ describe("languageOptions", () => {
         {
           id: englishRunC.id,
           courseware_id: englishRunC.courseware_id,
+          courseware_url: englishRunC.courseware_url ?? "",
           language: "en",
           title: englishRunC.title,
           run_tag: englishRunC.run_tag,
@@ -113,6 +133,7 @@ describe("languageOptions", () => {
         {
           id: spanishRunC.id,
           courseware_id: spanishRunC.courseware_id,
+          courseware_url: spanishRunC.courseware_url ?? "",
           language: "es",
           title: spanishRunC.title,
           run_tag: spanishRunC.run_tag,
@@ -137,10 +158,12 @@ describe("languageOptions", () => {
     const englishRun = factories.courses.courseRun({
       id: 11,
       courseware_id: "cw-en",
+      courseware_url: "https://example.com/cw-en",
     })
     const spanishRun = factories.courses.courseRun({
       id: 12,
       courseware_id: "cw-es",
+      courseware_url: "https://example.com/cw-es",
     })
 
     const englishEnrollment = factories.enrollment.courseEnrollment({
@@ -165,6 +188,7 @@ describe("languageOptions", () => {
       {
         id: spanishRun.id,
         courseware_id: spanishRun.courseware_id,
+        courseware_url: spanishRun.courseware_url ?? "",
         language: "es",
         title: spanishRun.title,
         run_tag: spanishRun.run_tag,
@@ -197,6 +221,7 @@ describe("languageOptions", () => {
         {
           id: templateRun.id,
           courseware_id: templateRun.courseware_id,
+          courseware_url: templateRun.courseware_url ?? "",
           language: "en",
           title: templateRun.title,
           run_tag: templateRun.run_tag,
@@ -204,6 +229,7 @@ describe("languageOptions", () => {
         {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
           language: "es",
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
@@ -246,7 +272,7 @@ describe("languageOptions", () => {
     expect(resolved?.enrollment_start).toBe(spanishRun.enrollment_start)
   })
 
-  test("synthetic language option resolves using contract-scoped template run", () => {
+  test("returns null when selected language has no concrete run", () => {
     const contractId = 77
     const nonEnrollableContractRun = factories.courses.courseRun({
       id: 1001,
@@ -271,6 +297,7 @@ describe("languageOptions", () => {
         {
           id: nonEnrollableContractRun.id,
           courseware_id: nonEnrollableContractRun.courseware_id,
+          courseware_url: nonEnrollableContractRun.courseware_url ?? "",
           language: "en",
           title: nonEnrollableContractRun.title,
           run_tag: nonEnrollableContractRun.run_tag,
@@ -278,46 +305,7 @@ describe("languageOptions", () => {
         {
           id: 1003,
           courseware_id: "cw-contract-es-synthetic",
-          language: "es",
-          title: "Modulo sintetico",
-          run_tag: "spanish",
-        },
-      ],
-    })
-
-    const spanishOption = getSelectedLanguageOption(course, "language:es")
-
-    const resolved = getResolvedRunForSelectedLanguage(
-      course,
-      spanishOption,
-      null,
-      null,
-      contractId,
-    )
-
-    expect(resolved?.id).toBe(1003)
-    expect(resolved?.title).toBe("Modulo sintetico")
-    expect(resolved?.courseware_id).toBe("cw-contract-es-synthetic")
-    expect(resolved?.b2b_contract).toBe(contractId)
-    expect(resolved?.is_enrollable).toBe(false)
-  })
-
-  test("returns null when contract-scoped template run does not exist", () => {
-    const contractId = 88
-    const nonContractRun = factories.courses.courseRun({
-      id: 2001,
-      title: "Non-contract run",
-      courseware_id: "cw-non-contract",
-      courseware_url: "https://openedx.example.com/non-contract",
-      b2b_contract: null,
-    })
-    const course = factories.courses.course({
-      courseruns: [nonContractRun],
-      next_run_id: nonContractRun.id,
-      language_options: [
-        {
-          id: 2002,
-          courseware_id: "cw-contract-es-synthetic",
+          courseware_url: "https://openedx.example.com/contract-spanish",
           language: "es",
           title: "Modulo sintetico",
           run_tag: "spanish",
@@ -336,5 +324,92 @@ describe("languageOptions", () => {
     )
 
     expect(resolved).toBeNull()
+  })
+
+  test("returns null when contract-scoped template run does not exist", () => {
+    const contractId = 88
+    const nonContractRun = factories.courses.courseRun({
+      id: 2001,
+      title: "Non-contract run",
+      courseware_id: "cw-non-contract",
+      courseware_url: "https://openedx.example.com/non-contract",
+      b2b_contract: null,
+    })
+    const course = factories.courses.course({
+      courseruns: [nonContractRun],
+      next_run_id: nonContractRun.id,
+      language_options: [
+        {
+          id: 2002,
+          courseware_id: "cw-contract-es-synthetic",
+          courseware_url: "https://openedx.example.com/contract-spanish",
+          language: "es",
+          title: "Modulo sintetico",
+          run_tag: "spanish",
+        },
+      ],
+    })
+
+    const spanishOption = getSelectedLanguageOption(course, "language:es")
+
+    const resolved = getResolvedRunForSelectedLanguage(
+      course,
+      spanishOption,
+      null,
+      null,
+      contractId,
+    )
+
+    expect(resolved).toBeNull()
+  })
+
+  test("ignores unenrollable options and picks enrollable option for the same language", () => {
+    const unenrollableEnglish = factories.courses.courseRun({
+      id: 3001,
+      courseware_id: "cw-en-unenrollable",
+      courseware_url: "https://openedx.example.com/en-unenrollable",
+      is_enrollable: false,
+    })
+    const enrollableEnglish = factories.courses.courseRun({
+      id: 3002,
+      courseware_id: "cw-en-enrollable",
+      courseware_url: "https://openedx.example.com/en-enrollable",
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [unenrollableEnglish, enrollableEnglish],
+      next_run_id: unenrollableEnglish.id,
+      language_options: [
+        {
+          id: unenrollableEnglish.id,
+          courseware_id: unenrollableEnglish.courseware_id,
+          courseware_url: unenrollableEnglish.courseware_url ?? "",
+          language: "en",
+          title: unenrollableEnglish.title,
+          run_tag: unenrollableEnglish.run_tag,
+        },
+        {
+          id: enrollableEnglish.id,
+          courseware_id: enrollableEnglish.courseware_id,
+          courseware_url: enrollableEnglish.courseware_url ?? "",
+          language: "en",
+          title: enrollableEnglish.title,
+          run_tag: enrollableEnglish.run_tag,
+        },
+      ],
+    })
+
+    const selectedOption = getSelectedLanguageOption(course, "language:en")
+    const selectedRun = getCourseRunForSelectedLanguage(course, "language:en")
+    const resolvedRun = getResolvedRunForSelectedLanguage(
+      course,
+      selectedOption,
+      selectedRun,
+      null,
+      undefined,
+    )
+
+    expect(selectedOption?.id).toBe(enrollableEnglish.id)
+    expect(resolvedRun?.id).toBe(enrollableEnglish.id)
   })
 })

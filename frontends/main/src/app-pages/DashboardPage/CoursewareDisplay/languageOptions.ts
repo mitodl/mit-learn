@@ -7,11 +7,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "./helpers"
 
-// Debug-only marker for synthetic language-selected runs.
-// Do not use this property for product behavior/branching.
-type SyntheticCourseRunV2 = CourseRunV2 & { __synthetic: boolean }
-type ResolvedLanguageRunV2 = CourseRunV2 | SyntheticCourseRunV2
-
 const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
   ar: "العربية",
   de: "Deutsch",
@@ -61,15 +56,28 @@ const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {
   return LANGUAGE_CODE_TO_NATIVE_NAME[baseCode] ?? languageCode
 }
 
+const getEnrollableLanguageOptions = (
+  course: CourseWithCourseRunsSerializerV2,
+): CourseRunLanguageOption[] => {
+  const runsById = new Map(
+    (course.courseruns ?? []).map((run) => [run.id, run]),
+  )
+  return (course.language_options ?? []).filter((option) => {
+    const run = runsById.get(option.id)
+    return Boolean(run?.is_enrollable)
+  })
+}
+
 const getDefaultLanguageOptionKey = (
   course: CourseWithCourseRunsSerializerV2,
 ): string | null => {
+  const enrollableLanguageOptions = getEnrollableLanguageOptions(course)
   const defaultRunId = course.next_run_id
   if (!defaultRunId) {
     return null
   }
 
-  const directMatch = (course.language_options ?? []).find(
+  const directMatch = enrollableLanguageOptions.find(
     (option) => option.id === defaultRunId,
   )
   if (directMatch) {
@@ -82,7 +90,7 @@ const getDefaultLanguageOptionKey = (
     return null
   }
 
-  const byCoursewareId = (course.language_options ?? []).find(
+  const byCoursewareId = enrollableLanguageOptions.find(
     (option) => option.courseware_id === defaultRun.courseware_id,
   )
   if (!byCoursewareId) {
@@ -108,7 +116,7 @@ const getDistinctLanguageOptions = (
       )
     }
 
-    ;(course.language_options ?? []).forEach((option) => {
+    getEnrollableLanguageOptions(course).forEach((option) => {
       const key = getLanguageOptionKey(option)
       const label = getLanguageOptionLabel(option)
       if (!key || !label) {
@@ -140,11 +148,31 @@ const getSelectedLanguageOption = (
   if (!selectedLanguageKey) {
     return null
   }
-  return (
-    (course.language_options ?? []).find(
-      (option) => getLanguageOptionKey(option) === selectedLanguageKey,
-    ) ?? null
+
+  const matchingOptions = getEnrollableLanguageOptions(course).filter(
+    (option) => getLanguageOptionKey(option) === selectedLanguageKey,
   )
+
+  if (matchingOptions.length === 0) {
+    return null
+  }
+
+  const nextRunMatch = matchingOptions.find(
+    (option) => option.id === course.next_run_id,
+  )
+  if (nextRunMatch) {
+    return nextRunMatch
+  }
+
+  const bestEnrollableRun = getBestRun(course, { enrollableOnly: true })
+  const bestRunMatch = matchingOptions.find(
+    (option) => option.id === bestEnrollableRun?.id,
+  )
+  if (bestRunMatch) {
+    return bestRunMatch
+  }
+
+  return matchingOptions[0] ?? null
 }
 
 const getCourseRunForSelectedLanguage = (
@@ -184,7 +212,7 @@ const getResolvedRunForSelectedLanguage = (
   selectedRun: CourseRunV2 | null,
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
-): ResolvedLanguageRunV2 | null => {
+): CourseRunV2 | null => {
   // Returns a CourseRunV2 representing the user's effective run for the selected
   // language. Three cases:
   //
@@ -195,13 +223,7 @@ const getResolvedRunForSelectedLanguage = (
   //   2. A real CourseRunV2 exists in course.courseruns for the language:
   //      return it directly.
   //
-  //   3. Pre-enrollment, no real CourseRunV2 exists for the language: synthesize
-  //      one by spreading templateRun and overriding only id/title/courseware_id/
-  //      run_tag from the language_options pointer. Dates, products, courseware_url,
-  //      and enrollability are inherited from a different-language run because
-  //      mitxonline does not currently surface per-language run metadata
-  //      pre-enrollment. Removable when the API returns language-specific runs
-  //      for non-default languages (see Approach C in feature_work/11088/pr_review.md).
+  //   3. No run matches, return null
   let scopedSelectedRun: CourseRunV2 | null = selectedRun
   if (
     typeof contractId === "number" &&
@@ -259,16 +281,7 @@ const getResolvedRunForSelectedLanguage = (
     return null
   }
 
-  // Return a synthetic selected-language run id/title/courseware mapped onto a
-  // scoped template run so unenrolled language selection can still resolve.
-  return {
-    ...templateRun,
-    id: selectedLanguageOption.id,
-    title: selectedLanguageOption.title,
-    courseware_id: selectedLanguageOption.courseware_id,
-    run_tag: selectedLanguageOption.run_tag,
-    __synthetic: true,
-  } satisfies SyntheticCourseRunV2
+  return null
 }
 
 export {
