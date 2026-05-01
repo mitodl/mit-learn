@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.65.3
+Version 0.65.3 (Released May 01, 2026)
 --------------
 
 - show resource_category in channel pages (#3264)
