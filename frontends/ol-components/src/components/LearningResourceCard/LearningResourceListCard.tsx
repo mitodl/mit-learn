@@ -168,7 +168,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
     resource.image?.url,
     resourceContentFilesImageSrc(resource),
     DEFAULT_RESOURCE_IMG,
-  ].filter(Boolean) as string[]
+  ].filter((src): src is string => Boolean(src))
   const imageSrc = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
 
   const prices = getLearningResourcePrices(resource)
