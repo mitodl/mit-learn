@@ -191,6 +191,7 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     language_options: runs.map((run) => ({
       id: run.id,
       courseware_id: run.courseware_id,
+      courseware_url: run.courseware_url ?? "",
       language: "en",
       title: run.title,
       run_tag: run.run_tag,

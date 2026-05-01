@@ -10,12 +10,11 @@ import {
   SimpleSelectOption,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
 import {
-  enrollmentQueries,
   useCreateB2bEnrollment,
   useDestroyEnrollment,
   useDestroyProgramEnrollment,
@@ -199,7 +198,6 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
   const createEnrollment = useCreateB2bEnrollment()
   const user = useQuery(mitxUserQueries.me())
   const modal = NiceModal.useModal()
-  const queryClient = useQueryClient()
 
   // Generate year options (minimum age 13, so current year - 13 back to 1900)
   const currentYear = new Date().getFullYear()
@@ -233,21 +231,7 @@ const JustInTimeDialogInner: React.FC<{ href: string; readableId: string }> = ({
       await createEnrollment.mutateAsync({
         readable_id: readableId,
       })
-      try {
-        const enrollments = await queryClient.fetchQuery(
-          enrollmentQueries.courseRunEnrollmentsList(),
-        )
-        const enrolledUrl = enrollments.find(
-          (enrollment) => enrollment.run.courseware_id === readableId,
-        )?.run.courseware_url
-        window.location.assign(enrolledUrl ?? href)
-      } catch (error) {
-        console.warn(
-          "Failed to fetch enrollments after JIT enrollment; falling back to destination URL",
-          error,
-        )
-        window.location.assign(href)
-      }
+      window.location.assign(href)
       modal.hide()
     },
   })
