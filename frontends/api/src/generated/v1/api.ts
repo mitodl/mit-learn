@@ -33202,17 +33202,11 @@ export const WebhooksApiAxiosParamCreator = function (
     },
     /**
      * Webhook handler for OVS video upserts and deletes from the dagster pipeline
-     * @param {boolean} [_delete]
-     * @param {string} [key]
-     * @param {string} [video_id]
      * @param {OVSVideoWebhookRequestRequest} [OVSVideoWebhookRequestRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     webhooksOvsVideosCreate: async (
-      _delete?: boolean,
-      key?: string,
-      video_id?: string,
       OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
@@ -33231,18 +33225,6 @@ export const WebhooksApiAxiosParamCreator = function (
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
-
-      if (_delete !== undefined) {
-        localVarQueryParameter["delete"] = _delete
-      }
-
-      if (key !== undefined) {
-        localVarQueryParameter["key"] = key
-      }
-
-      if (video_id !== undefined) {
-        localVarQueryParameter["video_id"] = video_id
-      }
 
       localVarHeaderParameter["Content-Type"] = "application/json"
 
@@ -33435,17 +33417,11 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     },
     /**
      * Webhook handler for OVS video upserts and deletes from the dagster pipeline
-     * @param {boolean} [_delete]
-     * @param {string} [key]
-     * @param {string} [video_id]
      * @param {OVSVideoWebhookRequestRequest} [OVSVideoWebhookRequestRequest]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async webhooksOvsVideosCreate(
-      _delete?: boolean,
-      key?: string,
-      video_id?: string,
       OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
@@ -33456,9 +33432,6 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksOvsVideosCreate(
-          _delete,
-          key,
-          video_id,
           OVSVideoWebhookRequestRequest,
           options,
         )
@@ -33578,9 +33551,6 @@ export const WebhooksApiFactory = function (
     ): AxiosPromise<WebhookResponse> {
       return localVarFp
         .webhooksOvsVideosCreate(
-          requestParameters._delete,
-          requestParameters.key,
-          requestParameters.video_id,
           requestParameters.OVSVideoWebhookRequestRequest,
           options,
         )
@@ -33671,27 +33641,6 @@ export interface WebhooksApiWebhooksContentFilesDeleteCreateRequest {
  * @interface WebhooksApiWebhooksOvsVideosCreateRequest
  */
 export interface WebhooksApiWebhooksOvsVideosCreateRequest {
-  /**
-   *
-   * @type {boolean}
-   * @memberof WebhooksApiWebhooksOvsVideosCreate
-   */
-  readonly _delete?: boolean
-
-  /**
-   *
-   * @type {string}
-   * @memberof WebhooksApiWebhooksOvsVideosCreate
-   */
-  readonly key?: string
-
-  /**
-   *
-   * @type {string}
-   * @memberof WebhooksApiWebhooksOvsVideosCreate
-   */
-  readonly video_id?: string
-
   /**
    *
    * @type {OVSVideoWebhookRequestRequest}
@@ -33797,9 +33746,6 @@ export class WebhooksApi extends BaseAPI {
   ) {
     return WebhooksApiFp(this.configuration)
       .webhooksOvsVideosCreate(
-        requestParameters._delete,
-        requestParameters.key,
-        requestParameters.video_id,
         requestParameters.OVSVideoWebhookRequestRequest,
         options,
       )

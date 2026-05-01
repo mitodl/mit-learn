@@ -454,7 +454,8 @@ def test_video_short_webhook_view_delete_nonexistent(settings, client, mocker):
 
 
 @pytest.fixture
-def ovs_platform():
+def ovs_platform(settings):
+    settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
     return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 

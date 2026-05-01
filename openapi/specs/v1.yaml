@@ -9911,33 +9911,11 @@ paths:
       operationId: webhooks_ovs_videos_create
       description: Webhook handler for OVS video upserts and deletes from the dagster
         pipeline
-      parameters:
-      - in: query
-        name: delete
-        schema:
-          type: boolean
-          default: false
-      - in: query
-        name: key
-        schema:
-          type: string
-          minLength: 1
-      - in: query
-        name: video_id
-        schema:
-          type: string
-          minLength: 1
       tags:
       - webhooks
       requestBody:
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/OVSVideoWebhookRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/OVSVideoWebhookRequestRequest'
-          multipart/form-data:
             schema:
               $ref: '#/components/schemas/OVSVideoWebhookRequestRequest'
       responses:

@@ -347,7 +347,7 @@ class TestHelpers:
 class TestTransform:
     """Tests for transform functions"""
 
-    def testtransform_video_with_subtitles(self, ovs_video_with_subtitles, settings):
+    def test_transform_video_with_subtitles(self, ovs_video_with_subtitles, settings):
         """Test transforming a video with thumbnails and subtitles"""
         result = transform_video(ovs_video_with_subtitles)
 
@@ -382,7 +382,7 @@ class TestTransform:
             },
         )
 
-    def testtransform_video_without_subtitles(
+    def test_transform_video_without_subtitles(
         self, ovs_video_without_subtitles, settings
     ):
         """Test transforming a video without thumbnails or subtitles"""
@@ -411,7 +411,7 @@ class TestTransform:
             },
         )
 
-    def testtransform_collection(self, settings):
+    def test_transform_collection(self, settings):
         """Test transforming a collection into playlist data"""
         settings.OVS_API_BASE_URL = "https://video-rc.odl.mit.edu"
         collection = {
@@ -554,7 +554,7 @@ class TestTransform:
             pytest.param([{"src": ""}], id="empty_src"),
         ],
     )
-    def testtransform_video_returns_none_without_m3u8(self, sources):
+    def test_transform_video_returns_none_without_m3u8(self, sources):
         """Test transform_video returns None when no m3u8 source exists"""
         video_data = {
             "key": "test_key",

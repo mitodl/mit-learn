@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
 from learning_resources.constants import LearningResourceType
@@ -150,7 +151,7 @@ class VideoShortWebhookView(BaseWebhookView):
 
 @extend_schema_view(
     post=extend_schema(
-        parameters=[OVSVideoWebhookRequestSerializer()],
+        request=OVSVideoWebhookRequestSerializer,
         responses=WebhookResponseSerializer(),
     ),
 )
@@ -161,6 +162,7 @@ class OVSVideoWebhookView(BaseWebhookView):
 
     permission_classes = []
     authentication_classes = []
+    parser_classes = [JSONParser]
     serializer_class = OVSVideoWebhookRequestSerializer
 
     def success(self, extra_data=None):
