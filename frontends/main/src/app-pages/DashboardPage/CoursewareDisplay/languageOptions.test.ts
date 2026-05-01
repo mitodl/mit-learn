@@ -1,4 +1,8 @@
 import { factories } from "api/mitxonline-test-utils"
+import type {
+  CourseRunEnrollmentV3,
+  CourseRunLanguageOption,
+} from "@mitodl/mitxonline-api-axios/v2"
 import {
   getCourseRunForSelectedLanguage,
   getDistinctLanguageOptions,
@@ -7,6 +11,10 @@ import {
   getResolvedRunForSelectedLanguage,
   getSelectedLanguageOption,
 } from "./languageOptions"
+
+type LanguageOptionWithEnrollability = CourseRunLanguageOption & {
+  is_enrollable: boolean
+}
 
 describe("languageOptions", () => {
   test("normalizes language keys", () => {
@@ -154,6 +162,191 @@ describe("languageOptions", () => {
     })
   })
 
+  test("builds distinct options when language option ids differ from run ids", () => {
+    const englishRun = factories.courses.courseRun({
+      id: 4001,
+      title: "English Run",
+      courseware_id: "cw-en-4001",
+      courseware_url: "https://example.com/cw-en-4001",
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: 4002,
+      title: "Spanish Run",
+      courseware_id: "cw-es-4002",
+      courseware_url: "https://example.com/cw-es-4002",
+      is_enrollable: true,
+    })
+
+    const course = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: 9001,
+          courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: 9002,
+          courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
+          language: "es",
+          title: spanishRun.title,
+          run_tag: spanishRun.run_tag,
+        },
+      ],
+    })
+
+    const options = getDistinctLanguageOptions([course])
+    const selectedRun = getCourseRunForSelectedLanguage(course, "language:es")
+
+    expect(options).toHaveLength(2)
+    expect(options.map((option) => option.value)).toEqual([
+      "language:en",
+      "language:es",
+    ])
+    expect(selectedRun?.id).toBe(spanishRun.id)
+  })
+
+  test("keeps language when one of multiple matching runs is enrollable", () => {
+    const englishRun = factories.courses.courseRun({
+      id: 6101,
+      title: "English",
+      courseware_id: "cw-en-6101",
+      courseware_url: "https://example.com/cw-en-6101",
+      is_enrollable: true,
+    })
+    const spanishUnenrollable = factories.courses.courseRun({
+      id: 6102,
+      title: "Spanish Old",
+      courseware_id: "cw-es-shared",
+      courseware_url: "https://example.com/cw-es-shared",
+      is_enrollable: false,
+    })
+    const spanishEnrollable = factories.courses.courseRun({
+      id: 6103,
+      title: "Spanish New",
+      courseware_id: "cw-es-shared",
+      courseware_url: "https://example.com/cw-es-shared",
+      is_enrollable: true,
+    })
+
+    const course = factories.courses.course({
+      courseruns: [englishRun, spanishUnenrollable, spanishEnrollable],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: 9101,
+          courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: 9102,
+          courseware_id: spanishEnrollable.courseware_id,
+          courseware_url: spanishEnrollable.courseware_url ?? "",
+          language: "es",
+          title: spanishEnrollable.title,
+          run_tag: spanishEnrollable.run_tag,
+        },
+      ],
+    })
+
+    const options = getDistinctLanguageOptions([course])
+    const selectedOption = getSelectedLanguageOption(course, "language:es")
+    const selectedRun = getCourseRunForSelectedLanguage(course, "language:es")
+
+    expect(options.map((option) => option.value)).toEqual([
+      "language:en",
+      "language:es",
+    ])
+    expect(selectedOption).not.toBeNull()
+    expect(selectedRun?.id).toBe(spanishEnrollable.id)
+  })
+
+  test("includes language options even when no language variant exists in courseruns", () => {
+    const templateRun = factories.courses.courseRun({
+      id: 6201,
+      title: "English Template",
+      courseware_id: "cw-template-en",
+      courseware_url: "https://example.com/cw-template-en",
+      is_enrollable: true,
+    })
+
+    const course = factories.courses.course({
+      courseruns: [templateRun],
+      next_run_id: templateRun.id,
+      language_options: [
+        {
+          id: templateRun.id,
+          courseware_id: templateRun.courseware_id,
+          courseware_url: templateRun.courseware_url ?? "",
+          language: "en",
+          title: templateRun.title,
+          run_tag: templateRun.run_tag,
+        },
+        {
+          id: 6202,
+          courseware_id: "cw-template-es",
+          courseware_url: "https://example.com/cw-template-es",
+          language: "es",
+          title: "Modulo Espanol",
+          run_tag: templateRun.run_tag,
+        },
+      ],
+    })
+
+    const options = getDistinctLanguageOptions([course])
+    expect(options.map((option) => option.value)).toEqual([
+      "language:en",
+      "language:es",
+    ])
+  })
+
+  test("filters out unenrollable options when is_enrollable is provided", () => {
+    const run = factories.courses.courseRun({
+      id: 6301,
+      title: "English",
+      courseware_id: "cw-en-6301",
+      courseware_url: "https://example.com/cw-en-6301",
+      is_enrollable: true,
+    })
+
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+          is_enrollable: true,
+        } as LanguageOptionWithEnrollability,
+        {
+          id: 6302,
+          courseware_id: "cw-es-6302",
+          courseware_url: "https://example.com/cw-es-6302",
+          language: "es",
+          title: "Modulo Espanol",
+          run_tag: run.run_tag,
+          is_enrollable: false,
+        } as LanguageOptionWithEnrollability,
+      ],
+    })
+
+    const options = getDistinctLanguageOptions([course])
+    expect(options.map((option) => option.value)).toEqual(["language:en"])
+  })
+
   test("matches selected enrollment by language option courseware id", () => {
     const englishRun = factories.courses.courseRun({
       id: 11,
@@ -272,7 +465,7 @@ describe("languageOptions", () => {
     expect(resolved?.enrollment_start).toBe(spanishRun.enrollment_start)
   })
 
-  test("returns null when selected language has no concrete run", () => {
+  test("returns synthetic run when selected language has no concrete run", () => {
     const contractId = 77
     const nonEnrollableContractRun = factories.courses.courseRun({
       id: 1001,
@@ -323,7 +516,11 @@ describe("languageOptions", () => {
       contractId,
     )
 
-    expect(resolved).toBeNull()
+    expect(resolved?.id).toBe(1003)
+    expect(resolved?.title).toBe("Modulo sintetico")
+    expect(resolved?.courseware_url).toBe(
+      "https://openedx.example.com/contract-spanish",
+    )
   })
 
   test("returns null when contract-scoped template run does not exist", () => {
@@ -411,5 +608,52 @@ describe("languageOptions", () => {
 
     expect(selectedOption?.id).toBe(enrollableEnglish.id)
     expect(resolvedRun?.id).toBe(enrollableEnglish.id)
+  })
+
+  test("ignores malformed enrollments without run data", () => {
+    const run = factories.courses.courseRun({
+      id: 5001,
+      courseware_id: "cw-en-5001",
+      courseware_url: "https://example.com/cw-en-5001",
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+        },
+      ],
+    })
+
+    const selectedOption = getSelectedLanguageOption(course, "language:en")
+    const selectedRun = getCourseRunForSelectedLanguage(course, "language:en")
+    const malformedEnrollment = {
+      ...factories.enrollment.courseEnrollment(),
+      run: undefined,
+    } as unknown as CourseRunEnrollmentV3
+
+    expect(
+      getEnrollmentForSelectedLanguage(
+        [malformedEnrollment],
+        selectedOption,
+        selectedRun,
+      ),
+    ).toBeNull()
+
+    expect(
+      getResolvedRunForSelectedLanguage(
+        course,
+        selectedOption,
+        selectedRun,
+        malformedEnrollment,
+      ),
+    ).toEqual(selectedRun)
   })
 })

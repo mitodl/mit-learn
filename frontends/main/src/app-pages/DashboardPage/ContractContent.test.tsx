@@ -45,6 +45,7 @@ const normalizeCourseForCardAssertions = (
         title: normalizedRun.title ?? course.title,
         run_tag: normalizedRun.run_tag,
         courseware_id: normalizedRun.courseware_id,
+        courseware_url: normalizedRun.courseware_url ?? "",
       },
     ],
   }
@@ -1385,6 +1386,7 @@ describe("ContractContent", () => {
         {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
           language: "en",
           title: englishRun.title,
           run_tag: englishRun.run_tag,
@@ -1392,6 +1394,7 @@ describe("ContractContent", () => {
         {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
           language: "es",
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
@@ -1463,6 +1466,7 @@ describe("ContractContent", () => {
         {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
           language: "en",
           title: englishRun.title,
           run_tag: englishRun.run_tag,
@@ -1470,6 +1474,7 @@ describe("ContractContent", () => {
         {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
           language: "es",
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
@@ -1550,6 +1555,7 @@ describe("ContractContent", () => {
         {
           id: run.id,
           courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
           language: "en",
           title: run.title,
           run_tag: run.run_tag,
@@ -1604,6 +1610,7 @@ describe("ContractContent", () => {
         {
           id: run.id,
           courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
           language: "en",
           title: run.title,
           run_tag: run.run_tag,
@@ -1696,6 +1703,7 @@ describe("ContractContent", () => {
         title: run.title,
         run_tag: run.run_tag,
         courseware_id: run.courseware_id,
+        courseware_url: run.courseware_url ?? "",
       })),
       next_run_id: runs[0].id,
       next_run: null, // Clear any factory-generated next_run reference
