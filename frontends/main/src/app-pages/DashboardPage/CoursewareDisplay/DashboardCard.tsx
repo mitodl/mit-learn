@@ -29,13 +29,12 @@ import {
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import {
-  enrollmentQueries,
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
@@ -302,7 +301,6 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 }
 
 const useEnrollmentHandler = () => {
-  const queryClient = useQueryClient()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
@@ -361,22 +359,8 @@ const useEnrollmentHandler = () => {
           createB2bEnrollment.mutate(
             { readable_id: readableId },
             {
-              onSuccess: async () => {
-                try {
-                  const enrollments = await queryClient.fetchQuery(
-                    enrollmentQueries.courseRunEnrollmentsList(),
-                  )
-                  const enrolledUrl = enrollments.find(
-                    (enrollment) => enrollment.run.courseware_id === readableId,
-                  )?.run.courseware_url
-                  window.location.href = enrolledUrl ?? destinationUrl
-                } catch (error) {
-                  console.warn(
-                    "Failed to fetch enrollments after B2B enrollment; falling back to destination URL",
-                    error,
-                  )
-                  window.location.href = destinationUrl
-                }
+              onSuccess: () => {
+                window.location.href = destinationUrl
               },
             },
           )
@@ -472,35 +456,10 @@ const useEnrollmentHandler = () => {
               : getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
-          const enrolledCoursewareId =
-            readableId ?? enrollmentAction.run.courseware_id
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
-              onSuccess: async () => {
-                // Fetch fresh enrollment data to get the authoritative
-                // courseware_url from the V3 enrollment record, which is
-                // reliable for language-variant runs where the V2 run object
-                // may have a null or incorrect courseware_url.
-                if (enrolledCoursewareId) {
-                  try {
-                    const enrollments = await queryClient.fetchQuery(
-                      enrollmentQueries.courseRunEnrollmentsList(),
-                    )
-                    const enrolledUrl = enrollments.find(
-                      (e) => e.run.courseware_id === enrolledCoursewareId,
-                    )?.run.courseware_url
-                    if (enrolledUrl) {
-                      window.location.href = enrolledUrl
-                      return
-                    }
-                  } catch (error) {
-                    console.warn(
-                      "Failed to fetch enrollments after enrollment; falling back to computed destination",
-                      error,
-                    )
-                  }
-                }
+              onSuccess: () => {
                 const destination =
                   selectedCoursewareUrl ??
                   enrollmentAction.run.courseware_url ??
@@ -532,7 +491,6 @@ const useEnrollmentHandler = () => {
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
-      queryClient,
     ],
   )
 
