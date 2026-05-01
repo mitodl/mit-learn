@@ -154,7 +154,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   onClick,
   headingLevel = 6,
 }) => {
-  const [imageError, setImageError] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
 
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />
@@ -162,6 +162,13 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (!resource) {
     return null
   }
+
+  const imageFallbacks = [
+    resource.image?.url,
+    resourceContentFilesImageSrc(resource),
+    DEFAULT_RESOURCE_IMG,
+  ].filter(Boolean) as string[]
+  const imageSrc = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
 
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
@@ -209,13 +216,11 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={
-        (!imageError &&
-          (resource.image?.url || resourceContentFilesImageSrc(resource))) ||
-        DEFAULT_RESOURCE_IMG
-      }
+      imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
-      onImageError={() => setImageError(true)}
+      onImageError={() =>
+        setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
+      }
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
       resourceType={resource.resource_category}
