@@ -157,7 +157,7 @@ override-dependencies = ["setuptools<80"]
 
 [tool.uv.sources]
 django-health-check = { git = "https://github.com/revsys/django-health-check", rev = "53f9bdc3a7acc8a577319987fef0bd3040eef4b4" } # pragma: allowlist secret
-mitol-django-api-versioning = { git = "https://github.com/mitodl/ol-django", subdirectory = "src/api_versioning", rev = "5290e759d575ba070de4cd98331d08c58f0abb5e" } # pragma: allowlist secret
+mitol-django-api-versioning = { git = "https://github.com/mitodl/ol-django", subdirectory = "src/api_versioning", rev = "7b87887e248c33d4cb222f1a7a74a1e93290376c" } # pragma: allowlist secret
 
 [tool.uv.build-backend]
 module-root = ""
