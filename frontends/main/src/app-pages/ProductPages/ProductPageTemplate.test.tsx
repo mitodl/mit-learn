@@ -12,7 +12,7 @@ import { PostHogEvents } from "@/common/constants"
 import type { ResourceInfo } from "./ProductPageTemplate"
 import { PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { getAllByImageSrc, getByImageSrc } from "ol-test-utilities"
+import { getAllByImageSrc } from "ol-test-utilities"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
