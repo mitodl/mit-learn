@@ -168,12 +168,16 @@ def tune_collection(client, collection_name):
     info = client.get_collection(collection_name)
     point_count = info.points_count
     shard_number = info.config.params.shard_number
-
-    settings = compute_optimizer_settings(point_count, shard_number)
-
+    desired = compute_optimizer_settings(point_count, shard_number)
+    current = info.config.optimizer_config
+    if (
+        current.indexing_threshold == desired["indexing_threshold"]
+        and current.flush_interval_sec == desired["flush_interval_sec"]
+    ):
+        return
     client.update_collection(
         collection_name=collection_name,
-        optimizer_config=models.OptimizersConfigDiff(**settings),
+        optimizer_config=models.OptimizersConfigDiff(**desired),
     )
 
 
