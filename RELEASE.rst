@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.65.4
+--------------
+
+- dashboard translations UI (#3269)
+
 Version 0.65.3 (Released May 01, 2026)
 --------------
 
