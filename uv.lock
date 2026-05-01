@@ -2684,7 +2684,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=6.0.0,<7" },
     { name = "markdown", specifier = ">=3.7,<4" },
     { name = "markdown2", specifier = ">=2.4.8,<3" },
-    { name = "mitol-django-api-versioning", git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fapi_versioning&rev=5290e759d575ba070de4cd98331d08c58f0abb5e" },
+    { name = "mitol-django-api-versioning", git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fapi_versioning&rev=7b87887e248c33d4cb222f1a7a74a1e93290376c" },
     { name = "mitol-django-common", specifier = ">=2026.4.2,<2027" },
     { name = "mitol-django-observability", specifier = ">=2026.1.0,<2027" },
     { name = "mitol-django-scim", specifier = ">=2026.4.2,<2027" },
@@ -2770,7 +2770,7 @@ dev = [
 [[package]]
 name = "mitol-django-api-versioning"
 version = "2026.3.24"
-source = { git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fapi_versioning&rev=5290e759d575ba070de4cd98331d08c58f0abb5e#5290e759d575ba070de4cd98331d08c58f0abb5e" }
+source = { git = "https://github.com/mitodl/ol-django?subdirectory=src%2Fapi_versioning&rev=7b87887e248c33d4cb222f1a7a74a1e93290376c#7b87887e248c33d4cb222f1a7a74a1e93290376c" }
 dependencies = [
     { name = "django" },
     { name = "djangorestframework" },
