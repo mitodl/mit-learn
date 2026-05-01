@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.65.5
+--------------
+
+- use courseware_url from language_options, filter them by is_enrollable (#3276)
+- fix: add heading tags to My Learning course titles for screen readers (#3253)
+- dashboard translations UI (#3269)
+
 Version 0.65.3 (Released May 01, 2026)
 --------------
 
