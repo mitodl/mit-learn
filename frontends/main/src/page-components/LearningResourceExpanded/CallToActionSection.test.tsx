@@ -330,7 +330,9 @@ describe("CallToActionSection", () => {
   })
 
   describe("Image fallback chain", () => {
-    const render = (resource: ReturnType<typeof factories.learningResources.resource>) =>
+    const render = (
+      resource: ReturnType<typeof factories.learningResources.resource>,
+    ) =>
       renderWithProviders(
         <CallToActionSection
           imgConfig={IMG_CONFIG}

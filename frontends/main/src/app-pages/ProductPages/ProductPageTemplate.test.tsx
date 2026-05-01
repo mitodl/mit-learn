@@ -91,7 +91,9 @@ describe("ProductPageTemplate image error fallback", () => {
     getAllByImageSrc(view.container, "https://example.com/image.jpg").forEach(
       (img) => fireEvent.error(img),
     )
-    expect(getAllByImageSrc(view.container, DEFAULT_RESOURCE_IMG).length).toBeGreaterThan(0)
+    expect(
+      getAllByImageSrc(view.container, DEFAULT_RESOURCE_IMG).length,
+    ).toBeGreaterThan(0)
   })
 })
 
