@@ -220,7 +220,7 @@ const ImageSection: React.FC<{
       resource.image?.url,
       resourceContentFilesImageSrc(resource),
       DEFAULT_RESOURCE_IMG,
-    ].filter(Boolean) as string[]
+    ].filter((url): url is string => Boolean(url))
     const imageUrl = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
