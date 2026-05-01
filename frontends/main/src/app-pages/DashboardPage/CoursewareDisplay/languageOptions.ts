@@ -180,10 +180,23 @@ const getResolvedRunForSelectedLanguage = (
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
 ): CourseRunV2 | null => {
-  // TODO: In this function, we adapt V3 enrollment run data to a V2-shaped course run
-  // object to preserve selected language context. Once all dashboard card/run context
-  // is migrated to V3-native types, this adaptation logic can be removed and the
-  // function can simply return the selected enrollment's run directly.
+  // Returns a CourseRunV2 representing the user's effective run for the selected
+  // language. Three cases:
+  //
+  //   1. User is enrolled in the language: shape a V2 run from the V3 enrollment
+  //      by spreading templateRun and overriding 13 fields. Removable when
+  //      dashboard card/run context migrates to V3-native types.
+  //
+  //   2. A real CourseRunV2 exists in course.courseruns for the language:
+  //      return it directly.
+  //
+  //   3. Pre-enrollment, no real CourseRunV2 exists for the language: synthesize
+  //      one by spreading templateRun and overriding only id/title/courseware_id/
+  //      run_tag from the language_options pointer. Dates, products, courseware_url,
+  //      and enrollability are inherited from a different-language run because
+  //      mitxonline does not currently surface per-language run metadata
+  //      pre-enrollment. Removable when the API returns language-specific runs
+  //      for non-default languages (see Approach C in feature_work/11088/pr_review.md).
   let scopedSelectedRun: CourseRunV2 | null = selectedRun
   if (
     typeof contractId === "number" &&
