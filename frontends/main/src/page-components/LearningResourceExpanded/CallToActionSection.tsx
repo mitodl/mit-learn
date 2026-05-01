@@ -216,8 +216,8 @@ const ImageSection: React.FC<{
   const aspect = config.width / config.height
   if (resource) {
     const imageUrl =
-      (!imageError && (resource.image?.url ||
-      resourceContentFilesImageSrc(resource))) ||
+      (!imageError &&
+        (resource.image?.url || resourceContentFilesImageSrc(resource))) ||
       DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>

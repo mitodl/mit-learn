@@ -210,8 +210,8 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={
-        (!imageError && (resource.image?.url ||
-        resourceContentFilesImageSrc(resource))) ||
+        (!imageError &&
+          (resource.image?.url || resourceContentFilesImageSrc(resource))) ||
         DEFAULT_RESOURCE_IMG
       }
       imageAlt={resource.image?.alt ?? ""}
