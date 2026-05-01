@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
@@ -213,6 +213,7 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const [imageIndex, setImageIndex] = useState(0)
+  useEffect(() => setImageIndex(0), [resource?.image?.url])
   const aspect = config.width / config.height
   if (resource) {
     const imageFallbacks = [

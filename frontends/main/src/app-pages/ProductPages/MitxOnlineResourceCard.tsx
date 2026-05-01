@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { usePostHog } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
 import { PostHogEvents } from "@/common/constants"
@@ -174,6 +174,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   } = props
 
   const [imageError, setImageError] = useState(false)
+  useEffect(() => setImageError(false), [props.resource?.readable_id])
 
   if (isLoading) {
     return (

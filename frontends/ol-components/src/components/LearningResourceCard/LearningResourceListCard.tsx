@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import styled from "@emotion/styled"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
@@ -155,6 +155,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   headingLevel = 6,
 }) => {
   const [imageIndex, setImageIndex] = useState(0)
+  useEffect(() => setImageIndex(0), [resource?.image?.url])
 
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />

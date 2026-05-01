@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   Container,
   Stack,
@@ -240,6 +240,7 @@ const SidebarMedia: React.FC<{
   priority?: boolean
 }> = ({ videoUrl, imageSrc, title, priority }) => {
   const [imageError, setImageError] = useState(false)
+  useEffect(() => setImageError(false), [imageSrc])
 
   if (videoUrl) {
     const embedUrl = convertToEmbedUrl(videoUrl)
