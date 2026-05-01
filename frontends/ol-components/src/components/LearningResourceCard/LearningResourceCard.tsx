@@ -55,7 +55,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   condensed = false,
 }) => {
   const [imageIndex, setImageIndex] = useState(0)
-  useEffect(() => setImageIndex(0), [resource?.image?.url])
+  useEffect(() => setImageIndex(0), [resource?.id, resource?.image?.url])
 
   // Use list card variants if list prop is true
   if (list) {

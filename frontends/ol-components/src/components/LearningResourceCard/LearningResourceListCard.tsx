@@ -155,7 +155,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   headingLevel = 6,
 }) => {
   const [imageIndex, setImageIndex] = useState(0)
-  useEffect(() => setImageIndex(0), [resource?.image?.url])
+  useEffect(() => setImageIndex(0), [resource?.id, resource?.image?.url])
 
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />
