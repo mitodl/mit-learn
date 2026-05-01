@@ -244,27 +244,46 @@ describe("ContractContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgX, programA: _programA, coursesA } = setupProgramsAndCourses()
+    const { orgX, programA, coursesA } = setupProgramsAndCourses()
     const contract = orgX.contracts[0]
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
     const enrollments = [
       makeCourseEnrollment({
         run: {
-          id: coursesA[0].courseruns[0].id,
-          course: { id: coursesA[0].id, title: coursesA[0].title },
+          id: normalizedCoursesA[0].courseruns[0].id,
+          title: normalizedCoursesA[0].title,
+          course: {
+            id: normalizedCoursesA[0].id,
+            title: normalizedCoursesA[0].title,
+          },
         },
         grades: [makeGrade({ passed: true })],
         b2b_contract_id: contract.id,
       }),
       makeCourseEnrollment({
         run: {
-          id: coursesA[1].courseruns[0].id,
-          course: { id: coursesA[1].id, title: coursesA[1].title },
+          id: normalizedCoursesA[1].courseruns[0].id,
+          title: normalizedCoursesA[1].title,
+          course: {
+            id: normalizedCoursesA[1].id,
+            title: normalizedCoursesA[1].title,
+          },
         },
         grades: [],
         certificate: null,
         b2b_contract_id: contract.id,
       }),
     ]
+
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      { results: normalizedCoursesA },
+    )
+
     // Override the default empty enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
 
@@ -1676,6 +1695,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-1",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
@@ -1683,6 +1703,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-2",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
@@ -1690,6 +1711,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-3",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
     ]
