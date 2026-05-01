@@ -598,6 +598,14 @@ describe("JustInTimeDialog", () => {
       mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
       spies.createEnrollment,
     )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      mitxonline.factories.enrollment.courseEnrollment({
+        run: {
+          courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url,
+        },
+      }),
+    ])
 
     const submitButton = within(dialog).getByRole("button", {
       name: "Submit",
