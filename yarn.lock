@@ -3342,9 +3342,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/smoot-design@npm:^6.24.0":
-  version: 6.24.0
-  resolution: "@mitodl/smoot-design@npm:6.24.0"
+"@mitodl/smoot-design@npm:^6.27.0":
+  version: 6.27.0
+  resolution: "@mitodl/smoot-design@npm:6.27.0"
   dependencies:
     "@ai-sdk/react": "npm:1.2.12"
     "@emotion/cache": "npm:^11.14.0"
@@ -3369,7 +3369,7 @@ __metadata:
     "@remixicon/react": ^4.2.0
     react: ^18 || ^19
     react-dom: ^18 || ^19
-  checksum: 10/ca8c5a25939e80f70d65a2a44056a2a1ecd778f298ac0153fa8e2b1861950280e17f8c33d4acfdc28967e29481ac112eecf7a80389431a47faa0f52c54ae1c11
+  checksum: 10/3db7c26bf2c412a0c13b712b2473315d8ae945bd0819e1a896e6d91a20745ae50431b55a88599b155d16083bb7d75fd048ef72fc64674145d20e0790c4613d74
   languageName: node
   linkType: hard
 
@@ -16185,7 +16185,7 @@ __metadata:
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/course-search-utils": "npm:^3.5.2"
     "@mitodl/mitxonline-api-axios": "npm:^2026.4.23"
-    "@mitodl/smoot-design": "npm:^6.24.0"
+    "@mitodl/smoot-design": "npm:^6.27.0"
     "@mui/material": "npm:^6.4.5"
     "@mui/material-nextjs": "npm:^6.4.3"
     "@opentelemetry/api": "npm:^1.9.1"
@@ -17834,7 +17834,7 @@ __metadata:
     validator: "npm:^13.11.0"
     wheel-indicator: "npm:^1.3.0"
   peerDependencies:
-    "@mitodl/smoot-design": ^6.24.0
+    "@mitodl/smoot-design": ^6.27.0
     next: ^16.1.6
   languageName: unknown
   linkType: soft
