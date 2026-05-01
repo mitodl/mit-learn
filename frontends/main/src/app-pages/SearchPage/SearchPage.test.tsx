@@ -12,6 +12,7 @@ import type {
   LearningResourcesSearchResponse,
   PaginatedLearningResourceOfferorDetailList,
 } from "api"
+import { ResourceTypeEnum } from "api"
 import invariant from "tiny-invariant"
 import { Permission } from "api/hooks/user"
 import {
@@ -1082,6 +1083,76 @@ describe("UniversalAIBanner", () => {
         "LearningMaterials(0)",
       ])
     })
+  })
+
+  test("Vector Hybrid Search with a query hides pagination and filters results locally", async () => {
+    const physicsTopic = factories.learningResources.topic({ name: "Physics" })
+    const chemistryTopic = factories.learningResources.topic({
+      name: "Chemistry",
+    })
+    const resources = [
+      factories.learningResources.resource({
+        title: "Physics Result",
+        resource_type: ResourceTypeEnum.Course,
+        topics: [physicsTopic],
+      }),
+      factories.learningResources.resource({
+        title: "Chemistry Result",
+        resource_type: ResourceTypeEnum.Course,
+        topics: [chemistryTopic],
+      }),
+    ]
+
+    setMockApiResponses({
+      search: {
+        count: 2,
+        metadata: {
+          aggregations: {
+            topic: [
+              { key: "Physics", doc_count: 1 },
+              { key: "Chemistry", doc_count: 1 },
+            ],
+            resource_type_group: [{ key: "course", doc_count: 2 }],
+          },
+          suggestions: [],
+        },
+        results: resources,
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+
+    const { location } = renderWithProviders(<SearchPage />, {
+      url: "?vector_search=true&q=test",
+    })
+
+    await screen.findByText("Physics Result")
+    await screen.findByText("Chemistry Result")
+    expect(
+      screen.queryByRole("navigation", { name: /pagination/i }),
+    ).not.toBeInTheDocument()
+
+    const initialVectorRequestCount = makeRequest.mock.calls.filter(
+      ([method, url]) =>
+        method === "get" && url.includes(urls.search.vectorResources()),
+    ).length
+
+    await user.click(screen.getByRole("button", { name: /Topic/i }))
+    await user.click(screen.getByRole("checkbox", { name: "Physics 1" }))
+
+    expect(location.current.search).toBe(
+      "?vector_search=true&q=test&topic=Physics",
+    )
+    expect(await screen.findByText("Physics Result")).toBeVisible()
+    expect(screen.queryByText("Chemistry Result")).not.toBeInTheDocument()
+
+    const finalVectorRequestCount = makeRequest.mock.calls.filter(
+      ([method, url]) =>
+        method === "get" && url.includes(urls.search.vectorResources()),
+    ).length
+    expect(finalVectorRequestCount).toBe(initialVectorRequestCount)
   })
 
   test("clicking Learn More fires cta_clicked with label and readableId", async () => {

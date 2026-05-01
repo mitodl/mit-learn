@@ -566,6 +566,123 @@ const toVectorSearchParams = (
   hybrid_search: true,
 })
 
+const VECTOR_CLIENT_FILTER_FACETS = [
+  "resource_type",
+  "certification_type",
+  "delivery",
+  "department",
+  "topic",
+  "offered_by",
+  "free",
+  "professional",
+  "resource_category",
+  "resource_type_group",
+] as const
+
+type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
+
+const toUnfacetedVectorSearchParams = (
+  params: ReturnType<typeof getSearchParams> & { sortby?: string },
+): VectorSearchRequest => {
+  const {
+    offset: _offset,
+    limit: _limit,
+    ...vectorParams
+  } = toVectorSearchParams(params)
+
+  return Object.fromEntries(
+    Object.entries(vectorParams).filter(
+      ([key]) =>
+        !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet),
+    ),
+  ) as VectorSearchRequest
+}
+
+const normalizeParamValues = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map(String)
+  }
+  if (value === null || value === undefined || value === "") {
+    return []
+  }
+  return [String(value)]
+}
+
+const getResourceFacetValues = (
+  resource: LearningResource,
+  facet: VectorClientFilterFacet,
+): string[] => {
+  switch (facet) {
+    case "certification_type":
+      return normalizeParamValues(
+        "certification_type" in resource
+          ? resource.certification_type?.code
+          : undefined,
+      )
+    case "delivery":
+      return normalizeParamValues(
+        "delivery" in resource ? resource.delivery?.map((d) => d.code) : [],
+      )
+    case "department":
+      return normalizeParamValues(
+        resource.departments?.map((d) => d.department_id),
+      )
+    case "offered_by":
+      return normalizeParamValues(resource.offered_by?.code)
+    case "topic":
+      return normalizeParamValues(resource.topics?.map((t) => t.name))
+    case "free":
+    case "professional":
+      return normalizeParamValues(resource[facet])
+    default:
+      return normalizeParamValues(resource[facet])
+  }
+}
+
+const matchesVectorClientFilters = (
+  resource: LearningResource,
+  params: ReturnType<typeof getSearchParams>,
+) =>
+  VECTOR_CLIENT_FILTER_FACETS.every((facet) => {
+    const selectedValues = normalizeParamValues(params[facet])
+    if (selectedValues.length === 0) {
+      return true
+    }
+    const resourceValues = getResourceFacetValues(resource, facet)
+    return selectedValues.some((value) => resourceValues.includes(value))
+  })
+
+const hasVectorClientFilters = (params: ReturnType<typeof getSearchParams>) =>
+  VECTOR_CLIENT_FILTER_FACETS.some(
+    (facet) => normalizeParamValues(params[facet]).length > 0,
+  )
+
+const getVectorClientAggregations = (
+  results: LearningResource[],
+  aggregationNames: string[],
+) => {
+  return Object.fromEntries(
+    aggregationNames.map((name) => {
+      const counts = new Map<string, number>()
+      for (const resource of results) {
+        for (const value of getResourceFacetValues(
+          resource,
+          name as VectorClientFilterFacet,
+        )) {
+          counts.set(value, (counts.get(value) ?? 0) + 1)
+        }
+      }
+      return [
+        name,
+        Array.from(counts.entries()).map(([key, docCount]) => ({
+          key,
+          doc_count: docCount,
+        })),
+      ]
+    }),
+  )
+}
+
 interface SearchDisplayProps {
   page: number
   setPage: (newPage: number) => void
@@ -642,9 +759,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const wantsVectorSearch = searchParams.get("vector_search") === "true"
   const isVectorSearch = wantsVectorSearch && user?.is_learning_path_editor
+  const isVectorQuerySearch =
+    isVectorSearch &&
+    typeof allParams.q === "string" &&
+    allParams.q.trim() !== ""
 
   const queryOptions = isVectorSearch
-    ? learningResourceQueries.vectorSearch(toVectorSearchParams(allParams))
+    ? learningResourceQueries.vectorSearch(
+        isVectorQuerySearch
+          ? toUnfacetedVectorSearchParams(allParams)
+          : toVectorSearchParams(allParams),
+      )
     : learningResourceQueries.search(allParams as LRSearchRequest)
 
   // @ts-expect-error Typescript has trouble unifying the different query key types
@@ -689,6 +814,31 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       }
     },
   })
+
+  const displayData = useMemo(() => {
+    if (!isVectorQuerySearch || !data) {
+      return data
+    }
+
+    const results = (data.results ?? []).filter((resource) =>
+      matchesVectorClientFilters(resource, allParams),
+    )
+    const hasClientFilters = hasVectorClientFilters(allParams)
+
+    return {
+      ...data,
+      count: hasClientFilters ? results.length : data.count,
+      next: null,
+      previous: null,
+      results,
+      metadata: {
+        ...data.metadata,
+        aggregations: hasClientFilters
+          ? getVectorClientAggregations(results, allParams.aggregations)
+          : data.metadata.aggregations,
+      },
+    }
+  }, [allParams, data, isVectorQuerySearch])
 
   useEffect(() => {
     if (onFetchTimeChange) {
@@ -974,7 +1124,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         facetManifest={facetManifest}
         activeFacets={requestParams}
         onFacetChange={toggleParamValue}
-        facetOptions={data?.metadata.aggregations ?? {}}
+        facetOptions={displayData?.metadata.aggregations ?? {}}
       />
       {user?.is_learning_path_editor
         ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
@@ -1006,14 +1156,14 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                * the count when data is loaded even if count is same as previous
                * count.
                */}
-              {isFetching || isLoading ? "" : `${data?.count} results`}
+              {isFetching || isLoading ? "" : `${displayData?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             <Stack direction="row" justifyContent="space-between">
               <StyledResourceTabs
                 setSearchParams={setSearchParams}
                 tabs={TABS}
-                aggregations={data?.metadata.aggregations}
+                aggregations={displayData?.metadata.aggregations}
                 onTabChange={() => setPage(1)}
               />
               <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
@@ -1085,9 +1235,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                         </li>
                       ))}
                   </PlainList>
-                ) : data && (data.results?.length ?? 0) > 0 ? (
+                ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
                   <PlainList itemSpacing={1.5}>
-                    {data.results.map((resource: LearningResource) => (
+                    {displayData.results.map((resource: LearningResource) => (
                       <li key={resource.id}>
                         <ResourceCard
                           resource={resource}
@@ -1101,30 +1251,32 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
               </StyledResultsContainer>
-              <PaginationContainer>
-                <Pagination
-                  count={getLastPage(data?.count ?? 0)}
-                  page={page}
-                  onChange={(_, newPage) => {
-                    setPage(newPage)
-                    setTimeout(() => {
-                      scrollHook.current?.scrollIntoView({
-                        block: "center",
-                        behavior: "smooth",
-                      })
-                    }, 0)
-                  }}
-                  renderItem={(item) => (
-                    <PaginationItem
-                      slots={{
-                        previous: RiArrowLeftLine,
-                        next: RiArrowRightLine,
-                      }}
-                      {...item}
-                    />
-                  )}
-                />
-              </PaginationContainer>
+              {!isVectorQuerySearch && (
+                <PaginationContainer>
+                  <Pagination
+                    count={getLastPage(displayData?.count ?? 0)}
+                    page={page}
+                    onChange={(_, newPage) => {
+                      setPage(newPage)
+                      setTimeout(() => {
+                        scrollHook.current?.scrollIntoView({
+                          block: "center",
+                          behavior: "smooth",
+                        })
+                      }, 0)
+                    }}
+                    renderItem={(item) => (
+                      <PaginationItem
+                        slots={{
+                          previous: RiArrowLeftLine,
+                          next: RiArrowRightLine,
+                        }}
+                        {...item}
+                      />
+                    )}
+                  />
+                </PaginationContainer>
+              )}
             </ResourceTypeGroupTabs.TabPanels>
           </Grid>
           <Grid
