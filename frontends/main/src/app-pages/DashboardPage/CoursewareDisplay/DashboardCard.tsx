@@ -29,16 +29,18 @@ import {
 } from "./DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import {
+  enrollmentQueries,
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
   mitxonlineLegacyUrl,
   getCourseEnrollmentAction,
+  getEnrollmentType,
   isVerifiedEnrollmentMode,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
@@ -259,12 +261,15 @@ const getContextMenuItems = (
   return [...menuItems, ...additionalItems]
 }
 
-const getTitle = (resource: DashboardResource): string => {
+const getTitle = (
+  resource: DashboardResource,
+  selectedCourseRun?: CourseRunV2 | null,
+): string => {
   if (resource.type === DashboardType.Course) {
-    return resource.data.title
+    return selectedCourseRun?.title ?? resource.data.title
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run.course.title
+    return resource.data.run.title
   }
   return resource.data.program.title
 }
@@ -297,6 +302,7 @@ const getDefaultNoun = (resource: DashboardResource): string => {
 }
 
 const useEnrollmentHandler = () => {
+  const queryClient = useQueryClient()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const createB2bEnrollment = useCreateB2bEnrollment()
   const createEnrollment = useCreateEnrollment()
@@ -307,21 +313,36 @@ const useEnrollmentHandler = () => {
     ({
       course,
       readableId,
+      selectedRunId,
       href,
+      selectedCoursewareUrl,
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
+      selectedRunId?: number
       href?: string
+      selectedCoursewareUrl?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
     }) => {
       if (isB2B) {
-        if (!readableId || !href) {
+        if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
+            readableId,
+            href,
+          })
+          return
+        }
+        const matchedRun = (course.courseruns ?? []).find(
+          (run) => run.courseware_id === readableId,
+        )
+        const destinationUrl = href ?? matchedRun?.courseware_url
+        if (!destinationUrl) {
+          console.warn("Cannot enroll in B2B course: missing destination URL", {
             readableId,
             href,
           })
@@ -333,15 +354,29 @@ const useEnrollmentHandler = () => {
 
         if (showJustInTimeDialog) {
           NiceModal.show(JustInTimeDialog, {
-            href,
+            href: destinationUrl,
             readableId,
           })
         } else {
           createB2bEnrollment.mutate(
             { readable_id: readableId },
             {
-              onSuccess: () => {
-                window.location.href = href
+              onSuccess: async () => {
+                try {
+                  const enrollments = await queryClient.fetchQuery(
+                    enrollmentQueries.courseRunEnrollmentsList(),
+                  )
+                  const enrolledUrl = enrollments.find(
+                    (enrollment) => enrollment.run.courseware_id === readableId,
+                  )?.run.courseware_url
+                  window.location.href = enrolledUrl ?? destinationUrl
+                } catch (error) {
+                  console.warn(
+                    "Failed to fetch enrollments after B2B enrollment; falling back to destination URL",
+                    error,
+                  )
+                  window.location.href = destinationUrl
+                }
               },
             },
           )
@@ -354,23 +389,122 @@ const useEnrollmentHandler = () => {
           )
           return
         }
+        const verifiedDestination =
+          selectedCoursewareUrl ??
+          (course.courseruns ?? []).find(
+            (run) => run.courseware_id === readableId,
+          )?.courseware_url ??
+          href
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: [programCoursewareId] },
           {
             onSuccess: () => {
-              window.location.href = href
+              window.location.href = verifiedDestination ?? href
             },
           },
         )
       } else {
-        const enrollmentAction = getCourseEnrollmentAction(course)
+        // Use the explicitly provided run_id when available (e.g., language
+        // picker selects a variant run that may not appear in course.courseruns).
+        // Fall back to searching course.courseruns by courseware_id, then to
+        // getCourseEnrollmentAction for the default run.
+        const directRequestedRun = selectedRunId
+          ? course.courseruns.find(
+              (r) => r.id === selectedRunId && r.is_enrollable,
+            )
+          : undefined
+        const isSyntheticRequestedRun =
+          !directRequestedRun && Boolean(selectedRunId && readableId)
+        const requestedRun = directRequestedRun
+          ? directRequestedRun
+          : isSyntheticRequestedRun
+            ? // Variant run not in courseruns: build a minimal run descriptor so
+              // we can still call createEnrollment with the correct id.
+              ({
+                id: selectedRunId!,
+                courseware_id: readableId!,
+              } as CourseRunV2)
+            : undefined
+        const requestedRunFromReadableId = readableId
+          ? course.courseruns.find(
+              (r) => r.courseware_id === readableId && r.is_enrollable,
+            )
+          : undefined
+        const enrollableRuns = (course.courseruns ?? []).filter(
+          (r) => r.is_enrollable,
+        )
+
+        const enrollmentAction =
+          // Preserve existing dashboard behavior: when a course has multiple
+          // enrollable runs, users should pick a run in the enrollment dialog.
+          // Exception: synthetic language-only runs are explicit selections
+          // derived from language options and should still allow direct action.
+          enrollableRuns.length > 1 && !isSyntheticRequestedRun
+            ? getCourseEnrollmentAction(course)
+            : (requestedRun ?? requestedRunFromReadableId)
+              ? (() => {
+                  const chosenRun = requestedRun ?? requestedRunFromReadableId!
+                  const enrollmentType = getEnrollmentType(
+                    course.courseruns.find((r) => r.id === chosenRun.id)
+                      ?.enrollment_modes,
+                  )
+                  if (enrollmentType === "free") {
+                    return { type: "audit" as const, run: chosenRun }
+                  }
+                  if (enrollmentType === "none") {
+                    // For synthetic language-only runs we don't have enrollment_modes,
+                    // so attempt an audit enrollment by run id. For normal runs,
+                    // defer to the default action picker.
+                    return isSyntheticRequestedRun
+                      ? { type: "audit" as const, run: chosenRun }
+                      : getCourseEnrollmentAction(course)
+                  }
+                  if (enrollmentType === "paid") {
+                    const product = course.courseruns.find(
+                      (r) => r.id === chosenRun.id,
+                    )?.products?.[0]
+                    return product
+                      ? { type: "checkout" as const, run: chosenRun, product }
+                      : { type: "none" as const }
+                  }
+                  return getCourseEnrollmentAction(course)
+                })()
+              : getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
+          const enrolledCoursewareId =
+            readableId ?? enrollmentAction.run.courseware_id
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
-              onSuccess: () => {
-                const destination = enrollmentAction.run.courseware_url ?? href
+              onSuccess: async () => {
+                // Fetch fresh enrollment data to get the authoritative
+                // courseware_url from the V3 enrollment record, which is
+                // reliable for language-variant runs where the V2 run object
+                // may have a null or incorrect courseware_url.
+                if (enrolledCoursewareId) {
+                  try {
+                    const enrollments = await queryClient.fetchQuery(
+                      enrollmentQueries.courseRunEnrollmentsList(),
+                    )
+                    const enrolledUrl = enrollments.find(
+                      (e) => e.run.courseware_id === enrolledCoursewareId,
+                    )?.run.courseware_url
+                    if (enrolledUrl) {
+                      window.location.href = enrolledUrl
+                      return
+                    }
+                  } catch (error) {
+                    console.warn(
+                      "Failed to fetch enrollments after enrollment; falling back to computed destination",
+                      error,
+                    )
+                  }
+                }
+                const destination =
+                  selectedCoursewareUrl ??
+                  enrollmentAction.run.courseware_url ??
+                  href
                 if (destination) {
                   window.location.href = destination
                 }
@@ -398,6 +532,7 @@ const useEnrollmentHandler = () => {
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
+      queryClient,
     ],
   )
 
@@ -439,19 +574,31 @@ const getCoursewareTextAndIcon = ({
   isProgram?: boolean
 }) => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${noun}`, endIcon: null }
+    return {
+      text: `Start ${noun}`,
+      endIcon: null,
+    }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: `View ${noun}`,
+      endIcon: null,
+    }
   }
   // Programs show "View Program" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: `View ${noun}`,
+      endIcon: null,
+    }
   }
-  return { text: "Continue", endIcon: <RiArrowRightLine /> }
+  return {
+    text: "Continue",
+    endIcon: <RiArrowRightLine />,
+  }
 }
 
 const CoursewareButton = styled(
@@ -607,7 +754,7 @@ const UpgradeBanner: React.FC<
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
-        Add a certificate for {formattedPrice}
+        {`Add a certificate for ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
         <NoSSR>
@@ -674,6 +821,8 @@ type DashboardCardProps = {
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
+  selectedCourseRun?: CourseRunV2 | null
+  uiLanguageCode?: string
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -691,6 +840,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   contractId,
   programEnrollment,
   onUpgradeError,
+  selectedCourseRun,
+  uiLanguageCode: _uiLanguageCode = "en",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -698,10 +849,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     FeatureFlags.MitxOnlineProductPages,
   )
 
-  const title = getTitle(resource)
+  const title = getTitle(resource, selectedCourseRun)
   const courseRun =
     resource.type === DashboardType.Course
-      ? getBestRun(resource.data, { enrollableOnly: true, contractId })
+      ? (selectedCourseRun ??
+        getBestRun(resource.data, { enrollableOnly: true, contractId }))
       : undefined
   const enrollmentRun =
     resource.type === DashboardType.CourseRunEnrollment
@@ -730,7 +882,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const isContractPageResource = Boolean(b2bContractId)
 
   const hasEnrollableRuns = isCourse
-    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    ? (courseRun?.is_enrollable ?? false)
     : true
 
   const disableEnrollment = isCourse && !hasEnrollableRuns
@@ -759,7 +911,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
+        selectedRunId: courseRun?.id,
         href: buttonHref ?? coursewareUrl ?? undefined,
+        selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programCoursewareId: programEnrollment?.program.readable_id,
@@ -768,6 +922,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   }, [
     isCourse,
     resource,
+    courseRun?.id,
     readableId,
     coursewareUrl,
     b2bContractId,

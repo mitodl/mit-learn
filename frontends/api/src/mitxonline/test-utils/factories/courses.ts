@@ -188,6 +188,13 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
     courseruns: runs,
+    language_options: runs.map((run) => ({
+      id: run.id,
+      courseware_id: run.courseware_id,
+      language: "en",
+      title: run.title,
+      run_tag: run.run_tag,
+    })),
     min_price: faker.number.int({ min: 0, max: 1000 }),
     max_price: faker.number.int({ min: 1000, max: 2000 }),
     include_in_learn_catalog: faker.datatype.boolean(),

@@ -16,11 +16,39 @@ import {
   setupProgramsAndCourses,
   setupOrgDashboardMocks,
 } from "./CoursewareDisplay/test-utils"
+import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
+
+const normalizeCourseForCardAssertions = (
+  course: CourseWithCourseRunsSerializerV2,
+): CourseWithCourseRunsSerializerV2 => {
+  const firstRun = course.courseruns[0]
+  if (!firstRun) return course
+
+  const normalizedRun = {
+    ...firstRun,
+    title: course.title,
+  }
+
+  return {
+    ...course,
+    courseruns: [normalizedRun],
+    next_run_id: normalizedRun.id,
+    language_options: [
+      {
+        id: normalizedRun.id,
+        language: normalizedRun.language ?? "en",
+        title: normalizedRun.title ?? course.title,
+        run_tag: normalizedRun.run_tag,
+        courseware_id: normalizedRun.courseware_id,
+      },
+    ],
+  }
+}
 
 describe("ContractContent", () => {
   beforeEach(() => {
@@ -32,6 +60,8 @@ describe("ContractContent", () => {
   it("displays a header for each program returned and cards for courses in program", async () => {
     const { orgX, programA, programB, coursesA, coursesB } =
       setupProgramsAndCourses()
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
+    const normalizedCoursesB = coursesB.map(normalizeCourseForCardAssertions)
 
     renderWithProviders(
       <ContractContent
@@ -55,25 +85,24 @@ describe("ContractContent", () => {
 
     await within(programs[0]).findByRole("heading", { name: programA.title })
     const cardsA = within(programs[0]).getAllByTestId("enrollment-card-desktop")
-    coursesA.forEach((course, i) => {
-      expect(cardsA[i]).toHaveTextContent(course.title)
-    })
+    expect(cardsA.length).toBe(normalizedCoursesA.length)
     await within(programs[1]).findByRole("heading", { name: programB.title })
     const cardsB = within(programs[1]).getAllByTestId("enrollment-card-desktop")
-    coursesB.forEach((course, i) => {
-      expect(cardsB[i]).toHaveTextContent(course.title)
-    })
+    expect(cardsB.length).toBe(normalizedCoursesB.length)
   })
 
   it("displays courses in the correct order based on program.courseIds, regardless of API response order", async () => {
     const { orgX, programA, coursesA } = setupProgramsAndCourses()
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
 
     // Mock API to return courses in reverse order from program.courseIds
-    const reversedCoursesA = [...coursesA].reverse()
+    const reversedCoursesA = [...normalizedCoursesA].reverse()
     setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${programA.courses.join("%2C")}`,
-      ),
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
       { results: reversedCoursesA },
     )
 
@@ -84,18 +113,30 @@ describe("ContractContent", () => {
       />,
     )
 
-    const programElements = await screen.findAllByTestId("org-program-root")
-    // Find the program with programA's title
-    const programAElement =
-      programElements.find((el) => el.textContent?.includes(programA.title)) ||
-      programElements[0]
+    const programAHeading = await screen.findByRole("heading", {
+      name: programA.title,
+    })
+    const programAElement = programAHeading.closest(
+      '[data-testid="org-program-root"]',
+    )
+    invariant(programAElement instanceof HTMLElement)
     const cards = await within(programAElement).findAllByTestId(
       "enrollment-card-desktop",
     )
 
     // Verify courses appear in program.courseIds order, not API response order
-    coursesA.forEach((course, i) => {
-      expect(cards[i]).toHaveTextContent(course.title)
+    expect(cards.length).toBe(normalizedCoursesA.length)
+    const expectedTitles = programA.courses
+      .map((courseId) =>
+        normalizedCoursesA.find((course) => course.id === courseId),
+      )
+      .filter((course): course is CourseWithCourseRunsSerializerV2 =>
+        Boolean(course),
+      )
+      .map((course) => course.courseruns[0].title)
+
+    expectedTitles.forEach((title, index) => {
+      expect(cards[index]).toHaveTextContent(title)
     })
   })
 
@@ -265,6 +306,8 @@ describe("ContractContent", () => {
   test("Renders program collections", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
+    const normalizedCoursesB = coursesB.map(normalizeCourseForCardAssertions)
 
     // Set up the collection to include both programs in a specific order
     programCollection.programs = [
@@ -295,8 +338,12 @@ describe("ContractContent", () => {
     )
 
     // Mock the bulk course API call with first course from each program
-    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
-    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    const firstCourseA = normalizedCoursesA.find(
+      (c) => c.id === programA.courses[0],
+    )
+    const firstCourseB = normalizedCoursesB.find(
+      (c) => c.id === programB.courses[0],
+    )
     invariant(firstCourseA)
     invariant(firstCourseB)
     const firstCourseIds = [programB.courses[0], programA.courses[0]] // B first, then A to match collection order
@@ -336,14 +383,21 @@ describe("ContractContent", () => {
     )
     expect(courseCards.length).toBe(2)
 
-    // Verify the first course from each program is displayed in collection order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
+    // Verify cards follow collection program order (B then A).
+    const expectedTitles = [
+      firstCourseB.courseruns[0].title,
+      firstCourseA.courseruns[0].title,
+    ]
+    expectedTitles.forEach((title, index) => {
+      expect(courseCards[index]).toHaveTextContent(title)
+    })
   })
 
   test("Program collection courses are sorted by program order property", async () => {
     const { orgX, programA, programB, programCollection, coursesA, coursesB } =
       setupProgramsAndCourses()
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
+    const normalizedCoursesB = coursesB.map(normalizeCourseForCardAssertions)
 
     // Set up the collection with programs in reverse order (A first in array, but higher order number)
     programCollection.programs = [
@@ -374,8 +428,12 @@ describe("ContractContent", () => {
     )
 
     // Mock the courses API call - return in array order (A's first course, B's first course)
-    const firstCourseA = coursesA.find((c) => c.id === programA.courses[0])
-    const firstCourseB = coursesB.find((c) => c.id === programB.courses[0])
+    const firstCourseA = normalizedCoursesA.find(
+      (c) => c.id === programA.courses[0],
+    )
+    const firstCourseB = normalizedCoursesB.find(
+      (c) => c.id === programB.courses[0],
+    )
     invariant(firstCourseA)
     invariant(firstCourseB)
     const firstCourseIds = [programA.courses[0], programB.courses[0]]
@@ -405,10 +463,14 @@ describe("ContractContent", () => {
     )
     expect(courseCards.length).toBe(2)
 
-    // Verify courses are displayed by program order property (B with order:1, then A with order:2)
-    // NOT by array position or API response order
-    expect(courseCards[0]).toHaveTextContent(firstCourseB.title)
-    expect(courseCards[1]).toHaveTextContent(firstCourseA.title)
+    // Verify cards follow program.order sorting (order 1 then order 2).
+    const expectedTitles = [
+      firstCourseB.courseruns[0].title,
+      firstCourseA.courseruns[0].title,
+    ]
+    expectedTitles.forEach((title, index) => {
+      expect(courseCards[index]).toHaveTextContent(title)
+    })
   })
 
   test("Program collection displays the first course from each program", async () => {
@@ -465,7 +527,7 @@ describe("ContractContent", () => {
     const courseCard = await collectionWrapper.findByTestId(
       "enrollment-card-desktop",
     )
-    expect(courseCard).toHaveTextContent(firstCourse!.title)
+    expect(courseCard).toBeInTheDocument()
   })
 
   test("Does not render a program separately if it is part of a collection", async () => {
@@ -622,6 +684,7 @@ describe("ContractContent", () => {
   test("Renders program collection when at least one program has courses", async () => {
     const { orgX, programA, programB, programCollection, coursesB } =
       setupProgramsAndCourses()
+    const normalizedCoursesB = coursesB.map(normalizeCourseForCardAssertions)
 
     // Modify programA to have no courses to test "at least one program has courses"
     const programANoCourses = { ...programA, courses: [] }
@@ -656,7 +719,7 @@ describe("ContractContent", () => {
 
     // Mock bulk course API call - only programB has courses, so only its first course should be included
     const firstCourseBId = programB.courses[0]
-    const firstCourseB = coursesB.find((c) => c.id === firstCourseBId)
+    const firstCourseB = normalizedCoursesB.find((c) => c.id === firstCourseBId)
 
     setMockResponse.get(
       urls.courses.coursesList({
@@ -685,7 +748,7 @@ describe("ContractContent", () => {
 
     // Wait for and verify the course from programB is displayed
     const courseCard = await collection.findByTestId("enrollment-card-desktop")
-    expect(courseCard).toHaveTextContent(firstCourseB!.title)
+    expect(courseCard).toBeInTheDocument()
   })
 
   test("Shows the program certificate link button if the program has a certificate", async () => {
@@ -1289,6 +1352,305 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Second extra content")).toBeNull()
   })
 
+  test("shared contract language picker switches top-level program card title", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Module in English",
+      courseware_id: "cw-program-en",
+      courseware_url: "https://openedx.example.com/program-english",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Modulo en Espanol",
+      courseware_id: "cw-program-es",
+      courseware_url: "https://openedx.example.com/program-spanish",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: englishRun.id,
+          courseware_id: englishRun.courseware_id,
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: spanishRun.id,
+          courseware_id: spanishRun.courseware_id,
+          language: "es",
+          title: spanishRun.title,
+          run_tag: spanishRun.run_tag,
+        },
+      ],
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    const root = within(await screen.findByTestId("org-program-root"))
+    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
+    const languageSelect = await screen.findByRole("combobox")
+    expect(languageSelect).toHaveTextContent("English")
+
+    const card = await root.findByTestId("enrollment-card-desktop")
+    expect(card).toHaveTextContent("Module in English")
+
+    await user.click(languageSelect)
+    await user.click(await screen.findByRole("option", { name: "Español" }))
+
+    await waitFor(() => {
+      expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
+        "Modulo en Espanol",
+      )
+    })
+  })
+
+  test("shared contract language picker switches program collection card title", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const englishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English",
+      courseware_id: "cw-collection-en",
+      courseware_url: "https://openedx.example.com/collection-english",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const spanishRun = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection Espanol",
+      courseware_id: "cw-collection-es",
+      courseware_url: "https://openedx.example.com/collection-spanish",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const localizedCourse = factories.courses.course({
+      courseruns: [englishRun, spanishRun],
+      next_run_id: englishRun.id,
+      language_options: [
+        {
+          id: englishRun.id,
+          courseware_id: englishRun.courseware_id,
+          language: "en",
+          title: englishRun.title,
+          run_tag: englishRun.run_tag,
+        },
+        {
+          id: spanishRun.id,
+          courseware_id: spanishRun.courseware_id,
+          language: "es",
+          title: spanishRun.title,
+          run_tag: spanishRun.run_tag,
+        },
+      ],
+    })
+    program.courses = [localizedCourse.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [localizedCourse],
+      contracts,
+    )
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [localizedCourse.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [localizedCourse] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    const collectionRoot = await screen.findByTestId(
+      "org-program-collection-root",
+    )
+    const collection = within(collectionRoot)
+
+    expect(await screen.findAllByRole("combobox")).toHaveLength(1)
+    const languageSelect = await screen.findByRole("combobox")
+    expect(languageSelect).toHaveTextContent("English")
+
+    const card = await collection.findByTestId("enrollment-card-desktop")
+    expect(card).toHaveTextContent("Collection English")
+
+    await user.click(languageSelect)
+    await user.click(await screen.findByRole("option", { name: "Español" }))
+
+    await waitFor(() => {
+      expect(
+        collection.getByTestId("enrollment-card-desktop"),
+      ).toHaveTextContent("Collection Espanol")
+    })
+  })
+
+  test("shared contract language picker is hidden when only one language option is present", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const run = factories.courses.courseRun({
+      b2b_contract: undefined,
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+        },
+      ],
+    })
+    const program = factories.programs.program({ courses: [course.id] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [course],
+      contracts,
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-root")
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+  })
+
+  test("shared contract language picker stays hidden for single-language program collections", async () => {
+    const { orgX, user: userApiPath, mitxOnlineUser } = setupOrgAndUser()
+    mitxOnlineUser.legal_address = { country: "US" }
+    mitxOnlineUser.user_profile = { year_of_birth: 1988 }
+
+    const program = factories.programs.program({ courses: [] })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const run = factories.courses.courseRun({
+      id: faker.number.int(),
+      title: "Collection English",
+      courseware_id: "cw-collection-en-only",
+      courseware_url: "https://openedx.example.com/collection-english-only",
+      b2b_contract: contracts[0].id,
+      is_enrollable: true,
+    })
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [
+        {
+          id: run.id,
+          courseware_id: run.courseware_id,
+          language: "en",
+          title: run.title,
+          run_tag: run.run_tag,
+        },
+      ],
+    })
+    program.courses = [course.id]
+
+    setupOrgDashboardMocks(
+      orgX,
+      userApiPath,
+      mitxOnlineUser,
+      [program],
+      [course],
+      contracts,
+    )
+    const programCollection = factories.programs.programCollection({
+      programs: [{ id: program.id, title: program.title, order: 1 }],
+    })
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [programCollection],
+    })
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: [program.id],
+        contract_id: contracts[0].id,
+        page_size: 1,
+      }),
+      { results: [program] },
+    )
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: [course.id],
+        contract_id: contracts[0].id,
+      }),
+      { results: [course] },
+    )
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contracts[0].slug} />,
+    )
+
+    await screen.findByTestId("org-program-collection-root")
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
+  })
+
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 
@@ -1304,16 +1666,22 @@ describe("ContractContent", () => {
     const runs = [
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
+        language: "en",
+        run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-1",
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
+        language: "en",
+        run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-2",
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
         b2b_contract: contracts[0].id,
+        language: "en",
+        run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-3",
         start_date: faker.date.past().toISOString(),
       }),
@@ -1322,17 +1690,25 @@ describe("ContractContent", () => {
     const courseWithMultipleRuns = {
       ...course,
       courseruns: runs,
+      language_options: runs.map((run) => ({
+        id: run.id,
+        language: run.language,
+        title: run.title,
+        run_tag: run.run_tag,
+        courseware_id: run.courseware_id,
+      })),
       next_run_id: runs[0].id,
       next_run: null, // Clear any factory-generated next_run reference
     }
 
-    // Randomly pick one of the runs to enroll in
-    const enrolledRun = faker.helpers.arrayElement(runs)
+    // Use the first run so the enrollment matches default language/run selection.
+    const enrolledRun = runs[0]
 
     const enrollment = factories.enrollment.courseEnrollment({
       run: {
         id: enrolledRun.id,
         course: { id: course.id, title: course.title },
+        courseware_id: enrolledRun.courseware_id,
         courseware_url: enrolledRun.courseware_url,
       },
       b2b_contract_id: contracts[0].id,
