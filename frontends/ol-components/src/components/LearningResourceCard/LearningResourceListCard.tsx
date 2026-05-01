@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
@@ -154,6 +154,8 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   onClick,
   headingLevel = 6,
 }) => {
+  const [imageError, setImageError] = useState(false)
+
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />
   }
@@ -208,11 +210,12 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={
-        resource.image?.url ||
-        resourceContentFilesImageSrc(resource) ||
+        (!imageError && (resource.image?.url ||
+        resourceContentFilesImageSrc(resource))) ||
         DEFAULT_RESOURCE_IMG
       }
       imageAlt={resource.image?.alt ?? ""}
+      onImageError={() => setImageError(true)}
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
       resourceType={resource.resource_category}

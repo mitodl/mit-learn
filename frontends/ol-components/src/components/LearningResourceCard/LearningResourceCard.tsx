@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { LearningResource } from "api"
 import {
@@ -53,6 +53,8 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   list = false,
   condensed = false,
 }) => {
+  const [imageError, setImageError] = useState(false)
+
   // Use list card variants if list prop is true
   if (list) {
     if (condensed) {
@@ -146,8 +148,9 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
+      imageSrc={(!imageError && resource.image?.url) || DEFAULT_RESOURCE_IMG}
       imageAlt={resource.image?.alt ?? ""}
+      onImageError={() => setImageError(true)}
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}

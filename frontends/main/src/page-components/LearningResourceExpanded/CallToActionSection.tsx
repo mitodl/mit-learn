@@ -212,11 +212,12 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
+  const [imageError, setImageError] = useState(false)
   const aspect = config.width / config.height
   if (resource) {
     const imageUrl =
-      resource.image?.url ||
-      resourceContentFilesImageSrc(resource) ||
+      (!imageError && (resource.image?.url ||
+      resourceContentFilesImageSrc(resource))) ||
       DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
@@ -225,6 +226,7 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
+          onError={() => setImageError(true)}
         />
       </ImageContainer>
     )
