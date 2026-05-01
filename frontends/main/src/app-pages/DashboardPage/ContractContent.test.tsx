@@ -98,9 +98,11 @@ describe("ContractContent", () => {
     // Mock API to return courses in reverse order from program.courseIds
     const reversedCoursesA = [...normalizedCoursesA].reverse()
     setMockResponse.get(
-      expect.stringContaining(
-        `/api/v2/courses/?id=${programA.courses.join("%2C")}`,
-      ),
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: orgX.contracts[0].id,
+        page_size: 30,
+      }),
       { results: reversedCoursesA },
     )
 
@@ -111,17 +113,31 @@ describe("ContractContent", () => {
       />,
     )
 
-    const programElements = await screen.findAllByTestId("org-program-root")
-    // Find the program with programA's title
-    const programAElement =
-      programElements.find((el) => el.textContent?.includes(programA.title)) ||
-      programElements[0]
+    const programAHeading = await screen.findByRole("heading", {
+      name: programA.title,
+    })
+    const programAElement = programAHeading.closest(
+      '[data-testid="org-program-root"]',
+    )
+    invariant(programAElement instanceof HTMLElement)
     const cards = await within(programAElement).findAllByTestId(
       "enrollment-card-desktop",
     )
 
     // Verify courses appear in program.courseIds order, not API response order
     expect(cards.length).toBe(normalizedCoursesA.length)
+    const expectedTitles = programA.courses
+      .map((courseId) =>
+        normalizedCoursesA.find((course) => course.id === courseId),
+      )
+      .filter((course): course is CourseWithCourseRunsSerializerV2 =>
+        Boolean(course),
+      )
+      .map((course) => course.courseruns[0].title)
+
+    expectedTitles.forEach((title, index) => {
+      expect(cards[index]).toHaveTextContent(title)
+    })
   })
 
   it("displays programs in the correct order based on contract.programs, regardless of API response order", async () => {
@@ -367,9 +383,14 @@ describe("ContractContent", () => {
     )
     expect(courseCards.length).toBe(2)
 
-    // Verify both expected cards are rendered for the collection programs.
-    expect(courseCards[0]).toBeInTheDocument()
-    expect(courseCards[1]).toBeInTheDocument()
+    // Verify cards follow collection program order (B then A).
+    const expectedTitles = [
+      firstCourseB.courseruns[0].title,
+      firstCourseA.courseruns[0].title,
+    ]
+    expectedTitles.forEach((title, index) => {
+      expect(courseCards[index]).toHaveTextContent(title)
+    })
   })
 
   test("Program collection courses are sorted by program order property", async () => {
@@ -442,9 +463,14 @@ describe("ContractContent", () => {
     )
     expect(courseCards.length).toBe(2)
 
-    // Verify cards are rendered for both ordered collection items.
-    expect(courseCards[0]).toBeInTheDocument()
-    expect(courseCards[1]).toBeInTheDocument()
+    // Verify cards follow program.order sorting (order 1 then order 2).
+    const expectedTitles = [
+      firstCourseB.courseruns[0].title,
+      firstCourseA.courseruns[0].title,
+    ]
+    expectedTitles.forEach((title, index) => {
+      expect(courseCards[index]).toHaveTextContent(title)
+    })
   })
 
   test("Program collection displays the first course from each program", async () => {

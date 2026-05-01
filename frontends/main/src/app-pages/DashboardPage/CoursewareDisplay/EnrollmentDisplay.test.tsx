@@ -2296,13 +2296,17 @@ describe("EnrollmentDisplay", () => {
 
       await screen.findByText("Core Courses")
 
-      // Cards should render for all req_tree courses.
+      // Cards should render in req_tree order (C, A, B), not API order.
       const cards = await screen.findAllByTestId("enrollment-card-desktop")
       expect(cards.length).toBe(3)
-      cards.forEach((card) => {
-        expect(
-          within(card).getByTestId("courseware-button"),
-        ).toBeInTheDocument()
+      const expectedTitles = [
+        courseC.courseruns[0].title,
+        courseA.courseruns[0].title,
+        courseB.courseruns[0].title,
+      ]
+
+      expectedTitles.forEach((title, index) => {
+        expect(cards[index]).toHaveTextContent(title)
       })
     })
 
