@@ -117,14 +117,18 @@ const CardRoot = styled.div<{
   },
 ])
 
-const TitleLink = styled(Link)(({ theme }) => ({
+const TitleHeading = styled.h3(({ theme }) => ({
+  margin: 0,
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleText = styled.div<{ clickable?: boolean }>(
+const TitleLink = styled(Link)()
+
+const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
+    margin: 0,
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
@@ -602,6 +606,7 @@ type DashboardCardProps = {
   useVerifiedEnrollment?: boolean
   parentProgramIds?: string[]
   onUpgradeError?: (error: string) => void
+  headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
 type DashboardCardSharedProps = Omit<DashboardCardProps, "resource">
@@ -703,6 +708,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   useVerifiedEnrollment,
   parentProgramIds,
   onUpgradeError,
+  headingLevel = "h3",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -788,16 +794,22 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   ) : (
     <>
       {titleHref ? (
-        <TitleLink
-          size="medium"
-          color="black"
-          href={titleHref}
+        <TitleHeading as={headingLevel}>
+          <TitleLink
+            size="medium"
+            color="black"
+            href={titleHref}
+            onClick={titleClick}
+          >
+            {title}
+          </TitleLink>
+        </TitleHeading>
+      ) : (
+        <TitleText
+          as={headingLevel}
+          clickable={Boolean(titleClick)}
           onClick={titleClick}
         >
-          {title}
-        </TitleLink>
-      ) : (
-        <TitleText clickable={Boolean(titleClick)} onClick={titleClick}>
           {title}
         </TitleText>
       )}
