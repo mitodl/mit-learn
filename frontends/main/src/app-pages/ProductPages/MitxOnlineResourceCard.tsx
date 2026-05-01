@@ -174,7 +174,10 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   } = props
 
   const [imageError, setImageError] = useState(false)
-  useEffect(() => setImageError(false), [props.resource?.readable_id])
+  useEffect(
+    () => setImageError(false),
+    [props.resource?.readable_id, props.resource?.page?.feature_image_src],
+  )
 
   if (isLoading) {
     return (
