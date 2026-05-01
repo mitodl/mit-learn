@@ -7,6 +7,11 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun } from "./helpers"
 
+// Debug-only marker for synthetic language-selected runs.
+// Do not use this property for product behavior/branching.
+type SyntheticCourseRunV2 = CourseRunV2 & { __synthetic: boolean }
+type ResolvedLanguageRunV2 = CourseRunV2 | SyntheticCourseRunV2
+
 const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
   ar: "العربية",
   de: "Deutsch",
@@ -179,7 +184,7 @@ const getResolvedRunForSelectedLanguage = (
   selectedRun: CourseRunV2 | null,
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
-): CourseRunV2 | null => {
+): ResolvedLanguageRunV2 | null => {
   // Returns a CourseRunV2 representing the user's effective run for the selected
   // language. Three cases:
   //
@@ -262,7 +267,8 @@ const getResolvedRunForSelectedLanguage = (
     title: selectedLanguageOption.title,
     courseware_id: selectedLanguageOption.courseware_id,
     run_tag: selectedLanguageOption.run_tag,
-  }
+    __synthetic: true,
+  } satisfies SyntheticCourseRunV2
 }
 
 export {
