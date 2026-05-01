@@ -19,12 +19,12 @@ from learning_resources.etl.ovs import (
     _get_cover_image_url,
     _get_resource_url,
     _get_source_url,
-    _transform_collection,
-    _transform_video,
     extract,
     get_ovs_transcripts,
     get_ovs_videos_for_transcripts_job,
     transform,
+    transform_collection,
+    transform_video,
 )
 from learning_resources.factories import (
     LearningResourcePlatformFactory,
@@ -347,9 +347,9 @@ class TestHelpers:
 class TestTransform:
     """Tests for transform functions"""
 
-    def test_transform_video_with_subtitles(self, ovs_video_with_subtitles, settings):
+    def testtransform_video_with_subtitles(self, ovs_video_with_subtitles, settings):
         """Test transforming a video with thumbnails and subtitles"""
-        result = _transform_video(ovs_video_with_subtitles)
+        result = transform_video(ovs_video_with_subtitles)
 
         assert_json_equal(
             result,
@@ -382,11 +382,11 @@ class TestTransform:
             },
         )
 
-    def test_transform_video_without_subtitles(
+    def testtransform_video_without_subtitles(
         self, ovs_video_without_subtitles, settings
     ):
         """Test transforming a video without thumbnails or subtitles"""
-        result = _transform_video(ovs_video_without_subtitles)
+        result = transform_video(ovs_video_without_subtitles)
 
         assert_json_equal(
             result,
@@ -411,7 +411,7 @@ class TestTransform:
             },
         )
 
-    def test_transform_collection(self, settings):
+    def testtransform_collection(self, settings):
         """Test transforming a collection into playlist data"""
         settings.OVS_API_BASE_URL = "https://video-rc.odl.mit.edu"
         collection = {
@@ -420,7 +420,7 @@ class TestTransform:
             "description": "A test collection",
             "is_public": True,
         }
-        result = _transform_collection(collection)
+        result = transform_collection(collection)
         assert_json_equal(
             result,
             {
@@ -554,8 +554,8 @@ class TestTransform:
             pytest.param([{"src": ""}], id="empty_src"),
         ],
     )
-    def test_transform_video_returns_none_without_m3u8(self, sources):
-        """Test _transform_video returns None when no m3u8 source exists"""
+    def testtransform_video_returns_none_without_m3u8(self, sources):
+        """Test transform_video returns None when no m3u8 source exists"""
         video_data = {
             "key": "test_key",
             "title": "Test",
@@ -567,7 +567,7 @@ class TestTransform:
             "cta_link": None,
             "duration": 0,
         }
-        assert _transform_video(video_data) is None
+        assert transform_video(video_data) is None
 
 
 @pytest.fixture

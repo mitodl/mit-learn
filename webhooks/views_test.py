@@ -5,9 +5,21 @@ import json
 import pytest
 from django.urls import reverse
 
+from learning_resources.constants import (
+    VIDEO_SHORT_RESOURCE_CATEGORY,
+    LearningResourceRelationTypes,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.etl.constants import ETLSource
-from learning_resources.factories import LearningResourceFactory
-from learning_resources.models import LearningResource
+from learning_resources.factories import (
+    LearningResourceFactory,
+    LearningResourcePlatformFactory,
+)
+from learning_resources.models import (
+    LearningResource,
+    LearningResourceRelationship,
+)
 from video_shorts.factories import VideoShortFactory
 from video_shorts.models import VideoShort
 
@@ -439,3 +451,263 @@ def test_video_short_webhook_view_delete_nonexistent(settings, client, mocker):
     assert response.status_code == 200
     assert VideoShort.objects.count() == 0
     mock_s3_task.delay.assert_not_called()
+
+
+@pytest.fixture
+def ovs_platform():
+    return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
+
+
+def _ovs_payload(*, key="vid_abc123", for_shorts=False, collection_key="col_abc"):
+    return {
+        "key": key,
+        "created_at": "2026-04-28T17:35:42.065326Z",
+        "title": "Sample OVS video",
+        "description": "Sample description",
+        "status": "Complete",
+        "is_public": True,
+        "youtube_id": None,
+        "sources": [
+            {
+                "src": (
+                    "https://du3yhovcx8dht.cloudfront.net/transcoded/"
+                    f"{key}/video__index.m3u8"
+                ),
+                "label": "HLS",
+                "type": "application/x-mpegURL",
+            }
+        ],
+        "cta_link": None,
+        "duration": 5.28,
+        "multiangle": False,
+        "videothumbnail_set": [
+            {
+                "id": 1,
+                "created_at": "2026-04-28T17:46:53.887896Z",
+                "s3_object_key": f"thumbnails/{key}/video_thumbnail.0000000.jpg",
+                "bucket_name": "odl-video-service-thumbnails-rc",
+                "cloudfront_url": (
+                    f"https://du3yhovcx8dht.cloudfront.net/thumbnails/{key}/"
+                    "video_thumbnail.0000000.jpg"
+                ),
+            }
+        ],
+        "videosubtitle_set": [],
+        "collection": {
+            "key": collection_key,
+            "title": "Video Shorts" if for_shorts else "Lecture Series",
+            "description": "",
+            "is_public": True,
+            "stream_source": None,
+            "for_shorts": for_shorts,
+        },
+    }
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_creates_short_and_playlist(
+    settings, client, mocker, ovs_platform
+):
+    """Webhook creates a Video LearningResource (Video Short category) and playlist."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+
+    payload = _ovs_payload(key="short1", for_shorts=True, collection_key="col_short")
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    video = LearningResource.objects.get(readable_id="short1")
+    assert video.resource_type == LearningResourceType.video.name
+    assert video.resource_category == VIDEO_SHORT_RESOURCE_CATEGORY
+    assert video.platform == ovs_platform
+    assert video.video.streaming_url.endswith(".m3u8")
+
+    playlist = LearningResource.objects.get(readable_id="col_short")
+    assert playlist.resource_type == LearningResourceType.video_playlist.name
+    assert playlist.resource_category == LearningResourceType.video_playlist.value
+
+    assert (
+        LearningResourceRelationship.objects.filter(
+            parent=playlist,
+            child=video,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_creates_regular_video(
+    settings, client, mocker, ovs_platform
+):
+    """Webhook with for_shorts=False sets resource_category to "Video"."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+
+    payload = _ovs_payload(key="vid1", for_shorts=False)
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+
+    video = LearningResource.objects.get(readable_id="vid1")
+    assert video.resource_category == LearningResourceType.video.value
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_idempotent_no_dup_relationship(
+    settings, client, mocker, ovs_platform
+):
+    """Re-sending the same webhook does not create duplicate relationships."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+
+    payload = _ovs_payload(key="dup1")
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    for _ in range(2):
+        response = client.post(
+            url,
+            data=json.dumps(payload),
+            content_type="application/json",
+            headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+        )
+        assert response.status_code == 200
+
+    assert LearningResource.objects.filter(readable_id="dup1").count() == 1
+    assert (
+        LearningResourceRelationship.objects.filter(
+            child__readable_id="dup1",
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_skips_when_no_m3u8_source(
+    settings,
+    client,
+    mocker,
+    ovs_platform,
+):
+    """Payload with no m3u8 source returns 200 but creates no resources."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    payload = _ovs_payload(key="no_src")
+    payload["sources"] = []
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+    assert not LearningResource.objects.filter(readable_id="no_src").exists()
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_deletes_existing(settings, client, mocker, ovs_platform):
+    """Webhook delete payload removes the matching OVS video resource."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    LearningResourceFactory.create(
+        readable_id="del_me",
+        platform=ovs_platform,
+        etl_source=ETLSource.ovs.name,
+        resource_type=LearningResourceType.video.name,
+    )
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+
+    payload = {"video_id": "del_me", "delete": True}
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+    assert mock_delete.called
+    assert mock_delete.mock_calls[0].args[0].readable_id == "del_me"
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_delete_missing(settings, client, mocker):
+    """Delete for a nonexistent OVS video returns 200 without error."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+
+    payload = {"video_id": "nope", "delete": True}
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+    assert not mock_delete.called
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_invalid_signature(settings, client, mocker):
+    """Wrong signature short-circuits before the view runs."""
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    payload = _ovs_payload()
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": "deadbeef"},
+    )
+    assert response.status_code in (403, 405)
+    mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_invalid_json(settings, client):
+    """Invalid JSON body returns 400."""
+    invalid = "not json{"
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=invalid,
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(invalid, settings)},
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_ovs_video_webhook_missing_key(settings, client):
+    """Upsert payload missing `key` returns 400."""
+    payload = {"title": "no key here"}
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 400
