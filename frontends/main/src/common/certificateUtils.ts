@@ -119,9 +119,15 @@ export const getVerifiableCredentialLinkedInURL = (
     verifiableCredentialJson,
   )
   /* TODO: Should I link to the certificate page instead of the download URL? */
-  return encodeURI(
-    `${LINKEDIN_ADD_TO_PROFILE_BASE_URL}?startTask=CERTIFICATION_NAME&name=${credentialName}&organizationId=${ORG_ID}&issueYear=${issueYear}&issueMonth=${issueMonth}&certId=${certId}&certUrl=${certUrl}`,
-  )
+  const linkedinUrl = new URL(LINKEDIN_ADD_TO_PROFILE_BASE_URL)
+  linkedinUrl.searchParams.set("startTask", "CERTIFICATION_NAME")
+  linkedinUrl.searchParams.set("name", credentialName)
+  linkedinUrl.searchParams.set("organizationId", ORG_ID.toString())
+  linkedinUrl.searchParams.set("issueYear", issueYear.toString())
+  linkedinUrl.searchParams.set("issueMonth", issueMonth.toString())
+  linkedinUrl.searchParams.set("certId", certId)
+  linkedinUrl.searchParams.set("certUrl", certUrl)
+  return linkedinUrl.toString()
 }
 
 export const getCertificateLinkedInUrl = (
