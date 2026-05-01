@@ -212,13 +212,15 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
-  const [imageError, setImageError] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
   const aspect = config.width / config.height
   if (resource) {
-    const imageUrl =
-      (!imageError &&
-        (resource.image?.url || resourceContentFilesImageSrc(resource))) ||
-      DEFAULT_RESOURCE_IMG
+    const imageFallbacks = [
+      resource.image?.url,
+      resourceContentFilesImageSrc(resource),
+      DEFAULT_RESOURCE_IMG,
+    ].filter(Boolean) as string[]
+    const imageUrl = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
         <Image
@@ -226,7 +228,9 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
-          onError={() => setImageError(true)}
+          onError={() =>
+            setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
+          }
         />
       </ImageContainer>
     )

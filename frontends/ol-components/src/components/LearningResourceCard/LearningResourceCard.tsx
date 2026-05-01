@@ -8,6 +8,7 @@ import {
   getBestResourceStartDate,
   showStartAnytime,
   getResourceLanguage,
+  resourceContentFilesImageSrc,
 } from "ol-utilities"
 import type { Size } from "../Card/Card"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -53,7 +54,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   list = false,
   condensed = false,
 }) => {
-  const [imageError, setImageError] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
 
   // Use list card variants if list prop is true
   if (list) {
@@ -105,6 +106,13 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     return null
   }
 
+  const imageFallbacks = [
+    resource.image?.url,
+    resourceContentFilesImageSrc(resource),
+    DEFAULT_RESOURCE_IMG,
+  ].filter(Boolean) as string[]
+  const imageSrc = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
+
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
@@ -148,9 +156,11 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={(!imageError && resource.image?.url) || DEFAULT_RESOURCE_IMG}
+      imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
-      onImageError={() => setImageError(true)}
+      onImageError={() =>
+        setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
+      }
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}
