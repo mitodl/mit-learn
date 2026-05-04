@@ -1,5 +1,5 @@
 import React from "react"
-import { Typography, styled, theme } from "ol-components"
+import { styled } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import type { VideoResource } from "api/v1"
 import { VideoCard, VideoCardSkeleton } from "./VideoCard"
@@ -17,22 +17,6 @@ const StyledContainer = styled(VideoContainer)(({ theme }) => ({
   },
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
-
-const CollectionHeader = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  margin: "32px 0 8px 0",
-  [theme.breakpoints.down("sm")]: {
-    margin: "24px 0 0 0",
-  },
-}))
-
-const CollectionTitle = styled(Typography)({
-  ...theme.typography.body1,
-  fontWeight: theme.typography.fontWeightMedium,
-  color: theme.custom.colors.black,
-})
 
 const VideoCardList = styled.div(({ theme }) => ({
   display: "flex",
@@ -61,10 +45,6 @@ const VideoCollection: React.FC<VideoCollectionProps> = ({
   return (
     <CollectionSection>
       <StyledContainer>
-        <CollectionHeader>
-          <CollectionTitle>{videos.length} Videos</CollectionTitle>
-        </CollectionHeader>
-
         <VideoCardList>
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => (
