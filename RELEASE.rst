@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.65.7
+--------------
+
+- filter server-side, remove video count (#3287)
+
 Version 0.65.6 (Released May 04, 2026)
 --------------
 
