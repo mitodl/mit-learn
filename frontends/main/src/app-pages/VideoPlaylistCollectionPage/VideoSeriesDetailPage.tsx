@@ -163,7 +163,9 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               {video?.title}
             </Styled.VideoTitle>
           )}
-          <Styled.StyledDuration>{duration}</Styled.StyledDuration>
+          {duration && (
+            <Styled.StyledDuration>{duration}</Styled.StyledDuration>
+          )}
           {/* Video player */}
           <Styled.PlayerWrapper
             id="video-player-region"
