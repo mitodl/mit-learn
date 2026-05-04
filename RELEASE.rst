@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.65.6
+Version 0.65.6 (Released May 04, 2026)
 --------------
 
 - fix fallback when no language is selected (#3286)
