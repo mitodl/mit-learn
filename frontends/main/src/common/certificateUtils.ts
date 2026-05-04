@@ -4,6 +4,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 
 import { LINKEDIN_ADD_TO_PROFILE_BASE_URL } from "@/common/urls"
+import invariant from "tiny-invariant"
 
 /**
  * Returns common display info for a certificate.
@@ -22,7 +23,9 @@ export enum CertificateType {
 /* Unsure if I should use NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL or NEXT_PUBLIC_MITX_ONLINE_BASE_URL
  * The below matches my naive expectations but we need to confirm that since we need unauthenticated access
  */
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL
+invariant(API_BASE_URL, "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL must be set")
 
 /* This is the Organization ID for MIT OpenLearning on LinkedIn as far as I can tell. We could parameterize this if needed */
 const ORG_ID = 74540637
@@ -92,6 +95,16 @@ export interface VerifiableCredential {
   }
 }
 
+/*
+The ID in a verifiable credential is prefixed with "urn:uuid:",
+so we strip that out for reference outside of our systems
+*/
+export const getIDFromVerifiableCredential = (
+  verifiableCredentialJson: VerifiableCredential,
+): string => {
+  return verifiableCredentialJson["id"].substring(9)
+}
+
 export const getVerifiableCredentialDownloadAPIURL = (
   verifiableCredentialJson: VerifiableCredential,
 ): string => {
@@ -99,14 +112,15 @@ export const getVerifiableCredentialDownloadAPIURL = (
     verifiableCredentialJson["credentialSubject"]["achievement"][
       "achievementType"
     ].toLowerCase()
-  const certId = verifiableCredentialJson["id"].substring(9)
+  //
+  const certId = getIDFromVerifiableCredential(verifiableCredentialJson)
   return `${API_BASE_URL}/api/v2/verifiable_${type}_credential/${certId}/download`
 }
 
 export const getVerifiableCredentialLinkedInURL = (
   verifiableCredentialJson: VerifiableCredential,
 ): string => {
-  const certId = verifiableCredentialJson["id"].substring(9)
+  const certId = getIDFromVerifiableCredential(verifiableCredentialJson)
   const credentialName =
     verifiableCredentialJson["credentialSubject"]["achievement"]["name"]
   const issueYear = new Date(
