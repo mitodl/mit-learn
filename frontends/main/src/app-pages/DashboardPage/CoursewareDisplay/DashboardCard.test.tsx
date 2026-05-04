@@ -126,7 +126,7 @@ describe.each([
     })
     expect(courseLink).toHaveAttribute("href", coursewareUrl)
     expect(
-      within(card).getByRole("heading", { name: course.title, level: 3 }),
+      within(card).getByRole("heading", { name: courseRun.title, level: 3 }),
     ).toBeInTheDocument()
   })
 
