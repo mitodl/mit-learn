@@ -392,6 +392,42 @@ describe("languageOptions", () => {
     expect(selectedEnrollment?.run.courseware_id).toBe(spanishRun.courseware_id)
   })
 
+  test("matches enrollment when course has no language options", () => {
+    const run = factories.courses.courseRun({
+      id: 7001,
+      title: "Enrolled Course",
+      courseware_id: "cw-enrolled-7001",
+      courseware_url: "https://example.com/cw-enrolled-7001",
+      is_enrollable: true,
+    })
+
+    const course = factories.courses.course({
+      courseruns: [run],
+      next_run_id: run.id,
+      language_options: [],
+    })
+
+    const selectedRun = getCourseRunForSelectedLanguage(course, "")
+    const enrollment = factories.enrollment.courseEnrollment({
+      run: {
+        id: run.id,
+        course: { id: course.id, title: course.title },
+        title: run.title,
+        courseware_id: run.courseware_id,
+        courseware_url: run.courseware_url,
+      },
+    })
+
+    const selectedEnrollment = getEnrollmentForSelectedLanguage(
+      [enrollment],
+      null,
+      selectedRun,
+    )
+
+    expect(selectedRun?.id).toBe(run.id)
+    expect(selectedEnrollment?.run.id).toBe(run.id)
+  })
+
   test("adapts V3 enrollment run into V2-shaped run context", () => {
     const templateRun = factories.courses.courseRun({
       id: 500,
