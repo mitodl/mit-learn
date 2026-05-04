@@ -156,35 +156,37 @@ const EpisodeList = styled.ul({
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled.li(({ theme }) => ({
-  margin: 0,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "28px 16px",
-  boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
-  gap: "16px",
-  "&:last-child": {
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
-  },
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray1,
-    cursor: "pointer",
-  },
-  "&:hover .episode-title, &:focus-visible .episode-title": {
-    color: theme.custom.colors.red,
-  },
-  "&:hover .play-button, &:focus-visible .play-button": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
+const EpisodeRow = styled.li<{ isEpisidePage?: boolean }>(
+  ({ theme, isEpisidePage }) => ({
+    margin: 0,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: !isEpisidePage ? "28px 16px" : "28px 0px",
+    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
     gap: "16px",
-    padding: "24px 16px",
-  },
-}))
+    "&:last-child": {
+      boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
+    },
+    "&:hover": {
+      backgroundColor: theme.custom.colors.lightGray1,
+      cursor: "pointer",
+    },
+    "&:hover .episode-title, &:focus-visible .episode-title": {
+      color: theme.custom.colors.red,
+    },
+    "&:hover .play-button, &:focus-visible .play-button": {
+      color: theme.custom.colors.red,
+    },
+    [theme.breakpoints.down("sm")]: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: "16px",
+      padding: "24px 16px",
+    },
+  }),
+)
 
 const EpisodeInfo = styled.div(({ theme }) => ({
   flex: 1,
@@ -199,7 +201,6 @@ const EpisodeTitleLink = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   textDecoration: "none",
   display: "block",
-  marginBottom: "8px",
   fontSize: "18px",
   fontStyle: "normal",
   fontWeight: theme.typography.fontWeightBold,
@@ -226,7 +227,7 @@ const StyledShowMore = styled(Button)(({ theme }) => ({
 }))
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "32px 0 16px 0",
+  padding: "20px 0 4px 0",
   borderBottom: `2px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     padding: "16px 0 0px 0",
@@ -254,7 +255,7 @@ const StyledDot = styled.span(({ theme }) => ({
 }))
 
 const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.lightGray1,
+  backgroundColor: theme.custom.colors.white,
 }))
 
 const EpisodeMeta = styled(Typography)(({ theme }) => ({
@@ -269,7 +270,10 @@ const PlayButton = styled(ActionButton, {
   isPlaying: boolean
 }>(({ theme, isPlaying }) => [
   {
+    width: "48px",
+    height: "48px",
     color: theme.custom.colors.darkGray2,
+    backgroundColor: theme.custom.colors.white,
     borderColor: "currentColor",
     "&:hover:not(:disabled)": {
       color: theme.custom.colors.red,
@@ -287,18 +291,20 @@ const PlayButton = styled(ActionButton, {
 
 /* ── Episode row component ── */
 
-type EpisodeItemProps = {
+export type EpisodeItemProps = {
   episode: LearningResource
   onPlayClick: (episode: LearningResource) => void
   isPlaying: boolean
   isPlayable: boolean
+  isEpisidePage?: boolean
 }
 
-const EpisodeItem: React.FC<EpisodeItemProps> = ({
+export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
   onPlayClick,
   isPlaying,
   isPlayable,
+  isEpisidePage = false,
 }) => {
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
@@ -314,7 +320,10 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   return (
-    <EpisodeRow onClick={() => onPlayClick(episode)}>
+    <EpisodeRow
+      onClick={() => onPlayClick(episode)}
+      isEpisidePage={isEpisidePage}
+    >
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">
           {episode.title}
