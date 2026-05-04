@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.65.5
+Version 0.65.5 (Released May 04, 2026)
 --------------
 
 - use courseware_url from language_options, filter them by is_enrollable (#3276)
