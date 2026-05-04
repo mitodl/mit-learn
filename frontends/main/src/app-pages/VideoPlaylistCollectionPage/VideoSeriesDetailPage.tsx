@@ -51,7 +51,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const {
     prevVideo,
     nextVideo,
@@ -79,6 +78,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     : null
 
   const topics = video?.topics ?? []
+  const captionUrls = video?.video?.caption_urls ?? []
   const playlistLabel = playlist?.title || "Video Collection"
 
   // Meta: instructors, department, duration, term
@@ -122,12 +122,44 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     }
   }, [isLoading, videoId])
 
+  // VideoObject JSON-LD for Google search indexing.
+  // Rendered as a plain <script> tag so Googlebot can read it without executing
+  // any additional JS. The replace guard prevents </script> injection.
+  const structuredData =
+    !isLoading && video
+      ? {
+          "@context": "https://schema.org",
+          "@type": "VideoObject",
+          name: video.title,
+          ...(video.description ? { description: video.description } : {}),
+          thumbnailUrl:
+            video.video?.cover_image_url || video.image?.url || undefined,
+          contentUrl: video.url ?? undefined,
+          ...(video.video?.duration
+            ? { duration: video.video.duration }
+            : {}),
+          ...(captionUrls.length > 0
+            ? { accessibilityFeature: ["captions"] }
+            : {}),
+        }
+      : null
+
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
   return (
     <Styled.PageWrapper>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <Styled.SkipLinksNav aria-label="Skip links">
         <Styled.SkipLink href="#video-detail-main">
           Skip to main content
@@ -227,6 +259,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined
@@ -290,6 +323,24 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             <Styled.ScreenReaderOnly id="video-description">
               {videoTitleLabel}. Duration: {durationLabel}. Topics:{" "}
               {topicNamesLabel}.
+            </Styled.ScreenReaderOnly>
+          )}
+
+          {/* Caption track links – visually hidden but present in the DOM so
+              Googlebot can follow each VTT URL and index the caption text,
+              associating the transcript content with this video page. */}
+          {!isLoading && captionUrls.length > 0 && (
+            <Styled.ScreenReaderOnly as="div">
+              <p>Captions available for this video:</p>
+              <ul>
+                {captionUrls.map((track) => (
+                  <li key={track.language}>
+                    <a href={track.url}>
+                      {track.language_name || track.language} captions (VTT)
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </Styled.ScreenReaderOnly>
           )}
 
