@@ -1677,6 +1677,61 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
 
+  test("disables CTA for non-enrolled B2B course when no translations and no enrollable runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+
+    const course = factories.courses.course()
+    const program = factories.programs.program({
+      courses: [course.id],
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const contractRun = factories.courses.courseRun({
+      b2b_contract: contracts[0].id,
+      language: "en",
+      run_tag: undefined,
+      is_enrollable: false,
+      courseware_url: "https://openedx.example.com/unenrollable-run",
+    })
+
+    const courseWithoutTranslations = {
+      ...course,
+      courseruns: [contractRun],
+      language_options: [],
+      next_run_id: contractRun.id,
+      next_run: null,
+    }
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      [courseWithoutTranslations],
+      contracts,
+    )
+
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const programElement = await screen.findByTestId("org-program-root")
+    const card = await within(programElement).findByTestId(
+      "enrollment-card-desktop",
+    )
+
+    const coursewareButton = within(card).getByTestId("courseware-button")
+    expect(coursewareButton).toHaveTextContent("Start Module")
+    expect(coursewareButton).toBeDisabled()
+  })
+
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 
