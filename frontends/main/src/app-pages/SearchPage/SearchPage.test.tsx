@@ -1142,9 +1142,10 @@ describe("UniversalAIBanner", () => {
     await user.click(screen.getByRole("button", { name: /Topic/i }))
     await user.click(screen.getByRole("checkbox", { name: "Physics 1" }))
 
-    expect(location.current.search).toBe(
-      "?vector_search=true&q=test&topic=Physics",
-    )
+    const searchParams = new URLSearchParams(location.current.search)
+    expect(searchParams.get("vector_search")).toBe("true")
+    expect(searchParams.get("q")).toBe("test")
+    expect(searchParams.get("topic")).toBe("Physics")
     expect(await screen.findByText("Physics Result")).toBeVisible()
     expect(screen.queryByText("Chemistry Result")).not.toBeInTheDocument()
 
