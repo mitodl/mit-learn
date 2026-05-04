@@ -10,6 +10,7 @@ import {
   getLanguageOptionKey,
   getResolvedRunForSelectedLanguage,
   getSelectedLanguageOption,
+  selectBestContractEnrollmentForLanguage,
 } from "./languageOptions"
 
 type LanguageOptionWithEnrollability = CourseRunLanguageOption & {
@@ -691,5 +692,174 @@ describe("languageOptions", () => {
         malformedEnrollment,
       ),
     ).toEqual(selectedRun)
+  })
+
+  describe("selectBestContractEnrollmentForLanguage", () => {
+    test("surfaces older-run enrollment when next_run_id points at unenrolled newer run", () => {
+      const oldRun = factories.courses.courseRun({
+        id: 544,
+        courseware_id: "course-v1:UAI+UAI.13+2025",
+        courseware_url: "https://example.com/2025",
+        is_enrollable: false,
+      })
+      const newRun = factories.courses.courseRun({
+        id: 2325,
+        courseware_id: "course-v1:UAI+UAI.13+2026",
+        courseware_url: "https://example.com/2026",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [oldRun, newRun],
+        next_run_id: newRun.id,
+        language_options: [
+          {
+            id: oldRun.id,
+            courseware_id: oldRun.courseware_id,
+            courseware_url: oldRun.courseware_url ?? "",
+            language: "en",
+            title: oldRun.title,
+            run_tag: oldRun.run_tag,
+          },
+          {
+            id: newRun.id,
+            courseware_id: newRun.courseware_id,
+            courseware_url: newRun.courseware_url ?? "",
+            language: "en",
+            title: newRun.title,
+            run_tag: newRun.run_tag,
+          },
+        ],
+      })
+
+      const oldEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: oldRun.id,
+          course: { id: course.id, title: course.title },
+          title: oldRun.title,
+          courseware_id: oldRun.courseware_id,
+          courseware_url: oldRun.courseware_url,
+        },
+      })
+
+      const result = selectBestContractEnrollmentForLanguage(
+        course,
+        [oldEnrollment],
+        "",
+      )
+
+      expect(result?.run.id).toBe(oldRun.id)
+    })
+
+    test("returns null when user has no enrollment for the selected language", () => {
+      const englishRun = factories.courses.courseRun({
+        id: 1,
+        courseware_id: "cw-en",
+        is_enrollable: true,
+      })
+      const spanishRun = factories.courses.courseRun({
+        id: 2,
+        courseware_id: "cw-es",
+        is_enrollable: true,
+      })
+      const course = factories.courses.course({
+        courseruns: [englishRun, spanishRun],
+        next_run_id: englishRun.id,
+        language_options: [
+          {
+            id: englishRun.id,
+            courseware_id: englishRun.courseware_id,
+            courseware_url: englishRun.courseware_url ?? "",
+            language: "en",
+            title: englishRun.title,
+            run_tag: englishRun.run_tag,
+          },
+          {
+            id: spanishRun.id,
+            courseware_id: spanishRun.courseware_id,
+            courseware_url: spanishRun.courseware_url ?? "",
+            language: "es",
+            title: spanishRun.title,
+            run_tag: spanishRun.run_tag,
+          },
+        ],
+      })
+
+      const spanishEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: spanishRun.id,
+          course: { id: course.id, title: course.title },
+          title: spanishRun.title,
+          courseware_id: spanishRun.courseware_id,
+        },
+      })
+
+      expect(
+        selectBestContractEnrollmentForLanguage(
+          course,
+          [spanishEnrollment],
+          "language:en",
+        ),
+      ).toBeNull()
+    })
+
+    test("prefers higher-graded enrollment when multiple match the language", () => {
+      const olderRun = factories.courses.courseRun({
+        id: 10,
+        courseware_id: "cw-old",
+      })
+      const newerRun = factories.courses.courseRun({
+        id: 20,
+        courseware_id: "cw-new",
+      })
+      const course = factories.courses.course({
+        courseruns: [olderRun, newerRun],
+        next_run_id: newerRun.id,
+        language_options: [
+          {
+            id: olderRun.id,
+            courseware_id: olderRun.courseware_id,
+            courseware_url: olderRun.courseware_url ?? "",
+            language: "en",
+            title: olderRun.title,
+            run_tag: olderRun.run_tag,
+          },
+          {
+            id: newerRun.id,
+            courseware_id: newerRun.courseware_id,
+            courseware_url: newerRun.courseware_url ?? "",
+            language: "en",
+            title: newerRun.title,
+            run_tag: newerRun.run_tag,
+          },
+        ],
+      })
+
+      const newerEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: newerRun.id,
+          course: { id: course.id, title: course.title },
+          title: newerRun.title,
+          courseware_id: newerRun.courseware_id,
+        },
+        grades: [factories.enrollment.grade({ grade: 0.4, passed: false })],
+      })
+      const olderEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: olderRun.id,
+          course: { id: course.id, title: course.title },
+          title: olderRun.title,
+          courseware_id: olderRun.courseware_id,
+        },
+        grades: [factories.enrollment.grade({ grade: 0.95, passed: true })],
+      })
+
+      const result = selectBestContractEnrollmentForLanguage(
+        course,
+        [newerEnrollment, olderEnrollment],
+        "language:en",
+      )
+
+      expect(result?.run.id).toBe(olderRun.id)
+    })
   })
 })
