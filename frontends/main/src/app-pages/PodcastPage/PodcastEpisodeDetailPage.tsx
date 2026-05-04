@@ -11,6 +11,9 @@ import {
 import type { Theme } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill } from "@remixicon/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
 import type { PodcastTrack } from "./PodcastPlayer"
 import {
@@ -23,8 +26,10 @@ import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
 import { HOME } from "@/common/urls"
+import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
+import { notFound } from "next/navigation"
 
 /* ── Layout ── */
 
@@ -188,6 +193,10 @@ export const PodcastEpisodeDetailPage: React.FC<
     null,
   )
 
+  const showPodcastDetailPage = useFeatureFlagEnabled(
+    FeatureFlags.PodcastDetailPage,
+  )
+  const flagsLoaded = useFeatureFlagsLoaded()
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
   // Fetch podcast only when a valid numeric podcastId is provided
   const { data: podcast } = useLearningResourcesDetail(Number(podcastId) || 0)
@@ -260,6 +269,9 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const podcastHref = podcastId ? `/podcast/${podcastId}` : "/podcast"
 
+  if (showPodcastDetailPage) {
+    return flagsLoaded ? notFound() : null
+  }
   return (
     <>
       <PageSection>
@@ -278,14 +290,10 @@ export const PodcastEpisodeDetailPage: React.FC<
         <HeaderSection>
           <EpisodeContainer>
             {podcast?.title && (
-              // <EpisodeLabel variant="body3">{podcast.title}</EpisodeLabel>
-              <EpisodeLabel>Chalk Radio</EpisodeLabel>
+              <EpisodeLabel variant="body3">{podcast.title}</EpisodeLabel>
             )}
 
-            {/* <EpisodeTitle variant="h1">{episode?.title ?? ""}</EpisodeTitle> */}
-            <EpisodeTitle variant="h1">
-              Jon Gruber on AI and Healthcare
-            </EpisodeTitle>
+            <EpisodeTitle variant="h1">{episode?.title ?? ""}</EpisodeTitle>
 
             {metaParts.length > 0 && (
               <MetaLine>
@@ -306,7 +314,12 @@ export const PodcastEpisodeDetailPage: React.FC<
             )}
 
             {episode?.description && (
-              <Description variant="body1">{episode.description}</Description>
+              <Description
+                variant="body1"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(episode.description),
+                }}
+              />
             )}
           </EpisodeContainer>
         </HeaderSection>

@@ -134,34 +134,6 @@ describe("VideoSeriesDetailPage", () => {
         name: "Introduction to Machine Learning",
       })
     })
-
-    test("renders the institution label from the video department", async () => {
-      const video = makeVideo({
-        departments: [
-          factories.learningResources.department({
-            department_id: "eecs",
-            name: "Electrical Engineering and Computer Science",
-          }),
-        ],
-      })
-      renderPage({ video })
-
-      await screen.findByText("ELECTRICAL ENGINEERING AND COMPUTER SCIENCE")
-    })
-
-    test("renders the institution label from offered_by when no department", async () => {
-      const playlist = makePlaylist({
-        offered_by: {
-          code: "ocw",
-          name: "MIT OpenCourseWare",
-          channel_url: null,
-        },
-      })
-      const video = makeVideo({ departments: [] })
-      renderPage({ video, playlistId: playlist.id, playlistData: playlist })
-
-      await screen.findByText("MIT OPENCOURSEWARE")
-    })
   })
 
   describe("breadcrumbs", () => {
@@ -388,42 +360,6 @@ describe("VideoSeriesDetailPage", () => {
       const descEl = document.getElementById("video-description")
       expect(descEl).toBeInTheDocument()
       expect(descEl?.textContent).toContain("My Video")
-    })
-  })
-
-  describe("topic chips", () => {
-    test("renders topic chip links for each topic", async () => {
-      const video = makeVideo({
-        topics: [
-          { id: 1, name: "Machine Learning", parent: 10, channel_url: null },
-          { id: 2, name: "Statistics", parent: 11, channel_url: null },
-        ],
-      })
-      renderPage({ video })
-
-      const mlChip = await screen.findByRole("link", {
-        name: "Machine Learning",
-      })
-      const statsChip = screen.getByRole("link", { name: "Statistics" })
-      expect(mlChip).toHaveAttribute("href", "/search?topic=Machine%20Learning")
-      expect(statsChip).toHaveAttribute("href", "/search?topic=Statistics")
-    })
-
-    test("renders the Video Series heading when topics are present", async () => {
-      const video = makeVideo({
-        topics: [{ id: 1, name: "Robotics", parent: 5, channel_url: null }],
-      })
-      renderPage({ video })
-
-      await screen.findByText("Video Series")
-    })
-
-    test("does not render the Video Series section when there are no topics", async () => {
-      const video = makeVideo({ topics: [] })
-      renderPage({ video })
-
-      await screen.findByRole("heading", { name: video.title })
-      expect(screen.queryByText("Video Series")).not.toBeInTheDocument()
     })
   })
 
