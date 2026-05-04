@@ -7,6 +7,7 @@ import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getQueryClient } from "@/app/getQueryClient"
+import { getOutlineCoursewareId } from "@/app-pages/ProductPages/util"
 
 export const generateMetadata = async (
   props: PageProps<"/courses/[readable_id]">,
@@ -57,9 +58,21 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
     notFound()
   }
 
+  const [course] = courses.results
+  const outlineCoursewareId = getOutlineCoursewareId(course)
+
+  if (outlineCoursewareId) {
+    await queryClient.prefetchQuery(
+      coursesQueries.courseOutline(outlineCoursewareId),
+    )
+  }
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <CoursePage readableId={readableId} />
+      <CoursePage
+        readableId={readableId}
+        outlineCoursewareId={outlineCoursewareId}
+      />
     </HydrationBoundary>
   )
 }
