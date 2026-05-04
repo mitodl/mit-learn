@@ -193,16 +193,6 @@ const useSimilarLearningResources = (
   })
 }
 
-const useVectorSimilarLearningResources = (
-  id: number,
-  opts?: { enabled?: boolean },
-) => {
-  return useQuery({
-    ...learningResourceQueries.vectorSimilar(id),
-    ...opts,
-  })
-}
-
 const useInfiniteLearningResourceItems = (
   id: number,
   params: Omit<ItemsListRequest, "offset">,
@@ -229,7 +219,6 @@ export {
   usePlatformsList,
   useSchoolsList,
   useSimilarLearningResources,
-  useVectorSimilarLearningResources,
   useInfiniteLearningResourceItems,
   learningResourceQueries,
   offerorQueries,
