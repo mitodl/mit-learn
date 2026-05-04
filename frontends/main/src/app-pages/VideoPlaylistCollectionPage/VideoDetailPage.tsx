@@ -385,7 +385,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const sources = useMemo(
     () =>
       video
@@ -403,6 +402,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     : null
 
   const topics = video?.topics ?? []
+  const captionUrls = video?.video?.caption_urls ?? []
 
   const playlistLabel = playlist?.title || "Video Collection"
 
@@ -525,6 +525,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined
@@ -575,6 +576,24 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             <ScreenReaderOnly id="video-description">
               {videoTitleLabel}. Duration: {durationLabel}. Topics:{" "}
               {topicNamesLabel}.
+            </ScreenReaderOnly>
+          )}
+
+          {/* Caption track links – visually hidden but present in the DOM so
+              Googlebot can follow each VTT URL and index the caption text,
+              associating the transcript content with this video page. */}
+          {!isLoading && captionUrls.length > 0 && (
+            <ScreenReaderOnly as="div">
+              <p>Captions available for this video:</p>
+              <ul>
+                {captionUrls.map((track) => (
+                  <li key={track.language}>
+                    <a href={track.url}>
+                      {track.language_name || track.language} captions (VTT)
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </ScreenReaderOnly>
           )}
 

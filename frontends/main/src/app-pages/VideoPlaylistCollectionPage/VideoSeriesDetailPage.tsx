@@ -72,7 +72,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
         : [],
     [video],
   )
-
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
@@ -135,9 +134,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           thumbnailUrl:
             video.video?.cover_image_url || video.image?.url || undefined,
           contentUrl: video.url ?? undefined,
-          ...(video.video?.duration
-            ? { duration: video.video.duration }
-            : {}),
+          ...(video.video?.duration ? { duration: video.video.duration } : {}),
           ...(captionUrls.length > 0
             ? { accessibilityFeature: ["captions"] }
             : {}),

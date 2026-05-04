@@ -42,6 +42,31 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
+  // Prevent the update effect from running on the very first mount —
+  // the init effect already handles the initial sources/tracks setup.
+  const isMountedRef = useRef(false)
+
+  const addTracks = (player: Player, trackList: CaptionUrl[]) => {
+    // Remove any existing remote text tracks first
+    const existing = player.remoteTextTracks()
+    for (let i = existing.length - 1; i >= 0; i--) {
+      // TextTrackList is array-like at runtime but lacks an index signature in types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      player.removeRemoteTextTrack((existing as any)[i])
+    }
+    trackList.forEach((track, index) => {
+      player.addRemoteTextTrack(
+        {
+          kind: "captions",
+          src: track.url,
+          srclang: track.language,
+          label: track.language_name || track.language,
+          default: index === 0,
+        },
+        false,
+      )
+    })
+  }
 
   useEffect(() => {
     // Only initialise once
@@ -70,28 +95,20 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         poster: poster ?? undefined,
         sources,
         techOrder: ["youtube", "html5"],
+        // Always set crossOrigin so the browser can fetch VTT files from
+        // a different origin (e.g. CloudFront CDN) without CORS errors.
+        crossOrigin: "anonymous",
       },
       function (this: Player) {
+        // Add tracks inside the ready callback — this is the earliest safe
+        // point; adding them before ready can silently fail on some browsers.
+        addTracks(this, tracks)
         onReady?.(this)
       },
     )
 
-    tracks.forEach((track, index) => {
-      player.addRemoteTextTrack(
-        {
-          kind: "captions",
-          src: track.url,
-          srclang: track.language,
-          label: track.language_name || track.language,
-          // Auto-show the first caption track so hearing-impaired / muted users
-          // see captions without needing to manually enable them.
-          default: index === 0,
-        },
-        false,
-      )
-    })
-
     playerRef.current = player
+    isMountedRef.current = true
   }, [
     ariaDescribedBy,
     ariaLabel,
@@ -104,32 +121,14 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     tracks,
   ])
 
-  // Update sources / poster / tracks when props change without re-creating the player
+  // Update sources / poster / tracks when props change without re-creating the player.
+  // Skip on first mount — the init effect's ready callback already handled it.
   useEffect(() => {
     const player = playerRef.current
-    if (!player) return
+    if (!player || !isMountedRef.current) return
     player.src(sources)
     player.poster(poster ?? "")
-
-    // Remove existing remote text tracks then re-add
-    const existingTracks = player.remoteTextTracks()
-    for (let i = existingTracks.length - 1; i >= 0; i--) {
-      // TextTrackList is array-like at runtime but lacks an index signature in types
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      player.removeRemoteTextTrack((existingTracks as any)[i])
-    }
-    tracks.forEach((track, index) => {
-      player.addRemoteTextTrack(
-        {
-          kind: "captions",
-          src: track.url,
-          srclang: track.language,
-          label: track.language_name || track.language,
-          default: index === 0,
-        },
-        false,
-      )
-    })
+    addTracks(player, tracks)
   }, [sources, poster, tracks])
 
   // Dispose on unmount
