@@ -148,6 +148,7 @@ jobs:
         env:
           ORIGIN: http://fakelearn.odl.local:8062
           MITOL_API_BASE_URL: http://api.fakelearn.odl.local:8065
+          MITX_ONLINE_LEGACY_BASE_URL: https://cifake.mitxonline.mit.edu
           SITE_NAME: MIT Learn
           SUPPORT_EMAIL: mitlearn-support@mit.edu
           EMBEDLY_KEY: fake-embedly-key
@@ -170,6 +171,7 @@ jobs:
             -f frontends/main/Dockerfile.web \
             --build-arg NEXT_PUBLIC_ORIGIN=$ORIGIN \
             --build-arg NEXT_PUBLIC_MITOL_API_BASE_URL=$MITOL_API_BASE_URL \
+            --build-arg NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL=$MITX_ONLINE_LEGACY_BASE_URL \
             --build-arg NEXT_PUBLIC_SITE_NAME="$SITE_NAME" \
             --build-arg NEXT_PUBLIC_MITOL_SUPPORT_EMAIL=$SUPPORT_EMAIL \
             --build-arg NEXT_PUBLIC_EMBEDLY_KEY=$EMBEDLY_KEY \
