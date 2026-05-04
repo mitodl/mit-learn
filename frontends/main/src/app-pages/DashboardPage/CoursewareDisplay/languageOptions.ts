@@ -237,8 +237,6 @@ const getCourseRunForSelectedLanguage = (
   if (!languageOption) {
     return (
       getBestRun(course, { enrollableOnly: true }) ??
-      course.courseruns.find((run) => run.id === course.next_run_id) ??
-      course.courseruns.find((run) => run.is_enrollable) ??
       course.courseruns[0] ??
       null
     )
