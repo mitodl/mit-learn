@@ -235,7 +235,11 @@ const getCourseRunForSelectedLanguage = (
 ): CourseRunV2 | null => {
   const languageOption = getSelectedLanguageOption(course, selectedLanguageKey)
   if (!languageOption) {
-    return null
+    return (
+      getBestRun(course, { enrollableOnly: true }) ??
+      course.courseruns[0] ??
+      null
+    )
   }
 
   const matchingRuns = getRunsForLanguageOption(course, languageOption)
@@ -267,7 +271,22 @@ const getEnrollmentForSelectedLanguage = (
   selectedRun: CourseRunV2 | null,
 ): CourseRunEnrollmentV3 | null => {
   if (!selectedLanguageOption) {
-    return null
+    if (!selectedRun) {
+      return null
+    }
+
+    return (
+      enrollments.find((enrollment) => {
+        if (!enrollment.run) {
+          return false
+        }
+
+        return (
+          enrollment.run.id === selectedRun.id ||
+          enrollment.run.courseware_id === selectedRun.courseware_id
+        )
+      }) ?? null
+    )
   }
 
   return (
