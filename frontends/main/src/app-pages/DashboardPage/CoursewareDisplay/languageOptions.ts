@@ -304,6 +304,65 @@ const getEnrollmentForSelectedLanguage = (
   )
 }
 
+/**
+ * Among contract-scoped enrollments, pick the user's best existing enrollment
+ * whose run is for the selected language on this course. Returns null when the
+ * user has no enrollment matching the language.
+ *
+ * Run language is determined via `course.language_options` (matching by id or
+ * courseware_id), independent of `is_enrollable` — we want to surface
+ * enrollments in older/closed runs too.
+ *
+ * Tiebreak across multiple matches: certificate > highest grade > first.
+ */
+const selectBestContractEnrollmentForLanguage = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+  selectedLanguageKey: string,
+): CourseRunEnrollmentV3 | null => {
+  const resolvedKey =
+    selectedLanguageKey || getDefaultLanguageOptionKey(course) || ""
+  if (!resolvedKey) {
+    return null
+  }
+
+  const matchingOptions = (course.language_options ?? []).filter(
+    (option) => getLanguageOptionKey(option) === resolvedKey,
+  )
+  if (matchingOptions.length === 0) {
+    return null
+  }
+
+  const optionRunIds = new Set<number>()
+  const optionCoursewareIds = new Set<string>()
+  matchingOptions.forEach((option) => {
+    optionRunIds.add(option.id)
+    if (option.courseware_id) {
+      optionCoursewareIds.add(option.courseware_id)
+    }
+  })
+
+  const matching = enrollments.filter(
+    (enrollment) =>
+      optionRunIds.has(enrollment.run.id) ||
+      optionCoursewareIds.has(enrollment.run.courseware_id),
+  )
+
+  if (matching.length === 0) {
+    return null
+  }
+
+  return matching.reduce((best, current) => {
+    const bestHasCert = !!best.certificate?.uuid
+    const currentHasCert = !!current.certificate?.uuid
+    if (currentHasCert && !bestHasCert) return current
+    if (bestHasCert && !currentHasCert) return best
+    const bestGrade = Math.max(0, ...best.grades.map((g) => g.grade ?? 0))
+    const currentGrade = Math.max(0, ...current.grades.map((g) => g.grade ?? 0))
+    return currentGrade > bestGrade ? current : best
+  }, matching[0])
+}
+
 const getResolvedRunForSelectedLanguage = (
   course: CourseWithCourseRunsSerializerV2,
   selectedLanguageOption: CourseRunLanguageOption | null,
@@ -402,6 +461,7 @@ const getResolvedRunForSelectedLanguage = (
 export {
   getLanguageCodeFromOptionKey,
   getLanguageOptionKey,
+  selectBestContractEnrollmentForLanguage,
   getDistinctLanguageOptions,
   getSelectedLanguageOption,
   getCourseRunForSelectedLanguage,

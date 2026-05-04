@@ -37,9 +37,9 @@ import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import {
   getCourseRunForSelectedLanguage,
   getDistinctLanguageOptions,
-  getEnrollmentForSelectedLanguage,
   getResolvedRunForSelectedLanguage,
   getSelectedLanguageOption,
+  selectBestContractEnrollmentForLanguage,
 } from "./CoursewareDisplay/languageOptions"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
@@ -350,29 +350,34 @@ const OrgProgramCollectionDisplay: React.FC<{
             />
           ))}
         {rawCourses.map((course) => {
-          const selectedLanguageOption = getSelectedLanguageOption(
-            course,
-            selectedLanguageKey,
-          )
-          const selectedRun = getCourseRunForSelectedLanguage(
-            course,
-            selectedLanguageKey,
-          )
           // Filter enrollments to only those matching this contract
           const contractEnrollments =
             enrollments?.filter(
               (enrollment) => enrollment.b2b_contract_id === contract.id,
             ) ?? []
-          const selectedLanguageEnrollment = getEnrollmentForSelectedLanguage(
-            contractEnrollments,
-            selectedLanguageOption,
-            selectedRun,
+          // Prefer the user's existing enrollment for the selected language
+          // over the next/best run, so older-run enrollments stay visible
+          // when the contract surfaces a newer run.
+          const selectedLanguageEnrollment =
+            selectBestContractEnrollmentForLanguage(
+              course,
+              contractEnrollments,
+              selectedLanguageKey,
+            )
+          const selectedLanguageOption = getSelectedLanguageOption(
+            course,
+            selectedLanguageKey,
           )
+          const selectedRun = selectedLanguageEnrollment
+            ? ((course.courseruns ?? []).find(
+                (r) => r.id === selectedLanguageEnrollment.run.id,
+              ) ?? null)
+            : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
           const resolvedRun = getResolvedRunForSelectedLanguage(
             course,
             selectedLanguageOption,
             selectedRun,
-            selectedLanguageEnrollment ?? null,
+            selectedLanguageEnrollment,
             contract.id,
           )
           return (
@@ -473,30 +478,34 @@ const OrgProgramDisplay: React.FC<{
         {programLoading || coursesQuery.isLoading
           ? skeleton
           : courses.map((course) => {
-              const selectedLanguageOption = getSelectedLanguageOption(
-                course,
-                selectedLanguageKey,
-              )
-              const selectedRun = getCourseRunForSelectedLanguage(
-                course,
-                selectedLanguageKey,
-              )
               // Filter enrollments to only those matching this contract
               const contractEnrollments =
                 courseRunEnrollments?.filter(
                   (enrollment) => enrollment.b2b_contract_id === contract?.id,
                 ) ?? []
+              // Prefer the user's existing enrollment for the selected
+              // language over the next/best run, so older-run enrollments
+              // stay visible when the contract surfaces a newer run.
               const selectedLanguageEnrollment =
-                getEnrollmentForSelectedLanguage(
+                selectBestContractEnrollmentForLanguage(
+                  course,
                   contractEnrollments,
-                  selectedLanguageOption,
-                  selectedRun,
+                  selectedLanguageKey,
                 )
+              const selectedLanguageOption = getSelectedLanguageOption(
+                course,
+                selectedLanguageKey,
+              )
+              const selectedRun = selectedLanguageEnrollment
+                ? ((course.courseruns ?? []).find(
+                    (r) => r.id === selectedLanguageEnrollment.run.id,
+                  ) ?? null)
+                : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
               const resolvedRun = getResolvedRunForSelectedLanguage(
                 course,
                 selectedLanguageOption,
                 selectedRun,
-                selectedLanguageEnrollment ?? null,
+                selectedLanguageEnrollment,
                 contract?.id,
               )
 
