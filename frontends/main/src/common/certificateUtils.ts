@@ -112,7 +112,6 @@ export const getVerifiableCredentialDownloadAPIURL = (
     verifiableCredentialJson["credentialSubject"]["achievement"][
       "achievementType"
     ].toLowerCase()
-  //
   const certId = getIDFromVerifiableCredential(verifiableCredentialJson)
   return `${API_BASE_URL}/api/v2/verifiable_${type}_credential/${certId}/download`
 }
