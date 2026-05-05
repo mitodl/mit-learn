@@ -96,6 +96,19 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   // VideoObject JSON-LD for Google search indexing.
   // Rendered as a plain <script> tag so Googlebot can read it without executing
   // any additional JS. The replace guard prevents </script> injection.
+  //
+  // Schema.org requires duration in ISO-8601 format (e.g. "PT2M0S").
+  // The backend ETL already stores it that way, but we validate defensively
+  // — ISO-8601 durations always start with "P" followed by at least one
+  // designator — to avoid emitting invalid structured data if the format ever
+  // changes.
+  const iso8601DurationRe =
+    /^P(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?$/
+  const durationIso =
+    video?.video?.duration && iso8601DurationRe.test(video.video.duration)
+      ? video.video.duration
+      : undefined
+
   const structuredData =
     !isLoading && video
       ? {
@@ -106,7 +119,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           thumbnailUrl:
             video.video?.cover_image_url || video.image?.url || undefined,
           contentUrl: video.url ?? undefined,
-          ...(video.video?.duration ? { duration: video.video.duration } : {}),
+          ...(durationIso ? { duration: durationIso } : {}),
           ...(captionUrls.length > 0
             ? { accessibilityFeature: ["captions"] }
             : {}),
@@ -284,7 +297,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <p>Captions available for this video:</p>
               <ul>
                 {captionUrls.map((track) => (
-                  <li key={track.language}>
+                  <li key={track.url}>
                     <a href={track.url}>
                       {track.language_name || track.language} captions (VTT)
                     </a>

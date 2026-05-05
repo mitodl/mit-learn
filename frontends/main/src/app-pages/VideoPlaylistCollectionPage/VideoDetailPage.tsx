@@ -587,7 +587,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <p>Captions available for this video:</p>
               <ul>
                 {captionUrls.map((track) => (
-                  <li key={track.language}>
+                  <li key={track.url}>
                     <a href={track.url}>
                       {track.language_name || track.language} captions (VTT)
                     </a>

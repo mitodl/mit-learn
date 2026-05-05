@@ -47,13 +47,17 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   const isMountedRef = useRef(false)
 
   const addTracks = (player: Player, trackList: CaptionUrl[]) => {
-    // Remove any existing remote text tracks first
+    // Remove any existing remote text tracks first.
+    // Snapshot into a plain array before mutating (TextTrackList is live).
+    // video.js's TextTrackList TS type lacks a numeric index signature, so
+    // cast via unknown to a Record — safer than `any` and no eslint-disable needed.
+    type TrackArg = Parameters<typeof player.removeRemoteTextTrack>[0]
     const existing = player.remoteTextTracks()
-    for (let i = existing.length - 1; i >= 0; i--) {
-      // TextTrackList is array-like at runtime but lacks an index signature in types
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      player.removeRemoteTextTrack((existing as any)[i])
-    }
+    const snapshot = Array.from(
+      { length: existing.length },
+      (_, i) => (existing as unknown as Record<number, TrackArg>)[i],
+    )
+    snapshot.forEach((t) => player.removeRemoteTextTrack(t))
     trackList.forEach((track, index) => {
       player.addRemoteTextTrack(
         {
@@ -104,11 +108,13 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         // point; adding them before ready can silently fail on some browsers.
         addTracks(this, tracks)
         onReady?.(this)
+        // Set the flag here so the update effect only runs after the player
+        // is truly ready and the initial setup is complete.
+        isMountedRef.current = true
       },
     )
 
     playerRef.current = player
-    isMountedRef.current = true
   }, [
     ariaDescribedBy,
     ariaLabel,
@@ -121,15 +127,26 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     tracks,
   ])
 
-  // Update sources / poster / tracks when props change without re-creating the player.
-  // Skip on first mount — the init effect's ready callback already handled it.
+  // Update sources / poster when they change without re-creating the player.
+  // Kept separate from the tracks effect so a captions-only change does not
+  // call player.src() and unexpectedly reload / interrupt playback.
   useEffect(() => {
     const player = playerRef.current
     if (!player || !isMountedRef.current) return
-    player.src(sources)
-    player.poster(poster ?? "")
-    addTracks(player, tracks)
-  }, [sources, poster, tracks])
+    player.ready(() => {
+      player.src(sources)
+      player.poster(poster ?? "")
+    })
+  }, [sources, poster])
+
+  // Update tracks independently so caption changes never trigger a media reload.
+  useEffect(() => {
+    const player = playerRef.current
+    if (!player || !isMountedRef.current) return
+    player.ready(() => {
+      addTracks(player, tracks)
+    })
+  }, [tracks])
 
   // Dispose on unmount
   useEffect(() => {
