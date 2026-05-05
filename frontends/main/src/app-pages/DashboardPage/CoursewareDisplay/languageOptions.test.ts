@@ -159,7 +159,7 @@ describe("languageOptions", () => {
     })
     expect(options[1]).toEqual({
       value: "language:es",
-      label: "Español",
+      label: "español",
     })
   })
 

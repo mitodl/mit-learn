@@ -31,15 +31,7 @@ const getNativeLanguageName = (languageCode: string): string => {
       type: "language",
     })
     const label = displayNames.of(languageCode)
-    if (!label) {
-      return languageCode
-    }
-
-    const [first, ...rest] = Array.from(label)
-    if (!first) {
-      return label
-    }
-    return `${first.toLocaleUpperCase(languageCode)}${rest.join("")}`
+    return label ?? languageCode
   } catch {
     return languageCode
   }

@@ -1443,7 +1443,7 @@ describe("ContractContent", () => {
     expect(card).toHaveTextContent("Module in English")
 
     await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "Español" }))
+    await user.click(await screen.findByRole("option", { name: "español" }))
 
     await waitFor(() => {
       expect(root.getByTestId("enrollment-card-desktop")).toHaveTextContent(
@@ -1549,7 +1549,7 @@ describe("ContractContent", () => {
     expect(card).toHaveTextContent("Collection English")
 
     await user.click(languageSelect)
-    await user.click(await screen.findByRole("option", { name: "Español" }))
+    await user.click(await screen.findByRole("option", { name: "español" }))
 
     await waitFor(() => {
       expect(
