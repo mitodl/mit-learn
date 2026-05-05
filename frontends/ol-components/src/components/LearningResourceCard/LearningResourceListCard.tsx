@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React from "react"
 import styled from "@emotion/styled"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { ResourceTypeEnum, LearningResource } from "api"
@@ -12,6 +12,7 @@ import {
   getResourceLanguage,
   formattedParentCourseName,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -154,8 +155,10 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   onClick,
   headingLevel = 6,
 }) => {
-  const [imageIndex, setImageIndex] = useState(0)
-  useEffect(() => setImageIndex(0), [resource?.id, resource?.image?.url])
+  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
 
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />
@@ -163,13 +166,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   if (!resource) {
     return null
   }
-
-  const imageFallbacks = [
-    resource.image?.url,
-    resourceContentFilesImageSrc(resource),
-    DEFAULT_RESOURCE_IMG,
-  ].filter((src): src is string => Boolean(src))
-  const imageSrc = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
 
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
@@ -219,9 +215,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       headingLevel={headingLevel}
       imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
-      onImageError={() =>
-        setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
-      }
+      onImageError={onImageError}
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
       resourceType={resource.resource_category}

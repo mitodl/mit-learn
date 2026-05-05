@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React from "react"
 import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
 import { LearningResource } from "api"
 import {
@@ -9,6 +9,7 @@ import {
   showStartAnytime,
   getResourceLanguage,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import type { Size } from "../Card/Card"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -54,8 +55,12 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   list = false,
   condensed = false,
 }) => {
-  const [imageIndex, setImageIndex] = useState(0)
-  useEffect(() => setImageIndex(0), [resource?.id, resource?.image?.url])
+  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+    // won't try contentFile image if resource image 404s, but that matches
+    // existing behavior: contentFile is only tried when resource has no image URL
+    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
 
   // Use list card variants if list prop is true
   if (list) {
@@ -107,13 +112,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     return null
   }
 
-  const imageFallbacks = [
-    resource.image?.url,
-    resourceContentFilesImageSrc(resource),
-    DEFAULT_RESOURCE_IMG,
-  ].filter((src): src is string => Boolean(src))
-  const imageSrc = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
-
   const prices = getLearningResourcePrices(resource)
   const anytime = showStartAnytime(resource)
   const startDate = getBestResourceStartDate(resource)
@@ -159,9 +157,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       headingLevel={headingLevel}
       imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
-      onImageError={() =>
-        setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
-      }
+      onImageError={onImageError}
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}

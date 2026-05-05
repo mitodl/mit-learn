@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
@@ -14,6 +14,7 @@ import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import {
   DEFAULT_RESOURCE_IMG,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
 import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
@@ -212,16 +213,12 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
-  const [imageIndex, setImageIndex] = useState(0)
-  useEffect(() => setImageIndex(0), [resource?.id, resource?.image?.url])
+  const { src: imageUrl, onError: onImageError } = useImageWithFallback(
+    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
   const aspect = config.width / config.height
   if (resource) {
-    const imageFallbacks = [
-      resource.image?.url,
-      resourceContentFilesImageSrc(resource),
-      DEFAULT_RESOURCE_IMG,
-    ].filter((url): url is string => Boolean(url))
-    const imageUrl = imageFallbacks[imageIndex] ?? DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
         <Image
@@ -229,9 +226,7 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
-          onError={() =>
-            setImageIndex((i) => Math.min(i + 1, imageFallbacks.length - 1))
-          }
+          onError={onImageError}
         />
       </ImageContainer>
     )

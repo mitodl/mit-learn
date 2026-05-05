@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React from "react"
 import {
   Container,
   Stack,
@@ -10,7 +10,7 @@ import {
   HEADER_HEIGHT,
   Grid2,
 } from "ol-components"
-import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { DEFAULT_RESOURCE_IMG, useImageWithFallback } from "ol-utilities"
 import { convertToEmbedUrl, hexToRgba } from "@/common/utils"
 import { HOME } from "@/common/urls"
 import { Button, styled } from "@mitodl/smoot-design"
@@ -239,8 +239,7 @@ const SidebarMedia: React.FC<{
   title: string
   priority?: boolean
 }> = ({ videoUrl, imageSrc, title, priority }) => {
-  const [imageError, setImageError] = useState(false)
-  useEffect(() => setImageError(false), [imageSrc])
+  const { src: resolvedSrc, onError } = useImageWithFallback(imageSrc, DEFAULT_RESOURCE_IMG)
 
   if (videoUrl) {
     const embedUrl = convertToEmbedUrl(videoUrl)
@@ -255,9 +254,9 @@ const SidebarMedia: React.FC<{
       priority={priority}
       width={540}
       height={306}
-      src={imageError ? DEFAULT_RESOURCE_IMG : imageSrc}
+      src={resolvedSrc}
       alt=""
-      onError={() => setImageError(true)}
+      onError={onError}
     />
   )
 }
