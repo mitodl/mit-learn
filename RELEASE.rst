@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.66.2
+--------------
+
+- fix b2b dashboard empty language code (#3293)
+- prefer existing B2B enrollment over next_run_id when picking same-language run (#3291)
+- filter server-side, remove video count (#3287)
+- fix fallback when no language is selected (#3286)
+- set s-maxage via NEXT_CACHE_S_MAXAGE_SECONDS (#3280)
+- fix: assert run.title in DashboardCard heading test (#3282)
+- fix: adjust duration position and remove institution label from the video series page and change the title of video and playlist on drawer (#3270)
+- qdrant: Automatically compute optimizer settings (#3273)
+
 Version 0.65.6 (Released May 04, 2026)
 --------------
 
