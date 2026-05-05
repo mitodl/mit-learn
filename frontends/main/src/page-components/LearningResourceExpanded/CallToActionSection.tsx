@@ -41,6 +41,7 @@ import {
   videoDetailPageView,
   videoPlaylistPageView,
   podcastPageView,
+  podcastEpisodePageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -355,6 +356,15 @@ const getResourceUrl = (
   if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
       return podcastPageView(resource.id.toString())
+    }
+    if (
+      resource.resource_type === ResourceTypeEnum.PodcastEpisode &&
+      resource?.podcast_episode?.podcasts?.[0]
+    ) {
+      return podcastEpisodePageView(
+        resource.id.toString(),
+        resource?.podcast_episode?.podcasts[0].toString(),
+      )
     }
   }
   return resource.url

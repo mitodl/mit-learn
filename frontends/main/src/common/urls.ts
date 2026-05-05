@@ -224,6 +224,11 @@ export const videoPlaylistPageView = (id: string) =>
 export const PODCAST_PAGE_VIEW = "/podcast/[id]"
 export const podcastPageView = (id: string) =>
   generatePath(PODCAST_PAGE_VIEW, { id })
+export const PODCAST_EPISODE_PAGE_VIEW = "/podcast/podcast_episode/[episodeId]"
+export const podcastEpisodePageView = (id: string, podcastId: string) => {
+  const params = new URLSearchParams({ podcast: String(podcastId) })
+  return `${generatePath(PODCAST_EPISODE_PAGE_VIEW, { episodeId: String(id) })}?${params.toString()}`
+}
 export const VIDEO_DETAIL_PAGE_VIEW = "/video-playlist/detail/[videoId]"
 export const videoDetailPageView = (videoId: number, playlistId: number) => {
   const params = new URLSearchParams({ playlist: String(playlistId) })
