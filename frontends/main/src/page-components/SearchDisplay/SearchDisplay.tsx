@@ -634,8 +634,12 @@ const getResourceFacetValues = (
     case "free":
     case "professional":
       return normalizeParamValues(resource[facet])
-    default:
+    case "resource_type":
+    case "resource_category":
+    case "resource_type_group":
       return normalizeParamValues(resource[facet])
+    default:
+      return []
   }
 }
 
