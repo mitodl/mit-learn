@@ -682,10 +682,15 @@ const getVectorClientAggregations = (
       }
       return [
         name,
-        Array.from(counts.entries()).map(([key, docCount]) => ({
-          key,
-          doc_count: docCount,
-        })),
+        Array.from(counts.entries())
+          .map(([key, docCount]) => ({
+            key,
+            doc_count: docCount,
+          }))
+          .sort(
+            (a, b) =>
+              b.doc_count - a.doc_count || a.key.localeCompare(b.key),
+          ),
       ]
     }),
   )
