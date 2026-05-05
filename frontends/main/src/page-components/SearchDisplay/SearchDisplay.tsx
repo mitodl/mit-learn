@@ -633,7 +633,6 @@ const getResourceFacetValues = (
       return normalizeParamValues(resource.topics?.map((t) => t.name))
     case "free":
     case "professional":
-      return normalizeParamValues(resource[facet])
     case "resource_type":
     case "resource_category":
     case "resource_type_group":
