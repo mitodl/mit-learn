@@ -44,6 +44,17 @@ const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
   "zh-tw": "繁體中文",
 }
 
+const nativeLanguageNameCache = new Map<string, string>()
+let cachedDisplayNamesRef: typeof Intl.DisplayNames | undefined =
+  Intl.DisplayNames
+
+const ensureNativeLanguageNameCacheIsFresh = (): void => {
+  if (Intl.DisplayNames !== cachedDisplayNamesRef) {
+    cachedDisplayNamesRef = Intl.DisplayNames
+    nativeLanguageNameCache.clear()
+  }
+}
+
 const getFallbackNativeLanguageName = (languageCode: string): string | null => {
   const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
   if (exactMatch) {
@@ -61,8 +72,17 @@ const getFallbackNativeLanguageName = (languageCode: string): string | null => {
 }
 
 const getNativeLanguageName = (languageCode: string): string => {
+  ensureNativeLanguageNameCacheIsFresh()
+
   const normalizedLanguageCode = languageCode.trim().toLowerCase()
   const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
+
+  const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
+  if (cachedLabel) {
+    return cachedLabel
+  }
+
+  let resolvedLabel: string | null = null
 
   try {
     if (typeof Intl.DisplayNames === "function") {
@@ -71,13 +91,17 @@ const getNativeLanguageName = (languageCode: string): string => {
       })
       const label = displayNames.of(normalizedLanguageCode)
       if (label && label.toLowerCase() !== normalizedLanguageCode) {
-        return label
+        resolvedLabel = label
       }
 
-      if (baseLanguageSubtag && baseLanguageSubtag !== normalizedLanguageCode) {
+      if (
+        !resolvedLabel &&
+        baseLanguageSubtag &&
+        baseLanguageSubtag !== normalizedLanguageCode
+      ) {
         const baseLabel = displayNames.of(baseLanguageSubtag)
         if (baseLabel && baseLabel.toLowerCase() !== baseLanguageSubtag) {
-          return baseLabel
+          resolvedLabel = baseLabel
         }
       }
     }
@@ -85,10 +109,13 @@ const getNativeLanguageName = (languageCode: string): string => {
     // Fall through to static fallback labels.
   }
 
-  return (
+  const finalLabel =
+    resolvedLabel ??
     getFallbackNativeLanguageName(normalizedLanguageCode) ??
     normalizedLanguageCode
-  )
+
+  nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
+  return finalLabel
 }
 
 const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {

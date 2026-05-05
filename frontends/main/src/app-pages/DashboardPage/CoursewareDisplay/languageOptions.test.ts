@@ -18,6 +18,16 @@ type LanguageOptionWithEnrollability = CourseRunLanguageOption & {
 }
 
 describe("languageOptions", () => {
+  const setIntlDisplayNames = (
+    value: typeof Intl.DisplayNames | undefined,
+  ): void => {
+    Object.defineProperty(Intl, "DisplayNames", {
+      value,
+      configurable: true,
+      writable: true,
+    })
+  }
+
   test("normalizes language keys", () => {
     expect(
       getLanguageOptionKey({
@@ -215,11 +225,7 @@ describe("languageOptions", () => {
 
   test("uses static fallback labels when Intl.DisplayNames is unavailable", () => {
     const originalDisplayNames = Intl.DisplayNames
-    ;(
-      Intl as typeof Intl & {
-        DisplayNames?: typeof Intl.DisplayNames
-      }
-    ).DisplayNames = undefined
+    setIntlDisplayNames(undefined)
 
     try {
       const run = factories.courses.courseRun({
@@ -253,11 +259,7 @@ describe("languageOptions", () => {
         },
       ])
     } finally {
-      ;(
-        Intl as typeof Intl & {
-          DisplayNames?: typeof Intl.DisplayNames
-        }
-      ).DisplayNames = originalDisplayNames
+      setIntlDisplayNames(originalDisplayNames)
     }
   })
 
@@ -276,11 +278,7 @@ describe("languageOptions", () => {
       }
     }
 
-    ;(
-      Intl as typeof Intl & {
-        DisplayNames?: typeof Intl.DisplayNames
-      }
-    ).DisplayNames = MockDisplayNames as unknown as typeof Intl.DisplayNames
+    setIntlDisplayNames(MockDisplayNames as unknown as typeof Intl.DisplayNames)
 
     try {
       const run = factories.courses.courseRun({
@@ -314,11 +312,87 @@ describe("languageOptions", () => {
         },
       ])
     } finally {
-      ;(
-        Intl as typeof Intl & {
-          DisplayNames?: typeof Intl.DisplayNames
+      setIntlDisplayNames(originalDisplayNames)
+    }
+  })
+
+  test("memoizes native language labels by language code", () => {
+    const originalDisplayNames = Intl.DisplayNames
+    let constructorCalls = 0
+
+    class MockDisplayNames {
+      constructor() {
+        constructorCalls += 1
+      }
+
+      of(code: string): string | undefined {
+        if (code === "es") {
+          return "español"
         }
-      ).DisplayNames = originalDisplayNames
+        return undefined
+      }
+    }
+
+    setIntlDisplayNames(MockDisplayNames as unknown as typeof Intl.DisplayNames)
+
+    try {
+      const runA = factories.courses.courseRun({
+        id: 7101,
+        title: "Spanish A",
+        courseware_id: "cw-es-7101",
+        courseware_url: "https://example.com/cw-es-7101",
+        is_enrollable: true,
+      })
+
+      const runB = factories.courses.courseRun({
+        id: 7102,
+        title: "Spanish B",
+        courseware_id: "cw-es-7102",
+        courseware_url: "https://example.com/cw-es-7102",
+        is_enrollable: true,
+      })
+
+      const courseA = factories.courses.course({
+        courseruns: [runA],
+        next_run_id: runA.id,
+        language_options: [
+          {
+            id: runA.id,
+            courseware_id: runA.courseware_id,
+            courseware_url: runA.courseware_url ?? "",
+            language: "es",
+            title: runA.title,
+            run_tag: runA.run_tag,
+          },
+        ],
+      })
+
+      const courseB = factories.courses.course({
+        courseruns: [runB],
+        next_run_id: runB.id,
+        language_options: [
+          {
+            id: runB.id,
+            courseware_id: runB.courseware_id,
+            courseware_url: runB.courseware_url ?? "",
+            language: "es",
+            title: runB.title,
+            run_tag: runB.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([courseA, courseB])
+
+      expect(options).toEqual([
+        {
+          value: "language:es",
+          label: "español",
+        },
+      ])
+      expect(constructorCalls).toBe(1)
+    } finally {
+      setIntlDisplayNames(originalDisplayNames)
     }
   })
 
