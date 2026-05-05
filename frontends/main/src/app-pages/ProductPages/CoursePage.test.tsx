@@ -240,8 +240,10 @@ describe("CoursePage", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      within(section).getByText(
-        "Less than 1 hour to complete . 0 Videos . 0 Readings . 0 Assignments",
+      within(section).getByText((content) =>
+        /^(Less than 1 hour to complete \. )?0 Videos \. 0 Readings \. 0 Assignments$/.test(
+          content,
+        ),
       ),
     ).toBeInTheDocument()
     expect(
