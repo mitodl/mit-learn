@@ -18,6 +18,16 @@ type LanguageOptionWithEnrollability = CourseRunLanguageOption & {
 }
 
 describe("languageOptions", () => {
+  const setIntlDisplayNames = (
+    value: typeof Intl.DisplayNames | undefined,
+  ): void => {
+    Object.defineProperty(Intl, "DisplayNames", {
+      value,
+      configurable: true,
+      writable: true,
+    })
+  }
+
   test("normalizes language keys", () => {
     expect(
       getLanguageOptionKey({
@@ -159,7 +169,7 @@ describe("languageOptions", () => {
     })
     expect(options[1]).toEqual({
       value: "language:es",
-      label: "Español",
+      label: "español",
     })
   })
 
@@ -211,6 +221,179 @@ describe("languageOptions", () => {
       "language:es",
     ])
     expect(selectedRun?.id).toBe(spanishRun.id)
+  })
+
+  test("uses static fallback labels when Intl.DisplayNames is unavailable", () => {
+    const originalDisplayNames = Intl.DisplayNames
+    setIntlDisplayNames(undefined)
+
+    try {
+      const run = factories.courses.courseRun({
+        id: 7001,
+        title: "Spanish LATAM",
+        courseware_id: "cw-es-419",
+        courseware_url: "https://example.com/cw-es-419",
+        is_enrollable: true,
+      })
+
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "es-419",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([course])
+      expect(options).toEqual([
+        {
+          value: "language:es-419",
+          label: "español (Latinoamérica)",
+        },
+      ])
+    } finally {
+      setIntlDisplayNames(originalDisplayNames)
+    }
+  })
+
+  test("falls back to the base language subtag when regional code is unresolved", () => {
+    const originalDisplayNames = Intl.DisplayNames
+
+    class MockDisplayNames {
+      of(code: string): string | undefined {
+        if (code === "zz-419") {
+          return undefined
+        }
+        if (code === "zz") {
+          return "Zed"
+        }
+        return undefined
+      }
+    }
+
+    setIntlDisplayNames(MockDisplayNames as unknown as typeof Intl.DisplayNames)
+
+    try {
+      const run = factories.courses.courseRun({
+        id: 7002,
+        title: "Mock Regional",
+        courseware_id: "cw-zz-419",
+        courseware_url: "https://example.com/cw-zz-419",
+        is_enrollable: true,
+      })
+
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "zz-419",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([course])
+      expect(options).toEqual([
+        {
+          value: "language:zz-419",
+          label: "Zed",
+        },
+      ])
+    } finally {
+      setIntlDisplayNames(originalDisplayNames)
+    }
+  })
+
+  test("memoizes native language labels by language code", () => {
+    const originalDisplayNames = Intl.DisplayNames
+    let constructorCalls = 0
+
+    class MockDisplayNames {
+      constructor() {
+        constructorCalls += 1
+      }
+
+      of(code: string): string | undefined {
+        if (code === "es") {
+          return "español"
+        }
+        return undefined
+      }
+    }
+
+    setIntlDisplayNames(MockDisplayNames as unknown as typeof Intl.DisplayNames)
+
+    try {
+      const runA = factories.courses.courseRun({
+        id: 7101,
+        title: "Spanish A",
+        courseware_id: "cw-es-7101",
+        courseware_url: "https://example.com/cw-es-7101",
+        is_enrollable: true,
+      })
+
+      const runB = factories.courses.courseRun({
+        id: 7102,
+        title: "Spanish B",
+        courseware_id: "cw-es-7102",
+        courseware_url: "https://example.com/cw-es-7102",
+        is_enrollable: true,
+      })
+
+      const courseA = factories.courses.course({
+        courseruns: [runA],
+        next_run_id: runA.id,
+        language_options: [
+          {
+            id: runA.id,
+            courseware_id: runA.courseware_id,
+            courseware_url: runA.courseware_url ?? "",
+            language: "es",
+            title: runA.title,
+            run_tag: runA.run_tag,
+          },
+        ],
+      })
+
+      const courseB = factories.courses.course({
+        courseruns: [runB],
+        next_run_id: runB.id,
+        language_options: [
+          {
+            id: runB.id,
+            courseware_id: runB.courseware_id,
+            courseware_url: runB.courseware_url ?? "",
+            language: "es",
+            title: runB.title,
+            run_tag: runB.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([courseA, courseB])
+
+      expect(options).toEqual([
+        {
+          value: "language:es",
+          label: "español",
+        },
+      ])
+      expect(constructorCalls).toBe(1)
+    } finally {
+      setIntlDisplayNames(originalDisplayNames)
+    }
   })
 
   test("keeps language when one of multiple matching runs is enrollable", () => {
