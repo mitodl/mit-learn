@@ -380,6 +380,12 @@ class QdrantView(APIView):
     async def _async_vector_resource_counts(
         self, hits, params, search_collection=RESOURCES_COLLECTION_NAME
     ):
+        """
+        Compute total count and aggregations/facets based on
+        hits returned from the vector search. This is a fallback
+        for when the aggregation counts are inaccurate
+        due to Qdrant's approximate search.
+        """
         total_count = len(hits)
         aggregation_keys = params.get("aggregations") or []
         aggregations = {}
