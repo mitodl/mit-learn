@@ -42,7 +42,7 @@ const PlayerShell = styled.div(({ theme }) => ({
   gap: "24px",
   padding: "32px",
   background: theme.custom.colors.white,
-  borderTop: `2px solid ${theme.custom.colors.mitRed}`,
+  borderTop: `2px solid ${theme.custom.colors.red}`,
   boxShadow: "0 -4px 16px rgba(0,0,0,0.12)",
   [theme.breakpoints.down("sm")]: {
     gridTemplateColumns: "minmax(0, 1fr) auto",
@@ -94,7 +94,7 @@ const IconButton = styled.button(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   color: theme.custom.colors.silverGray,
-  "&:hover": { color: theme.custom.colors.mitRed },
+  "&:hover": { color: theme.custom.colors.red },
   "& svg": {
     width: "24px",
     height: "24px",
@@ -124,7 +124,7 @@ const PlayPauseButton = styled.button(({ theme }) => ({
   height: "64px",
   flexShrink: 0,
   overflow: "hidden",
-  color: theme.custom.colors.mitRed,
+  color: theme.custom.colors.red,
   "&:hover": { opacity: 0.8 },
   // Target only direct SVG children (Remix icons) — not the spinner's SVG.
   "& > svg": {
@@ -197,20 +197,20 @@ const ProgressRange = styled.input<{ percent: number }>(
     outline: "none",
     border: "none",
     padding: 0,
-    background: `linear-gradient(to right, ${theme.custom.colors.mitRed} ${percent}%, ${theme.custom.colors.lightGray2} ${percent}%)`,
+    background: `linear-gradient(to right, ${theme.custom.colors.red} ${percent}%, ${theme.custom.colors.lightGray2} ${percent}%)`,
     "&::-webkit-slider-thumb": {
       WebkitAppearance: "none",
       width: "14px",
       height: "14px",
       borderRadius: "50%",
-      background: theme.custom.colors.mitRed,
+      background: theme.custom.colors.red,
       cursor: "pointer",
     },
     "&::-moz-range-thumb": {
       width: "14px",
       height: "14px",
       borderRadius: "50%",
-      background: theme.custom.colors.mitRed,
+      background: theme.custom.colors.red,
       border: "none",
       cursor: "pointer",
     },
@@ -229,8 +229,8 @@ const SpeedButton = styled.button(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   flexShrink: 0,
   "&:hover": {
-    borderColor: theme.custom.colors.mitRed,
-    color: theme.custom.colors.mitRed,
+    borderColor: theme.custom.colors.red,
+    color: theme.custom.colors.red,
   },
   [theme.breakpoints.down("sm")]: {
     justifySelf: "end",
