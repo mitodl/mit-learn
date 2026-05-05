@@ -45,6 +45,7 @@ const normalizeCourseForCardAssertions = (
         title: normalizedRun.title ?? course.title,
         run_tag: normalizedRun.run_tag,
         courseware_id: normalizedRun.courseware_id,
+        courseware_url: normalizedRun.courseware_url ?? "",
       },
     ],
   }
@@ -243,27 +244,46 @@ describe("ContractContent", () => {
   })
 
   test("Shows correct enrollment status", async () => {
-    const { orgX, programA: _programA, coursesA } = setupProgramsAndCourses()
+    const { orgX, programA, coursesA } = setupProgramsAndCourses()
     const contract = orgX.contracts[0]
+    const normalizedCoursesA = coursesA.map(normalizeCourseForCardAssertions)
     const enrollments = [
       makeCourseEnrollment({
         run: {
-          id: coursesA[0].courseruns[0].id,
-          course: { id: coursesA[0].id, title: coursesA[0].title },
+          id: normalizedCoursesA[0].courseruns[0].id,
+          title: normalizedCoursesA[0].title,
+          course: {
+            id: normalizedCoursesA[0].id,
+            title: normalizedCoursesA[0].title,
+          },
         },
         grades: [makeGrade({ passed: true })],
         b2b_contract_id: contract.id,
       }),
       makeCourseEnrollment({
         run: {
-          id: coursesA[1].courseruns[0].id,
-          course: { id: coursesA[1].id, title: coursesA[1].title },
+          id: normalizedCoursesA[1].courseruns[0].id,
+          title: normalizedCoursesA[1].title,
+          course: {
+            id: normalizedCoursesA[1].id,
+            title: normalizedCoursesA[1].title,
+          },
         },
         grades: [],
         certificate: null,
         b2b_contract_id: contract.id,
       }),
     ]
+
+    setMockResponse.get(
+      urls.courses.coursesList({
+        id: programA.courses,
+        contract_id: contract.id,
+        page_size: 30,
+      }),
+      { results: normalizedCoursesA },
+    )
+
     // Override the default empty enrollments for this test
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), enrollments)
 
@@ -1385,6 +1405,7 @@ describe("ContractContent", () => {
         {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
           language: "en",
           title: englishRun.title,
           run_tag: englishRun.run_tag,
@@ -1392,6 +1413,7 @@ describe("ContractContent", () => {
         {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
           language: "es",
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
@@ -1463,6 +1485,7 @@ describe("ContractContent", () => {
         {
           id: englishRun.id,
           courseware_id: englishRun.courseware_id,
+          courseware_url: englishRun.courseware_url ?? "",
           language: "en",
           title: englishRun.title,
           run_tag: englishRun.run_tag,
@@ -1470,6 +1493,7 @@ describe("ContractContent", () => {
         {
           id: spanishRun.id,
           courseware_id: spanishRun.courseware_id,
+          courseware_url: spanishRun.courseware_url ?? "",
           language: "es",
           title: spanishRun.title,
           run_tag: spanishRun.run_tag,
@@ -1550,6 +1574,7 @@ describe("ContractContent", () => {
         {
           id: run.id,
           courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
           language: "en",
           title: run.title,
           run_tag: run.run_tag,
@@ -1604,6 +1629,7 @@ describe("ContractContent", () => {
         {
           id: run.id,
           courseware_id: run.courseware_id,
+          courseware_url: run.courseware_url ?? "",
           language: "en",
           title: run.title,
           run_tag: run.run_tag,
@@ -1651,6 +1677,61 @@ describe("ContractContent", () => {
     expect(screen.queryByText("Learning Language:")).not.toBeInTheDocument()
   })
 
+  test("disables CTA for non-enrolled B2B course when no translations and no enrollable runs", async () => {
+    const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
+
+    const course = factories.courses.course()
+    const program = factories.programs.program({
+      courses: [course.id],
+    })
+    const contracts = createTestContracts(orgX.id, 1, [program.id])
+    orgX.contracts = contracts
+    mitxOnlineUser.b2b_organizations[0].contracts = contracts
+
+    const contractRun = factories.courses.courseRun({
+      b2b_contract: contracts[0].id,
+      language: "en",
+      run_tag: undefined,
+      is_enrollable: false,
+      courseware_url: "https://openedx.example.com/unenrollable-run",
+    })
+
+    const courseWithoutTranslations = {
+      ...course,
+      courseruns: [contractRun],
+      language_options: [],
+      next_run_id: contractRun.id,
+      next_run: null,
+    }
+
+    setupOrgDashboardMocks(
+      orgX,
+      user,
+      mitxOnlineUser,
+      [program],
+      [courseWithoutTranslations],
+      contracts,
+    )
+
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
+
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const programElement = await screen.findByTestId("org-program-root")
+    const card = await within(programElement).findByTestId(
+      "enrollment-card-desktop",
+    )
+
+    const coursewareButton = within(card).getByTestId("courseware-button")
+    expect(coursewareButton).toHaveTextContent("Start Module")
+    expect(coursewareButton).toBeDisabled()
+  })
+
   test("displays correct run URL when user is enrolled in one of multiple runs", async () => {
     const { orgX, user, mitxOnlineUser } = setupOrgAndUser()
 
@@ -1669,6 +1750,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-1",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
@@ -1676,6 +1758,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-2",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
       factories.courses.courseRun({
@@ -1683,6 +1766,7 @@ describe("ContractContent", () => {
         language: "en",
         run_tag: undefined,
         courseware_url: "https://openedx.example.com/course-run-3",
+        is_enrollable: true,
         start_date: faker.date.past().toISOString(),
       }),
     ]
@@ -1696,6 +1780,7 @@ describe("ContractContent", () => {
         title: run.title,
         run_tag: run.run_tag,
         courseware_id: run.courseware_id,
+        courseware_url: run.courseware_url ?? "",
       })),
       next_run_id: runs[0].id,
       next_run: null, // Clear any factory-generated next_run reference

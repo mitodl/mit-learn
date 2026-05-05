@@ -399,6 +399,7 @@ const createCoursesWithContractRuns = (contracts: ContractPage[]) => {
         {
           id: contractRun.id,
           courseware_id: contractRun.courseware_id,
+          courseware_url: contractRun.courseware_url ?? "",
           language: "en",
           title: contractRun.title,
           run_tag: contractRun.run_tag,

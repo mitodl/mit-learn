@@ -111,7 +111,10 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
     expect(screen.getByText("2 Modules (0 of 2 complete)")).toBeInTheDocument()
     expect(
       screen.getAllByText(cardData.moduleCourses[0].title).length,
@@ -133,7 +136,10 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
     expect(screen.getByText("Not Started")).toBeInTheDocument()
   })
 
@@ -171,7 +177,10 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
     const rows = await screen.findAllByTestId("enrollment-card-desktop")
     // req_tree has moduleOne first, moduleTwo second (from setupCardData)
     expect(rows[0]).toHaveTextContent(moduleOne.title)

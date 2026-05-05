@@ -5,12 +5,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getBestRun } from "./helpers"
-
-// Debug-only marker for synthetic language-selected runs.
-// Do not use this property for product behavior/branching.
-type SyntheticCourseRunV2 = CourseRunV2 & { __synthetic: boolean }
-type ResolvedLanguageRunV2 = CourseRunV2 | SyntheticCourseRunV2
+import { getBestRun, selectBestEnrollment } from "./helpers"
 
 const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
   ar: "العربية",
@@ -61,15 +56,84 @@ const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {
   return LANGUAGE_CODE_TO_NATIVE_NAME[baseCode] ?? languageCode
 }
 
+type ExtendedLanguageOption = CourseRunLanguageOption & {
+  is_enrollable?: boolean
+}
+
+const isLanguageOptionEnrollable = (
+  course: CourseWithCourseRunsSerializerV2,
+  option: CourseRunLanguageOption,
+): boolean => {
+  const enrollable = (option as ExtendedLanguageOption).is_enrollable
+  if (typeof enrollable === "boolean") {
+    return enrollable
+  }
+
+  const exactRunMatch = (course.courseruns ?? []).find(
+    (run) => run.id === option.id,
+  )
+  if (exactRunMatch) {
+    return Boolean(exactRunMatch.is_enrollable)
+  }
+
+  // If enrollability is not present on language_options payload, keep the
+  // option available instead of hiding potentially valid languages.
+  return true
+}
+
+const getRunsForLanguageOption = (
+  course: CourseWithCourseRunsSerializerV2,
+  option: CourseRunLanguageOption,
+): CourseRunV2[] => {
+  const runs = course.courseruns ?? []
+
+  const byId = runs.filter((run) => run.id === option.id)
+  const byCoursewareId = runs.filter(
+    (run) => run.courseware_id === option.courseware_id,
+  )
+  const byCoursewareUrl = option.courseware_url
+    ? runs.filter((run) => run.courseware_url === option.courseware_url)
+    : []
+
+  const seen = new Set<number>()
+  const combined = [...byId, ...byCoursewareId, ...byCoursewareUrl]
+  return combined.filter((run) => {
+    if (seen.has(run.id)) {
+      return false
+    }
+    seen.add(run.id)
+    return true
+  })
+}
+
+const getEnrollableLanguageOptions = (
+  course: CourseWithCourseRunsSerializerV2,
+): CourseRunLanguageOption[] => {
+  return (course.language_options ?? []).filter((option) => {
+    return isLanguageOptionEnrollable(course, option)
+  })
+}
+
+const getUsableLanguageKeys = (
+  course: CourseWithCourseRunsSerializerV2,
+): Set<string> => {
+  return new Set(
+    (course.language_options ?? [])
+      .map((option) => getLanguageOptionKey(option))
+      .filter((key) => Boolean(key)),
+  )
+}
+
 const getDefaultLanguageOptionKey = (
   course: CourseWithCourseRunsSerializerV2,
 ): string | null => {
+  const enrollableLanguageOptions = getEnrollableLanguageOptions(course)
   const defaultRunId = course.next_run_id
   if (!defaultRunId) {
     return null
   }
 
-  const directMatch = (course.language_options ?? []).find(
+  const directMatch = enrollableLanguageOptions.find(
     (option) => option.id === defaultRunId,
   )
   if (directMatch) {
@@ -82,7 +146,7 @@ const getDefaultLanguageOptionKey = (
     return null
   }
 
-  const byCoursewareId = (course.language_options ?? []).find(
+  const byCoursewareId = enrollableLanguageOptions.find(
     (option) => option.courseware_id === defaultRun.courseware_id,
   )
   if (!byCoursewareId) {
@@ -108,7 +172,7 @@ const getDistinctLanguageOptions = (
       )
     }
 
-    ;(course.language_options ?? []).forEach((option) => {
+    getEnrollableLanguageOptions(course).forEach((option) => {
       const key = getLanguageOptionKey(option)
       const label = getLanguageOptionLabel(option)
       if (!key || !label) {
@@ -137,14 +201,42 @@ const getSelectedLanguageOption = (
   course: CourseWithCourseRunsSerializerV2,
   selectedLanguageKey: string,
 ): CourseRunLanguageOption | null => {
-  if (!selectedLanguageKey) {
+  const resolvedLanguageKey =
+    selectedLanguageKey || getDefaultLanguageOptionKey(course) || ""
+
+  if (!resolvedLanguageKey) {
     return null
   }
-  return (
-    (course.language_options ?? []).find(
-      (option) => getLanguageOptionKey(option) === selectedLanguageKey,
-    ) ?? null
+
+  const matchingOptions = getEnrollableLanguageOptions(course).filter(
+    (option) => getLanguageOptionKey(option) === resolvedLanguageKey,
   )
+
+  if (matchingOptions.length === 0) {
+    return null
+  }
+
+  const nextRunMatch = matchingOptions.find(
+    (option) => option.id === course.next_run_id,
+  )
+  if (nextRunMatch) {
+    return nextRunMatch
+  }
+
+  const bestEnrollableRun = getBestRun(course, { enrollableOnly: true })
+  const bestRunMatch = matchingOptions.find((option) => {
+    return (
+      option.id === bestEnrollableRun?.id ||
+      option.courseware_id === bestEnrollableRun?.courseware_id ||
+      (Boolean(option.courseware_url) &&
+        option.courseware_url === bestEnrollableRun?.courseware_url)
+    )
+  })
+  if (bestRunMatch) {
+    return bestRunMatch
+  }
+
+  return matchingOptions[0] ?? null
 }
 
 const getCourseRunForSelectedLanguage = (
@@ -153,10 +245,34 @@ const getCourseRunForSelectedLanguage = (
 ): CourseRunV2 | null => {
   const languageOption = getSelectedLanguageOption(course, selectedLanguageKey)
   if (!languageOption) {
+    return (
+      getBestRun(course, { enrollableOnly: true }) ??
+      course.courseruns[0] ??
+      null
+    )
+  }
+
+  const matchingRuns = getRunsForLanguageOption(course, languageOption)
+  if (matchingRuns.length === 0) {
     return null
   }
 
-  return course.courseruns.find((run) => run.id === languageOption.id) ?? null
+  const nextRunMatch = matchingRuns.find((run) => run.id === course.next_run_id)
+  if (nextRunMatch) {
+    return nextRunMatch
+  }
+
+  const bestEnrollableRun = getBestRun(course, { enrollableOnly: true })
+  const bestRunMatch = matchingRuns.find(
+    (run) => run.id === bestEnrollableRun?.id,
+  )
+  if (bestRunMatch) {
+    return bestRunMatch
+  }
+
+  return (
+    matchingRuns.find((run) => run.is_enrollable) ?? matchingRuns[0] ?? null
+  )
 }
 
 const getEnrollmentForSelectedLanguage = (
@@ -165,17 +281,105 @@ const getEnrollmentForSelectedLanguage = (
   selectedRun: CourseRunV2 | null,
 ): CourseRunEnrollmentV3 | null => {
   if (!selectedLanguageOption) {
-    return null
+    if (!selectedRun) {
+      return null
+    }
+
+    return (
+      enrollments.find((enrollment) => {
+        if (!enrollment.run) {
+          return false
+        }
+
+        return (
+          enrollment.run.id === selectedRun.id ||
+          enrollment.run.courseware_id === selectedRun.courseware_id
+        )
+      }) ?? null
+    )
   }
 
   return (
     enrollments.find((enrollment) => {
+      if (!enrollment.run) {
+        return false
+      }
+
       return (
         enrollment.run.id === selectedLanguageOption.id ||
+        enrollment.run.courseware_id === selectedLanguageOption.courseware_id ||
         (selectedRun ? enrollment.run.id === selectedRun.id : false)
       )
     }) ?? null
   )
+}
+
+/**
+ * Among contract-scoped enrollments, pick the user's best existing enrollment
+ * whose run is for the selected language on this course. Returns null when the
+ * user has no enrollment matching the language.
+ *
+ * Run language is determined via `course.language_options` (matching by id or
+ * courseware_id), independent of `is_enrollable` — we want to surface
+ * enrollments in older/closed runs too.
+ *
+ * Tiebreak across multiple matches: certificate > highest grade > first.
+ */
+const selectBestContractEnrollmentForLanguage = (
+  course: CourseWithCourseRunsSerializerV2,
+  enrollments: CourseRunEnrollmentV3[],
+  selectedLanguageKey: string,
+): CourseRunEnrollmentV3 | null => {
+  const resolvedKey =
+    selectedLanguageKey || getDefaultLanguageOptionKey(course) || ""
+  const usableLanguageKeys = getUsableLanguageKeys(course)
+  if (!resolvedKey) {
+    return selectBestEnrollment(course, enrollments)
+  }
+
+  const matchingOptions = (course.language_options ?? []).filter(
+    (option) => getLanguageOptionKey(option) === resolvedKey,
+  )
+  if (matchingOptions.length === 0) {
+    if (usableLanguageKeys.size === 0) {
+      return selectBestEnrollment(course, enrollments)
+    }
+    return null
+  }
+
+  const optionRunIds = new Set<number>()
+  const optionCoursewareIds = new Set<string>()
+  matchingOptions.forEach((option) => {
+    optionRunIds.add(option.id)
+    if (option.courseware_id) {
+      optionCoursewareIds.add(option.courseware_id)
+    }
+  })
+
+  const matching = enrollments.filter(
+    (enrollment) =>
+      optionRunIds.has(enrollment.run.id) ||
+      optionCoursewareIds.has(enrollment.run.courseware_id),
+  )
+
+  if (matching.length === 0) {
+    // If this course effectively has a single usable language (or none),
+    // preserve legacy behavior by using best enrollment association.
+    if (usableLanguageKeys.size <= 1) {
+      return selectBestEnrollment(course, enrollments)
+    }
+    return null
+  }
+
+  return matching.reduce((best, current) => {
+    const bestHasCert = !!best.certificate?.uuid
+    const currentHasCert = !!current.certificate?.uuid
+    if (currentHasCert && !bestHasCert) return current
+    if (bestHasCert && !currentHasCert) return best
+    const bestGrade = Math.max(0, ...best.grades.map((g) => g.grade ?? 0))
+    const currentGrade = Math.max(0, ...current.grades.map((g) => g.grade ?? 0))
+    return currentGrade > bestGrade ? current : best
+  }, matching[0])
 }
 
 const getResolvedRunForSelectedLanguage = (
@@ -184,7 +388,7 @@ const getResolvedRunForSelectedLanguage = (
   selectedRun: CourseRunV2 | null,
   selectedEnrollment: CourseRunEnrollmentV3 | null,
   contractId?: number,
-): ResolvedLanguageRunV2 | null => {
+): CourseRunV2 | null => {
   // Returns a CourseRunV2 representing the user's effective run for the selected
   // language. Three cases:
   //
@@ -196,12 +400,13 @@ const getResolvedRunForSelectedLanguage = (
   //      return it directly.
   //
   //   3. Pre-enrollment, no real CourseRunV2 exists for the language: synthesize
-  //      one by spreading templateRun and overriding only id/title/courseware_id/
-  //      run_tag from the language_options pointer. Dates, products, courseware_url,
-  //      and enrollability are inherited from a different-language run because
-  //      mitxonline does not currently surface per-language run metadata
-  //      pre-enrollment. Removable when the API returns language-specific runs
-  //      for non-default languages (see Approach C in feature_work/11088/pr_review.md).
+  //      one by spreading templateRun and overriding only
+  //      id/title/courseware_id/courseware_url/run_tag from the
+  //      language_options pointer. Dates, products, and enrollability are
+  //      inherited from a different-language run because mitxonline does not
+  //      currently surface per-language run metadata pre-enrollment.
+  //      Removable when the API returns language-specific runs for non-default
+  //      languages.
   let scopedSelectedRun: CourseRunV2 | null = selectedRun
   if (
     typeof contractId === "number" &&
@@ -218,7 +423,8 @@ const getResolvedRunForSelectedLanguage = (
         : (getBestRun(course) ?? null)
   }
 
-  if (selectedEnrollment) {
+  const enrollmentRun = selectedEnrollment?.run
+  if (enrollmentRun) {
     if (!templateRun) {
       // Cannot adapt enrollment.run to a CourseRunV2 shape without a scoped
       // template run to supply required base fields.
@@ -229,21 +435,20 @@ const getResolvedRunForSelectedLanguage = (
     // so downstream CourseRunV2 consumers get the selected-language run context.
     return {
       ...templateRun,
-      id: selectedEnrollment.run.id,
-      title: selectedEnrollment.run.title,
-      courseware_id: selectedEnrollment.run.courseware_id,
-      courseware_url: selectedEnrollment.run.courseware_url,
-      run_tag: selectedEnrollment.run.run_tag,
-      start_date: selectedEnrollment.run.start_date,
-      end_date: selectedEnrollment.run.end_date,
-      is_enrollable: selectedEnrollment.run.is_enrollable,
-      is_upgradable: selectedEnrollment.run.is_upgradable,
-      is_archived: selectedEnrollment.run.is_archived,
-      is_self_paced: selectedEnrollment.run.is_self_paced,
-      upgrade_deadline: selectedEnrollment.run.upgrade_deadline,
-      certificate_available_date:
-        selectedEnrollment.run.certificate_available_date,
-      course_number: selectedEnrollment.run.course_number,
+      id: enrollmentRun.id,
+      title: enrollmentRun.title,
+      courseware_id: enrollmentRun.courseware_id,
+      courseware_url: enrollmentRun.courseware_url,
+      run_tag: enrollmentRun.run_tag,
+      start_date: enrollmentRun.start_date,
+      end_date: enrollmentRun.end_date,
+      is_enrollable: enrollmentRun.is_enrollable,
+      is_upgradable: enrollmentRun.is_upgradable,
+      is_archived: enrollmentRun.is_archived,
+      is_self_paced: enrollmentRun.is_self_paced,
+      upgrade_deadline: enrollmentRun.upgrade_deadline,
+      certificate_available_date: enrollmentRun.certificate_available_date,
+      course_number: enrollmentRun.course_number,
     }
   }
 
@@ -259,21 +464,23 @@ const getResolvedRunForSelectedLanguage = (
     return null
   }
 
-  // Return a synthetic selected-language run id/title/courseware mapped onto a
-  // scoped template run so unenrolled language selection can still resolve.
+  // Pre-enrollment fallback when selected language has no concrete CourseRunV2
+  // in this payload: project selected-language identifiers onto a scoped base
+  // run so UI can render the chosen language title/URL context.
   return {
     ...templateRun,
     id: selectedLanguageOption.id,
     title: selectedLanguageOption.title,
     courseware_id: selectedLanguageOption.courseware_id,
+    courseware_url: selectedLanguageOption.courseware_url,
     run_tag: selectedLanguageOption.run_tag,
-    __synthetic: true,
-  } satisfies SyntheticCourseRunV2
+  }
 }
 
 export {
   getLanguageCodeFromOptionKey,
   getLanguageOptionKey,
+  selectBestContractEnrollmentForLanguage,
   getDistinctLanguageOptions,
   getSelectedLanguageOption,
   getCourseRunForSelectedLanguage,

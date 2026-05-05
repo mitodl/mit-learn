@@ -40,6 +40,13 @@ def _use_test_qdrant_settings(settings, mocker):
     )
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
     mocker.patch("vector_search.utils.SemanticChunker")
+    mocker.patch(
+        "vector_search.utils.compute_optimizer_settings",
+        return_value={
+            "indexing_threshold": 10,
+            "flush_interval_sec": 5,
+        },
+    )
 
     mock_qdrant.scroll.return_value = [
         [],
