@@ -162,7 +162,10 @@ const setupApis = ({
   childPrograms: V2ProgramDetail[]
 } => {
   setMockResponse.get(
-    urls.programs.programsList({ readable_id: program.readable_id, live: true }),
+    urls.programs.programsList({
+      readable_id: program.readable_id,
+      live: true,
+    }),
     { results: [program] },
   )
 
@@ -657,7 +660,10 @@ describe("ProgramPage", () => {
     const page = makePage({ program_details: program })
     // Simulate live=false: the API filters it out, returning empty results
     setMockResponse.get(
-      urls.programs.programsList({ readable_id: program.readable_id, live: true }),
+      urls.programs.programsList({
+        readable_id: program.readable_id,
+        live: true,
+      }),
       { results: [] },
     )
     setMockResponse.get(urls.pages.programPages(program.readable_id), {
