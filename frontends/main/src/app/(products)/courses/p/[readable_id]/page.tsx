@@ -51,7 +51,7 @@ const Page: React.FC<PageProps<"/courses/p/[readable_id]">> = async (props) => {
   const [programPages, programs] = await Promise.all([
     queryClient.fetchQuery(pagesQueries.programPages(readableId)),
     queryClient.fetchQuery(
-      programsQueries.programsList({ readable_id: readableId }),
+      programsQueries.programsList({ readable_id: readableId, live: true }),
     ),
   ])
 
