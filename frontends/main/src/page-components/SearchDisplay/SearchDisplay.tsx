@@ -1251,8 +1251,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
               </StyledResultsContainer>
-              {!isVectorQuerySearch && (
-                <PaginationContainer>
+              <PaginationContainer>
+                {!isVectorQuerySearch && (
                   <Pagination
                     count={getLastPage(displayData?.count ?? 0)}
                     page={page}
@@ -1275,8 +1275,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       />
                     )}
                   />
-                </PaginationContainer>
-              )}
+                )}
+              </PaginationContainer>
             </ResourceTypeGroupTabs.TabPanels>
           </Grid>
           <Grid
