@@ -610,7 +610,7 @@ const normalizeParamValues = (value: unknown): string[] => {
 
 const getResourceFacetValues = (
   resource: LearningResource,
-  facet: VectorClientFilterFacet,
+  facet: string,
 ): string[] => {
   switch (facet) {
     case "certification_type":
@@ -642,8 +642,12 @@ const getResourceFacetValues = (
 const matchesVectorClientFilters = (
   resource: LearningResource,
   params: ReturnType<typeof getSearchParams>,
+  excludedFacet?: string,
 ) =>
   VECTOR_CLIENT_FILTER_FACETS.every((facet) => {
+    if (facet === excludedFacet) {
+      return true
+    }
     const selectedValues = normalizeParamValues(params[facet])
     if (selectedValues.length === 0) {
       return true
@@ -658,17 +662,18 @@ const hasVectorClientFilters = (params: ReturnType<typeof getSearchParams>) =>
   )
 
 const getVectorClientAggregations = (
-  results: LearningResource[],
+  allResults: LearningResource[],
+  params: ReturnType<typeof getSearchParams>,
   aggregationNames: string[],
 ) => {
   return Object.fromEntries(
     aggregationNames.map((name) => {
+      const resultsForFacet = allResults.filter((resource) =>
+        matchesVectorClientFilters(resource, params, name),
+      )
       const counts = new Map<string, number>()
-      for (const resource of results) {
-        for (const value of getResourceFacetValues(
-          resource,
-          name as VectorClientFilterFacet,
-        )) {
+      for (const resource of resultsForFacet) {
+        for (const value of getResourceFacetValues(resource, name)) {
           counts.set(value, (counts.get(value) ?? 0) + 1)
         }
       }
@@ -820,7 +825,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       return data
     }
 
-    const results = (data.results ?? []).filter((resource) =>
+    const allResults = data.results ?? []
+    const results = allResults.filter((resource) =>
       matchesVectorClientFilters(resource, allParams),
     )
     const hasClientFilters = hasVectorClientFilters(allParams)
@@ -834,7 +840,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       metadata: {
         ...data.metadata,
         aggregations: hasClientFilters
-          ? getVectorClientAggregations(results, allParams.aggregations)
+          ? getVectorClientAggregations(
+              allResults,
+              allParams,
+              allParams.aggregations,
+            )
           : data.metadata.aggregations,
       },
     }
