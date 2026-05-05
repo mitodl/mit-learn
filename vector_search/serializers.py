@@ -227,6 +227,7 @@ class LearningResourcesVectorSearchRequestSerializer(
     score_cutoff = serializers.FloatField(
         required=False,
         default=0.1,
+        min_value=0.0,
         help_text="The minimum score a result must have to be returned",
     )
 
