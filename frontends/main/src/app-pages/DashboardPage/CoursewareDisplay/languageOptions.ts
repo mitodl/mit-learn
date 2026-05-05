@@ -5,7 +5,7 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getBestRun } from "./helpers"
+import { getBestRun, selectBestEnrollment } from "./helpers"
 
 const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
   ar: "العربية",
@@ -349,6 +349,16 @@ const selectBestContractEnrollmentForLanguage = (
   )
 
   if (matching.length === 0) {
+    const usableLanguageKeys = new Set(
+      (course.language_options ?? [])
+        .map((option) => getLanguageOptionKey(option))
+        .filter((key) => Boolean(key)),
+    )
+    // If this course effectively has a single usable language (or none),
+    // preserve legacy behavior by using best enrollment association.
+    if (usableLanguageKeys.size <= 1) {
+      return selectBestEnrollment(course, enrollments)
+    }
     return null
   }
 

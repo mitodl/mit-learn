@@ -802,6 +802,65 @@ describe("languageOptions", () => {
       ).toBeNull()
     })
 
+    test("falls back to legacy best enrollment on single-language courses when language-option run matching fails", () => {
+      const languageRunA = factories.courses.courseRun({
+        id: 101,
+        courseware_id: "cw-en-a",
+        is_enrollable: true,
+      })
+      const languageRunB = factories.courses.courseRun({
+        id: 102,
+        courseware_id: "cw-en-b",
+        is_enrollable: true,
+      })
+      const enrolledRun = factories.courses.courseRun({
+        id: 103,
+        courseware_id: "cw-enrolled",
+        is_enrollable: false,
+      })
+
+      const course = factories.courses.course({
+        courseruns: [languageRunA, languageRunB, enrolledRun],
+        next_run_id: languageRunA.id,
+        language_options: [
+          {
+            id: languageRunA.id,
+            courseware_id: languageRunA.courseware_id,
+            courseware_url: languageRunA.courseware_url ?? "",
+            language: "en",
+            title: languageRunA.title,
+            run_tag: languageRunA.run_tag,
+          },
+          {
+            id: languageRunB.id,
+            courseware_id: languageRunB.courseware_id,
+            courseware_url: languageRunB.courseware_url ?? "",
+            language: "en",
+            title: languageRunB.title,
+            run_tag: languageRunB.run_tag,
+          },
+        ],
+      })
+
+      const enrolledRunEnrollment = factories.enrollment.courseEnrollment({
+        run: {
+          id: enrolledRun.id,
+          course: { id: course.id, title: course.title },
+          title: enrolledRun.title,
+          courseware_id: enrolledRun.courseware_id,
+          courseware_url: enrolledRun.courseware_url,
+        },
+      })
+
+      const result = selectBestContractEnrollmentForLanguage(
+        course,
+        [enrolledRunEnrollment],
+        "",
+      )
+
+      expect(result?.run.id).toBe(enrolledRun.id)
+    })
+
     test("prefers higher-graded enrollment when multiple match the language", () => {
       const olderRun = factories.courses.courseRun({
         id: 10,
