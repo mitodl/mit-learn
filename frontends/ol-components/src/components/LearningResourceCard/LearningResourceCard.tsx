@@ -58,7 +58,8 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   const { src: imageSrc, onError: onImageError } = useImageWithFallback(
     // won't try contentFile image if resource image 404s, but that matches
     // existing behavior: contentFile is only tried when resource has no image URL
-    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
     DEFAULT_RESOURCE_IMG,
   )
 

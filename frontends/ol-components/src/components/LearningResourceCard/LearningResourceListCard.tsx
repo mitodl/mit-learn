@@ -156,7 +156,8 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   headingLevel = 6,
 }) => {
   const { src: imageSrc, onError: onImageError } = useImageWithFallback(
-    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
     DEFAULT_RESOURCE_IMG,
   )
 

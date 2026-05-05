@@ -9,7 +9,11 @@ import type {
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { DEFAULT_RESOURCE_IMG, LocalDate, useImageWithFallback } from "ol-utilities"
+import {
+  DEFAULT_RESOURCE_IMG,
+  LocalDate,
+  useImageWithFallback,
+} from "ol-utilities"
 import { formatPrice, getBestRun, getEnrollmentType } from "@/common/mitxonline"
 
 type CommonCardProps = {

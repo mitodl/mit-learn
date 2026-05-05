@@ -239,7 +239,10 @@ const SidebarMedia: React.FC<{
   title: string
   priority?: boolean
 }> = ({ videoUrl, imageSrc, title, priority }) => {
-  const { src: resolvedSrc, onError } = useImageWithFallback(imageSrc, DEFAULT_RESOURCE_IMG)
+  const { src: resolvedSrc, onError } = useImageWithFallback(
+    imageSrc,
+    DEFAULT_RESOURCE_IMG,
+  )
 
   if (videoUrl) {
     const embedUrl = convertToEmbedUrl(videoUrl)

@@ -214,7 +214,8 @@ const ImageSection: React.FC<{
   config: ImageConfig
 }> = ({ resource, config }) => {
   const { src: imageUrl, onError: onImageError } = useImageWithFallback(
-    resource?.image?.url ?? (resource ? resourceContentFilesImageSrc(resource) : null),
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
     DEFAULT_RESOURCE_IMG,
   )
   const aspect = config.width / config.height
