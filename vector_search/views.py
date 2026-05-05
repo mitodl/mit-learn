@@ -1,9 +1,9 @@
 import asyncio
 import logging
+from collections import Counter
 from functools import wraps
 from itertools import chain
 
-import pandas as pd
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
@@ -410,29 +410,19 @@ class QdrantView(APIView):
             if not qdrant_field:
                 continue
 
-            extracted = []
+            counter = Counter()
             for hit in hits:
-                values = set()
+                seen = set()
                 for val in self._extract_values(hit, qdrant_field):
                     if isinstance(val, (str, int, float, bool)):
-                        values.add(val)
-                extracted.extend(list(values))
+                        key = str(val).lower() if isinstance(val, bool) else str(val)
+                        if key not in seen:
+                            seen.add(key)
+                            counter[key] += 1
 
-            if extracted:
-                series = pd.Series(extracted)
-
-                def format_key(val):
-                    if isinstance(val, bool):
-                        return str(val).lower()
-                    return str(val)
-
-                counts = series.apply(format_key).value_counts()
-
-                aggregations[agg_key] = [
-                    {"key": str(k), "doc_count": int(v)} for k, v in counts.items()
-                ]
-            else:
-                aggregations[agg_key] = []
+            aggregations[agg_key] = [
+                {"key": k, "doc_count": v} for k, v in counter.most_common()
+            ]
 
         return {
             "total": {"value": total_count},
