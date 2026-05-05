@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.3
+Version 0.66.3 (Released May 05, 2026)
 --------------
 
 - fix: remove h5 font weight override (#3272)
