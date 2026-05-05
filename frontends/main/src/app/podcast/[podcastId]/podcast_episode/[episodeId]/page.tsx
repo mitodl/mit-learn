@@ -8,7 +8,7 @@ import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
-  props: PageProps<"/podcast/podcast_episode/[episodeId]">,
+  props: PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
 ) => {
   const { episodeId } = await props.params
   const queryClient = getQueryClient()
@@ -27,13 +27,11 @@ export const generateMetadata = async (
 }
 
 const Page: React.FC<
-  PageProps<"/podcast/podcast_episode/[episodeId]">
+  PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">
 > = async (props) => {
-  const { episodeId } = await props.params
-  const searchParams = await props.searchParams
-  const podcastId = searchParams["podcast"]
+  const { episodeId, podcastId } = await props.params
   const episodeIdNumber = Number(episodeId)
-
+  console.log("Episode ID:", episodeId, podcastId) // Debug log to check the value of episodeId and its conversion
   if (Number.isNaN(episodeIdNumber)) {
     notFound()
   }

@@ -114,16 +114,27 @@ const PlayPauseButton = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: 0,
+  // Fixed size + overflow:hidden keeps the spinner clipped inside the button.
+  // The spinner is absolutely centered; play/pause icons fill the same area.
+  position: "relative",
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
+  width: "64px",
+  height: "64px",
+  flexShrink: 0,
+  overflow: "hidden",
   color: theme.custom.colors.mitRed,
   "&:hover": { opacity: 0.8 },
-  "& svg": {
+  // Target only direct SVG children (Remix icons) — not the spinner's SVG.
+  "& > svg": {
     width: "64px",
     height: "64px",
   },
   [theme.breakpoints.down("sm")]: {
-    "& svg": {
+    width: "56px",
+    height: "56px",
+    "& > svg": {
       width: "56px",
       height: "56px",
     },
@@ -156,6 +167,13 @@ const TrackTitle = styled(Typography)(({ theme }) => ({
 const PodcastName = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
+
+const PodcastPlayerLoader = styled(LoadingSpinner)({
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+})
 
 const ProgressWrapper = styled.div(({ theme }) => ({
   gridArea: "progress",
@@ -229,7 +247,15 @@ const CloseButton = styled.button(({ theme }) => ({
   alignItems: "center",
   color: theme.custom.colors.darkGray2,
   flexShrink: 0,
-  "&:hover": { color: theme.custom.colors.mitRed },
+  "&:hover": {
+    backgroundColor: theme.custom.colors.red,
+    color: theme.custom.colors.white,
+    width: "32px",
+    height: "32px",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "4px",
+  },
   justifySelf: "end",
 }))
 
@@ -407,7 +433,7 @@ const PodcastPlayer = ({
             disabled={isBuffering || isPlayPending || !hasAudioSource}
           >
             {isBuffering || isPlayPending ? (
-              <LoadingSpinner loading size={40} color="inherit" />
+              <PodcastPlayerLoader loading size={40} color="inherit" />
             ) : isPlaying ? (
               <RiPauseCircleLine />
             ) : (

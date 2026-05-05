@@ -25,7 +25,7 @@ import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME } from "@/common/urls"
+import { HOME, podcastPageView } from "@/common/urls"
 import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
@@ -212,7 +212,7 @@ export const PodcastEpisodeDetailPage: React.FC<
       : null
 
   const { data: episodesData } = useInfiniteLearningResourceItems(
-    podcastId ? Number(podcastId) : 0,
+    Number(podcastId),
     { learning_resource_id: Number(podcastId), limit: 5 },
     { enabled: !!podcast },
   )
@@ -272,7 +272,7 @@ export const PodcastEpisodeDetailPage: React.FC<
     }
   }, [currentTrack, isMobile])
 
-  const podcastHref = `/podcast/${podcastId}`
+  const podcastHref = podcastId ? podcastPageView(podcastId) : "/"
 
   if (!showPodcastDetailPage) {
     return flagsLoaded ? notFound() : null
