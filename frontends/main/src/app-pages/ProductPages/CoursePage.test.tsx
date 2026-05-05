@@ -239,11 +239,13 @@ describe("CoursePage", () => {
         "Less than 1 hour to complete . 30 Videos . 2 Readings . 1 Assignment",
       ),
     ).toBeInTheDocument()
+    const coreConceptsCard = within(section)
+      .getByText("Core concepts")
+      .closest("article")
+    expect(coreConceptsCard).toBeInTheDocument()
     expect(
-      within(section).getByText((content) =>
-        /^(Less than 1 hour to complete \. )?0 Videos \. 0 Readings \. 0 Assignments$/.test(
-          content,
-        ),
+      within(coreConceptsCard as HTMLElement).getByText(
+        "Less than 1 hour to complete",
       ),
     ).toBeInTheDocument()
     expect(
