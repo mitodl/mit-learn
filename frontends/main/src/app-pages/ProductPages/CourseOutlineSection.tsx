@@ -12,10 +12,6 @@ const SectionRoot = styled.section({
   gap: "16px",
 })
 
-const SummaryText = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.black,
-}))
-
 const ModuleStack = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -112,17 +108,11 @@ const CourseOutlineSection: React.FC<{
     return null
   }
 
-  const countLabel =
-    modules.length === 1
-      ? "There is 1 lecture in this course"
-      : `There are ${modules.length} lectures in this course`
-
   return (
     <SectionRoot aria-labelledby={HeadingIds.CourseContent}>
       <Typography variant="h4" component="h2" id={HeadingIds.CourseContent}>
         Course content
       </Typography>
-      <SummaryText variant="body1">{countLabel}</SummaryText>
       <ModuleStack>
         {modules.map((module, index) => {
           const title = getModuleTitle(module, index)

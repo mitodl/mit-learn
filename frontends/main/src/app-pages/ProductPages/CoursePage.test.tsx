@@ -212,7 +212,7 @@ describe("CoursePage", () => {
     expectRawContent(section, page.prerequisites)
   })
 
-  test("Course content section renders lecture titles and summary", async () => {
+  test("Course content section renders lecture titles", async () => {
     const course = makeCourse()
     const page = makePage({ course_details: course })
     setupApis({ course, page })
@@ -221,9 +221,6 @@ describe("CoursePage", () => {
     const section = await screen.findByRole("region", {
       name: "Course content",
     })
-    expect(
-      within(section).getByText("There are 2 lectures in this course"),
-    ).toBeInTheDocument()
     expect(within(section).getByText("Introduction")).toBeInTheDocument()
     expect(within(section).getByText("Core concepts")).toBeInTheDocument()
   })

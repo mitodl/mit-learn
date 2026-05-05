@@ -35,9 +35,6 @@ describe("CourseOutlineSection", () => {
     })
 
     expect(
-      within(section).getByText("There are 4 lectures in this course"),
-    ).toBeInTheDocument()
-    expect(
       within(section).getByText("0 Videos . 0 Readings . 0 Assignments"),
     ).toBeInTheDocument()
     expect(
