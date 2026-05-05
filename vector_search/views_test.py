@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
@@ -554,3 +556,62 @@ def test_vector_search_sortby_scroll_pagination(mocker, client):
 
     # query_points should not be called (no query string)
     assert mock_qdrant.query_points.call_count == 0
+
+
+def test_async_vector_resource_counts_aggregation_buckets():
+    """
+    _async_vector_resource_counts should compute correct aggregation
+    buckets from hydrated hits that contain multi-valued fields
+    (topics, delivery) and scalar fields (free).
+    """
+    view = QdrantView()
+
+    # Simulate hydrated hits (dicts keyed by payload field paths)
+    hits = [
+        {
+            "readable_id": "course-1",
+            "topics": [{"name": "Mathematics"}, {"name": "Physics"}],
+            "delivery": [{"code": "online"}, {"code": "in_person"}],
+            "free": True,
+        },
+        {
+            "readable_id": "course-2",
+            "topics": [{"name": "Mathematics"}, {"name": "Social Science"}],
+            "delivery": [{"code": "online"}],
+            "free": False,
+        },
+        {
+            "readable_id": "course-3",
+            "topics": [{"name": "Physics"}],
+            "delivery": [{"code": "in_person"}],
+            "free": True,
+        },
+    ]
+
+    params = {"aggregations": ["topic", "delivery", "free"]}
+
+    result = asyncio.run(
+        view._async_vector_resource_counts(hits, params)  # noqa: SLF001
+    )
+
+    assert result["total"]["value"] == 3
+
+    # Build lookup dicts for easier assertions
+    topic_buckets = {b["key"]: b["doc_count"] for b in result["aggregations"]["topic"]}
+    delivery_buckets = {
+        b["key"]: b["doc_count"] for b in result["aggregations"]["delivery"]
+    }
+    free_buckets = {b["key"]: b["doc_count"] for b in result["aggregations"]["free"]}
+
+    # topic: Mathematics appears in 2 hits, Physics in 2, Social Science in 1
+    assert topic_buckets == {
+        "Mathematics": 2,
+        "Physics": 2,
+        "Social Science": 1,
+    }
+
+    # delivery: online in 2 hits, in_person in 2
+    assert delivery_buckets == {"online": 2, "in_person": 2}
+
+    # free: True (→ "true") in 2 hits, False (→ "false") in 1
+    assert free_buckets == {"true": 2, "false": 1}
