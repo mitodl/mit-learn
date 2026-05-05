@@ -25,16 +25,70 @@ const getLanguageCodeFromOptionKey = (optionKey: string): string | null => {
   return code || null
 }
 
-const getNativeLanguageName = (languageCode: string): string => {
-  try {
-    const displayNames = new Intl.DisplayNames([languageCode], {
-      type: "language",
-    })
-    const label = displayNames.of(languageCode)
-    return label ?? languageCode
-  } catch {
-    return languageCode
+const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
+  ar: "العربية",
+  de: "Deutsch",
+  en: "English",
+  es: "español",
+  "es-419": "español (Latinoamérica)",
+  fr: "français",
+  hi: "हिन्दी",
+  it: "italiano",
+  ja: "日本語",
+  ko: "한국어",
+  pt: "português",
+  "pt-br": "português (Brasil)",
+  ru: "русский",
+  zh: "中文",
+  "zh-cn": "简体中文",
+  "zh-tw": "繁體中文",
+}
+
+const getFallbackNativeLanguageName = (languageCode: string): string | null => {
+  const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
+  if (exactMatch) {
+    return exactMatch
   }
+
+  const baseLanguageSubtag = languageCode.split("-")[0]
+  if (!baseLanguageSubtag) {
+    return null
+  }
+
+  return (
+    FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag] ?? baseLanguageSubtag
+  )
+}
+
+const getNativeLanguageName = (languageCode: string): string => {
+  const normalizedLanguageCode = languageCode.trim().toLowerCase()
+  const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
+
+  try {
+    if (typeof Intl.DisplayNames === "function") {
+      const displayNames = new Intl.DisplayNames([normalizedLanguageCode], {
+        type: "language",
+      })
+      const label = displayNames.of(normalizedLanguageCode)
+      if (label && label.toLowerCase() !== normalizedLanguageCode) {
+        return label
+      }
+
+      if (baseLanguageSubtag && baseLanguageSubtag !== normalizedLanguageCode) {
+        const baseLabel = displayNames.of(baseLanguageSubtag)
+        if (baseLabel && baseLabel.toLowerCase() !== baseLanguageSubtag) {
+          return baseLabel
+        }
+      }
+    }
+  } catch {
+    // Fall through to static fallback labels.
+  }
+
+  return (
+    getFallbackNativeLanguageName(normalizedLanguageCode) ??
+    normalizedLanguageCode
+  )
 }
 
 const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {

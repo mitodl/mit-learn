@@ -213,6 +213,115 @@ describe("languageOptions", () => {
     expect(selectedRun?.id).toBe(spanishRun.id)
   })
 
+  test("uses static fallback labels when Intl.DisplayNames is unavailable", () => {
+    const originalDisplayNames = Intl.DisplayNames
+    ;(
+      Intl as typeof Intl & {
+        DisplayNames?: typeof Intl.DisplayNames
+      }
+    ).DisplayNames = undefined
+
+    try {
+      const run = factories.courses.courseRun({
+        id: 7001,
+        title: "Spanish LATAM",
+        courseware_id: "cw-es-419",
+        courseware_url: "https://example.com/cw-es-419",
+        is_enrollable: true,
+      })
+
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "es-419",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([course])
+      expect(options).toEqual([
+        {
+          value: "language:es-419",
+          label: "español (Latinoamérica)",
+        },
+      ])
+    } finally {
+      ;(
+        Intl as typeof Intl & {
+          DisplayNames?: typeof Intl.DisplayNames
+        }
+      ).DisplayNames = originalDisplayNames
+    }
+  })
+
+  test("falls back to the base language subtag when regional code is unresolved", () => {
+    const originalDisplayNames = Intl.DisplayNames
+
+    class MockDisplayNames {
+      of(code: string): string | undefined {
+        if (code === "zz-419") {
+          return undefined
+        }
+        if (code === "zz") {
+          return "Zed"
+        }
+        return undefined
+      }
+    }
+
+    ;(
+      Intl as typeof Intl & {
+        DisplayNames?: typeof Intl.DisplayNames
+      }
+    ).DisplayNames = MockDisplayNames as unknown as typeof Intl.DisplayNames
+
+    try {
+      const run = factories.courses.courseRun({
+        id: 7002,
+        title: "Mock Regional",
+        courseware_id: "cw-zz-419",
+        courseware_url: "https://example.com/cw-zz-419",
+        is_enrollable: true,
+      })
+
+      const course = factories.courses.course({
+        courseruns: [run],
+        next_run_id: run.id,
+        language_options: [
+          {
+            id: run.id,
+            courseware_id: run.courseware_id,
+            courseware_url: run.courseware_url ?? "",
+            language: "zz-419",
+            title: run.title,
+            run_tag: run.run_tag,
+          },
+        ],
+      })
+
+      const options = getDistinctLanguageOptions([course])
+      expect(options).toEqual([
+        {
+          value: "language:zz-419",
+          label: "Zed",
+        },
+      ])
+    } finally {
+      ;(
+        Intl as typeof Intl & {
+          DisplayNames?: typeof Intl.DisplayNames
+        }
+      ).DisplayNames = originalDisplayNames
+    }
+  })
+
   test("keeps language when one of multiple matching runs is enrollable", () => {
     const englishRun = factories.courses.courseRun({
       id: 6101,
