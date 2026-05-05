@@ -127,7 +127,6 @@ const Description = styled(Typography)(({ theme }) => ({
   marginTop: "32px",
   fontSize: "18px",
   fontStyle: "normal",
-  fontWeight: theme.typography.fontWeightBold,
   lineHeight: "32px",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body1,
@@ -203,8 +202,7 @@ export const PodcastEpisodeDetailPage: React.FC<
   )
   const flagsLoaded = useFeatureFlagsLoaded()
   const { data: episode } = useLearningResourcesDetail(Number(episodeId))
-  // Fetch podcast only when a valid numeric podcastId is provided
-  const { data: podcast } = useLearningResourcesDetail(Number(podcastId) || 0)
+  const { data: podcast } = useLearningResourcesDetail(Number(podcastId))
 
   const podcastEpisode =
     episode?.resource_type === ResourceTypeEnum.PodcastEpisode

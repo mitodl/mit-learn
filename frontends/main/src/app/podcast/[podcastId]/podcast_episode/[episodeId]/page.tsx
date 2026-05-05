@@ -31,7 +31,7 @@ const Page: React.FC<
 > = async (props) => {
   const { episodeId, podcastId } = await props.params
   const episodeIdNumber = Number(episodeId)
-  console.log("Episode ID:", episodeId, podcastId) // Debug log to check the value of episodeId and its conversion
+
   if (Number.isNaN(episodeIdNumber)) {
     notFound()
   }
@@ -45,16 +45,11 @@ const Page: React.FC<
     notFound()
   }
 
-  // Pre-fetch the parent podcast if provided so the client gets it instantly.
-  // Swallow any errors — a missing/erroring podcast must not break the episode page.
-  if (podcastId && !Number.isNaN(Number(podcastId))) {
-    try {
-      await queryClient.prefetchQuery(
-        learningResourceQueries.detail(Number(podcastId)),
-      )
-    } catch {
-      // intentionally ignored
-    }
+  const podcastResource = await queryClient.fetchQueryOr404(
+    learningResourceQueries.detail(Number(podcastId)),
+  )
+  if (podcastResource.resource_type !== ResourceTypeEnum.Podcast) {
+    notFound()
   }
 
   return (
