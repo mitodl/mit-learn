@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.2
+Version 0.66.2 (Released May 05, 2026)
 --------------
 
 - fix b2b dashboard empty language code (#3293)
