@@ -231,7 +231,7 @@ export const PodcastEpisodeDetailPage: React.FC<
     : null
 
   const topics = episode?.topics?.map((t) => t.name).filter(Boolean) ?? []
-  const topicString = topics?.join("  ")
+  const topicString = topics?.join("\u00A0\u00A0\u00A0\u00A0")
   const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
 
   const getAudioUrl = (ep: LearningResource): string | null => {
@@ -348,7 +348,9 @@ export const PodcastEpisodeDetailPage: React.FC<
               ))}
             </EpisodeList>
           )}
-          <ViewAllLink href={podcastHref}>View all episodes →</ViewAllLink>
+          {podcastId && (
+            <ViewAllLink href={podcastHref}>View all episodes →</ViewAllLink>
+          )}
         </EpisodeContainer>
       </PageSection>
 
