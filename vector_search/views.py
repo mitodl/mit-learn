@@ -3,6 +3,7 @@ import logging
 from functools import wraps
 from itertools import chain
 
+import pandas as pd
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
@@ -346,6 +347,92 @@ class QdrantView(APIView):
         else:
             return await sync_to_async(_content_file_vector_hits)(search_result)
 
+    def _extract_values(self, obj, qdrant_field):
+        """
+        Extract values from a nested dictionary based on a path like 'topics[].name'
+        """
+        if not qdrant_field:
+            return []
+
+        parts = qdrant_field.split(".")
+        values = [obj]
+
+        for part in parts:
+            is_array = part.endswith("[]")
+            key = part[:-2] if is_array else part
+
+            next_values = []
+            for v in values:
+                if not isinstance(v, dict):
+                    continue
+                item = v.get(key)
+                if item is None:
+                    continue
+
+                if isinstance(item, list):
+                    next_values.extend(item)
+                else:
+                    next_values.append(item)
+            values = next_values
+
+        return values
+
+    async def _async_vector_resource_counts(
+        self, hits, params, search_collection=RESOURCES_COLLECTION_NAME
+    ):
+        total_count = len(hits)
+        aggregation_keys = params.get("aggregations") or []
+        aggregations = {}
+
+        if not aggregation_keys or not hits:
+            return {
+                "total": {"value": total_count},
+                "aggregations": aggregations,
+            }
+
+        from vector_search.constants import (
+            COLLECTION_PARAM_MAP,
+            QDRANT_RESOURCE_PARAM_MAP,
+        )
+
+        param_map = COLLECTION_PARAM_MAP.get(
+            search_collection, QDRANT_RESOURCE_PARAM_MAP
+        )
+
+        for agg_key in aggregation_keys:
+            qdrant_field = param_map.get(agg_key)
+            if not qdrant_field:
+                continue
+
+            extracted = []
+            for hit in hits:
+                values = set()
+                for val in self._extract_values(hit, qdrant_field):
+                    if isinstance(val, (str, int, float, bool)):
+                        values.add(val)
+                extracted.extend(list(values))
+
+            if extracted:
+                series = pd.Series(extracted)
+
+                def format_key(val):
+                    if isinstance(val, bool):
+                        return str(val).lower()
+                    return str(val)
+
+                counts = series.apply(format_key).value_counts()
+
+                aggregations[agg_key] = [
+                    {"key": str(k), "doc_count": int(v)} for k, v in counts.items()
+                ]
+            else:
+                aggregations[agg_key] = []
+
+        return {
+            "total": {"value": total_count},
+            "aggregations": aggregations,
+        }
+
     async def _async_vector_counts(
         self,
         params: dict,
@@ -411,6 +498,10 @@ class QdrantView(APIView):
                 score_cutoff=score_cutoff,
                 hybrid_search=hybrid_search,
             )
+            counts = await self._async_vector_resource_counts(
+                hits, params, search_collection=search_collection
+            )
+
             return {
                 "hits": hits,
                 **counts,
