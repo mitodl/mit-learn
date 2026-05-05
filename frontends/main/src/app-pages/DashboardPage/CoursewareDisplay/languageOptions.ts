@@ -7,22 +7,6 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getBestRun, selectBestEnrollment } from "./helpers"
 
-const LANGUAGE_CODE_TO_NATIVE_NAME: Record<string, string> = {
-  ar: "العربية",
-  de: "Deutsch",
-  "de-de": "Deutsch",
-  el: "Ελληνικά",
-  es: "Español",
-  "es-419": "Español (Latinoamérica)",
-  fr: "Français",
-  pt: "Português",
-  ja: "日本語",
-  "pt-br": "Português (Brasil)",
-  zh: "中文",
-  "zh-hans": "简体中文",
-  en: "English",
-}
-
 const getLanguageCode = (option: CourseRunLanguageOption): string | null => {
   const normalized = option.language?.trim().toLowerCase().replace(/_/g, "-")
   return normalized || null
@@ -41,19 +25,33 @@ const getLanguageCodeFromOptionKey = (optionKey: string): string | null => {
   return code || null
 }
 
+const getNativeLanguageName = (languageCode: string): string => {
+  try {
+    const displayNames = new Intl.DisplayNames([languageCode], {
+      type: "language",
+    })
+    const label = displayNames.of(languageCode)
+    if (!label) {
+      return languageCode
+    }
+
+    const [first, ...rest] = Array.from(label)
+    if (!first) {
+      return label
+    }
+    return `${first.toLocaleUpperCase(languageCode)}${rest.join("")}`
+  } catch {
+    return languageCode
+  }
+}
+
 const getLanguageOptionLabel = (option: CourseRunLanguageOption): string => {
   const languageCode = getLanguageCode(option)
   if (!languageCode) {
     return ""
   }
 
-  const exact = LANGUAGE_CODE_TO_NATIVE_NAME[languageCode]
-  if (exact) {
-    return exact
-  }
-
-  const baseCode = languageCode.split("-")[0]
-  return LANGUAGE_CODE_TO_NATIVE_NAME[baseCode] ?? languageCode
+  return getNativeLanguageName(languageCode)
 }
 
 type ExtendedLanguageOption = CourseRunLanguageOption & {
