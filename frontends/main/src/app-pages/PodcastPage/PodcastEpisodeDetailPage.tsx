@@ -30,6 +30,7 @@ import DOMPurify from "isomorphic-dompurify"
 import { EpisodeItem } from "./PodcastDetailPage"
 import PodcastContainer from "./PodcastContainer"
 import { notFound } from "next/navigation"
+import Link from "next/link"
 
 /* ── Layout ── */
 
@@ -56,7 +57,7 @@ const HeaderSection = styled.div(({ theme }) => ({
   },
 }))
 
-const EpisodeLabel = styled(Typography)(({ theme }) => ({
+const EpisodeLabel = styled(Link)(({ theme }) => ({
   color: theme.custom.colors.darkRed,
   textTransform: "uppercase" as const,
   ...theme.typography.body2,
@@ -65,6 +66,10 @@ const EpisodeLabel = styled(Typography)(({ theme }) => ({
   lineHeight: "150%" /* 21px */,
   marginTop: "64px",
   display: "block",
+  textDecoration: "none",
+  "&:hover": {
+    textDecoration: "underline",
+  },
   [theme.breakpoints.down("sm")]: {
     marginTop: "32px",
     marginBottom: "8px",
@@ -290,7 +295,7 @@ export const PodcastEpisodeDetailPage: React.FC<
         <HeaderSection>
           <EpisodeContainer>
             {podcast?.title && (
-              <EpisodeLabel variant="body3">{podcast.title}</EpisodeLabel>
+              <EpisodeLabel href={podcastHref}>{podcast.title}</EpisodeLabel>
             )}
 
             <EpisodeTitle variant="h1">{episode?.title ?? ""}</EpisodeTitle>

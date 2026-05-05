@@ -62,7 +62,7 @@ const ContentArea = styled.div(({ theme }) => ({
   },
 }))
 
-const CategoryLabel = styled.span(({ theme }) => ({
+const CategoryLabel = styled(Link)(({ theme }) => ({
   display: "block",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
@@ -73,6 +73,9 @@ const CategoryLabel = styled.span(({ theme }) => ({
   fontSize: "12px",
   fontStyle: "normal",
   lineHeight: "150%" /* 18px */,
+  "&:hover": {
+    textDecoration: "underline",
+  },
 }))
 
 const VideoTitle = styled.h1(({ theme }) => ({
@@ -483,7 +486,9 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <CategoryLabel>{playlistLabel}</CategoryLabel>
+            <CategoryLabel href={`/video-playlist/${playlistId}`}>
+              {playlistLabel}
+            </CategoryLabel>
           ) : null}
 
           {isLoading ? (

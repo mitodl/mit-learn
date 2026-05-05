@@ -49,7 +49,7 @@ export const SeriesNavTitle = styled(Link)(({ theme }) => ({
   textDecoration: "none",
   flexShrink: 1,
   minWidth: 0,
-  "&:hover": { color: theme.custom.colors.red },
+  "&:hover": { color: theme.custom.colors.red, textDecoration: "underline" },
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
     fontWeight: theme.typography.fontWeightMedium,
@@ -131,6 +131,9 @@ export const NavLinkText = styled.span({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   minWidth: 0,
+  "&:hover": {
+    textDecoration: "underline",
+  },
 })
 
 export const NavArrowIcon = styled.span({

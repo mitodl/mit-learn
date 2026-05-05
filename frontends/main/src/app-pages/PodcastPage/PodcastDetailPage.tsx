@@ -165,6 +165,9 @@ const EpisodeRow = styled("li", {
   alignItems: "center",
   justifyContent: "space-between",
   padding: !isEpisodePage ? "28px 16px" : "28px 0px",
+  ...(isEpisodePage && {
+    "&:first-of-type": { paddingTop: 0, boxShadow: "none" },
+  }),
   boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
   gap: "16px",
   "&:last-child": {
@@ -208,6 +211,10 @@ const EpisodeTitleLink = styled.span(({ theme }) => ({
 }))
 
 const StyledButton = styled(Button)(({ theme }) => ({
+  padding: "16px 20px",
+  ...theme.typography.body1,
+  fontWeight: theme.typography.fontWeightMedium,
+  lineHeight: "16px",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
   },
@@ -225,6 +232,11 @@ const StyledShowMore = styled(Button)(({ theme }) => ({
     width: "100%",
   },
 }))
+
+const StyledIcon = styled(RiPlayFill)({
+  width: "24px !important",
+  height: "24px !important",
+})
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "20px 0 4px 0",
@@ -526,7 +538,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     <StyledButton
                       onClick={() => handlePlayClick(latestEpisode)}
                       variant="primary"
-                      startIcon={<RiPlayFill />}
+                      startIcon={<StyledIcon />}
                       disabled={!getEpisodeAudioUrl(latestEpisode)}
                     >
                       Play Latest Episode
