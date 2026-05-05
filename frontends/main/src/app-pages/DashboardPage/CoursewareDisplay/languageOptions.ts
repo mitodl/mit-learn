@@ -323,7 +323,7 @@ const selectBestContractEnrollmentForLanguage = (
   const resolvedKey =
     selectedLanguageKey || getDefaultLanguageOptionKey(course) || ""
   if (!resolvedKey) {
-    return null
+    return selectBestEnrollment(course, enrollments)
   }
 
   const matchingOptions = (course.language_options ?? []).filter(
