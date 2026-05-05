@@ -688,8 +688,7 @@ const getVectorClientAggregations = (
             doc_count: docCount,
           }))
           .sort(
-            (a, b) =>
-              b.doc_count - a.doc_count || a.key.localeCompare(b.key),
+            (a, b) => b.doc_count - a.doc_count || a.key.localeCompare(b.key),
           ),
       ]
     }),
