@@ -19,8 +19,10 @@ from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users
 from vector_search.constants import (
+    COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
 )
@@ -395,11 +397,6 @@ class QdrantView(APIView):
                 "total": {"value": total_count},
                 "aggregations": aggregations,
             }
-
-        from vector_search.constants import (
-            COLLECTION_PARAM_MAP,
-            QDRANT_RESOURCE_PARAM_MAP,
-        )
 
         param_map = COLLECTION_PARAM_MAP.get(
             search_collection, QDRANT_RESOURCE_PARAM_MAP
