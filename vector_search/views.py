@@ -474,8 +474,11 @@ class QdrantView(APIView):
         hybrid_search: bool = False,
     ):
         if query_string and score_cutoff > 0:
+            count_params = params.copy()
+            count_params.pop("aggregations", None)
+            # just get the total count and avoid a call to aggregations
             counts = await self._async_vector_counts(
-                params,
+                count_params,
                 search_collection=search_collection,
             )
             total_count = counts["total"]["value"]
