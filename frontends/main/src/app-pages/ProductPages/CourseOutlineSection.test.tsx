@@ -35,23 +35,13 @@ describe("CourseOutlineSection", () => {
     })
 
     expect(
-      within(section).getByText("0 Videos . 0 Readings . 0 Assignments"),
-    ).toBeInTheDocument()
+      within(section).queryByText("0 Videos . 0 Readings . 0 Assignments"),
+    ).not.toBeInTheDocument()
     expect(
-      within(section).getByText(
-        "Less than 1 hour to complete . 0 Videos . 0 Readings . 0 Assignments",
-      ),
+      within(section).getByText("Less than 1 hour to complete"),
     ).toBeInTheDocument()
-    expect(
-      within(section).getByText(
-        "1 hour to complete . 0 Videos . 0 Readings . 0 Assignments",
-      ),
-    ).toBeInTheDocument()
-    expect(
-      within(section).getByText(
-        "2 hours to complete . 0 Videos . 0 Readings . 0 Assignments",
-      ),
-    ).toBeInTheDocument()
+    expect(within(section).getByText("1 hour to complete")).toBeInTheDocument()
+    expect(within(section).getByText("2 hours to complete")).toBeInTheDocument()
   })
 
   test("shows counts inline without requiring expansion", async () => {
@@ -109,7 +99,7 @@ describe("CourseOutlineSection", () => {
     expect(within(section).getByText("Module 2")).toBeInTheDocument()
   })
 
-  test("defaults included counts to zero when module counts are missing", async () => {
+  test("omits zero-value counts when module counts are missing", async () => {
     const modules: CourseOutlineModule[] = [
       makeModule({ id: "m1", title: "Intro" }),
     ]
@@ -121,7 +111,7 @@ describe("CourseOutlineSection", () => {
     })
 
     expect(
-      within(section).getByText("0 Videos . 0 Readings . 0 Assignments"),
-    ).toBeInTheDocument()
+      within(section).queryByText(/0 (Videos|Readings|Assignments)/),
+    ).toBeNull()
   })
 })

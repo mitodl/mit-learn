@@ -90,10 +90,12 @@ const getMetaLine = (module: CourseOutlineModule): string => {
   const assignments = counts.assignments ?? 0
 
   const metaParts = [
-    formatCount(videos, "Video", "Videos"),
-    formatCount(readings, "Reading", "Readings"),
-    formatCount(assignments, "Assignment", "Assignments"),
-  ]
+    videos > 0 ? formatCount(videos, "Video", "Videos") : null,
+    readings > 0 ? formatCount(readings, "Reading", "Readings") : null,
+    assignments > 0
+      ? formatCount(assignments, "Assignment", "Assignments")
+      : null,
+  ].filter((part): part is string => Boolean(part))
   const effort = formatEffort(module.effort_time)
   if (effort) {
     metaParts.unshift(effort)
