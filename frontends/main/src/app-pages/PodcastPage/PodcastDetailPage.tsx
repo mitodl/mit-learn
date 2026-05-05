@@ -156,37 +156,37 @@ const EpisodeList = styled.ul({
   gridTemplateColumns: "1fr",
 })
 
-const EpisodeRow = styled.li<{ isEpisidePage?: boolean }>(
-  ({ theme, isEpisidePage }) => ({
-    margin: 0,
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: !isEpisidePage ? "28px 16px" : "28px 0px",
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
+const EpisodeRow = styled("li", {
+  shouldForwardProp: (prop) => prop !== "isEpisodePage",
+})<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
+  margin: 0,
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: !isEpisodePage ? "28px 16px" : "28px 0px",
+  boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
+  gap: "16px",
+  "&:last-child": {
+    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
+  },
+  "&:hover": {
+    backgroundColor: theme.custom.colors.lightGray1,
+    cursor: "pointer",
+  },
+  "&:hover .episode-title, &:focus-visible .episode-title": {
+    color: theme.custom.colors.red,
+  },
+  "&:hover .play-button, &:focus-visible .play-button": {
+    color: theme.custom.colors.red,
+  },
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "flex-start",
     gap: "16px",
-    "&:last-child": {
-      boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
-    },
-    "&:hover": {
-      backgroundColor: theme.custom.colors.lightGray1,
-      cursor: "pointer",
-    },
-    "&:hover .episode-title, &:focus-visible .episode-title": {
-      color: theme.custom.colors.red,
-    },
-    "&:hover .play-button, &:focus-visible .play-button": {
-      color: theme.custom.colors.red,
-    },
-    [theme.breakpoints.down("sm")]: {
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: "16px",
-      padding: "24px 16px",
-    },
-  }),
-)
+    padding: "24px 16px",
+  },
+}))
 
 const EpisodeInfo = styled.div(({ theme }) => ({
   flex: 1,
@@ -296,7 +296,7 @@ export type EpisodeItemProps = {
   onPlayClick: (episode: LearningResource) => void
   isPlaying: boolean
   isPlayable: boolean
-  isEpisidePage?: boolean
+  isEpisodePage?: boolean
 }
 
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
@@ -304,7 +304,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   onPlayClick,
   isPlaying,
   isPlayable,
-  isEpisidePage = false,
+  isEpisodePage = false,
 }) => {
   const podcastEpisode =
     episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
@@ -322,7 +322,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   return (
     <EpisodeRow
       onClick={() => onPlayClick(episode)}
-      isEpisidePage={isEpisidePage}
+      isEpisodePage={isEpisodePage}
     >
       <EpisodeInfo>
         <EpisodeTitleLink className="episode-title">

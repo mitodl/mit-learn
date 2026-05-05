@@ -208,7 +208,7 @@ export const PodcastEpisodeDetailPage: React.FC<
 
   const { data: episodesData } = useInfiniteLearningResourceItems(
     podcastId ? Number(podcastId) : 0,
-    { learning_resource_id: podcastId ? Number(podcastId) : 0, limit: 5 },
+    { learning_resource_id: Number(podcastId), limit: 5 },
     { enabled: !!podcast },
   )
   const episodes =
@@ -267,9 +267,9 @@ export const PodcastEpisodeDetailPage: React.FC<
     }
   }, [currentTrack, isMobile])
 
-  const podcastHref = podcastId ? `/podcast/${podcastId}` : "/podcast"
+  const podcastHref = `/podcast/${podcastId}`
 
-  if (showPodcastDetailPage) {
+  if (!showPodcastDetailPage) {
     return flagsLoaded ? notFound() : null
   }
   return (
@@ -338,7 +338,7 @@ export const PodcastEpisodeDetailPage: React.FC<
                     if (getAudioUrl(ep)) setPlayingEpisode(ep)
                   }}
                   isPlayable={Boolean(getAudioUrl(episode))}
-                  isEpisidePage
+                  isEpisodePage
                 />
               ))}
             </EpisodeList>

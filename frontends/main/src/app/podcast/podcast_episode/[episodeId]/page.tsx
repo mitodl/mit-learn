@@ -8,14 +8,14 @@ import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
-  props: PageProps<"/podcast/detail/[id]">,
+  props: PageProps<"/podcast/podcast_episode/[episodeId]">,
 ) => {
-  const { id } = await props.params
+  const { episodeId } = await props.params
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
     const resource = await queryClient.fetchQuery(
-      learningResourceQueries.detail(Number(id)),
+      learningResourceQueries.detail(Number(episodeId)),
     )
     return standardizeMetadata({
       title: resource.title,
@@ -26,36 +26,43 @@ export const generateMetadata = async (
   })
 }
 
-const Page: React.FC<PageProps<"/podcast/detail/[id]">> = async (props) => {
-  const { id } = await props.params
+const Page: React.FC<
+  PageProps<"/podcast/podcast_episode/[episodeId]">
+> = async (props) => {
+  const { episodeId } = await props.params
   const searchParams = await props.searchParams
   const podcastId = searchParams["podcast"]
-  const episodeId = Number(id)
+  const episodeIdNumber = Number(episodeId)
 
-  if (Number.isNaN(episodeId)) {
+  if (Number.isNaN(episodeIdNumber)) {
     notFound()
   }
 
   const queryClient = getQueryClient()
 
   const resource = await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(episodeId),
+    learningResourceQueries.detail(episodeIdNumber),
   )
   if (resource.resource_type !== ResourceTypeEnum.PodcastEpisode) {
     notFound()
   }
 
-  // Pre-fetch the parent podcast if provided so the client gets it instantly
+  // Pre-fetch the parent podcast if provided so the client gets it instantly.
+  // Swallow any errors — a missing/erroring podcast must not break the episode page.
   if (podcastId && !Number.isNaN(Number(podcastId))) {
-    await queryClient.prefetchQuery(
-      learningResourceQueries.detail(Number(podcastId)),
-    )
+    try {
+      await queryClient.prefetchQuery(
+        learningResourceQueries.detail(Number(podcastId)),
+      )
+    } catch {
+      // intentionally ignored
+    }
   }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <PodcastEpisodeDetailPage
-        episodeId={id}
+        episodeId={episodeId}
         podcastId={typeof podcastId === "string" ? podcastId : null}
       />
     </HydrationBoundary>
