@@ -18,6 +18,7 @@ import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
+import { buildVideoStructuredData } from "./videoStructuredData"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -49,7 +50,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const {
     prevVideo,
     nextVideo,
@@ -71,11 +71,11 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
         : [],
     [video],
   )
-
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
 
+  const captionUrls = video?.video?.caption_urls ?? []
   const playlistLabel = playlist?.title || "Video Collection"
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
@@ -94,12 +94,28 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     }
   }, [isLoading, videoId])
 
+  // VideoObject JSON-LD for Google search indexing.
+  // Rendered as a plain <script> tag so Googlebot can read it without executing
+  // any additional JS. The replace guard prevents </script> injection.
+  // See: https://developers.google.com/search/docs/appearance/structured-data/video
+  const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
   return (
     <Styled.PageWrapper>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <Styled.SkipLinksNav aria-label="Skip links">
         <Styled.SkipLink href="#video-detail-main">
           Skip to main content
@@ -192,6 +208,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined

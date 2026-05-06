@@ -28,6 +28,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { notFound } from "next/navigation"
 import SharePopover from "@/components/SharePopover/SharePopover"
+import { buildVideoStructuredData } from "./videoStructuredData"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
@@ -388,7 +389,6 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const sources = useMemo(
     () =>
       video
@@ -406,6 +406,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     : null
 
   const topics = video?.topics ?? []
+  const captionUrls = video?.video?.caption_urls ?? []
 
   const playlistLabel = playlist?.title || "Video Collection"
 
@@ -442,12 +443,26 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     }
   }, [isLoading, videoId])
 
+  // VideoObject JSON-LD for Google search indexing.
+  // See: https://developers.google.com/search/docs/appearance/structured-data/video
+  const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
   return (
     <PageWrapper>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <SkipLinksNav aria-label="Skip links">
         <SkipLink href="#video-detail-main">Skip to main content</SkipLink>
         <SkipLink href="#video-player-region">Skip to video player</SkipLink>
@@ -530,6 +545,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined
