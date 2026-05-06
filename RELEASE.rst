@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.66.9
+--------------
+
+- fix: change play icon for video collection detail page (#3306)
+
 Version 0.66.8 (Released May 06, 2026)
 --------------
 
