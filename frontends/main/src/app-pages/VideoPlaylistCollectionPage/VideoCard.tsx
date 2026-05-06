@@ -143,9 +143,7 @@ type VideoCardProps = {
 const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
   const [imgError, setImgError] = useState(false)
   const imageUrl = !imgError
-    ? (resource?.image?.url ??
-      resource.content_files?.[0]?.image_src ??
-      PLACEHOLDER_IMG)
+    ? (resource?.image?.url ?? PLACEHOLDER_IMG)
     : PLACEHOLDER_IMG
   const description = resource.description ?? ""
   const duration = resource.video?.duration

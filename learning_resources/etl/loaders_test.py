@@ -15,6 +15,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_FILE,
     CONTENT_TYPE_PAGE,
     CURRENCY_USD,
+    OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     Availability,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
@@ -34,7 +35,6 @@ from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     ProgramLoadResult,
     calculate_completeness,
-    find_existing_videos,
     load_content_file,
     load_content_files,
     load_course,
@@ -58,7 +58,9 @@ from learning_resources.etl.loaders import (
     load_topics,
     load_video,
     load_video_channels,
+    load_video_with_content_file,
     load_videos,
+    load_videos_from_content_files,
 )
 from learning_resources.etl.mitxonline import transform_programs
 from learning_resources.etl.utils import get_s3_prefix_for_source
@@ -2284,70 +2286,25 @@ def test_load_playlist_removed_videos_unpublished(
 
     load_playlist(channel, props)
 
-    # YouTube video should be unpublished
+    # Both OCW and YouTube videos should be unpublished
     youtube_video.refresh_from_db()
     assert youtube_video.published is False
 
-    # OCW video should NOT be unpublished
     ocw_video.refresh_from_db()
-    assert ocw_video.published is True
+    assert ocw_video.published is False
 
     # bulk_resources_unpublished_actions called only with the youtube video
     mock_bulk_unpublish.assert_called_once_with(
-        [youtube_video.id],
+        [youtube_video.id, ocw_video.id],
         LearningResourceType.video.name,
     )
-
-
-@pytest.mark.parametrize("all_videos_exist", [True, False])
-def test_find_existing_videos(all_videos_exist):
-    """Test that find_existing_videos returns matching video resources or None"""
-    video_resource_1 = VideoFactory.create().learning_resource
-    video_resource_2 = VideoFactory.create().learning_resource
-    run = LearningResourceRunFactory.create()
-
-    # Create content files with youtube_id linked to video resources
-    ContentFileFactory.create(
-        run=run,
-        youtube_id="yt_id_1",
-        direct_learning_resource=video_resource_1,
-    )
-    ContentFileFactory.create(
-        run=run,
-        youtube_id="yt_id_2",
-        direct_learning_resource=video_resource_2,
-    )
-
-    if all_videos_exist:
-        videos_data = [
-            {"youtube_id": "yt_id_1"},
-            {"youtube_id": "yt_id_2"},
-        ]
-        result = find_existing_videos(videos_data)
-        assert result is not None
-        assert len(result) == 2
-        assert result[0].id == video_resource_1.id
-        assert result[1].id == video_resource_2.id
-    else:
-        videos_data = [
-            {"youtube_id": "yt_id_1"},
-            {"youtube_id": "missing_yt_id"},
-        ]
-        result = find_existing_videos(videos_data)
-        assert result is None
-
-
-def test_find_existing_videos_empty_list():
-    """Test that find_existing_videos returns an empty list for empty input"""
-    result = find_existing_videos([])
-    assert result == []
 
 
 @pytest.mark.parametrize("all_videos_exist", [True, False])
 def test_load_playlist_create_videos_false(
     mocker, all_videos_exist, mock_get_similar_topics_qdrant
 ):
-    """Test load_playlist with create_videos=False uses find_existing_videos"""
+    """Test load_playlist with create_videos=False uses load_videos_from_content_files"""
     expected_topics = [{"name": "Biology"}, {"name": "Physics"}]
     [
         LearningResourceTopicFactory.create(name=topic["name"])
@@ -2365,17 +2322,19 @@ def test_load_playlist_create_videos_false(
     )
 
     channel = VideoChannelFactory.create()
-    run = LearningResourceRunFactory.create()
 
     if all_videos_exist:
         video_resource = VideoFactory.create().learning_resource
-        ContentFileFactory.create(
-            run=run,
-            youtube_id="yt_existing",
-            direct_learning_resource=video_resource,
+        mock_load_from_cf = mocker.patch(
+            "learning_resources.etl.loaders.load_videos_from_content_files",
+            return_value=[video_resource],
         )
         videos_data = [{"youtube_id": "yt_existing"}]
     else:
+        mock_load_from_cf = mocker.patch(
+            "learning_resources.etl.loaders.load_videos_from_content_files",
+            return_value=None,
+        )
         videos_data = [{"youtube_id": "yt_missing"}]
 
     playlist = VideoPlaylistFactory.build().learning_resource
@@ -2397,15 +2356,148 @@ def test_load_playlist_create_videos_false(
 
     result = load_playlist(channel, props)
 
+    mock_load_from_cf.assert_called_once()
+
     if all_videos_exist:
         assert isinstance(result, LearningResource)
         assert result.resources.count() == 1
         assert result.video_playlist.channel == channel
     else:
         assert result is None
-        # update_index should not be called for the playlist
-        # (only possibly for unpublishing an existing one)
         mock_update_index.assert_not_called()
+
+
+def test_load_video_with_content_file(mocker):
+    """Test that load_video_with_content_file creates a video resource
+    combining youtube data with OCW content file data
+    """
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.loaders.update_index",
+    )
+
+    ocw_platform = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    offeror = LearningResourceOfferorFactory.create(is_ocw=True)
+    topic = LearningResourceTopicFactory.create(name="Physics")
+    parent_course = LearningResourceFactory.create(
+        is_course=True,
+        platform=ocw_platform,
+        offered_by=offeror,
+        etl_source=ETLSource.ocw.name,
+    )
+    parent_course.topics.set([topic])
+    run = LearningResourceRunFactory.create(learning_resource=parent_course)
+
+    content_file = ContentFileFactory.create(
+        run=run,
+        title="OCW Lecture 1",
+        url="https://ocw.mit.edu/lecture1",
+        description="OCW lecture description",
+        youtube_id="yt_abc123",
+    )
+
+    youtube_video_data = {
+        "readable_id": "yt_abc123",
+        "platform": PlatformType.youtube.name,
+        "etl_source": ETLSource.youtube.name,
+        "title": "YouTube Title (should be overridden)",
+        "description": "YouTube description (should be overridden)",
+        "url": "https://youtube.com/watch?v=yt_abc123",
+        "published": True,
+        "video": {"duration": "PT30M"},
+        "image": {"url": "https://i.ytimg.com/vi/yt_abc123/hqdefault.jpg"},
+        "youtube_id": "yt_abc123",
+        "offered_by": {"code": "mit"},
+    }
+
+    result = load_video_with_content_file(youtube_video_data, content_file)
+
+    assert isinstance(result, LearningResource)
+    assert result.resource_type == LearningResourceType.video.name
+    assert result.readable_id == "yt_abc123"
+    # Title/description/url should come from content file, not youtube
+    assert result.title == "OCW Lecture 1"
+    assert result.description == "OCW lecture description"
+    assert result.url == "https://ocw.mit.edu/lecture1"
+    assert result.resource_category == OCW_CONTENT_CATEGORY_LECTURE_VIDEOS
+    # Platform/offered_by/topics should come from parent course
+    assert result.platform == ocw_platform
+    assert result.offered_by == offeror
+    assert list(result.topics.values_list("name", flat=True)) == ["Physics"]
+    # Video model should be created
+    assert result.video.duration == "PT30M"
+    # Content file should be linked
+    content_file.refresh_from_db()
+    assert content_file.direct_learning_resource == result
+    # Parent course should have this as a child
+    assert parent_course.children.filter(
+        child=result,
+        relation_type=LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS,
+    ).exists()
+    assert mock_update_index.call_count == 1
+
+
+@pytest.mark.parametrize(
+    ("match_ratio", "expected_result"),
+    [
+        ("all_match", "returns_videos"),
+        ("three_quarter_match", "returns_videos"),
+        ("below_threshold", "returns_none"),
+    ],
+)
+def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
+    """Test that load_videos_from_content_files respects the 3/4 threshold"""
+    mock_load = mocker.patch(
+        "learning_resources.etl.loaders.load_video_with_content_file",
+        side_effect=lambda _data, _cf: LearningResourceFactory.create(
+            resource_type=LearningResourceType.video.name,
+        ),
+    )
+
+    run = LearningResourceRunFactory.create()
+
+    # Create 4 content files with youtube_ids
+    for i in range(4):
+        ContentFileFactory.create(
+            run=run,
+            youtube_id=f"yt_id_{i}",
+        )
+
+    if match_ratio == "all_match":
+        # All 4 match
+        videos_data = [{"youtube_id": f"yt_id_{i}"} for i in range(4)]
+    elif match_ratio == "three_quarter_match":
+        # 3 out of 4 match (exactly 75%)
+        videos_data = [
+            {"youtube_id": "yt_id_0"},
+            {"youtube_id": "yt_id_1"},
+            {"youtube_id": "yt_id_2"},
+            {"youtube_id": "yt_missing"},
+        ]
+    else:
+        # 2 out of 4 match (50%, below threshold)
+        videos_data = [
+            {"youtube_id": "yt_id_0"},
+            {"youtube_id": "yt_id_1"},
+            {"youtube_id": "yt_missing_1"},
+            {"youtube_id": "yt_missing_2"},
+        ]
+
+    result = load_videos_from_content_files(iter(videos_data))
+
+    if expected_result == "returns_videos":
+        assert result is not None
+        expected_count = 4 if match_ratio == "all_match" else 3
+        assert len(result) == expected_count
+        assert mock_load.call_count == expected_count
+    else:
+        assert result is None
+        mock_load.assert_not_called()
+
+
+def test_load_videos_from_content_files_empty_input():
+    """Test that an empty iterable returns an empty list"""
+    result = load_videos_from_content_files(iter([]))
+    assert result == []
 
 
 def test_load_playlists_unpublish(mocker):
@@ -3181,24 +3273,14 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("create_ocw_learning_materials", "show_ocw_lecture_videos"),
-    [
-        (True, False),
-        (False, True),
-        (False, False),
-    ],
-)
-def test_load_learning_materials(
-    mocker, settings, create_ocw_learning_materials, show_ocw_lecture_videos
-):
+@pytest.mark.parametrize("create_ocw_learning_materials", [True, False])
+def test_load_learning_materials(mocker, settings, create_ocw_learning_materials):
     """
     Test that load_learning_materials runs load_learning_material
-    based on CREATE_OCW_LEARNING_MATERIALS and SHOW_OCW_LECTURE_VIDEOS settings
+    based on CREATE_OCW_LEARNING_MATERIALS setting
     """
 
     settings.CREATE_OCW_LEARNING_MATERIALS = create_ocw_learning_materials
-    settings.SHOW_OCW_LECTURE_VIDEOS = show_ocw_lecture_videos
 
     ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     ocw_course = CourseFactory.create(
@@ -3209,7 +3291,6 @@ def test_load_learning_materials(
     relevant_content_tag = LearningResourceContentTagFactory.create(
         name="Programming Assignments"
     )
-    lecture_video_tag = LearningResourceContentTagFactory.create(name="Lecture Videos")
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
     no_longer_relevant_resource = LearningResourceFactory.create()
@@ -3217,12 +3298,6 @@ def test_load_learning_materials(
     learning_material_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
         content_tags=[relevant_content_tag],
-        content_type=CONTENT_TYPE_FILE,
-    )
-
-    lecture_video_content_file = ContentFileFactory.create(
-        run=ocw_course.learning_resource.runs.first(),
-        content_tags=[lecture_video_tag],
         content_type=CONTENT_TYPE_FILE,
     )
 
@@ -3241,65 +3316,41 @@ def test_load_learning_materials(
         course_run=ocw_course.learning_resource.runs.first(),
         content_file_ids=[
             learning_material_content_file.id,
-            lecture_video_content_file.id,
             other_content_file.id,
         ],
     )
 
     if create_ocw_learning_materials:
-        # Both programming assignments and lecture videos are promoted
-        assert load_learning_materials_spy.call_count == 2
+        # Programming assignments are promoted
+        assert load_learning_materials_spy.call_count == 1
         load_learning_materials_spy.assert_any_call(
             ocw_course.learning_resource.runs.first(),
             learning_material_content_file,
             {"Programming Assignments"},
         )
-        load_learning_materials_spy.assert_any_call(
-            ocw_course.learning_resource.runs.first(),
-            lecture_video_content_file,
-            {"Lecture Videos"},
-        )
-        resource_relationships = ocw_course.learning_resource.children.all()
-        assert resource_relationships.count() == 2
-        # 2 load_learning_material calls (each calls update_index)
-        # + 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 3
-    elif show_ocw_lecture_videos:
-        # Only lecture videos are promoted
-        assert load_learning_materials_spy.call_count == 1
-        load_learning_materials_spy.assert_called_with(
-            ocw_course.learning_resource.runs.first(),
-            lecture_video_content_file,
-            {"Lecture Videos"},
-        )
         resource_relationships = ocw_course.learning_resource.children.all()
         assert resource_relationships.count() == 1
-        lecture_video_content_file.refresh_from_db()
-        assert (
-            resource_relationships.first().child.id
-            == lecture_video_content_file.direct_learning_resource.id
-        )
-        # 1 load_learning_material call + 1 for unpublishing no_longer_relevant_resource
+        # 1 load_learning_material call (calls update_index)
+        # + 1 for unpublishing no_longer_relevant_resource
         assert mock_index.call_count == 2
+
+        no_longer_relevant_resource.refresh_from_db()
+        assert no_longer_relevant_resource.published is False
     else:
         # Nothing is promoted
         assert load_learning_materials_spy.call_count == 0
         resource_relationships = ocw_course.learning_resource.children.all()
         assert resource_relationships.count() == 0
-        # 1 for unpublishing no_longer_relevant_resource
-        assert mock_index.call_count == 1
-
-    no_longer_relevant_resource.refresh_from_db()
-    assert no_longer_relevant_resource.published is False
 
 
 @pytest.mark.django_db
-def test_load_learning_materials_demotes_page_content_files(mocker):
+def test_load_learning_materials_demotes_page_content_files(mocker, settings):
     """
     Page content files should not be promoted to learning resources.
     If a page content file was previously promoted (has direct_learning_resource),
     load_learning_materials should unpublish that resource and clear the link.
     """
+    settings.CREATE_OCW_LEARNING_MATERIALS = True
     ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
     ocw_course = CourseFactory.create(
         platform=ocw.code,
@@ -3336,6 +3387,60 @@ def test_load_learning_materials_demotes_page_content_files(mocker):
 
     # No learning materials should be linked to the course
     assert ocw_course.learning_resource.children.count() == 0
+
+
+@pytest.mark.django_db
+def test_load_learning_materials_preserves_videos(mocker, settings):
+    """
+    Content files with a direct_learning_resource whose resource_type is
+    video should be preserved as-is (not re-promoted or unpublished).
+    Their resource id should appear in the final material_ids list so
+    the course keeps them as children.
+    """
+    settings.CREATE_OCW_LEARNING_MATERIALS = True
+    ocw = LearningResourcePlatformFactory.create(code=PlatformType.ocw.name)
+    ocw_course = CourseFactory.create(
+        platform=ocw.code,
+        learning_resource__is_course=True,
+    )
+    run = ocw_course.learning_resource.runs.first()
+
+    # A video resource created by YouTube ETL
+    video_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.video.name,
+        published=True,
+    )
+
+    # Content file linked to the video resource
+    video_content_file = ContentFileFactory.create(
+        run=run,
+        direct_learning_resource=video_resource,
+        content_type=CONTENT_TYPE_FILE,
+    )
+
+    mock_index = mocker.patch("learning_resources.etl.loaders.update_index")
+
+    loaders.load_learning_materials(
+        course_run=run,
+        content_file_ids=[video_content_file.id],
+    )
+
+    # The video resource should still be published and unchanged
+    video_resource.refresh_from_db()
+    assert video_resource.published is True
+
+    # The content file should still be linked to the video resource
+    video_content_file.refresh_from_db()
+    assert video_content_file.direct_learning_resource == video_resource
+
+    # The course should have the video as a child
+    assert ocw_course.learning_resource.children.filter(
+        child=video_resource,
+        relation_type=LearningResourceRelationTypes.COURSE_LEARNING_MATERIALS,
+    ).exists()
+
+    # update_index should not have been called (no changes needed)
+    mock_index.assert_not_called()
 
 
 @pytest.mark.django_db
