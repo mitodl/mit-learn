@@ -53,10 +53,11 @@ const EpisodeRowLink = styled(Link)(({ theme }) => ({
   textDecoration: "none",
   flex: 1,
   "&:hover .episode-title, &:focus-visible .episode-title": {
-    color: theme.custom.colors.red,
+    color: theme.custom.colors.darkRed,
   },
   "&:hover .play-button, &:focus-visible .play-button": {
     color: theme.custom.colors.red,
+    borderColor: theme.custom.colors.darkGray1,
   },
   [theme.breakpoints.down("sm")]: {
     flexDirection: "row",
@@ -71,7 +72,7 @@ const EpisodeRow = styled.li(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   "&:last-child": {
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
+    boxShadow: `0 1px 0 ${theme.custom.colors.lightGray2}`,
   },
   "&:has(a:hover), &:has(a:focus-visible)": {
     backgroundColor: theme.custom.colors.lightGray1,
@@ -172,7 +173,6 @@ const PlayButton = styled("div")<{
     width: "48px",
     height: "48px",
     border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-    borderRadius: "8px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

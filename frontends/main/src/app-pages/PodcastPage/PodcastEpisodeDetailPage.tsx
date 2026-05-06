@@ -144,11 +144,10 @@ const EpisodeList = styled.ul({
 })
 
 export const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "20px 0 4px 0",
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
-  backgroundColor: theme.custom.colors.white,
+  padding: "18px 0 2px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
-    padding: "16px 0 0 0",
+    padding: "12px 0 0 0",
   },
 }))
 

@@ -4,10 +4,10 @@ import type { VideoPlaylistResource } from "api/v1"
 import VideoContainer from "./VideoContainer"
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "20px 0 4px 0",
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
+  padding: "18px 0 2px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
-    padding: "16px 0 0px 0",
+    padding: "12px 0 0px 0",
   },
 }))
 
