@@ -123,10 +123,31 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     left: 0,
   },
   ".vjs-big-play-button": {
-    width: "64px !important",
-    height: "64px !important",
-    lineHeight: "64px !important",
+    width: "92px !important",
+    height: "92px !important",
+    lineHeight: "92px !important",
     borderRadius: "50% !important",
+    backgroundColor: "#d8daddb3 !important",
+    border: "none !important",
+    fontSize: "4em !important",
+    marginTop: "-1.25em !important",
+    marginLeft: "-1.18em !important",
+    [theme.breakpoints.down("sm")]: {
+      width: "68px !important",
+      height: "68px !important",
+      lineHeight: "68px !important",
+      marginLeft: "-1em !important",
+      marginTop: "-.7em !important",
+    },
+  },
+  "& .vjs-big-play-button": {
+    opacity: 1,
+    transform: "scale(1)",
+    transition: "opacity 0.3s ease, transform 0.3s ease",
+  },
+  "&:hover .vjs-big-play-button": {
+    opacity: 0.75,
+    transform: "scale(1.12)",
   },
 }))
 
