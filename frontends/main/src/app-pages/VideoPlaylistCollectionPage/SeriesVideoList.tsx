@@ -54,11 +54,10 @@ const EpisodeRowLink = styled(Link)(({ theme }) => ({
   flex: 1,
   "&:hover .episode-title, &:focus-visible .episode-title": {
     color: theme.custom.colors.darkRed,
-    fontWeight: theme.typography.fontWeightBold,
   },
   "&:hover .play-button, &:focus-visible .play-button": {
     color: theme.custom.colors.red,
-    border: `1px solid ${theme.custom.colors.darkGray1}`,
+    borderColor: theme.custom.colors.darkGray1,
   },
   [theme.breakpoints.down("sm")]: {
     flexDirection: "row",
