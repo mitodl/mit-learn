@@ -167,6 +167,11 @@ const EpisodeRow = styled("li", {
   padding: !isEpisodePage ? "28px 16px" : "28px 0px",
   ...(isEpisodePage && {
     "&:first-of-type": { paddingTop: 0, boxShadow: "none" },
+    // When there is only one episode (first AND last), keep only the bottom
+    // shadow — the top shadow from :first-of-type should remain removed.
+    "&:first-of-type:last-child": {
+      boxShadow: `0 1px 0 ${theme.custom.colors.lightGray2}`,
+    },
   }),
   boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
   gap: "16px",
