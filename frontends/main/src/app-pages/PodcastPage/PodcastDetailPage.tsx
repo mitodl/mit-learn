@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button, ActionButton } from "@mitodl/smoot-design"
-import { RiPlayFill } from "@remixicon/react"
+import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
-import type { PodcastTrack } from "./PodcastPlayer"
+import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -306,6 +306,7 @@ const PlayButton = styled(ActionButton, {
 export type EpisodeItemProps = {
   episode: LearningResource
   onPlayClick: (episode: LearningResource) => void
+  onPauseClick?: () => void
   isPlaying: boolean
   isPlayable: boolean
   isEpisodePage?: boolean
@@ -314,6 +315,7 @@ export type EpisodeItemProps = {
 export const EpisodeItem: React.FC<EpisodeItemProps> = ({
   episode,
   onPlayClick,
+  onPauseClick,
   isPlaying,
   isPlayable,
   isEpisodePage = false,
@@ -333,7 +335,7 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
 
   return (
     <EpisodeRow
-      onClick={() => onPlayClick(episode)}
+      onClick={() => (isPlaying ? onPauseClick?.() : onPlayClick(episode))}
       isEpisodePage={isEpisodePage}
     >
       <EpisodeInfo>
@@ -354,13 +356,15 @@ export const EpisodeItem: React.FC<EpisodeItemProps> = ({
           </EpisodeMeta>
         )}
         <PlayButton
-          aria-label={`Play ${episode.title}`}
+          aria-label={
+            isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`
+          }
           isPlaying={isPlaying}
           disabled={!isPlayable}
           variant="secondary"
           className="play-button"
         >
-          <RiPlayFill size={20} />
+          {isPlaying ? <RiPauseFill size={20} /> : <RiPlayFill size={20} />}
         </PlayButton>
       </EpisodeRight>
     </EpisodeRow>
@@ -387,6 +391,8 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const playerRef = useRef<PodcastPlayerHandle>(null)
 
   const { data: resource } = useLearningResourcesDetail(id)
 
@@ -446,7 +452,11 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
 
   const handlePlayClick = (episode: LearningResource) => {
     if (!getEpisodeAudioUrl(episode)) return
-    setPlayingEpisode(episode)
+    if (playingEpisode?.id === episode.id) {
+      playerRef.current?.resume()
+    } else {
+      setPlayingEpisode(episode)
+    }
   }
 
   const currentTrack: PodcastTrack | null = playingEpisode
@@ -561,7 +571,10 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                     key={episode.id}
                     episode={episode}
                     onPlayClick={handlePlayClick}
-                    isPlaying={playingEpisode?.id === episode.id}
+                    onPauseClick={() => playerRef.current?.pause()}
+                    isPlaying={
+                      playingEpisode?.id === episode.id && isAudioPlaying
+                    }
                     isPlayable={Boolean(getEpisodeAudioUrl(episode))}
                   />
                 ))}
@@ -589,8 +602,10 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
       </PageSection>
       {currentTrack && (
         <PodcastPlayer
+          ref={playerRef}
           track={currentTrack}
           onClose={() => setPlayingEpisode(null)}
+          onPlayStateChange={setIsAudioPlaying}
         />
       )}
     </>

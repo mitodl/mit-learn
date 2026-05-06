@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   Breadcrumbs,
   Typography,
@@ -15,7 +15,7 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
-import type { PodcastTrack } from "./PodcastPlayer"
+import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
@@ -196,6 +196,8 @@ export const PodcastEpisodeDetailPage: React.FC<
   const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
     null,
   )
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const playerRef = useRef<PodcastPlayerHandle>(null)
 
   const showPodcastDetailPage = useFeatureFlagEnabled(
     FeatureFlags.PodcastDetailPage,
@@ -336,10 +338,18 @@ export const PodcastEpisodeDetailPage: React.FC<
                 <EpisodeItem
                   key={episode.id}
                   episode={episode}
-                  isPlaying={playingEpisode?.id === episode.id}
+                  isPlaying={
+                    playingEpisode?.id === episode.id && isAudioPlaying
+                  }
                   onPlayClick={(ep) => {
-                    if (getAudioUrl(ep)) setPlayingEpisode(ep)
+                    if (!getAudioUrl(ep)) return
+                    if (playingEpisode?.id === ep.id) {
+                      playerRef.current?.resume()
+                    } else {
+                      setPlayingEpisode(ep)
+                    }
                   }}
+                  onPauseClick={() => playerRef.current?.pause()}
                   isPlayable={Boolean(getAudioUrl(episode))}
                   isEpisodePage
                 />
@@ -354,8 +364,10 @@ export const PodcastEpisodeDetailPage: React.FC<
 
       {currentTrack && (
         <PodcastPlayer
+          ref={playerRef}
           track={currentTrack}
           onClose={() => setPlayingEpisode(null)}
+          onPlayStateChange={setIsAudioPlaying}
         />
       )}
     </>

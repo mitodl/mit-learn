@@ -1,6 +1,13 @@
 "use client"
 
-import React, { useRef, useState, useEffect, useCallback } from "react"
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react"
 import { styled, Typography, LoadingSpinner } from "ol-components"
 import {
   RiPlayCircleLine,
@@ -19,6 +26,11 @@ export type PodcastTrack = {
   audioUrl: string
   title: string
   podcastName: string
+}
+
+export type PodcastPlayerHandle = {
+  pause: () => void
+  resume: () => void
 }
 
 type PodcastPlayerProps = {
@@ -271,216 +283,235 @@ const formatTime = (seconds: number): string => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const PodcastPlayer = ({
-  track,
-  onClose,
-  onPlayStateChange,
-}: PodcastPlayerProps) => {
-  const hasAudioSource = Boolean(track.audioUrl.trim())
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const isPlayPendingRef = useRef(false)
-  const playAttemptIdRef = useRef(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isBuffering, setIsBuffering] = useState(true)
-  const [isPlayPending, setIsPlayPending] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [speedIndex, setSpeedIndex] = useState(1) // default 1x
-  const speedIndexRef = useRef(1)
+const PodcastPlayer = forwardRef<PodcastPlayerHandle, PodcastPlayerProps>(
+  ({ track, onClose, onPlayStateChange }, ref) => {
+    const hasAudioSource = Boolean(track.audioUrl.trim())
+    const audioRef = useRef<HTMLAudioElement>(null)
+    const isPlayPendingRef = useRef(false)
+    const playAttemptIdRef = useRef(0)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [isBuffering, setIsBuffering] = useState(true)
+    const [isPlayPending, setIsPlayPending] = useState(false)
+    const [currentTime, setCurrentTime] = useState(0)
+    const [duration, setDuration] = useState(0)
+    const [speedIndex, setSpeedIndex] = useState(1) // default 1x
+    const speedIndexRef = useRef(1)
 
-  const startPlayback = useCallback(async () => {
-    if (!hasAudioSource || isPlayPendingRef.current) return
+    const startPlayback = useCallback(async () => {
+      if (!hasAudioSource || isPlayPendingRef.current) return
 
-    const audio = audioRef.current
-    if (!audio) return
+      const audio = audioRef.current
+      if (!audio) return
 
-    const attemptId = ++playAttemptIdRef.current
-    isPlayPendingRef.current = true
-    setIsPlayPending(true)
+      const attemptId = ++playAttemptIdRef.current
+      isPlayPendingRef.current = true
+      setIsPlayPending(true)
 
-    try {
-      await audio.play()
-      if (playAttemptIdRef.current === attemptId) {
-        setIsPlaying(true)
-      }
-    } catch {
-      if (playAttemptIdRef.current === attemptId) {
-        setIsPlaying(false)
-      }
-    } finally {
-      if (playAttemptIdRef.current === attemptId) {
-        isPlayPendingRef.current = false
-        setIsPlayPending(false)
-      }
-    }
-  }, [hasAudioSource])
-
-  // Auto-play when a new track is loaded
-  useEffect(() => {
-    // Invalidate any in-flight play attempt from a previous track.
-    playAttemptIdRef.current += 1
-    isPlayPendingRef.current = false
-    setIsPlayPending(false)
-
-    setCurrentTime(0)
-    setDuration(0)
-    setIsPlaying(false)
-    setIsBuffering(hasAudioSource)
-
-    if (!hasAudioSource) {
-      return
-    }
-
-    const audio = audioRef.current
-    if (!audio) return
-    audio.load()
-    audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
-    void startPlayback()
-  }, [track.audioUrl, hasAudioSource, startPlayback])
-
-  const handlePlayPause = async () => {
-    if (!hasAudioSource) return
-
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (isPlaying) {
-      audio.pause()
-      setIsPlaying(false)
-    } else {
-      void startPlayback()
-    }
-  }
-
-  useEffect(() => {
-    onPlayStateChange?.(isPlaying)
-  }, [isPlaying, onPlayStateChange])
-
-  const handleSkip = (seconds: number) => {
-    const audio = audioRef.current
-    if (!audio) return
-    audio.currentTime = Math.max(
-      0,
-      Math.min(audio.currentTime + seconds, duration),
-    )
-  }
-
-  const handleSpeedCycle = () => {
-    const nextIndex = (speedIndex + 1) % SPEED_OPTIONS.length
-    speedIndexRef.current = nextIndex
-    setSpeedIndex(nextIndex)
-    if (audioRef.current) {
-      audioRef.current.playbackRate = SPEED_OPTIONS[nextIndex]
-    }
-  }
-
-  const handleSeekKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
-
-    event.preventDefault()
-    handleSkip(event.key === "ArrowRight" ? 5 : -5)
-  }
-
-  const percent = duration ? (currentTime / duration) * 100 : 0
-  return (
-    <>
-      {/* Shared audio element */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <audio
-        ref={audioRef}
-        src={hasAudioSource ? track.audioUrl : undefined}
-        onWaiting={() => setIsBuffering(true)}
-        onCanPlay={() => setIsBuffering(false)}
-        onError={() => {
-          setIsBuffering(false)
+      try {
+        await audio.play()
+        if (playAttemptIdRef.current === attemptId) {
+          setIsPlaying(true)
+        }
+      } catch {
+        if (playAttemptIdRef.current === attemptId) {
           setIsPlaying(false)
-        }}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-        onEnded={() => setIsPlaying(false)}
-      />
+        }
+      } finally {
+        if (playAttemptIdRef.current === attemptId) {
+          isPlayPendingRef.current = false
+          setIsPlayPending(false)
+        }
+      }
+    }, [hasAudioSource])
 
-      <PlayerShell>
-        <TrackInfo>
-          <PodcastName variant="body1" sx={{ color: "text.secondary" }}>
-            {track.podcastName}
-          </PodcastName>
-          <TrackTitle variant="subtitle2">{track.title}</TrackTitle>
-        </TrackInfo>
+    // Auto-play when a new track is loaded
+    useEffect(() => {
+      // Invalidate any in-flight play attempt from a previous track.
+      playAttemptIdRef.current += 1
+      isPlayPendingRef.current = false
+      setIsPlayPending(false)
 
-        <Divider />
+      setCurrentTime(0)
+      setDuration(0)
+      setIsPlaying(false)
+      setIsBuffering(hasAudioSource)
 
-        <Controls>
-          <IconButton
-            onClick={() => handleSkip(-10)}
-            aria-label="Rewind 10 seconds"
-            title="Rewind 10s"
-          >
-            <RiReplay10Line />
-          </IconButton>
+      if (!hasAudioSource) {
+        return
+      }
 
-          <PlayPauseButton
-            onClick={handlePlayPause}
-            aria-label={
-              !hasAudioSource
-                ? "Play unavailable"
-                : isBuffering || isPlayPending
-                  ? "Loading"
-                  : isPlaying
-                    ? "Pause"
-                    : "Play"
-            }
-            disabled={isBuffering || isPlayPending || !hasAudioSource}
-          >
-            {isBuffering || isPlayPending ? (
-              <PodcastPlayerLoader loading size={40} color="inherit" />
-            ) : isPlaying ? (
-              <RiPauseCircleLine />
-            ) : (
-              <RiPlayCircleLine />
-            )}
-          </PlayPauseButton>
+      const audio = audioRef.current
+      if (!audio) return
+      audio.load()
+      audio.playbackRate = SPEED_OPTIONS[speedIndexRef.current]
+      void startPlayback()
+    }, [track.audioUrl, hasAudioSource, startPlayback])
 
-          <IconButton
-            onClick={() => handleSkip(30)}
-            aria-label="Forward 30 seconds"
-            title="Forward 30s"
-          >
-            <RiForward30Line />
-          </IconButton>
-        </Controls>
+    useImperativeHandle(
+      ref,
+      () => ({
+        pause: () => {
+          const audio = audioRef.current
+          if (audio) {
+            audio.pause()
+            setIsPlaying(false)
+          }
+        },
+        resume: () => {
+          void startPlayback()
+        },
+      }),
+      [startPlayback],
+    )
 
-        <ProgressWrapper>
-          <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
-          <ProgressRange
-            type="range"
-            min={0}
-            max={duration || 1}
-            value={currentTime}
-            step={1}
-            percent={percent}
-            aria-label="Seek"
-            onChange={(e) => {
-              const audio = audioRef.current
-              if (!audio) return
-              audio.currentTime = Number(e.target.value)
-            }}
-            onKeyDown={handleSeekKeyDown}
-          />
-          <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
+    const handlePlayPause = async () => {
+      if (!hasAudioSource) return
 
-          <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
-            {SPEED_OPTIONS[speedIndex]}x
-          </SpeedButton>
-        </ProgressWrapper>
+      const audio = audioRef.current
+      if (!audio) return
 
-        {/* Close */}
-        <CloseButton onClick={onClose} aria-label="Close player">
-          <RiCloseLine size={24} />
-        </CloseButton>
-      </PlayerShell>
-    </>
-  )
-}
+      if (isPlaying) {
+        audio.pause()
+        setIsPlaying(false)
+      } else {
+        void startPlayback()
+      }
+    }
+
+    useEffect(() => {
+      onPlayStateChange?.(isPlaying)
+    }, [isPlaying, onPlayStateChange])
+
+    const handleSkip = (seconds: number) => {
+      const audio = audioRef.current
+      if (!audio) return
+      audio.currentTime = Math.max(
+        0,
+        Math.min(audio.currentTime + seconds, duration),
+      )
+    }
+
+    const handleSpeedCycle = () => {
+      const nextIndex = (speedIndex + 1) % SPEED_OPTIONS.length
+      speedIndexRef.current = nextIndex
+      setSpeedIndex(nextIndex)
+      if (audioRef.current) {
+        audioRef.current.playbackRate = SPEED_OPTIONS[nextIndex]
+      }
+    }
+
+    const handleSeekKeyDown = (
+      event: React.KeyboardEvent<HTMLInputElement>,
+    ) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+
+      event.preventDefault()
+      handleSkip(event.key === "ArrowRight" ? 5 : -5)
+    }
+
+    const percent = duration ? (currentTime / duration) * 100 : 0
+    return (
+      <>
+        {/* Shared audio element */}
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <audio
+          ref={audioRef}
+          src={hasAudioSource ? track.audioUrl : undefined}
+          onWaiting={() => setIsBuffering(true)}
+          onCanPlay={() => setIsBuffering(false)}
+          onError={() => {
+            setIsBuffering(false)
+            setIsPlaying(false)
+          }}
+          onTimeUpdate={() =>
+            setCurrentTime(audioRef.current?.currentTime ?? 0)
+          }
+          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+          onEnded={() => setIsPlaying(false)}
+        />
+
+        <PlayerShell>
+          <TrackInfo>
+            <PodcastName variant="body1" sx={{ color: "text.secondary" }}>
+              {track.podcastName}
+            </PodcastName>
+            <TrackTitle variant="subtitle2">{track.title}</TrackTitle>
+          </TrackInfo>
+
+          <Divider />
+
+          <Controls>
+            <IconButton
+              onClick={() => handleSkip(-10)}
+              aria-label="Rewind 10 seconds"
+              title="Rewind 10s"
+            >
+              <RiReplay10Line />
+            </IconButton>
+
+            <PlayPauseButton
+              onClick={handlePlayPause}
+              aria-label={
+                !hasAudioSource
+                  ? "Play unavailable"
+                  : isBuffering || isPlayPending
+                    ? "Loading"
+                    : isPlaying
+                      ? "Pause"
+                      : "Play"
+              }
+              disabled={isBuffering || isPlayPending || !hasAudioSource}
+            >
+              {isBuffering || isPlayPending ? (
+                <PodcastPlayerLoader loading size={40} color="inherit" />
+              ) : isPlaying ? (
+                <RiPauseCircleLine />
+              ) : (
+                <RiPlayCircleLine />
+              )}
+            </PlayPauseButton>
+
+            <IconButton
+              onClick={() => handleSkip(30)}
+              aria-label="Forward 30 seconds"
+              title="Forward 30s"
+            >
+              <RiForward30Line />
+            </IconButton>
+          </Controls>
+
+          <ProgressWrapper>
+            <TimeLabel variant="body3">{formatTime(currentTime)}</TimeLabel>
+            <ProgressRange
+              type="range"
+              min={0}
+              max={duration || 1}
+              value={currentTime}
+              step={1}
+              percent={percent}
+              aria-label="Seek"
+              onChange={(e) => {
+                const audio = audioRef.current
+                if (!audio) return
+                audio.currentTime = Number(e.target.value)
+              }}
+              onKeyDown={handleSeekKeyDown}
+            />
+            <TimeLabel variant="body3">{formatTime(duration)}</TimeLabel>
+
+            <SpeedButton onClick={handleSpeedCycle} aria-label="Playback speed">
+              {SPEED_OPTIONS[speedIndex]}x
+            </SpeedButton>
+          </ProgressWrapper>
+
+          {/* Close */}
+          <CloseButton onClick={onClose} aria-label="Close player">
+            <RiCloseLine size={24} />
+          </CloseButton>
+        </PlayerShell>
+      </>
+    )
+  },
+)
 
 export default PodcastPlayer
