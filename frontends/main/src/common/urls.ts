@@ -214,6 +214,8 @@ export const FACEBOOK_SHARE_BASE_URL =
 export const TWITTER_SHARE_BASE_URL = "https://x.com/share"
 export const LINKEDIN_SHARE_BASE_URL =
   "https://www.linkedin.com/sharing/share-offsite"
+export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
+  "https://www.linkedin.com/profile/add"
 
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
