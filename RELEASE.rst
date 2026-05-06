@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.66.6
+--------------
+
+- fix: improve the hover state of video and adjust the border of breadcrum (#3301)
+- fix: remove the top border when there is only single item and removed the current episode from the more episode list (#3299)
+- adds a "Receipt" menu item  (#3260)
+- feat: add podcast episode page and few fixes in podcast page (#3283)
+- use Intl to get native language names (#3297)
+
 Version 0.66.3 (Released May 05, 2026)
 --------------
 
