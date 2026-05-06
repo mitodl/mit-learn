@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.7
+Version 0.66.7 (Released May 06, 2026)
 --------------
 
 - fix: add video captions on the video detail page (#3284)
