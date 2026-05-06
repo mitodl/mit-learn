@@ -4,10 +4,12 @@ import { useOfferorsList } from "api/hooks/learningResources"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
-import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+
+import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
+
 import { getFacets } from "./searchRequests"
 import { keyBy } from "lodash"
 
@@ -52,6 +54,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   }, [offerorsQuery.data?.results])
 
   const [searchParams, setSearchParams] = useSearchParams()
+
   const resourceTypeGroup = searchParams.get("resource_type_group")
 
   const { facetNames, facetManifest } = useMemo(
@@ -118,7 +121,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
         />
       </SearchInputContainer>
 
-      <SearchDisplay
+      <HybridSearchDisplay
         resultsHeadingEl="h3"
         filterHeadingEl="h3"
         page={page}

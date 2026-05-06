@@ -6,6 +6,7 @@ import type { FacetManifest } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { styled, Container, theme, Typography } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
@@ -178,23 +179,44 @@ const SearchPage: React.FC = () => {
           </SearchFieldWrapper>
         </SearchFieldContainer>
       </Header>
-      <SearchDisplay
-        onFetchTimeChange={setFetchTime}
-        filterHeadingEl="h2"
-        resultsHeadingEl="h2"
-        page={page}
-        setSearchParams={setSearchParams}
-        requestParams={params}
-        setPage={setPage}
-        facetManifest={facetManifest as FacetManifest}
-        facetNames={facetNames}
-        constantSearchParams={constantSearchParams}
-        hasFacets={hasFacets}
-        setParamValue={setParamValue}
-        clearAllFacets={clearAllFacets}
-        toggleParamValue={toggleParamValue}
-        showProfessionalToggle
-      />
+      {searchParams.get("vector_search") === "true" &&
+      user?.is_learning_path_editor ? (
+        <HybridSearchDisplay
+          onFetchTimeChange={setFetchTime}
+          filterHeadingEl="h2"
+          resultsHeadingEl="h2"
+          page={page}
+          setSearchParams={setSearchParams}
+          requestParams={params}
+          setPage={setPage}
+          facetManifest={facetManifest as FacetManifest}
+          facetNames={facetNames}
+          constantSearchParams={constantSearchParams}
+          hasFacets={hasFacets}
+          setParamValue={setParamValue}
+          clearAllFacets={clearAllFacets}
+          toggleParamValue={toggleParamValue}
+          showProfessionalToggle
+        />
+      ) : (
+        <SearchDisplay
+          onFetchTimeChange={setFetchTime}
+          filterHeadingEl="h2"
+          resultsHeadingEl="h2"
+          page={page}
+          setSearchParams={setSearchParams}
+          requestParams={params}
+          setPage={setPage}
+          facetManifest={facetManifest as FacetManifest}
+          facetNames={facetNames}
+          constantSearchParams={constantSearchParams}
+          hasFacets={hasFacets}
+          setParamValue={setParamValue}
+          clearAllFacets={clearAllFacets}
+          toggleParamValue={toggleParamValue}
+          showProfessionalToggle
+        />
+      )}
     </Page>
   )
 }

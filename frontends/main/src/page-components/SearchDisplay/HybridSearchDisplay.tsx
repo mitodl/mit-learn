@@ -540,6 +540,7 @@ const mapVectorSortby = (
  */
 const toVectorSearchParams = (
   params: ReturnType<typeof getSearchParams> & { sortby?: string },
+  scoreCutoff?: number,
 ): VectorSearchRequest => ({
   aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
@@ -560,6 +561,7 @@ const toVectorSearchParams = (
   resource_type: params.resource_type as VectorSearchRequest["resource_type"],
   resource_type_group:
     params.resource_type_group as VectorSearchRequest["resource_type_group"],
+  score_cutoff: scoreCutoff,
   sortby: mapVectorSortby(params.sortby),
   topic: params.topic,
   hybrid_search: true,
@@ -582,16 +584,19 @@ type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
 
 const toUnfacetedVectorSearchParams = (
   params: ReturnType<typeof getSearchParams> & { sortby?: string },
+  scoreCutoff?: number,
+  preserveKeys?: Set<string>,
 ): VectorSearchRequest => {
   const {
     offset: _offset,
     limit: _limit,
     ...vectorParams
-  } = toVectorSearchParams(params)
+  } = toVectorSearchParams(params, scoreCutoff)
 
   return Object.fromEntries(
     Object.entries(vectorParams).filter(
       ([key]) =>
+        (preserveKeys?.has(key) ?? false) ||
         !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet),
     ),
   ) as VectorSearchRequest
@@ -645,9 +650,15 @@ const matchesVectorClientFilters = (
   resource: LearningResource,
   params: ReturnType<typeof getSearchParams>,
   excludedFacet?: string,
+  serverSideKeys?: Set<string>,
 ) =>
   VECTOR_CLIENT_FILTER_FACETS.every((facet) => {
     if (facet === excludedFacet) {
+      return true
+    }
+    // Skip facets that are already enforced server-side
+    // (e.g. constantSearchParams from a channel page)
+    if (serverSideKeys?.has(facet)) {
       return true
     }
     const selectedValues = normalizeParamValues(params[facet])
@@ -658,20 +669,26 @@ const matchesVectorClientFilters = (
     return selectedValues.some((value) => resourceValues.includes(value))
   })
 
-const hasVectorClientFilters = (params: ReturnType<typeof getSearchParams>) =>
+const hasVectorClientFilters = (
+  params: ReturnType<typeof getSearchParams>,
+  serverSideKeys?: Set<string>,
+) =>
   VECTOR_CLIENT_FILTER_FACETS.some(
-    (facet) => normalizeParamValues(params[facet]).length > 0,
+    (facet) =>
+      !(serverSideKeys?.has(facet) ?? false) &&
+      normalizeParamValues(params[facet]).length > 0,
   )
 
 const getVectorClientAggregations = (
   allResults: LearningResource[],
   params: ReturnType<typeof getSearchParams>,
   aggregationNames: string[],
+  serverSideKeys?: Set<string>,
 ) => {
   return Object.fromEntries(
     aggregationNames.map((name) => {
       const resultsForFacet = allResults.filter((resource) =>
-        matchesVectorClientFilters(resource, params, name),
+        matchesVectorClientFilters(resource, params, name, serverSideKeys),
       )
       const counts = new Map<string, number>()
       for (const resource of resultsForFacet) {
@@ -710,6 +727,11 @@ interface SearchDisplayProps {
   setSearchParams: UseResourceSearchParamsProps["setSearchParams"]
   resultsHeadingEl: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
   filterHeadingEl: React.ElementType
+  /**
+   * Optional minimum score threshold (0 < n < 1) for vector search results.
+   * Passed directly to the vector search endpoint as `score_cutoff`.
+   */
+  scoreCutoff?: number
 }
 
 const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
@@ -728,6 +750,7 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   resultsHeadingEl,
   filterHeadingEl,
   onFetchTimeChange,
+  scoreCutoff,
 }) => {
   const [searchParams] = useSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -771,13 +794,24 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   const isVectorQuerySearch =
     typeof allParams.q === "string" && allParams.q.trim() !== ""
 
-  const queryOptions = learningResourceQueries.vectorSearch(
-    isVectorQuerySearch
-      ? toUnfacetedVectorSearchParams(allParams)
-      : toVectorSearchParams(allParams),
+  // Keys from constantSearchParams (e.g. channel-level topic/department filters)
+  // must always be sent to the server and should not be handled client-side.
+  const serverSideKeys = useMemo(
+    () => new Set(Object.keys(constantSearchParams)),
+    [constantSearchParams],
   )
 
-  const { data, isLoading, isFetching } = useQuery({
+  const queryOptions = learningResourceQueries.vectorSearch(
+    isVectorQuerySearch
+      ? toUnfacetedVectorSearchParams(allParams, scoreCutoff, serverSideKeys)
+      : toVectorSearchParams(allParams, scoreCutoff),
+  )
+
+  const {
+    data,
+    isLoading: isQueryLoading,
+    isFetching,
+  } = useQuery({
     ...queryOptions,
     enabled: !isUserLoading,
     placeholderData: keepPreviousData,
@@ -819,6 +853,12 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
     },
   })
 
+  // Treat the query as loading while the user query is still resolving,
+  // because the search query is disabled (enabled: !isUserLoading) during
+  // that time. A disabled query reports isLoading=false with data=undefined,
+  // which would briefly flash "No results found".
+  const isLoading = isQueryLoading || isUserLoading
+
   const displayData = useMemo(() => {
     if (!isVectorQuerySearch || !data) {
       return data
@@ -826,9 +866,14 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
 
     const allResults = data.results ?? []
     const results = allResults.filter((resource) =>
-      matchesVectorClientFilters(resource, allParams),
+      matchesVectorClientFilters(
+        resource,
+        allParams,
+        undefined,
+        serverSideKeys,
+      ),
     )
-    const hasClientFilters = hasVectorClientFilters(allParams)
+    const hasClientFilters = hasVectorClientFilters(allParams, serverSideKeys)
 
     return {
       ...data,
@@ -843,11 +888,12 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
               allResults,
               allParams,
               allParams.aggregations,
+              serverSideKeys,
             )
           : data.metadata.aggregations,
       },
     }
-  }, [allParams, data, isVectorQuerySearch])
+  }, [allParams, data, isVectorQuerySearch, serverSideKeys])
 
   useEffect(() => {
     if (onFetchTimeChange) {
