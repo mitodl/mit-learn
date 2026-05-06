@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.6
+Version 0.66.6 (Released May 06, 2026)
 --------------
 
 - fix: improve the hover state of video and adjust the border of breadcrum (#3301)
