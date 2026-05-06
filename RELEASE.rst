@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.66.4
+--------------
+
+- feat: add podcast episode page and few fixes in podcast page (#3283)
+- use Intl to get native language names (#3297)
+
 Version 0.66.3 (Released May 05, 2026)
 --------------
 
