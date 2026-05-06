@@ -112,7 +112,11 @@ const VideoPlaylistCollectionPage: React.FC<
 
   return (
     <Page>
-      <VideoPageHeader playlist={playlist} isSeries={playlistType} />
+      <VideoPageHeader
+        playlist={playlist}
+        isSeries={playlistType}
+        totalVideos={videos.length}
+      />
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />

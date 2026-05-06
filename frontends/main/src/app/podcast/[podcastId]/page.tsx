@@ -7,13 +7,15 @@ import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound } from "next/navigation"
 
-export const generateMetadata = async (props: PageProps<"/podcast/[id]">) => {
-  const { id } = await props.params
+export const generateMetadata = async (
+  props: PageProps<"/podcast/[podcastId]">,
+) => {
+  const { podcastId } = await props.params
   const queryClient = getQueryClient()
 
   return safeGenerateMetadata(async () => {
     const resource = await queryClient.fetchQuery(
-      learningResourceQueries.detail(Number(id)),
+      learningResourceQueries.detail(Number(podcastId)),
     )
     return standardizeMetadata({
       title: resource.title,
@@ -24,16 +26,16 @@ export const generateMetadata = async (props: PageProps<"/podcast/[id]">) => {
   })
 }
 
-const Page: React.FC<PageProps<"/podcast/[id]">> = async (props) => {
-  const { id } = await props.params
+const Page: React.FC<PageProps<"/podcast/[podcastId]">> = async (props) => {
+  const { podcastId } = await props.params
   const queryClient = getQueryClient()
 
-  const podcastId = Number(id)
-  if (Number.isNaN(podcastId)) {
+  const podcastIdNumber = Number(podcastId)
+  if (Number.isNaN(podcastIdNumber)) {
     notFound()
   }
   const resource = await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(podcastId),
+    learningResourceQueries.detail(podcastIdNumber),
   )
   if (resource.resource_type !== ResourceTypeEnum.Podcast) {
     notFound()
@@ -41,7 +43,7 @@ const Page: React.FC<PageProps<"/podcast/[id]">> = async (props) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <PodcastDetailPage podcastId={id} />
+      <PodcastDetailPage podcastId={podcastId} />
     </HydrationBoundary>
   )
 }
