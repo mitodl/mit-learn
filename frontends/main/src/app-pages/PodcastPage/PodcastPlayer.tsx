@@ -259,11 +259,11 @@ const CloseButton = styled.button(({ theme }) => ({
   alignItems: "center",
   color: theme.custom.colors.darkGray2,
   flexShrink: 0,
+  width: "32px",
+  height: "32px",
   "&:hover": {
     backgroundColor: theme.custom.colors.red,
     color: theme.custom.colors.white,
-    width: "32px",
-    height: "32px",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: "4px",

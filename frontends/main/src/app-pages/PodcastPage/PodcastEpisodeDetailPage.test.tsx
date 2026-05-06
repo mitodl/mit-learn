@@ -119,7 +119,8 @@ describe("PodcastEpisodeDetailPage", () => {
   })
 
   test("renders 'More from <podcast>' section header", async () => {
-    const { episode, podcast } = setupApis()
+    const moreEpisodes = [makePodcastEpisode(), makePodcastEpisode()]
+    const { episode, podcast } = setupApis({ moreEpisodes })
 
     renderWithProviders(
       <PodcastEpisodeDetailPage

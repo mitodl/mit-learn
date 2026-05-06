@@ -10,7 +10,7 @@ import {
 } from "ol-components"
 import type { Theme } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import { RiPlayFill } from "@remixicon/react"
+import { RiPlayFill, RiPauseFill } from "@remixicon/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -220,7 +220,11 @@ export const PodcastEpisodeDetailPage: React.FC<
     episodesData?.pages.flatMap((page) =>
       page.results
         .map((rel) => rel.resource)
-        .filter((r) => r.resource_type === ResourceTypeEnum.PodcastEpisode),
+        .filter(
+          (r) =>
+            r.resource_type === ResourceTypeEnum.PodcastEpisode &&
+            r.id !== Number(episodeId),
+        ),
     ) ?? []
   const duration = podcastEpisode?.duration
     ? Math.round(moment.duration(podcastEpisode.duration).asMinutes())
@@ -241,8 +245,18 @@ export const PodcastEpisodeDetailPage: React.FC<
     return candidate?.trim() ? candidate : null
   }
 
+  const isCurrentEpisodePlaying =
+    !!episode && playingEpisode?.id === episode.id && isAudioPlaying
+
   const handlePlay = () => {
-    if (episode && getAudioUrl(episode)) {
+    if (!episode) return
+    if (playingEpisode?.id === episode.id) {
+      if (isAudioPlaying) {
+        playerRef.current?.pause()
+      } else {
+        playerRef.current?.resume()
+      }
+    } else if (getAudioUrl(episode)) {
       setPlayingEpisode(episode)
     }
   }
@@ -311,10 +325,12 @@ export const PodcastEpisodeDetailPage: React.FC<
               <StyledButton
                 onClick={handlePlay}
                 variant="primary"
-                startIcon={<RiPlayFill />}
+                startIcon={
+                  isCurrentEpisodePlaying ? <RiPauseFill /> : <RiPlayFill />
+                }
                 disabled={!episode || !getAudioUrl(episode)}
               >
-                Play Episode
+                {isCurrentEpisodePlaying ? "Pause Episode" : "Play Episode"}
               </StyledButton>
             )}
 
@@ -328,11 +344,12 @@ export const PodcastEpisodeDetailPage: React.FC<
             )}
           </EpisodeContainer>
         </HeaderSection>
-        <EpisodeContainer>
-          <MoreItemDescription>
-            More from {podcast?.title ?? "Podcast"}
-          </MoreItemDescription>
-          {episodes && episodes.length > 0 && (
+        {episodes && episodes.length > 0 && (
+          <EpisodeContainer>
+            <MoreItemDescription>
+              More from {podcast?.title ?? "Podcast"}
+            </MoreItemDescription>
+
             <EpisodeList>
               {episodes.map((episode) => (
                 <EpisodeItem
@@ -355,11 +372,11 @@ export const PodcastEpisodeDetailPage: React.FC<
                 />
               ))}
             </EpisodeList>
-          )}
-          {podcastId && (
-            <ViewAllLink href={podcastHref}>View all episodes →</ViewAllLink>
-          )}
-        </EpisodeContainer>
+            {podcastId && (
+              <ViewAllLink href={podcastHref}>View all episodes →</ViewAllLink>
+            )}
+          </EpisodeContainer>
+        )}
       </PageSection>
 
       {currentTrack && (
