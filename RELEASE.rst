@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.8
+Version 0.66.8 (Released May 06, 2026)
 --------------
 
 - fix the breadcrum on video collection page (#3304)
