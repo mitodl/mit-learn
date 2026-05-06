@@ -18,6 +18,7 @@ import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
+import { buildVideoStructuredData } from "./videoStructuredData"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -96,35 +97,8 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   // VideoObject JSON-LD for Google search indexing.
   // Rendered as a plain <script> tag so Googlebot can read it without executing
   // any additional JS. The replace guard prevents </script> injection.
-  //
-  // Schema.org requires duration in ISO-8601 format (e.g. "PT2M0S").
-  // The backend ETL already stores it that way, but we validate defensively
-  // — ISO-8601 durations always start with "P" followed by at least one
-  // designator — to avoid emitting invalid structured data if the format ever
-  // changes.
-  const iso8601DurationRe =
-    /^P(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?$/
-  const durationIso =
-    video?.video?.duration && iso8601DurationRe.test(video.video.duration)
-      ? video.video.duration
-      : undefined
-
-  const structuredData =
-    !isLoading && video
-      ? {
-          "@context": "https://schema.org",
-          "@type": "VideoObject",
-          name: video.title,
-          ...(video.description ? { description: video.description } : {}),
-          thumbnailUrl:
-            video.video?.cover_image_url || video.image?.url || undefined,
-          contentUrl: video.url ?? undefined,
-          ...(durationIso ? { duration: durationIso } : {}),
-          ...(captionUrls.length > 0
-            ? { accessibilityFeature: ["captions"] }
-            : {}),
-        }
-      : null
+  // See: https://developers.google.com/search/docs/appearance/structured-data/video
+  const structuredData = !isLoading ? buildVideoStructuredData(video) : null
 
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
@@ -286,24 +260,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           {!isLoading && !video?.description && (
             <Styled.ScreenReaderOnly id="video-description">
               {videoTitleLabel}. Duration: {durationLabel}.
-            </Styled.ScreenReaderOnly>
-          )}
-
-          {/* Caption track links – visually hidden but present in the DOM so
-              Googlebot can follow each VTT URL and index the caption text,
-              associating the transcript content with this video page. */}
-          {!isLoading && captionUrls.length > 0 && (
-            <Styled.ScreenReaderOnly as="div">
-              <p>Captions available for this video:</p>
-              <ul>
-                {captionUrls.map((track) => (
-                  <li key={track.url}>
-                    <a href={track.url}>
-                      {track.language_name || track.language} captions (VTT)
-                    </a>
-                  </li>
-                ))}
-              </ul>
             </Styled.ScreenReaderOnly>
           )}
         </VideoContainer>
