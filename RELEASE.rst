@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.66.10
+Version 0.66.10 (Released May 07, 2026)
 ---------------
 
 - fix: add fallback image for API-provided URLs that return 404 (#3277)
