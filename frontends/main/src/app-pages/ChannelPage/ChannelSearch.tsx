@@ -4,7 +4,7 @@ import { useOfferorsList } from "api/hooks/learningResources"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import { useSearchParams } from "@mitodl/course-search-utils/next"
-
+import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
@@ -102,7 +102,25 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   useEffect(() => {
     setCurrentText(params.q ?? "")
   }, [params, setCurrentText])
-
+  const searchProps = {
+    resultsHeadingEl: "h3",
+    filterHeadingEl: "h3",
+    page: page,
+    setSearchParams: setSearchParams,
+    requestParams: params,
+    setPage: setPage,
+    facetManifest: facetManifest,
+    facetNames: facetNames,
+    constantSearchParams: constantSearchParams,
+    hasFacets: hasFacets,
+    setParamValue: setParamValue,
+    clearAllFacets: clearAllFacets,
+    toggleParamValue: toggleParamValue,
+    showProfessionalToggle:
+      SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType],
+  }
+  const ChannelSearchDisplay =
+    channelType === ChannelTypeEnum.Topic ? HybridSearchDisplay : SearchDisplay
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>
@@ -121,24 +139,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
         />
       </SearchInputContainer>
 
-      <HybridSearchDisplay
-        resultsHeadingEl="h3"
-        filterHeadingEl="h3"
-        page={page}
-        setSearchParams={setSearchParams}
-        requestParams={params}
-        setPage={setPage}
-        facetManifest={facetManifest}
-        facetNames={facetNames}
-        constantSearchParams={constantSearchParams}
-        hasFacets={hasFacets}
-        setParamValue={setParamValue}
-        clearAllFacets={clearAllFacets}
-        toggleParamValue={toggleParamValue}
-        showProfessionalToggle={
-          SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType]
-        }
-      />
+      <ChannelSearchDisplay {...searchProps} />
     </section>
   )
 }
