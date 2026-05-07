@@ -50,11 +50,12 @@ const HeaderRoot = styled.div({
 })
 
 const ImageContainer = styled.div(({ theme }) => ({
-  width: "120px",
-  height: "118px",
-  padding: "0 24px",
   display: "flex",
+  width: "80px",
+  height: "80px",
+  padding: "16px",
   alignItems: "center",
+  justifyContent: "center",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
@@ -62,6 +63,10 @@ const ImageContainer = styled.div(({ theme }) => ({
     width: "100%",
     height: "auto",
   },
+}))
+
+const SubHeaderText = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.silverGrayDark,
 }))
 
 const ContractHeader: React.FC<{
@@ -87,7 +92,7 @@ const ContractHeader: React.FC<{
         <Typography variant="h3" component="h1">
           {org?.name}
         </Typography>
-        <Typography variant="body1">{contract?.name}</Typography>
+        <SubHeaderText variant="subtitle1">{contract?.name}</SubHeaderText>
       </Stack>
     </HeaderRoot>
   )
@@ -218,12 +223,10 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
     marginBottom: "0",
   },
   "> label": {
+    ...theme.typography.body3,
+    color: theme.custom.colors.silverGrayDark,
     marginBottom: "0",
     whiteSpace: "nowrap",
-  },
-  "> .MuiInputBase-root": {
-    width: "fit-content",
-    maxWidth: "100%",
   },
   [theme.breakpoints.down("sm")]: {
     "> .MuiInputBase-root": {
@@ -550,9 +553,13 @@ const ContractRoot = styled.div({
 
 const ContractHeaderSection = styled.div(({ theme }) => ({
   display: "flex",
+  padding: "24px",
+  alignItems: "center",
   justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: "16px",
+  gap: "24px",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
   },
@@ -669,21 +676,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <Stack>
           <ContractHeaderSection>
             <ContractHeader org={org} contract={contract} />
-            {languageOptions.length > 1 && (
-              <ProgramLanguageSelect
-                size="small"
-                label="Learning Language:"
-                value={selectedLanguageKey}
-                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-                options={languageOptions}
-                renderValue={(value) => {
-                  const selected = languageOptions.find(
-                    (opt) => opt.value === value,
-                  )
-                  return String(selected?.label ?? "")
-                }}
-              />
-            )}
           </ContractHeaderSection>
           <WelcomeMessage contract={contract} />
         </Stack>
@@ -708,7 +700,11 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                 const selected = languageOptions.find(
                   (opt) => opt.value === value,
                 )
-                return String(selected?.label ?? "")
+                return (
+                  <Typography variant="subtitle3" marginRight="16px">
+                    {selected?.label ?? ""}
+                  </Typography>
+                )
               }}
             />
           )}
