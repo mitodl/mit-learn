@@ -128,8 +128,9 @@ class QdrantView(APIView):
                 exact=False,
             ),
             "limit": limit,
-            "score_threshold": score_cutoff,
         }
+        if score_cutoff > 0:
+            search_params["score_threshold"] = score_cutoff
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
