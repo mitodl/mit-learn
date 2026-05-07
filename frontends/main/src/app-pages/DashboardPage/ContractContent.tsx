@@ -258,6 +258,7 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
     width: "100%",
     padding: "12px 16px",
+    borderRadius: "0 0 8px 8px",
     justifyContent: "space-between",
     ".MuiInputBase-root": {
       width: "100%",
