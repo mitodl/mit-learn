@@ -217,6 +217,7 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   display: "inline-flex",
   flexDirection: "row",
   alignItems: "center",
+  margin: "10px",
   gap: "8px",
   width: "auto",
   "> *:not(:last-child)": {
