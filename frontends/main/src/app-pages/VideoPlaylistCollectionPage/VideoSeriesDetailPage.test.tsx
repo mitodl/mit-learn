@@ -371,12 +371,12 @@ describe("VideoSeriesDetailPage", () => {
   })
 
   describe("video player", () => {
-    test("renders the video player when a streaming URL is present", async () => {
+    test("renders VideoJsPlayer when a non-YouTube streaming URL is present", async () => {
       const video = makeVideo({
         video: {
           id: 1,
           caption_urls: [],
-          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          streaming_url: "https://cdn.example.com/video/index.m3u8",
           duration: "120",
           cover_image_url: null,
         },
@@ -384,6 +384,64 @@ describe("VideoSeriesDetailPage", () => {
       renderPage({ video })
 
       await screen.findByTestId("video-js-player")
+      expect(
+        screen.queryByTitle(/YouTube video player/i),
+      ).not.toBeInTheDocument()
+    })
+
+    test("renders a YouTube iframe (not VideoJsPlayer) for a YouTube video", async () => {
+      const video = makeVideo({
+        title: "My YouTube Video",
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: null,
+          duration: "120",
+          cover_image_url: null,
+        },
+        url: null,
+        content_files: [
+          factories.learningResources.contentFile({
+            youtube_id: "dQw4w9WgXcQ",
+          }),
+        ],
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      const iframe = screen.getByTitle("Video: My YouTube Video")
+      expect(iframe.tagName).toBe("IFRAME")
+      expect(iframe).toHaveAttribute(
+        "src",
+        expect.stringContaining("youtube.com/embed/dQw4w9WgXcQ"),
+      )
+      expect(iframe).toHaveAttribute("aria-describedby", "video-description")
+      expect(screen.queryByTestId("video-js-player")).not.toBeInTheDocument()
+    })
+
+    test("falls back to VideoJsPlayer when youtube_id is present but not extractable", async () => {
+      // If somehow sources produce video/youtube type but extractYouTubeId fails,
+      // the VideoJsPlayer branch should be used instead of a broken iframe.
+      // We simulate this by providing a pageUrl YouTube link (resolveVideoSources
+      // produces video/youtube type) with a malformed video ID that can't be extracted.
+      const video = makeVideo({
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: null,
+          duration: "",
+          cover_image_url: null,
+        },
+        url: "https://www.youtube.com/watch?v=SHORT", // < 11 chars — won't parse
+        content_files: [],
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+      await screen.findByTestId("video-js-player")
+      expect(
+        screen.queryByTitle(/YouTube video player/i),
+      ).not.toBeInTheDocument()
     })
 
     test("renders a fallback image when there is no video source but an image exists", async () => {

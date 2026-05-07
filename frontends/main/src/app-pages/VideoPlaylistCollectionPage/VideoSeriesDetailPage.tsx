@@ -100,6 +100,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   // any additional JS. The replace guard prevents </script> injection.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+  const youTubeId =
+    sources[0]?.type === "video/youtube"
+      ? extractYouTubeId(sources[0].src)
+      : null
 
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
@@ -205,10 +209,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               >
                 <Skeleton variant="rectangular" width="100%" height="100%" />
               </div>
-            ) : sources[0]?.type === "video/youtube" ? (
+            ) : youTubeId ? (
               <YouTubeIframePlayer
                 key={videoId}
-                videoId={extractYouTubeId(sources[0].src) ?? ""}
+                videoId={youTubeId}
                 ariaLabel={`Video: ${videoTitleLabel}`}
                 ariaDescribedBy="video-description"
               />

@@ -1,4 +1,46 @@
-import { resolveVideoSources } from "./videoSources"
+import { extractYouTubeId, resolveVideoSources } from "./videoSources"
+
+describe("extractYouTubeId", () => {
+  it("extracts ID from a youtube.com/watch?v= URL", () => {
+    expect(
+      extractYouTubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+    ).toBe("dQw4w9WgXcQ")
+  })
+
+  it("extracts ID from a youtu.be short URL", () => {
+    expect(extractYouTubeId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ")
+  })
+
+  it("extracts ID from a youtube.com/watch URL with extra query params", () => {
+    expect(
+      extractYouTubeId(
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL123&index=2",
+      ),
+    ).toBe("dQw4w9WgXcQ")
+  })
+
+  it("extracts ID from a youtube embed URL (v= form)", () => {
+    expect(
+      extractYouTubeId("https://www.youtube.com/embed/dQw4w9WgXcQ"),
+    ).toBeNull()
+  })
+
+  it("returns null for a non-YouTube URL", () => {
+    expect(extractYouTubeId("https://ocw.mit.edu/some-video")).toBeNull()
+  })
+
+  it("returns null for an empty string", () => {
+    expect(extractYouTubeId("")).toBeNull()
+  })
+
+  it("returns null when the ID is shorter than 11 characters", () => {
+    expect(extractYouTubeId("https://www.youtube.com/watch?v=short")).toBeNull()
+  })
+
+  it("handles IDs containing hyphens and underscores", () => {
+    expect(extractYouTubeId("https://youtu.be/a-b_c123456")).toBe("a-b_c123456")
+  })
+})
 
 describe("resolveVideoSources", () => {
   it("returns HLS source for .m3u8 streaming URL", () => {

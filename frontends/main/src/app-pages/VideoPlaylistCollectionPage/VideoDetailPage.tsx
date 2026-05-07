@@ -468,6 +468,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
   // VideoObject JSON-LD for Google search indexing.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+  const youTubeId =
+    sources[0]?.type === "video/youtube"
+      ? extractYouTubeId(sources[0].src)
+      : null
 
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
@@ -563,10 +567,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               >
                 <Skeleton variant="rectangular" width="100%" height="100%" />
               </div>
-            ) : sources[0]?.type === "video/youtube" ? (
+            ) : youTubeId ? (
               <YouTubeIframePlayer
                 key={videoId}
-                videoId={extractYouTubeId(sources[0].src) ?? ""}
+                videoId={youTubeId}
                 ariaLabel={`Video: ${videoTitleLabel}`}
                 ariaDescribedBy="video-description"
               />

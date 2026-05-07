@@ -2,8 +2,6 @@
 
 import React from "react"
 
-const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN ?? ""
-
 export type YouTubeIframePlayerProps = {
   videoId: string
   title?: string
@@ -24,7 +22,17 @@ const YouTubeIframePlayer: React.FC<YouTubeIframePlayerProps> = ({
   ariaLabel,
   ariaDescribedBy,
 }) => {
-  const src = `https://www.youtube.com/embed/${videoId}?rel=0&origin=${encodeURIComponent(ORIGIN)}`
+  // Prefer the build-time env var; fall back to the browser's own origin at
+  // runtime (always available in a "use client" component). Omit the param
+  // entirely when neither is available (e.g. during SSR without the env var).
+  const origin =
+    process.env.NEXT_PUBLIC_ORIGIN ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+
+  const params = new URLSearchParams({ rel: "0" })
+  if (origin) params.set("origin", origin)
+
+  const src = `https://www.youtube.com/embed/${videoId}?${params}`
 
   return (
     <iframe
@@ -32,6 +40,7 @@ const YouTubeIframePlayer: React.FC<YouTubeIframePlayerProps> = ({
       title={title ?? ariaLabel ?? "YouTube video player"}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
+      loading="lazy"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowFullScreen
       style={{
