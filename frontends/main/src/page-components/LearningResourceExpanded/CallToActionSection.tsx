@@ -329,7 +329,7 @@ const getResourceUrl = (
     resource.url
   ) {
     const url = new URL(resource.url)
-    return url.pathname.replace(/^\/courses/, "/courses/o");
+    return url.pathname.replace(/^\/courses/, "/courses/o")
   }
   if (
     mitxonlineProductPages &&
