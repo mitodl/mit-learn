@@ -9,8 +9,9 @@ import VideoContainer from "./VideoContainer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { resolveVideoSources } from "./videoSources"
+import { resolveVideoSources, extractYouTubeId } from "./videoSources"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
+import YouTubeIframePlayer from "./YouTubeIframePlayer"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { notFound } from "next/navigation"
@@ -204,17 +205,22 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               >
                 <Skeleton variant="rectangular" width="100%" height="100%" />
               </div>
+            ) : sources[0]?.type === "video/youtube" ? (
+              <YouTubeIframePlayer
+                key={videoId}
+                videoId={extractYouTubeId(sources[0].src) ?? ""}
+                ariaLabel={`Video: ${videoTitleLabel}`}
+                ariaDescribedBy="video-description"
+              />
             ) : sources.length > 0 ? (
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
                 tracks={captionUrls}
                 poster={
-                  sources[0]?.type === "video/youtube"
-                    ? undefined
-                    : (video?.video?.cover_image_url ??
-                      video?.image?.url ??
-                      undefined)
+                  video?.video?.cover_image_url ??
+                  video?.image?.url ??
+                  undefined
                 }
                 autoplay={false}
                 controls

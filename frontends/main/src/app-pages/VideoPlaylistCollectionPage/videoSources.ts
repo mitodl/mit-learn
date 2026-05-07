@@ -1,6 +1,15 @@
 import type { VideoJsSource } from "./VideoJsPlayer"
 
 /**
+ * Extract the YouTube video ID from a youtube.com/watch or youtu.be URL.
+ * Returns null if the URL is not a recognised YouTube URL.
+ */
+export function extractYouTubeId(url: string): string | null {
+  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  return match ? match[1] : null
+}
+
+/**
  * Derive the correct video.js source object from a VideoResource.
  * Prefers direct streaming_url; falls back to the YouTube page URL.
  *
