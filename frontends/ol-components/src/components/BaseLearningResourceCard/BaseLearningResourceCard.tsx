@@ -91,6 +91,7 @@ interface BaseLearningResourceCardProps {
   // Display data
   imageSrc?: string
   imageAlt?: string
+  onImageError?: React.ReactEventHandler<HTMLImageElement>
   title?: string
   resourceType?: string
   /**
@@ -292,6 +293,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   headingLevel = 6,
   imageSrc,
   imageAlt = "",
+  onImageError,
   title,
   resourceType,
   resourcePrice,
@@ -500,6 +502,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           <ListCard.Image
             src={imageSrc}
             alt={imageAlt}
+            onError={onImageError}
             {...IMAGE_SIZES["desktop"]}
           />
         )}
@@ -588,6 +591,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         <Card.Image
           src={imageSrc}
           alt={imageAlt}
+          onError={onImageError}
           {...getImageDimensions(size, isMedia)}
         />
       )}
