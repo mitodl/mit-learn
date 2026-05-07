@@ -4,50 +4,53 @@
 <tr>
   <td
     style="
-      padding: 5px 20px 0;
-      font-family: sans-serif;
-      font-size: 15px;
-      line-height: 20px;
-      color: #000;
+      padding: 32px 32px 0;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-size: 14px;
+      line-height: 22px;
+      color: #212326;
     "
   >
-    <p style="margin: 0 0 12px">
+    <p style="margin: 0 0 16px">
       Hi
-      {{ display_name }}
+      {{ display_name }},
     </p>
-    <p style="margin: 0 0 12px">
-      Welcome to MIT Learn. We're glad you're here!
+    <span style="margin: 0 0 16px">
+      <strong>Welcome to MIT Learn. Your account is ready.</strong>
+    </span>
+    <p style="margin: 0 0 16px">
+      The MIT Learn platform brings together courses, programs and learning
+      materials from across MIT. With advanced search and AskTIM's AI-powered
+      guidance, quickly discover the most relevant content for your learning
+      goals.
     </p>
-    <p style="margin: 0 0 12px">
-      You now have access to MIT's growing collection of 12,700+ online learning
-      experiences, designed to help you build new skills, explore emerging
-      technologies, and even advance your career.
+    <p style="margin: 0 0 16px">
+      With your account, you can make MIT Learn your own:
     </p>
-    <p style="margin: 0 0 12px">
-      Here's what you can do with your new account:
-    </p>
-    <ul style="margin: 0 0 12px 20px; padding: 0">
-      <li style="margin: 0 0 12px">
-        <strong>Explore thousands of resources</strong><br />
-        Browse MIT-designed courses, videos, podcasts, and learning materials
-        across almost every field. You'll find free content, professional
-        certificates, and advanced programs as you're ready for them.
+    <ul
+      style="
+        margin: 0 0 16px 18px;
+        padding: 0;
+        font-size: 12px;
+        line-height: 18px;
+        color: #212326;
+      "
+    >
+      <li style="margin: 0 0 4px">
+        Follow topics and departments to get updates when
+        <span style="white-space: nowrap">new MIT</span><br />
+        learning resources are published
       </li>
-      <li style="margin: 0 0 12px">
-        <strong>Use AskTIM to guide you</strong><br />
-        AskTIM - your AI assistant - helps you find resources aligned with your
-        interests. In select offerings, it can summarize lessons, reinforce key
-        concepts, and support you as you work through material.
+      <li style="margin: 0 0 4px">
+        Bookmark resources and create lists so you can return to them later
       </li>
-      <li style="margin: 0 0 12px">
-        <strong>Stay organized and up to date</strong><br />
-        Follow topics that interest you, save resources for later, and receive
-        updates when new opportunities launch.
+      <li style="margin: 0">
+        Use your dashboard to find recommendations based on your interests
       </li>
     </ul>
-    <p style="margin: 0 0 12px">
-      MIT has a long tradition of opening doors to learners everywhere. With MIT
-      Learn, it's all in one place, and you can learn on your own terms.
+    <p style="margin: 0 0 24px">
+      Use your account to save what matters, follow your interests, and pick up
+      your learning where you left off.
     </p>
     <table
       align="left"
@@ -60,37 +63,66 @@
       <tr>
         <td
           align="left"
-          style="border-radius: 4px; background: #a31f34; text-align: left"
+          style="
+            border-radius: 4px;
+            background: #a31f34;
+            text-align: left;
+            box-shadow:
+              0 2px 4px rgba(37, 38, 43, 0.1),
+              0 3px 8px rgba(37, 38, 43, 0.12);
+          "
         >
           <a
             class="button-a button-a-primary"
-            href="{{ APP_BASE_URL }}/search"
+            href="{{ APP_BASE_URL }}/dashboard"
             align="left"
             style="
               background: #a31f34;
               border: 1px solid #a31f34;
-              font-family: sans-serif;
-              font-size: 15px;
-              line-height: 15px;
+              font-family: 'Source Sans Pro', sans-serif;
+              font-weight: 500;
+              font-size: 14px;
+              line-height: 14px;
               text-decoration: none;
               text-align: center;
-              padding: 13px 17px;
+              padding: 16px;
               color: #fff;
               display: block;
               border-radius: 4px;
             "
-            >Find your first course today &rarr;</a
+            >Go To Your Dashboard</a
           >
         </td>
       </tr>
     </table>
-    <div style="clear: both; height: 16px"></div>
-    <p style="margin: 0">
-      The MIT Learn Team<br />
-      <em>Massachusetts Institute of Technology</em>
+    <div style="clear: both; height: 24px"></div>
+    <p
+      style="
+        margin: 0 0 24px;
+        font-size: 14px;
+        line-height: 18px;
+        color: #212326;
+      "
+    >
+      <strong>The MIT Learn Team</strong>
+    </p>
+    <p style="margin: 0; border-top: 1px solid #d9dde3"></p>
+    <p
+      style="
+        margin: 24px 0 0;
+        font-family: 'Source Sans Pro', sans-serif;
+        font-size: 12px;
+        line-height: 17px;
+        color: #212326;
+        text-align: center;
+      "
+    >
+      <strong>MIT Learn</strong> &bull; 77 Massachusetts Avenue &bull;
+      Cambridge, MA 02139 &bull; USA
     </p>
   </td>
 </tr>
 {% endblock %}
 
 {% block footer %}{% endblock %}
+{% block footer-address %}{% endblock %}

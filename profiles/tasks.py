@@ -33,7 +33,7 @@ def send_welcome_email(user_id):
     display_name = profile_name or full_name or user.username or "there"
     send_template_email(
         [user.email],
-        "Welcome to MIT Learn",
+        "MIT Learn - Welcome to MIT Learn",
         "email/welcome_email.html",
         context={"display_name": display_name},
     )
