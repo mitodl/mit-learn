@@ -37,6 +37,7 @@ def test_create_user(profile_data):
         assert user.profile.name is None
 
 
+@pytest.mark.django_db(transaction=True)
 def test_create_user_triggers_plugins_for_new_users(mocker):
     """create_user should trigger user_created plugins for brand new users."""
     mock_pm = mocker.Mock()
@@ -50,6 +51,7 @@ def test_create_user_triggers_plugins_for_new_users(mocker):
     )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_create_user_does_not_retrigger_plugins_for_existing_users(mocker):
     """create_user should not trigger user_created plugins for existing users."""
     user = UserFactory.create(email="existing@localhost")

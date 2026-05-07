@@ -37,7 +37,13 @@ def create_user(username, email, profile_data=None, user_extra=None):
 
         profile_api.ensure_profile(user, profile_data=profile_data)
         if created:
-            user_created_actions(user=user, is_new=True, details=profile_data or {})
+            transaction.on_commit(
+                lambda: user_created_actions(
+                    user=user,
+                    is_new=True,
+                    details=profile_data or {},
+                )
+            )
 
     return user
 

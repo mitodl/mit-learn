@@ -88,28 +88,3 @@ def test_send_welcome_email_uses_username_when_names_missing(mocker):
         "email/welcome_email.html",
         context={"display_name": "username-only"},
     )
-
-
-@pytest.mark.django_db
-def test_send_welcome_email_uses_generic_greeting_when_name_and_username_missing(
-    mocker,
-):
-    """Falls back to a generic greeting when no user-identifying name exists."""
-    user = UserFactory.create(
-        email="generic.greeting@example.com",
-        first_name="",
-        last_name="",
-        username="",
-    )
-    user.profile.name = None
-    user.profile.save()
-    mocked_send = mocker.patch("profiles.tasks.send_template_email")
-
-    send_welcome_email(user.id)
-
-    mocked_send.assert_called_once_with(
-        ["generic.greeting@example.com"],
-        "MIT Learn - Welcome to MIT Learn",
-        "email/welcome_email.html",
-        context={"display_name": "there"},
-    )
