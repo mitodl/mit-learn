@@ -458,7 +458,6 @@ def test_vector_search_sortby_pagination(mocker, client):
         "sortby": "-created_on",
         "limit": 20,
         "offset": 60,
-        "score_cutoff": 0,
     }
 
     client.get(
@@ -615,3 +614,77 @@ def test_async_vector_resource_counts_aggregation_buckets():
 
     # free: True (→ "true") in 2 hits, False (→ "false") in 1
     assert free_buckets == {"true": 2, "false": 1}
+
+
+def test_vector_search_no_score_cutoff_omits_score_threshold(mocker, client):
+    """Test that if score_cutoff is not explicitly passed, score_threshold is omitted from qdrant query"""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=42))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    params = {
+        "q": "test",
+        "limit": 10,
+        "offset": 20,
+    }
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert "score_threshold" not in call_kwargs
+
+
+def test_async_vector_resource_counts_usage(mocker, client):
+    """Test that _async_vector_resource_counts is only called when q and explicit score_cutoff are present."""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=42))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    spy_resource_counts = mocker.spy(QdrantView, "_async_vector_resource_counts")
+    spy_vector_counts = mocker.spy(QdrantView, "_async_vector_counts")
+
+    url = reverse("vector_search:v0:vector_learning_resources_search")
+
+    # 1. q present, no score_cutoff
+    client.get(url, data={"q": "test"})
+    assert spy_resource_counts.call_count == 0
+    assert spy_vector_counts.call_count == 1
+
+    # 2. no q, score_cutoff present
+    spy_vector_counts.reset_mock()
+    client.get(url, data={"score_cutoff": 0.5})
+    assert spy_resource_counts.call_count == 0
+    assert spy_vector_counts.call_count == 1
+
+    # 3. no q, no score_cutoff
+    spy_vector_counts.reset_mock()
+    client.get(url, data={})
+    assert spy_resource_counts.call_count == 0
+    assert spy_vector_counts.call_count == 1
+
+    # 4. q present, score_cutoff present
+    spy_vector_counts.reset_mock()
+    client.get(url, data={"q": "test", "score_cutoff": 0.5})
+    assert spy_resource_counts.call_count == 1

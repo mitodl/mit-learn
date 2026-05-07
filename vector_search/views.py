@@ -108,7 +108,7 @@ class QdrantView(APIView):
         encoder_dense,
         encoder_sparse,
         hybrid_search,
-        score_cutoff: float = 0.0,
+        score_cutoff: float | None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -129,7 +129,11 @@ class QdrantView(APIView):
             ),
             "limit": limit,
         }
-        if score_cutoff > 0:
+
+        if (
+            type(score_cutoff) is float
+            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
+        ):
             search_params["score_threshold"] = score_cutoff
 
         if hybrid_search:
@@ -277,7 +281,7 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
-        score_cutoff: float = 0,
+        score_cutoff: float | None = None,
         *,
         hybrid_search: bool = False,
     ):
@@ -467,11 +471,15 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
-        score_cutoff: float = 0,
+        score_cutoff: float | None = None,
         *,
         hybrid_search: bool = False,
     ):
-        if query_string and score_cutoff > 0:
+        if (
+            query_string
+            and type(score_cutoff) is float
+            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
+        ):
             count_params = params.copy()
             count_params.pop("aggregations", None)
             # just get the total count and avoid a call to aggregations

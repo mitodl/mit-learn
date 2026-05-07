@@ -836,6 +836,8 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
+VECTOR_SEARCH_MIN_SCORE = get_float("VECTOR_SEARCH_MIN_SCORE", 0.1)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
