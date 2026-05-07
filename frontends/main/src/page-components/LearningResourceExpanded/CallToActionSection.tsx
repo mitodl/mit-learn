@@ -328,7 +328,8 @@ const getResourceUrl = (
     resource.platform?.code === PlatformEnum.Ocw &&
     resource.url
   ) {
-    return resource.url.replace(/.*?ocw\.mit\.edu\/courses\//, "/courses/o/")
+    const url = new URL(resource.url)
+    return url.pathname.replace(/^\/courses/, "/courses/o");
   }
   if (
     mitxonlineProductPages &&
