@@ -21,6 +21,13 @@ type MetadataAsyncProps = {
 } & Metadata
 
 /**
+ * Throw inside safeGenerateMetadata to trigger a 404 not-found response.
+ * Use this instead of Next.js's notFound(), which throws an internal error
+ * that safeGenerateMetadata's catch block cannot intercept.
+ */
+export class MetadataNotFound extends Error {}
+
+/**
  * Wraps the metadata generation function in a try/catch block. Uncaught or
  * rethrown errors in generateMetadata result in showing the fallback error page,
  * which is heavy handed for metadata generation errors.
@@ -38,12 +45,15 @@ export async function safeGenerateMetadata(
   try {
     return await fn()
   } catch (error: unknown) {
+    if (error instanceof MetadataNotFound) {
+      return notFound()
+    }
     if ((error as AxiosError)?.response?.status === 404) {
       return notFound()
     }
     console.error("Error fetching page metadata", error)
     Sentry.captureException(error)
-    return await standardizeMetadata()
+    return standardizeMetadata()
   }
 }
 

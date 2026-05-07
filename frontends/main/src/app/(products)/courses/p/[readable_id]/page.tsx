@@ -1,6 +1,10 @@
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import {
+  safeGenerateMetadata,
+  standardizeMetadata,
+  MetadataNotFound,
+} from "@/common/metadata"
 import ProgramAsCoursePage from "@/app-pages/ProductPages/ProgramAsCoursePage"
 import { notFound, redirect } from "next/navigation"
 import { pagesQueries } from "api/mitxonline-hooks/pages"
@@ -19,17 +23,16 @@ export const generateMetadata = async (
   return safeGenerateMetadata(async () => {
     const queryClient = getQueryClient()
 
-    const programPages = await queryClient.fetchQuery(
-      pagesQueries.programPages(readableId),
+    const { results: programs } = await queryClient.fetchQuery(
+      programsQueries.programsList({ readable_id: readableId, live: true }),
     )
 
-    if (programPages.items.length === 0) {
-      notFound()
+    if (programs.length === 0) {
+      throw new MetadataNotFound()
     }
-    const [program] = programPages.items
+    const [program] = programs
 
-    const image =
-      program.program_details.page.feature_image_src || DEFAULT_RESOURCE_IMG
+    const image = program.page?.feature_image_src || DEFAULT_RESOURCE_IMG
 
     return standardizeMetadata({
       title: program.title,
