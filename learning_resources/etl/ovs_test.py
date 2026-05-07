@@ -7,6 +7,7 @@ import pytest
 import requests
 
 from learning_resources.constants import (
+    VIDEO_SHORT_RESOURCE_CATEGORY,
     Availability,
     LearningResourceType,
     PlatformType,
@@ -568,6 +569,37 @@ class TestTransform:
             "duration": 0,
         }
         assert transform_video(video_data) is None
+
+
+@pytest.mark.parametrize(
+    ("collection", "expected_category"),
+    [
+        pytest.param(
+            {"key": "c1", "for_shorts": True},
+            VIDEO_SHORT_RESOURCE_CATEGORY,
+            id="for_shorts_true",
+        ),
+        pytest.param({"key": "c1", "for_shorts": False}, None, id="for_shorts_false"),
+        pytest.param({"key": "c1"}, None, id="for_shorts_missing"),
+        pytest.param(None, None, id="collection_none"),
+    ],
+)
+def test_transform_video_resource_category(collection, expected_category):
+    """resource_category is set only when the video's collection has for_shorts=True"""
+    video_data = {
+        "key": "test_key",
+        "title": "Test",
+        "description": "",
+        "created_at": "2020-01-01T00:00:00Z",
+        "sources": [{"src": "https://example.com/video__index.m3u8"}],
+        "videothumbnail_set": [],
+        "videosubtitle_set": [],
+        "cta_link": None,
+        "duration": 0,
+        "collection": collection,
+    }
+    result = transform_video(video_data)
+    assert result.get("resource_category") == expected_category
 
 
 @pytest.fixture
