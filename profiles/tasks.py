@@ -3,6 +3,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 
 from main.celery import app
 from profiles.utils import send_template_email
@@ -24,9 +25,10 @@ def send_welcome_email(user_id):
         log.warning("User %s has blank email, skipping welcome email", user_id)
         return
 
-    profile_name = (
-        getattr(user, "profile", None).name if getattr(user, "profile", None) else None
-    )
+    try:
+        profile_name = user.profile.name
+    except ObjectDoesNotExist:
+        profile_name = None
     full_name = " ".join(
         part for part in [user.first_name, user.last_name] if part
     ).strip()

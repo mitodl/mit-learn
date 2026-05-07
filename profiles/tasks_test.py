@@ -88,3 +88,25 @@ def test_send_welcome_email_uses_username_when_names_missing(mocker):
         "email/welcome_email.html",
         context={"display_name": "username-only"},
     )
+
+
+@pytest.mark.django_db
+def test_send_welcome_email_handles_missing_profile_relation(mocker):
+    """Falls back cleanly when the reverse profile relation is missing."""
+    user = UserFactory.create(
+        email="missing.profile@example.com",
+        first_name="",
+        last_name="",
+        username="profile-missing",
+    )
+    user.profile.delete()
+    mocked_send = mocker.patch("profiles.tasks.send_template_email")
+
+    send_welcome_email(user.id)
+
+    mocked_send.assert_called_once_with(
+        ["missing.profile@example.com"],
+        "MIT Learn - Welcome to MIT Learn",
+        "email/welcome_email.html",
+        context={"display_name": "profile-missing"},
+    )
