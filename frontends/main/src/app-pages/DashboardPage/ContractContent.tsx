@@ -43,11 +43,16 @@ import {
 } from "./CoursewareDisplay/languageOptions"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
-const HeaderRoot = styled.div({
+const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "0 16px",
+    gap: "16px",
+  },
+}))
 
 const ImageContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -63,11 +68,28 @@ const ImageContainer = styled.div(({ theme }) => ({
     width: "100%",
     height: "auto",
   },
+  [theme.breakpoints.down("sm")]: {
+    width: "56px",
+    height: "56px",
+    padding: "8px",
+  },
 }))
 
+const HeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+  },
+})) as typeof Typography
+
 const SubHeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
-}))
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle2,
+  },
+})) as typeof Typography
 
 const ContractHeader: React.FC<{
   org?: OrganizationPage
@@ -89,10 +111,8 @@ const ContractHeader: React.FC<{
         />
       </ImageContainer>
       <Stack gap="8px">
-        <Typography variant="h3" component="h1">
-          {org?.name}
-        </Typography>
-        <SubHeaderText variant="subtitle1">{contract?.name}</SubHeaderText>
+        <HeaderText component="h1">{org?.name}</HeaderText>
+        <SubHeaderText>{contract?.name}</SubHeaderText>
       </Stack>
     </HeaderRoot>
   )
@@ -172,13 +192,19 @@ const ProgramHeader = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    padding: "16px",
+    backgroundColor: theme.custom.colors.lightGray1,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramHeaderText = styled.div({
+const ProgramHeaderText = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: "8px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "0",
+  },
+}))
 
 const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -217,7 +243,7 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   display: "inline-flex",
   flexDirection: "row",
   alignItems: "center",
-  margin: "10px",
+  padding: "10px",
   gap: "8px",
   width: "auto",
   "> *:not(:last-child)": {
@@ -230,10 +256,13 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
     whiteSpace: "nowrap",
   },
   [theme.breakpoints.down("sm")]: {
-    "> .MuiInputBase-root": {
-      width: "fit-content",
-      maxWidth: "100%",
+    width: "100%",
+    padding: "12px 16px",
+    justifyContent: "space-between",
+    ".MuiInputBase-root": {
+      width: "100%",
     },
+    backgroundColor: theme.custom.colors.lightGray1,
   },
 })) as typeof SimpleSelectField
 
@@ -563,6 +592,8 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    gap: "16px",
+    padding: "16px 0 0 0",
   },
 }))
 
