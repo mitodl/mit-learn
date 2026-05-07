@@ -10,9 +10,12 @@ from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.loaders import load_ovs_video_from_webhook
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -23,6 +26,7 @@ from video_shorts.api import delete_video_short, upsert_video_short
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
+    OVSVideoWebhookRequestSerializer,
     VideoShortWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
@@ -143,6 +147,58 @@ class VideoShortWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
         except ValidationError:
             raise
+
+
+@extend_schema_view(
+    post=extend_schema(
+        request=OVSVideoWebhookRequestSerializer,
+        responses=WebhookResponseSerializer(),
+    ),
+)
+class OVSVideoWebhookView(BaseWebhookView):
+    """
+    Webhook handler for OVS video upserts and deletes from the dagster pipeline
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    parser_classes = [JSONParser]
+    serializer_class = OVSVideoWebhookRequestSerializer
+
+    def success(self, extra_data=None):
+        if not extra_data:
+            extra_data = {}
+        response = WebhookResponseSerializer(
+            data={"status": "success", "message": "Webhook received", **extra_data}
+        )
+        if response.is_valid():
+            return Response(response.data)
+        log.error("Invalid response data: %s", response.errors)
+        return HttpResponseBadRequest("Invalid response data")
+
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+        OVSVideoWebhookRequestSerializer(data=payload).is_valid(raise_exception=True)
+
+        if payload.get("delete"):
+            video_id = payload["video_id"]
+            resource = LearningResource.objects.filter(
+                readable_id=video_id,
+                etl_source=ETLSource.ovs.name,
+                resource_type=LearningResourceType.video.name,
+            ).first()
+            if resource:
+                resource_delete_actions(resource)
+            else:
+                log.info("OVS delete webhook: no resource for video_id=%s", video_id)
+        else:
+            load_ovs_video_from_webhook(payload)
+
+        clear_views_cache()
+        return self.success()
 
 
 class ContentFileDeleteWebhookView(ContentFileWebhookView):

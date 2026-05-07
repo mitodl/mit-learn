@@ -5164,6 +5164,31 @@ export const NullEnum = {
 export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
 
 /**
+ * Serializer for OVS video webhook requests.  Accepts either an OVS video upsert payload (full result dict from the OVS public videos API; `key` is required) or a delete payload (`video_id` plus `delete: true`).
+ * @export
+ * @interface OVSVideoWebhookRequestRequest
+ */
+export interface OVSVideoWebhookRequestRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof OVSVideoWebhookRequestRequest
+   */
+  key?: string
+  /**
+   *
+   * @type {string}
+   * @memberof OVSVideoWebhookRequestRequest
+   */
+  video_id?: string
+  /**
+   *
+   * @type {boolean}
+   * @memberof OVSVideoWebhookRequestRequest
+   */
+  delete?: boolean
+}
+/**
  * * `mitx` - MITx * `ocw` - MIT OpenCourseWare * `bootcamps` - Bootcamps * `xpro` - MIT xPRO * `mitpe` - MIT Professional Education * `see` - MIT Sloan Executive Education * `climate` - MIT Climate
  * @export
  * @enum {string}
@@ -33176,6 +33201,53 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
+     * Webhook handler for OVS video upserts and deletes from the dagster pipeline
+     * @param {OVSVideoWebhookRequestRequest} [OVSVideoWebhookRequestRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksOvsVideosCreate: async (
+      OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/v1/webhooks/ovs_videos/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        OVSVideoWebhookRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
      * @param {{ [key: string]: any; }} video_metadata
@@ -33344,6 +33416,37 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, operationBasePath || basePath)
     },
     /**
+     * Webhook handler for OVS video upserts and deletes from the dagster pipeline
+     * @param {OVSVideoWebhookRequestRequest} [OVSVideoWebhookRequestRequest]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async webhooksOvsVideosCreate(
+      OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<WebhookResponse>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.webhooksOvsVideosCreate(
+          OVSVideoWebhookRequestRequest,
+          options,
+        )
+      const index = configuration?.serverIndex ?? 0
+      const operationBasePath =
+        operationServerMap["WebhooksApi.webhooksOvsVideosCreate"]?.[index]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, operationBasePath || basePath)
+    },
+    /**
      * Webhook handler for VideoShort updates
      * @param {string} video_id
      * @param {{ [key: string]: any; }} video_metadata
@@ -33437,6 +33540,23 @@ export const WebhooksApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
+     * Webhook handler for OVS video upserts and deletes from the dagster pipeline
+     * @param {WebhooksApiWebhooksOvsVideosCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    webhooksOvsVideosCreate(
+      requestParameters: WebhooksApiWebhooksOvsVideosCreateRequest = {},
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<WebhookResponse> {
+      return localVarFp
+        .webhooksOvsVideosCreate(
+          requestParameters.OVSVideoWebhookRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
      * Webhook handler for VideoShort updates
      * @param {WebhooksApiWebhooksVideoShortsCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -33513,6 +33633,20 @@ export interface WebhooksApiWebhooksContentFilesDeleteCreateRequest {
    * @memberof WebhooksApiWebhooksContentFilesDeleteCreate
    */
   readonly ContentFileWebHookRequestRequest: ContentFileWebHookRequestRequest
+}
+
+/**
+ * Request parameters for webhooksOvsVideosCreate operation in WebhooksApi.
+ * @export
+ * @interface WebhooksApiWebhooksOvsVideosCreateRequest
+ */
+export interface WebhooksApiWebhooksOvsVideosCreateRequest {
+  /**
+   *
+   * @type {OVSVideoWebhookRequestRequest}
+   * @memberof WebhooksApiWebhooksOvsVideosCreate
+   */
+  readonly OVSVideoWebhookRequestRequest?: OVSVideoWebhookRequestRequest
 }
 
 /**
@@ -33594,6 +33728,25 @@ export class WebhooksApi extends BaseAPI {
     return WebhooksApiFp(this.configuration)
       .webhooksContentFilesDeleteCreate(
         requestParameters.ContentFileWebHookRequestRequest,
+        options,
+      )
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Webhook handler for OVS video upserts and deletes from the dagster pipeline
+   * @param {WebhooksApiWebhooksOvsVideosCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof WebhooksApi
+   */
+  public webhooksOvsVideosCreate(
+    requestParameters: WebhooksApiWebhooksOvsVideosCreateRequest = {},
+    options?: RawAxiosRequestConfig,
+  ) {
+    return WebhooksApiFp(this.configuration)
+      .webhooksOvsVideosCreate(
+        requestParameters.OVSVideoWebhookRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

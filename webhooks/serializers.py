@@ -25,6 +25,30 @@ class VideoShortWebhookRequestSerializer(serializers.Serializer):
     source = serializers.CharField(required=False, allow_blank=True)
 
 
+class OVSVideoWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for OVS video webhook requests.
+
+    Accepts either an OVS video upsert payload (full result dict from the OVS
+    public videos API; `key` is required) or a delete payload (`video_id` plus
+    `delete: true`).
+    """
+
+    key = serializers.CharField(required=False)
+    video_id = serializers.CharField(required=False)
+    delete = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        if attrs.get("delete"):
+            if not attrs.get("video_id"):
+                raise serializers.ValidationError(
+                    {"video_id": "video_id is required for delete"}
+                )
+        elif not self.initial_data.get("key"):
+            raise serializers.ValidationError({"key": "key is required for upsert"})
+        return attrs
+
+
 class WebhookResponseSerializer(serializers.Serializer):
     """
     Serializer for webhook responses.
