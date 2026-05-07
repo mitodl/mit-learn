@@ -7,8 +7,8 @@ import type {
 import { coursesApi } from "../../clients"
 
 type CourseOutlineResponse = GeneratedCourseOutlineResponse
-type CourseOutlineModule = NonNullable<CourseOutlineResponse["modules"]>[number]
-type CourseOutlineModuleCounts = NonNullable<CourseOutlineModule["counts"]>
+type CourseOutlineModule = CourseOutlineResponse["modules"][number]
+type CourseOutlineModuleCounts = CourseOutlineModule["counts"]
 
 const coursesKeys = {
   root: ["mitxonline", "courses"],

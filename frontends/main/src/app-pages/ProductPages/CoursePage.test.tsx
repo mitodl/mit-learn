@@ -236,7 +236,7 @@ describe("CoursePage", () => {
     })
     expect(
       within(section).getByText(
-        "Less than 1 hour to complete . 30 Videos . 2 Readings . 1 Assignment",
+        /Less than 1 hour to complete\s*•\s*30 Videos\s*•\s*2 Readings\s*•\s*1 Assignment/,
       ),
     ).toBeInTheDocument()
     const coreConceptsCard = within(section)

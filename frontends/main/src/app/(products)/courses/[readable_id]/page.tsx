@@ -69,10 +69,7 @@ const Page: React.FC<PageProps<"/courses/[readable_id]">> = async (props) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <CoursePage
-        readableId={readableId}
-        outlineCoursewareId={outlineCoursewareId}
-      />
+      <CoursePage readableId={readableId} />
     </HydrationBoundary>
   )
 }

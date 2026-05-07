@@ -60,9 +60,7 @@ const getModuleTitle = (module: CourseOutlineModule, index: number): string => {
 
 const formatHours = (seconds: number): string => {
   const hours = seconds / 3600
-  // Keep one decimal for short modules, but avoid trailing ".0".
-  const rounded = hours < 10 ? Math.round(hours * 10) / 10 : Math.round(hours)
-  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1)
+  return `${Math.round(hours)}`
 }
 
 const formatEffort = (seconds?: number | null): string | null => {
@@ -90,17 +88,16 @@ const getMetaLine = (module: CourseOutlineModule): string => {
   const assignments = counts.assignments ?? 0
 
   const metaParts = [
+    formatEffort(module.effort_time),
     videos > 0 ? formatCount(videos, "Video", "Videos") : null,
     readings > 0 ? formatCount(readings, "Reading", "Readings") : null,
     assignments > 0
       ? formatCount(assignments, "Assignment", "Assignments")
       : null,
   ].filter((part): part is string => Boolean(part))
-  const effort = formatEffort(module.effort_time)
-  if (effort) {
-    metaParts.unshift(effort)
-  }
-  return metaParts.join(" . ")
+
+  // Use en-spaces around bullets for slightly wider visual separation.
+  return metaParts.join("\u2002•\u2002")
 }
 
 const CourseOutlineSection: React.FC<{

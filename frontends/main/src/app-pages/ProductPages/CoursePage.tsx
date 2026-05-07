@@ -26,7 +26,6 @@ import CourseOutlineSection from "./CourseOutlineSection"
 
 type CoursePageProps = {
   readableId: string
-  outlineCoursewareId?: string
 }
 
 const StyledCourseEnrollmentButton = styled(CourseEnrollmentButton)(
@@ -41,10 +40,7 @@ const PrerequisitesSection = styled.section({
   gap: "16px",
 })
 
-const CoursePage: React.FC<CoursePageProps> = ({
-  readableId,
-  outlineCoursewareId,
-}) => {
+const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.coursePages(readableId))
   const courses = useQuery(
     coursesQueries.coursesList({ readable_id: readableId }),
@@ -52,7 +48,7 @@ const CoursePage: React.FC<CoursePageProps> = ({
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
   const effectiveOutlineCoursewareId = course
-    ? (outlineCoursewareId ?? getOutlineCoursewareId(course))
+    ? getOutlineCoursewareId(course)
     : undefined
   const outline = useQuery({
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),

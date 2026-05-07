@@ -26,6 +26,7 @@ describe("CourseOutlineSection", () => {
       makeModule({ id: "m2", title: "Under one hour", effort_time: 3599 }),
       makeModule({ id: "m3", title: "Exactly one hour", effort_time: 3600 }),
       makeModule({ id: "m4", title: "Plural hours", effort_time: 7200 }),
+      makeModule({ id: "m5", title: "Rounded hours", effort_time: 9540 }),
     ]
 
     renderWithProviders(<CourseOutlineSection modules={modules} />)
@@ -35,13 +36,16 @@ describe("CourseOutlineSection", () => {
     })
 
     expect(
-      within(section).queryByText("0 Videos . 0 Readings . 0 Assignments"),
+      within(section).queryByText(
+        /0 Videos\s*•\s*0 Readings\s*•\s*0 Assignments/,
+      ),
     ).not.toBeInTheDocument()
     expect(
       within(section).getByText("Less than 1 hour to complete"),
     ).toBeInTheDocument()
     expect(within(section).getByText("1 hour to complete")).toBeInTheDocument()
     expect(within(section).getByText("2 hours to complete")).toBeInTheDocument()
+    expect(within(section).getByText("3 hours to complete")).toBeInTheDocument()
   })
 
   test("shows counts inline without requiring expansion", async () => {
@@ -74,10 +78,12 @@ describe("CourseOutlineSection", () => {
       name: "Course content",
     })
     expect(
-      within(section).getByText("1 Video . 2 Readings . 3 Assignments"),
+      within(section).getByText(/1 Video\s*•\s*2 Readings\s*•\s*3 Assignments/),
     ).toBeInTheDocument()
     expect(
-      within(section).getByText("4 Videos . 5 Readings . 6 Assignments"),
+      within(section).getByText(
+        /4 Videos\s*•\s*5 Readings\s*•\s*6 Assignments/,
+      ),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: /Intro/i }),
