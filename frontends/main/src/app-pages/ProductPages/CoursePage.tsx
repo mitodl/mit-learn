@@ -55,6 +55,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
     enabled: Boolean(effectiveOutlineCoursewareId),
   })
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
+  const showCourseOutline = useFeatureFlagEnabled(
+    FeatureFlags.CourseOutlineSection,
+  )
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
@@ -106,7 +109,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
       ) : null}
-      <CourseOutlineSection modules={outline.data?.modules ?? []} />
+      {showCourseOutline ? (
+        <CourseOutlineSection modules={outline.data?.modules ?? []} />
+      ) : null}
       <HowYoullLearnSection page={page} />
       {page.prerequisites ? (
         <PrerequisitesSection aria-labelledby={HeadingIds.Prereqs}>

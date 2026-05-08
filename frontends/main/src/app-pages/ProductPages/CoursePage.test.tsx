@@ -19,6 +19,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
 import { getOutlineCoursewareId } from "./util"
+import { FeatureFlags } from "@/common/feature_flags"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -223,6 +224,23 @@ describe("CoursePage", () => {
     })
     expect(within(section).getByText("Introduction")).toBeInTheDocument()
     expect(within(section).getByText("Core concepts")).toBeInTheDocument()
+  })
+
+  test("Hides course content section when course outline flag is disabled", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag !== FeatureFlags.CourseOutlineSection,
+    )
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(
+      screen.queryByRole("region", {
+        name: "Course content",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   test("Course content section shows metadata inline", async () => {
