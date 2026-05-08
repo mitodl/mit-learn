@@ -979,7 +979,7 @@ class UserListViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return a queryset for this user"""
         return UserList.objects.for_serialization().annotate(
-            item_count=Count("children")
+            item_count=Count("children", filter=Q(children__child__published=True))
         )
 
     def list(self, request, **kwargs):  # noqa: ARG002
@@ -1052,6 +1052,10 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     permission_classes = (HasUserListItemPermissions,)
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
+
+    def list(self, request, *args, **kwargs):
+        self.queryset = self.queryset.filter(child__published=True)
+        return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):  # noqa: ARG002
         data = request.data.copy()
