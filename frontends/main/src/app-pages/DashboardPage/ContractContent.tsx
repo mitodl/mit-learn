@@ -495,8 +495,8 @@ const OrgProgramDisplay: React.FC<{
           </Typography>
           <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
-        <ProgramControls>
-          {hasValidCertificate && (
+        {hasValidCertificate && (
+          <ProgramControls>
             <ProgramCertificateButton
               size="small"
               variant="bordered"
@@ -505,8 +505,8 @@ const OrgProgramDisplay: React.FC<{
             >
               {`View ${program.program_type ? `${program.program_type} ` : ""}Certificate`}
             </ProgramCertificateButton>
-          )}
-        </ProgramControls>
+          </ProgramControls>
+        )}
       </ProgramHeader>
       <PlainList>
         {programLoading || coursesQuery.isLoading
