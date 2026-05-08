@@ -75,6 +75,15 @@ const ImageContainer = styled.div(({ theme }) => ({
   },
 }))
 
+const HeaderTextContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  [theme.breakpoints.down("sm")]: {
+    gap: "0px",
+  },
+}))
+
 const HeaderText = styled(Typography)(({ theme }) => ({
   ...theme.typography.h3,
   color: theme.custom.colors.darkGray2,
@@ -110,10 +119,10 @@ const ContractHeader: React.FC<{
           alt=""
         />
       </ImageContainer>
-      <Stack gap="8px">
+      <HeaderTextContainer>
         <HeaderText component="h1">{org?.name}</HeaderText>
         <SubHeaderText>{contract?.name}</SubHeaderText>
-      </Stack>
+      </HeaderTextContainer>
     </HeaderRoot>
   )
 }
