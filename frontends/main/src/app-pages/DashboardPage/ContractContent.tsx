@@ -590,7 +590,7 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   gap: "24px",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
-  boxShadow: "0 1px 6px 0 rgba(3, 21, 45, 0.05)",
+  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     gap: "16px",
