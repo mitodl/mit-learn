@@ -480,24 +480,11 @@ class QdrantView(APIView):
             and type(score_cutoff) is float
             and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
         ):
-            count_params = params.copy()
-            count_params.pop("aggregations", None)
-            # just get the total count and avoid a call to aggregations
-            counts = await self._async_vector_counts(
-                count_params,
-                search_collection=search_collection,
-            )
-            total_count = counts["total"]["value"]
-            if total_count == 0:
-                return {
-                    "hits": [],
-                    **counts,
-                }
             hits = await self._async_vector_hits(
                 query_string,
                 params,
                 order_by=order_by,
-                limit=total_count,
+                limit=settings.VECTOR_SEARCH_PAGE_MAX_LIMIT,
                 offset=0,
                 search_collection=search_collection,
                 score_cutoff=score_cutoff,
