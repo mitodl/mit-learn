@@ -217,6 +217,18 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   )
 }
 
+const PROGRAM_TYPE_DISPLAY: Record<string, string> = {
+  "MicroMasters®": "MicroMasters®",
+  MicroMasters: "MicroMasters®",
+}
+
+const formatProgramTypeLabel = (
+  programType: string | null | undefined,
+): string | undefined => {
+  if (!programType) return undefined
+  return PROGRAM_TYPE_DISPLAY[programType]
+}
+
 const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   const pages = useQuery(pagesQueries.programPages(readableId))
   const programs = useQuery(
@@ -272,6 +284,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
   return (
     <ProductPageTemplate
       currentBreadcrumbLabel="Program"
+      label={formatProgramTypeLabel(program.program_type)}
       title={page.title}
       shortDescription={
         <DescriptionHTML
