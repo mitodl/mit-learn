@@ -35,6 +35,8 @@ const makeVideo = (overrides = {}) =>
     ...overrides,
   })
 
+const VIDEOS_PAGE_SIZE = 10
+
 const setupApis = ({
   playlistId,
   videos,
@@ -52,7 +54,7 @@ const setupApis = ({
     playlist,
   )
 
-  // Items endpoint: /api/v1/learning_resources/{id}/items/
+  // Items endpoint used by useInfiniteLearningResourceItems: includes ?limit=N
   const itemRelationships = videos.map((resource, i) => ({
     id: i + 1,
     child: resource.id,
@@ -60,12 +62,15 @@ const setupApis = ({
     position: i + 1,
     resource,
   }))
-  setMockResponse.get(urls.learningResources.items({ id: playlistId }), {
-    count: videos.length,
-    next: null,
-    previous: null,
-    results: itemRelationships,
-  })
+  setMockResponse.get(
+    `${urls.learningResources.items({ id: playlistId })}?limit=${VIDEOS_PAGE_SIZE}`,
+    {
+      count: videos.length,
+      next: null,
+      previous: null,
+      results: itemRelationships,
+    },
+  )
 
   setMockResponse.get(
     expect.stringContaining(
