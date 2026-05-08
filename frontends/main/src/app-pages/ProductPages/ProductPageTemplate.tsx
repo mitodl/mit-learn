@@ -351,6 +351,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                         data-testid="program-type-label"
                         variant="outlinedWhite"
                         size="large"
+                        sx={{ typography: "subtitle2" }}
                       />
                     ) : null}
                     <Typography
