@@ -3293,7 +3293,9 @@ def test_load_learning_materials(mocker, settings, create_ocw_learning_materials
     )
     irrelevant_content_tag = LearningResourceContentTagFactory.create(name="Syllabus")
 
-    no_longer_relevant_resource = LearningResourceFactory.create()
+    no_longer_relevant_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
 
     learning_material_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
@@ -3359,7 +3361,10 @@ def test_load_learning_materials_demotes_page_content_files(mocker, settings):
     relevant_content_tag = LearningResourceContentTagFactory.create(
         name="Programming Assignments"
     )
-    previously_promoted_resource = LearningResourceFactory.create(published=True)
+    previously_promoted_resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        published=True,
+    )
 
     page_content_file = ContentFileFactory.create(
         run=ocw_course.learning_resource.runs.first(),
