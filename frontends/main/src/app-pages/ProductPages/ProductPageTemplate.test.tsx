@@ -1,4 +1,5 @@
 import React from "react"
+import { fireEvent } from "@testing-library/react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
@@ -10,6 +11,8 @@ import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import type { ResourceInfo } from "./ProductPageTemplate"
 import { PlatformEnum } from "api"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { getAllByImageSrc } from "ol-test-utilities"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -66,6 +69,33 @@ const renderProductPageTemplate = (
     </ProductPageTemplate>,
   )
 }
+
+describe("ProductPageTemplate image error fallback", () => {
+  it("falls back to DEFAULT_RESOURCE_IMG when imageSrc returns 404", () => {
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
+    const { view } = renderWithProviders(
+      <ProductPageTemplate
+        currentBreadcrumbLabel="Programs"
+        title="Sample Program"
+        shortDescription="Program description"
+        imageSrc="https://example.com/image.jpg"
+        infoBox={<div>Info box</div>}
+        enrollmentAction={<button type="button">Enroll</button>}
+        showStayUpdated={false}
+        resource={DEFAULT_RESOURCE}
+      >
+        <div>Page content</div>
+      </ProductPageTemplate>,
+    )
+
+    getAllByImageSrc(view.container, "https://example.com/image.jpg").forEach(
+      (img) => fireEvent.error(img),
+    )
+    expect(
+      getAllByImageSrc(view.container, DEFAULT_RESOURCE_IMG).length,
+    ).toBeGreaterThan(0)
+  })
+})
 
 describe("ProductPageTemplate stay-updated trigger", () => {
   beforeEach(() => {

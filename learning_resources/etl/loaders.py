@@ -15,6 +15,7 @@ from learning_resources.constants import (
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     VIDEO_CONTENT_CATEGORIES,
+    VIDEO_SHORT_RESOURCE_CATEGORY,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1340,7 +1341,7 @@ def load_video(video_data: dict) -> LearningResource:
     offered_by_data = video_data.pop("offered_by", None)
     video_fields = video_data.pop("video", {})
     image_data = video_data.pop("image", None)
-    video_data["resource_category"] = LearningResourceType.video.value
+    video_data.setdefault("resource_category", LearningResourceType.video.value)
     video_data.pop("youtube_id", None)
 
     with transaction.atomic():
@@ -1453,6 +1454,64 @@ def load_documents(
         LearningResourceType.document.name,
     )
     return document_resources
+
+
+def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResource:
+    """Upsert an OVS collection as a video_playlist LearningResource."""
+    from learning_resources.etl.ovs import transform_collection
+
+    playlist_data = transform_collection(collection_data)
+    playlist_id = playlist_data.pop("playlist_id")
+    platform_code = playlist_data.pop("platform")
+    playlist_data["resource_category"] = LearningResourceType.video_playlist.value
+    channel, _ = VideoChannel.objects.get_or_create(
+        channel_id="ovs",
+        defaults={"title": "ODL Video Service"},
+    )
+    playlist, _ = LearningResource.objects.update_or_create(
+        readable_id=playlist_id,
+        resource_type=LearningResourceType.video_playlist.name,
+        platform=LearningResourcePlatform.objects.get(code=platform_code),
+        defaults=playlist_data,
+    )
+    VideoPlaylist.objects.update_or_create(
+        learning_resource=playlist, defaults={"channel": channel}
+    )
+    return playlist
+
+
+def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
+    """
+    Upsert a single OVS video and its collection-as-playlist from a webhook payload.
+
+    `video_payload` is one result dict from the OVS public videos API. Returns the
+    video LearningResource, or None if the payload has no usable streaming source.
+    """
+    from learning_resources.etl.ovs import transform_video
+
+    video_data = transform_video(video_payload)
+    if video_data is None:
+        return None
+    collection = video_payload.get("collection") or {}
+    if collection.get("for_shorts"):
+        video_data["resource_category"] = VIDEO_SHORT_RESOURCE_CATEGORY
+
+    with transaction.atomic():
+        playlist = (
+            _upsert_ovs_playlist_from_collection(collection)
+            if collection.get("key")
+            else None
+        )
+        video = load_video(video_data)
+        if playlist:
+            LearningResourceRelationship.objects.update_or_create(
+                parent=playlist,
+                child=video,
+                relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            )
+    if playlist:
+        update_index(playlist, newly_created=False)
+    return video
 
 
 def load_ovs_playlist(playlist_data: dict) -> LearningResource | None:
