@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.66.11
+---------------
+
+- feat: Welcome to learn email on new account setup (#3189)
+
 Version 0.66.10 (Released May 07, 2026)
 ---------------
 
