@@ -3173,7 +3173,7 @@ export interface LearningPath {
    */
   id: number
   /**
-   *
+   * Number of published items in the list.
    * @type {number}
    * @memberof LearningPath
    */
@@ -8941,7 +8941,7 @@ export interface UserList {
    */
   topics?: Array<LearningResourceTopic>
   /**
-   *
+   * Number of published items in the list.
    * @type {number}
    * @memberof UserList
    */

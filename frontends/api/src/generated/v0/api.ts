@@ -2263,7 +2263,7 @@ export interface LearningPath {
    */
   id: number
   /**
-   *
+   * Number of published items in the list.
    * @type {number}
    * @memberof LearningPath
    */

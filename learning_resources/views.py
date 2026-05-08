@@ -1053,6 +1053,17 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
 
+    def get_queryset(self):
+        """Hide unpublished children from read actions only.
+
+        Create/update/destroy still see all relationships so users can manage
+        items whose child resource was unpublished after being added.
+        """
+        queryset = super().get_queryset()
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.filter(child__published=True)
+        return queryset
+
     def create(self, request, *args, **kwargs):  # noqa: ARG002
         data = request.data.copy()
         data["parent"] = kwargs.get("userlist_id")

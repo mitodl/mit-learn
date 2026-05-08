@@ -3151,6 +3151,7 @@ components:
         item_count:
           type: integer
           readOnly: true
+          description: Number of published items in the list.
       required:
       - id
       - item_count
