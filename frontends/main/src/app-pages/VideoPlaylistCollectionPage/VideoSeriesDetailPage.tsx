@@ -1,17 +1,12 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef } from "react"
-import dynamic from "next/dynamic"
-import Image from "next/image"
+import React, { useEffect, useRef } from "react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { Skeleton } from "ol-components"
+import { Skeleton, styled } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { resolveVideoSources, extractYouTubeId } from "./videoSources"
-import type { VideoJsPlayerProps } from "./VideoJsPlayer"
-import YouTubeIframePlayer from "./YouTubeIframePlayer"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { notFound } from "next/navigation"
@@ -20,11 +15,11 @@ import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
 import { buildVideoStructuredData } from "./videoStructuredData"
+import VideoResourcePlayer from "./VideoResourcePlayer"
 
-const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
-  () => import("./VideoJsPlayer"),
-  { ssr: false },
-)
+const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
+  borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
+}))
 
 type VideoSeriesDetailPageProps = {
   videoId: number
@@ -61,22 +56,10 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     getVideoHref,
   } = useSeriesNavigation(videoId, playlistId)
 
-  const sources = useMemo(
-    () =>
-      video
-        ? resolveVideoSources(
-            video.video?.streaming_url,
-            video.url,
-            video.content_files?.[0]?.youtube_id,
-          )
-        : [],
-    [video],
-  )
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
 
-  const captionUrls = video?.video?.caption_urls ?? []
   const playlistLabel = playlist?.title || "Video Collection"
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
@@ -100,10 +83,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
   // any additional JS. The replace guard prevents </script> injection.
   // See: https://developers.google.com/search/docs/appearance/structured-data/video
   const structuredData = !isLoading ? buildVideoStructuredData(video) : null
-  const youTubeId =
-    sources[0]?.type === "video/youtube"
-      ? extractYouTubeId(sources[0].src)
-      : null
 
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
@@ -194,65 +173,13 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             <Styled.StyledDuration>{duration}</Styled.StyledDuration>
           )}
           {/* Video player */}
-          <Styled.PlayerWrapper
-            id="video-player-region"
-            tabIndex={-1}
-            role="region"
-            aria-label={`Video player for ${videoTitleLabel}`}
-            aria-describedby="video-description"
-          >
-            {isLoading ? (
-              <div
-                role="status"
-                aria-live="polite"
-                aria-label="Loading video player"
-              >
-                <Skeleton variant="rectangular" width="100%" height="100%" />
-              </div>
-            ) : youTubeId ? (
-              <YouTubeIframePlayer
-                key={videoId}
-                videoId={youTubeId}
-                ariaLabel={`Video: ${videoTitleLabel}`}
-                ariaDescribedBy="video-description"
-              />
-            ) : sources.length > 0 ? (
-              <VideoJsPlayer
-                key={videoId}
-                sources={sources}
-                tracks={captionUrls}
-                poster={
-                  video?.video?.cover_image_url ??
-                  video?.image?.url ??
-                  undefined
-                }
-                autoplay={false}
-                controls
-                fluid={false}
-                ariaLabel={`Video: ${videoTitleLabel}`}
-                ariaDescribedBy="video-description"
-              />
-            ) : video?.image?.url ? (
-              <Styled.ThumbnailWrapper>
-                <Image
-                  src={video.image.url}
-                  alt={videoThumbnailAlt}
-                  fill
-                  sizes="100vw"
-                  style={{ objectFit: "cover" }}
-                />
-              </Styled.ThumbnailWrapper>
-            ) : (
-              <>
-                <Styled.ScreenReaderOnly role="alert" aria-live="polite">
-                  No playable source available for this video.
-                </Styled.ScreenReaderOnly>
-                <Styled.NoVideoMessage>
-                  No playable source available for this video.
-                </Styled.NoVideoMessage>
-              </>
-            )}
-          </Styled.PlayerWrapper>
+          <StyledVideoResourcePlayer
+            video={video}
+            videoId={videoId}
+            isLoading={isLoading}
+            videoTitleLabel={videoTitleLabel}
+            videoThumbnailAlt={videoThumbnailAlt}
+          />
 
           {/* UP NEXT */}
           {!itemsLoading && nextVideo && (
