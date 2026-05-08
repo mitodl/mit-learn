@@ -233,10 +233,14 @@ export const podcastEpisodePageView = (id: string, podcastId: string) =>
     podcastId: String(podcastId),
     episodeId: String(id),
   })
-export const VIDEO_DETAIL_PAGE_VIEW = "/video-playlist/detail/[videoId]"
-export const videoDetailPageView = (videoId: number, playlistId: number) => {
-  const params = new URLSearchParams({ playlist: String(playlistId) })
-  return `${generatePath(VIDEO_DETAIL_PAGE_VIEW, { videoId: String(videoId) })}?${params.toString()}`
+export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
+export const videoDetailPageView = (videoId: number, playlistId?: number) => {
+  const base = generatePath(VIDEO_DETAIL_PAGE_VIEW, { videoId: String(videoId) })
+  if (playlistId !== undefined) {
+    const params = new URLSearchParams({ playlist: String(playlistId) })
+    return `${base}?${params.toString()}`
+  }
+  return base
 }
 export const PROGRAM_PAGE_VIEW = "/programs/[readableId]"
 export const PROGRAM_AS_COURSE_PAGE_VIEW = "/courses/p/[readableId]"

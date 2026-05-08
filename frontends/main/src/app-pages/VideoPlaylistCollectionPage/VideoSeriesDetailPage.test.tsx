@@ -245,7 +245,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(prevLink).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${prev.id}?playlist=${playlist.id}`,
+        `/video/${prev.id}?playlist=${playlist.id}`,
       )
     })
 
@@ -265,7 +265,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(nextLink).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${next.id}?playlist=${playlist.id}`,
+        `/video/${next.id}?playlist=${playlist.id}`,
       )
     })
 

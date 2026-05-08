@@ -49,7 +49,7 @@ const VideoPlaylistCollectionPage: React.FC<
   VideoPlaylistCollectionPageProps
 > = ({ playlistId }) => {
   const getVideoHref = (resource: VideoResource) =>
-    `/video-playlist/detail/${resource.id}?playlist=${playlistId}`
+    `/video/${resource.id}?playlist=${playlistId}`
 
   const showVideoPlaylistPage = useFeatureFlagEnabled(
     FeatureFlags.VideoPlaylistPage,

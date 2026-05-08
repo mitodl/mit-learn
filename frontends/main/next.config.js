@@ -47,6 +47,12 @@ const nextConfig = {
     return [
       {
         // can be removed once fastly redirect is in place
+        source: "/video-playlist/detail/:id",
+        destination: "/video/:id",
+        permanent: true,
+      },
+      {
+        // can be removed once fastly redirect is in place
         source: "/attach/:code",
         destination: "/enrollmentcode/:code",
         permanent: true,

@@ -637,7 +637,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   shareButtonRef.current as unknown as HTMLDivElement | null
                 }
                 onClose={() => setShareOpen(false)}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video-playlist/${video?.id}?playlist=${playlistId}`}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video?.id}?playlist=${playlistId}`}
               />
             </ShareRow>
           )}
@@ -690,7 +690,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       return (
                         <React.Fragment key={item.id}>
                           <MoreFromItem
-                            href={`/video-playlist/detail/${item.id}?playlist=${playlistId}`}
+                            href={`/video/${item.id}?playlist=${playlistId}`}
                             aria-label={`Open video ${item.title}`}
                           >
                             <MoreFromThumbnailWrapper>
