@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 
 from learning_resources.constants import (
+    VIDEO_SHORT_RESOURCE_CATEGORY,
     Availability,
     LearningResourceType,
     PlatformType,
@@ -221,7 +222,7 @@ def transform_video(video_data: dict) -> dict | None:
     cover_image_url = _get_cover_image_url(video_data)
     image_data = {"url": cover_image_url} if cover_image_url else None
 
-    return {
+    video_dict = {
         "readable_id": video_data["key"],
         "platform": PlatformType.ovs.name,
         "etl_source": ETLSource.ovs.name,
@@ -240,6 +241,10 @@ def transform_video(video_data: dict) -> dict | None:
             "cover_image_url": cover_image_url or "",
         },
     }
+
+    if (video_data.get("collection") or {}).get("for_shorts", False):
+        video_dict["resource_category"] = VIDEO_SHORT_RESOURCE_CATEGORY
+    return video_dict
 
 
 def transform_collection(collection_data: dict) -> dict:

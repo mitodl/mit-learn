@@ -15,7 +15,6 @@ from learning_resources.constants import (
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     VIDEO_CONTENT_CATEGORIES,
-    VIDEO_SHORT_RESOURCE_CATEGORY,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1493,8 +1492,6 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
     if video_data is None:
         return None
     collection = video_payload.get("collection") or {}
-    if collection.get("for_shorts"):
-        video_data["resource_category"] = VIDEO_SHORT_RESOURCE_CATEGORY
 
     with transaction.atomic():
         playlist = (
