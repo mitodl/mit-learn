@@ -235,7 +235,9 @@ export const podcastEpisodePageView = (id: string, podcastId: string) =>
   })
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
 export const videoDetailPageView = (videoId: number, playlistId?: number) => {
-  const base = generatePath(VIDEO_DETAIL_PAGE_VIEW, { videoId: String(videoId) })
+  const base = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
+    videoId: String(videoId),
+  })
   if (playlistId !== undefined) {
     const params = new URLSearchParams({ playlist: String(playlistId) })
     return `${base}?${params.toString()}`

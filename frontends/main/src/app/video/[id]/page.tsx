@@ -10,9 +10,7 @@ import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/Video
 import { notFound } from "next/navigation"
 import type { VideoResource } from "api/v1"
 
-export const generateMetadata = async (
-  props: PageProps<"/video/[id]">,
-) => {
+export const generateMetadata = async (props: PageProps<"/video/[id]">) => {
   const { id } = await props.params
   const videoId = Number(id)
   if (!Number.isInteger(videoId) || videoId <= 0) {
