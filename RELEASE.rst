@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.66.12
+---------------
+
+- refactor ocw video etl (#3308)
+- fix: update metadata for video pages (#3310)
+- Both ETL and webhook should populate OVS resource_category when applicable. (#3313)
+- feat: Welcome to learn email on new account setup (#3189)
+
 Version 0.66.10 (Released May 07, 2026)
 ---------------
 
