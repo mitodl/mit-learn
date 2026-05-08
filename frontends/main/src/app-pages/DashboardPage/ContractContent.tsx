@@ -351,7 +351,7 @@ const OrgProgramCollectionDisplay: React.FC<{
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
-        <Typography variant="h5" component="h2">
+        <Typography variant="subtitle1" component="h2">
           {collection.title}
         </Typography>
         <ProgramDescription html={collection.description ?? ""} />
@@ -499,7 +499,7 @@ const OrgProgramDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
         <ProgramHeaderText>
-          <Typography variant="h5" component="h2">
+          <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
           <ProgramDescription html={program.page.description ?? ""} />
