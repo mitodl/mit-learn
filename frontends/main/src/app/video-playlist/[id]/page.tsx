@@ -34,12 +34,11 @@ export const generateMetadata = async (
 
     return standardizeMetadata({
       title: playlist.title,
-      description: playlist.description ?? "Learn Video Playlist",
+      description: playlist.description ?? undefined,
       image: firstVideoImage ?? playlist.image?.url,
       imageAlt: firstVideoImage
         ? firstVideoImageAlt
         : (playlist.image?.alt ?? undefined),
-      robots: "noindex, nofollow",
     })
   })
 }
