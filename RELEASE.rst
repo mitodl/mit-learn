@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.66.10 (Released May 07, 2026)
+---------------
+
+- fix: add fallback image for API-provided URLs that return 404 (#3277)
+- OVS videos webhook endpoint (#3275)
+- Add to profile button linkedin share button for certificates and verifiable credentials (#3278)
+
 Version 0.66.9 (Released May 06, 2026)
 --------------
 

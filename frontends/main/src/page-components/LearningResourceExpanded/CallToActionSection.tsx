@@ -14,6 +14,7 @@ import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import {
   DEFAULT_RESOURCE_IMG,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
 import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
@@ -213,12 +214,13 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
+  const { src: imageUrl, onError: onImageError } = useImageWithFallback(
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
   const aspect = config.width / config.height
   if (resource) {
-    const imageUrl =
-      resource.image?.url ||
-      resourceContentFilesImageSrc(resource) ||
-      DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
         <Image
@@ -226,6 +228,7 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
+          onError={onImageError}
         />
       </ImageContainer>
     )

@@ -22,6 +22,11 @@ v1_urls = [
         views.VideoShortWebhookView.as_view(),
         name="video_short_webhook",
     ),
+    re_path(
+        r"^ovs_videos/$",
+        views.OVSVideoWebhookView.as_view(),
+        name="ovs_video_webhook",
+    ),
 ]
 
 urlpatterns = [
