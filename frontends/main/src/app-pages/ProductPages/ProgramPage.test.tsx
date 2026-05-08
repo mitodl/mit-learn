@@ -682,7 +682,10 @@ describe("ProgramPage", () => {
     test.each(["MicroMasters®", "MicroMasters"])(
       "Shows 'MicroMasters®' label when program_type is '%s'",
       async (programType) => {
-        const program = makeProgram({ ...makeReqs(), program_type: programType })
+        const program = makeProgram({
+          ...makeReqs(),
+          program_type: programType,
+        })
         const page = makePage({ program_details: program })
         setupApis({ program, page })
         renderWithProviders(<ProgramPage readableId={program.readable_id} />)
@@ -699,9 +702,7 @@ describe("ProgramPage", () => {
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
       await screen.findByRole("heading", { name: page.title })
-      expect(
-        screen.queryByTestId("program-type-label"),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId("program-type-label")).not.toBeInTheDocument()
     })
 
     test("Shows no label when program_type is null", async () => {
@@ -711,9 +712,7 @@ describe("ProgramPage", () => {
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
       await screen.findByRole("heading", { name: page.title })
-      expect(
-        screen.queryByTestId("program-type-label"),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId("program-type-label")).not.toBeInTheDocument()
     })
   })
 
