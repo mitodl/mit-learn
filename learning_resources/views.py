@@ -1053,10 +1053,6 @@ class UserListItemViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     http_method_names = VALID_HTTP_METHODS
     parent_lookup_kwargs = {"userlist_id": "parent"}
 
-    def list(self, request, *args, **kwargs):
-        self.queryset = self.queryset.filter(child__published=True)
-        return super().list(request, *args, **kwargs)
-
     def create(self, request, *args, **kwargs):  # noqa: ARG002
         data = request.data.copy()
         data["parent"] = kwargs.get("userlist_id")

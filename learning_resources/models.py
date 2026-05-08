@@ -1026,7 +1026,10 @@ class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
         """Prefetch related objects used by API serializers"""
         return (
             self.select_related("child", "child__image")
-            .filter(child__published=True)
+            .exclude(
+                relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+                child__published=False,
+            )
             .order_by("position", "id")
         )
 
@@ -1305,9 +1308,9 @@ class UserListQuerySet(TimestampedModelQuerySet):
             ),
             Prefetch(
                 "children",
-                queryset=UserListRelationship.objects.select_related(
-                    "child", "child__image"
-                ).order_by("position"),
+                queryset=UserListRelationship.objects.filter(child__published=True)
+                .select_related("child", "child__image")
+                .order_by("position"),
                 to_attr="_children",
             ),
         )
@@ -1321,12 +1324,14 @@ class UserListRelationshipQuerySet(TimestampedModelQuerySet):
 
     def for_serialization(self):
         """Prefetch related objects used by API serializers"""
-        return self.select_related("parent", "parent__author").prefetch_related(
-            Prefetch(
-                "child",
-                queryset=LearningResource.objects.filter(
-                    published=True
-                ).for_serialization(),
+        return (
+            self.select_related("parent", "parent__author")
+            .filter(child__published=True)
+            .prefetch_related(
+                Prefetch(
+                    "child",
+                    queryset=LearningResource.objects.for_serialization(),
+                )
             )
         )
 
