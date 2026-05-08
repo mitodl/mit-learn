@@ -123,7 +123,6 @@ const Title = styled("h2")(({ theme }) => ({
   ...theme.typography.h3,
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h5,
-    fontWeight: theme.typography.fontWeightBold,
   },
 }))
 

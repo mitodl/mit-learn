@@ -192,7 +192,11 @@ def extract_playlist_items(
 
 
 def _extract_playlists(
-    youtube_client: Resource, request: BatchHttpRequest, playlist_configs: dict
+    youtube_client: Resource,
+    request: BatchHttpRequest,
+    playlist_configs: dict,
+    *,
+    create_videos_channel_setting: bool,
 ) -> Generator[tuple, None, None]:
     """
     Extract a list of playlists
@@ -201,6 +205,8 @@ def _extract_playlists(
         youtube_client (Resource): Youtube api client
         request (BatchHttpRequest): Youtube api BatchHttpRequest object
         playlist_configs (dict): dict of playlist configurations
+        create_videos_channel_setting (bool): whether the channel config
+            is to create videos from youtube data
 
     Returns:
         A generator that yields playlist data
@@ -216,15 +222,20 @@ def _extract_playlists(
                 playlist_id = playlist_data["id"]
                 if playlist_id in playlist_configs:
                     playlist_config = playlist_configs[playlist_id]
+                    create_videos = playlist_config.get(
+                        "create_videos", create_videos_channel_setting
+                    )
                 else:
                     playlist_config = playlist_configs.get(
                         WILDCARD_PLAYLIST_ID, {"ignore": True}
                     )
+                    create_videos = create_videos_channel_setting
 
                 if not playlist_config.get("ignore", False):
                     yield (
                         playlist_data,
                         extract_playlist_items(youtube_client, playlist_id),
+                        create_videos,
                     )
 
             request = youtube_client.playlists().list_next(request, response)
@@ -237,7 +248,11 @@ def _extract_playlists(
 
 
 def extract_playlists(
-    youtube_client: Resource, playlist_configs: list[dict], channel_id: str
+    youtube_client: Resource,
+    playlist_configs: list[dict],
+    channel_id: str,
+    *,
+    create_videos_channel_setting: bool,
 ) -> Generator[tuple, None, None]:
     """
     Extract a list of playlists for a channel
@@ -245,6 +260,8 @@ def extract_playlists(
         youtube_client (object): Youtube api client
         playlist_configs (list of dict): list of playlist configurations
         channel_id (str): youtube's id for the channel
+        create_videos_channel_setting (bool): whether the channel config
+            is to create videos from youtube data
     Returns:
         A generator that yields playlist data
     """
@@ -272,7 +289,12 @@ def extract_playlists(
         )
 
     for request in requests:
-        yield from _extract_playlists(youtube_client, request, playlist_configs_by_id)
+        yield from _extract_playlists(
+            youtube_client,
+            request,
+            playlist_configs_by_id,
+            create_videos_channel_setting=create_videos_channel_setting,
+        )
 
 
 def extract_channels(
@@ -311,11 +333,13 @@ def extract_channels(
                 channel_id = channel_data["id"]
                 channel_config = channel_configs_by_ids[channel_id]
                 offered_by = channel_config.get("offered_by", None)
+                create_videos = channel_config.get("create_videos", True)
                 playlist_configs = channel_config.get("playlists", [])
-
-                # if we hit any error on a playlist, we simply abort
                 playlists = extract_playlists(
-                    youtube_client, playlist_configs, channel_id
+                    youtube_client,
+                    playlist_configs,
+                    channel_id,
+                    create_videos_channel_setting=create_videos,
                 )
                 yield (offered_by, channel_data, playlists)
 
@@ -481,11 +505,16 @@ def transform_video(video_data: dict, offered_by_code: str) -> dict:
             "duration": video_data["contentDetails"]["duration"],
         },
         "availability": Availability.anytime.name,
+        "youtube_id": video_data["id"],
     }
 
 
 def transform_playlist(
-    playlist_data: dict, videos: Generator[dict, None, None], offered_by_code: str
+    playlist_data: dict,
+    videos: Generator[dict, None, None],
+    offered_by_code: str,
+    *,
+    create_videos: bool,
 ) -> dict:
     """
     Transform a playlist into our normalized data
@@ -494,6 +523,8 @@ def transform_playlist(
         playlist_data (dict): the extracted playlist data
         videos (generator): generator for data for the playlist's videos
         offered_by_code (str): the offered_by code for this playlist
+        create_videos (bool): whether to create videos from this playlist
+            or match to existing videos without creating new ones
     Returns:
         dict: normalized playlist data
     """
@@ -515,6 +546,7 @@ def transform_playlist(
             "alt": playlist_data["snippet"]["title"],
         },
         "availability": Availability.anytime.name,
+        "create_videos": create_videos,
     }
 
 
@@ -539,8 +571,10 @@ def transform(extracted_channels: iter) -> Generator[dict, None, None]:
             "published": True,
             # intentional generator expression
             "playlists": (
-                transform_playlist(playlist, videos, offered_by)
-                for playlist, videos in playlists
+                transform_playlist(
+                    playlist, videos, offered_by, create_videos=create_videos
+                )
+                for playlist, videos, create_videos in playlists
             ),
         }
 

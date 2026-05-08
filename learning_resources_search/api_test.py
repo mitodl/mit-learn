@@ -2475,6 +2475,7 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(opens
                                     }
                                 },
                                 {"term": {"resource_type": "course"}},
+                                {"term": {"resource_type": "video"}},
                             ],
                             "minimum_should_match": 1,
                         }

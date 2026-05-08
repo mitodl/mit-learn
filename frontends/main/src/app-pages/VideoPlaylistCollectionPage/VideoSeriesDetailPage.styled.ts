@@ -15,10 +15,10 @@ export const PageWrapper = styled.div({
 })
 
 export const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "20px 0 4px 0",
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
+  padding: "18px 0 2px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
-    padding: "16px 0 0 0",
+    padding: "12px 0 0 0",
   },
 }))
 
@@ -49,7 +49,7 @@ export const SeriesNavTitle = styled(Link)(({ theme }) => ({
   textDecoration: "none",
   flexShrink: 1,
   minWidth: 0,
-  "&:hover": { color: theme.custom.colors.red },
+  "&:hover": { color: theme.custom.colors.red, textDecoration: "underline" },
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.body3,
     fontWeight: theme.typography.fontWeightMedium,
@@ -131,6 +131,9 @@ export const NavLinkText = styled.span({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   minWidth: 0,
+  "&:hover": {
+    textDecoration: "underline",
+  },
 })
 
 export const NavArrowIcon = styled.span({
@@ -165,7 +168,7 @@ export const VideoTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h2,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.black,
-  margin: "0 0 40px",
+  margin: "0 0 16px",
   "&:focus": { outline: "none" },
   fontSize: "44px",
   fontStyle: "normal",
@@ -173,7 +176,7 @@ export const VideoTitle = styled.h1(({ theme }) => ({
   letterSpacing: "-0.88px",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
-    margin: "0 0 14px",
+    margin: "0 0 8px",
     letterSpacing: "inherit",
   },
 }))
@@ -297,8 +300,9 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
+  margin: "0 0 40px",
   [theme.breakpoints.down("sm")]: {
-    marginTop: "4px",
+    margin: "0 0 16px",
   },
 }))
 

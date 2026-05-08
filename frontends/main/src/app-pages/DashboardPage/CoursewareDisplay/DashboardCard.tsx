@@ -21,6 +21,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
 import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { getReceiptMenuItem } from "./receiptMenuItem"
 import {
   EmailSettingsDialog,
   JustInTimeDialog,
@@ -37,9 +38,10 @@ import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import { coursePageView, programPageView, programView } from "@/common/urls"
 import {
-  mitxonlineLegacyUrl,
   getCourseEnrollmentAction,
+  getEnrollmentType,
   isVerifiedEnrollmentMode,
+  mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
@@ -139,14 +141,18 @@ const CardRoot = styled.div<{
   },
 ])
 
-const TitleLink = styled(Link)(({ theme }) => ({
+const TitleHeading = styled.h3(({ theme }) => ({
+  margin: 0,
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleText = styled.div<{ clickable?: boolean }>(
+const TitleLink = styled(Link)()
+
+const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
+    margin: 0,
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
@@ -215,6 +221,12 @@ const getContextMenuItems = (
         },
       })
     }
+
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-program/${program.id}/`,
+    )
+    if (receiptMenuItem) menuItems.push(receiptMenuItem)
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
     const detailsUrl = useProductPages
@@ -254,17 +266,26 @@ const getContextMenuItems = (
       },
     )
 
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-run/${resource.data.run.id}/`,
+    )
+    if (receiptMenuItem) courseMenuItems.push(receiptMenuItem)
+
     menuItems.push(...courseMenuItems)
   }
   return [...menuItems, ...additionalItems]
 }
 
-const getTitle = (resource: DashboardResource): string => {
+const getTitle = (
+  resource: DashboardResource,
+  selectedCourseRun?: CourseRunV2 | null,
+): string => {
   if (resource.type === DashboardType.Course) {
-    return resource.data.title
+    return selectedCourseRun?.title ?? resource.data.title
   }
   if (resource.type === DashboardType.CourseRunEnrollment) {
-    return resource.data.run.course.title
+    return resource.data.run.title
   }
   return resource.data.program.title
 }
@@ -307,21 +328,36 @@ const useEnrollmentHandler = () => {
     ({
       course,
       readableId,
+      selectedRunId,
       href,
+      selectedCoursewareUrl,
       isB2B,
       isVerifiedProgram,
       programCoursewareId,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
+      selectedRunId?: number
       href?: string
+      selectedCoursewareUrl?: string
       isB2B?: boolean
       isVerifiedProgram?: boolean
       programCoursewareId?: string
     }) => {
       if (isB2B) {
-        if (!readableId || !href) {
+        if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
+            readableId,
+            href,
+          })
+          return
+        }
+        const matchedRun = (course.courseruns ?? []).find(
+          (run) => run.courseware_id === readableId,
+        )
+        const destinationUrl = href ?? matchedRun?.courseware_url
+        if (!destinationUrl) {
+          console.warn("Cannot enroll in B2B course: missing destination URL", {
             readableId,
             href,
           })
@@ -333,7 +369,7 @@ const useEnrollmentHandler = () => {
 
         if (showJustInTimeDialog) {
           NiceModal.show(JustInTimeDialog, {
-            href,
+            href: destinationUrl,
             readableId,
           })
         } else {
@@ -341,7 +377,7 @@ const useEnrollmentHandler = () => {
             { readable_id: readableId },
             {
               onSuccess: () => {
-                window.location.href = href
+                window.location.href = destinationUrl
               },
             },
           )
@@ -354,23 +390,97 @@ const useEnrollmentHandler = () => {
           )
           return
         }
+        const verifiedDestination =
+          selectedCoursewareUrl ??
+          (course.courseruns ?? []).find(
+            (run) => run.courseware_id === readableId,
+          )?.courseware_url ??
+          href
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: [programCoursewareId] },
           {
             onSuccess: () => {
-              window.location.href = href
+              window.location.href = verifiedDestination ?? href
             },
           },
         )
       } else {
-        const enrollmentAction = getCourseEnrollmentAction(course)
+        // Use the explicitly provided run_id when available (e.g., language
+        // picker selects a variant run that may not appear in course.courseruns).
+        // Fall back to searching course.courseruns by courseware_id, then to
+        // getCourseEnrollmentAction for the default run.
+        const directRequestedRun = selectedRunId
+          ? course.courseruns.find(
+              (r) => r.id === selectedRunId && r.is_enrollable,
+            )
+          : undefined
+        const isSyntheticRequestedRun =
+          !directRequestedRun && Boolean(selectedRunId && readableId)
+        const requestedRun = directRequestedRun
+          ? directRequestedRun
+          : isSyntheticRequestedRun
+            ? // Variant run not in courseruns: build a minimal run descriptor so
+              // we can still call createEnrollment with the correct id.
+              ({
+                id: selectedRunId!,
+                courseware_id: readableId!,
+              } as CourseRunV2)
+            : undefined
+        const requestedRunFromReadableId = readableId
+          ? course.courseruns.find(
+              (r) => r.courseware_id === readableId && r.is_enrollable,
+            )
+          : undefined
+        const enrollableRuns = (course.courseruns ?? []).filter(
+          (r) => r.is_enrollable,
+        )
+
+        const enrollmentAction =
+          // Preserve existing dashboard behavior: when a course has multiple
+          // enrollable runs, users should pick a run in the enrollment dialog.
+          // Exception: synthetic language-only runs are explicit selections
+          // derived from language options and should still allow direct action.
+          enrollableRuns.length > 1 && !isSyntheticRequestedRun
+            ? getCourseEnrollmentAction(course)
+            : (requestedRun ?? requestedRunFromReadableId)
+              ? (() => {
+                  const chosenRun = requestedRun ?? requestedRunFromReadableId!
+                  const enrollmentType = getEnrollmentType(
+                    course.courseruns.find((r) => r.id === chosenRun.id)
+                      ?.enrollment_modes,
+                  )
+                  if (enrollmentType === "free") {
+                    return { type: "audit" as const, run: chosenRun }
+                  }
+                  if (enrollmentType === "none") {
+                    // For synthetic language-only runs we don't have enrollment_modes,
+                    // so attempt an audit enrollment by run id. For normal runs,
+                    // defer to the default action picker.
+                    return isSyntheticRequestedRun
+                      ? { type: "audit" as const, run: chosenRun }
+                      : getCourseEnrollmentAction(course)
+                  }
+                  if (enrollmentType === "paid") {
+                    const product = course.courseruns.find(
+                      (r) => r.id === chosenRun.id,
+                    )?.products?.[0]
+                    return product
+                      ? { type: "checkout" as const, run: chosenRun, product }
+                      : { type: "none" as const }
+                  }
+                  return getCourseEnrollmentAction(course)
+                })()
+              : getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
               onSuccess: () => {
-                const destination = enrollmentAction.run.courseware_url ?? href
+                const destination =
+                  selectedCoursewareUrl ??
+                  enrollmentAction.run.courseware_url ??
+                  href
                 if (destination) {
                   window.location.href = destination
                 }
@@ -439,19 +549,31 @@ const getCoursewareTextAndIcon = ({
   isProgram?: boolean
 }) => {
   if (enrollmentStatus === EnrollmentStatus.NotEnrolled) {
-    return { text: `Start ${noun}`, endIcon: null }
+    return {
+      text: `Start ${noun}`,
+      endIcon: null,
+    }
   }
   if (
     (endDate && isInPast(endDate)) ||
     enrollmentStatus === EnrollmentStatus.Completed
   ) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: `View ${noun}`,
+      endIcon: null,
+    }
   }
   // Programs show "View Program" when enrolled, courses show "Continue"
   if (isProgram && enrollmentStatus === EnrollmentStatus.Enrolled) {
-    return { text: `View ${noun}`, endIcon: null }
+    return {
+      text: `View ${noun}`,
+      endIcon: null,
+    }
   }
-  return { text: "Continue", endIcon: <RiArrowRightLine /> }
+  return {
+    text: "Continue",
+    endIcon: <RiArrowRightLine />,
+  }
 }
 
 const CoursewareButton = styled(
@@ -607,7 +729,7 @@ const UpgradeBanner: React.FC<
     <SubtitleLinkRoot {...others}>
       <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiAddLine size="16px" />
-        Add a certificate for {formattedPrice}
+        {`Add a certificate for ${formattedPrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
         <NoSSR>
@@ -674,6 +796,8 @@ type DashboardCardProps = {
   contractId?: number
   programEnrollment?: V3UserProgramEnrollment
   onUpgradeError?: (error: string) => void
+  selectedCourseRun?: CourseRunV2 | null
+  uiLanguageCode?: string
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -691,6 +815,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   contractId,
   programEnrollment,
   onUpgradeError,
+  selectedCourseRun,
+  uiLanguageCode: _uiLanguageCode = "en",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -698,10 +824,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     FeatureFlags.MitxOnlineProductPages,
   )
 
-  const title = getTitle(resource)
+  const title = getTitle(resource, selectedCourseRun)
   const courseRun =
     resource.type === DashboardType.Course
-      ? getBestRun(resource.data, { enrollableOnly: true, contractId })
+      ? (selectedCourseRun ??
+        getBestRun(resource.data, { enrollableOnly: true, contractId }))
       : undefined
   const enrollmentRun =
     resource.type === DashboardType.CourseRunEnrollment
@@ -730,7 +857,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   const isContractPageResource = Boolean(b2bContractId)
 
   const hasEnrollableRuns = isCourse
-    ? (resource.data.courseruns ?? []).some((run) => run.is_enrollable)
+    ? (courseRun?.is_enrollable ?? false)
     : true
 
   const disableEnrollment = isCourse && !hasEnrollableRuns
@@ -759,7 +886,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       enrollment.enroll({
         course: resource.data,
         readableId: readableId,
+        selectedRunId: courseRun?.id,
         href: buttonHref ?? coursewareUrl ?? undefined,
+        selectedCoursewareUrl: coursewareUrl ?? undefined,
         isB2B: !!b2bContractId,
         isVerifiedProgram: isVerifiedProgramEnrollment,
         programCoursewareId: programEnrollment?.program.readable_id,
@@ -768,6 +897,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   }, [
     isCourse,
     resource,
+    courseRun?.id,
     readableId,
     coursewareUrl,
     b2bContractId,
@@ -806,14 +936,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   ) : (
     <>
       {titleHref ? (
-        <TitleLink
-          size="medium"
-          color="black"
-          href={titleHref}
-          onClick={titleClick}
-        >
-          {title}
-        </TitleLink>
+        <TitleHeading>
+          <TitleLink
+            size="medium"
+            color="black"
+            href={titleHref}
+            onClick={titleClick}
+          >
+            {title}
+          </TitleLink>
+        </TitleHeading>
       ) : titleClick ? (
         <TitleText clickable onClick={titleClick}>
           {title}

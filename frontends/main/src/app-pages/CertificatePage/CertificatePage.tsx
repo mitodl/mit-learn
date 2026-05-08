@@ -21,7 +21,13 @@ import type {
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { DigitalCredentialDialog } from "./DigitalCredentialDialog"
-import { getCertificateInfo } from "@/common/certificateUtils"
+import {
+  getCertificateInfo,
+  getVerifiableCredentialLinkedInURL,
+  getCertificateLinkedInUrl,
+  getVerifiableCredentialDownloadAPIURL,
+  CertificateType,
+} from "@/common/certificateUtils"
 
 const Page = styled.div(({ theme }) => ({
   backgroundImage: `url(${backgroundImage.src})`,
@@ -636,11 +642,6 @@ const ProgramCertificate = ({
   )
 }
 
-export enum CertificateType {
-  Course = "course",
-  Program = "program",
-}
-
 const CertificatePage: React.FC<{
   certificateType: CertificateType
   uuid: string
@@ -747,6 +748,14 @@ const CertificatePage: React.FC<{
     ? certificateData?.verifiable_credential_json
     : null
 
+  const linkedInAddToProfileUrl = verifiableCredential
+    ? getVerifiableCredentialLinkedInURL(verifiableCredential)
+    : getCertificateLinkedInUrl(certificateType, certificateData!, pageUrl)
+
+  const sharePageUrl = verifiableCredential
+    ? `https://verifierplus.org/#verify?vc=${encodeURIComponent(getVerifiableCredentialDownloadAPIURL(verifiableCredential))}`
+    : pageUrl
+
   return (
     <Page>
       <SharePopover
@@ -754,7 +763,8 @@ const CertificatePage: React.FC<{
         title={`${title} Certificate issued by MIT Open Learning`}
         anchorEl={shareButtonRef.current}
         onClose={() => setShareOpen(false)}
-        pageUrl={pageUrl}
+        pageUrl={sharePageUrl}
+        linkedInHrefOverride={linkedInAddToProfileUrl}
       />
       {verifiableCredential ? (
         <DigitalCredentialDialog

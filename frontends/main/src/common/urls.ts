@@ -214,6 +214,8 @@ export const FACEBOOK_SHARE_BASE_URL =
 export const TWITTER_SHARE_BASE_URL = "https://x.com/share"
 export const LINKEDIN_SHARE_BASE_URL =
   "https://www.linkedin.com/sharing/share-offsite"
+export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
+  "https://www.linkedin.com/profile/add"
 
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
@@ -221,9 +223,16 @@ export const coursePageView = (readableId: string) =>
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
 export const videoPlaylistPageView = (id: string) =>
   generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
-export const PODCAST_PAGE_VIEW = "/podcast/[id]"
+export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
 export const podcastPageView = (id: string) =>
-  generatePath(PODCAST_PAGE_VIEW, { id })
+  generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
+export const PODCAST_EPISODE_PAGE_VIEW =
+  "/podcast/[podcastId]/podcast_episode/[episodeId]"
+export const podcastEpisodePageView = (id: string, podcastId: string) =>
+  generatePath(PODCAST_EPISODE_PAGE_VIEW, {
+    podcastId: String(podcastId),
+    episodeId: String(id),
+  })
 export const VIDEO_DETAIL_PAGE_VIEW = "/video-playlist/detail/[videoId]"
 export const videoDetailPageView = (videoId: number, playlistId: number) => {
   const params = new URLSearchParams({ playlist: String(playlistId) })

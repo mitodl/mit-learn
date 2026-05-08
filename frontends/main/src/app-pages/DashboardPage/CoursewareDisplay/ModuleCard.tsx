@@ -31,6 +31,7 @@ import {
 } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "api/mitxonline-hooks/baskets"
 import { EnrollmentStatus, getBestRun, getEnrollmentStatus } from "./helpers"
+import { getReceiptMenuItem } from "./receiptMenuItem"
 import {
   CourseWithCourseRunsSerializerV2,
   CourseRunEnrollmentV3,
@@ -117,14 +118,18 @@ const CardRoot = styled.div<{
   },
 ])
 
-const TitleLink = styled(Link)(({ theme }) => ({
+const TitleHeading = styled.h3(({ theme }) => ({
+  margin: 0,
   [theme.breakpoints.down("md")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleText = styled.div<{ clickable?: boolean }>(
+const TitleLink = styled(Link)()
+
+const TitleText = styled.h3<{ clickable?: boolean }>(
   ({ theme, clickable }) => ({
+    margin: 0,
     ...theme.typography.subtitle2,
     color: theme.custom.colors.darkGray2,
     cursor: clickable ? "pointer" : "default",
@@ -225,6 +230,12 @@ const getContextMenuItems = (
         },
       },
     )
+
+    const receiptMenuItem = getReceiptMenuItem(
+      resource.data.enrollment_mode,
+      `/orders/receipt/by-run/${resource.data.run.id}/`,
+    )
+    if (receiptMenuItem) courseMenuItems.push(receiptMenuItem)
 
     menuItems.push(...courseMenuItems)
   }
@@ -602,6 +613,7 @@ type DashboardCardProps = {
   useVerifiedEnrollment?: boolean
   parentProgramIds?: string[]
   onUpgradeError?: (error: string) => void
+  headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
 }
 
 type DashboardCardSharedProps = Omit<DashboardCardProps, "resource">
@@ -703,6 +715,7 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   useVerifiedEnrollment,
   parentProgramIds,
   onUpgradeError,
+  headingLevel = "h3",
 }) => {
   const enrollment = useEnrollmentHandler()
   const mitxOnlineUser = enrollment.mitxOnlineUser
@@ -788,16 +801,22 @@ const DashboardCourseCard: React.FC<DashboardCourseCardProps> = ({
   ) : (
     <>
       {titleHref ? (
-        <TitleLink
-          size="medium"
-          color="black"
-          href={titleHref}
+        <TitleHeading as={headingLevel}>
+          <TitleLink
+            size="medium"
+            color="black"
+            href={titleHref}
+            onClick={titleClick}
+          >
+            {title}
+          </TitleLink>
+        </TitleHeading>
+      ) : (
+        <TitleText
+          as={headingLevel}
+          clickable={Boolean(titleClick)}
           onClick={titleClick}
         >
-          {title}
-        </TitleLink>
-      ) : (
-        <TitleText clickable={Boolean(titleClick)} onClick={titleClick}>
           {title}
         </TitleText>
       )}

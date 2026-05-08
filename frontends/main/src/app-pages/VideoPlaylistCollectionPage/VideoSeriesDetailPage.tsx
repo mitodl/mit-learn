@@ -17,9 +17,8 @@ import { notFound } from "next/navigation"
 import { useSeriesNavigation } from "./useSeriesNavigation"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
-import MetaRow from "./MetaRow"
-import TopicChips from "./TopicChips"
 import * as Styled from "./VideoSeriesDetailPage.styled"
+import { buildVideoStructuredData } from "./videoStructuredData"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
   () => import("./VideoJsPlayer"),
@@ -51,7 +50,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const {
     prevVideo,
     nextVideo,
@@ -64,48 +62,28 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
   const sources = useMemo(
     () =>
-      video ? resolveVideoSources(video.video?.streaming_url, video.url) : [],
+      video
+        ? resolveVideoSources(
+            video.video?.streaming_url,
+            video.url,
+            video.content_files?.[0]?.youtube_id,
+          )
+        : [],
     [video],
   )
-
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
 
-  const topics = video?.topics ?? []
+  const captionUrls = video?.video?.caption_urls ?? []
   const playlistLabel = playlist?.title || "Video Collection"
-
-  // Meta: instructors, department, duration, term
-  const run = video?.runs?.[0]
-  const instructorNames =
-    run?.instructors
-      ?.map((i) => i.full_name)
-      .filter(Boolean)
-      .join(", ") ?? null
-  const departmentName = video?.departments?.[0]?.name ?? null
-  const term =
-    run?.semester && run?.year
-      ? `${run.semester} ${run.year}`
-      : run?.semester || (run?.year ? String(run.year) : null)
-  const metaParts = [instructorNames, departmentName, duration, term].filter(
-    Boolean,
-  ) as string[]
-
-  const institutionLabel =
-    video?.departments?.[0]?.name?.toUpperCase() ??
-    playlist?.offered_by?.name?.toUpperCase() ??
-    null
 
   const isLoading = videoLoading || (!!playlistId && playlistLoading)
 
   const videoTitleLabel = video?.title?.trim() || "Untitled video"
   const durationLabel = duration || "Unknown duration"
-  const topicNamesLabel =
-    topics
-      .map((t) => t.name)
-      .filter(Boolean)
-      .join(" · ") || "No topics listed"
-  const videoThumbnailAlt = `Video thumbnail for ${videoTitleLabel}. Duration: ${durationLabel}. Topics: ${topicNamesLabel}`
+
+  const videoThumbnailAlt = `Video thumbnail for ${videoTitleLabel}. Duration: ${durationLabel}`
   const loadingStatusMessage = isLoading
     ? "Loading video details and player"
     : "Video details loaded"
@@ -116,12 +94,28 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
     }
   }, [isLoading, videoId])
 
+  // VideoObject JSON-LD for Google search indexing.
+  // Rendered as a plain <script> tag so Googlebot can read it without executing
+  // any additional JS. The replace guard prevents </script> injection.
+  // See: https://developers.google.com/search/docs/appearance/structured-data/video
+  const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
   return (
     <Styled.PageWrapper>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <Styled.SkipLinksNav aria-label="Skip links">
         <Styled.SkipLink href="#video-detail-main">
           Skip to main content
@@ -178,15 +172,6 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
 
       <Styled.ContentArea id="video-detail-main" tabIndex={-1}>
         <VideoContainer>
-          {/* Institution / category label */}
-          {isLoading ? (
-            <Skeleton width={280} height={16} style={{ marginBottom: 8 }} />
-          ) : institutionLabel ? (
-            <Styled.InstitutionLabel>
-              {institutionLabel}
-            </Styled.InstitutionLabel>
-          ) : null}
-
           {/* Video title */}
           {isLoading ? (
             <Skeleton
@@ -200,7 +185,9 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               {video?.title}
             </Styled.VideoTitle>
           )}
-
+          {duration && (
+            <Styled.StyledDuration>{duration}</Styled.StyledDuration>
+          )}
           {/* Video player */}
           <Styled.PlayerWrapper
             id="video-player-region"
@@ -221,6 +208,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined
@@ -261,33 +249,19 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
             <UpNextSection nextVideo={nextVideo} getVideoHref={getVideoHref} />
           )}
 
-          {/* Meta row */}
-          {!isLoading && (
-            <MetaRow
-              metaParts={metaParts}
-              instructorNames={instructorNames}
-              departmentName={departmentName}
-              duration={duration}
-              term={term}
-            />
-          )}
-
           {/* Description */}
           {!isLoading && video?.description && (
-            <Styled.DescriptionText id="video-description">
-              {video.description}
-            </Styled.DescriptionText>
+            <Styled.DescriptionText
+              id="video-description"
+              dangerouslySetInnerHTML={{ __html: video.description }}
+            />
           )}
 
           {!isLoading && !video?.description && (
             <Styled.ScreenReaderOnly id="video-description">
-              {videoTitleLabel}. Duration: {durationLabel}. Topics:{" "}
-              {topicNamesLabel}.
+              {videoTitleLabel}. Duration: {durationLabel}.
             </Styled.ScreenReaderOnly>
           )}
-
-          {/* Topic chips */}
-          {!isLoading && <TopicChips topics={topics} />}
         </VideoContainer>
       </Styled.ContentArea>
     </Styled.PageWrapper>

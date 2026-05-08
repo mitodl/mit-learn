@@ -1,7 +1,9 @@
 import React from "react"
-import { screen } from "@testing-library/react"
+import { screen, fireEvent } from "@testing-library/react"
 import { renderWithProviders } from "@/test-utils"
 import { factories } from "api/test-utils"
+import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
+import { getByImageSrc } from "ol-test-utilities"
 import { PlatformEnum, ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
@@ -54,7 +56,7 @@ describe("CallToActionSection", () => {
         resourceType: ResourceTypeEnum.Video,
         platform: PlatformEnum.Youtube,
         resourceCategory: "Lecture Video",
-        expectedText: "Watch Video",
+        expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Video,
@@ -66,7 +68,7 @@ describe("CallToActionSection", () => {
         resourceType: ResourceTypeEnum.VideoPlaylist,
         platform: PlatformEnum.Youtube,
         resourceCategory: "Video Playlist",
-        expectedText: "Watch Video",
+        expectedText: "Learn More",
       },
       {
         resourceType: ResourceTypeEnum.Podcast,
@@ -324,6 +326,49 @@ describe("CallToActionSection", () => {
       expect(href).toContain(url)
       expect(href).toContain("utm_source=mit-learn")
       expect(href).not.toContain("/courses/")
+    })
+  })
+
+  describe("Image fallback chain", () => {
+    const render = (
+      resource: ReturnType<typeof factories.learningResources.resource>,
+    ) =>
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+    it("shows content_files image when resource.image is null for Document/Video", () => {
+      const contentFileImageSrc = "https://example.com/content-file.jpg"
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Document,
+        image: null,
+        content_files: [
+          factories.learningResources.contentFile({
+            image_src: contentFileImageSrc,
+          }),
+        ],
+      })
+
+      const { view } = render(resource)
+
+      getByImageSrc(view.container, contentFileImageSrc)
+    })
+
+    it("falls back to DEFAULT_RESOURCE_IMG when image.url returns 404", () => {
+      const primaryUrl = "https://example.com/primary.jpg"
+      const resource = factories.learningResources.resource({
+        resource_type: ResourceTypeEnum.Document,
+        image: { url: primaryUrl, alt: "primary" },
+      })
+
+      const { view } = render(resource)
+      fireEvent.error(getByImageSrc(view.container, primaryUrl))
+
+      getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
     })
   })
 

@@ -2,7 +2,8 @@ import React from "react"
 import moment from "moment"
 import { factories, setMockResponse } from "api/test-utils"
 import { screen, renderWithProviders, user } from "@/test-utils"
-import CertificatePage, { CertificateType } from "./CertificatePage"
+import CertificatePage from "./CertificatePage"
+import { CertificateType } from "@/common/certificateUtils"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import * as mitxonline from "api/mitxonline-test-utils"
 import {
@@ -232,6 +233,31 @@ describe("CertificatePage - SharePopover", () => {
     expect(facebookLink).toHaveAttribute("href", facebookHref)
     expect(twitterLink).toHaveAttribute("href", twitterHref)
     expect(linkedinLink).toHaveAttribute("href", linkedinHref)
+
+    expect(facebookLink).toHaveAttribute("target", "_blank")
+    expect(twitterLink).toHaveAttribute("target", "_blank")
+    expect(linkedinLink).toHaveAttribute("target", "_blank")
+  })
+
+  it("renders social media share links with correct URLs when given override", () => {
+    const linkedInHrefOverride = "https://example.com/linkedInHrefOverride"
+    renderWithProviders(
+      <SharePopover
+        {...mockProps}
+        linkedInHrefOverride={linkedInHrefOverride}
+      />,
+    )
+
+    const facebookHref = `${FACEBOOK_SHARE_BASE_URL}?u=${encodeURIComponent(mockProps.pageUrl)}`
+    const twitterHref = `${TWITTER_SHARE_BASE_URL}?text=${encodeURIComponent(mockProps.title)}&url=${encodeURIComponent(mockProps.pageUrl)}`
+
+    const facebookLink = screen.getByRole("link", { name: "Share on Facebook" })
+    const twitterLink = screen.getByRole("link", { name: "Share on Twitter" })
+    const linkedinLink = screen.getByRole("link", { name: "Share on LinkedIn" })
+
+    expect(facebookLink).toHaveAttribute("href", facebookHref)
+    expect(twitterLink).toHaveAttribute("href", twitterHref)
+    expect(linkedinLink).toHaveAttribute("href", linkedInHrefOverride)
 
     expect(facebookLink).toHaveAttribute("target", "_blank")
     expect(twitterLink).toHaveAttribute("target", "_blank")

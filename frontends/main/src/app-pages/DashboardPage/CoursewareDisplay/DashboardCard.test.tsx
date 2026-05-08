@@ -96,7 +96,7 @@ describe.each([
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
   })
 
-  test("It shows course title and links to courseware when enrolled", async () => {
+  test("It shows enrolled run title and links to courseware when enrolled", async () => {
     setupUserApis()
     const coursewareUrl = faker.internet.url()
     const courseRun = mitxonline.factories.courses.courseRun({
@@ -122,9 +122,12 @@ describe.each([
     const card = getCard()
 
     const courseLink = within(card).getByRole("link", {
-      name: course.title,
+      name: courseRun.title,
     })
     expect(courseLink).toHaveAttribute("href", coursewareUrl)
+    expect(
+      within(card).getByRole("heading", { name: courseRun.title, level: 3 }),
+    ).toBeInTheDocument()
   })
 
   test("It shows course title as clickable text (not link) when not enrolled (non-B2B)", async () => {
@@ -147,9 +150,10 @@ describe.each([
     expect(
       within(card).queryByRole("link", { name: course.title }),
     ).not.toBeInTheDocument()
-    // Should be clickable text
-    const titleText = within(card).getByText(course.title)
-    expect(titleText).toBeInTheDocument()
+    // Should be clickable text wrapped in a heading
+    expect(
+      within(card).getByRole("heading", { name: course.title, level: 3 }),
+    ).toBeInTheDocument()
   })
 
   test("It shows course title as clickable text if not enrolled but has B2B contract", async () => {
@@ -177,8 +181,9 @@ describe.each([
     expect(
       within(card).queryByRole("link", { name: course.title }),
     ).not.toBeInTheDocument()
-    const titleText = within(card).getByText(course.title)
-    expect(titleText).toBeInTheDocument()
+    expect(
+      within(card).getByRole("heading", { name: course.title, level: 3 }),
+    ).toBeInTheDocument()
   })
 
   test("Accepts a classname", () => {
@@ -297,6 +302,65 @@ describe.each([
     const card = getCard()
     const coursewareCTA = within(card).getByTestId("courseware-button")
 
+    expect(coursewareCTA).toBeDisabled()
+  })
+
+  test("uses selectedCourseRun title for course card", () => {
+    setupUserApis()
+    const defaultRun = mitxonline.factories.courses.courseRun({
+      title: "Default Run Title",
+      is_enrollable: true,
+    })
+    const selectedRun = mitxonline.factories.courses.courseRun({
+      title: "Selected Language Run Title",
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({
+      title: "Base Course Title",
+      courseruns: [defaultRun, selectedRun],
+      next_run_id: defaultRun.id,
+    })
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.Course, data: course }}
+        selectedCourseRun={selectedRun}
+      />,
+    )
+
+    const card = getCard()
+    expect(
+      within(card).getByText("Selected Language Run Title"),
+    ).toBeInTheDocument()
+    expect(
+      within(card).queryByText("Base Course Title"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("uses selectedCourseRun enrollability to disable enrollment CTA", () => {
+    setupUserApis()
+    const enrollableDefaultRun = mitxonline.factories.courses.courseRun({
+      title: "Enrollable Default",
+      is_enrollable: true,
+    })
+    const nonEnrollableSelectedRun = mitxonline.factories.courses.courseRun({
+      title: "Non-enrollable Selected",
+      is_enrollable: false,
+    })
+    const course = mitxOnlineCourse({
+      courseruns: [enrollableDefaultRun, nonEnrollableSelectedRun],
+      next_run_id: enrollableDefaultRun.id,
+    })
+
+    renderWithProviders(
+      <DashboardCard
+        resource={{ type: DashboardType.Course, data: course }}
+        selectedCourseRun={nonEnrollableSelectedRun}
+      />,
+    )
+
+    const card = getCard()
+    const coursewareCTA = within(card).getByTestId("courseware-button")
     expect(coursewareCTA).toBeDisabled()
   })
 
@@ -1072,6 +1136,7 @@ describe.each([
     run?: ReturnType<typeof mitxonline.factories.courses.courseRun>
   }) => {
     setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
     // Use run's courseware_id if provided, otherwise fall back to course's readable_id
     const runId =
@@ -1104,7 +1169,10 @@ describe.each([
   test.each(ENROLLMENT_TRIGGERS)(
     "Enrollment for complete profile bypasses just-in-time dialog",
     async ({ trigger }) => {
-      const userData = mitxUser()
+      const userData = mitxUser({
+        legal_address: { country: "US" },
+        user_profile: { year_of_birth: 1988 },
+      })
       const b2bContractId = faker.number.int()
       const run = mitxonline.factories.courses.courseRun({
         b2b_contract: b2bContractId,
@@ -1248,6 +1316,7 @@ describe.each([
 
         const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
         setMockResponse.post(enrollmentUrl, {})
+        setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
         renderWithProviders(
           <DashboardCard
@@ -1327,6 +1396,71 @@ describe.each([
         ).not.toBeInTheDocument()
       },
     )
+
+    test("Audit enrollment redirects to selected language run courseware_url", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const sourceRun = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_id: "course-v1:LANGTEST+COURSE+BASE",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home",
+        enrollment_modes: [
+          mitxonline.factories.courses.enrollmentMode({
+            requires_payment: false,
+          }),
+        ],
+      })
+
+      const course = mitxOnlineCourse({
+        courseruns: [sourceRun],
+        next_run_id: sourceRun.id,
+      })
+
+      const selectedLanguageRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        is_enrollable: true,
+        courseware_id: "course-v1:LANGTEST+COURSE+ALT_ES",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+ALT_ES/home",
+      })
+
+      const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
+      setMockResponse.post(enrollmentUrl, {})
+      // Return no matching enrollment so redirect falls back to selected run URL.
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          selectedCourseRun={selectedLanguageRun}
+          buttonHref={
+            "https://courses.c4103.com/learn/course/course-v1:LANGTEST+COURSE+BASE/home"
+          }
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "POST",
+            url: enrollmentUrl,
+            data: JSON.stringify({ run_id: selectedLanguageRun.id }),
+          }),
+        )
+      })
+
+      await waitFor(() => {
+        expect(window.location.href).toBe(selectedLanguageRun.courseware_url)
+      })
+    })
   })
 
   describe("Verified Program Enrollment", () => {
@@ -1432,6 +1566,68 @@ describe.each([
       await screen.findByRole("dialog", { name: course.title })
     })
 
+    test("Verified enrollment redirects to selected language run courseware_url", async () => {
+      const userData = mitxUser()
+      setMockResponse.get(mitxonline.urls.userMe.get(), userData)
+
+      const sourceRun = mitxonline.factories.courses.courseRun({
+        b2b_contract: null,
+        is_enrollable: true,
+        courseware_id: "course-v1:VERIFYTEST+COURSE+BASE",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+BASE/home",
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [sourceRun],
+        next_run_id: sourceRun.id,
+      })
+
+      const selectedLanguageRun = mitxonline.factories.courses.courseRun({
+        id: faker.number.int(),
+        is_enrollable: true,
+        courseware_id: "course-v1:VERIFYTEST+COURSE+ALT_ES",
+        courseware_url:
+          "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+ALT_ES/home",
+      })
+
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: "verified",
+        })
+
+      const verifiedEndpoint =
+        mitxonline.urls.verifiedProgramEnrollments.create(
+          selectedLanguageRun.courseware_id,
+        )
+      setMockResponse.post(verifiedEndpoint, {})
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{ type: DashboardType.Course, data: course }}
+          selectedCourseRun={selectedLanguageRun}
+          buttonHref={
+            "https://courses.c4103.com/learn/course/course-v1:VERIFYTEST+COURSE+BASE/home"
+          }
+          programEnrollment={programEnrollment}
+        />,
+      )
+
+      const card = getCard()
+      const button = within(card).getByTestId("courseware-button")
+
+      await user.click(button)
+
+      await waitFor(() => {
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "POST", url: verifiedEndpoint }),
+        )
+      })
+
+      await waitFor(() => {
+        expect(window.location.href).toBe(selectedLanguageRun.courseware_url)
+      })
+    })
+
     test("Audit program enrollment bypasses dialog for free-only single-run enrollment", async () => {
       const userData = mitxUser()
       setMockResponse.get(mitxonline.urls.userMe.get(), userData)
@@ -1457,6 +1653,7 @@ describe.each([
 
       const enrollmentUrl = mitxonline.urls.enrollment.enrollmentsListV1()
       setMockResponse.post(enrollmentUrl, {})
+      setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
       renderWithProviders(
         <DashboardCard
@@ -1940,6 +2137,203 @@ describe.each([
       expect(
         screen.getByRole("menuitem", { name: "Unenroll" }),
       ).toBeInTheDocument()
+    })
+
+    test("Receipt menu item appears for verified course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { ...run, course },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.getByRole("menuitem", { name: "Receipt" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Receipt menu item does not appear for audit course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = course.courseruns[0]
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+        enrollment_mode: EnrollmentMode.Audit,
+        run: { ...run, course },
+      })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.queryByRole("menuitem", { name: "Receipt" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Receipt menu item links to correct MITx Online URL for verified course run enrollment", async () => {
+      setupUserApis()
+      const course = mitxOnlineCourse()
+      const run = mitxonline.factories.courses.courseRun({ id: 42 })
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { ...run, course },
+      })
+
+      const windowOpenSpy = jest
+        .spyOn(window, "open")
+        .mockImplementation(() => null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.CourseRunEnrollment,
+            data: enrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const receiptItem = screen.getByRole("menuitem", { name: "Receipt" })
+      await user.click(receiptItem)
+
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/orders/receipt/by-run/42/"),
+        "_blank",
+        "noopener,noreferrer",
+      )
+      windowOpenSpy.mockRestore()
+    })
+
+    test("Receipt menu item appears for verified program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Verified,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.getByRole("menuitem", { name: "Receipt" }),
+      ).toBeInTheDocument()
+    })
+
+    test("Receipt menu item does not appear for audit program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram()
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Audit,
+        })
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      expect(
+        screen.queryByRole("menuitem", { name: "Receipt" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("Receipt menu item links to correct MITx Online URL for verified program enrollment", async () => {
+      setupUserApis()
+      const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: EnrollmentMode.Verified,
+        })
+
+      const windowOpenSpy = jest
+        .spyOn(window, "open")
+        .mockImplementation(() => null)
+
+      renderWithProviders(
+        <DashboardCard
+          resource={{
+            type: DashboardType.ProgramEnrollment,
+            data: programEnrollment,
+          }}
+        />,
+      )
+
+      const card = getCard()
+      const contextMenuButton = within(card).getByRole("button", {
+        name: "More options",
+      })
+      await user.click(contextMenuButton)
+
+      const receiptItem = screen.getByRole("menuitem", { name: "Receipt" })
+      await user.click(receiptItem)
+
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        mitxonlineLegacyUrl("/orders/receipt/by-program/99/"),
+        "_blank",
+        "noopener,noreferrer",
+      )
+      windowOpenSpy.mockRestore()
     })
   })
 })

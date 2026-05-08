@@ -142,8 +142,9 @@ type VideoCardProps = {
 
 const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
   const [imgError, setImgError] = useState(false)
-  const imageUrl =
-    !imgError && resource.image?.url ? resource.image.url : PLACEHOLDER_IMG
+  const imageUrl = !imgError
+    ? (resource?.image?.url ?? PLACEHOLDER_IMG)
+    : PLACEHOLDER_IMG
   const description = resource.description ?? ""
   const duration = resource.video?.duration
     ? formatDurationClockTime(resource.video.duration)
@@ -171,7 +172,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
         </CardTitleRow>
         <CardMetaRow>
           <CardMetaGroup>
-            <CardMetaValue>{description}</CardMetaValue>
+            <CardMetaValue dangerouslySetInnerHTML={{ __html: description }} />
           </CardMetaGroup>
         </CardMetaRow>
       </CardContent>

@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.65.0"
+VERSION = "0.66.10"
 
 log = logging.getLogger()
 
@@ -939,3 +939,7 @@ VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
 
 # Hubspot settings
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
+
+# Create all learning material resources for OCW courses
+# Learning material resources are behind show_ocw_files flag in search
+CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)

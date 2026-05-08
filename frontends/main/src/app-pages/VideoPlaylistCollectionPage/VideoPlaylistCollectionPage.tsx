@@ -69,11 +69,11 @@ const VideoPlaylistCollectionPage: React.FC<
   )
 
   const { data: similarData, isLoading: similarLoading } = useQuery({
-    ...learningResourceQueries.vectorSimilar(playlistId),
-    select: (data) =>
-      data.filter(
-        (resource) => resource.resource_type === ResourceTypeEnum.VideoPlaylist,
-      ),
+    ...learningResourceQueries.vectorSimilar({
+      id: playlistId,
+      limit: 6,
+      resource_type: [ResourceTypeEnum.VideoPlaylist],
+    }),
   })
 
   if (!showVideoPlaylistPage) {
@@ -88,7 +88,6 @@ const VideoPlaylistCollectionPage: React.FC<
     (item): item is VideoResource =>
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
-  const collectionVideos = videos.slice(1)
   const playlistType = isOcwPlaylist(playlist)
 
   const totalVideos = videos.length
@@ -113,7 +112,11 @@ const VideoPlaylistCollectionPage: React.FC<
 
   return (
     <Page>
-      <VideoPageHeader playlist={playlist} isSeries={playlistType} />
+      <VideoPageHeader
+        playlist={playlist}
+        isSeries={playlistType}
+        totalVideos={videos.length}
+      />
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
@@ -128,7 +131,7 @@ const VideoPlaylistCollectionPage: React.FC<
       ) : null}
       {!playlistType && (
         <VideoCollection
-          videos={collectionVideos}
+          videos={videos.slice(1)} // 0th video is featured prominently
           isLoading={isLoading}
           getHref={getVideoHref}
         />

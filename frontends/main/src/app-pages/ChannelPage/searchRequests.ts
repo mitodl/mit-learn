@@ -30,6 +30,7 @@ export const getConstantSearchParams = (searchFilter?: string) => {
 const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
   [ChannelTypeEnum.Topic]: [
     "free",
+    "resource_category",
     "resource_type",
     "certification_type",
     "delivery",
@@ -38,6 +39,7 @@ const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
   ],
   [ChannelTypeEnum.Department]: [
     "free",
+    "resource_category",
     "resource_type",
     "certification_type",
     "topic",
@@ -46,6 +48,7 @@ const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
   ],
   [ChannelTypeEnum.Unit]: [
     "free",
+    "resource_category",
     "resource_type",
     "topic",
     "certification_type",

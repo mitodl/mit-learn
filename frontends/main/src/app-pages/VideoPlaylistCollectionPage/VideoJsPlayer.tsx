@@ -6,6 +6,7 @@ import Player from "video.js/dist/types/player"
 import "video.js/dist/video-js.css"
 // Register YouTube tech so video.js can play youtube:// sources
 import "videojs-youtube"
+import type { CaptionUrl } from "api/v1"
 
 export type VideoJsSource = {
   src: string
@@ -14,6 +15,7 @@ export type VideoJsSource = {
 
 export type VideoJsPlayerProps = {
   sources: VideoJsSource[]
+  tracks?: CaptionUrl[]
   poster?: string | null
   autoplay?: boolean
   controls?: boolean
@@ -29,6 +31,7 @@ export type VideoJsPlayerProps = {
  */
 const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
   sources,
+  tracks = [],
   poster,
   autoplay = true,
   controls = true,
@@ -39,6 +42,35 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<Player | null>(null)
+  // Prevent the update effect from running on the very first mount —
+  // the init effect already handles the initial sources/tracks setup.
+  const isMountedRef = useRef(false)
+
+  const addTracks = (player: Player, trackList: CaptionUrl[]) => {
+    // Remove any existing remote text tracks first.
+    // Snapshot into a plain array before mutating (TextTrackList is live).
+    // video.js's TextTrackList TS type lacks a numeric index signature, so
+    // cast via unknown to a Record — safer than `any` and no eslint-disable needed.
+    type TrackArg = Parameters<typeof player.removeRemoteTextTrack>[0]
+    const existing = player.remoteTextTracks()
+    const snapshot = Array.from(
+      { length: existing.length },
+      (_, i) => (existing as unknown as Record<number, TrackArg>)[i],
+    )
+    snapshot.forEach((t) => player.removeRemoteTextTrack(t))
+    trackList.forEach((track, index) => {
+      player.addRemoteTextTrack(
+        {
+          kind: "captions",
+          src: track.url,
+          srclang: track.language,
+          label: track.language_name || track.language,
+          default: index === 0,
+        },
+        false,
+      )
+    })
+  }
 
   useEffect(() => {
     // Only initialise once
@@ -67,9 +99,18 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
         poster: poster ?? undefined,
         sources,
         techOrder: ["youtube", "html5"],
+        // Always set crossOrigin so the browser can fetch VTT files from
+        // a different origin (e.g. CloudFront CDN) without CORS errors.
+        crossOrigin: "anonymous",
       },
       function (this: Player) {
+        // Add tracks inside the ready callback — this is the earliest safe
+        // point; adding them before ready can silently fail on some browsers.
+        addTracks(this, tracks)
         onReady?.(this)
+        // Set the flag here so the update effect only runs after the player
+        // is truly ready and the initial setup is complete.
+        isMountedRef.current = true
       },
     )
 
@@ -83,15 +124,29 @@ const VideoJsPlayer: React.FC<VideoJsPlayerProps> = ({
     onReady,
     poster,
     sources,
+    tracks,
   ])
 
-  // Update sources / poster when props change without re-creating the player
+  // Update sources / poster when they change without re-creating the player.
+  // Kept separate from the tracks effect so a captions-only change does not
+  // call player.src() and unexpectedly reload / interrupt playback.
   useEffect(() => {
     const player = playerRef.current
-    if (!player) return
-    player.src(sources)
-    player.poster(poster ?? "")
+    if (!player || !isMountedRef.current) return
+    player.ready(() => {
+      player.src(sources)
+      player.poster(poster ?? "")
+    })
   }, [sources, poster])
+
+  // Update tracks independently so caption changes never trigger a media reload.
+  useEffect(() => {
+    const player = playerRef.current
+    if (!player || !isMountedRef.current) return
+    player.ready(() => {
+      addTracks(player, tracks)
+    })
+  }, [tracks])
 
   // Dispose on unmount
   useEffect(() => {
