@@ -688,3 +688,47 @@ def test_async_vector_resource_counts_usage(mocker, client):
     spy_vector_counts.reset_mock()
     client.get(url, data={"q": "test", "score_cutoff": 0.5})
     assert spy_resource_counts.call_count == 1
+
+
+def test_vector_search_with_score_cutoff_enforces_max_limit(mocker, client, settings):
+    """Test that vector search with score_cutoff limits returned results to VECTOR_SEARCH_PAGE_MAX_LIMIT"""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+
+    settings.VECTOR_SEARCH_PAGE_MAX_LIMIT = 5
+
+    mock_result = mocker.MagicMock()
+    mock_points = []
+    for i in range(10):
+        mock_point = mocker.MagicMock()
+        mock_point.payload = {"readable_id": f"resource-{i}"}
+        mock_points.append(mock_point)
+    mock_result.points = mock_points
+
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+    mocker.patch(
+        "vector_search.views._resource_vector_hits",
+        return_value=[{"id": f"resource-{i}"} for i in range(10)],
+    )
+
+    params = {
+        "q": "test",
+        "limit": 10,
+        "offset": 0,
+        "score_cutoff": 0.5,
+    }
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    assert response.status_code == 200
+    response_json = response.json()
+    assert len(response_json["results"]) == 5
