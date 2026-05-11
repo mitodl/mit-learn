@@ -5,7 +5,7 @@ import {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   pickDisplayedEnrollmentForLegacyDashboard,
-  resolveCardDataForLanguage,
+  resolveSlotForLanguage,
 } from "./dashboardViewModel"
 
 describe("dashboardViewModel", () => {
@@ -301,7 +301,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const resolved = resolveCardDataForLanguage(
+      const resolved = resolveSlotForLanguage(
         course,
         [englishEnrollment, spanishEnrollment],
         "language:es",
@@ -372,7 +372,7 @@ describe("dashboardViewModel", () => {
         },
       })
 
-      const resolved = resolveCardDataForLanguage(
+      const resolved = resolveSlotForLanguage(
         course,
         [otherContractEnrollment],
         "language:es",
@@ -414,7 +414,7 @@ describe("dashboardViewModel", () => {
         ],
       })
 
-      const resolved = resolveCardDataForLanguage(course, [], "language:es", {
+      const resolved = resolveSlotForLanguage(course, [], "language:es", {
         contractId: 1,
       })
 

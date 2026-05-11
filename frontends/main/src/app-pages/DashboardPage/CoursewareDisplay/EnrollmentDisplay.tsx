@@ -30,7 +30,7 @@ import {
 } from "./DashboardCard"
 import {
   getDistinctDashboardLanguageOptions,
-  resolveCardDataForLanguage,
+  resolveSlotForLanguage,
 } from "./model/dashboardViewModel"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
@@ -729,7 +729,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   const courseEnrollments =
                     enrollmentsByCourseId[item.course.id] || []
                   const { displayedEnrollment, displayedRun } =
-                    resolveCardDataForLanguage(
+                    resolveSlotForLanguage(
                       item.course,
                       courseEnrollments,
                       selectedLanguageKey,

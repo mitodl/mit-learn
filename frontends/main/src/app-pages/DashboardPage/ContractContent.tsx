@@ -36,7 +36,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import {
   getDistinctDashboardLanguageOptions,
-  resolveCardDataForLanguage,
+  resolveSlotForLanguage,
 } from "./CoursewareDisplay/model/dashboardViewModel"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
@@ -395,13 +395,12 @@ const OrgProgramCollectionDisplay: React.FC<{
             enrollments?.filter(
               (enrollment) => enrollment.b2b_contract_id === contract.id,
             ) ?? []
-          const { displayedEnrollment, displayedRun } =
-            resolveCardDataForLanguage(
-              course,
-              contractEnrollments,
-              selectedLanguageKey,
-              { contractId: contract.id },
-            )
+          const { displayedEnrollment, displayedRun } = resolveSlotForLanguage(
+            course,
+            contractEnrollments,
+            selectedLanguageKey,
+            { contractId: contract.id },
+          )
 
           const resource = displayedEnrollment
             ? {
@@ -507,7 +506,7 @@ const OrgProgramDisplay: React.FC<{
                   (enrollment) => enrollment.b2b_contract_id === contract?.id,
                 ) ?? []
               const { displayedEnrollment, displayedRun } =
-                resolveCardDataForLanguage(
+                resolveSlotForLanguage(
                   course,
                   contractEnrollments,
                   selectedLanguageKey,

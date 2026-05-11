@@ -281,22 +281,22 @@ const getDistinctDashboardLanguageOptions = (
 const getLanguageOptionKeyValue = (option: SimpleSelectOption): string =>
   String(option.value)
 
-type ResolveCardDataForLanguageOpts = {
+type ResolveSlotForLanguageOpts = {
   contractId?: number
 }
 
-type ResolveCardDataForLanguageResult = {
+type ResolveSlotForLanguageResult = {
   displayedEnrollment: CourseRunEnrollmentV3 | null
   displayedRun: CourseRunV2 | null
   selectedLanguageOption: CourseRunLanguageOption | null
 }
 
-const resolveCardDataForLanguage = (
+const resolveSlotForLanguage = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
   selectedLanguageKey: string,
-  opts?: ResolveCardDataForLanguageOpts,
-): ResolveCardDataForLanguageResult => {
+  opts?: ResolveSlotForLanguageOpts,
+): ResolveSlotForLanguageResult => {
   const selectedLanguageOption = getSelectedLanguageOption(
     course,
     selectedLanguageKey,
@@ -363,7 +363,7 @@ export {
   pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
-  resolveCardDataForLanguage,
+  resolveSlotForLanguage,
   getDashboardLanguageOptions,
   getDistinctDashboardLanguageOptions,
 }
