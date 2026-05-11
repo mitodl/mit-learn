@@ -559,10 +559,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       const itemDuration = item.video?.duration
                         ? formatDurationClockTime(item.video.duration)
                         : null
-                      const imageUrl =
-                        item.image?.url ??
-                        item.content_files?.[0]?.image_src ??
-                        null
+                      const imageUrl = item.image?.url ?? null
                       const itemTopicNames = (item.topics ?? [])
                         .map((topic) => topic.name)
                         .filter(Boolean)

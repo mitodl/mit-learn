@@ -1,7 +1,6 @@
 import React from "react"
-import type { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { standardizeMetadata } from "@/common/metadata"
+import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
@@ -10,9 +9,28 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoDetailPageRouter from "@/app-pages/VideoPlaylistCollectionPage/VideoDetailPageRouter"
 import { notFound } from "next/navigation"
 
-export const metadata: Metadata = standardizeMetadata({
-  title: "Video Detail",
-})
+export const generateMetadata = async (
+  props: PageProps<"/video-playlist/detail/[id]">,
+) => {
+  const { id } = await props.params
+  const videoId = Number(id)
+  if (!Number.isInteger(videoId) || videoId <= 0) {
+    notFound()
+  }
+  const queryClient = getQueryClient()
+
+  return safeGenerateMetadata(async () => {
+    const resource = await queryClient.fetchQuery(
+      learningResourceQueries.detail(videoId),
+    )
+    return standardizeMetadata({
+      title: resource.title,
+      description: resource.description ?? undefined,
+      image: resource.image?.url,
+      imageAlt: resource.image?.alt ?? undefined,
+    })
+  })
+}
 
 const Page: React.FC<PageProps<"/video-playlist/detail/[id]">> = async ({
   params,

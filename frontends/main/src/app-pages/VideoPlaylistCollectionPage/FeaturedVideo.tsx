@@ -184,8 +184,7 @@ const FeaturedVideo: React.FC<FeaturedVideoProps> = ({
   totalVideos,
   totalTime,
 }) => {
-  const imageUrl =
-    video.image?.url ?? video.content_files?.[0]?.image_src ?? null
+  const imageUrl = video.image?.url ?? null
 
   const duration = video.video?.duration
     ? formatDurationClockTime(video.video.duration)

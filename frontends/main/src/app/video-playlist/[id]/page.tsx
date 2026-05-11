@@ -1,7 +1,6 @@
 import React from "react"
-import type { Metadata } from "next"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { standardizeMetadata } from "@/common/metadata"
+import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
@@ -10,17 +9,46 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage/VideoPlaylistCollectionPage"
 import { notFound } from "next/navigation"
 
-export const metadata: Metadata = standardizeMetadata({
-  title: "Video Playlist",
-  robots: "noindex, nofollow",
-})
+export const generateMetadata = async (
+  props: PageProps<"/video-playlist/[id]">,
+) => {
+  const { id } = await props.params
+  const playlistId = Number(id)
+  if (!Number.isInteger(playlistId) || playlistId <= 0) {
+    notFound()
+  }
+  const queryClient = getQueryClient()
+
+  return safeGenerateMetadata(async () => {
+    const [playlist, items] = await Promise.all([
+      queryClient.fetchQuery(videoPlaylistQueries.detail(playlistId)),
+      queryClient.fetchQuery(
+        learningResourceQueries.items(playlistId, {
+          learning_resource_id: playlistId,
+        }),
+      ),
+    ])
+
+    const firstVideoImage = items?.[0]?.image?.url
+    const firstVideoImageAlt = items?.[0]?.image?.alt ?? undefined
+
+    return standardizeMetadata({
+      title: playlist.title,
+      description: playlist.description ?? undefined,
+      image: firstVideoImage ?? playlist.image?.url,
+      imageAlt: firstVideoImage
+        ? firstVideoImageAlt
+        : (playlist.image?.alt ?? undefined),
+    })
+  })
+}
 
 const Page: React.FC<PageProps<"/video-playlist/[id]">> = async ({
   params,
 }) => {
   const { id } = await params
   const playlistId = Number(id)
-  if (Number.isNaN(playlistId)) {
+  if (!Number.isInteger(playlistId) || playlistId <= 0) {
     notFound()
   }
   const queryClient = getQueryClient()

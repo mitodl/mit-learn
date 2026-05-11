@@ -494,9 +494,8 @@ def generate_filter_clauses(search_params):
                 }
             },
             {"term": {"resource_type": "course"}},
+            {"term": {"resource_type": "video"}},
         ]
-        if settings.SHOW_OCW_LECTURE_VIDEOS:
-            ocw_should.append({"term": {"resource_category": "Lecture Videos"}})
         ocw_clause = {
             "bool": {
                 "should": ocw_should,
