@@ -167,25 +167,43 @@ describe("Learning Resource Expanded", () => {
     },
   )
 
-  test.each([ResourceTypeEnum.PodcastEpisode])(
-    "Renders xpro logo conditionally on offered_by=xpro and not platform.code",
+  test.each([
+    ResourceTypeEnum.Course,
+    ResourceTypeEnum.Program,
+    ResourceTypeEnum.Document,
+  ])("Renders xpro logo for %s with offered_by=xpro", (resourceType) => {
+    const resource = factories.learningResources.resource({
+      resource_type: resourceType,
+      platform: { code: "test" },
+      offered_by: { code: "xpro" },
+    })
+
+    setup({ resource })
+    const xproImage = screen
+      .getAllByRole("img")
+      .find((img) => img.getAttribute("alt")?.includes("xPRO"))
+
+    expect(xproImage).toBeInTheDocument()
+    expect(xproImage).toHaveAttribute("alt", PLATFORM_LOGOS["xpro"].name)
+  })
+
+  test.each([ResourceTypeEnum.PodcastEpisode, ResourceTypeEnum.Video])(
+    "Does not render platform logo for resource type %s",
     (resourceType) => {
       const resource = factories.learningResources.resource({
         resource_type: resourceType,
-        platform: { code: "test" },
-        offered_by: { code: "xpro" },
-        podcast_episode: {
-          episode_link: "https://example.com",
-        },
+        platform: { code: "ocw" },
+        offered_by: { code: "ocw" },
       })
 
       setup({ resource })
-      const xproImage = screen
-        .getAllByRole("img")
-        .find((img) => img.getAttribute("alt")?.includes("xPRO"))
+      const platformLogo = screen
+        .queryAllByRole("img")
+        .find((img) =>
+          img.getAttribute("alt")?.includes(PLATFORM_LOGOS["ocw"]?.name ?? ""),
+        )
 
-      expect(xproImage).toBeInTheDocument()
-      expect(xproImage).toHaveAttribute("alt", PLATFORM_LOGOS["xpro"].name)
+      expect(platformLogo).toBeUndefined()
     },
   )
 

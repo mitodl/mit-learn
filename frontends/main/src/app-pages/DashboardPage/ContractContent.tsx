@@ -43,18 +43,24 @@ import {
 } from "./CoursewareDisplay/languageOptions"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
-const HeaderRoot = styled.div({
+const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "0 16px",
+    gap: "16px",
+  },
+}))
 
 const ImageContainer = styled.div(({ theme }) => ({
-  width: "120px",
-  height: "118px",
-  padding: "0 24px",
   display: "flex",
+  width: "80px",
+  height: "80px",
+  padding: "16px",
   alignItems: "center",
+  justifyContent: "center",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
@@ -62,7 +68,37 @@ const ImageContainer = styled.div(({ theme }) => ({
     width: "100%",
     height: "auto",
   },
+  [theme.breakpoints.down("sm")]: {
+    width: "56px",
+    height: "56px",
+    padding: "8px",
+  },
 }))
+
+const HeaderTextContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  [theme.breakpoints.down("sm")]: {
+    gap: "0px",
+  },
+}))
+
+const HeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+  },
+})) as typeof Typography
+
+const SubHeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle2,
+  },
+})) as typeof Typography
 
 const ContractHeader: React.FC<{
   org?: OrganizationPage
@@ -83,12 +119,10 @@ const ContractHeader: React.FC<{
           alt=""
         />
       </ImageContainer>
-      <Stack gap="8px">
-        <Typography variant="h3" component="h1">
-          {org?.name}
-        </Typography>
-        <Typography variant="body1">{contract?.name}</Typography>
-      </Stack>
+      <HeaderTextContainer>
+        <HeaderText component="h1">{org?.name}</HeaderText>
+        <SubHeaderText>{contract?.name}</SubHeaderText>
+      </HeaderTextContainer>
     </HeaderRoot>
   )
 }
@@ -167,13 +201,19 @@ const ProgramHeader = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    padding: "16px",
+    backgroundColor: theme.custom.colors.lightGray1,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramHeaderText = styled.div({
+const ProgramHeaderText = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: "8px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "0",
+  },
+}))
 
 const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -212,24 +252,27 @@ const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
   display: "inline-flex",
   flexDirection: "row",
   alignItems: "center",
+  padding: "10px",
   gap: "8px",
   width: "auto",
   "> *:not(:last-child)": {
     marginBottom: "0",
   },
   "> label": {
+    ...theme.typography.body3,
+    color: theme.custom.colors.silverGrayDark,
     marginBottom: "0",
     whiteSpace: "nowrap",
   },
-  "> .MuiInputBase-root": {
-    width: "fit-content",
-    maxWidth: "100%",
-  },
   [theme.breakpoints.down("sm")]: {
-    "> .MuiInputBase-root": {
-      width: "fit-content",
-      maxWidth: "100%",
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "0 0 8px 8px",
+    justifyContent: "space-between",
+    ".MuiInputBase-root": {
+      width: "100%",
     },
+    backgroundColor: theme.custom.colors.lightGray1,
   },
 })) as typeof SimpleSelectField
 
@@ -308,7 +351,7 @@ const OrgProgramCollectionDisplay: React.FC<{
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
-        <Typography variant="h5" component="h2">
+        <Typography variant="subtitle1" component="h2">
           {collection.title}
         </Typography>
         <ProgramDescription html={collection.description ?? ""} />
@@ -456,13 +499,13 @@ const OrgProgramDisplay: React.FC<{
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
         <ProgramHeaderText>
-          <Typography variant="h5" component="h2">
+          <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
           <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
-        <ProgramControls>
-          {hasValidCertificate && (
+        {hasValidCertificate && (
+          <ProgramControls>
             <ProgramCertificateButton
               size="small"
               variant="bordered"
@@ -471,8 +514,8 @@ const OrgProgramDisplay: React.FC<{
             >
               {`View ${program.program_type ? `${program.program_type} ` : ""}Certificate`}
             </ProgramCertificateButton>
-          )}
-        </ProgramControls>
+          </ProgramControls>
+        )}
       </ProgramHeader>
       <PlainList>
         {programLoading || coursesQuery.isLoading
@@ -550,11 +593,17 @@ const ContractRoot = styled.div({
 
 const ContractHeaderSection = styled.div(({ theme }) => ({
   display: "flex",
+  padding: "24px",
+  alignItems: "center",
   justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: "16px",
+  gap: "24px",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    gap: "16px",
+    padding: "16px 0 0 0",
   },
 }))
 
@@ -669,21 +718,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <Stack>
           <ContractHeaderSection>
             <ContractHeader org={org} contract={contract} />
-            {languageOptions.length > 1 && (
-              <ProgramLanguageSelect
-                size="small"
-                label="Learning Language:"
-                value={selectedLanguageKey}
-                onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
-                options={languageOptions}
-                renderValue={(value) => {
-                  const selected = languageOptions.find(
-                    (opt) => opt.value === value,
-                  )
-                  return String(selected?.label ?? "")
-                }}
-              />
-            )}
           </ContractHeaderSection>
           <WelcomeMessage contract={contract} />
         </Stack>
@@ -708,7 +742,11 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                 const selected = languageOptions.find(
                   (opt) => opt.value === value,
                 )
-                return String(selected?.label ?? "")
+                return (
+                  <Typography variant="subtitle3" marginRight="16px">
+                    {selected?.label ?? ""}
+                  </Typography>
+                )
               }}
             />
           )}

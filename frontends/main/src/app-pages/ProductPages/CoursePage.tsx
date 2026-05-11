@@ -10,7 +10,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
-import { HeadingIds } from "./util"
+import { getOutlineCoursewareId, HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
@@ -22,6 +22,7 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseEnrollmentButton from "./CourseEnrollmentButton"
+import CourseOutlineSection from "./CourseOutlineSection"
 
 type CoursePageProps = {
   readableId: string
@@ -46,7 +47,17 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   )
   const page = pages.data?.items[0]
   const course = courses.data?.results?.[0]
+  const effectiveOutlineCoursewareId = course
+    ? getOutlineCoursewareId(course)
+    : undefined
+  const outline = useQuery({
+    ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
+    enabled: Boolean(effectiveOutlineCoursewareId),
+  })
   const enabled = useFeatureFlagEnabled(FeatureFlags.MitxOnlineProductPages)
+  const showCourseOutline = useFeatureFlagEnabled(
+    FeatureFlags.CourseOutlineSection,
+  )
   const flagsLoaded = useFeatureFlagsLoaded()
 
   if (!enabled) {
@@ -97,6 +108,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       ) : null}
       {page.what_you_learn ? (
         <WhatYoullLearnSection html={page.what_you_learn} />
+      ) : null}
+      {showCourseOutline ? (
+        <CourseOutlineSection modules={outline.data?.modules ?? []} />
       ) : null}
       <HowYoullLearnSection page={page} />
       {page.prerequisites ? (

@@ -25,6 +25,7 @@ export const generateMetadata = async (
       queryClient.fetchQuery(
         learningResourceQueries.items(playlistId, {
           learning_resource_id: playlistId,
+          limit: 1,
         }),
       ),
     ])

@@ -532,7 +532,7 @@ const INFO_ITEMS: InfoItemConfig = [
       const name = formattedParentCourseName(resource)
       if (!name || !resource.url) return name
       return (
-        <Link href={resource.url} color="red" size="small">
+        <Link href={resource.url} color="red" hovercolor="red" size="small">
           {name}
         </Link>
       )
