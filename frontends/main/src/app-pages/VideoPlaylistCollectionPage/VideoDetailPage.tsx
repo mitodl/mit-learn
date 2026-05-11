@@ -1,19 +1,13 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import dynamic from "next/dynamic"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Typography, styled, theme, Skeleton } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import { RiShareForwardFill, RiPlayCircleFill } from "@remixicon/react"
-import {
-  SkipLinksNav,
-  SkipLink,
-  StyledBreadcrumbs,
-  NoVideoMessage,
-} from "./shared.styled"
+import { SkipLinksNav, SkipLink, StyledBreadcrumbs } from "./shared.styled"
 import { useQuery } from "@tanstack/react-query"
 import {
   useLearningResourcesDetail,
@@ -22,21 +16,14 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { resolveVideoSources } from "./videoSources"
-import type { VideoJsPlayerProps } from "./VideoJsPlayer"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { notFound } from "next/navigation"
 import SharePopover from "@/components/SharePopover/SharePopover"
 import { buildVideoStructuredData } from "./videoStructuredData"
+import VideoResourcePlayer from "./VideoResourcePlayer"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
-
-// Lazy-load the video.js player only when the page mounts
-const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
-  () => import("./VideoJsPlayer"),
-  { ssr: false },
-)
 
 const PageWrapper = styled.div({
   backgroundColor: "#fff",
@@ -105,49 +92,10 @@ const MetaRow = styled.div({
   },
 })
 
-const PlayerWrapper = styled.div(({ theme }) => ({
-  width: "100%",
-  aspectRatio: "16/9",
-  backgroundColor: "#000",
-  overflow: "hidden",
-  position: "relative",
+const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   marginTop: "-10px",
   [theme.breakpoints.down("sm")]: {
     marginTop: "0",
-  },
-  ".video-js, .vjs-tech": {
-    width: "100% !important",
-    height: "100% !important",
-    position: "absolute",
-    top: 0,
-    left: 0,
-  },
-  ".vjs-big-play-button": {
-    width: "92px !important",
-    height: "92px !important",
-    lineHeight: "92px !important",
-    borderRadius: "50% !important",
-    backgroundColor: "#d8daddb3 !important",
-    border: "none !important",
-    fontSize: "4em !important",
-    marginTop: "-1.25em !important",
-    marginLeft: "-1.18em !important",
-    [theme.breakpoints.down("sm")]: {
-      width: "68px !important",
-      height: "68px !important",
-      lineHeight: "68px !important",
-      marginLeft: "-1em !important",
-      marginTop: "-.7em !important",
-    },
-  },
-  "& .vjs-big-play-button": {
-    opacity: 1,
-    transform: "scale(1)",
-    transition: "opacity 0.3s ease, transform 0.3s ease",
-  },
-  "&:hover .vjs-big-play-button": {
-    opacity: 0.75,
-    transform: "scale(1.12)",
   },
 }))
 
@@ -320,12 +268,6 @@ const SeeAllLink = styled(Link)(({ theme }) => ({
   },
 }))
 
-const ThumbnailWrapper = styled.div({
-  position: "relative",
-  width: "100%",
-  height: "100%",
-})
-
 const SpacerBlock = styled.div(({ theme }) => ({
   "& .spacer-block": {
     display: "none",
@@ -410,24 +352,12 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-  const sources = useMemo(
-    () =>
-      video
-        ? resolveVideoSources(
-            video.video?.streaming_url,
-            video.url,
-            video.content_files?.[0]?.youtube_id,
-          )
-        : [],
-    [video],
-  )
 
   const duration = video?.video?.duration
     ? formatDurationClockTime(video.video.duration)
     : null
 
   const topics = video?.topics ?? []
-  const captionUrls = video?.video?.caption_urls ?? []
 
   const playlistLabel = playlist?.title || "Video Collection"
 
@@ -547,60 +477,13 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
             </MetaRow>
           )}
 
-          <PlayerWrapper
-            id="video-player-region"
-            tabIndex={-1}
-            role="region"
-            aria-label={`Video player for ${videoTitleLabel}`}
-            aria-describedby="video-description"
-          >
-            {isLoading ? (
-              <div
-                role="status"
-                aria-live="polite"
-                aria-label="Loading video player"
-              >
-                <Skeleton variant="rectangular" width="100%" height="100%" />
-              </div>
-            ) : sources.length > 0 ? (
-              <VideoJsPlayer
-                key={videoId}
-                sources={sources}
-                tracks={captionUrls}
-                poster={
-                  sources[0]?.type === "video/youtube"
-                    ? undefined
-                    : (video?.video?.cover_image_url ??
-                      video?.image?.url ??
-                      undefined)
-                }
-                autoplay={false}
-                controls
-                fluid={false}
-                ariaLabel={`Video: ${videoTitleLabel}`}
-                ariaDescribedBy="video-description"
-              />
-            ) : video?.image?.url ? (
-              <ThumbnailWrapper>
-                <Image
-                  src={video.image.url}
-                  alt={videoThumbnailAlt}
-                  fill
-                  sizes="100vw"
-                  style={{ objectFit: "cover" }}
-                />
-              </ThumbnailWrapper>
-            ) : (
-              <>
-                <ScreenReaderOnly role="alert" aria-live="polite">
-                  No playable source available for this video.
-                </ScreenReaderOnly>
-                <NoVideoMessage>
-                  No playable source available for this video.
-                </NoVideoMessage>
-              </>
-            )}
-          </PlayerWrapper>
+          <StyledVideoResourcePlayer
+            video={video}
+            videoId={videoId}
+            isLoading={isLoading}
+            videoTitleLabel={videoTitleLabel}
+            videoThumbnailAlt={videoThumbnailAlt}
+          />
           <BorderLine />
 
           {!isLoading && video?.description && (
