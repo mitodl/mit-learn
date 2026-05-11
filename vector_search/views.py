@@ -25,6 +25,7 @@ from vector_search.constants import (
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
     RESOURCES_RETRIEVE_PAYLOAD,
+    VECTOR_SEARCH_MIN_SCORE,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -130,10 +131,7 @@ class QdrantView(APIView):
             "limit": limit,
         }
 
-        if (
-            type(score_cutoff) is float
-            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
-        ):
+        if type(score_cutoff) is float and score_cutoff >= VECTOR_SEARCH_MIN_SCORE:
             search_params["score_threshold"] = score_cutoff
 
         if hybrid_search:
@@ -466,7 +464,7 @@ class QdrantView(APIView):
         if (
             query_string
             and type(score_cutoff) is float
-            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
+            and score_cutoff >= VECTOR_SEARCH_MIN_SCORE
         ):
             hits = await self._async_vector_hits(
                 query_string,

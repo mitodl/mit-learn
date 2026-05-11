@@ -836,7 +836,6 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
-VECTOR_SEARCH_MIN_SCORE = get_float("VECTOR_SEARCH_MIN_SCORE", 0.1)
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)

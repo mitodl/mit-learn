@@ -1428,7 +1428,7 @@ paths:
         schema:
           type: number
           format: double
-          minimum: 0.1
+          minimum: 0
           default: 0.1
         description: The minimum score a result must have to be returned
       - in: query
