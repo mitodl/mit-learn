@@ -178,7 +178,7 @@ const VideoPlaylistCollectionPage: React.FC<
           </EpisodeListContainer>
         </EpisodeListSection>
       )}
-      {(hasNextPage || itemsLoading) && (
+      {hasNextPage && (
         <ShowMoreContainer>
           <ShowMoreButton
             variant="secondary"
