@@ -4,10 +4,10 @@ import type { VideoPlaylistResource } from "api/v1"
 import VideoContainer from "./VideoContainer"
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "32px 0 16px 0",
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
+  padding: "18px 0 2px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
-    padding: "16px 0 0px 0",
+    padding: "12px 0 0px 0",
   },
 }))
 
@@ -40,6 +40,13 @@ const CollectionLabel = styled.span(({ theme }) => ({
   letterSpacing: "1.92px",
 }))
 
+const CollectionHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {},
+}))
+
 const PageTitle = styled.h1<{ isSeries?: boolean }>(({ theme, isSeries }) => ({
   ...theme.typography.h2,
   fontWeight: theme.typography.fontWeightBold,
@@ -70,13 +77,22 @@ const PageDescription = styled(Typography)(({ theme }) => ({
   },
 }))
 
+const CollectionTitle = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body1,
+  fontWeight: theme.typography.fontWeightMedium,
+  color: theme.custom.colors.black,
+  lineHeight: "150%",
+}))
+
 type VideoPageHeaderProps = {
   playlist?: VideoPlaylistResource
   isSeries?: boolean
+  totalVideos?: number
 }
 
 const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
   playlist,
+  totalVideos,
   isSeries = false,
 }) => {
   const collectionLabel = playlist
@@ -108,6 +124,11 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
           <PageTitle isSeries={isSeries}>
             {playlist?.title ?? <Skeleton width={380} />}
           </PageTitle>
+          {!isSeries && (
+            <CollectionHeader>
+              <CollectionTitle>{totalVideos} Videos</CollectionTitle>
+            </CollectionHeader>
+          )}
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (

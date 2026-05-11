@@ -10,6 +10,7 @@ import type { VideoJsSource } from "./VideoJsPlayer"
 export function resolveVideoSources(
   streamingUrl: string | null | undefined,
   pageUrl: string | null | undefined,
+  youtubeId: string | null | undefined,
 ): VideoJsSource[] {
   if (streamingUrl) {
     // HLS
@@ -22,6 +23,15 @@ export function resolveVideoSources(
     }
     // MP4 or generic
     return [{ src: streamingUrl, type: "video/mp4" }]
+  }
+
+  if (youtubeId) {
+    return [
+      {
+        src: `https://www.youtube.com/watch?v=${youtubeId}`,
+        type: "video/youtube",
+      },
+    ]
   }
 
   if (pageUrl && /youtube\.com|youtu\.be/.test(pageUrl)) {

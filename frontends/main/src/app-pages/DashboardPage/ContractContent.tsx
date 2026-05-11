@@ -14,6 +14,7 @@ import {
   Link,
   PlainList,
   Skeleton,
+  SimpleSelectField,
   Stack,
   styled,
   Typography,
@@ -32,25 +33,34 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug } from "@/common/utils"
+import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import {
-  ResourceType,
-  getKey,
-  selectBestEnrollment,
-} from "./CoursewareDisplay/helpers"
+  getCourseRunForSelectedLanguage,
+  getDistinctLanguageOptions,
+  getResolvedRunForSelectedLanguage,
+  getSelectedLanguageOption,
+  selectBestContractEnrollmentForLanguage,
+} from "./CoursewareDisplay/languageOptions"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 
-const HeaderRoot = styled.div({
+const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "0 16px",
+    gap: "16px",
+  },
+}))
 
 const ImageContainer = styled.div(({ theme }) => ({
-  width: "120px",
-  height: "118px",
-  padding: "0 24px",
   display: "flex",
+  width: "80px",
+  height: "80px",
+  padding: "16px",
   alignItems: "center",
+  justifyContent: "center",
   borderRadius: "8px",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0px 1px 3px 0px rgba(120, 147, 172, 0.40)",
@@ -58,7 +68,37 @@ const ImageContainer = styled.div(({ theme }) => ({
     width: "100%",
     height: "auto",
   },
+  [theme.breakpoints.down("sm")]: {
+    width: "56px",
+    height: "56px",
+    padding: "8px",
+  },
 }))
+
+const HeaderTextContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  [theme.breakpoints.down("sm")]: {
+    gap: "0px",
+  },
+}))
+
+const HeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h5,
+  },
+})) as typeof Typography
+
+const SubHeaderText = styled(Typography)(({ theme }) => ({
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.subtitle2,
+  },
+})) as typeof Typography
 
 const ContractHeader: React.FC<{
   org?: OrganizationPage
@@ -79,12 +119,10 @@ const ContractHeader: React.FC<{
           alt=""
         />
       </ImageContainer>
-      <Stack gap="8px">
-        <Typography variant="h3" component="h1">
-          {org?.name}
-        </Typography>
-        <Typography variant="body1">{contract?.name}</Typography>
-      </Stack>
+      <HeaderTextContainer>
+        <HeaderText component="h1">{org?.name}</HeaderText>
+        <SubHeaderText>{contract?.name}</SubHeaderText>
+      </HeaderTextContainer>
     </HeaderRoot>
   )
 }
@@ -163,13 +201,19 @@ const ProgramHeader = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
+    padding: "16px",
+    backgroundColor: theme.custom.colors.lightGray1,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramHeaderText = styled.div({
+const ProgramHeaderText = styled.div(({ theme }) => ({
   flexDirection: "column",
   gap: "8px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "0",
+  },
+}))
 
 const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
@@ -194,6 +238,43 @@ const ProgramCollectionsList = styled(PlainList)({
   flexDirection: "column",
   gap: "40px",
 })
+
+const ProgramControls = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "12px",
+  alignItems: "center",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
+const ProgramLanguageSelect = styled(SimpleSelectField)(({ theme }) => ({
+  display: "inline-flex",
+  flexDirection: "row",
+  alignItems: "center",
+  padding: "10px",
+  gap: "8px",
+  width: "auto",
+  "> *:not(:last-child)": {
+    marginBottom: "0",
+  },
+  "> label": {
+    ...theme.typography.body3,
+    color: theme.custom.colors.silverGrayDark,
+    marginBottom: "0",
+    whiteSpace: "nowrap",
+  },
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "0 0 8px 8px",
+    justifyContent: "space-between",
+    ".MuiInputBase-root": {
+      width: "100%",
+    },
+    backgroundColor: theme.custom.colors.lightGray1,
+  },
+})) as typeof SimpleSelectField
 
 // Custom hook to handle multiple program queries and check if any have courses
 const useProgramCollectionCourses = (
@@ -236,7 +317,8 @@ const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   contract: ContractPage
   enrollments?: CourseRunEnrollmentV3[]
-}> = ({ collection, contract, enrollments }) => {
+  selectedLanguageKey: string
+}> = ({ collection, contract, enrollments, selectedLanguageKey }) => {
   const { isLoading, programsWithCourses, hasAnyCourses } =
     useProgramCollectionCourses(collection, contract.id)
   const firstCourseIds = programsWithCourses
@@ -249,26 +331,27 @@ const OrgProgramCollectionDisplay: React.FC<{
     }),
     enabled: firstCourseIds !== undefined && firstCourseIds.length > 0,
   })
-  // Create mapping from course ID to program order
-  const courseIdToOrder = new Map<number, number>()
-  programsWithCourses?.forEach((item) => {
-    const firstCourseId = item.program.courses[0]
-    const programId = item.programId
-    const order =
-      collection.programs.find((p) => p.id === programId)?.order ?? Infinity
-    courseIdToOrder.set(firstCourseId, order)
-  })
-  const rawCourses =
-    courses.data?.results.sort((a, b) => {
+  const rawCourses = React.useMemo(() => {
+    const courseIdToOrder = new Map<number, number>()
+    programsWithCourses?.forEach((item) => {
+      const firstCourseId = item.program.courses[0]
+      const programId = item.programId
+      const order =
+        collection.programs.find((p) => p.id === programId)?.order ?? Infinity
+      courseIdToOrder.set(firstCourseId, order)
+    })
+
+    const results = courses.data?.results ?? []
+    return [...results].sort((a, b) => {
       const orderA = courseIdToOrder.get(a.id) ?? Infinity
       const orderB = courseIdToOrder.get(b.id) ?? Infinity
       return orderA - orderB
-    }) ?? []
-
+    })
+  }, [courses.data?.results, programsWithCourses, collection.programs])
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
-        <Typography variant="h5" component="h2">
+        <Typography variant="subtitle1" component="h2">
           {collection.title}
         </Typography>
         <ProgramDescription html={collection.description ?? ""} />
@@ -315,9 +398,30 @@ const OrgProgramCollectionDisplay: React.FC<{
             enrollments?.filter(
               (enrollment) => enrollment.b2b_contract_id === contract.id,
             ) ?? []
-          const bestEnrollment = selectBestEnrollment(
+          // Prefer the user's existing enrollment for the selected language
+          // over the next/best run, so older-run enrollments stay visible
+          // when the contract surfaces a newer run.
+          const selectedLanguageEnrollment =
+            selectBestContractEnrollmentForLanguage(
+              course,
+              contractEnrollments,
+              selectedLanguageKey,
+            )
+          const selectedLanguageOption = getSelectedLanguageOption(
             course,
-            contractEnrollments,
+            selectedLanguageKey,
+          )
+          const selectedRun = selectedLanguageEnrollment
+            ? ((course.courseruns ?? []).find(
+                (r) => r.id === selectedLanguageEnrollment.run.id,
+              ) ?? null)
+            : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
+          const resolvedRun = getResolvedRunForSelectedLanguage(
+            course,
+            selectedLanguageOption,
+            selectedRun,
+            selectedLanguageEnrollment,
+            contract.id,
           )
           return (
             <DashboardCardStyled
@@ -325,19 +429,23 @@ const OrgProgramCollectionDisplay: React.FC<{
               key={getKey({
                 resourceType: ResourceType.Course,
                 id: course.id,
-                runId: bestEnrollment?.run.id,
+                runId: selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
               })}
               resource={
-                bestEnrollment
+                selectedLanguageEnrollment
                   ? {
                       type: DashboardType.CourseRunEnrollment,
-                      data: bestEnrollment,
+                      data: selectedLanguageEnrollment,
                     }
                   : { type: DashboardType.Course, data: course }
               }
               noun="Module"
               offerUpgrade={false}
-              buttonHref={bestEnrollment?.run.courseware_url}
+              buttonHref={
+                selectedLanguageEnrollment?.run.courseware_url ??
+                resolvedRun?.courseware_url
+              }
+              selectedCourseRun={resolvedRun}
               contractId={contract.id}
             />
           )
@@ -354,6 +462,7 @@ const OrgProgramDisplay: React.FC<{
   programEnrollments?: V3UserProgramEnrollment[]
   programLoading: boolean
   orgId: number
+  selectedLanguageKey: string
 }> = ({
   program,
   contract,
@@ -361,6 +470,7 @@ const OrgProgramDisplay: React.FC<{
   programEnrollments,
   programLoading,
   orgId: _orgId,
+  selectedLanguageKey,
 }) => {
   const programEnrollment = programEnrollments?.find(
     (enrollment) => enrollment.program.id === program.id,
@@ -377,29 +487,34 @@ const OrgProgramDisplay: React.FC<{
     <Skeleton width="100%" height="65px" style={{ marginBottom: "16px" }} />
   )
 
-  const courses =
-    coursesQuery.data?.results.sort((a, b) => {
-      return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
-    }) ?? []
-
+  const courses = React.useMemo(
+    () =>
+      [...(coursesQuery.data?.results ?? [])].sort((a, b) => {
+        return program.courses.indexOf(a.id) - program.courses.indexOf(b.id)
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [coursesQuery.data?.results, program.courses],
+  )
   return (
     <ProgramRoot data-testid="org-program-root">
       <ProgramHeader>
         <ProgramHeaderText>
-          <Typography variant="h5" component="h2">
+          <Typography variant="subtitle1" component="h2">
             {program.title}
           </Typography>
           <ProgramDescription html={program.page.description ?? ""} />
         </ProgramHeaderText>
         {hasValidCertificate && (
-          <ProgramCertificateButton
-            size="small"
-            variant="bordered"
-            startIcon={<RiAwardFill />}
-            href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
-          >
-            View {program.program_type} Certificate
-          </ProgramCertificateButton>
+          <ProgramControls>
+            <ProgramCertificateButton
+              size="small"
+              variant="bordered"
+              startIcon={<RiAwardFill />}
+              href={`/certificate/program/${programEnrollment?.certificate?.uuid}/`}
+            >
+              {`View ${program.program_type ? `${program.program_type} ` : ""}Certificate`}
+            </ProgramCertificateButton>
+          </ProgramControls>
         )}
       </ProgramHeader>
       <PlainList>
@@ -411,9 +526,30 @@ const OrgProgramDisplay: React.FC<{
                 courseRunEnrollments?.filter(
                   (enrollment) => enrollment.b2b_contract_id === contract?.id,
                 ) ?? []
-              const bestEnrollment = selectBestEnrollment(
+              // Prefer the user's existing enrollment for the selected
+              // language over the next/best run, so older-run enrollments
+              // stay visible when the contract surfaces a newer run.
+              const selectedLanguageEnrollment =
+                selectBestContractEnrollmentForLanguage(
+                  course,
+                  contractEnrollments,
+                  selectedLanguageKey,
+                )
+              const selectedLanguageOption = getSelectedLanguageOption(
                 course,
-                contractEnrollments,
+                selectedLanguageKey,
+              )
+              const selectedRun = selectedLanguageEnrollment
+                ? ((course.courseruns ?? []).find(
+                    (r) => r.id === selectedLanguageEnrollment.run.id,
+                  ) ?? null)
+                : getCourseRunForSelectedLanguage(course, selectedLanguageKey)
+              const resolvedRun = getResolvedRunForSelectedLanguage(
+                course,
+                selectedLanguageOption,
+                selectedRun,
+                selectedLanguageEnrollment,
+                contract?.id,
               )
 
               return (
@@ -422,19 +558,24 @@ const OrgProgramDisplay: React.FC<{
                   key={getKey({
                     resourceType: ResourceType.Course,
                     id: course.id,
-                    runId: bestEnrollment?.run.id,
+                    runId:
+                      selectedLanguageEnrollment?.run.id ?? resolvedRun?.id,
                   })}
                   resource={
-                    bestEnrollment
+                    selectedLanguageEnrollment
                       ? {
                           type: DashboardType.CourseRunEnrollment,
-                          data: bestEnrollment,
+                          data: selectedLanguageEnrollment,
                         }
                       : { type: DashboardType.Course, data: course }
                   }
                   noun="Module"
                   offerUpgrade={false}
-                  buttonHref={bestEnrollment?.run.courseware_url}
+                  buttonHref={
+                    selectedLanguageEnrollment?.run.courseware_url ??
+                    resolvedRun?.courseware_url
+                  }
+                  selectedCourseRun={resolvedRun}
                   contractId={contract?.id}
                 />
               )
@@ -449,6 +590,22 @@ const ContractRoot = styled.div({
   flexDirection: "column",
   gap: "40px",
 })
+
+const ContractHeaderSection = styled.div(({ theme }) => ({
+  display: "flex",
+  padding: "24px",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "24px",
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    gap: "16px",
+    padding: "16px 0 0 0",
+  },
+}))
 
 type ContractContentInternalProps = {
   org: OrganizationPage
@@ -482,6 +639,31 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       page_size: 200,
     }),
   )
+  const contractCourses = React.useMemo(
+    () => coursesQuery.data?.results ?? [],
+    [coursesQuery.data?.results],
+  )
+  const languageOptions = React.useMemo(
+    () => getDistinctLanguageOptions(contractCourses),
+    [contractCourses],
+  )
+  const [selectedLanguageKey, setSelectedLanguageKey] = React.useState("")
+
+  useEffect(() => {
+    if (languageOptions.length === 0) {
+      if (selectedLanguageKey) {
+        setSelectedLanguageKey("")
+      }
+      return
+    }
+
+    const hasSelectedLanguage = languageOptions.some(
+      (option) => option.value === selectedLanguageKey,
+    )
+    if (!hasSelectedLanguage) {
+      setSelectedLanguageKey(String(languageOptions[0].value))
+    }
+  }, [languageOptions, selectedLanguageKey])
 
   // Helper to check if a program has any courses with contract-scoped runs
   const programHasContractRuns = (programId: number): boolean => {
@@ -534,7 +716,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     return (
       <>
         <Stack>
-          <ContractHeader org={org} contract={contract} />
+          <ContractHeaderSection>
+            <ContractHeader org={org} contract={contract} />
+          </ContractHeaderSection>
           <WelcomeMessage contract={contract} />
         </Stack>
         {skeleton}
@@ -545,7 +729,28 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   return (
     <>
       <Stack>
-        <ContractHeader org={org} contract={contract} />
+        <ContractHeaderSection>
+          <ContractHeader org={org} contract={contract} />
+          {languageOptions.length > 1 && (
+            <ProgramLanguageSelect
+              size="small"
+              label="Learning Language:"
+              value={selectedLanguageKey}
+              onChange={(e) => setSelectedLanguageKey(String(e.target.value))}
+              options={languageOptions}
+              renderValue={(value) => {
+                const selected = languageOptions.find(
+                  (opt) => opt.value === value,
+                )
+                return (
+                  <Typography variant="subtitle3" marginRight="16px">
+                    {selected?.label ?? ""}
+                  </Typography>
+                )
+              }}
+            />
+          )}
+        </ContractHeaderSection>
         <WelcomeMessage contract={contract} />
       </Stack>
       <ContractRoot>
@@ -563,6 +768,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                 programEnrollments={programEnrollmentsQuery.data}
                 programLoading={programsQuery.isLoading}
                 orgId={orgId}
+                selectedLanguageKey={selectedLanguageKey}
               />
             ))}
         <ProgramCollectionsList>
@@ -597,6 +803,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                   collection={collection}
                   contract={contract}
                   enrollments={courseRunEnrollmentsQuery.data}
+                  selectedLanguageKey={selectedLanguageKey}
                 />
               )
             })}

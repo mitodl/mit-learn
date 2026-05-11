@@ -310,4 +310,63 @@ describe("ChannelSearch", () => {
     await user.click(screen.getByRole("button", { name: "Search" }))
     expect(location.current.searchParams.get("q")).toBe("woof")
   })
+
+  test.each([
+    { channelType: ChannelTypeEnum.Topic },
+    { channelType: ChannelTypeEnum.Department },
+    { channelType: ChannelTypeEnum.Unit },
+  ])(
+    "Shows Resource Category facet only when resource_type_group=learning_material ($channelType)",
+    async ({ channelType }) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: channelType },
+        search: {
+          count: 700,
+          metadata: {
+            aggregations: {
+              resource_type_group: [
+                { key: "course", doc_count: 100 },
+                { key: "learning_material", doc_count: 200 },
+              ],
+              resource_category: [
+                { key: "Course", doc_count: 100 },
+                { key: "Video", doc_count: 100 },
+              ],
+              topic: [{ key: "physics", doc_count: 100 }],
+              department: [{ key: "1", doc_count: 100 }],
+              certification_type: [{ key: "micromasters", doc_count: 100 }],
+              delivery: [{ key: "online", doc_count: 100 }],
+              offered_by: [{ key: "ocw", doc_count: 100 }],
+            },
+            suggestions: [],
+          },
+        },
+      })
+
+      const {
+        view: { unmount },
+      } = renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/`,
+      })
+
+      const facetsContainer = await screen.findByTestId("facets-container")
+      await within(facetsContainer).findByText("Certificate")
+      expect(
+        within(facetsContainer).queryByText("Resource Category"),
+      ).toBeNull()
+
+      unmount()
+
+      // Re-render with resource_type_group=learning_material
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/?resource_type_group=learning_material`,
+      })
+
+      expect(
+        await within(await screen.findByTestId("facets-container")).findByText(
+          "Resource Category",
+        ),
+      ).toBeInTheDocument()
+    },
+  )
 })

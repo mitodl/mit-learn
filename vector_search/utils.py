@@ -38,6 +38,18 @@ from vector_search.constants import (
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_LARGE,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_MEDIUM,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_SMALL,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE,
+    QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO,
+    QDRANT_OPTIMIZER_SEGMENT_LARGE,
+    QDRANT_OPTIMIZER_SEGMENT_MEDIUM,
+    QDRANT_OPTIMIZER_SEGMENT_SMALL,
+    QDRANT_OPTIMIZER_SEGMENT_XLARGE,
+    QDRANT_OPTIMIZER_THRESHOLD_LARGE,
+    QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
+    QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
     RESOURCES_COLLECTION_NAME,
@@ -127,6 +139,48 @@ def points_generator(
         yield models.PointStruct(**point_data)
 
 
+def compute_optimizer_settings(point_count: int, shard_number: int):
+    points_per_shard = max(point_count // shard_number, 1)
+
+    # Determine target segment size
+    if points_per_shard < QDRANT_OPTIMIZER_THRESHOLD_SMALL:
+        target_segment = QDRANT_OPTIMIZER_SEGMENT_SMALL
+        flush_interval = QDRANT_OPTIMIZER_FLUSH_INTERVAL_SMALL
+    elif points_per_shard < QDRANT_OPTIMIZER_THRESHOLD_MEDIUM:
+        target_segment = QDRANT_OPTIMIZER_SEGMENT_MEDIUM
+        flush_interval = QDRANT_OPTIMIZER_FLUSH_INTERVAL_MEDIUM
+    elif points_per_shard < QDRANT_OPTIMIZER_THRESHOLD_LARGE:
+        target_segment = QDRANT_OPTIMIZER_SEGMENT_LARGE
+        flush_interval = QDRANT_OPTIMIZER_FLUSH_INTERVAL_LARGE
+    else:
+        target_segment = QDRANT_OPTIMIZER_SEGMENT_XLARGE
+        flush_interval = QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE
+
+    indexing_threshold = int(target_segment * QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO)
+
+    return {
+        "indexing_threshold": indexing_threshold,
+        "flush_interval_sec": flush_interval,
+    }
+
+
+def tune_collection(client, collection_name):
+    info = client.get_collection(collection_name)
+    point_count = info.points_count
+    shard_number = info.config.params.shard_number
+    desired = compute_optimizer_settings(point_count, shard_number)
+    current = info.config.optimizer_config
+    if (
+        current.indexing_threshold == desired["indexing_threshold"]
+        and current.flush_interval_sec == desired["flush_interval_sec"]
+    ):
+        return
+    client.update_collection(
+        collection_name=collection_name,
+        optimizer_config=models.OptimizersConfigDiff(**desired),
+    )
+
+
 def create_qdrant_collections(force_recreate):
     """
     Create or recreate QDrant collections
@@ -187,6 +241,7 @@ def create_qdrant_collection(collection_name, force_recreate):
             ),
             hnsw_config=models.HnswConfigDiff(on_disk=False),
         )
+    tune_collection(client, collection_name)
 
 
 def update_qdrant_indexes():
@@ -872,11 +927,13 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
 
 def _resource_vector_hits(search_result):
-    hits = [
-        readable_id
-        for readable_id in (hit.payload.get("readable_id") for hit in search_result)
-        if readable_id
-    ]
+    hits = list(
+        dict.fromkeys(
+            readable_id
+            for readable_id in (hit.payload.get("readable_id") for hit in search_result)
+            if readable_id
+        )
+    )
     """
     Always lookup learning resources by readable_id for portability
     in case we load points from external systems

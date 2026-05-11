@@ -35,7 +35,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.65.0"
+VERSION = "0.66.10"
 
 log = logging.getLogger()
 
@@ -836,6 +836,11 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MULTIPLIER = get_int(
 VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
     name="VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT", default=500
 )
+VECTOR_SEARCH_MIN_SCORE = get_float("VECTOR_SEARCH_MIN_SCORE", 0.1)
+
+# hard limit for special cases where we need to return all results without pagination
+VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
     "EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER", default=False
@@ -934,3 +939,7 @@ VIDEO_SHORTS_COUNT = get_int("VIDEO_SHORTS_COUNT", 12)
 
 # Hubspot settings
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
+
+# Create all learning material resources for OCW courses
+# Learning material resources are behind show_ocw_files flag in search
+CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)

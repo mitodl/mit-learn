@@ -43,7 +43,7 @@ export function useSeriesNavigation(
   const videoPosition = currentIndex >= 0 ? currentIndex + 1 : null
 
   const getVideoHref = (v: VideoResource) =>
-    `/video-playlist/detail/${v.id}?playlist=${playlistId}`
+    `/video/${v.id}?playlist=${playlistId}`
 
   return {
     videoItems,

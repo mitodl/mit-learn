@@ -1,13 +1,15 @@
 "use client"
 
 import React from "react"
-import { styled, Skeleton } from "ol-components"
+import { styled, Skeleton, Typography } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { notFound } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   learningResourceQueries,
   videoPlaylistQueries,
+  useInfiniteLearningResourceItems,
 } from "api/hooks/learningResources"
 import { formatDurationHuman } from "ol-utilities"
 import { isOcwPlaylist } from "@/common/utils"
@@ -41,6 +43,22 @@ const EpisodeListUl = styled.ul({
   margin: 0,
   padding: 0,
 })
+
+const ShowMoreContainer = styled("div")({
+  width: "100%",
+  display: "flex",
+  justifyContent: "center",
+})
+
+const ShowMoreButton = styled(Button)(({ theme }) => ({
+  minWidth: "140px",
+  margin: "40px 0 0px 0",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
+}))
+
+const VIDEOS_PAGE_SIZE = 10
 type VideoPlaylistCollectionPageProps = {
   playlistId: number
 }
@@ -49,7 +67,7 @@ const VideoPlaylistCollectionPage: React.FC<
   VideoPlaylistCollectionPageProps
 > = ({ playlistId }) => {
   const getVideoHref = (resource: VideoResource) =>
-    `/video-playlist/detail/${resource.id}?playlist=${playlistId}`
+    `/video/${resource.id}?playlist=${playlistId}`
 
   const showVideoPlaylistPage = useFeatureFlagEnabled(
     FeatureFlags.VideoPlaylistPage,
@@ -62,18 +80,23 @@ const VideoPlaylistCollectionPage: React.FC<
     isError,
   } = useQuery(videoPlaylistQueries.detail(playlistId))
 
-  const { data: items, isLoading: itemsLoading } = useQuery(
-    learningResourceQueries.items(playlistId, {
-      learning_resource_id: playlistId,
-    }),
-  )
+  const {
+    data: itemsData,
+    isLoading: itemsLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteLearningResourceItems(playlistId, {
+    learning_resource_id: playlistId,
+    limit: VIDEOS_PAGE_SIZE,
+  })
 
   const { data: similarData, isLoading: similarLoading } = useQuery({
-    ...learningResourceQueries.vectorSimilar(playlistId),
-    select: (data) =>
-      data.filter(
-        (resource) => resource.resource_type === ResourceTypeEnum.VideoPlaylist,
-      ),
+    ...learningResourceQueries.vectorSimilar({
+      id: playlistId,
+      limit: 6,
+      resource_type: [ResourceTypeEnum.VideoPlaylist],
+    }),
   })
 
   if (!showVideoPlaylistPage) {
@@ -84,11 +107,14 @@ const VideoPlaylistCollectionPage: React.FC<
     return notFound()
   }
   const isLoading = playlistLoading || itemsLoading
-  const videos = (items ?? []).filter(
+  const videos = (
+    itemsData?.pages.flatMap((page) =>
+      page.results.map((rel) => rel.resource),
+    ) ?? []
+  ).filter(
     (item): item is VideoResource =>
       item.resource_type === VideoResourceResourceTypeEnum.Video,
   )
-  const collectionVideos = videos.slice(1)
   const playlistType = isOcwPlaylist(playlist)
 
   const totalVideos = videos.length
@@ -110,10 +136,13 @@ const VideoPlaylistCollectionPage: React.FC<
   const otherCollections = ((similarData ?? []) as VideoPlaylistResource[])
     .filter((resource) => resource.id !== playlistId)
     .slice(0, 6)
-
   return (
     <Page>
-      <VideoPageHeader playlist={playlist} isSeries={playlistType} />
+      <VideoPageHeader
+        playlist={playlist}
+        isSeries={playlistType}
+        totalVideos={videos.length}
+      />
 
       {isLoading ? (
         <Skeleton variant="rectangular" width="100%" height={460} />
@@ -128,7 +157,7 @@ const VideoPlaylistCollectionPage: React.FC<
       ) : null}
       {!playlistType && (
         <VideoCollection
-          videos={collectionVideos}
+          videos={videos.slice(1)} // 0th video is featured prominently
           isLoading={isLoading}
           getHref={getVideoHref}
         />
@@ -148,6 +177,22 @@ const VideoPlaylistCollectionPage: React.FC<
             </EpisodeListUl>
           </EpisodeListContainer>
         </EpisodeListSection>
+      )}
+      {hasNextPage && (
+        <ShowMoreContainer>
+          <ShowMoreButton
+            variant="secondary"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? "Loading..." : "Load more videos"}
+          </ShowMoreButton>
+        </ShowMoreContainer>
+      )}
+      {!itemsLoading && videos.length === 0 && (
+        <Typography variant="body1" color="text.secondary">
+          No videos found.
+        </Typography>
       )}
       <RelatedPlaylist
         collections={otherCollections}

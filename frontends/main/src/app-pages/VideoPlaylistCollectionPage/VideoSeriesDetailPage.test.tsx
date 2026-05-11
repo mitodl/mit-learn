@@ -20,8 +20,15 @@ jest.mock("next-nprogress-bar", () => ({
 // Stub VideoJsPlayer to avoid loading video.js in the test environment
 jest.mock("./VideoJsPlayer", () => ({
   __esModule: true,
-  default: (props: { ariaLabel?: string }) => (
-    <div data-testid="video-js-player" aria-label={props.ariaLabel} />
+  default: (props: {
+    ariaLabel?: string
+    tracks?: { language: string; language_name: string; url: string }[]
+  }) => (
+    <div
+      data-testid="video-js-player"
+      aria-label={props.ariaLabel}
+      data-tracks={JSON.stringify(props.tracks ?? [])}
+    />
   ),
 }))
 
@@ -134,34 +141,6 @@ describe("VideoSeriesDetailPage", () => {
         name: "Introduction to Machine Learning",
       })
     })
-
-    test("renders the institution label from the video department", async () => {
-      const video = makeVideo({
-        departments: [
-          factories.learningResources.department({
-            department_id: "eecs",
-            name: "Electrical Engineering and Computer Science",
-          }),
-        ],
-      })
-      renderPage({ video })
-
-      await screen.findByText("ELECTRICAL ENGINEERING AND COMPUTER SCIENCE")
-    })
-
-    test("renders the institution label from offered_by when no department", async () => {
-      const playlist = makePlaylist({
-        offered_by: {
-          code: "ocw",
-          name: "MIT OpenCourseWare",
-          channel_url: null,
-        },
-      })
-      const video = makeVideo({ departments: [] })
-      renderPage({ video, playlistId: playlist.id, playlistData: playlist })
-
-      await screen.findByText("MIT OPENCOURSEWARE")
-    })
   })
 
   describe("breadcrumbs", () => {
@@ -266,7 +245,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(prevLink).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${prev.id}?playlist=${playlist.id}`,
+        `/video/${prev.id}?playlist=${playlist.id}`,
       )
     })
 
@@ -286,7 +265,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(nextLink).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${next.id}?playlist=${playlist.id}`,
+        `/video/${next.id}?playlist=${playlist.id}`,
       )
     })
 
@@ -391,42 +370,6 @@ describe("VideoSeriesDetailPage", () => {
     })
   })
 
-  describe("topic chips", () => {
-    test("renders topic chip links for each topic", async () => {
-      const video = makeVideo({
-        topics: [
-          { id: 1, name: "Machine Learning", parent: 10, channel_url: null },
-          { id: 2, name: "Statistics", parent: 11, channel_url: null },
-        ],
-      })
-      renderPage({ video })
-
-      const mlChip = await screen.findByRole("link", {
-        name: "Machine Learning",
-      })
-      const statsChip = screen.getByRole("link", { name: "Statistics" })
-      expect(mlChip).toHaveAttribute("href", "/search?topic=Machine%20Learning")
-      expect(statsChip).toHaveAttribute("href", "/search?topic=Statistics")
-    })
-
-    test("renders the Video Series heading when topics are present", async () => {
-      const video = makeVideo({
-        topics: [{ id: 1, name: "Robotics", parent: 5, channel_url: null }],
-      })
-      renderPage({ video })
-
-      await screen.findByText("Video Series")
-    })
-
-    test("does not render the Video Series section when there are no topics", async () => {
-      const video = makeVideo({ topics: [] })
-      renderPage({ video })
-
-      await screen.findByRole("heading", { name: video.title })
-      expect(screen.queryByText("Video Series")).not.toBeInTheDocument()
-    })
-  })
-
   describe("video player", () => {
     test("renders the video player when a streaming URL is present", async () => {
       const video = makeVideo({
@@ -487,6 +430,28 @@ describe("VideoSeriesDetailPage", () => {
         "No playable source available for this video.",
       )
     })
+
+    test("passes caption_urls as tracks prop to VideoJsPlayer", async () => {
+      const captionUrls = [
+        { language: "en", language_name: "English", url: "/captions/en.vtt" },
+      ]
+      const video = makeVideo({
+        video: {
+          id: 1,
+          caption_urls: captionUrls,
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "",
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      const player = await screen.findByTestId("video-js-player")
+      const tracks = JSON.parse(player.getAttribute("data-tracks") ?? "[]")
+      expect(tracks).toHaveLength(1)
+      expect(tracks[0].language).toBe("en")
+      expect(tracks[0].url).toBe("/captions/en.vtt")
+    })
   })
 
   describe("loading state", () => {
@@ -537,6 +502,105 @@ describe("VideoSeriesDetailPage", () => {
       expect(
         screen.getByRole("link", { name: "Skip to video player" }),
       ).toHaveAttribute("href", "#video-player-region")
+    })
+  })
+
+  describe("JSON-LD structured data", () => {
+    test("renders an application/ld+json script tag with VideoObject data", async () => {
+      const video = makeVideo({
+        title: "Deep Learning Lecture",
+        description: "An intro to deep learning.",
+        last_modified: "2024-01-15T00:00:00Z",
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "PT1H30M",
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+
+      const script = document.querySelector(
+        "script[type='application/ld+json']",
+      )
+      expect(script).toBeInTheDocument()
+      const data = JSON.parse(script!.textContent ?? "{}")
+      expect(data["@type"]).toBe("VideoObject")
+      expect(data.name).toBe("Deep Learning Lecture")
+      expect(data.description).toBe("An intro to deep learning.")
+      expect(data.duration).toBe("PT1H30M")
+    })
+
+    test("omits duration from JSON-LD when it is not ISO-8601", async () => {
+      const video = makeVideo({
+        last_modified: "2024-01-15T00:00:00Z",
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "120", // plain seconds — not ISO-8601
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+
+      const script = document.querySelector(
+        "script[type='application/ld+json']",
+      )
+      const data = JSON.parse(script!.textContent ?? "{}")
+      expect(data.duration).toBeUndefined()
+    })
+
+    test("includes accessibilityFeature captions in JSON-LD when caption_urls is non-empty", async () => {
+      const captionUrls = [
+        { language: "en", language_name: "English", url: "/captions/en.vtt" },
+      ]
+      const video = makeVideo({
+        last_modified: "2024-01-15T00:00:00Z",
+        video: {
+          id: 1,
+          caption_urls: captionUrls,
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "PT10M",
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+
+      const script = document.querySelector(
+        "script[type='application/ld+json']",
+      )
+      const data = JSON.parse(script!.textContent ?? "{}")
+      expect(data.accessibilityFeature).toContain("captions")
+    })
+
+    test("omits accessibilityFeature from JSON-LD when caption_urls is empty", async () => {
+      const video = makeVideo({
+        last_modified: "2024-01-15T00:00:00Z",
+        video: {
+          id: 1,
+          caption_urls: [],
+          streaming_url: "https://www.youtube.com/watch?v=abc123",
+          duration: "PT10M",
+          cover_image_url: null,
+        },
+      })
+      renderPage({ video })
+
+      await screen.findByRole("heading", { name: video.title })
+
+      const script = document.querySelector(
+        "script[type='application/ld+json']",
+      )
+      const data = JSON.parse(script!.textContent ?? "{}")
+      expect(data.accessibilityFeature).toBeUndefined()
     })
   })
 })

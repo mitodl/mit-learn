@@ -108,7 +108,7 @@ class QdrantView(APIView):
         encoder_dense,
         encoder_sparse,
         hybrid_search,
-        score_cutoff: float = 0.0,
+        score_cutoff: float | None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -128,8 +128,13 @@ class QdrantView(APIView):
                 exact=False,
             ),
             "limit": limit,
-            "score_threshold": score_cutoff,
         }
+
+        if (
+            type(score_cutoff) is float
+            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
+        ):
+            search_params["score_threshold"] = score_cutoff
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
@@ -276,7 +281,7 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
-        score_cutoff: float = 0,
+        score_cutoff: float | None = None,
         *,
         hybrid_search: bool = False,
     ):
@@ -466,29 +471,20 @@ class QdrantView(APIView):
         limit: int = 10,
         offset: int = 0,
         search_collection=RESOURCES_COLLECTION_NAME,
-        score_cutoff: float = 0,
+        score_cutoff: float | None = None,
         *,
         hybrid_search: bool = False,
     ):
-        if query_string and score_cutoff > 0:
-            count_params = params.copy()
-            count_params.pop("aggregations", None)
-            # just get the total count and avoid a call to aggregations
-            counts = await self._async_vector_counts(
-                count_params,
-                search_collection=search_collection,
-            )
-            total_count = counts["total"]["value"]
-            if total_count == 0:
-                return {
-                    "hits": [],
-                    **counts,
-                }
+        if (
+            query_string
+            and type(score_cutoff) is float
+            and score_cutoff >= settings.VECTOR_SEARCH_MIN_SCORE
+        ):
             hits = await self._async_vector_hits(
                 query_string,
                 params,
                 order_by=order_by,
-                limit=total_count,
+                limit=settings.VECTOR_SEARCH_PAGE_MAX_LIMIT,
                 offset=0,
                 search_collection=search_collection,
                 score_cutoff=score_cutoff,

@@ -10,6 +10,9 @@ const yup = require("yup")
 const schema = yup.object().shape({
   // Server-only env vars
   MITOL_NOINDEX: yup.string().oneOf(["true", "false"]),
+  NEXT_CACHE_S_MAXAGE_SECONDS: yup
+    .string()
+    .matches(/^\d+$/, { excludeEmptyString: true }),
   // Client or Server env vars
   NEXT_PUBLIC_APPZI_URL: yup.string(),
   NEXT_PUBLIC_ORIGIN: yup.string().required(),

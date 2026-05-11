@@ -1,3 +1,4 @@
+from django.conf import settings
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -226,8 +227,8 @@ class LearningResourcesVectorSearchRequestSerializer(
     )
     score_cutoff = serializers.FloatField(
         required=False,
-        default=0.1,
-        min_value=0.0,
+        default=None,
+        min_value=settings.VECTOR_SEARCH_MIN_SCORE,
         help_text="The minimum score a result must have to be returned",
     )
 

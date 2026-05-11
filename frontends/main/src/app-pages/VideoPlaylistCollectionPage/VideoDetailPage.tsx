@@ -28,6 +28,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { notFound } from "next/navigation"
 import SharePopover from "@/components/SharePopover/SharePopover"
+import { buildVideoStructuredData } from "./videoStructuredData"
 
 const NEXT_PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_ORIGIN
 
@@ -43,10 +44,10 @@ const PageWrapper = styled.div({
 })
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "32px 0 16px 0",
-  borderBottom: `2px solid ${theme.custom.colors.red}`,
+  padding: "18px 0 2px 0",
+  borderBottom: `1px solid ${theme.custom.colors.red}`,
   [theme.breakpoints.down("sm")]: {
-    padding: "16px 0 0 0",
+    padding: "12px 0 0 0",
   },
 }))
 
@@ -62,7 +63,7 @@ const ContentArea = styled.div(({ theme }) => ({
   },
 }))
 
-const CategoryLabel = styled.span(({ theme }) => ({
+const CategoryLabel = styled(Link)(({ theme }) => ({
   display: "block",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold,
@@ -73,6 +74,9 @@ const CategoryLabel = styled.span(({ theme }) => ({
   fontSize: "12px",
   fontStyle: "normal",
   lineHeight: "150%" /* 18px */,
+  "&:hover": {
+    textDecoration: "underline",
+  },
 }))
 
 const VideoTitle = styled.h1(({ theme }) => ({
@@ -119,10 +123,31 @@ const PlayerWrapper = styled.div(({ theme }) => ({
     left: 0,
   },
   ".vjs-big-play-button": {
-    width: "64px !important",
-    height: "64px !important",
-    lineHeight: "64px !important",
+    width: "92px !important",
+    height: "92px !important",
+    lineHeight: "92px !important",
     borderRadius: "50% !important",
+    backgroundColor: "#d8daddb3 !important",
+    border: "none !important",
+    fontSize: "4em !important",
+    marginTop: "-1.25em !important",
+    marginLeft: "-1.18em !important",
+    [theme.breakpoints.down("sm")]: {
+      width: "68px !important",
+      height: "68px !important",
+      lineHeight: "68px !important",
+      marginLeft: "-1em !important",
+      marginTop: "-.7em !important",
+    },
+  },
+  "& .vjs-big-play-button": {
+    opacity: 1,
+    transform: "scale(1)",
+    transition: "opacity 0.3s ease, transform 0.3s ease",
+  },
+  "&:hover .vjs-big-play-button": {
+    opacity: 0.75,
+    transform: "scale(1.12)",
   },
 }))
 
@@ -385,10 +410,15 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
   const playlist = playlistData as VideoPlaylistResource | undefined
   const video = resource as VideoResource | undefined
-
   const sources = useMemo(
     () =>
-      video ? resolveVideoSources(video.video?.streaming_url, video.url) : [],
+      video
+        ? resolveVideoSources(
+            video.video?.streaming_url,
+            video.url,
+            video.content_files?.[0]?.youtube_id,
+          )
+        : [],
     [video],
   )
 
@@ -397,6 +427,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     : null
 
   const topics = video?.topics ?? []
+  const captionUrls = video?.video?.caption_urls ?? []
 
   const playlistLabel = playlist?.title || "Video Collection"
 
@@ -433,12 +464,26 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
     }
   }, [isLoading, videoId])
 
+  // VideoObject JSON-LD for Google search indexing.
+  // See: https://developers.google.com/search/docs/appearance/structured-data/video
+  const structuredData = !isLoading ? buildVideoStructuredData(video) : null
+
   if (!showVideoPlaylistPage) {
     return flagsLoaded ? notFound() : null
   }
 
   return (
     <PageWrapper>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify does not escape </ by default; replace prevents
+          // a malicious title/description from breaking out of the script tag.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/<\//g, "<\\/"),
+          }}
+        />
+      )}
       <SkipLinksNav aria-label="Skip links">
         <SkipLink href="#video-detail-main">Skip to main content</SkipLink>
         <SkipLink href="#video-player-region">Skip to video player</SkipLink>
@@ -477,7 +522,9 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <CategoryLabel>{playlistLabel}</CategoryLabel>
+            <CategoryLabel href={`/video-playlist/${playlistId}`}>
+              {playlistLabel}
+            </CategoryLabel>
           ) : null}
 
           {isLoading ? (
@@ -519,6 +566,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <VideoJsPlayer
                 key={videoId}
                 sources={sources}
+                tracks={captionUrls}
                 poster={
                   sources[0]?.type === "video/youtube"
                     ? undefined
@@ -556,9 +604,10 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           <BorderLine />
 
           {!isLoading && video?.description && (
-            <DescriptionText id="video-description">
-              {video?.description}
-            </DescriptionText>
+            <DescriptionText
+              id="video-description"
+              dangerouslySetInnerHTML={{ __html: video.description }}
+            />
           )}
 
           {!isLoading && !video?.description && (
@@ -585,7 +634,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                   shareButtonRef.current as unknown as HTMLDivElement | null
                 }
                 onClose={() => setShareOpen(false)}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video-playlist/${video?.id}?playlist=${playlistId}`}
+                pageUrl={`${NEXT_PUBLIC_ORIGIN}/video/${video?.id}?playlist=${playlistId}`}
               />
             </ShareRow>
           )}
@@ -635,7 +684,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                       return (
                         <React.Fragment key={item.id}>
                           <MoreFromItem
-                            href={`/video-playlist/detail/${item.id}?playlist=${playlistId}`}
+                            href={`/video/${item.id}?playlist=${playlistId}`}
                             aria-label={`Open video ${item.title}`}
                           >
                             <MoreFromThumbnailWrapper>
@@ -660,9 +709,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                                 {item.title}
                               </MoreFromItemTitle>
                               {item.description && (
-                                <MoreFromItemMeta>
-                                  {item.description}
-                                </MoreFromItemMeta>
+                                <MoreFromItemMeta
+                                  dangerouslySetInnerHTML={{
+                                    __html: item.description,
+                                  }}
+                                />
                               )}
                             </MoreFromTextSide>
                           </MoreFromItem>

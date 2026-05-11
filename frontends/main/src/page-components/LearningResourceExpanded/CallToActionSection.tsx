@@ -14,6 +14,7 @@ import type { ImageConfig, LearningResourceCardProps } from "ol-components"
 import {
   DEFAULT_RESOURCE_IMG,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import { ResourceTypeEnum, ResourceTypeGroupEnum, PlatformEnum } from "api"
 import { Button, ButtonLink, ButtonProps, Input } from "@mitodl/smoot-design"
@@ -41,6 +42,7 @@ import {
   videoDetailPageView,
   videoPlaylistPageView,
   podcastPageView,
+  podcastEpisodePageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -212,12 +214,13 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
+  const { src: imageUrl, onError: onImageError } = useImageWithFallback(
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
   const aspect = config.width / config.height
   if (resource) {
-    const imageUrl =
-      resource.image?.url ||
-      resourceContentFilesImageSrc(resource) ||
-      DEFAULT_RESOURCE_IMG
     return (
       <ImageContainer>
         <Image
@@ -225,6 +228,7 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
+          onError={onImageError}
         />
       </ImageContainer>
     )
@@ -257,13 +261,13 @@ const getCallToActionText = (resource: LearningResource): string => {
   const listenToPodcast = "Listen to Podcast"
   const viewArticle = "View Article"
   const learnMore = "Learn More"
-  const watchVideos = "Watch Video"
+  const watchVideo = "Watch Video"
   const callsToAction = {
     [ResourceTypeEnum.Course]: learnMore,
     [ResourceTypeEnum.Program]: learnMore,
     [ResourceTypeEnum.LearningPath]: learnMore,
-    [ResourceTypeEnum.Video]: watchVideos,
-    [ResourceTypeEnum.VideoPlaylist]: watchVideos,
+    [ResourceTypeEnum.Video]: watchVideo,
+    [ResourceTypeEnum.VideoPlaylist]: learnMore,
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
@@ -276,7 +280,7 @@ const getCallToActionText = (resource: LearningResource): string => {
   if (resource?.platform?.code === PlatformEnum.Ocw) {
     if (resource.resource_type === ResourceTypeEnum.Course) {
       return accessCourseMaterials
-    } else {
+    } else if (resource.resource_type === ResourceTypeEnum.Document) {
       return accessLearningMaterial
     }
   }
@@ -356,6 +360,15 @@ const getResourceUrl = (
   if (showPodcastPage) {
     if (resource.resource_type === ResourceTypeEnum.Podcast) {
       return podcastPageView(resource.id.toString())
+    }
+    if (
+      resource.resource_type === ResourceTypeEnum.PodcastEpisode &&
+      resource?.podcast_episode?.podcasts?.[0]
+    ) {
+      return podcastEpisodePageView(
+        resource.id.toString(),
+        resource?.podcast_episode?.podcasts[0].toString(),
+      )
     }
   }
   return resource.url
@@ -451,7 +464,10 @@ const CallToActionSection = ({
         >
           {cta}
         </StyledLink>
-        {platformImage ? (
+        {platformImage &&
+        (resource.resource_type === ResourceTypeEnum.Course ||
+          resource.resource_type === ResourceTypeEnum.Program ||
+          resource.resource_type === ResourceTypeEnum.Document) ? (
           <PlatformContainer>
             <Platform>
               <OnPlatform>on</OnPlatform>

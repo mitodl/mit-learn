@@ -33,6 +33,18 @@ from vector_search.constants import (
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_LARGE,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_MEDIUM,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_SMALL,
+    QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE,
+    QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO,
+    QDRANT_OPTIMIZER_SEGMENT_LARGE,
+    QDRANT_OPTIMIZER_SEGMENT_MEDIUM,
+    QDRANT_OPTIMIZER_SEGMENT_SMALL,
+    QDRANT_OPTIMIZER_SEGMENT_XLARGE,
+    QDRANT_OPTIMIZER_THRESHOLD_LARGE,
+    QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
+    QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
@@ -46,6 +58,7 @@ from vector_search.utils import (
     _is_markdown_content,
     _resource_vector_hits,
     async_qdrant_aggregations,
+    compute_optimizer_settings,
     create_qdrant_collections,
     embed_learning_resources,
     embed_topics,
@@ -61,6 +74,65 @@ from vector_search.utils import (
 from vector_search.utils import qdrant_client as vector_qdrant_client
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.mark.parametrize(
+    ("point_count", "shard_number", "segment_size", "flush_interval"),
+    [
+        (
+            0,
+            10,
+            QDRANT_OPTIMIZER_SEGMENT_SMALL,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_SMALL,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_SMALL - 1,
+            1,
+            QDRANT_OPTIMIZER_SEGMENT_SMALL,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_SMALL,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_SMALL,
+            1,
+            QDRANT_OPTIMIZER_SEGMENT_MEDIUM,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_MEDIUM,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
+            2,
+            QDRANT_OPTIMIZER_SEGMENT_MEDIUM,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_MEDIUM,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
+            1,
+            QDRANT_OPTIMIZER_SEGMENT_LARGE,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_LARGE,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_LARGE,
+            4,
+            QDRANT_OPTIMIZER_SEGMENT_LARGE,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_LARGE,
+        ),
+        (
+            QDRANT_OPTIMIZER_THRESHOLD_LARGE,
+            1,
+            QDRANT_OPTIMIZER_SEGMENT_XLARGE,
+            QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE,
+        ),
+    ],
+)
+def test_compute_optimizer_settings(
+    point_count, shard_number, segment_size, flush_interval
+):
+    """Optimizer settings are determined by point count per shard."""
+    assert compute_optimizer_settings(point_count, shard_number) == {
+        "indexing_threshold": int(
+            segment_size * QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO
+        ),
+        "flush_interval_sec": flush_interval,
+    }
 
 
 @pytest.mark.parametrize("content_type", ["course", "content_file"])

@@ -1,5 +1,5 @@
-import { parseReqTree } from "./util"
-import { RequirementTreeBuilder } from "api/mitxonline-test-utils"
+import { parseReqTree, getOutlineCoursewareId } from "./util"
+import { RequirementTreeBuilder, factories } from "api/mitxonline-test-utils"
 
 describe("parseReqTree", () => {
   test("parses courses as requirement items", () => {
@@ -56,5 +56,50 @@ describe("parseReqTree", () => {
     const result = parseReqTree(tree.serialize())
     expect(result[0].requiredCount).toBe(2)
     expect(result[0].items).toHaveLength(3)
+  })
+})
+
+describe("getOutlineCoursewareId", () => {
+  test("uses next_run_id courseware_id when available", () => {
+    const run1 = factories.courses.courseRun({
+      id: 10,
+      courseware_id: "course-v1:Org+A+Run1",
+    })
+    const run2 = factories.courses.courseRun({
+      id: 20,
+      courseware_id: "course-v1:Org+A+Run2",
+    })
+    const course = factories.courses.course({
+      readable_id: "course-v1:Org+A",
+      next_run_id: 20,
+      courseruns: [run1, run2],
+    })
+
+    expect(getOutlineCoursewareId(course)).toBe("course-v1:Org+A+Run2")
+  })
+
+  test("falls back to first run courseware_id", () => {
+    const course = factories.courses.course({
+      readable_id: "course-v1:Org+A",
+      next_run_id: null,
+      courseruns: [
+        factories.courses.courseRun({
+          id: 1,
+          courseware_id: "course-v1:Org+A+Run1",
+        }),
+      ],
+    })
+
+    expect(getOutlineCoursewareId(course)).toBe("course-v1:Org+A+Run1")
+  })
+
+  test("returns undefined when no run courseware_id exists", () => {
+    const course = factories.courses.course({
+      readable_id: "course-v1:Org+A",
+      next_run_id: null,
+      courseruns: [factories.courses.courseRun({ id: 1, courseware_id: "" })],
+    })
+
+    expect(getOutlineCoursewareId(course)).toBeUndefined()
   })
 })

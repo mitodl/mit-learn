@@ -12,6 +12,7 @@ import {
   getResourceLanguage,
   formattedParentCourseName,
   resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -154,6 +155,12 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   onClick,
   headingLevel = 6,
 }) => {
+  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
+
   if (isLoading) {
     return <BaseLearningResourceCard isLoading className={className} list />
   }
@@ -207,12 +214,9 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={
-        resource.image?.url ||
-        resourceContentFilesImageSrc(resource) ||
-        DEFAULT_RESOURCE_IMG
-      }
+      imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
+      onImageError={onImageError}
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
       resourceType={resource.resource_category}

@@ -550,7 +550,9 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               </>
             )}
           </StatusContainer>
-          <Typography variant="subtitle2">{courseProgram?.title}</Typography>
+          <Typography variant="subtitle2" component="h3">
+            {courseProgram?.title}
+          </Typography>
         </ProgramCardHeaderInner>
         <>
           {programCertificateUrl && (
@@ -595,6 +597,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
               useVerifiedEnrollment={useVerifiedEnrollment}
               parentProgramIds={parentProgramIds}
               variant="stacked"
+              headingLevel="h4"
             />
           )
         })}

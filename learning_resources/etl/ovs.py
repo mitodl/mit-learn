@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 
 from learning_resources.constants import (
+    VIDEO_SHORT_RESOURCE_CATEGORY,
     Availability,
     LearningResourceType,
     PlatformType,
@@ -200,7 +201,7 @@ def extract(*, url=None) -> Generator[dict, None, None]:
         next_url = data.get("next")
 
 
-def _transform_video(video_data: dict) -> dict | None:
+def transform_video(video_data: dict) -> dict | None:
     """
     Transform a single OVS video into LearningResource format.
 
@@ -221,7 +222,7 @@ def _transform_video(video_data: dict) -> dict | None:
     cover_image_url = _get_cover_image_url(video_data)
     image_data = {"url": cover_image_url} if cover_image_url else None
 
-    return {
+    video_dict = {
         "readable_id": video_data["key"],
         "platform": PlatformType.ovs.name,
         "etl_source": ETLSource.ovs.name,
@@ -241,8 +242,12 @@ def _transform_video(video_data: dict) -> dict | None:
         },
     }
 
+    if (video_data.get("collection") or {}).get("for_shorts", False):
+        video_dict["resource_category"] = VIDEO_SHORT_RESOURCE_CATEGORY
+    return video_dict
 
-def _transform_collection(collection_data: dict) -> dict:
+
+def transform_collection(collection_data: dict) -> dict:
     """
     Transform an OVS collection into a playlist dict.
 
@@ -281,11 +286,11 @@ def transform(extracted_videos) -> Generator[dict, None, None]:
         if not collection or not collection.get("key"):
             continue
         collection_key = collection["key"]
-        transformed_video = _transform_video(video_data)
+        transformed_video = transform_video(video_data)
         if not transformed_video:
             continue
         if collection_key not in collections:
-            collections[collection_key] = _transform_collection(collection)
+            collections[collection_key] = transform_collection(collection)
         collection_videos[collection_key].append(transformed_video)
 
     for collection_key, playlist_data in collections.items():

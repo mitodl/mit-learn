@@ -8,6 +8,8 @@ import {
   getBestResourceStartDate,
   showStartAnytime,
   getResourceLanguage,
+  resourceContentFilesImageSrc,
+  useImageWithFallback,
 } from "ol-utilities"
 import type { Size } from "../Card/Card"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
@@ -53,6 +55,14 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   list = false,
   condensed = false,
 }) => {
+  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+    // won't try contentFile image if resource image 404s, but that matches
+    // existing behavior: contentFile is only tried when resource has no image URL
+    resource?.image?.url ??
+      (resource ? resourceContentFilesImageSrc(resource) : null),
+    DEFAULT_RESOURCE_IMG,
+  )
+
   // Use list card variants if list prop is true
   if (list) {
     if (condensed) {
@@ -146,8 +156,9 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       href={href}
       onClick={onClick}
       headingLevel={headingLevel}
-      imageSrc={resource.image?.url || DEFAULT_RESOURCE_IMG}
+      imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
+      onImageError={onImageError}
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}

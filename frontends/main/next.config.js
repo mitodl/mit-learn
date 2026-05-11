@@ -8,6 +8,10 @@ const NEXT_PUBLIC_OPTIMIZE_IMAGES = Boolean(
 )
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development"
 
+const NEXT_CACHE_S_MAXAGE_SECONDS =
+  process.env.NEXT_CACHE_S_MAXAGE_SECONDS || "1800"
+const PAGE_CACHE_CONTROL = `s-maxage=${NEXT_CACHE_S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`
+
 const processFeatureFlags = () => {
   const featureFlagPrefix =
     process.env.NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX || "FEATURE_"
@@ -43,6 +47,12 @@ const nextConfig = {
     return [
       {
         // can be removed once fastly redirect is in place
+        source: "/video-playlist/detail/:id",
+        destination: "/video/:id",
+        permanent: true,
+      },
+      {
+        // can be removed once fastly redirect is in place
         source: "/attach/:code",
         destination: "/enrollmentcode/:code",
         permanent: true,
@@ -69,8 +79,7 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value:
-              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
+            value: PAGE_CACHE_CONTROL,
           },
         ],
       },
@@ -86,8 +95,7 @@ const nextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value:
-              "s-maxage=1800, stale-if-error=86400, stale-while-revalidate=86400",
+            value: PAGE_CACHE_CONTROL,
           },
         ],
       },

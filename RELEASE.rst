@@ -1,6 +1,86 @@
 Release Notes
 =============
 
+Version 0.66.10 (Released May 07, 2026)
+---------------
+
+- fix: add fallback image for API-provided URLs that return 404 (#3277)
+- OVS videos webhook endpoint (#3275)
+- Add to profile button linkedin share button for certificates and verifiable credentials (#3278)
+
+Version 0.66.9 (Released May 06, 2026)
+--------------
+
+- fix: change play icon for video collection detail page (#3306)
+
+Version 0.66.8 (Released May 06, 2026)
+--------------
+
+- fix the breadcrum on video collection page (#3304)
+
+Version 0.66.7 (Released May 06, 2026)
+--------------
+
+- fix: add video captions on the video detail page (#3284)
+
+Version 0.66.6 (Released May 06, 2026)
+--------------
+
+- fix: improve the hover state of video and adjust the border of breadcrum (#3301)
+- fix: remove the top border when there is only single item and removed the current episode from the more episode list (#3299)
+- adds a "Receipt" menu item  (#3260)
+- feat: add podcast episode page and few fixes in podcast page (#3283)
+- use Intl to get native language names (#3297)
+
+Version 0.66.3 (Released May 05, 2026)
+--------------
+
+- fix: remove h5 font weight override (#3272)
+
+Version 0.66.2 (Released May 05, 2026)
+--------------
+
+- fix b2b dashboard empty language code (#3293)
+- prefer existing B2B enrollment over next_run_id when picking same-language run (#3291)
+- filter server-side, remove video count (#3287)
+- fix fallback when no language is selected (#3286)
+- set s-maxage via NEXT_CACHE_S_MAXAGE_SECONDS (#3280)
+- fix: assert run.title in DashboardCard heading test (#3282)
+- fix: adjust duration position and remove institution label from the video series page and change the title of video and playlist on drawer (#3270)
+- qdrant: Automatically compute optimizer settings (#3273)
+
+Version 0.65.6 (Released May 04, 2026)
+--------------
+
+- fix fallback when no language is selected (#3286)
+
+Version 0.65.5 (Released May 04, 2026)
+--------------
+
+- use courseware_url from language_options, filter them by is_enrollable (#3276)
+- fix: add heading tags to My Learning course titles for screen readers (#3253)
+- dashboard translations UI (#3269)
+
+Version 0.65.3 (Released May 01, 2026)
+--------------
+
+- show resource_category in channel pages (#3264)
+- use youtube etl for playlists and ocw for videos (#3257)
+- Vector search pagination fix for empty hybrid searches (#3251)
+
+Version 0.65.2 (Released April 30, 2026)
+--------------
+
+- feat: implement the video series page design (#3258)
+- fix: improvements in podcast player and removal of video player from drawer  (#3241)
+- Add support for dynamically displaying the How You'll Learn cards (#3198)
+- MITxOnline program published status should consider include_in_learn_catalog (#3250)
+- do not promote ocw page contentfiles to resources (#3261)
+- dashboard b2c series certificate display (#3256)
+- flaky test test_learning_resources_serializer (#3252)
+- [pre-commit.ci] pre-commit autoupdate (#2973)
+- Update dependency sharp to v0.34.5 (#2707)
+
 Version 0.65.0 (Released April 28, 2026)
 --------------
 

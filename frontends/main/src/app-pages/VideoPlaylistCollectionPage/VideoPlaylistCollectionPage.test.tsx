@@ -35,6 +35,8 @@ const makeVideo = (overrides = {}) =>
     ...overrides,
   })
 
+const VIDEOS_PAGE_SIZE = 10
+
 const setupApis = ({
   playlistId,
   videos,
@@ -52,7 +54,7 @@ const setupApis = ({
     playlist,
   )
 
-  // Items endpoint: /api/v1/learning_resources/{id}/items/
+  // Items endpoint used by useInfiniteLearningResourceItems: includes ?limit=N
   const itemRelationships = videos.map((resource, i) => ({
     id: i + 1,
     child: resource.id,
@@ -60,12 +62,15 @@ const setupApis = ({
     position: i + 1,
     resource,
   }))
-  setMockResponse.get(urls.learningResources.items({ id: playlistId }), {
-    count: videos.length,
-    next: null,
-    previous: null,
-    results: itemRelationships,
-  })
+  setMockResponse.get(
+    `${urls.learningResources.items({ id: playlistId })}?limit=${VIDEOS_PAGE_SIZE}`,
+    {
+      count: videos.length,
+      next: null,
+      previous: null,
+      results: itemRelationships,
+    },
+  )
 
   setMockResponse.get(
     expect.stringContaining(
@@ -256,7 +261,7 @@ describe("VideoPage", () => {
       const titleEl = await screen.findByText(collection.title)
       expect(titleEl.closest("a")).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${collection.id}?playlist=${playlist.id}`,
+        `/video/${collection.id}?playlist=${playlist.id}`,
       )
     })
 
@@ -274,7 +279,7 @@ describe("VideoPage", () => {
       const titleEls = await screen.findAllByText(featured.title)
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${featured.id}?playlist=${playlist.id}`,
+        `/video/${featured.id}?playlist=${playlist.id}`,
       )
     })
   })
@@ -348,13 +353,13 @@ describe("VideoPage", () => {
       const ep1Title = await screen.findByText(ep1.title)
       expect(ep1Title.closest("a")).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${ep1.id}?playlist=${playlist.id}`,
+        `/video/${ep1.id}?playlist=${playlist.id}`,
       )
 
       const ep2Title = screen.getByText(ep2.title)
       expect(ep2Title.closest("a")).toHaveAttribute(
         "href",
-        `/video-playlist/detail/${ep2.id}?playlist=${playlist.id}`,
+        `/video/${ep2.id}?playlist=${playlist.id}`,
       )
     })
   })
