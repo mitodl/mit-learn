@@ -103,8 +103,8 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
     setCurrentText(params.q ?? "")
   }, [params, setCurrentText])
   const searchProps = {
-    resultsHeadingEl: "h3",
-    filterHeadingEl: "h3",
+    resultsHeadingEl: "h3" as const,
+    filterHeadingEl: "h3" as const,
     page: page,
     setSearchParams: setSearchParams,
     requestParams: params,
