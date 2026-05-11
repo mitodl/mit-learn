@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.67.0
+--------------
+
+- fix: add iframe for youtube videos playing (#3311)
+- fix flaky test (#3319)
+- video ui tweaks (#3322)
+- fix: change the video detail page route & load more videos feature on video collection page (#3316)
+- feat: added module section on course product page (#3242)
+- translations UI design revisions (#3314)
+- refactor ocw video etl (#3308)
+- fix: update metadata for video pages (#3310)
+- Both ETL and webhook should populate OVS resource_category when applicable. (#3313)
+- feat: Welcome to learn email on new account setup (#3189)
+
 Version 0.66.10 (Released May 07, 2026)
 ---------------
 
