@@ -1,6 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, waitFor } from "@/test-utils"
 import { notFound } from "next/navigation"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -97,8 +97,7 @@ describe("VideoEmbedPage", () => {
 
     renderWithProviders(<VideoEmbedPage videoId={video.id} />)
 
-    await screen.findByTestId("video-js-player").catch(() => null)
-    expect(notFound).toHaveBeenCalled()
+    await waitFor(() => expect(notFound).toHaveBeenCalled())
   })
 
   test("does not call notFound while feature flags are still loading", () => {
