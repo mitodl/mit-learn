@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.67.1
+--------------
+
+- fix: 404 on product pages when live=false (#3295)
+- feat: added welcome to learner email once he login for the first time (#3324)
+- dashboard refactor phase 1 (#3320)
+
 Version 0.67.0 (Released May 11, 2026)
 --------------
 
