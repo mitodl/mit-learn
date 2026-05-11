@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-Version 0.67.0
+Version 0.67.0 (Released May 11, 2026)
 --------------
 
 - fix: add iframe for youtube videos playing (#3311)
