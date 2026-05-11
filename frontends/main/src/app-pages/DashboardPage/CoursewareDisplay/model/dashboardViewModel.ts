@@ -1,3 +1,11 @@
+/**
+ * Pure-model layer for the dashboard.
+ *
+ * Owns the canonical types (e.g. DashboardCourseSlot) and the pure transforms
+ * — grouping, slot construction, display policy — that data hooks compose into
+ * render-ready shapes. No React, no queries; everything is synchronous and
+ * unit-testable in isolation.
+ */
 import type { SimpleSelectOption } from "ol-components"
 import type {
   CourseRunEnrollmentV3,
@@ -6,13 +14,22 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 
+/**
+ * A program/contract dashboard's view of a course: every enrollment whose run
+ * belongs to this course, plus a derived display choice for the legacy
+ * single-enrollment card UI.
+ *
+ * `enrollments` must be course-matched (by run id) with no language filter —
+ * language is a display selection (`selectedLanguageKey` → `displayedEnrollment`
+ * / `displayedRun`), not a filter on the underlying list. Contract scoping,
+ * when applicable, must be applied by the slot constructor before the list
+ * reaches the slot.
+ */
 export type DashboardCourseSlot = {
   course: CourseWithCourseRunsSerializerV2
   enrollments: CourseRunEnrollmentV3[]
   selectedLanguageKey: string
   availableLanguages: SimpleSelectOption[]
-  displayedEnrollment: CourseRunEnrollmentV3 | null
-  displayedRun: CourseRunV2 | null
   contractId?: number
   isContractPageResource?: boolean
   ancestorContext?: {
@@ -20,6 +37,10 @@ export type DashboardCourseSlot = {
     parentProgramReadableIds?: string[]
     useVerifiedEnrollment?: boolean
   }
+  // Whether these fields survive past the legacy-card removal is an open tied
+  // to new card UX (run selection controlled by card or parent.)
+  displayedEnrollment: CourseRunEnrollmentV3 | null
+  displayedRun: CourseRunV2 | null
 }
 
 const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {

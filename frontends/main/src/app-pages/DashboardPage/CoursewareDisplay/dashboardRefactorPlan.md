@@ -172,6 +172,15 @@ Rules:
 - When legacy cards are replaced (Phase 8), enrolled cards consume V3 enrollment data from `enrollments[]` directly and Case 1 of the synthesis can be deleted.
 - Cases 2 and 3 of `getResolvedRunForSelectedLanguage` remain. Case 2 is a trivial passthrough (the selected language has a real `CourseRunV2` in `course.courseruns`). Case 3 (pre-enrollment, no real `CourseRunV2` for the selected language) is a load-bearing workaround for an API gap: mitxonline does not surface per-language run metadata pre-enrollment. Case 3 is removable only if/when that API gap closes.
 
+### Open question: are display fields permanent on the slot?
+
+`displayedEnrollment` and `displayedRun` are not strictly necessary on the slot — the legacy adapter could compute them inline from `enrollments` + `selectedLanguageKey`. They are on the slot for convenience: the hook is computing them anyway (Phase 2's composite resolver), caching the result keeps the adapter as pure shape-conversion, and slot construction becomes unit-testable in isolation ("given course X, enrollments [A, B], lang Y → slot.displayedEnrollment = A").
+Whether these fields survive past Phase 7 hinges on multi-run UX direction:
+
+- **Parent-owned selection** (parent picks which enrollment to display, card receives `displayedEnrollment` as a controlled prop) → fields stay on the slot, expressing the parent's chosen display.
+- **Card-owned selection** (card has internal state for enrollment selection) → fields are deleted with the legacy adapter; slot becomes purer (`course`, `enrollments`, `selectedLanguageKey`, `availableLanguages`, contract/ancestor).
+  Recommendation: parent-owned (consistency with `selectedLanguageKey`, no prop-to-state sync, URL-deep-linkable). But this is not blocking Phases 1–6; decide when multi-run UX lands.
+
 ## Proposed file structure
 
 Add focused files under the existing dashboard area. The end state consolidates pure-model code into a single file (`model/dashboardViewModel.ts`); the existing `helpers.ts` and `languageOptions.ts` are progressively absorbed and deleted by Phase 7.
