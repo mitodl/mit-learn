@@ -12,6 +12,7 @@ export enum FeatureFlags {
   UniversalAISearchBanner = "universal-ai-search-banner",
   VideoShorts = "video-shorts",
   MitxOnlineProductPages = "mitxonline-product-pages",
+  CourseOutlineSection = "course-outline-section",
   VideoPlaylistPage = "video-playlist-page",
   PodcastDetailPage = "podcast-detail-page",
 }

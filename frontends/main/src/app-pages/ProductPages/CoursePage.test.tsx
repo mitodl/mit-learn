@@ -18,6 +18,8 @@ import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import invariant from "tiny-invariant"
+import { getOutlineCoursewareId } from "./util"
+import { FeatureFlags } from "@/common/feature_flags"
 
 jest.mock("posthog-js/react")
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -48,6 +50,41 @@ const setupApis = ({
   setMockResponse.get(urls.pages.coursePages(course.readable_id), {
     items: [page],
   })
+  const outlineCoursewareId = getOutlineCoursewareId(course)
+  if (outlineCoursewareId) {
+    setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
+      course_id: course.readable_id,
+      generated_at: new Date().toISOString(),
+      modules: [
+        {
+          id: "m1",
+          title: "Introduction",
+          effort_time: 540,
+          effort_activities: 0,
+          counts: {
+            videos: 30,
+            readings: 2,
+            problems: 0,
+            assignments: 1,
+            app_items: 0,
+          },
+        },
+        {
+          id: "m2",
+          title: "Core concepts",
+          effort_time: 60,
+          effort_activities: 0,
+          counts: {
+            videos: 0,
+            readings: 0,
+            problems: 0,
+            assignments: 0,
+            app_items: 0,
+          },
+        },
+      ],
+    })
+  }
 
   setMockResponse.get(
     learnUrls.userMe.get(),
@@ -112,6 +149,7 @@ describe("CoursePage", () => {
         { level: 2, name: "Course Information" },
         { level: 2, name: "About this Course" },
         { level: 2, name: "What you'll learn" },
+        { level: 2, name: "Course content" },
         { level: 2, name: "How you'll learn" },
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
@@ -173,6 +211,64 @@ describe("CoursePage", () => {
 
     const section = await screen.findByRole("region", { name: "Prerequisites" })
     expectRawContent(section, page.prerequisites)
+  })
+
+  test("Course content section renders lecture titles", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+    expect(within(section).getByText("Introduction")).toBeInTheDocument()
+    expect(within(section).getByText("Core concepts")).toBeInTheDocument()
+  })
+
+  test("Hides course content section when course outline flag is disabled", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag !== FeatureFlags.CourseOutlineSection,
+    )
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    await screen.findByRole("heading", { name: page.title })
+    expect(
+      screen.queryByRole("region", {
+        name: "Course content",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("Course content section shows metadata inline", async () => {
+    const course = makeCourse()
+    const page = makePage({ course_details: course })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+    expect(
+      within(section).getByText(
+        /Less than 1 hour to complete\s*•\s*30 Videos\s*•\s*2 Readings\s*•\s*1 Assignment/,
+      ),
+    ).toBeInTheDocument()
+    const coreConceptsCard = within(section)
+      .getByText("Core concepts")
+      .closest("article")
+    expect(coreConceptsCard).toBeInTheDocument()
+    expect(
+      within(coreConceptsCard as HTMLElement).getByText(
+        "Less than 1 hour to complete",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(section).queryByRole("button", { name: /Introduction/i }),
+    ).not.toBeInTheDocument()
   })
 
   test("Renders program bundle upsell when course belongs to a program (content tested in ProgramBundleUpsell.test)", async () => {
@@ -259,6 +355,16 @@ describe("CoursePage", () => {
       urls.courses.coursesList({ readable_id: "readable_id" }),
       { results: courses },
     )
+    if (courses.length > 0) {
+      const outlineCoursewareId = getOutlineCoursewareId(courses[0])
+      if (outlineCoursewareId) {
+        setMockResponse.get(urls.courses.courseOutline(outlineCoursewareId), {
+          course_id: courses[0].readable_id,
+          generated_at: new Date().toISOString(),
+          modules: [],
+        })
+      }
+    }
     setMockResponse.get(urls.pages.coursePages("readable_id"), {
       items: pages,
     })

@@ -1,0 +1,123 @@
+import React from "react"
+import { renderWithProviders, screen, within } from "@/test-utils"
+import type { CourseOutlineModule } from "api/mitxonline-hooks/courses"
+import CourseOutlineSection from "./CourseOutlineSection"
+
+const makeModule = (
+  module: Partial<CourseOutlineModule> &
+    Pick<CourseOutlineModule, "id" | "title">,
+): CourseOutlineModule => ({
+  effort_time: 0,
+  effort_activities: 0,
+  counts: {
+    videos: 0,
+    readings: 0,
+    problems: 0,
+    assignments: 0,
+    app_items: 0,
+  },
+  ...module,
+})
+
+describe("CourseOutlineSection", () => {
+  test("renders static course content cards with metadata line", async () => {
+    const modules: CourseOutlineModule[] = [
+      makeModule({ id: "m1", title: "No effort" }),
+      makeModule({ id: "m2", title: "Under one hour", effort_time: 3599 }),
+      makeModule({ id: "m3", title: "Exactly one hour", effort_time: 3600 }),
+      makeModule({ id: "m4", title: "Plural hours", effort_time: 7200 }),
+      makeModule({ id: "m5", title: "Rounded hours", effort_time: 9540 }),
+    ]
+
+    renderWithProviders(<CourseOutlineSection modules={modules} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+
+    expect(
+      within(section).queryByText(
+        /0 Videos\s*•\s*0 Readings\s*•\s*0 Assignments/,
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      within(section).getByText("Less than 1 hour to complete"),
+    ).toBeInTheDocument()
+    expect(within(section).getByText("1 hour to complete")).toBeInTheDocument()
+    expect(within(section).getByText("2 hours to complete")).toBeInTheDocument()
+    expect(within(section).getByText("3 hours to complete")).toBeInTheDocument()
+  })
+
+  test("shows counts inline without requiring expansion", async () => {
+    const modules: CourseOutlineModule[] = [
+      {
+        ...makeModule({ id: "m1", title: "Intro" }),
+        counts: {
+          videos: 1,
+          readings: 2,
+          problems: 0,
+          assignments: 3,
+          app_items: 0,
+        },
+      },
+      {
+        ...makeModule({ id: "m2", title: "Deep dive" }),
+        counts: {
+          videos: 4,
+          readings: 5,
+          problems: 0,
+          assignments: 6,
+          app_items: 0,
+        },
+      },
+    ]
+
+    renderWithProviders(<CourseOutlineSection modules={modules} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+    expect(
+      within(section).getByText(/1 Video\s*•\s*2 Readings\s*•\s*3 Assignments/),
+    ).toBeInTheDocument()
+    expect(
+      within(section).getByText(
+        /4 Videos\s*•\s*5 Readings\s*•\s*6 Assignments/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Intro/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("falls back to Module N title when title is missing", async () => {
+    const modules: CourseOutlineModule[] = [
+      makeModule({ id: "m1", title: "   " }),
+      makeModule({ id: "m2", title: "" }),
+    ]
+
+    renderWithProviders(<CourseOutlineSection modules={modules} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+    expect(within(section).getByText("Module 1")).toBeInTheDocument()
+    expect(within(section).getByText("Module 2")).toBeInTheDocument()
+  })
+
+  test("omits zero-value counts when module counts are missing", async () => {
+    const modules: CourseOutlineModule[] = [
+      makeModule({ id: "m1", title: "Intro" }),
+    ]
+
+    renderWithProviders(<CourseOutlineSection modules={modules} />)
+
+    const section = await screen.findByRole("region", {
+      name: "Course content",
+    })
+
+    expect(
+      within(section).queryByText(/0 (Videos|Readings|Assignments)/),
+    ).toBeNull()
+  })
+})
