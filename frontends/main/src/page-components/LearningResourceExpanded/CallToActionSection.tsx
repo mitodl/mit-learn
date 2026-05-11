@@ -43,6 +43,7 @@ import {
   videoPlaylistPageView,
   podcastPageView,
   podcastEpisodePageView,
+  ocwLearnPageView,
 } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -378,9 +379,9 @@ const getResourceUrl = (
     resource.platform?.code === PlatformEnum.Ocw &&
     resource.url
   ) {
-    const url = new URL(resource.url)
-    return url.pathname.replace(/^\/courses/, "/courses/o")
+    return ocwLearnPageView(resource.url)
   }
+
   return resource.url
 }
 
