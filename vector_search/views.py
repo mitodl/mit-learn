@@ -145,23 +145,24 @@ class QdrantView(APIView):
                     query_string
                 ),
             )
-            if order_by:
+            prefetch_params = [
+                models.Prefetch(
+                    filter=search_filter,
+                    query=sparse_query,
+                    using=encoder_sparse.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+                models.Prefetch(
+                    filter=search_filter,
+                    query=dense_query,
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
+                ),
+            ]
+            if order_by and "score_threshold" not in search_params:
                 # Nest: vector prefetches → fusion prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
-                    prefetch=[
-                        models.Prefetch(
-                            filter=search_filter,
-                            query=sparse_query,
-                            using=encoder_sparse.model_short_name(),
-                            limit=prefetch_limit,
-                        ),
-                        models.Prefetch(
-                            filter=search_filter,
-                            query=dense_query,
-                            using=encoder_dense.model_short_name(),
-                            limit=prefetch_limit,
-                        ),
-                    ],
+                    prefetch=prefetch_params,
                     query=models.FusionQuery(fusion=models.Fusion.RRF),
                     limit=prefetch_limit,
                 )
@@ -169,20 +170,7 @@ class QdrantView(APIView):
                     order_by=self._format_order_by(order_by)
                 )
             else:
-                search_params["prefetch"] = [
-                    models.Prefetch(
-                        filter=search_filter,
-                        query=sparse_query,
-                        using=encoder_sparse.model_short_name(),
-                        limit=prefetch_limit,
-                    ),
-                    models.Prefetch(
-                        filter=search_filter,
-                        query=dense_query,
-                        using=encoder_dense.model_short_name(),
-                        limit=prefetch_limit,
-                    ),
-                ]
+                search_params["prefetch"] = prefetch_params
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
             dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)

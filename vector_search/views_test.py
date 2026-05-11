@@ -407,10 +407,17 @@ def test_vector_search_sortby_parameter(mocker, client, query_string, hybrid_sea
         "q": query_string,
         "sortby": "-views",
         "hybrid_search": hybrid_search,
+        "score_cutoff": 0,
     }
-
-    client.get(
-        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    view = QdrantView()
+    asyncio.run(
+        view.async_vector_search(
+            query_string,
+            params,
+            order_by="-views",
+            score_cutoff=0,
+            hybrid_search=hybrid_search,
+        )
     )
 
     if query_string:
